@@ -1,7 +1,7 @@
 from cStringIO import StringIO
-import socket, datetime, time, sys, threading, random, subprocess, os
+import socket, datetime, time, sys, threading, random, subprocess, os, json, signal
 
-# Minecraft IRC Wrapper by Ben Baptist -- Version 0.2
+# Minecraft IRC Wrapper by Ben Baptist -- Version 0.3
 # benbaptist.com
 # 
 # version 0.1 changelog:
@@ -19,6 +19,14 @@ import socket, datetime, time, sys, threading, random, subprocess, os
 # - automatic backup system that auto-deletes older backups (needs a bit of work)
 # - control server from IRC
 # - fixed line wrapping a bit
+# version 0.3 changelog:
+# - doesn't read from server.log anymore; actually reads from console properly, thus fixing minor issues in certain setups (e.g. if server logging was done in a different file)
+# - 1.7 support
+# 	 ^ added a newMode configuration option for those still using pre-1.7 servers
+# - new backup system - stores backup information in backups.json)
+#   ^ backup notifications can be turned off, as well
+# - fix the Wrapper not reconnecting to IRC (needs to)
+# - other fixes
 # bugs needing fixed:
 # - none that I can think of
 # to-do list:
@@ -32,14 +40,16 @@ class Config:
 	port = 6667
 	channels = ['#main'] # channels to join
 	autoCommands = ['COMMAND 1', 'COMMAND 2'] # these commands run on start
-	showChannelServer = False # This will hide the channel name from the IRC messages on the Minecraft server, thus reducing the amount of size each messages takes up on screen
+	showChannelServer = True # This will hide the channel name from the IRC messages on the Minecraft server, thus reducing the amount of size each messages takes up on screen
 	commandsShowOnIRC = False # this will output ANY user command to the IRC channel for all to see. beware if typing passwords/private messages/etc.
+	newMode = True # for Minecraft 1.7 and above, set this to true
 	
 	backup = False # on or off switch
-	backupKeep = 25 # how many backups do you wish to keep?
-	backupLocation = 'backup-location' # this folder MUST BE EMPTY.
+	backupKeep = 10 # how many backups do you wish to keep?
+	backupLocation = 'backup-location' # where to keep backups. best to use empty folder.
 	backupFolders = ['server.log', 'server.properties', 'world', 'world_nether', 'world_the_end', 'white-list.txt'] # specify files and folders to back up. DO NOT SPECIFY THE BACKUP FOLDER HERE. EFFECTS ARE WORSE THAN DIVIDING BY ZERO.
 	backupInterval = 3600 # in seconds. 3600 seconds == one hour.
+	backupNotification = True
 	
 	deathKick = False
 	deathKickers = ['JohnnyDiesalot', 'MisterDeath']
@@ -63,6 +73,8 @@ class Server:
 		self.currentSecond = 0
 		self.backupInterval = 0
 		self.authorized = {}
+		self.data = ""
+		self.backups = []
 	def login(self, user):
 		if user not in self.players:
 			self.players.append(user)
@@ -110,7 +122,6 @@ class Server:
 		return a
 	def parse(self):
 		for message in self.messages:
-			print message
 			for channel in Config.channels:
 				self.send('PRIVMSG %s :%s' % (channel, message))
 		self.messages = []
@@ -233,12 +244,12 @@ class Server:
 		else:
 			try:
 				buffer = self.sock.recv(1024)
-				print buffer
+				if buffer == "":
+					self.log.error("Disconnected from IRC")
+					self.sock = False
+					return False
 			except socket.timeout:
-				buffer = ''
-				#self.sock = False
-				#self.log.error('Disconnected from IRC, reconnecting')
-				#return ""
+				buffer = ""
 			if len(buffer) == 0:
 				self.timeout += 1
 				if self.timeout == 60:
@@ -249,26 +260,63 @@ class Server:
 				self.parse()
 	# -- server management -- #
 	def console(self, text):
-		self.proc.stdin.write('say %s\n' % text)
+		if Config.newMode:
+			self.proc.stdin.write('tellraw @a %s\n' % json.dumps({"text": text}))
+		else:
+			self.proc.stdin.write('say %s\n' % text)
 	def run(self, text):
 		self.proc.stdin.write('%s\n' % text)
+	def capture(self):
+		while not self.halt:
+			time.sleep(0.05)
+			try:
+				data = self.proc.stdout.readline()
+				if len(data) > 0:
+					self.data += data
+			except:
+				print "error"
 	def startServer(self):
 		while not self.halt:
 			self.status = 1
 			self.log.info('Starting server...')
 			self.proc = subprocess.Popen(self.serverArgs.split(' ')[1:], stdout=subprocess.PIPE, stdin=subprocess.PIPE)
-			serverLogLength = os.path.getsize('server.log')
 			while True:
 				# backups
-				if int(time.time()) is not self.currentSecond:
+#				print [int(time.time()) is not self.currentSecond, (self.currentSecond, int(time.time()))]
+				if self.currentSecond == int(time.time()):
+					""
+				else:
 					self.backupInterval += 1
 					self.currentSecond = int(time.time())
 				if self.backupInterval == Config.backupInterval and Config.backup:
 					self.backupInterval = 0
+					if len(self.backups) == 0 and os.path.exists(Config.backupLocation + "/backups.json"):
+						f = open(Config.backupLocation + "/backups.json", "r")
+						try:
+							self.backups = json.loads(f.read())
+						except:
+							self.log.error("NOTE - backups.json was unreadable. This might be due to corruption. This might lead to backups never being deleted.")
+							self.send('PRIVMSG %s :ERROR - backups.json is corrupted. Please contact an administer instantly, this may be critical.' % (channel))
+							self.backups = []
+						f.close()
+					else:
+						if len(os.listdir(Config.backupLocation)) > 0:
+							# import old backups from previous versions of Wrapper.py
+							backupTimestamps = []
+							for backupNames in os.listdir(Config.backupLocation):
+								try:
+									backupTimestamps.append(int(backupNames[backupNames.find('-')+1:backupNames.find('.')]))
+								except:
+									pass
+							backupTimestamps.sort()
+							for backupI in backupTimestamps:
+								self.backups.append((int(backupI), "backup-%s.tar" % str(backupI)))
 					for channel in Config.channels:
-						self.send('PRIVMSG %s :Conducting backup. IRC/Server connection may lag for a bit.' % (channel))
-					server.write('say Conducting backup... server and IRC/server bridge may lag...\n')
-					filename = 'backup-%s.tar' % str(int(time.time()))
+						self.send('PRIVMSG %s :Backing up, IRC bridge will freeze and lag may occur' % (channel))
+					if Config.backupNotification:
+						self.console('\xc2\xa7bBacking up, IRC bridge will freeze and lag may occur')
+					timestamp = int(time.time())
+					filename = 'backup-%s.tar' % datetime.datetime.fromtimestamp(int(timestamp)).strftime('%Y-%m-%d_%H:%M:%S')
 					server.write('save-on\n')
 					server.write('save-all\n')
 	
@@ -278,24 +326,39 @@ class Server:
 					arguments = ["tar", "cfpv", '%s/%s' % (Config.backupLocation, filename)]
 					for file in Config.backupFolders:
 						arguments.append(file)
-					os.system(' '.join(arguments))
-					server.write('say Backup Complete!\n')
+					statusCode = os.system(' '.join(arguments))
+					if Config.backupNotification:
+						if statusCode == 0:
+							self.console('\xc2\xa7aBackup complete!')
+							for channel in Config.channels:
+								self.send('PRIVMSG %s :Backup complete!' % (channel))
+						else:
+							self.console('\xc2\xa7cBackup potentially failed - tar exited with status code %d - contact server admin immediately' % int(statusCode))
+							for channel in Config.channels:
+								self.send('PRIVMSG %s :Backup potentially failed - tar exited with status code %d - contact server admin immediately' % (channel, int(statusCode)))
+					self.backups.append((timestamp, 'backup-%s.tar' % datetime.datetime.fromtimestamp(int(timestamp)).strftime('%Y-%m-%d_%H:%M:%S')))
 					
-					if len(os.listdir(Config.backupLocation)) > Config.backupKeep:
-						print "Pruning old backups..."
-						backupTimestamps = []
-						for backupNames in os.listdir(Config.backupLocation):
-							backupTimestamps.append(int(backupNames[backupNames.find('-')+1:backupNames.find('.')]))
-						backupTimestamps.sort()
-						markedForDeletion = []
-						zonk = len(backupTimestamps)
-						for i,e in enumerate(backupTimestamps):
-							if zonk > Config.backupKeep:
-								print "Deleting: %s" % datetime.datetime.fromtimestamp(int(e)).strftime('%Y-%m-%d %H:%M:%S')					
-								markedForDeletion.append(e)
-								zonk = zonk - 1
-						for timestamp in markedForDeletion:
-							os.remove('%s/backup-%s.tar' % (Config.backupLocation, timestamp))
+					if len(self.backups) > Config.backupKeep:
+						self.log.info("Deleting old backups...")
+#						for i,backup in enumerate(self.backups.sort()):
+						while len(self.backups) > Config.backupKeep:
+							backup = self.backups[0]
+							try:
+								os.remove('%s/%s' % (Config.backupLocation, backup[1]))
+							except:
+								print "Failed to delete"
+							self.log.info("Deleting old backup: %s" % datetime.datetime.fromtimestamp(int(backup[0])).strftime('%Y-%m-%d_%H:%M:%S'))
+							hink = self.backups[0][1][:]
+							del self.backups[0]
+					f = open(Config.backupLocation + "/backups.json", "w")
+					f.write(json.dumps(self.backups))
+					f.close()
+#							
+#						for i,e in enumerate(self.backups):
+#							if zonk > Config.backupKeep:				
+#								markedForDeletion.append(e)
+#						for timestamp in markedForDeletion:
+#							os.remove('%s/backup-%s.tar' % (Config.backupLocation, timestamp))
 				# handle IRC
 				self.handle()
 				if self.proc.poll() is not None:
@@ -304,55 +367,49 @@ class Server:
 					if not Config.autoRestart:
 						self.halt = True
 					break
-				if os.path.getsize('server.log') > serverLogLength:
-					f = open('server.log', 'r')
-					f.seek(serverLogLength)
-					data = f.read()
-					serverLogLength = os.path.getsize('server.log')
-					f.close()
-					deathPrefixes = ['fell', 'was', 'drowned', 'blew', 'wakled', 'went', 'burned', 'hit', 'tried', 'died', 'got', 'starved', 'suffocated', 'withered']
-					#print "poll: %s" % str(self.proc.poll())
-					for line in data.split('\n'):
-						if len(line) < 1: continue
-						self.line = line
-						#if self.args(3) == 'Stopping' and self.args(4) == 'server':
-						#	self.log.info('Server shutdown')
-						#	self.halt = True
-						if self.argserver(3) is not False:
-							if self.argserver(3)[0] == '<':
-								name = self.argserver(3)[1:self.argserver(3).find('>')]
-								message = ' '.join(line.split(' ')[4:]).replace('\x1b', '').strip('[m')
-								self.msg('<%s> %s' % (name, message))
-							elif self.argserver(4) == 'logged':
-								name = self.argserver(3)[0:self.argserver(3).find('[')]
-								self.msg('[%s connected]' % name)
-								self.login(name)
-							elif self.argserver(4) == 'lost':
-								name = self.argserver(3)
-								reason = self.argserver(6)
-								self.msg('[%s disconnected] (%s)' % (name, reason))
-								self.logout(name)
-							elif self.argserver(4) == 'Kicked':
-								name = self.argserver(6)
-								self.msg('%s disconnected: kicked' % (name, reason))
-								self.logout(name)
-							elif self.argserver(4) == 'issued':
-								name = self.argserver(3)
-								command = message = ' '.join(line.split(' ')[7:])
-								if Config.commandsShowOnIRC:
-									self.msg('%s issued command: %s' % (name, command))
-							elif self.argserver(3) == 'Done':
-								self.status = 2
-								self.msg('Server started')
-							elif self.argserver(4) in deathPrefixes:
-								self.msg(' '.join(self.line.split(' ')[3:]))
-								name = self.argserver(3)
-								deathKicks = ['You died! Kicked from server.']
-								randThing = Config.deathKickMessages[random.randrange(0, len(Config.deathKickMessages))]
-								print Config.deathKick 
-								print name in Config.deathKickers
-								if Config.deathKick and name in Config.deathKickers:
-									server.proc.stdin.write('kick %s %s\n\r' % (name, randThing))	
+				if len(self.data) > 0:
+					data = self.data[:]
+					self.data = ""
+				else:
+					data = ""
+				deathPrefixes = ['fell', 'was', 'drowned', 'blew', 'walked', 'went', 'burned', 'hit', 'tried', 'died', 'got', 'starved', 'suffocated', 'withered']
+				for line in data.split('\n'):
+					if len(line) < 1: continue
+					self.line = line
+					print line
+					if self.argserver(3) is not False:
+						if self.argserver(3)[0] == '<':
+							name = self.argserver(3)[1:self.argserver(3).find('>')]
+							message = ' '.join(line.split(' ')[4:]).replace('\x1b', '').strip('[m')
+							self.msg('<%s> %s' % (name, message))
+						elif self.argserver(4) == 'logged':
+							name = self.argserver(3)[0:self.argserver(3).find('[')]
+							self.msg('[%s connected]' % name)
+							self.login(name)
+						elif self.argserver(4) == 'lost':
+							name = self.argserver(3)
+							reason = self.argserver(6)
+							self.msg('[%s disconnected] (%s)' % (name, reason))
+							self.logout(name)
+						elif self.argserver(4) == 'Kicked':
+							name = self.argserver(6)
+						elif self.argserver(4) == 'issued':
+							name = self.argserver(3)
+							command = message = ' '.join(line.split(' ')[7:])
+							if Config.commandsShowOnIRC:
+								self.msg('%s issued command: %s' % (name, command))
+						elif self.argserver(3) == 'Done':
+							self.status = 2
+							self.msg('Server started')
+						elif self.argserver(4) in deathPrefixes:
+							self.msg(' '.join(self.line.split(' ')[3:]))
+							name = self.argserver(3)
+							deathKicks = ['You died! Kicked from server.']
+							randThing = Config.deathKickMessages[random.randrange(0, len(Config.deathKickMessages))]
+							print Config.deathKick 
+							print name in Config.deathKickers
+							if Config.deathKick and name in Config.deathKickers:
+								server.proc.stdin.write('kick %s %s\n\r' % (name, randThing))
 				time.sleep(0.1)
 
 class Log:
@@ -366,19 +423,28 @@ class Log:
 		print "%s [ERROR] %s" % (self.timestamp(), string)
 
 def consoleWatch():
-	while irc.reconnect:
+	while not server.halt:
 		input = raw_input('> ')
-		#if input[0] == '/':
-		#	pass
-		#else:
-		try:
-			server.proc.stdin.write('%s\n' % input)
-		except:
-			break
-	print "input loop ended"
-time.sleep(0.5)
+		if input == "/halt":
+			server.run("stop")
+			server.halt = True
+		elif input == "/restart":
+			server.run("stop")
+		else:
+			try:
+				server.proc.stdin.write('%s\n' % input)
+			except:
+				break
+def instantEnd(signal, frame):
+	server.halt = True
+	sys.exit()
+signal.signal(signal.SIGINT, instantEnd)
 logger = Log()
-#consoleWatchT = threading.Thread(target=consoleWatch, args=())
-#consoleWatchT.start()
 server = Server(sys.argv, logger)
+captureThread = threading.Thread(target=server.capture, args=())
+captureThread.daemon = True
+captureThread.start()
+consoleWatchT = threading.Thread(target=consoleWatch, args=())
+consoleWatchT.daemon = True
+consoleWatchT.start()
 server.startServer()
