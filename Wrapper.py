@@ -1,7 +1,6 @@
-from cStringIO import StringIO
 import socket, datetime, time, sys, threading, random, subprocess, os, json, signal
 
-# Minecraft IRC Wrapper by Ben Baptist -- Version 0.3
+# Minecraft IRC Wrapper by Ben Baptist -- Version 0.3.1
 # benbaptist.com
 # 
 # version 0.1 changelog:
@@ -27,8 +26,12 @@ import socket, datetime, time, sys, threading, random, subprocess, os, json, sig
 #   ^ backup notifications can be turned off, as well
 # - fix the Wrapper not reconnecting to IRC (needs to)
 # - other fixes
+# version 0.3.1 changelog:
+# - removed StringIO module import, it was useless
+# - fixed crash while trying to send error message to IRC when backups.json was unreadable
+# - Wrapper.py now kicks users and shuts down the server when it crashes
 # bugs needing fixed:
-# - none that I can think of
+# - fixing pre-1.7 servers not working (even with newMode set to False)
 # to-do list:
 # - maybe add some in-game commands such as /halt
 # - web interface?
@@ -36,13 +39,13 @@ import socket, datetime, time, sys, threading, random, subprocess, os, json, sig
 # configuration
 class Config:
 	nick = 'MinecraftIRC'
-	server = 'benbaptist.com'
+	server = '192.168.1.160'
 	port = 6667
 	channels = ['#main'] # channels to join
 	autoCommands = ['COMMAND 1', 'COMMAND 2'] # these commands run on start
 	showChannelServer = True # This will hide the channel name from the IRC messages on the Minecraft server, thus reducing the amount of size each messages takes up on screen
 	commandsShowOnIRC = False # this will output ANY user command to the IRC channel for all to see. beware if typing passwords/private messages/etc.
-	newMode = True # for Minecraft 1.7 and above, set this to true
+	newMode = False # for Minecraft 1.7 and above, set this to true, otherwise set to False for older versions
 	
 	backup = False # on or off switch
 	backupKeep = 10 # how many backups do you wish to keep?
@@ -250,6 +253,8 @@ class Server:
 					return False
 			except socket.timeout:
 				buffer = ""
+			except:
+				buffer = ""
 			if len(buffer) == 0:
 				self.timeout += 1
 				if self.timeout == 60:
@@ -296,7 +301,8 @@ class Server:
 							self.backups = json.loads(f.read())
 						except:
 							self.log.error("NOTE - backups.json was unreadable. This might be due to corruption. This might lead to backups never being deleted.")
-							self.send('PRIVMSG %s :ERROR - backups.json is corrupted. Please contact an administer instantly, this may be critical.' % (channel))
+							for channel in Config.channels:
+								self.send('PRIVMSG %s :ERROR - backups.json is corrupted. Please contact an administer instantly, this may be critical.' % (channel))
 							self.backups = []
 						f.close()
 					else:
@@ -378,38 +384,68 @@ class Server:
 					self.line = line
 					print line
 					if self.argserver(3) is not False:
-						if self.argserver(3)[0] == '<':
-							name = self.argserver(3)[1:self.argserver(3).find('>')]
-							message = ' '.join(line.split(' ')[4:]).replace('\x1b', '').strip('[m')
-							self.msg('<%s> %s' % (name, message))
-						elif self.argserver(4) == 'logged':
-							name = self.argserver(3)[0:self.argserver(3).find('[')]
-							self.msg('[%s connected]' % name)
-							self.login(name)
-						elif self.argserver(4) == 'lost':
-							name = self.argserver(3)
-							reason = self.argserver(6)
-							self.msg('[%s disconnected] (%s)' % (name, reason))
-							self.logout(name)
-						elif self.argserver(4) == 'Kicked':
-							name = self.argserver(6)
-						elif self.argserver(4) == 'issued':
-							name = self.argserver(3)
-							command = message = ' '.join(line.split(' ')[7:])
-							if Config.commandsShowOnIRC:
-								self.msg('%s issued command: %s' % (name, command))
-						elif self.argserver(3) == 'Done':
-							self.status = 2
-							self.msg('Server started')
-						elif self.argserver(4) in deathPrefixes:
-							self.msg(' '.join(self.line.split(' ')[3:]))
-							name = self.argserver(3)
-							deathKicks = ['You died! Kicked from server.']
-							randThing = Config.deathKickMessages[random.randrange(0, len(Config.deathKickMessages))]
-							print Config.deathKick 
-							print name in Config.deathKickers
-							if Config.deathKick and name in Config.deathKickers:
-								server.proc.stdin.write('kick %s %s\n\r' % (name, randThing))
+						if Config.newMode:
+							if self.argserver(3)[0] == '<':
+								name = self.argserver(3)[1:self.argserver(3).find('>')].replace("\xc2\xfa", "")
+								message = ' '.join(line.split(' ')[4:]).replace('\x1b', '').strip('[m').replace("\xc2\xfa", "")
+								self.msg('<%s> %s' % (name, message))
+							elif self.argserver(4) == 'logged':
+								name = self.argserver(3)[0:self.argserver(3).find('[')]
+								self.msg('[%s connected]' % name)
+								self.login(name)
+							elif self.argserver(4) == 'lost':
+								name = self.argserver(3)
+								reason = self.argserver(6)
+								self.msg('[%s disconnected] (%s)' % (name, reason))
+								self.logout(name)
+							elif self.argserver(4) == 'Kicked':
+								name = self.argserver(6)
+							elif self.argserver(4) == 'issued':
+								name = self.argserver(3)
+								command = message = ' '.join(line.split(' ')[7:])
+								if Config.commandsShowOnIRC:
+									self.msg('%s issued command: %s' % (name, command))
+							elif self.argserver(3) == 'Done':
+								self.status = 2
+								self.msg('Server started')
+							elif self.argserver(4) in deathPrefixes:
+								self.msg(' '.join(self.line.split(' ')[3:]))
+								name = self.argserver(3)
+								randThing = Config.deathKickMessages[random.randrange(0, len(Config.deathKickMessages))]
+								if Config.deathKick and name in Config.deathKickers:
+									server.proc.stdin.write('kick %s %s\n\r' % (name, randThing))
+						else: # -- FOR 1.6.4 AND PREVIOUSLY ONLY!!!!! -- 
+							if self.argserver(2)[0] == '<':
+								name = self.argserver(2)[1:self.argserver(2).find('>')].replace("\xc2\xfa", "")
+								message = ' '.join(line.split(' ')[3:]).replace('\x1b', '').strip('[m').replace("\xc2\xfa", "")
+								self.msg('<%s> %s' % (name, message))
+							elif self.argserver(3) == 'logged':
+								name = self.argserver(2)[0:self.argserver(2).find('[')]
+								self.msg('[%s connected]' % name)
+								self.login(name)
+							elif self.argserver(3) == 'lost':
+								name = self.argserver(2)
+								reason = self.argserver(5)
+								self.msg('[%s disconnected] (%s)' % (name, reason))
+								self.logout(name)
+							elif self.argserver(3) == 'Kicked':
+								name = self.argserver(6)
+								self.msg('[%s disconnected] (kicked)' % name)
+								self.logout(name)
+							elif self.argserver(3) == 'issued':
+								name = self.argserver(2)
+								command = message = ' '.join(line.split(' ')[6:])
+								if Config.commandsShowOnIRC:
+									self.msg('%s issued command: %s' % (name, command))
+							elif self.argserver(2) == 'Done':
+								self.status = 2
+								self.msg('Server started')
+							elif self.argserver(3) in deathPrefixes:
+								self.msg(' '.join(self.line.split(' ')[2:]))
+								name = self.argserver(2)
+								randThing = Config.deathKickMessages[random.randrange(0, len(Config.deathKickMessages))]
+								if Config.deathKick and name in Config.deathKickers:
+									server.proc.stdin.write('kick %s %s\n\r' % (name, randThing))
 				time.sleep(0.1)
 
 class Log:
@@ -447,4 +483,11 @@ captureThread.start()
 consoleWatchT = threading.Thread(target=consoleWatch, args=())
 consoleWatchT.daemon = True
 consoleWatchT.start()
-server.startServer()
+try:
+	server.startServer()
+except:
+	server.halt = True
+	for player in server.players:
+		server.run("kick %s Wrapper.py crashed - please contact a server admin instantly" % player)
+	server.run("save-all")
+	server.run("stop")
