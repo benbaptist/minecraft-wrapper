@@ -39,13 +39,13 @@ import socket, datetime, time, sys, threading, random, subprocess, os, json, sig
 # configuration
 class Config:
 	nick = 'MinecraftIRC'
-	server = '192.168.1.160'
+	server = 'benbaptist.com'
 	port = 6667
 	channels = ['#main'] # channels to join
 	autoCommands = ['COMMAND 1', 'COMMAND 2'] # these commands run on start
 	showChannelServer = True # This will hide the channel name from the IRC messages on the Minecraft server, thus reducing the amount of size each messages takes up on screen
 	commandsShowOnIRC = False # this will output ANY user command to the IRC channel for all to see. beware if typing passwords/private messages/etc.
-	newMode = False # for Minecraft 1.7 and above, set this to true, otherwise set to False for older versions
+	newMode = True # for Minecraft 1.7 and above, set this to true, otherwise set to False for older versions
 	
 	backup = False # on or off switch
 	backupKeep = 10 # how many backups do you wish to keep?
