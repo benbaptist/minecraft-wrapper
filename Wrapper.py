@@ -90,7 +90,7 @@ class Config:
 		self.config = {}
 		self.exit = False
 	def loadConfig(self):
-		if not os.path.exists("wrapper.properties"):
+		if not os.path.exists("wrapper.properties"): # creates new wrapper.properties. The reason I do this is so the ordering isn't random and is a bit prettier
 			f = open("wrapper.properties", "w")
 			f.write(DEFAULT_CONFIG)
 			f.close()
@@ -551,7 +551,7 @@ class Server:
 						if not self.config["General"]["pre-1.7-mode"]:
 							if self.argserver(3)[0] == "<":
 								name = self.formatForIRC(self.filterName(self.argserver(3)[1:self.argserver(3).find('>')].replace("\xc2\xfa", "")))
-								message = self.formatForIRC(" ".join(line.split(' ')[4:]).replace('\x1b', '').strip('[m').replace("\xc2\xfa", ""))
+								message = self.formatForIRC(" ".join(line.split(' ')[4:]).replace('\x1b', '').replace("\xc2\xfa", ""))
 								self.msg("<%s> %s" % (name, message))
 							elif self.argserver(4) == "logged":
 								name = self.formatForIRC(self.filterName(self.argserver(3)[0:self.argserver(3).find('[')]))
@@ -586,7 +586,7 @@ class Server:
 						else: # -- FOR 1.6.4 AND PREVIOUSLY ONLY!!!!! -- 
 							if self.argserver(2)[0] == '<':
 								name = self.filterName(self.argserver(2)[1:self.argserver(2).find('>')].replace("\xc2\xfa", ""))
-								message = ' '.join(line.split(' ')[3:]).replace('\x1b', '').strip('[m').replace("\xc2\xfa", "")
+								message = ' '.join(line.split(' ')[3:]).replace('\x1b', '').replace("\xc2\xfa", "")
 								self.msg('<%s> %s' % (name, message))
 							elif self.argserver(3) == 'logged':
 								name = self.argserver(2)[0:self.argserver(2).find('[')]
@@ -637,6 +637,7 @@ def consoleWatch():
 		if input == "/halt":
 			server.run("stop")
 			server.halt = True
+			sys.exit()
 		elif input == "/stop":
 			server.run("stop")
 			server.server = False
