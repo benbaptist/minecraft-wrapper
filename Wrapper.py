@@ -1,6 +1,6 @@
 import socket, datetime, time, sys, threading, random, subprocess, os, json, signal, traceback, ConfigParser, ast
 
-# Minecraft IRC Wrapper by Ben Baptist -- Version 0.4.0
+# Minecraft IRC Wrapper by Ben Baptist -- Version 0.4.1
 # benbaptist.com
 # 
 # version 0.1 changelog:
@@ -30,13 +30,6 @@ import socket, datetime, time, sys, threading, random, subprocess, os, json, sig
 # - removed StringIO module import, it was useless
 # - fixed crash while trying to send error message to IRC when backups.json was unreadable
 # - Wrapper.py now kicks users and shuts down the server when it crashes
-# version 0.3.2 changelog:
-# - fixed save-off during backup
-# - achievements are now logged
-# - obstruct usernames in IRC to refrain from pinging
-# - other small fixes
-# - version 0.4.0 changelog:
-# - 
 # bugs needing fixed:
 # - fixing pre-1.7 servers not working (even with pre1.7Mode set to True)
 # to-do list:
@@ -83,7 +76,7 @@ death-kick-messages = ['You died!']
 """
 
 class Config:
-	version = "0.4.0"
+	version = "0.4.1"
 	debug = True
 	def __init__(self, log):
 		self.log = log
@@ -550,7 +543,7 @@ class Server:
 					if self.argserver(3) is not False:
 						if not self.config["General"]["pre-1.7-mode"]:
 							if self.argserver(3)[0] == "<":
-								name = self.formatForIRC(self.filterName(self.argserver(3)[1:self.argserver(3).find('>')].replace("\xc2\xfa", "")))
+								name = self.formatForIRC(self.filterName(self.argserver(3)[1:self.argserver(3).find('>')]))
 								message = self.formatForIRC(" ".join(line.split(' ')[4:]).replace('\x1b', '').replace("\xc2\xfa", ""))
 								self.msg("<%s> %s" % (name, message))
 							elif self.argserver(4) == "logged":
