@@ -4,8 +4,10 @@
 - Web interface for server management
 - Multi-server mode
 - Proxy system (like Bungeecord, perhaps)
--- Maybe add some in-game Wrapper.py commands such as /halt
--- Block/Action Logging
+<ul>
+<li> Maybe add some in-game Wrapper.py commands such as /halt</li>
+<li> Block/Action Logging</li>
+</ul>
 - Ability to halt server without shutting down wrapper - for fine server control
 - Potentially implement region fixer in wrapper.py
 - Update version of Minecraft server automatically
@@ -24,6 +26,8 @@ Small update, but brings one much-needed change: the new configuration file syst
 - New configuration file
 - Obstruct usernames in IRC to refrain from pinging (currently doesn't work with colored names, known bug)
 - Bug fixes:
--- Save-off during backup
--- Various crashes, such as when it can't connect to IRC
--- Other small fixes
+<ul>
+<li> Save-off during backup</li>
+<li> Various crashes, such as when it can't connect to IRC</li>
+<li> Other small fixes</li>
+</ul>
