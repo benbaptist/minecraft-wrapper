@@ -50,7 +50,7 @@ auto-restart = True
 
 [Backups]
 enabled = False
-backup-folders = ['server.log', 'server.properties', 'world', 'world_nether', 'world_the_end', 'white-list.txt']
+backup-folders = ['server.properties', 'world', 'white-list.txt']
 backup-interval = 3600
 backup-notification = True
 backup-location = backup-directory
@@ -161,7 +161,10 @@ class Config:
 			sys.exit()
 	def save(self):
 		self.parser.write(open("wrapper.properties", "wb"))
-
+class IRC:
+	def __init__(self):
+		self.socket = False
+	
 class Server:
 	def __init__(self, args, logger):
 		self.log = logger
