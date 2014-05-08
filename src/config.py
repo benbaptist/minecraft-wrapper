@@ -42,7 +42,7 @@ public-stats = True"""
 
 class Config:
 	version = "0.6.0"
-	debug = True
+	debug = False
 	def __init__(self, log):
 		self.log = log
 		self.config = {}
