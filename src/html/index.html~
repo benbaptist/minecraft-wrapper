@@ -1,0 +1,122 @@
+<html>
+	<head>
+		<title>[server_name] - Server Stats</title>
+		<style type="text/css">
+			@font-face {
+			  font-family: 'AndroidFont';
+			  src: url('/RobotoCondensed-Light.ttf')
+			}
+			body{
+				margin: 0px;
+			}
+			.top{ 
+				background-color: lightgrey; /*#0099FF 33CCFF*/
+/*				width: 100%;*/
+				padding: 10px;
+			}
+			.top span{
+				font-family: UnDotum;
+				color: #333333;
+				margin: 0px;
+				font-size: 20px;
+				font-weight: bold;
+			}
+			.sidebar{
+				background-color: #aaaaaa;
+				height: 100%;
+				width: 2in;
+				float: left;
+			}
+			.sidebar .item{
+				font-family: AndroidFont;
+				font-size: 25px;
+				font-weight: light;
+				padding-left: 25px;
+				padding-top: 10px;
+				padding-bottom: 10px;
+			}
+			.sidebar .item:hover{
+				background-color: #666666;
+				cursor: pointer;
+			}
+			.main{
+				float: left;
+				padding: 5px;
+				font-family: Arial;
+				font-size: 14px;
+			}
+			h2{
+				margin: 0px;
+			}
+		</style>
+		<script type="text/javascript">
+			// ugh I hate this code so badly. it's so bad. ugly. i hate javascript. 
+			// - benbaptist
+			// oh, and... uh... this code is provided as-is and blab blah blah blah etc, etc.
+			current = "stats"
+			e = function(i){return document.getElementById(i)}
+			// functions stolen from StackOverflow.com :P
+			function pad(n, width, z){ // http://stackoverflow.com/questions/10073699/pad-a-number-with-leading-zeros-in-javascript
+			  z = z || '0';
+			  n = n + '';
+			  return n.length >= width ? n : new Array(width - n.length + 1).join(z) + n;
+			}
+			// stuff
+			function select(id){
+				document.getElementById(current).style.display = "none"
+				document.getElementById(id.innerHTML.toLowerCase()).style.display = "block"
+				current = id.innerHTML.toLowerCase()
+			}
+			function getHTTP(request){
+				var ajax = new XMLHttpRequest()
+				ajax.open("GET", request, false)
+				ajax.send(null)
+				return JSON.parse(ajax.response)
+			}
+			function poll(){
+				data = getHTTP("/action/stats")
+				//document.getElementById("stats").innerHTML = getHTTP("/action/stats").playerCount
+				e("player_list").innerHTML = "<th>Player</th><th>Logged In</th></tr>"
+				for (i in data.players){
+					var player = data.players[i]
+					var d = new Date(player.loggedIn * 1000); var date = d.getMonth() + "/" + d.getDay() + "/" + d.getFullYear() + " @ " + d.getHours() + ":" + pad(d.getMinutes(), 2)
+					e("player_list").innerHTML += "<td>"+player.name+"</td><td>"+date+"</td>"
+				}
+				/*for (i in data.players){
+					var player = data.players[i]
+					if (!e("player-"+player)){
+						e("player_list").innerHTML += "<td id='player-"+player+"'>" + player + "</td>"
+					}
+				}*/
+//				for (i in players){if(!(players[i] in data.players)){e("player-"+players[i]).remove()}}
+				e("player_count").innerHTML = "(" + data.players.length + ")"
+				setTimeout("poll()", 1000)
+			}
+			window.onload = function(){
+				poll()
+			}
+		</script>
+	</head>
+	<body>
+		<div class="top">
+			<span>Server Stats</span>
+		</div>
+		<div class="sidebar">
+			<div class="item" onclick="select(this)">Stats</div>
+			<div class="item" onclick="select(this)">Chat</div>
+		</div>
+		<div class="main">
+			<div id="stats">
+				<h2>Players <span id="player_count"></span></h2>
+				<table style="border:solid 1 black;width:100%;">
+					<tbody id="player_list" style="width:100%;">
+						<th>Player</th></tr>
+					</tbody>
+				</table>
+			</div>
+			<div id="chat" style="display:none">
+				<iframe src="google.com"></iframe>
+			</div>
+		</div>
+	</body>
+</html>

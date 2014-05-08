@@ -33,8 +33,15 @@ users-to-kick = ['username1', 'username2', 'remove these usernames to kick ALL u
 death-kick-messages = ['You died!']
 """
 
+"""[Web]
+enabled = False
+bind = 0.0.0.0
+port = 8070
+password = blahblah98
+public-stats = True"""
+
 class Config:
-	version = "0.5.0"
+	version = "0.6.0"
 	debug = True
 	def __init__(self, log):
 		self.log = log
@@ -52,7 +59,7 @@ class Config:
 
 		sections = ["General", "Backups", "IRC", "Death"]
 		defaults = {"General":{
-			"command": "java -jar minecraft_server.1.7.4.jar",
+			"command": "java -jar minecraft_server.1.7.7.jar",
 			"auto-restart": True,
 			"pre-1.7-mode": False
 		},		
@@ -83,6 +90,14 @@ class Config:
 			"death-kick-messages": ["You died!"],
 			"users-to-kick": ["username1", "username2", "remove these usernames to kick ALL users upon death"]
 		}}
+		
+	#	"Web":{
+#			"enabled": False,
+#			"bind": "0.0.0.0",
+#			"port": 8070,
+#			"password": "usefulpass",
+#			"public-stats": True
+#		},
 		
 		for section in sections:
 			try:

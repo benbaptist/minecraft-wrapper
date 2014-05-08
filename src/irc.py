@@ -113,11 +113,13 @@ class IRC:
 			channel = self.args(2)[1:][:-1]
 			self.log.info("%s joined %s" % (nick, channel))
 			self.console(channel, [{"text": nick, "color": "green"}, {"text": " joined the channel", "color": "white"}])
+			self.wrapper.callEvent("irc.channelJoin", {"user": nick, "channel": channel})
 		if self.args(1) == "PART":
 			nick = self.args(0)[1:self.args(0).find("!")]
 			channel = self.args(2)
 			self.log.info("%s parted from %s" % (nick, channel))
 			self.console(channel, [{"text": nick, "color": "green"}, {"text": " left the channel", "color": "white"}])
+			self.wrapper.callEvent("irc.channelPart", {"user": nick, "channel": channel})
 		if self.args(1) == "MODE":
 			try:
 				nick = self.args(0)[1:self.args(0).find('!')]
@@ -129,22 +131,31 @@ class IRC:
 				pass
 		if self.args(0) == "PING":
 			self.send("PONG %s" % self.args(1))
+		if self.args(0) == "QUIT":
+			nick = self.args(0)[1:self.args(0).find("!")]
+			message = " ".join(self.line.split(" ")[2:])[1:].strip("\n").strip("\r")
+			
+			self.wrapper.callEvent("irc.quit", {"user": nick, "quit": message})
+			self.rawConsole({"text": nick, "color": "green", extra:[{"text": " quit", "color": "white"}]})
 		if self.args(1) == "PRIVMSG":
 			channel = self.args(2)
 			nick = self.args(0)[1:self.args(0).find("!")]
 			message = " ".join(self.line.split(" ")[3:])[1:].strip("\n").strip("\r")
 			
 			if channel[0] == "#":
+				self.wrapper.callEvent("irc.channelMessage", {"user": nick, "channel": channel, "message": message})
 				if message.strip() == ".players":
 					users = ""
 					for user in self.server.players:
 						users += "%s " % user
 					self.send("PRIVMSG %s :There are currently %s users on the server: %s" % (channel, len(self.server.players), users))
+				elif message.strip() == ".about":
+					self.send("PRIVMSG %s :Wrapper.py version %s" % (channel, Config.version))
 				else:
 					self.log.info('[%s] (%s) %s' % (channel, nick, message))
 					message = message.decode("utf-8", "ignore")
 					for msg in self.everyNth(message, 80):
-							self.console(channel, [{"text": "(%s) " % nick, "color": "green"}, {"text": msg, "color": "white"}])
+						self.console(channel, [{"text": "(%s) " % nick, "color": "green"}, {"text": msg, "color": "white"}])
 			elif self.config["IRC"]["control-from-irc"]:
 				self.log.info('[PRIVATE] (%s) %s' % (nick, message))
 				def args(i):

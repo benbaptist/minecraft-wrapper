@@ -15,6 +15,24 @@
 - Potentially implement a way to reload the config - but that might be too difficult/bug prone
 - UHC-style timer
 - Clean up & organize code... it's a tad cluttery right now! (this is only semi-true now, I've cleaned it up quite a bit)
+- Fix messages not sending from IRC to server with show-channel off
+
+<h4>0.6.0</h4>
+- Added an in-development plugin system! Super early, but it works great, it seems.
+<ul>
+	<li>Plugins are hosted in the 'wrapper-plugins' folder as single .py files or Python package folders</li>
+	<li>Type '/plugins' in the console to see a list of loaded Wrapper.py plugins</li>
+	<li>Type '/reloadplugins' to reload plugins</li>
+	<li>More documentation for writing plugins will be released soon</li>
+</ul> 
+- Fixed crash when typing 'list' command in console (I thought I fixed this crash long ago, but apparently not!)
+- Added .about command in IRC to see Wrapper.py version
+I had more planned for this update, but I got busy, haven't really been able to work much on Wrapper.py as much. 
+I've written part of the code for a web panel, but the code is not even close to being finished. I released 0.6 earlier
+because some people really wanted the plugin functionality ASAP.
+
+As a note, the plugin API is still very *extremely* early in development. I have a lot more planned for it, but it's still
+pretty powerful as is.
 
 <h4>0.5.0</h4>
 - Fixed non-UTF-8 characters crashing Wrapper.py

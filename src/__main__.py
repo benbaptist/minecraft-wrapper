@@ -1,15 +1,81 @@
 # -*- coding: utf-8 -*-
 import socket, datetime, time, sys, threading, random, subprocess, os, json, signal, traceback, ConfigParser, ast
-from log import Log
+from log import *
 from config import Config
 from irc import IRC
 from server import Server
+from importlib import import_module
+import importlib
+from api import API
+from proxy import Proxy
+from web import Web
 			
 class Wrapper:
 	def __init__(self):
 		self.log = Log()
 		self.halt = False
 		self.configManager = Config(self.log)
+		self.plugins = {}
+		self.server = False
+		self.proxy = Proxy(self)
+		self.api = API(self, "Wrapper.py")
+		self.listeners = []
+	def loadPlugin(self, i):
+		self.log.info("Loading plugin %s..." % i)
+		if os.path.isdir("wrapper-plugins/%s" % i):
+			plugin = import_module(i)
+		elif i[-3:] == ".py":
+			plugin = import_module(i[:-3])
+		else:
+			return False
+		main = plugin.Main(API(self, i), PluginLog(self.log, i))
+		self.plugins[i] = {"main": main, "name": i, "good": True, "events": {}, "module": plugin}
+		main.onEnable()
+	def unloadPlugin(self, plugin):
+		self.plugins[plugin]["main"].onDisable()
+		reload(self.plugins[plugin]["module"])
+	def loadPlugins(self):
+		self.log.info("Loading plugins...")
+		if not os.path.exists("wrapper-plugins"):
+			os.mkdir("wrapper-plugins")
+		sys.path.append("wrapper-plugins")
+		for i in os.listdir("wrapper-plugins"):
+			try:
+				if os.path.isdir("wrapper-plugins/%s" % i): self.loadPlugin(i)
+				elif i[-3:] == ".py": self.loadPlugin(i)
+			except:
+				for line in traceback.format_exc().split("\n"):
+					self.log.debug(line)
+				self.log.error("Failed to import plugin '%s'" % i)
+				self.plugins[i] = {"name": i, "good": False}
+		self.callEvent("helloworld.event", {"testValue": True})
+	def reloadPlugins(self):
+		for i in self.plugins:
+			try:
+				self.unloadPlugin(i)
+			except:
+				for line in traceback.format_exc().split("\n"):
+					self.log.debug(line)
+				self.log.error("Failed to unload plugin '%s'" % i)
+		self.plugins = {}
+		self.loadPlugins()
+		self.log.info("Plugins reloaded")
+	def callEvent(self, event, payload):
+		for sock in self.listeners:
+			sock.append({"event": event, "payload": payload})
+		for pluginID in self.plugins:
+			plugin = self.plugins[pluginID]
+			if not plugin["good"]: continue
+			if event in plugin["events"]:
+				try:
+					result = plugin["events"][event](payload)
+					if result == False:
+						return False
+				except:
+					self.log.error("Plugin '%s' errored out when executing callback event '%s':" % (pluginID, event))
+					for line in traceback.format_exc().split("\n"):
+						self.log.error(line)
+		return True
 	def start(self):
 		self.configManager.loadConfig()
 		self.config = self.configManager.config
@@ -22,6 +88,11 @@ class Wrapper:
 			t = threading.Thread(target=self.irc.init, args=())
 			t.daemon = True
 			t.start()
+		#if self.config["Web"]["enabled"]:
+#			self.web = Web(self)
+#			t = threading.Thread(target=self.web.wrap, args=())
+#			t.daemon = True
+#			t.start()
 		
 		if len(sys.argv) < 2:
 			wrapper.server.serverArgs = wrapper.configManager.config["General"]["command"].split(" ")
@@ -34,6 +105,9 @@ class Wrapper:
 		consoleDaemon = threading.Thread(target=self.console, args=())
 		consoleDaemon.daemon = True
 		consoleDaemon.start()
+		#proxyThread = threading.Thread(target=self.proxy.host, args=())
+#		proxyThread.daemon = True
+#		proxyThread.start()
 		
 		self.server.startServer()
 	def SIGINT(self, s, f):
@@ -66,9 +140,12 @@ class Wrapper:
 				self.server.start = True
 			elif command == "restart":
 				self.server.run("stop")
+			elif command == "reloadplugins":
+				self.reloadPlugins()
 			elif command == "help":
+				self.log.info("/reloadplugins - reload plugins")	
 				self.log.info("/start & /stop - start and stop the server without auto-restarting respectively without shutting down Wrapper.py")
-				self.log.info("/restart - same as just typing 'stop' (without a slash)")				
+				self.log.info("/restart - restarts the server, obviously")				
 				self.log.info("/halt - shutdown Wrapper.py completely")
 				self.log.info("Wrapper.py version %s" % Config.version)
 			else:
@@ -77,6 +154,8 @@ if __name__ == "__main__":
 	wrapper = Wrapper()
 	log = wrapper.log
 	log.info("Wrapper.py started - version %s" % Config.version)
+	wrapper.loadPlugins()
+	
 	try:
 		t = threading.Thread(target=wrapper.start(), args=())
 		t.daemon = True
