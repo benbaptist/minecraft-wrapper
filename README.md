@@ -27,5 +27,11 @@ Wrapper.py supports the following features:
 More documentation will be released for working with the plugin API, but for now, here's a few things.</br></br>
 
 <b>List of events</b>: https://docs.google.com/spreadsheet/ccc?key=0AoWx24EFSt80dDRiSGVxcW1xQkVLb2dWTUN4WE5aNmc&usp=sharing</br>
-Check the 'plugins' folder to see some example plugins. template.py literally does nothing - it is just the shell of a plugin to work off of.
-example.py contains some actual functions. 
+</br></br>Check the 'plugins' folder to see some example plugins.
+<ul> 
+<li>template.py literally does nothing - it is just the shell of a plugin to work off of.</li>
+<li>example.py contains some actual functions. </li>
+<li>zombie.py is a fun test plugin that leaves behind undead versions of people when killed by undead mobs.</li>
+</ul>
+</br>Tip: Open config.py and change debug to True in the 'Config' class if you want to see more error messages and other useful messages 
+while developing plugins.
