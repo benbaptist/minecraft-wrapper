@@ -27,7 +27,7 @@ Wrapper.py supports the following features:
 More documentation will be released for working with the plugin API, but for now, here's a few things.</br></br>
 
 <b>List of events</b>: https://docs.google.com/spreadsheet/ccc?key=0AoWx24EFSt80dDRiSGVxcW1xQkVLb2dWTUN4WE5aNmc&usp=sharing</br>
-</br></br>Check the 'plugins' folder to see some example plugins.
+</br></br>Check the 'plugins' folder to see some example plugins. (note: plugins are supposed to go into the wrapper-plugins folder on your Wrapper.py installation)
 <ul> 
 <li>template.py literally does nothing - it is just the shell of a plugin to work off of.</li>
 <li>example.py contains some actual functions. </li>
