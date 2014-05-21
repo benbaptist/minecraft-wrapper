@@ -1,4 +1,4 @@
-import socket, threading, struct, StringIO
+import socket, threading, struct, StringIO, time
 class Proxy:
 	def __init__(self, wrapper):
 		self.wrapper = wrapper
@@ -6,6 +6,7 @@ class Proxy:
 		self.socket = False
 	def host(self):
 		while not self.socket:
+			time.sleep(1)
 			try:
 				self.socket = socket.socket()
 				self.socket.bind(("0.0.0.0", 25590))
@@ -37,8 +38,8 @@ class Client:
 		self.server.connect(("localhost", 25525))
 	def disconnect(self):
 		try:
-			self.server.close()
 			self.client.close()
+			self.server.close()
 		except:
 			pass
 	def handleServerToClient(self):
@@ -69,7 +70,8 @@ class Client:
 		original += self.pack_varInt(id)
 		original += payload.read()
 		payload.seek(0)
-		print original.encode('hex')
+		if id is not 3: print "%s: %s" % (id, payload.read().encode('hex'))
+		payload.seek(0)
 		return (id, payload, original)
 	def unpack_byte(self, socket):
 		return struct.unpack("B", socket.recv(1))[0]

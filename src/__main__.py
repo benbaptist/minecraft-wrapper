@@ -105,9 +105,9 @@ class Wrapper:
 		consoleDaemon = threading.Thread(target=self.console, args=())
 		consoleDaemon.daemon = True
 		consoleDaemon.start()
-		#proxyThread = threading.Thread(target=self.proxy.host, args=())
-#		proxyThread.daemon = True
-#		proxyThread.start()
+		proxyThread = threading.Thread(target=self.proxy.host, args=())
+		proxyThread.daemon = True
+		proxyThread.start()
 		
 		self.server.startServer()
 	def SIGINT(self, s, f):
@@ -142,6 +142,16 @@ class Wrapper:
 				self.server.run("stop")
 			elif command == "reloadplugins":
 				self.reloadPlugins()
+			elif command == "plugins":
+				self.log.info("List of plugins installed:")
+				for plug in self.plugins:
+					try: description = self.plugins[plug]["main"].description
+					except: description = "No description available for this plugin"
+					
+					try: version = self.plugins[plug]["main"].version
+					except: version = (1, 0, 0)
+						
+					self.log.info("%s v%s - %s" % (plug, ".".join([str(_) for _ in version]), description))
 			elif command == "help":
 				self.log.info("/reloadplugins - reload plugins")	
 				self.log.info("/start & /stop - start and stop the server without auto-restarting respectively without shutting down Wrapper.py")
