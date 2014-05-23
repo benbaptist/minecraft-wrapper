@@ -140,7 +140,7 @@ class Wrapper:
 				self.server.start = True
 			elif command == "restart":
 				self.server.run("stop")
-			elif command == "reloadplugins":
+			elif command == "reload":
 				self.reloadPlugins()
 			elif command == "plugins":
 				self.log.info("List of plugins installed:")
@@ -153,7 +153,8 @@ class Wrapper:
 						
 					self.log.info("%s v%s - %s" % (plug, ".".join([str(_) for _ in version]), description))
 			elif command == "help":
-				self.log.info("/reloadplugins - reload plugins")	
+				self.log.info("/reload - reload plugins")	
+				self.log.info("/plugins - lists plugins")	
 				self.log.info("/start & /stop - start and stop the server without auto-restarting respectively without shutting down Wrapper.py")
 				self.log.info("/restart - restarts the server, obviously")				
 				self.log.info("/halt - shutdown Wrapper.py completely")

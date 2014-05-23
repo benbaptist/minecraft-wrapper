@@ -17,6 +17,10 @@
 - Clean up & organize code... it's a tad cluttery right now! (this is only semi-true now, I've cleaned it up quite a bit)
 - Fix messages not sending from IRC to server with show-channel off
 
+<h4>0.6.1</h4>
+- Write date to log files as well as a timestamp
+- Added /plugins command - was removed in the last update by mistake
+
 <h4>0.6.0</h4>
 - Added an in-development plugin system! Super early, but it works great, it seems.
 <ul>
