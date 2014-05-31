@@ -17,9 +17,20 @@
 - Clean up & organize code... it's a tad cluttery right now! (this is only semi-true now, I've cleaned it up quite a bit)
 - Fix messages not sending from IRC to server with show-channel off
 
-<h4>0.6.1</h4>
+<h4>0.7.0</h4>
+- Huge Improvements to APIs
+<ul>
+<li>self.api.registerCommand() for making real /commands in-game</li>
+<li></li>
+</ul> 
+- Added a proxy mode - this is necessary for additional features of the API
+<ul>
+<li>If you've used BungeeCord before - proxy mode should make sense. The only difference is that you don't need to make the server in offline mode.</li>
+</ul> 
 - Write date to log files as well as a timestamp
 - Added /plugins command - was removed in the last update by mistake
+- Removed IRC -> Server Line-Wrapping (each message was divided automatically every 80 characters - it was annoying)
+
 
 <h4>0.6.0</h4>
 - Added an in-development plugin system! Super early, but it works great, it seems.

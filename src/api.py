@@ -54,8 +54,9 @@ class API:
 		self.name = name
 		self.minecraft = Minecraft(wrapper)
 		self.server = wrapper.server
-	def registerCommand(self, name, sender, callback):
-		pass
+	def registerCommand(self, name, callback):
+		self.wrapper.log.debug("[%s] Registered command '%s'" % (self.name, name))
+		self.wrapper.plugins[self.name]["commands"][name] = callback
 	def registerEvent(self, eventType, callback):
 		self.wrapper.log.debug("[%s] Registered event '%s'" % (self.name, eventType))
 		self.wrapper.plugins[self.name]["events"][eventType] = callback
@@ -71,6 +72,8 @@ class API:
 				else:
 					sock.remove(event)
 			time.sleep(0.05)
+	def callEvent(self, event, payload):
+		self.wrapper.callEvent(event, payload)
 class Minecraft:
 	def __init__(self, wrapper):
 		self.wrapper = wrapper
@@ -100,6 +103,8 @@ class Minecraft:
 		self.wrapper.server.run("effect %s %s %d %d" % (player, effectConverted, duration, amplifier))
 	def summonEntity(self, entity, x=0, y=0, z=0, dataTag={}):
 		self.wrapper.server.run("summon %s %d %d %d %s" % (entity, x, y, z, json.dumps(dataTag)))
+	def message(self, destination="", json_message={}):
+		self.console("tellraw %s %s" % (destination, json.dumps(json_message)))
 	def broadcast(self, message=""):
 		extras = []
 		bold = False
@@ -137,6 +142,11 @@ class Minecraft:
 		extras.append({"text": current, "color": color, "obfuscated": obfuscated, 
 			"underline": underline, "bold": bold, "italic": italic, "strikethrough": strikethrough})
 		self.wrapper.server.run("tellraw @a %s" % json.dumps({"text": "", "extra": extras}))
+	def changeResourcePack(self, url, name):
+		if self.getPlayer(name).client is False:
+			raise Exception("User %s is not connected via proxy" % name)
+		else:
+			self.getPlayer("name").client.send("varint|string|short|bytearray", (0x3f, "MC|RPack", len(url), url), self.getPlayer("name").client.client) 
 	def teleportAllEntities(self, entity, x, y, z):
 		self.wrapper.server.run("tp @e[type=%s] %d %d %d" % (entity, x, y, z))
 	def teleportPlayer(self):
@@ -161,11 +171,31 @@ class Minecraft:
 			if args(3) == "The" and args(4) == "block" and args(6) == "%d,%d,%d" % (x, y, z):
 				return {"block": args(8)}
 class Player:
-	def __init__(self, name, wrapper):
-		#self.uuid = uuid
+	def __init__(self, username, wrapper):
 		self.wrapper = wrapper
-#		self.server = wrapper.server
-		self.name = name
+		self.server = wrapper.server
+		self.name = username
+		self.username = self.name # just an alias - same variable
 		self.loggedIn = time.time()
+		
+		self.uuid = self.wrapper.getUUID(username)
+		for client in self.wrapper.proxy.clients:
+			if client.username == username:
+				self.client = client
+				break
+	def getPosition(self):
+		return self.client.position
+	def getGamemode(self):
+		return self.client.gamemode
+	def setGamemode(self, gm=0):
+		if gm in (0, 1, 2, 3):
+			self.client.gamemode = gm
+			self.wrapper.server.run("gamemode %s %d" % (self.username, gm))
+	def isOp(self):
+		operators = json.loads(open("ops.json", "r").read())
+		for i in operators:
+			if i["uuid"] == self.uuid or i["name"] == self.username:
+				return True
+		return False
 	def message(self, message=""):
-		self.wrapper.server.run("tellraw %s %s" % (self.name, json.dumps({"text": message})))
+		self.wrapper.server.run("tellraw %s %s" % (self.username, json.dumps(message)))

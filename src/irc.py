@@ -46,20 +46,6 @@ class IRC:
 			self.socket.send("%s\n" % payload)
 		else:
 			return False
-	def everyNth(self, str, j):
-		a = []
-		z = 0
-		b = 0
-		a.append("")
-		for i in str:
-			a[b] += i
-			if z == j:
-				z = 0
-				b+=1
-				a.append("")
-			else:
-				z+=1
-		return a
 	def handle(self):
 		while self.socket:
 			try:
@@ -154,8 +140,7 @@ class IRC:
 				else:
 					self.log.info('[%s] (%s) %s' % (channel, nick, message))
 					message = message.decode("utf-8", "ignore")
-					for msg in self.everyNth(message, 80):
-						self.console(channel, [{"text": "(%s) " % nick, "color": "green"}, {"text": msg, "color": "white"}])
+					self.console(channel, [{"text": "(%s) " % nick, "color": "green"}, {"text": message, "color": "white"}])
 			elif self.config["IRC"]["control-from-irc"]:
 				self.log.info('[PRIVATE] (%s) %s' % (nick, message))
 				def args(i):

@@ -30,6 +30,12 @@ forward-commands-to-irc = False
 kick-on-death = False
 users-to-kick = ['username1', 'username2', 'remove these usernames to kick ALL users upon death']
 death-kick-messages = ['You died!']
+
+[Proxy]
+enabled = False
+server-port = 25564
+proxy-port = 25565
+bind = 0.0.0.0
 """
 
 """[Web]
@@ -56,7 +62,7 @@ class Config:
 		self.parser = ConfigParser.ConfigParser()
 		self.parser.readfp(open("wrapper.properties"))
 
-		sections = ["General", "Backups", "IRC", "Death"]
+		sections = ["General", "Backups", "IRC", "Death", "Proxy"]
 		defaults = {"General":{
 			"command": "java -jar minecraft_server.1.7.7.jar",
 			"auto-restart": True
@@ -87,6 +93,12 @@ class Config:
 			"kick-on-death": False,
 			"death-kick-messages": ["You died!"],
 			"users-to-kick": ["username1", "username2", "remove these usernames to kick ALL users upon death"]
+		},
+		"Proxy":{
+			"enabled": False,
+			"server-port": 25564,
+			"proxy-port": 25565,
+			"bind": "0.0.0.0"
 		}}
 		
 	#	"Web":{

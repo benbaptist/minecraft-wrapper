@@ -18,8 +18,8 @@ class Wrapper:
 		self.plugins = {}
 		self.server = False
 		self.proxy = Proxy(self)
-		self.api = API(self, "Wrapper.py")
 		self.listeners = []
+		self.api = API(self, "Wrapper.py")
 	def loadPlugin(self, i):
 		self.log.info("Loading plugin %s..." % i)
 		if os.path.isdir("wrapper-plugins/%s" % i):
@@ -29,7 +29,7 @@ class Wrapper:
 		else:
 			return False
 		main = plugin.Main(API(self, i), PluginLog(self.log, i))
-		self.plugins[i] = {"main": main, "name": i, "good": True, "events": {}, "module": plugin}
+		self.plugins[i] = {"main": main, "name": i, "good": True, "events": {}, "commands": {}, "module": plugin}
 		main.onEnable()
 	def unloadPlugin(self, plugin):
 		self.plugins[plugin]["main"].onDisable()
@@ -61,6 +61,8 @@ class Wrapper:
 		self.loadPlugins()
 		self.log.info("Plugins reloaded")
 	def callEvent(self, event, payload):
+		if event == "player.runCommand":
+			if not self.playerCommand(payload): return False
 		for sock in self.listeners:
 			sock.append({"event": event, "payload": payload})
 		for pluginID in self.plugins:
@@ -76,6 +78,36 @@ class Wrapper:
 					for line in traceback.format_exc().split("\n"):
 						self.log.error(line)
 		return True
+	def playerCommand(self, payload):
+		self.log.info("%s executed '/%s %s'" % (payload["player"], payload["command"], " ".join(payload["args"])))
+		if payload["command"] == "wrapper":
+			return False
+		if payload["command"] == "reload":
+			self.reloadPlugins()
+			self.api.minecraft.getPlayer(payload["player"]).message({"text": "Plugins reloaded.", "color": "green"})
+			return False
+		for pluginID in self.plugins:
+			plugin = self.plugins[pluginID]
+			if not plugin["good"]: continue
+			command = payload["command"]
+			if payload["command"] in plugin["commands"]:
+				try:
+					plugin["commands"][command](self.api.minecraft.getPlayer(payload["player"]), payload["args"])
+					return False
+				except:
+					self.log.error("Plugin '%s' errored out when executing command: '<%s> /%s':" % (pluginID, payload["player"], command))
+					for line in traceback.format_exc().split("\n"):
+						self.log.error(line)
+					self.api.minecraft.getPlayer(payload["player"]).message({"text": "An internal error occurred on the server side while trying to execute this command. Apologies.", "color": "red"})
+		return True
+	def getUUID(self, name):
+		f = open("usercache.json", "r")
+		data = json.loads(f.read())
+		f.close()
+		for u in data:
+			if u["name"] == name:
+				return u["uuid"]
+		return False
 	def start(self):
 		self.configManager.loadConfig()
 		self.config = self.configManager.config
@@ -105,9 +137,10 @@ class Wrapper:
 		consoleDaemon = threading.Thread(target=self.console, args=())
 		consoleDaemon.daemon = True
 		consoleDaemon.start()
-		proxyThread = threading.Thread(target=self.proxy.host, args=())
-		proxyThread.daemon = True
-		proxyThread.start()
+		if self.config["Proxy"]["enabled"]:
+			proxyThread = threading.Thread(target=self.proxy.host, args=())
+			proxyThread.daemon = True
+			proxyThread.start()
 		
 		self.server.startServer()
 	def SIGINT(self, s, f):
