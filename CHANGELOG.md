@@ -21,7 +21,7 @@
 - Huge Improvements to APIs
 <ul>
 <li>self.api.registerCommand() for making real /commands in-game</li>
-<li></li>
+<li>self.api.minecraft.changeResourcePack() for changing resource packs on the fly</li>
 </ul> 
 - Added a proxy mode - this is necessary for additional features of the API
 <ul>
