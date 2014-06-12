@@ -3,6 +3,7 @@ import traceback, ConfigParser, ast, time, os, sys
 DEFAULT_CONFIG = """[General]
 command = java -jar minecraft_server.1.7.9.jar nogui
 auto-restart = True
+debug = False
 
 [Backups]
 enabled = False
@@ -65,7 +66,8 @@ class Config:
 		sections = ["General", "Backups", "IRC", "Death", "Proxy"]
 		defaults = {"General":{
 			"command": "java -jar minecraft_server.1.7.7.jar",
-			"auto-restart": True
+			"auto-restart": True,
+			"debug": False
 		},		
 		"IRC":{ 
 			"enabled": True, 
@@ -130,7 +132,7 @@ class Config:
 				if item not in self.config[section]:
 					self.config[section][item] = defaults[section][item]
 					self.parser.set(section, item, defaults[section][item])
-					self.log.debug("key %s in section %s not in wrapper.properties - adding" % (item, section))
+					self.log.debug("Key %s in section %s not in wrapper.properties - adding" % (item, section))
 					self.exit = True
 				else:
 					for key in keys:
@@ -139,6 +141,7 @@ class Config:
 						except:
 							self.config[section][key[0]] = key[1]
 		self.save()
+		Config.debug = self.config["General"]["debug"]
 		if self.exit:
 			self.log.info("Updated wrapper.properties with new entries - edit configuration if needed and start again")
 			sys.exit()

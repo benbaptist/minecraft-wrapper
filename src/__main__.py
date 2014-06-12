@@ -19,19 +19,32 @@ class Wrapper:
 		self.server = False
 		self.proxy = Proxy(self)
 		self.listeners = []
+		
+		self.commands = {}
+		self.events = {}
+		
 		self.api = API(self, "Wrapper.py")
+		self.api.registerCommand("ponk", self.ponk)
+	def ponk(self, player, args):
+		player.message("&aHey man, you just ran ponk! That's cool!")
 	def loadPlugin(self, i):
 		self.log.info("Loading plugin %s..." % i)
 		if os.path.isdir("wrapper-plugins/%s" % i):
 			plugin = import_module(i)
+			name = i
 		elif i[-3:] == ".py":
 			plugin = import_module(i[:-3])
+			name = i[:-3]
 		else:
 			return False
-		main = plugin.Main(API(self, i), PluginLog(self.log, i))
-		self.plugins[i] = {"main": main, "name": i, "good": True, "events": {}, "commands": {}, "module": plugin}
+		self.commands[name] = {}
+		self.events[name] = {}
+		main = plugin.Main(API(self, name), PluginLog(self.log, name))
+		self.plugins[name] = {"main": main, "name": name, "good": True, "module": plugin} #  "events": {}, "commands": {}, 
 		main.onEnable()
 	def unloadPlugin(self, plugin):
+		del self.commands[plugin]
+		del self.events[plugin]
 		self.plugins[plugin]["main"].onDisable()
 		reload(self.plugins[plugin]["module"])
 	def loadPlugins(self):
@@ -65,12 +78,10 @@ class Wrapper:
 			if not self.playerCommand(payload): return False
 		for sock in self.listeners:
 			sock.append({"event": event, "payload": payload})
-		for pluginID in self.plugins:
-			plugin = self.plugins[pluginID]
-			if not plugin["good"]: continue
-			if event in plugin["events"]:
+		for pluginID in self.events:
+			if event in self.events[pluginID]:
 				try:
-					result = plugin["events"][event](payload)
+					result = self.events[pluginID][event](payload)
 					if result == False:
 						return False
 				except:
@@ -90,15 +101,16 @@ class Wrapper:
 			plugin = self.plugins[pluginID]
 			if not plugin["good"]: continue
 			command = payload["command"]
-			if payload["command"] in plugin["commands"]:
+			if command in self.commands[pluginID]:
 				try:
-					plugin["commands"][command](self.api.minecraft.getPlayer(payload["player"]), payload["args"])
+					self.commands[pluginID][command](self.api.minecraft.getPlayer(payload["player"]), payload["args"])
 					return False
 				except:
 					self.log.error("Plugin '%s' errored out when executing command: '<%s> /%s':" % (pluginID, payload["player"], command))
 					for line in traceback.format_exc().split("\n"):
 						self.log.error(line)
 					self.api.minecraft.getPlayer(payload["player"]).message({"text": "An internal error occurred on the server side while trying to execute this command. Apologies.", "color": "red"})
+					return False
 		return True
 	def getUUID(self, name):
 		f = open("usercache.json", "r")
@@ -112,6 +124,8 @@ class Wrapper:
 		self.configManager.loadConfig()
 		self.config = self.configManager.config
 		signal.signal(signal.SIGINT, self.SIGINT)
+		
+		self.loadPlugins()
 		
 		self.server = Server(sys.argv, self.log, self.configManager.config, self)
 		
@@ -198,7 +212,6 @@ if __name__ == "__main__":
 	wrapper = Wrapper()
 	log = wrapper.log
 	log.info("Wrapper.py started - version %s" % Config.version)
-	wrapper.loadPlugins()
 	
 	try:
 		t = threading.Thread(target=wrapper.start(), args=())

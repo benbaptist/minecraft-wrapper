@@ -56,10 +56,12 @@ class API:
 		self.server = wrapper.server
 	def registerCommand(self, name, callback):
 		self.wrapper.log.debug("[%s] Registered command '%s'" % (self.name, name))
-		self.wrapper.plugins[self.name]["commands"][name] = callback
+		if self.name not in self.wrapper.commands: self.wrapper.commands[self.name] = {}
+		self.wrapper.commands[self.name][name] = callback
 	def registerEvent(self, eventType, callback):
 		self.wrapper.log.debug("[%s] Registered event '%s'" % (self.name, eventType))
-		self.wrapper.plugins[self.name]["events"][eventType] = callback
+		if self.name not in self.wrapper.events: self.wrapper.events[self.name] = {}
+		self.wrapper.events[self.name][eventType] = callback
 	def blockForEvent(self, eventType):
 		sock = []
 		self.wrapper.listeners.append(sock)
@@ -77,35 +79,7 @@ class API:
 class Minecraft:
 	def __init__(self, wrapper):
 		self.wrapper = wrapper
-	def processColorCodes(self, string):
-		for code in API.colorCodes:
-			string = string.replace(code, API.colorCodes[code])
-		return string	
-	def console(self, string):
-		try:
-			self.wrapper.server.run(string)
-		except:
-			pass
-	def setBlock(self, x, y, z, tileName, dataValue=0, oldBlockHandling="replace", dataTag={}):
-		self.wrapper.server.run("setblock %d %d %d %s %d %s %s" % (x, y, z, tileName, dataValue, oldBlockHandling, json.dumps(dataTag).replace('"', "")))
-	def giveStatusEffect(self, player, effect, duration=30, amplifier=30):
-		if type(effect) == int: effectConverted = str(effect)
-		else:
-			try: 
-				effectConverted = int(effect)
-			except: # a non-number was passed, so we'll figure out what status effect it was in word form
-				if effect in API.statusEffects:
-					effectConverted = str(API.statusEffects[effect])
-				else:
-					raise Exception("Invalid status effect given!")
-		if int(effectConverted) > 24 or int(effectConverted) < 1:
-			raise Exception("Invalid status effect given!") 
-		self.wrapper.server.run("effect %s %s %d %d" % (player, effectConverted, duration, amplifier))
-	def summonEntity(self, entity, x=0, y=0, z=0, dataTag={}):
-		self.wrapper.server.run("summon %s %d %d %d %s" % (entity, x, y, z, json.dumps(dataTag)))
-	def message(self, destination="", json_message={}):
-		self.console("tellraw %s %s" % (destination, json.dumps(json_message)))
-	def broadcast(self, message=""):
+	def processColorCodes(self, message):
 		extras = []
 		bold = False
 		italic = False
@@ -141,12 +115,41 @@ class Minecraft:
 				it.next()
 		extras.append({"text": current, "color": color, "obfuscated": obfuscated, 
 			"underline": underline, "bold": bold, "italic": italic, "strikethrough": strikethrough})
-		self.wrapper.server.run("tellraw @a %s" % json.dumps({"text": "", "extra": extras}))
-	def changeResourcePack(self, url, name):
+		return json.dumps({"text": "", "extra": extras})
+	def console(self, string):
+		try:
+			self.wrapper.server.run(string)
+		except:
+			pass
+	def setBlock(self, x, y, z, tileName, dataValue=0, oldBlockHandling="replace", dataTag={}):
+		self.wrapper.server.run("setblock %d %d %d %s %d %s %s" % (x, y, z, tileName, dataValue, oldBlockHandling, json.dumps(dataTag).replace('"', "")))
+	def giveStatusEffect(self, player, effect, duration=30, amplifier=30):
+		if type(effect) == int: effectConverted = str(effect)
+		else:
+			try: 
+				effectConverted = int(effect)
+			except: # a non-number was passed, so we'll figure out what status effect it was in word form
+				if effect in API.statusEffects:
+					effectConverted = str(API.statusEffects[effect])
+				else:
+					raise Exception("Invalid status effect given!")
+		if int(effectConverted) > 24 or int(effectConverted) < 1:
+			raise Exception("Invalid status effect given!") 
+		self.wrapper.server.run("effect %s %s %d %d" % (player, effectConverted, duration, amplifier))
+	def summonEntity(self, entity, x=0, y=0, z=0, dataTag={}):
+		self.wrapper.server.run("summon %s %d %d %d %s" % (entity, x, y, z, json.dumps(dataTag)))
+	def message(self, destination="", json_message={}):
+		self.console("tellraw %s %s" % (destination, json.dumps(json_message)))
+	def broadcast(self, message=""):
+		if isinstance(message, dict):
+			self.wrapper.server.run("tellraw @a %s" % json.dumps(message))
+		else:
+			self.wrapper.server.run("tellraw @a %s" % self.processColorCodes(message))
+	def changeResourcePack(self, name, url):
 		if self.getPlayer(name).client is False:
 			raise Exception("User %s is not connected via proxy" % name)
 		else:
-			self.getPlayer("name").client.send("varint|string|short|bytearray", (0x3f, "MC|RPack", len(url), url), self.getPlayer("name").client.client) 
+			self.getPlayer(name).client.send("varint|string|short|bytearray", (0x3f, "MC|RPack", len(url), url), self.getPlayer(name).client.client) 
 	def teleportAllEntities(self, entity, x, y, z):
 		self.wrapper.server.run("tp @e[type=%s] %d %d %d" % (entity, x, y, z))
 	def teleportPlayer(self):
@@ -183,6 +186,46 @@ class Player:
 			if client.username == username:
 				self.client = client
 				break
+	def processColorCodes(self, message):
+		message = message.encode('ascii', 'ignore')
+		extras = []
+		bold = False
+		italic = False
+		underline = False
+		obfuscated = False
+		strikethrough = False
+		color = "white"
+		current = ""; it = iter(xrange(len(message)))
+		for i in it:
+			char = message[i]
+			if char is not "&":
+				current += char
+			else:
+				extras.append({"text": current, "color": color, "obfuscated": obfuscated, 
+					"underline": underline, "bold": bold, "italic": italic, "strikethrough": strikethrough})
+				current = ""
+				code = message[i+1]
+				if code in "abcdef0123456789":
+					try: color = API.colorCodes[code]
+					except: color = "white"
+				if code == "k": obfuscated = True
+				if code == "l": bold = True
+				if code == "m": strikethrough = True
+				if code == "n": underline = True
+				if code == "o": italic = True
+				if code == "r":
+					bold = False
+					italic = False
+					underline = False
+					obfuscated = False
+					strikethrough = False
+					color = "white"
+				if code == "&":
+					current += "&"
+				it.next()
+		extras.append({"text": current, "color": color, "obfuscated": obfuscated, 
+			"underline": underline, "bold": bold, "italic": italic, "strikethrough": strikethrough})
+		return json.dumps({"text": "", "extra": extras})
 	def getPosition(self):
 		return self.client.position
 	def getGamemode(self):
@@ -191,6 +234,8 @@ class Player:
 		if gm in (0, 1, 2, 3):
 			self.client.gamemode = gm
 			self.wrapper.server.run("gamemode %s %d" % (self.username, gm))
+	def setResourcePack(self, url):
+		print self.client.send("varint|string|short|bytearray", (0x3f, "MC|RPack", len(url), url), self.client.client)
 	def isOp(self):
 		operators = json.loads(open("ops.json", "r").read())
 		for i in operators:
@@ -198,4 +243,7 @@ class Player:
 				return True
 		return False
 	def message(self, message=""):
-		self.wrapper.server.run("tellraw %s %s" % (self.username, json.dumps(message)))
+		if isinstance(message, dict):
+			self.wrapper.server.run("tellraw %s %s" % (self.username, json.dumps(message)))
+		else:
+			self.wrapper.server.run("tellraw %s %s" % (self.username, self.processColorCodes(message)))

@@ -44,6 +44,7 @@ class Client:
 		self.server.connect(("localhost", self.wrapper.config["Proxy"]["server-port"]))
 	def disconnect(self, message="Disconnecting"):
 		self.wrapper.log.debug("Disconnecting client '%s' for reason: %s" % (self.username, message))
+		self.abort = True
 		try:
 			self.wrapper.proxy.clients.remove(self)
 		except:
@@ -52,13 +53,11 @@ class Client:
 			self.client.close()
 			self.server.close()
 		except:
-			pass
+			print traceback.format_exc()
 	def handleServerToClient(self):
 		try:
 			while not self.abort:
-				buffer = self.server.recv(1024 * 1024)
-				self.client.send(buffer)
-				continue
+				if self.abort: break
 				objection = True
 				try:
 					packet = self.grabPacket(self.server)
@@ -85,6 +84,7 @@ class Client:
 	def handleClientToServer(self):
 		try:
 			while not self.abort:
+				if self.abort: break
 				try:
 					packet = self.grabPacket(self.client)
 					if packet[0] == -1: continue
@@ -103,8 +103,8 @@ class Client:
 					data = self.read("string:message", packet[1])
 					if data is not None:
 						try:
-							if data["message"] == "tomato":
-								self.send("varint|string|short|bytearray", (0x3f, "MC|RPack", len("http://benbaptist.com/s/ResourcePackTest.zip"), "http://benbaptist.com/s/ResourcePackTest.zip"), self.client) 
+							#if data["message"] == "tomato":
+							#	self.send("varint|string|short|bytearray", (0x3f, "MC|RPack", len("http://benbaptist.com/s/ResourcePackTest.zip"), "http://benbaptist.com/s/ResourcePackTest.zip"), self.client) 
 							objection = self.wrapper.callEvent("player.rawMessage", {"player": self.username, "message": data["message"]})
 							if objection and data["message"][0] == "/":
 								def args(i):
@@ -133,9 +133,14 @@ class Client:
 				if packet[0] == 0x07:
 					#data = self.read("byte:status|int:x|ubyte:y|int:z|byte:face", packet[1])
 					data = self.read("byte:status|long:position|byte:face", packet[1])
-					position = (data["position"] >> 38, data["position"] << 26 >> 52, data["position"] << 38 >> 38)
+					position = (data["position"] >> 38, (data["position"] >> 26) & 0xFFF, data["position"] & 0x3FFFFFF)
 					if data is not None and data["status"] not in (3, 4, 5):
 						objection = self.wrapper.callEvent("player.dig", {"player": self.username, "xyz": position, "status": data["status"], "face": data["face"]})
+				if packet[0] == 0x08:
+					data = self.read("long:position|byte:direction", packet[1])
+					position = (data["position"] >> 38, (data["position"] >> 26) & 0xFFF, data["position"] & 0x3FFFFFF)
+					if data is not None:
+						objection = self.wrapper.callEvent("player.place", {"player": self.username, "xyz": position})
 				#payload = packet.parse()
 				#if payload["packet"] == "chat": # chat packet
 				#	objection = self.wrapper.callEvent("player.rawMessage", {"player": self.username, "message": payload["payload"]["json"]})
@@ -203,7 +208,6 @@ class Client:
 				result[name] = None
 		return result
 	def send(self, expression, payload, socket):
-		return False
 		result = ""
 		for i,type in enumerate(expression.split("|")):
 			try:
@@ -231,18 +235,24 @@ class Client:
 		return struct.pack(">h", payload)
 	def send_varInt(self, payload):
 		return self.pack_varInt(payload)
+	def read_data(self, socket, length):
+		d = socket.read(length)
+		if len(d) == 0:
+			self.disconnect()
+			return False
+		return d
 	def read_byte(self, socket):
-		return struct.unpack("b", socket.read(1))[0]
+		return struct.unpack("b", self.read_data(socket, 1))[0]
 	def read_ubyte(self, socket):
-		return struct.unpack("B", socket.read(1))[0]
+		return struct.unpack("B", self.read_data(socket, 1))[0]
 	def read_long(self, socket):
-		return struct.unpack(">q", socket.read(8))[0]
+		return struct.unpack(">q", self.read_data(socket, 8))[0]
 	def read_float(self, socket):
-		return struct.unpack(">f", socket.read(4))[0]
+		return struct.unpack(">f", self.read_data(socket, 4))[0]
 	def read_int(self, socket):
-		return struct.unpack(">i", socket.read(4))[0]
+		return struct.unpack(">i", self.read_data(socket, 4))[0]
 	def read_double(self, socket):
-		return struct.unpack(">d", socket.read(8))[0]
+		return struct.unpack(">d", self.read_data(socket, 8))[0]
 	def read_bool(self, socket):
 		if socket.read(1) == 0x01: return True
 		else: return False
