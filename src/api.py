@@ -79,6 +79,8 @@ class API:
 class Minecraft:
 	def __init__(self, wrapper):
 		self.wrapper = wrapper
+	def getWorldName(self):
+		return self.wrapper.server.worldName
 	def processColorCodes(self, message):
 		extras = []
 		bold = False
@@ -235,7 +237,7 @@ class Player:
 			self.client.gamemode = gm
 			self.wrapper.server.run("gamemode %s %d" % (self.username, gm))
 	def setResourcePack(self, url):
-		print self.client.send("varint|string|short|bytearray", (0x3f, "MC|RPack", len(url), url), self.client.client)
+		self.client.send(0x3f, "string|short|bytearray", ("MC|RPack", len(url), url), self.client.client)
 	def isOp(self):
 		operators = json.loads(open("ops.json", "r").read())
 		for i in operators:

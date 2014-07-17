@@ -22,9 +22,6 @@ class Wrapper:
 		
 		self.commands = {}
 		self.events = {}
-		
-		self.api = API(self, "Wrapper.py")
-		self.api.registerCommand("ponk", self.ponk)
 	def ponk(self, player, args):
 		player.message("&aHey man, you just ran ponk! That's cool!")
 	def loadPlugin(self, i):
@@ -97,7 +94,7 @@ class Wrapper:
 			self.reloadPlugins()
 			self.api.minecraft.getPlayer(payload["player"]).message({"text": "Plugins reloaded.", "color": "green"})
 			return False
-		for pluginID in self.plugins:
+		for pluginID in self.commands:
 			plugin = self.plugins[pluginID]
 			if not plugin["good"]: continue
 			command = payload["command"]
@@ -125,6 +122,9 @@ class Wrapper:
 		self.config = self.configManager.config
 		signal.signal(signal.SIGINT, self.SIGINT)
 		
+		self.api = API(self, "Wrapper.py")
+		self.api.registerCommand("ponk", self.ponk)
+		
 		self.loadPlugins()
 		
 		self.server = Server(sys.argv, self.log, self.configManager.config, self)
@@ -134,11 +134,11 @@ class Wrapper:
 			t = threading.Thread(target=self.irc.init, args=())
 			t.daemon = True
 			t.start()
-		#if self.config["Web"]["enabled"]:
-#			self.web = Web(self)
-#			t = threading.Thread(target=self.web.wrap, args=())
-#			t.daemon = True
-#			t.start()
+		if self.config["Web"]["web-enabled"]:
+			self.web = Web(self)
+			t = threading.Thread(target=self.web.wrap, args=())
+			t.daemon = True
+			t.start()
 		
 		if len(sys.argv) < 2:
 			wrapper.server.serverArgs = wrapper.configManager.config["General"]["command"].split(" ")
@@ -151,7 +151,7 @@ class Wrapper:
 		consoleDaemon = threading.Thread(target=self.console, args=())
 		consoleDaemon.daemon = True
 		consoleDaemon.start()
-		if self.config["Proxy"]["enabled"]:
+		if self.config["Proxy"]["proxy-enabled"]:
 			proxyThread = threading.Thread(target=self.proxy.host, args=())
 			proxyThread.daemon = True
 			proxyThread.start()

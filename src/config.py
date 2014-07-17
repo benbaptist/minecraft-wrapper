@@ -47,7 +47,7 @@ password = blahblah98
 public-stats = True"""
 
 class Config:
-	version = "0.6.1"
+	version = "0.7"
 	debug = False
 	def __init__(self, log):
 		self.log = log
@@ -63,7 +63,7 @@ class Config:
 		self.parser = ConfigParser.ConfigParser()
 		self.parser.readfp(open("wrapper.properties"))
 
-		sections = ["General", "Backups", "IRC", "Death", "Proxy"]
+		sections = ["General", "Backups", "IRC", "Death", "Proxy", "Web"]
 		defaults = {"General":{
 			"command": "java -jar minecraft_server.1.7.7.jar",
 			"auto-restart": True,
@@ -97,19 +97,19 @@ class Config:
 			"users-to-kick": ["username1", "username2", "remove these usernames to kick ALL users upon death"]
 		},
 		"Proxy":{
-			"enabled": False,
+			"proxy-enabled": False,
 			"server-port": 25564,
 			"proxy-port": 25565,
-			"bind": "0.0.0.0"
+			"proxy-bind": "0.0.0.0"
+		},
+		"Web":{
+			"web-enabled": False,
+			"web-bind": "0.0.0.0",
+			"web-port": 8070,
+			"web-password": "usefulpass",
+			"public-stats": True
 		}}
-		
-	#	"Web":{
-#			"enabled": False,
-#			"bind": "0.0.0.0",
-#			"port": 8070,
-#			"password": "usefulpass",
-#			"public-stats": True
-#		},
+
 		
 		for section in sections:
 			try:
