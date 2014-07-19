@@ -90,11 +90,29 @@ class Wrapper:
 		self.log.info("%s executed '/%s %s'" % (payload["player"], payload["command"], " ".join(payload["args"])))
 		if payload["command"] == "wrapper":
 			return False
+		if payload["command"] == "plugins" or payload["command"] == "pl":
+			player = self.api.minecraft.getPlayer(payload["player"])
+			if player.isOp():
+				player.message({"text": "List of plugins installed:", "color": "red", "italic": True})
+				for plugin in self.plugins:
+					try: description = self.plugins[plugin]["main"].description
+					except: description = "No description available for this plugin"
+					
+					try: version = self.plugins[plugin]["main"].version
+					except: version = (1, 0, 0)
+					
+					player.message({"text": "%s v%s - %s" % (plugin, ".".join([str(_) for _ in version]), description), "color": "gray"})
+				return False
 		if payload["command"] == "reload":
-			self.reloadPlugins()
-			self.api.minecraft.getPlayer(payload["player"]).message({"text": "Plugins reloaded.", "color": "green"})
-			return False
+			player = self.api.minecraft.getPlayer(payload["player"])
+			if player.isOp():
+				self.reloadPlugins()
+				self.api.minecraft.getPlayer(payload["player"]).message({"text": "Plugins reloaded.", "color": "green"})
+				return False
 		for pluginID in self.commands:
+			#if pluginID == "Wrapper.py":
+#				self.commands[pluginID][command](self.api.minecraft.getPlayer(payload["player"]), payload["args"])
+#				return False
 			plugin = self.plugins[pluginID]
 			if not plugin["good"]: continue
 			command = payload["command"]

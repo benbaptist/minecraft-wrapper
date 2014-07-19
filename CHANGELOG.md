@@ -30,6 +30,7 @@
 - Write date to log files as well as a timestamp
 - Added /plugins command - was removed in the last update by mistake
 - Removed IRC -> Server Line-Wrapping (each message was divided automatically every 80 characters - it was annoying)
+- Fixed bug where serious plugin errors resulted in that plugin not being reloadable
 
 
 <h4>0.6.0</h4>
