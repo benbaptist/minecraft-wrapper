@@ -37,6 +37,8 @@ enabled = False
 server-port = 25564
 proxy-port = 25565
 bind = 0.0.0.0
+motd = Minecraft Server
+online-mode = True
 """
 
 """[Web]
@@ -100,7 +102,9 @@ class Config:
 			"proxy-enabled": False,
 			"server-port": 25564,
 			"proxy-port": 25565,
-			"proxy-bind": "0.0.0.0"
+			"proxy-bind": "0.0.0.0",
+			"motd": "Minecraft Server",
+			"online-mode": True
 		},
 		"Web":{
 			"web-enabled": False,

@@ -76,6 +76,11 @@ class API:
 			time.sleep(0.05)
 	def callEvent(self, event, payload):
 		self.wrapper.callEvent(event, payload)
+	def getPluginContext(self, pluginID):
+		if pluginID in self.wrapper.plugins:
+			return self.wrapper.plugins[pluginID]
+		else:
+			raise Exception("Plugin %s does not exist!")
 class Minecraft:
 	def __init__(self, wrapper):
 		self.wrapper = wrapper
@@ -165,6 +170,8 @@ class Minecraft:
 			raise Exception("No such player %s is logged in" % name)
 	def getLevelInfo(self, worldName=""):
 		pass
+	def getSpawnPoint(self):
+		return self.wrapper.server.spawnPoint
 	def getBlock(self, x, y, z):
 		# this function doesn't really work well yet
 		self.wrapper.server.run("testforblock %d %d %d air" % (x, y, z))
@@ -232,10 +239,13 @@ class Player:
 		return self.client.position
 	def getGamemode(self):
 		return self.client.gamemode
+	def getDimension(self):
+		return self.client.dimension
 	def setGamemode(self, gm=0):
 		if gm in (0, 1, 2, 3):
 			self.client.gamemode = gm
-			self.wrapper.server.run("gamemode %s %d" % (self.username, gm))
+			self.wrapper.server.run("gamemode %d %s" % (gm, self.username))
+			print "Setting gamemode of %s" % self.username
 	def setResourcePack(self, url):
 		self.client.send(0x3f, "string|short|bytearray", ("MC|RPack", len(url), url), self.client.client)
 	def isOp(self):
