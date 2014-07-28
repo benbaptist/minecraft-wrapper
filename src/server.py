@@ -13,6 +13,8 @@ class Server:
 		self.uuid = {}
 		self.data = ""
 		self.backups = []
+		
+		self.worldName = None
 	def login(self, user):
 		try:
 			if user not in self.players:
@@ -221,6 +223,8 @@ class Server:
 									message = self.formatForIRC(" ".join(line.split(' ')[4:]).replace('\x1b', '').replace("\xc2\xfa", ""))
 									self.msg("<%s> %s" % (name, message))
 									self.wrapper.callEvent("player.message", {"player": self.stripSpecialIRCChars(name), "message": message})
+								elif self.argserver(3) == "Preparing" and self.argserver(4) == "level":
+									self.worldName = self.argserver(5).replace('"', "")
 								elif self.argserver(4) == "logged":
 									name = self.formatForIRC(self.filterName(self.argserver(3)[0:self.argserver(3).find('[')]))
 									self.msg("[%s connected]" % name)

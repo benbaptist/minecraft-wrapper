@@ -1,4 +1,4 @@
-import socket, threading, struct, StringIO, time, traceback, json, encryption, random, requests, hashlib, os
+import socket, threading, struct, StringIO, time, traceback, json, encryption, random, requests, hashlib, os, zlib
 class Proxy:
 	def __init__(self, wrapper):
 		self.wrapper = wrapper
@@ -23,11 +23,9 @@ class Proxy:
 		 		sock, addr = self.socket.accept()
 		 		client = Client(sock, addr, self.wrapper, self.publicKey, self.privateKey)
 		 		
-		 		print "client.connect()"
 		 		t = threading.Thread(target=client.handle, args=())
 		 		t.daemon = True
 		 		t.start()
-		 		print "client.handle() thread started"
 		 		self.clients.append(client)
 		 	except:
 		 		print traceback.print_exc()
@@ -44,11 +42,12 @@ class Client: # handle client/game connection
 		self.publicKey = publicKey
 		self.privateKey = privateKey
 		self.abort = False
+		self.tPing = time.time()
 		self.server = None
 		
 		self.state = 0 # 0 = init, 1 = motd, 2 = login, 3 = active, 4 = authorizing
 		
-		self.packet = Packet(self.socket)
+		self.packet = Packet(self.socket, True)
 		self.send = self.packet.send
 		self.read = self.packet.read
 		self.sendRaw = self.packet.sendRaw
@@ -67,6 +66,8 @@ class Client: # handle client/game connection
 		self.server.send(0x00, "varint|string|ushort|varint", (self.version, "localhost", self.config["Proxy"]["server-port"], 2))
 		self.server.send(0x00, "string", (self.username,))
 #		self.server.send(0x46, "varint", (-1,))
+#		self.server.packet.compression = True
+#		self.packet.compression = True
 		self.server.state = 2
 	def close(self):
 		self.abort = True
@@ -82,11 +83,11 @@ class Client: # handle client/game connection
 			self.packet.flush()
 			time.sleep(0.05)
 	def parse(self, id):
+#		print "Client ID: %d" % id
 		if id == 0x00:
 			if self.state == 0:
 				data = self.read("varint:version|string:address|ushort:port|varint:state")
 				self.version = data["version"]
-				print "Protocol version: %d" % self.version
 				if data["state"] == 2:
 					self.state = 2
 				return False
@@ -101,6 +102,7 @@ class Client: # handle client/game connection
 					f.close()
 					MOTD["favicon"] = serverIcon
 				self.send(0x00, "string", (json.dumps(MOTD),))
+				self.state = 5
 				return False
 			elif self.state == 2:
 				data = self.read("string:username")
@@ -116,6 +118,11 @@ class Client: # handle client/game connection
 					self.send(0x02, "string|string", ("b5c6c2f1-2cb8-30d8-807e-8a75ddf765af", self.username))
 					self.state = 3
 				return False
+			elif self.state == 3:
+				return False
+			elif self.state == 5:
+				keepAlive = self.read("int:keepAlive")["keepAlive"]
+				self.send(0x00, "int", (keepAlive,))
 		if id == 0x01:
 			if self.state == 3: # chat packet
 				data = self.read("string:message")
@@ -136,17 +143,17 @@ class Client: # handle client/game connection
 				data = self.read("bytearray:shared_secret|bytearray:verify_token")
 				sharedSecret = encryption.decrypt_shared_secret(data["shared_secret"], self.privateKey)
 				verifyToken = encryption.decrypt_shared_secret(data["verify_token"], self.privateKey)
-				if verifyToken == self.verifyToken:
-					print "VERIFY TOKENS ARE THE SAME, HOORAY!"
-				else:
-					print "VERIFY TOKENS WERE NOT THE SAME - KILLING"
+			#	if verifyToken == self.verifyToken:
+#					print "VERIFY TOKENS ARE THE SAME, HOORAY!"
+#				else:
+#					print "VERIFY TOKENS WERE NOT THE SAME - KILLING"
 				h = hashlib.sha1()
 				h.update(self.serverID)
 				h.update(sharedSecret)
 				h.update(self.publicKey)
 				serverId = h.hexdigest()
 				r = requests.get("https://sessionserver.mojang.com/session/minecraft/hasJoined?username=%s&serverId=%s" % (self.username, serverId))
-				print "SessionServer response: %s" % r.text
+#				print "SessionServer response: %s" % r.text
 				
 				self.packet.sendCipher = encryption.AES128CFB8(sharedSecret)
 				self.packet.recvCipher = encryption.AES128CFB8(sharedSecret)
@@ -174,6 +181,7 @@ class Client: # handle client/game connection
 			data = self.read("double:x|double:y|double:z|float:yaw|float:pitch|bool:on_ground")
 			#objection = self.wrapper.callEvent("player.move", {"player": self.username, "xyz": (data["x"], data["y"], data["z"]), "on_ground": data["on_ground"]})
 			self.position = (data["x"], data["y"], data["z"])
+			if self.server.state is not 3: return False
 		if id == 0x07: # block breakment
 			if self.version < 6:
 				data = self.read("byte:status|int:x|ubyte:y|int:z|byte:face", packet[1])
@@ -182,8 +190,9 @@ class Client: # handle client/game connection
 				data = self.read("byte:status|position:position|byte:face")
 				position = data["position"]
 			if data is None: return False 
-			if data["status"] not in (3, 4, 5):
+			if data["status"] not in (0, 1, 3, 4, 5):
 				if not self.wrapper.callEvent("player.dig", {"player": self.username, "position": position, "status": data["status"], "face": data["face"]}): return False
+			if self.server.state is not 3: return False
 		if id == 0x08: # block placement
 			if self.version < 6:
 				data = self.read("int:x|ubyte:y|int:z|byte:direction", packet[1])
@@ -195,10 +204,7 @@ class Client: # handle client/game connection
 			if data["direction"] == -1: 
 				if not self.wrapper.callEvent("player.action", {"player": self.username}): return False
 			if not self.wrapper.callEvent("player.place", {"player": self.username, "position": position}): return False
-		#if id == 0x46: # set threshold
-#			data = self.read("varint:threshold")
-#			print "SET THRESHOLD TO: %s" % data
-#			return False
+			if self.server.state is not 3: return False
 		return True
 	def handle(self):
 		t = threading.Thread(target=self.flush, args=())
@@ -209,17 +215,19 @@ class Client: # handle client/game connection
 				try:
 					id, original = self.packet.grabPacket()
 				except EOFError:
-					print "Client EOFError"
 					self.close()
 					break
 				except:
-					print "Failed to grab packet:"
-					print traceback.format_exc()
+					#print "Failed to grab packet (CLIENT):"
+#					print traceback.format_exc()
 					break
+				if time.time() - self.tPing > 1 and self.state == 3:
+					self.send(0x00, "int", (random.randrange(0, 99999),))
+					self.tPing = time.time()
 				if self.parse(id) and self.server:
 					self.server.sendRaw(original)
 		except:
-			print "error server->client, blah"
+			print "error client->server, blah"
 			print traceback.format_exc()
 		
 
@@ -232,11 +240,10 @@ class Server: # handle server connection
 		self.state = 0 # 0 = init, 1 = motd, 2 = login, 3 = active, 4 = authorizing
 		self.packet = None
 	def connect(self):
-		print "Connecting to server..."
 		self.socket = socket.socket()
 		self.socket.connect(("localhost", self.wrapper.config["Proxy"]["server-port"]))
 		
-		self.packet = Packet(self.socket)
+		self.packet = Packet(self.socket, False)
 		
 		self.send = self.packet.send
 		self.read = self.packet.read
@@ -245,12 +252,15 @@ class Server: # handle server connection
 		t = threading.Thread(target=self.flush, args=())
 		t.daemon = True
 		t.start()
-	def close(self):
+	def close(self, reason="Disconnected"):
 		self.abort = True
 		self.packet = None
 		self.socket.close()
 		
 		# I may remove this later so the client can remain connected upon server disconnection
+#		self.client.send(0x02, "string|byte", (json.dumps({"text": "Disconnected from server. Reason: %s" % reason, "color": "red"}),0))
+#		self.abort = True
+#		self.client.connect()
 		self.client.abort = True
 		self.client.server = None
 		self.client.close()
@@ -258,24 +268,62 @@ class Server: # handle server connection
 		print "Connection closed"
 	def flush(self):
 		while not self.abort:
-			self.packet.flush()
+			try:
+				self.packet.flush()
+			except:
+				self.close()
+				break
 			time.sleep(0.05)
 	def parse(self, id):
+#		print "Server ID: %d" % id
+		if id == 0x00:
+			if self.state < 3:
+				message = self.read("string:string")
+				self.log.info("Disconnected from Server: %s" % message["string"])
+			elif self.state == 3:
+				if self.client.version > 7:
+					self.send(0x00, "varint", (self.read("int:i")["i"],))
+				return False
 		if id == 0x01:
 			data = self.read("int:eid|ubyte:gamemode|byte:dimension|ubyte:difficulty|ubyte:max_players|string:level_type")
 			self.client.gamemode = data["gamemode"]
 			self.client.dimension = data["dimension"]
+			print "Gamemode & dimension: %d & %d " % (self.client.gamemode, self.client.dimension)
 		if id == 0x02:
 			if self.state == 2:
 				self.state = 3
 				return False
+			elif self.state == 3:
+				data = json.loads(self.read("string:json")["json"])
+				try: 
+					if data["translate"] == "chat.type.admin": return False
+				except: pass
+		if id == 0x03:
+			if self.state == 2:
+				data = self.read("varint:threshold")
+				self.packet.compression = True
+				self.packet.compressThreshold = data["threshold"]
+#				self.client.send(0x03, "varint", (data["threshold"],))
+#				self.client.packet.compression = True
+#				self.client.packet.compressThreshold = data["threshold"]
+				time.sleep(1)
+				return False
 		if id == 0x05:
 			data = self.read("int:x|int:y|int:z")
 			self.wrapper.server.spawnPoint = (data["x"], data["y"], data["z"])
-		if id == 0x46:
-			data = self.read("varint:threshold")
-			print "SET THRESHOLD TO: %s" % data["threshold"]
-			return False
+		if id == 0x40:
+			message = json.loads(self.read("string:string"))
+			self.log.info("Disconnected from Server: %s" % message["message"])
+#			return False
+	#	if id == 0x46:
+#			data = self.read("varint:threshold")
+#			print "SET THRESHOLD TO: %s" % data["threshold"]
+#			self.packet.compression = True
+#			self.packet.compressThreshold = data["threshold"]
+#			self.client.send(0x46, "varint", (data["threshold"],))
+#			self.client.packet.compression = True
+#			self.client.packet.compressThreshold = data["threshold"]
+#			return False
 		return True
 	def handle(self):
 		try:
@@ -283,13 +331,12 @@ class Server: # handle server connection
 				try:
 					id, original = self.packet.grabPacket()
 				except EOFError:
-					print "Server EOFError"
 					print traceback.format_exc()
 					self.close()
 					break
 				except:
-					print "Failed to grab packet:"
-					print traceback.format_exc()
+					#print "Failed to grab packet (SERVER):"
+#					print traceback.format_exc()
 					break
 				if self.parse(id):
 					self.client.sendRaw(original)
@@ -299,27 +346,30 @@ class Server: # handle server connection
 
 
 class Packet: # PACKET PARSING CODE
-	def __init__(self, socket):
+	def __init__(self, socket, isClient):
 		self.socket = socket
+		
+		self.isClient = isClient
 		
 		self.recvCipher = None
 		self.sendCipher = None
 		self.compression = False
+		self.compressThreshold = -1
 		
 		self.buffer = StringIO.StringIO()
-		self.query = []
+		self.queue = []
 	def grabPacket(self):
 		length = self.unpack_varInt()
+		dataLength = 0
 		if self.compression:
 			dataLength = self.unpack_varInt()
+			length = length - len(self.pack_varInt(dataLength))
 		payload = self.recv(length)
+		if dataLength > 0:
+			payload = zlib.decompress(payload)
 		self.buffer = StringIO.StringIO(payload)
 		id = self.read_varInt()
-		
-		original = self.pack_varInt(length)
-		original += payload
-		
-		return (id, original)
+		return (id, payload)
 	def pack_varInt(self, val):
 		total = b''
 		if val < 0:
@@ -343,14 +393,24 @@ class Packet: # PACKET PARSING CODE
 			total = total - (1<<32)
 		return total
 	def flush(self):
-		for packet in self.query:
+		for p in self.queue:
+			packet = p[1]
+			if p[0]:
+				if len(packet) > self.compressThreshold:
+					packetCompressed = self.pack_varInt(len(packet)) + zlib.compress(packet)
+					packet = self.pack_varInt(len(packetCompressed)) + packetCompressed
+				else:
+					packet = self.pack_varInt(0) + packet
+					packet = self.pack_varInt(len(packet)) + packet
+			else:
+				packet = self.pack_varInt(len(packet)) + packet
 			if self.sendCipher is None:
 				self.socket.send(packet)
 			else:
 				self.socket.send(self.sendCipher.encrypt(packet))
-		self.query = []
+		self.queue = []
 	def sendRaw(self, payload):
-		self.query.append(payload)
+		self.queue.append((self.compression, payload))
 	# -- SENDING AND PARSING PACKETS -- #
 	def read(self, expression):
 		result = {}
@@ -393,12 +453,18 @@ class Packet: # PACKET PARSING CODE
 				if type == "bytearray": result += pay
 			except:
 				print traceback.format_exc()
-		if self.compression:
-			result = self.pack_varInt(len(result)) + self.pack_varInt(-1) + result
-		else:
-			result = self.pack_varInt(len(result)) + result
+	#	if self.compression:
+#			if len(result) > self.compressThreshold:
+#				print len(result), "more than threshold, compressing"
+#				compressedResult = zlib.compress(result)
+#				result = self.pack_varInt(len(compressedResult)) + self.pack_varInt(len(result)) + compressedResult
+#			else:
+#				print "sending uncompressed %d: %d" % (id, len(result))
+#				result = self.pack_varInt(len(result)) + self.pack_varInt(0) + result
+#		else:
+#			result = self.pack_varInt(len(result)) + result
 			
-		print "W>C ID %s: %s" % (chr(id).encode("hex"), result.encode("hex"))
+		#print "W>C ID %s: %s" % (chr(id).encode("hex"), result.encode("hex"))
 		self.sendRaw(result)
 		return result
 	# -- SENDING DATA TYPES -- #
@@ -425,16 +491,15 @@ class Packet: # PACKET PARSING CODE
 	def recv(self, length):
 		d = self.socket.recv(length)
 		if len(d) == 0 and length is not len(d):
-#			print d, length
 			raise EOFError("Actual length of packet was not as long as expected!")
 		if self.recvCipher is None:
 			return d
 		return self.recvCipher.decrypt(d)
 	def read_data(self, length):
 		d = self.buffer.read(length)
-		if len(d) == 0:
-			self.disconnect("Received no data - connection closed")
-			return ""
+#		if len(d) == 0 and length is not 0:
+#			self.disconnect("Received no data - connection closed")
+#			return ""
 		return d
 	def read_byte(self):
 		return struct.unpack("b", self.read_data(1))[0]

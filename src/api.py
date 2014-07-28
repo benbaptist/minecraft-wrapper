@@ -1,4 +1,4 @@
-import json, time, StringIO
+import json, time, StringIO, nbt
 class API:
 	statusEffects = {
 		"speed": 1,
@@ -156,7 +156,7 @@ class Minecraft:
 		if self.getPlayer(name).client is False:
 			raise Exception("User %s is not connected via proxy" % name)
 		else:
-			self.getPlayer(name).client.send("varint|string|short|bytearray", (0x3f, "MC|RPack", len(url), url), self.getPlayer(name).client.client) 
+			self.getPlayer(name).client.send(0x3f, "string|bytearray", ("MC|RPack", url))
 	def teleportAllEntities(self, entity, x, y, z):
 		self.wrapper.server.run("tp @e[type=%s] %d %d %d" % (entity, x, y, z))
 	def teleportPlayer(self):
@@ -168,10 +168,16 @@ class Minecraft:
 			return self.wrapper.server.players[name]
 		except:
 			raise Exception("No such player %s is logged in" % name)
-	def getLevelInfo(self, worldName=""):
-		pass
+	# get world-based information
+	def getLevelInfo(self, worldName=False):
+		if not worldName: worldName = self.wrapper.server.worldName
+		if not worldName: raise Exception("Server Uninitiated")
+		f = nbt.NBTFile("%s/level.dat" % worldName, "rb")
+		return f["Data"]
 	def getSpawnPoint(self):
-		return self.wrapper.server.spawnPoint
+		return (int(str(self.getLevelInfo()["SpawnX"])), int(str(self.getLevelInfo()["SpawnY"])), int(str(self.getLevelInfo()["SpawnZ"])))
+	def getTime(self):
+		return int(str(self.getLevelInfo()["Time"]))
 	def getBlock(self, x, y, z):
 		# this function doesn't really work well yet
 		self.wrapper.server.run("testforblock %d %d %d air" % (x, y, z))
@@ -247,7 +253,7 @@ class Player:
 			self.wrapper.server.run("gamemode %d %s" % (gm, self.username))
 			print "Setting gamemode of %s" % self.username
 	def setResourcePack(self, url):
-		self.client.send(0x3f, "string|short|bytearray", ("MC|RPack", len(url), url), self.client.client)
+		self.client.send(0x3f, "string|bytearray", ("MC|RPack", url))
 	def isOp(self):
 		operators = json.loads(open("ops.json", "r").read())
 		for i in operators:
@@ -259,3 +265,5 @@ class Player:
 			self.wrapper.server.run("tellraw %s %s" % (self.username, json.dumps(message)))
 		else:
 			self.wrapper.server.run("tellraw %s %s" % (self.username, self.processColorCodes(message)))
+	def actionMessage(self, message=""):
+		self.client.send(0x02, "string|byte", (json.dumps({"text": self.processColorCodes(message)}), 2))

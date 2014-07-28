@@ -1,7 +1,7 @@
 import traceback, ConfigParser, ast, time, os, sys
 # configuration
 DEFAULT_CONFIG = """[General]
-command = java -jar minecraft_server.1.7.9.jar nogui
+command = java -jar minecraft_server.1.7.10.jar nogui
 auto-restart = True
 debug = False
 
@@ -67,7 +67,7 @@ class Config:
 
 		sections = ["General", "Backups", "IRC", "Death", "Proxy", "Web"]
 		defaults = {"General":{
-			"command": "java -jar minecraft_server.1.7.7.jar",
+			"command": "java -jar minecraft_server.1.7.10.jar",
 			"auto-restart": True,
 			"debug": False
 		},		

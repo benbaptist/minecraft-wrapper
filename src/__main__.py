@@ -101,7 +101,8 @@ class Wrapper:
 					try: version = self.plugins[plugin]["main"].version
 					except: version = (1, 0, 0)
 					
-					player.message({"text": "%s v%s - %s" % (plugin, ".".join([str(_) for _ in version]), description), "color": "gray"})
+					version = ".".join([str(_) for _ in version])
+					player.message({"text": "%s" % plugin, color: "white", "extra":[{"text": "v%s - %s" % (version, description), "color": "gray"}]})
 				return False
 		if payload["command"] == "reload":
 			player = self.api.minecraft.getPlayer(payload["player"])
