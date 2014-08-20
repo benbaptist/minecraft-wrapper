@@ -15,9 +15,12 @@ class Server:
 		self.backups = []
 		
 		self.worldName = None
+		self.protocolVersion = 5 # the protocol version is unknown until the first proxy mode connection is made
+		self.version = None
 	def login(self, user):
 		try:
 			if user not in self.players:
+				time.sleep(1)
 				self.players[user] = api.Player(user, self.wrapper)
 		except:
 			traceback.print_exc()
@@ -47,10 +50,10 @@ class Server:
 			self.send('PRIVMSG %s :%s' % (channel, text))
 #		self.console()
 	def console(self, text):
-		if not self.config["General"]["pre-1.7-mode"]:
-			self.run("tellraw @a %s" % json.dumps(text, encoding='utf-8'))
-		else:
-			self.run("say %s" % text)
+#		if not self.config["General"]["pre-1.7-mode"]:
+		self.run("tellraw @a %s" % json.dumps(text, encoding='utf-8'))
+#		else:
+#			self.run("say %s" % text)
 	def run(self, text):
 		try:
 			self.proc.stdin.write("%s\n" % text)
@@ -217,11 +220,11 @@ class Server:
 					print line
 					if self.argserver(3) is not False:
 						try:
-							if not self.config["General"]["pre-1.7-mode"]:
+		#					if not self.config["General"]["pre-1.7-mode"]:
 								if self.argserver(3)[0] == "<":
 									name = self.formatForIRC(self.filterName(self.argserver(3)[1:self.argserver(3).find('>')]))
 									message = self.formatForIRC(" ".join(line.split(' ')[4:]).replace('\x1b', '').replace("\xc2\xfa", ""))
-									self.msg("<%s> %s" % (name, message))
+#									self.msg("<%s> %s" % (name, message))
 									self.wrapper.callEvent("player.message", {"player": self.stripSpecialIRCChars(name), "message": message})
 								elif self.argserver(3) == "Preparing" and self.argserver(4) == "level":
 									self.worldName = self.argserver(5).replace('"', "")
@@ -250,6 +253,8 @@ class Server:
 									self.msg("Server started")
 									self.log.info("Server started")
 									self.wrapper.callEvent("server.started", {})
+								elif self.argserver(3) == 'Starting' and self.argserver(4) == "minecraft":
+									self.version = self.argserver(7)
 								elif self.argserver(4) in deathPrefixes:
 									self.msg(' '.join(self.line.split(' ')[3:]))
 									name = self.filterName(self.argserver(3))
@@ -267,38 +272,38 @@ class Server:
 									achievement = ' '.join(line.split(' ')[9:])
 									self.msg("%s has just earned the achievement %s" % (name, achievement))
 									self.wrapper.callEvent("player.achievement", {"player": name, "achievement": achievement})
-							else: # -- FOR 1.6.4 AND PREVIOUSLY ONLY!!!!! -- 
-								if self.argserver(2)[0] == '<':
-									name = self.filterName(self.argserver(2)[1:self.argserver(2).find('>')].replace("\xc2\xfa", ""))
-									message = ' '.join(line.split(' ')[3:]).replace('\x1b', '').replace("\xc2\xfa", "")
-									self.msg('<%s> %s' % (name, message))
-								elif self.argserver(3) == 'logged':
-									name = self.argserver(2)[0:self.argserver(2).find('[')]
-									self.msg('[%s connected]' % name)
-									self.login(name)
-								elif self.argserver(3) == 'lost':
-									name = self.argserver(2)
-									reason = self.argserver(5)
-									self.msg('[%s disconnected] (%s)' % (name, reason))
-									self.logout(name)
-								elif self.argserver(3) == 'Kicked':
-									name = self.argserver(6)
-									self.msg('[%s disconnected] (kicked)' % name)
-									self.logout(name)
-								elif self.argserver(3) == 'issued':
-									name = self.argserver(2)
-									command = message = ' '.join(line.split(' ')[6:])
-									if self.config["forwardCommandsToIRC"]:
-										self.msg('%s issued command: %s' % (name, command))
-								elif self.argserver(2) == 'Done':
-									self.status = 2
-									self.msg('Server started')
-								elif self.argserver(3) in deathPrefixes:
-									self.msg(' '.join(self.line.split(' ')[2:]))
-									name = self.argserver(2)
-									randThing = self.config["deathKickMessages"][random.randrange(0, len(self.config["deathKickMessages"]))]
-									if self.config["deathKick"] and name in self.config["deathKickers"]:
-										self.run("kick %s %s" % (name, randThing))
+						#	else: # -- FOR 1.6.4 AND PREVIOUSLY ONLY!!!!! -- 
+#								if self.argserver(2)[0] == '<':
+#									name = self.filterName(self.argserver(2)[1:self.argserver(2).find('>')].replace("\xc2\xfa", ""))
+#									message = ' '.join(line.split(' ')[3:]).replace('\x1b', '').replace("\xc2\xfa", "")
+#									self.msg('<%s> %s' % (name, message))
+#								elif self.argserver(3) == 'logged':
+#									name = self.argserver(2)[0:self.argserver(2).find('[')]
+#									self.msg('[%s connected]' % name)
+#									self.login(name)
+#								elif self.argserver(3) == 'lost':
+#									name = self.argserver(2)
+#									reason = self.argserver(5)
+#									self.msg('[%s disconnected] (%s)' % (name, reason))
+#									self.logout(name)
+#								elif self.argserver(3) == 'Kicked':
+#									name = self.argserver(6)
+#									self.msg('[%s disconnected] (kicked)' % name)
+#									self.logout(name)
+#								elif self.argserver(3) == 'issued':
+#									name = self.argserver(2)
+#									command = message = ' '.join(line.split(' ')[6:])
+#									if self.config["forwardCommandsToIRC"]:
+#										self.msg('%s issued command: %s' % (name, command))
+#								elif self.argserver(2) == 'Done':
+#									self.status = 2
+#									self.msg('Server started')
+#								elif self.argserver(3) in deathPrefixes:
+#									self.msg(' '.join(self.line.split(' ')[2:]))
+#									name = self.argserver(2)
+#									randThing = self.config["deathKickMessages"][random.randrange(0, len(self.config["deathKickMessages"]))]
+#									if self.config["deathKick"] and name in self.config["deathKickers"]:
+#										self.run("kick %s %s" % (name, randThing))
 						except:
 							pass
 				time.sleep(0.1)

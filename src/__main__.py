@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import socket, datetime, time, sys, threading, random, subprocess, os, json, signal, traceback, ConfigParser, ast
+import socket, datetime, time, sys, threading, random, subprocess, os, json, signal, traceback, ConfigParser, ast, proxy, web
 from log import *
 from config import Config
 from irc import IRC
@@ -7,8 +7,6 @@ from server import Server
 from importlib import import_module
 import importlib
 from api import API
-from proxy import Proxy
-from web import Web
 			
 class Wrapper:
 	def __init__(self):
@@ -17,7 +15,6 @@ class Wrapper:
 		self.configManager = Config(self.log)
 		self.plugins = {}
 		self.server = False
-		self.proxy = Proxy(self)
 		self.listeners = []
 		
 		self.commands = {}
@@ -67,6 +64,10 @@ class Wrapper:
 				for line in traceback.format_exc().split("\n"):
 					self.log.debug(line)
 				self.log.error("Failed to unload plugin '%s'" % i)
+				try:
+					reload(self.plugins[plugin]["module"])
+				except:
+					pass
 		self.plugins = {}
 		self.loadPlugins()
 		self.log.info("Plugins reloaded")
@@ -75,20 +76,24 @@ class Wrapper:
 			if not self.playerCommand(payload): return False
 		for sock in self.listeners:
 			sock.append({"event": event, "payload": payload})
-		for pluginID in self.events:
-			if event in self.events[pluginID]:
-				try:
-					result = self.events[pluginID][event](payload)
-					if result == False:
-						return False
-				except:
-					self.log.error("Plugin '%s' errored out when executing callback event '%s':" % (pluginID, event))
-					for line in traceback.format_exc().split("\n"):
-						self.log.error(line)
+		try:
+			for pluginID in self.events:
+				if event in self.events[pluginID]:
+					try:
+						result = self.events[pluginID][event](payload)
+						if result == False:
+							return False
+					except:
+						self.log.error("Plugin '%s' errored out when executing callback event '%s':" % (pluginID, event))
+						for line in traceback.format_exc().split("\n"):
+							self.log.error(line)
+		except:
+			self.log.error("A serious runtime error occurred - if you notice any strange behaviour, please restart immediately")
 		return True
 	def playerCommand(self, payload):
-		self.log.info("%s executed '/%s %s'" % (payload["player"], payload["command"], " ".join(payload["args"])))
+		self.log.info("%s executed: /%s %s" % (payload["player"], payload["command"], " ".join(payload["args"])))
 		if payload["command"] == "wrapper":
+			self.api.minecraft.getPlayer(payload["player"]).message({"text": "Wrapper.py version %s" % Config.version, "color": "green"})
 			return False
 		if payload["command"] == "plugins" or payload["command"] == "pl":
 			player = self.api.minecraft.getPlayer(payload["player"])
@@ -102,18 +107,25 @@ class Wrapper:
 					except: version = (1, 0, 0)
 					
 					version = ".".join([str(_) for _ in version])
-					player.message({"text": "%s" % plugin, color: "white", "extra":[{"text": "v%s - %s" % (version, description), "color": "gray"}]})
+					player.message({"text": "%s" % plugin, "color": "gold", "extra":[{"text": " v%s - %s" % (version, description), "color": "gray"}]})
 				return False
 		if payload["command"] == "reload":
 			player = self.api.minecraft.getPlayer(payload["player"])
 			if player.isOp():
-				self.reloadPlugins()
-				self.api.minecraft.getPlayer(payload["player"]).message({"text": "Plugins reloaded.", "color": "green"})
+				try:
+					self.reloadPlugins()
+					self.api.minecraft.getPlayer(payload["player"]).message({"text": "Plugins reloaded.", "color": "green"})
+				except:
+					self.log.error("Failure to reload plugins:")
+					self.log.error(traceback.format_exc())
+					self.api.minecraft.getPlayer(payload["player"]).message({"text": "An error occurred while reloading plugins. Please check the console immediately for a traceback.", "color": "red"})
 				return False
 		for pluginID in self.commands:
-			#if pluginID == "Wrapper.py":
-#				self.commands[pluginID][command](self.api.minecraft.getPlayer(payload["player"]), payload["args"])
-#				return False
+			if pluginID == "Wrapper.py":
+				try: 
+					self.commands[pluginID][command](self.api.minecraft.getPlayer(payload["player"]), payload["args"])
+				except: pass
+				continue
 			plugin = self.plugins[pluginID]
 			if not plugin["good"]: continue
 			command = payload["command"]
@@ -154,11 +166,14 @@ class Wrapper:
 			t.daemon = True
 			t.start()
 		if self.config["Web"]["web-enabled"]:
-			self.web = Web(self)
-			t = threading.Thread(target=self.web.wrap, args=())
-			t.daemon = True
-			t.start()
-		
+			if web.IMPORT_SUCCESS:
+				self.web = web.Web(self)
+				t = threading.Thread(target=self.web.wrap, args=())
+				t.daemon = True
+				t.start()
+			else:
+				self.log.error("Web remote could not be started because you do not have the required modules installed: pkg_resources")
+				self.log.error("Hint: http://stackoverflow.com/questions/7446187")
 		if len(sys.argv) < 2:
 			wrapper.server.serverArgs = wrapper.configManager.config["General"]["command"].split(" ")
 		else:
@@ -170,12 +185,20 @@ class Wrapper:
 		consoleDaemon = threading.Thread(target=self.console, args=())
 		consoleDaemon.daemon = True
 		consoleDaemon.start()
+		
 		if self.config["Proxy"]["proxy-enabled"]:
+			t = threading.Thread(target=self.startProxy, args=())
+			t.daemon = True
+			t.start()
+		self.server.startServer()
+	def startProxy(self):
+		if proxy.IMPORT_SUCCESS:
+			self.proxy = proxy.Proxy(self)
 			proxyThread = threading.Thread(target=self.proxy.host, args=())
 			proxyThread.daemon = True
 			proxyThread.start()
-		
-		self.server.startServer()
+		else:
+			self.log.error("Proxy mode could not be started because you do not have the required modules installed: pycrypt")
 	def SIGINT(self, s, f):
 		self.shutdown()
 	def shutdown(self):
@@ -209,7 +232,7 @@ class Wrapper:
 			elif command == "reload":
 				self.reloadPlugins()
 			elif command == "plugins":
-				self.log.info("List of plugins installed:")
+				self.log.info("List of Wrapper.py plugins installed:")
 				for plug in self.plugins:
 					try: description = self.plugins[plug]["main"].description
 					except: description = "No description available for this plugin"

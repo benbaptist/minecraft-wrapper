@@ -1,4 +1,4 @@
-import json, time, StringIO, nbt
+import json, time, StringIO, nbt, items
 class API:
 	statusEffects = {
 		"speed": 1,
@@ -42,12 +42,12 @@ class API:
 		"d": "light_purple",
 		"e": "yellow",
 		"f": "white",
-		"&r": "\xc2\xa7r",
-		"&k": "\xc2\xa7k", # obfuscated
-		"&l": "\xc2\xa7l", # bold
-		"&m": "\xc2\xa7m", # strikethrough
-		"&n": "\xc2\xa7n", # underline
-		"&o": "\xc2\xa7o", # italic
+		"r": "\xc2\xa7r",
+		"k": "\xc2\xa7k", # obfuscated
+		"l": "\xc2\xa7l", # bold
+		"m": "\xc2\xa7m", # strikethrough
+		"n": "\xc2\xa7n", # underline
+		"o": "\xc2\xa7o", # italic
 	}
 	def __init__(self, wrapper, name=""):
 		self.wrapper = wrapper
@@ -84,6 +84,8 @@ class API:
 class Minecraft:
 	def __init__(self, wrapper):
 		self.wrapper = wrapper
+		
+		self.blocks = items.Blocks
 	def getWorldName(self):
 		return self.wrapper.server.worldName
 	def processColorCodes(self, message):
@@ -197,10 +199,22 @@ class Player:
 		self.loggedIn = time.time()
 		
 		self.uuid = self.wrapper.getUUID(username)
+		self.client = None
 		for client in self.wrapper.proxy.clients:
 			if client.username == username:
 				self.client = client
 				break
+	def getClient(self):
+		if self.client == None:
+			for client in self.wrapper.proxy.clients:
+				try:
+					if client.username == username:
+						self.client = client
+						return self.client
+				except:
+					pass
+		else:
+			return self.client
 	def processColorCodes(self, message):
 		message = message.encode('ascii', 'ignore')
 		extras = []
@@ -241,17 +255,20 @@ class Player:
 		extras.append({"text": current, "color": color, "obfuscated": obfuscated, 
 			"underline": underline, "bold": bold, "italic": italic, "strikethrough": strikethrough})
 		return json.dumps({"text": "", "extra": extras})
+	def processColorCodesOld(self, message):
+		for i in API.colorCodes:
+			message = message.replace("&" + i, "\xc2\xa7" + i)
+		return message
 	def getPosition(self):
-		return self.client.position
+		return self.getClient().position
 	def getGamemode(self):
-		return self.client.gamemode
+		return self.getClient().gamemode
 	def getDimension(self):
-		return self.client.dimension
+		return self.getClient().dimension
 	def setGamemode(self, gm=0):
 		if gm in (0, 1, 2, 3):
 			self.client.gamemode = gm
 			self.wrapper.server.run("gamemode %d %s" % (gm, self.username))
-			print "Setting gamemode of %s" % self.username
 	def setResourcePack(self, url):
 		self.client.send(0x3f, "string|bytearray", ("MC|RPack", url))
 	def isOp(self):
@@ -260,10 +277,34 @@ class Player:
 			if i["uuid"] == self.uuid or i["name"] == self.username:
 				return True
 		return False
+	# Visual notifications
 	def message(self, message=""):
 		if isinstance(message, dict):
 			self.wrapper.server.run("tellraw %s %s" % (self.username, json.dumps(message)))
 		else:
 			self.wrapper.server.run("tellraw %s %s" % (self.username, self.processColorCodes(message)))
 	def actionMessage(self, message=""):
-		self.client.send(0x02, "string|byte", (json.dumps({"text": self.processColorCodes(message)}), 2))
+		if self.getClient().version > 10:
+			self.getClient().send(0x02, "string|byte", (json.dumps({"text": self.processColorCodesOld(message)}), 2))
+	def setVisualXP(self, progress, level, total):
+		if self.getClient().version > 10:
+			self.getClient().send(0x1f, "float|varint|varint", (progress, level, total))
+		else:
+			self.getClient().send(0x1f, "float|short|short", (progress, level, total))
+	def openWindow(self, type, title, slots):
+		self.getClient().windowCounter += 1
+		if self.getClient().windowCounter > 200: self.getClient().windowCounter = 2
+		if self.getClient().version > 10:
+			self.getClient().send(0x2d, "ubyte|string|json|ubyte", (self.getClient().windowCounter, "0", {"text": title}, slots))
+		return None # return a Window object soon
+	# Abilities & visual
+	def setPlayerFlying(self, fly): # UNFINISHED FUNCTION
+		if fly:
+			self.getClient().send(0x13, "byte|float|float", (255, 1, 1))
+		else:
+			self.getClient().send(0x13, "byte|float|float", (0, 1, 1))
+	# Inventory-related actions
+	def getItemInSlot(self, slot):
+		return self.getClient().inventory[slot]
+	def getHeldItem(self):
+		return self.getClient().inventory[36 + self.getClient().slot]

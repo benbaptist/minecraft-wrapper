@@ -1,4 +1,4 @@
-import socket, traceback, time, threading
+import socket, traceback, time, threading, api
 from config import Config
 class IRC:
 	def __init__(self, server, config, log, wrapper, address, port, nickname, channels):
@@ -13,6 +13,9 @@ class IRC:
 		self.log = log
 		self.timeout = False
 		self.msgQueue = []
+		
+		self.api = api.API(self.wrapper)
+		self.api.registerEvent("player.message", self.playerMessageHandle)
 	def init(self):
 		while not self.wrapper.halt:
 			try:
@@ -27,6 +30,7 @@ class IRC:
 					self.log.error(line)
 				self.disconnect("Error in Wrapper.py - restarting")
 			self.log.info("Disconnected from IRC")
+			time.sleep(5)
 	def connect(self):
 		self.socket = socket.socket()
 		self.socket.connect((self.address, self.port))
@@ -46,6 +50,10 @@ class IRC:
 			self.socket.send("%s\n" % payload)
 		else:
 			return False
+	def playerMessageHandle(self, payload):
+		player = payload["player"]
+		message = payload["message"]
+		self.msgQueue.append("<%s> %s" % (player, message))
 	def handle(self):
 		while self.socket:
 			try:

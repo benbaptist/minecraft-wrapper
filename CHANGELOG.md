@@ -5,16 +5,24 @@
 - Multi-server mode
 - Proxy system (like Bungeecord, perhaps)
 <ul>
+<strike>
 <li> Maybe add some custom in-game Wrapper.py commands such as /halt</li>
 <li> Log player actions such as block manipulation, etc.</li>
+</strike>
+<li>The above is possible now with the proxy mode, using plugins.</li>
 </ul>
 - Ability to halt server without shutting down wrapper - for fine server control
-- Potentially implement region fixer in wrapper.py
+- Potentially implement region-fixer in Wrapper.py
 - Update version of Minecraft server automatically
+- Update Wrapper.py automatically or with a one-click update
 - First-run setup wizard for new setups
 - Potentially implement a way to reload the config - but that might be too difficult/bug prone
-- UHC-style timer
+- UHC-style timer mode
 - Clean up & organize code... it's a tad cluttery right now! (this is only semi-true now, I've cleaned it up quite a bit)
+<ul>
+<li> Move backup code into a new class, backup.py</li>
+<li> Redo function names and general cleanup in in server.py - names are very confusing at the moment (fix start & stop functions, console functions)</li>
+</ul>
 - Fix messages not sending from IRC to server with show-channel off
 
 <h4>0.7.0</h4>

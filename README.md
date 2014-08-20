@@ -21,6 +21,9 @@ Wrapper.py supports the following features:
 <li> Chat between Minecraft server and IRC channels</li>
 </ul>
 - Plugin system for modifying the Wrapper or adding Bukkit-like features to a vanilla server
+<ul>
+<li> Proxy mode allows you to add extra functionality to plugins, such as real /commands</li>
+</ul>
 - Minecraft 1.7 and later support (uses tellraw!)
 
 #API#

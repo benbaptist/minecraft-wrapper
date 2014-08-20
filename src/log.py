@@ -9,13 +9,16 @@ class Log:
 		print payload
 		self.file.write("%s\n" % payload)
 		self.file.flush()
+	def prefix(self, type="INFO", string=""):
+		for line in string.split("\n"):
+			self.write("%s [Wrapper.py/%s] %s" % (self.timestamp(), type, line))
 	def info(self, string):
-		self.write("%s [Wrapper.py/INFO] %s" % (self.timestamp(), string))
+		self.prefix("INFO", string)
 	def error(self, string):
-		self.write("%s [Wrapper.py/ERROR] %s" % (self.timestamp(), string))
+		self.prefix("ERROR", string)
 	def debug(self, string):
 		if Config.debug:
-			self.write("%s [Wrapper.py/DEBUG] %s" % (self.timestamp(), string))
+			self.prefix("DEBUG", string)
 class PluginLog:
 	def __init__(self, log, PluginName="Hello"):
 		self.log = log

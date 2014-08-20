@@ -1,122 +1,91 @@
-<html>
-	<head>
-		<title>[server_name] - Server Stats</title>
-		<style type="text/css">
-			@font-face {
-			  font-family: 'AndroidFont';
-			  src: url('/RobotoCondensed-Light.ttf')
-			}
-			body{
-				margin: 0px;
-			}
-			.top{ 
-				background-color: lightgrey; /*#0099FF 33CCFF*/
-/*				width: 100%;*/
-				padding: 10px;
-			}
-			.top span{
-				font-family: UnDotum;
-				color: #333333;
-				margin: 0px;
-				font-size: 20px;
-				font-weight: bold;
-			}
-			.sidebar{
-				background-color: #aaaaaa;
-				height: 100%;
-				width: 2in;
-				float: left;
-			}
-			.sidebar .item{
-				font-family: AndroidFont;
-				font-size: 25px;
-				font-weight: light;
-				padding-left: 25px;
-				padding-top: 10px;
-				padding-bottom: 10px;
-			}
-			.sidebar .item:hover{
-				background-color: #666666;
-				cursor: pointer;
-			}
-			.main{
-				float: left;
-				padding: 5px;
-				font-family: Arial;
-				font-size: 14px;
-			}
-			h2{
-				margin: 0px;
-			}
-		</style>
-		<script type="text/javascript">
-			// ugh I hate this code so badly. it's so bad. ugly. i hate javascript. 
-			// - benbaptist
-			// oh, and... uh... this code is provided as-is and blab blah blah blah etc, etc.
-			current = "stats"
-			e = function(i){return document.getElementById(i)}
-			// functions stolen from StackOverflow.com :P
-			function pad(n, width, z){ // http://stackoverflow.com/questions/10073699/pad-a-number-with-leading-zeros-in-javascript
-			  z = z || '0';
-			  n = n + '';
-			  return n.length >= width ? n : new Array(width - n.length + 1).join(z) + n;
-			}
-			// stuff
-			function select(id){
-				document.getElementById(current).style.display = "none"
-				document.getElementById(id.innerHTML.toLowerCase()).style.display = "block"
-				current = id.innerHTML.toLowerCase()
-			}
-			function getHTTP(request){
-				var ajax = new XMLHttpRequest()
-				ajax.open("GET", request, false)
-				ajax.send(null)
-				return JSON.parse(ajax.response)
-			}
-			function poll(){
-				data = getHTTP("/action/stats")
-				//document.getElementById("stats").innerHTML = getHTTP("/action/stats").playerCount
-				e("player_list").innerHTML = "<th>Player</th><th>Logged In</th></tr>"
-				for (i in data.players){
-					var player = data.players[i]
-					var d = new Date(player.loggedIn * 1000); var date = d.getMonth() + "/" + d.getDay() + "/" + d.getFullYear() + " @ " + d.getHours() + ":" + pad(d.getMinutes(), 2)
-					e("player_list").innerHTML += "<td>"+player.name+"</td><td>"+date+"</td>"
-				}
-				/*for (i in data.players){
-					var player = data.players[i]
-					if (!e("player-"+player)){
-						e("player_list").innerHTML += "<td id='player-"+player+"'>" + player + "</td>"
-					}
-				}*/
-//				for (i in players){if(!(players[i] in data.players)){e("player-"+players[i]).remove()}}
-				e("player_count").innerHTML = "(" + data.players.length + ")"
-				setTimeout("poll()", 1000)
-			}
-			window.onload = function(){
-				poll()
-			}
-		</script>
-	</head>
-	<body>
-		<div class="top">
-			<span>Server Stats</span>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="description" content="">
+	<meta name="author" content="benbaptist" >
+
+	<title>Theme Template for Bootstrap</title>
+
+	<style type="text/css">
+		.theme-showcase{
+			margin-top: 50px;
+		}
+	</style>
+	<!-- Bootstrap core CSS -->
+	<link href="css/bootstrap.min.css" rel="stylesheet">
+	<!-- Bootstrap theme -->
+	<link href="css/bootstrap-theme.min.css" rel="stylesheet">
+	<link href="css/bootstrap-theme.css" rel="stylesheet">
+<body role="document">
+
+	<!-- Fixed navbar -->
+	<div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+		<div class="container">
+		<div class="navbar-header">
+			<button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+				<span class="sr-only">Toggle navigation</span>
+				<span class="icon-bar"></span>
+				<span class="icon-bar"></span>
+				<span class="icon-bar"></span>
+			</button>
+			<a class="navbar-brand" href="#">Wrapper.py</a>
 		</div>
-		<div class="sidebar">
-			<div class="item" onclick="select(this)">Stats</div>
-			<div class="item" onclick="select(this)">Chat</div>
+		<div class="navbar-collapse collapse">
+			<ul class="nav navbar-nav">
+				<li class="active"><a href="/">Home</a></li>
+				<li><a href="admin.html">Admin</a></li>
+			</ul>
+		</div><!--/.nav-collapse -->
 		</div>
-		<div class="main">
-			<div id="stats">
-				<h2>Players <span id="player_count"></span></h2>
-				<table style="border:solid 1 black;width:100%;">
-					<tbody id="player_list" style="width:100%;">
-						<th>Player</th></tr>
-					</tbody>
-				</table>
-			</div>
-			<div id="chat" style="display:none">
-				<iframe src="google.com"></iframe>
-			</div>
+	</div>
+
+	<div class="container theme-showcase" role="main">
+		<div class="page-header">
+		<h1>Players</h1>
 		</div>
-	</body>
+		<table class="table table-condensed">
+		<thead>
+		<tr>
+			<th>Skin</th>
+			<th>Player</th>
+			<th>Login Date</th>
+		</tr>
+		</thead>
+		<tbody>
+		<tr>
+			<td><img src="/face/benbaptist.png"/></td>
+			<td>benbaptist</td>
+			<td>0</td>
+		</tr>
+		</tbody>
+	</table>
+
+
+
+		<div class="page-header">
+		<h1>Navs</h1>
+		</div>
+		<ul class="nav nav-tabs" role="tablist">
+		<li class="active"><a href="#">Home</a></li>
+		<li><a href="#">Profile</a></li>
+		<li><a href="#">Messages</a></li>
+		</ul>
+		<ul class="nav nav-pills">
+		<li class="active"><a href="#">Home</a></li>
+		<li><a href="#">Profile</a></li>
+		<li><a href="#">Messages</a></li>
+		</ul>
+	</div> <!-- /container -->
+
+
+	<!-- Bootstrap core JavaScript
+	================================================== -->
+	<!-- Placed at the end of the document so the pages load faster -->
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+	<script src="js/bootstrap.min.js"></script>
+	<script src="js/docs.min.js"></script>
+</body>
 </html>

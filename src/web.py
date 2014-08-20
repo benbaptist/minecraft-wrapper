@@ -1,5 +1,10 @@
-import socket, pkg_resources, traceback, zipfile, threading, time, json, random
+import socket, traceback, zipfile, threading, time, json, random, urlparse
 from api import API
+try:
+	import pkg_resources
+	IMPORT_SUCCESS = True
+except:
+	IMPORT_SUCCESS = False
 class Web:
 	def __init__(self, wrapper):
 		self.wrapper = wrapper
@@ -109,12 +114,14 @@ class Client:
 		return {"type": "error", "error": "unknown_key"}
 	def getContentType(self, filename):
 		ext = filename[filename.rfind("."):][1:]
-		if ext in ("txt", "html", "js", "css"): return "text/html"
+		if ext == "js": return "application/javascript"
+		if ext == "css": return "text/css"
+		if ext in ("txt", "html"): return "text/html"
 		if ext in ("ico"): return "image/x-icon"
 		return "application/octet-stream"
 	def get(self):
-		request = self.request.split("/")[1]
-		if request == "":
+		request = self.request
+		if request == "/":
 			file = "index.html"
 		elif request == "action":
 			try:

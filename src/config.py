@@ -6,6 +6,7 @@ auto-restart = True
 debug = False
 
 [Backups]
+;; Automatic backups with automatic backup pruning. Interval is in seconds. ;; 
 enabled = False
 backup-folders = ['server.properties', 'world', 'white-list.txt']
 backup-interval = 3600
@@ -14,34 +15,39 @@ backup-location = backup-directory
 backups-keep = 10
 
 [IRC]
+;; This allows your users to communicate to and from the server via IRC and vise versa. ;;
 enabled = False
 server = benbaptist.com
 port = 6667
-nick = MinecraftServ
+nick = MinecraftServer
 channels = ['#main']
 command-character = !
 show-channel-server = True
 autorun-irc-commands = ['COMMAND 1', 'COMMAND 2']
-control-from-irc = True
 obstruct-nicknames = False
+control-from-irc = True
 control-irc-pass = password
-forward-commands-to-irc = False
 
 [Death]
+;; This kicks a player upon death. I don't recall why I implemented this. ;;
 kick-on-death = False
 users-to-kick = ['username1', 'username2', 'remove these usernames to kick ALL users upon death']
 death-kick-messages = ['You died!']
 
 [Proxy]
-enabled = False
-server-port = 25564
+;; This is a man-in-the-middle proxy mode similar to BungeeCord, but allows for extra plugin functionality. ;;
+;; The server must be on offline mode. Make sure that the server is inaccessible directly from the outside world. ;;
+;; Note: the online-mode option here refers to the proxy only, not to the server's offline mode. ;;
+proxy-enabled = False
 proxy-port = 25565
-bind = 0.0.0.0
+proxy-bind = 0.0.0.0
+server-port = 25564
 motd = Minecraft Server
 online-mode = True
 """
 
 """[Web]
+;; This is a web UI. ;;
 enabled = False
 bind = 0.0.0.0
 port = 8070
@@ -61,8 +67,8 @@ class Config:
 			f.write(DEFAULT_CONFIG)
 			f.close()
 			self.exit = True
-		open("wrapper.properties", "a").close()
-		self.parser = ConfigParser.ConfigParser()
+#		open("wrapper.properties", "a").close()
+		self.parser = ConfigParser.ConfigParser(allow_no_value = True)
 		self.parser.readfp(open("wrapper.properties"))
 
 		sections = ["General", "Backups", "IRC", "Death", "Proxy", "Web"]
@@ -73,7 +79,7 @@ class Config:
 		},		
 		"IRC":{ 
 			"enabled": True, 
-			"nick": "MinecraftIRC", 
+			"nick": "MinecraftServer", 
 			"server": "benbaptist.com", 
 			"port": 6667, 
 			"channels": ["#main"], 
@@ -147,7 +153,7 @@ class Config:
 		self.save()
 		Config.debug = self.config["General"]["debug"]
 		if self.exit:
-			self.log.info("Updated wrapper.properties with new entries - edit configuration if needed and start again")
+			self.log.info("Updated wrapper.properties file - check and edit configuration if needed and start again.")
 			sys.exit()
 	def save(self):
 		self.parser.write(open("wrapper.properties", "wb"))
