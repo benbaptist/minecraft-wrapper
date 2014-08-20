@@ -47,7 +47,7 @@ class API:
 		"l": "\xc2\xa7l", # bold
 		"m": "\xc2\xa7m", # strikethrough
 		"n": "\xc2\xa7n", # underline
-		"o": "\xc2\xa7o", # italic
+		"o": "\xc2\xa7o", # italic,
 	}
 	def __init__(self, wrapper, name=""):
 		self.wrapper = wrapper
@@ -103,7 +103,7 @@ class Minecraft:
 				current += char
 			else:
 				extras.append({"text": current, "color": color, "obfuscated": obfuscated, 
-					"underline": underline, "bold": bold, "italic": italic, "strikethrough": strikethrough})
+					"underlined": underline, "bold": bold, "italic": italic, "strikethrough": strikethrough})
 				current = ""
 				code = message[i+1]
 				if code in "abcdef0123456789":
@@ -123,7 +123,7 @@ class Minecraft:
 					color = "white"
 				it.next()
 		extras.append({"text": current, "color": color, "obfuscated": obfuscated, 
-			"underline": underline, "bold": bold, "italic": italic, "strikethrough": strikethrough})
+			"underlined": underline, "bold": bold, "italic": italic, "strikethrough": strikethrough})
 		return json.dumps({"text": "", "extra": extras})
 	def console(self, string):
 		try:
@@ -231,7 +231,7 @@ class Player:
 				current += char
 			else:
 				extras.append({"text": current, "color": color, "obfuscated": obfuscated, 
-					"underline": underline, "bold": bold, "italic": italic, "strikethrough": strikethrough})
+					"underlined": underline, "bold": bold, "italic": italic, "strikethrough": strikethrough})
 				current = ""
 				code = message[i+1]
 				if code in "abcdef0123456789":
@@ -253,7 +253,7 @@ class Player:
 					current += "&"
 				it.next()
 		extras.append({"text": current, "color": color, "obfuscated": obfuscated, 
-			"underline": underline, "bold": bold, "italic": italic, "strikethrough": strikethrough})
+			"underlined": underline, "bold": bold, "italic": italic, "strikethrough": strikethrough})
 		return json.dumps({"text": "", "extra": extras})
 	def processColorCodesOld(self, message):
 		for i in API.colorCodes:
