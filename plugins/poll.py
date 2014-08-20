@@ -1,6 +1,6 @@
 # -- Poll Plugin -- 
 
-import threading, time, random, json, os
+import time, json, os
 class Main:
 	def __init__(self, api, log):
 		self.api = api
@@ -12,6 +12,8 @@ class Main:
 	def onEnable(self):
 		self.api.registerEvent("player.message", self.command)
 		self.api.registerEvent("player.join", self.join)
+		
+		self.api.registerEvent("irc.channelMessage", self.IRCCommand)
 		
 		self.loadPolls()
 	def onDisable(self):
@@ -39,6 +41,39 @@ class Main:
 	def save(self):
 		with open("poll_plugin.json", "w") as f:
 			f.write(json.dumps(self.data))
+	def getResults(self, pollObject):
+		count = {}
+		for player in pollObject["results"]:
+			value = pollObject["results"][player]
+			if value not in count: count[value] = 0
+			count[value] += 1
+		return count
+	def IRCCommand(self, payload):
+		def args(i):
+			try: return payload["message"].split(" ")[i]
+			except: return ""
+		def argsAfter(i):
+			try: return " ".join(payload["message"].split(" ")[i:])
+			except: return ""
+		try:
+			if not payload["message"][0] == "!": return
+		except: return
+		command = args(0)[1:]
+		if command == "test":
+			self.api.wrapper.irc.msgQueue.append("Hello there! Test")
+		if command == "results":
+			poll = args(1)
+			if len(poll) > 0:
+				if poll in self.data["polls"]:
+					pollObject = self.data["polls"][poll]
+					results = self.getResults(pollObject)
+					self.api.wrapper.irc.msgQueue.append("The poll results for '%s': " % poll)
+					for i in results:
+						self.api.wrapper.irc.msgQueue.append("%s: %s vote(s)" % (pollObject["options"][i], results[i]))
+				else:
+					self.api.wrapper.irc.msgQueue.append("Error: Poll '%s' does not exist." % poll)
+			else:
+				self.api.wrapper.irc.msgQueue.append("Usage: !results <pollName>")
 	def command(self, payload): # sloppy debug stuff. :P
 		def args(i):
 			try: return payload["message"].split(" ")[i]
@@ -46,8 +81,24 @@ class Main:
 		def argsAfter(i):
 			try: return " ".join(payload["message"].split(" ")[i:])
 			except: return ""
+		try:
+			if not payload["message"][0] == "!": return
+		except: return
 		command = args(0)[1:]
 		player = self.minecraft.getPlayer(payload["player"])
+		if command == "results":
+			poll = args(1)
+			if len(poll) > 0:
+				if poll in self.data["polls"]:
+					pollObject = self.data["polls"][poll]
+					results = self.getResults(pollObject)
+					player.message("&a&oThe poll results for '%s': " % poll)
+					for i in results:
+						player.message("&b%s: &6%s vote(s)" % (pollObject["options"][i], results[i]))
+				else:
+					player.message("&cError: Poll '%s' does not exist." % poll)
+			else:
+				player.message("&cUsage: !results <pollName>")
 		if command == "vote":
 			poll = args(1)
 			value = args(2)
