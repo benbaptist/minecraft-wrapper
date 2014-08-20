@@ -5,11 +5,16 @@ Wrapper.py is a simple Minecraft server wrapper for implementing various functio
 
 #Usage#
 You only need to download Wrapper.py, the src folder is just the extracted version of Wrapper.py.</br>  
-Run the following command to download Wrapper.py:</br></br>  
+On Linux, you can run the following command to download the stable Wrapper.py (if you have wget installed):</br></br>  
 ```
 
-curl https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master/Wrapper.py
+wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master/Wrapper.py
 ```  
+or the following to download the unstable, development version of Wrapper.py:
+```
+
+wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/Wrapper.py
+```
 Run `python Wrapper.py` to start. Wrapper.py is a Python-executable zipped-up folder, hence why viewing it results in garbled text. If you want to view the source code, open it
 with a zip file viewer OR download the src folder.</br>   
 On first run, it'll create the configuration file 'wrapper.properties' and exit. Tune this file to your needs, and then run `python Wrapper.py` again.</br>  
