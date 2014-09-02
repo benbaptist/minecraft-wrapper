@@ -44,18 +44,19 @@ proxy-bind = 0.0.0.0
 server-port = 25564
 motd = Minecraft Server
 online-mode = True
-"""
 
-"""[Web]
+[Web]
 ;; This is a web UI. ;;
 enabled = False
 bind = 0.0.0.0
 port = 8070
 password = blahblah98
-public-stats = True"""
+public-stats = True
+"""
 
 class Config:
 	version = "0.7"
+	buildType = "dev" # dev, beta, or release
 	debug = False
 	def __init__(self, log):
 		self.log = log

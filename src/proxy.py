@@ -1,4 +1,4 @@
-import socket, threading, struct, StringIO, time, traceback, json, random, requests, hashlib, os, zlib
+import socket, threading, struct, StringIO, time, traceback, json, random, requests, hashlib, os, zlib, binascii, uuid, md5
 try:
 	import encryption
 	IMPORT_SUCCESS = True
@@ -11,6 +11,7 @@ class Proxy:
 		self.socket = False
 		self.isServer = False
 		self.clients = []
+		self.skins = {}
 		
 		self.privateKey = encryption.generate_key_pair()
 		self.publicKey = encryption.encode_public_key(self.privateKey)
@@ -31,16 +32,14 @@ class Proxy:
 	 	while not self.wrapper.halt:
 	 		try:
 		 		sock, addr = self.socket.accept()
-		 		client = Client(sock, addr, self.wrapper, self.publicKey, self.privateKey)
+		 		client = Client(sock, addr, self.wrapper, self.publicKey, self.privateKey, True)
 		 		
 		 		t = threading.Thread(target=client.handle, args=())
 		 		t.daemon = True
 		 		t.start()
 
 				self.clients.append(client)
-		 		print "HICKERY DOOD"
-		 		print self.clients		 		
-		 		
+
 		 		# remove stale clients
 		 		for i, client in enumerate(self.wrapper.proxy.clients):
 					if client.abort:
@@ -68,18 +67,28 @@ class Proxy:
 				self.wrapper.server.protocolVersion = data["version"]["protocol"]
 				break
 		sock.close()
+	def getClientByServerUUID(self, id):
+		for client in self.clients:
+			if str(client.serverUUID) == str(id):
+				return client
 class Client: # handle client/game connection
-	def __init__(self, socket, addr, wrapper, publicKey, privateKey):
+	def __init__(self, socket, addr, wrapper, publicKey, privateKey, isProxyConnection):
 		self.socket = socket
 		self.wrapper = wrapper
 		self.config = wrapper.config
 		self.socket = socket
 		self.publicKey = publicKey
 		self.privateKey = privateKey
+		self.proxy = wrapper.proxy
 		self.abort = False
 		self.tPing = time.time()
 		self.server = None
 		self.isServer = False
+		self.turnItUp = False
+		self.uuid = None
+		self.serverUUID = None
+		self.isProxyConnection = isProxyConnection
+		self.fake = False
 		
 		self.state = 0 # 0 = init, 1 = motd, 2 = login, 3 = active, 4 = authorizing
 		
@@ -122,7 +131,7 @@ class Client: # handle client/game connection
 			if client.username == self.username:
 				del self.wrapper.proxy.clients[i]
 	def disconnect(self, message):
-		print "Disconnecting client: %s" % message
+		#print "Disconnecting client: %s" % message
 		if self.state == 3:
 			self.send(0x40, "json", ({"text": message, "color": "red"},))
 		else:
@@ -131,13 +140,25 @@ class Client: # handle client/game connection
 		self.close()
 	def flush(self):
 		while not self.abort:
-#			try:
 			self.packet.flush()
-		#	except:
-#				print "Error while flushing to client"
-#				print traceback.format_exc()
-#				self.close()
 			time.sleep(0.05)
+	# UUID operations
+	def UUIDIntToHex(self, uuid):
+		uuid = uuid.encode("hex")
+		uuid = "%s-%s-%s-%s-%s" % (uuid[:8], uuid[8:12], uuid[12:16], uuid[16:20], uuid[20:])
+		return uuid
+	def UUIDHexToInt(self, uuid):
+		uuid = uuid.replace("-", "").decode("hex")
+		return uuid
+	def UUIDFromName(self, name):
+		m = md5.new()
+		m.update(name)
+		d = bytearray(m.digest())
+		d[6] &= 0x0f
+		d[6] |= 0x30
+		d[8] &= 0x3f
+		d[8] |= 0x80
+		return uuid.UUID(bytes=str(d))
 	def parse(self, id):
 		if id == 0x00:
 			if self.state == 0:
@@ -174,7 +195,8 @@ class Client: # handle client/game connection
 					self.send(0x01, "string|bytearray|bytearray", (self.serverID, self.publicKey, self.verifyToken))
 				else:
 					self.connect()
-					self.send(0x02, "string|string", ("b5c6c2f1-2cb8-30d8-807e-8a75ddf765af", self.username))
+					self.uuid = uuid.uuid3(uuid.NAMESPACE_OID, "OfflinePlayer: %s" % self.username)
+					self.send(0x02, "string|string", (str(self.uuid), self.username))
 					self.state = 3
 				return False
 			elif self.state == 3:
@@ -204,6 +226,9 @@ class Client: # handle client/game connection
 				h.update(sharedSecret)
 				h.update(self.publicKey)
 				serverId = h.hexdigest()
+				# The absolute worst hack until I can figure out why Python's hexdigest is not the same as Java's. Still not 100% fixing.
+				if serverId[0] == "0": serverId = serverId[1:] 
+				if serverId[-1] == "0": serverId = serverId[0:-1]
 				r = requests.get("https://sessionserver.mojang.com/session/minecraft/hasJoined?username=%s&serverId=%s" % (self.username, serverId))
 #				print "SessionServer response: %s" % r.text
 				
@@ -215,8 +240,9 @@ class Client: # handle client/game connection
 					return False
 				try:
 					data = r.json()
-					uuid = data["id"]
-					self.uuid = "%s-%s-%s-%s-%s" % (uuid[:8], uuid[8:12], uuid[12:16], uuid[16:20], uuid[20:])
+					self.uuid = data["id"]
+					self.uuid = "%s-%s-%s-%s-%s" % (self.uuid[:8], self.uuid[8:12], self.uuid[12:16], self.uuid[16:20], self.uuid[20:])
+					self.uuid = uuid.UUID(self.uuid)
 					
 					if not data["name"] == self.username:
 						self.disconnect("Client's username did not match Mojang's record")
@@ -224,14 +250,23 @@ class Client: # handle client/game connection
 					for property in data["properties"]:
 						if property["name"] == "textures":
 							self.skinBlob = property["value"]
+							self.wrapper.proxy.skins[self.uuid] = self.skinBlob
+					self.properties = data["properties"]
 				except:
+#					print traceback.format_exc()
 					self.disconnect("Session Server Error (this is not your fault - keep reconnecting until it works)")
 					return False
 				#self.uuid = "b5c6c2f1-2cb8-30d8-807e-8a75ddf765af" # static UUID because Mojang SessionServer sux
+				self.serverUUID = self.UUIDFromName("OfflinePlayer:" + self.username)
 				
-				self.send(0x02, "string|string", (self.uuid, self.username))
+				if self.version > 26:
+					self.packet.setCompression(256)
+				
+				self.send(0x02, "string|string", (str(self.uuid), self.username))
+#				self.send(0x38, "varint|varint|uuid|boolean|json", (3, ))
 				self.state = 3
 				self.connect()
+				
 				return False
 			elif self.state == 5: # ping packet during status request
 				keepAlive = self.read("long:keepAlive")["keepAlive"]
@@ -308,18 +343,30 @@ class Client: # handle client/game connection
 			print "error client->server, blah"
 			print traceback.format_exc()
 		
-
+class FakeClient:
+	def __init__(self, version):
+		self.packet = {}
+		self.version = version
+		self.abort = False
+		self.fake = True
+	def send(self):
+		pass
 class Server: # handle server connection
 	def __init__(self, client, wrapper):
 		self.client = client
 		self.wrapper = wrapper
 		self.abort = False
 		self.isServer = True
+		self.turnItUp = False
+		self.proxy = wrapper.proxy
 		
 		self.state = 0 # 0 = init, 1 = motd, 2 = login, 3 = active, 4 = authorizing
 		self.packet = None
 		self.version = self.wrapper.server.protocolVersion
 		self.log = wrapper.log
+		
+		if client == None:
+			self.client = FakeClient(self.wrapper.server.protocolVersion)
 	def connect(self):
 		self.socket = socket.socket()
 		self.socket.connect(("localhost", self.wrapper.config["Proxy"]["server-port"]))
@@ -361,7 +408,7 @@ class Server: # handle server connection
 #				self.close()
 #				break
 			time.sleep(0.05)
-	def parse(self, id):
+	def parse(self, id, original):
 		if id == 0x00:
 			if self.state < 3:
 				message = self.read("string:string")
@@ -388,15 +435,31 @@ class Server: # handle server connection
 				data = self.read("varint:threshold")
 				self.packet.compression = True
 				self.packet.compressThreshold = data["threshold"]
-#				self.client.send(0x03, "varint", (data["threshold"],))
-			#	self.client.packet.compression = True
-#				self.client.packet.compressThreshold = data["threshold"]
-				print "SET COMPRESSION"
+#				self.client.packet.setCompression(50000000000)
+#				self.client.turnItUp = data["threshold"]
 				time.sleep(1)
 				return False
 		if id == 0x05:
 			data = self.read("int:x|int:y|int:z")
 			self.wrapper.server.spawnPoint = (data["x"], data["y"], data["z"])
+		if id == 0x0c: # Spawn Player
+			data = self.read("varint:eid|uuid:uuid|int:x|int:y|int:z|byte:yaw|byte:pitch|short:item|rest:metadata")
+			if self.proxy.getClientByServerUUID(data["uuid"]):
+				self.client.send(0x0c, "varint|uuid|int|int|int|byte|byte|short|raw", (
+					data["eid"],
+					self.proxy.getClientByServerUUID(data["uuid"]).uuid,
+					data["x"],
+					data["y"],
+					data["z"],
+					data["yaw"],
+					data["pitch"],
+					data["item"],
+					data["metadata"]))
+				return False
+	#	if id == 0x21: # Chunk Data
+#			if self.client.packet.compressThreshold == -1:
+#				print "CLIENT COMPRESSION ENABLED"
+#				self.client.packet.setCompression(256)
 		if id == 0x2b: # change game state
 			data = self.read("ubyte:reason|float:value")
 			if data["reason"] == 3:
@@ -409,6 +472,50 @@ class Server: # handle server connection
 			message = json.loads(self.read("string:string"))
 			self.log.info("Disconnected from Server: %s" % message["message"])
 			self.disconnect(message)
+		if id == 0x47:
+			print "player list header/footer", original.encode("hex")
+		if id == 0x38:
+			head = self.read("varint:action|varint:length")
+			z = 0
+			while z < head["length"]:
+				serverUUID = self.read("uuid:uuid")["uuid"]
+				client = self.client.proxy.getClientByServerUUID(serverUUID)
+				if not client: 
+					z += 1
+					continue
+				z += 1
+				if head["action"] == 0:
+					properties = client.properties
+					raw = ""
+					for i in properties:
+						raw += self.client.packet.send_string(i["name"]) # name
+						raw += self.client.packet.send_string(i["value"]) # value
+						if "signature" in i:
+							raw += self.client.packet.send_bool(True)
+							raw += self.client.packet.send_string(i["signature"]) # signature
+						else:
+							raw += self.client.packet.send_bool(False)
+					raw += self.client.packet.send_varInt(0)
+					raw += self.client.packet.send_varInt(0)
+					raw += self.client.packet.send_bool(False)
+					self.client.send(0x38, "varint|varint|uuid|string|varint|raw", (0, 1, client.uuid, client.username, len(properties), raw))
+				elif head["action"] == 1:
+					data = self.read("varint:gamemode")
+					self.client.send(0x38, "varint|varint|uuid|varint", (1, 1, client.uuid, data["gamemode"]))
+				elif head["action"] == 2:
+					data = self.read("varint:ping")
+					self.client.send(0x38, "varint|varint|uuid|varint", (2, 1, client.uuid, data["ping"]))
+				elif head["action"] == 3:
+					data = self.read("bool:has_display")
+					if data["has_display"]:
+						data = self.read("string:displayname")
+						self.client.send(0x38, "varint|varint|uuid|bool|string", (3, 1, client.uuid, True, data["displayname"]))
+					else:
+						self.client.send(0x38, "varint|varint|uuid|varint", (3, 1, client.uuid, False))
+				elif head["action"] == 4:
+					print "Log off", client.uuid
+					self.client.send(0x38, "varint|varint|uuid", (4, 1, client.uuid))
+				return False
 #			return False
 	#	if id == 0x46:
 #			data = self.read("varint:threshold")
@@ -438,11 +545,16 @@ class Server: # handle server connection
 					self.close()
 					break
 				try:
-					if self.parse(id):
+					if self.parse(id, original) and self.client.fake == False:
 						self.client.sendRaw(original)
 				except:
 					self.log.debug("Could not parse packet, connection may crumble:")
 					self.log.debug(traceback.format_exc())
+				#if self.client.turnItUp:
+#					print "COMPRESSION ENABLED - QUEUE AND TURNITUP"
+#					self.client.turnItUp = False
+#					self.client.packet.turnItUp = True
+#					self.client.packet.compressThreshold = self.turnItUp
 		except:
 			print "error server->client, blah"
 			print traceback.format_exc()
@@ -457,7 +569,9 @@ class Packet: # PACKET PARSING CODE
 		self.recvCipher = None
 		self.sendCipher = None
 		self.compressThreshold = -1
+		self.turnItUp = False
 		self.version = 5
+		self.HASS = False
 		
 		self.buffer = StringIO.StringIO()
 		self.queue = []
@@ -495,12 +609,16 @@ class Packet: # PACKET PARSING CODE
 		if total&(1<<31):
 			total = total - (1<<32)
 		return total
+	def setCompression(self, threshold):
+#		self.sendRaw("\x03\x80\x02")
+		self.send(0x03, "varint", (threshold,))
+		self.compressThreshold = threshold
+		#time.sleep(1.5)
 	def flush(self):
 		for p in self.queue:
 			packet = p[1]
-			if p[0] > -1:
+			if p[0] > -1: #  p[0] > -1:
 				if len(packet) > self.compressThreshold:
-					raise Exception("COMPRESSING SUX")
 					packetCompressed = self.pack_varInt(len(packet)) + zlib.compress(packet)
 					packet = self.pack_varInt(len(packetCompressed)) + packetCompressed
 				else:
@@ -508,6 +626,8 @@ class Packet: # PACKET PARSING CODE
 					packet = self.pack_varInt(len(packet)) + packet
 			else:
 				packet = self.pack_varInt(len(packet)) + packet
+		#	if not self.obj.isServer:
+#				print packet.encode("hex")
 			if self.sendCipher is None:
 				self.socket.send(packet)
 			else:
@@ -536,6 +656,9 @@ class Packet: # PACKET PARSING CODE
 				if type == "bytearray": result[name] = self.read_bytearray()
 				if type == "position": result[name] = self.read_position()
 				if type == "slot": result[name] = self.read_slot()
+				if type == "uuid": result[name] = self.read_uuid()
+				if type == "metadata": result[name] = self.read_metadata()
+				if type == "rest": result[name] = self.read_rest()
 			except:
 				print traceback.format_exc()
 				result[name] = None
@@ -558,6 +681,9 @@ class Packet: # PACKET PARSING CODE
 					if type == "double": result += self.send_double(pay)
 					if type == "json": result += self.send_json(pay)
 					if type == "bytearray": result += self.send_bytearray(pay)
+					if type == "uuid": result += self.send_uuid(pay)
+					if type == "metadata": result += self.send_metadata(pay)
+					if type == "raw": result += pay
 				except:
 					print traceback.format_exc()
 		self.sendRaw(result)
@@ -585,6 +711,19 @@ class Packet: # PACKET PARSING CODE
 		return self.send_varInt(len(payload)) + payload
 	def send_json(self, payload):
 		return self.send_string(json.dumps(payload))
+	def send_uuid(self, payload):
+		return payload.bytes
+	def send_metadata(self, payload):
+		b = ""
+		for i in payload:
+			item = payload[i]
+			b+= chr(int("3", 2))
+			continue
+		b += self.send_ubyte(0x7f)
+		return b
+	def send_bool(self, payload):
+		if payload == False: return self.send_byte(0)
+		if payload == True: return self.send_byte(1)
 		
 	# -- READING DATA TYPES -- #
 	def recv(self, length):
@@ -649,5 +788,28 @@ class Packet: # PACKET PARSING CODE
 		if total&(1<<31):
 			total = total - (1<<32)
 		return total
+	def read_uuid(self):
+		i = self.read_data(16)
+		i = uuid.UUID(bytes=i)
+		return i
 	def read_string(self):
 		return self.read_data(self.read_varInt())
+	def read_rest(self):
+		return self.read_data(1024 * 1024)
+	def read_metadata(self):
+		data = {}
+		while True:
+			a = self.read_ubyte()
+			if a == 0x7f: return data
+			print "Metadata byte: %d" % a
+			index = a & 0x1f
+			type = a >> 5
+			if type == 0: data[index] = ("byte", self.read_byte())
+			if type == 1: data[index] = ("short", self.read_short())
+			if type == 2: data[index] = ("int", self.read_int())
+			if type == 3: data[index] = ("float", self.read_float())
+			if type == 4: data[index] = ("string", self.read_string())
+			if type == 5: data[index] = ("slot", self.read_slot())
+			if type == 6: 
+				data[index] = ("position", (self.read_int(), self.read_int(), self.read_int()))
+		return data

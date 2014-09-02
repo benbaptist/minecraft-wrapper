@@ -25,7 +25,7 @@ class Web:
 				if self.bind():
 					self.listen()
 				else:
-					self.log.error("Could not bind web to port - retrying in 5 seconds")
+					self.log.error("Could not bind web to %s:%d - retrying in 5 seconds" % (self.config["Web"]["web-bind"], self.config["Web"]["web-port"]))
 			except:
 				for line in traceback.format_exc().split("\n"):
 					self.log.error(line)
