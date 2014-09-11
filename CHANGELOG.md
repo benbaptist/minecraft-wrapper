@@ -6,7 +6,7 @@
 - Proxy system (like Bungeecord, perhaps)
 <ul>
 <strike>
-<li> Maybe add some custom in-game Wrapper.py commands such as /halt</li>
+<li> Add more custom in-game Wrapper.py commands such as /halt</li>
 <li> Log player actions such as block manipulation, etc.</li>
 </strike>
 <li>The above is possible now with the proxy mode, using plugins.</li>
@@ -24,6 +24,11 @@
 <li> Redo function names and general cleanup in in server.py - names are very confusing at the moment (fix start & stop functions, console functions)</li>
 </ul>
 - Fix messages not sending from IRC to server with show-channel off
+- Finish adding all block IDs, item IDs and their respective damage values to items.py
+- Proxy mode error: Error -3 while decompressing data: incorrect header check
+- Proxy mode error: Error -5 while decompressing data: incomplete or truncated stream
+- The "Z" in Position packets don't parse properly.
+- Players might not appear to disconnect from the tab menu
 
 <h4>0.7.0</h4>
 - Huge Improvements to APIs
@@ -31,9 +36,10 @@
 <li>self.api.registerCommand() for making real /commands in-game</li>
 <li>self.api.minecraft.changeResourcePack() for changing resource packs on the fly</li>
 </ul> 
-- Added a proxy mode - this is necessary for additional features of the API
+- Added a proxy mode - this is necessary for additional features of the API such as /commands and other special features
 <ul>
 <li>If you've used BungeeCord before - proxy mode should make sense. The only difference is that you don't need to make the server in offline mode.</li>
+<li>Built-in commands such as /reload, /wrapper, /pl(ugins), etc.</li>
 </ul> 
 - Write date to log files as well as a timestamp
 - Added /plugins command - was removed in the last update by mistake

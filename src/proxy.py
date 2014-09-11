@@ -225,10 +225,7 @@ class Client: # handle client/game connection
 				h.update(self.serverID)
 				h.update(sharedSecret)
 				h.update(self.publicKey)
-				serverId = h.hexdigest()
-				# The absolute worst hack until I can figure out why Python's hexdigest is not the same as Java's. Still not 100% fixing.
-				if serverId[0] == "0": serverId = serverId[1:] 
-				if serverId[-1] == "0": serverId = serverId[0:-1]
+				serverId = self.packet.hexdigest(h)
 				r = requests.get("https://sessionserver.mojang.com/session/minecraft/hasJoined?username=%s&serverId=%s" % (self.username, serverId))
 #				print "SessionServer response: %s" % r.text
 				
@@ -254,7 +251,7 @@ class Client: # handle client/game connection
 					self.properties = data["properties"]
 				except:
 #					print traceback.format_exc()
-					self.disconnect("Session Server Error (this is not your fault - keep reconnecting until it works)")
+					self.disconnect("Session Server Error")
 					return False
 				#self.uuid = "b5c6c2f1-2cb8-30d8-807e-8a75ddf765af" # static UUID because Mojang SessionServer sux
 				self.serverUUID = self.UUIDFromName("OfflinePlayer:" + self.username)
@@ -516,16 +513,6 @@ class Server: # handle server connection
 					print "Log off", client.uuid
 					self.client.send(0x38, "varint|varint|uuid", (4, 1, client.uuid))
 				return False
-#			return False
-	#	if id == 0x46:
-#			data = self.read("varint:threshold")
-#			print "SET THRESHOLD TO: %s" % data["threshold"]
-#			self.packet.compression = True
-#			self.packet.compressThreshold = data["threshold"]
-#			self.client.send(0x46, "varint", (data["threshold"],))
-#			self.client.packet.compression = True
-#			self.client.packet.compressThreshold = data["threshold"]
-#			return False
 		return True
 	def handle(self):
 		try:
@@ -575,6 +562,11 @@ class Packet: # PACKET PARSING CODE
 		
 		self.buffer = StringIO.StringIO()
 		self.queue = []
+	def hexdigest(self, sh):
+		d = long(sh.hexdigest(), 16)
+		if d >> 39 * 4 & 0x8:
+			return "-%x" % ((-d) & (2 ** (40 * 4) - 1))
+		return "%x" % d
 	def grabPacket(self):
 		length = self.unpack_varInt()
 		dataLength = 0

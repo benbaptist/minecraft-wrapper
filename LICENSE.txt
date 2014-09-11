@@ -1,5 +1,10 @@
-Wrapper.py's license is undecided, however nbt.py is used within the project. Here's the license for nbt.py:
+Wrapper.py's license is undecided.
 
+
+License for encryption.py (from mc4p by sadimusi):
+http://www.wtfpl.net/txt/copying/
+
+License for nbt.py:
 https://github.com/twoolie/NBT
 https://raw.githubusercontent.com/twoolie/NBT/master/LICENSE.txt
  Copyright (c) 2010-2013 Thomas Woolford and contributors

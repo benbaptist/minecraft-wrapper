@@ -88,6 +88,10 @@ class Minecraft:
 		self.blocks = items.Blocks
 	def getWorldName(self):
 		return self.wrapper.server.worldName
+	def isServerStarted(self):
+		if self.wrapper.server:
+			if self.wrapper.server.status == 2: return True
+		return False
 	def processColorCodes(self, message):
 		extras = []
 		bold = False
@@ -105,22 +109,26 @@ class Minecraft:
 				extras.append({"text": current, "color": color, "obfuscated": obfuscated, 
 					"underlined": underline, "bold": bold, "italic": italic, "strikethrough": strikethrough})
 				current = ""
-				code = message[i+1]
+				try: code = message[i+1]
+				except: break
 				if code in "abcdef0123456789":
 					try: color = API.colorCodes[code]
 					except: color = "white"
 				if code == "k": obfuscated = True
-				if code == "l": bold = True
-				if code == "m": strikethrough = True
-				if code == "n": underline = True
-				if code == "o": italic = True
-				if code == "r":
+				elif code == "l": bold = True
+				elif code == "m": strikethrough = True
+				elif code == "n": underline = True
+				elif code == "o": italic = True
+				elif code == "&": current += "&"
+				elif code == "r":
 					bold = False
 					italic = False
 					underline = False
 					obfuscated = False
 					strikethrough = False
 					color = "white"
+				else:
+					current += "&" + code
 				it.next()
 		extras.append({"text": current, "color": color, "obfuscated": obfuscated, 
 			"underlined": underline, "bold": bold, "italic": italic, "strikethrough": strikethrough})
