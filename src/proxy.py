@@ -65,6 +65,7 @@ class Proxy:
 			if id == 0x00:
 				data = json.loads(packet.read("string:response")["response"])
 				self.wrapper.server.protocolVersion = data["version"]["protocol"]
+				self.wrapper.server.maxPlayers = 1024
 				break
 		sock.close()
 	def getClientByServerUUID(self, id):
@@ -159,6 +160,10 @@ class Client: # handle client/game connection
 		d[8] &= 0x3f
 		d[8] |= 0x80
 		return uuid.UUID(bytes=str(d))
+	def getPlayerObject(self):
+		if self.username in self.wrapper.server.players:
+			return self.wrapper.server.players[self.username]
+		return False
 	def parse(self, id):
 		if id == 0x00:
 			if self.state == 0:
@@ -172,8 +177,12 @@ class Client: # handle client/game connection
 					self.disconnect("Invalid state '%d'" % data["state"])
 				return False
 			elif self.state == 1:
+				sample = []
+				for i in self.wrapper.server.players:
+					player = self.wrapper.server.players[i]
+					sample.append({"name": player.username, "id": str(player.uuid)})
 				MOTD = {"description": self.config["Proxy"]["motd"], 
-					"players": {"max": 20, "online": len(self.wrapper.server.players)},
+					"players": {"max": self.wrapper.server.maxPlayers, "online": len(self.wrapper.server.players), "sample": sample},
 					"version": {"name": self.wrapper.server.version, "protocol": self.wrapper.server.protocolVersion}
 				}
 				if os.path.exists("server-icon.png"):
@@ -206,7 +215,7 @@ class Client: # handle client/game connection
 				data = self.read("string:message")
 				if data is None: return False
 				try:
-					if not self.wrapper.callEvent("player.rawMessage", {"player": self.username, "message": data["message"]}): return False
+					if not self.wrapper.callEvent("player.rawMessage", {"player": self.getPlayerObject(), "message": data["message"]}): return False
 					if data["message"][0] == "/":
 						def args(i):
 							try: return data["message"].split(" ")[i]
@@ -214,7 +223,7 @@ class Client: # handle client/game connection
 						def argsAfter(i):
 							try: return data["message"].split(" ")[i:]
 							except: return ""
-						return self.wrapper.callEvent("player.runCommand", {"player": self.username, "command": args(0)[1:], "args": argsAfter(1)})
+						return self.wrapper.callEvent("player.runCommand", {"player": self.getPlayerObject(), "command": args(0)[1:], "args": argsAfter(1)})
 				except:
 					print traceback.format_exc()
 			elif self.state == 4: # encryption response packet
@@ -288,9 +297,12 @@ class Client: # handle client/game connection
 				position = data["position"]
 			if data is None: return False 
 			if data["status"] == 2:
-				if not self.wrapper.callEvent("player.dig", {"player": self.username, "position": position, "action": "end_break", "face": data["face"]}): return False
+				if not self.wrapper.callEvent("player.dig", {"player": self.getPlayerObject(), "position": position, "action": "end_break", "face": data["face"]}): return False
 			if data["status"] == 0:
-				if not self.wrapper.callEvent("player.dig", {"player": self.username, "position": position, "action": "begin_break", "face": data["face"]}): return False
+				if not self.gamemode == 1:
+					if not self.wrapper.callEvent("player.dig", {"player": self.getPlayerObject(), "position": position, "action": "begin_break", "face": data["face"]}): return False
+				else:
+					if not self.wrapper.callEvent("player.dig", {"player": self.getPlayerObject(), "position": position, "action": "end_break", "face": data["face"]}): return False
 			if self.server.state is not 3: return False
 		if id == 0x08: # Player Block Placement
 			if self.version < 6:
@@ -301,9 +313,9 @@ class Client: # handle client/game connection
 				position = data["position"]
 			position = data["position"]
 			if position == None:
-				if not self.wrapper.callEvent("player.action", {"player": self.username}): return False
+				if not self.wrapper.callEvent("player.action", {"player": self.getPlayerObject()}): return False
 			else:
-				if not self.wrapper.callEvent("player.place", {"player": self.username, "position": position, "item": data["item"]}): return False
+				if not self.wrapper.callEvent("player.place", {"player": self.getPlayerObject(), "position": position, "item": data["item"]}): return False
 			if self.server.state is not 3: return False
 		if id == 0x09: # Held Item Change
 			slot = self.read("short:short")["short"]
@@ -320,6 +332,7 @@ class Client: # handle client/game connection
 			while not self.abort:
 				try:
 					id, original = self.packet.grabPacket()
+					self.original = original
 				except EOFError:
 					self.close()
 					break
@@ -356,6 +369,7 @@ class Server: # handle server connection
 		self.isServer = True
 		self.turnItUp = False
 		self.proxy = wrapper.proxy
+		self.spam = False
 		
 		self.state = 0 # 0 = init, 1 = motd, 2 = login, 3 = active, 4 = authorizing
 		self.packet = None
@@ -418,6 +432,7 @@ class Server: # handle server connection
 			data = self.read("int:eid|ubyte:gamemode|byte:dimension|ubyte:difficulty|ubyte:max_players|string:level_type")
 			self.client.gamemode = data["gamemode"]
 			self.client.dimension = data["dimension"]
+			self.spam = True
 		if id == 0x02:
 			if self.state == 2:
 				self.state = 3
@@ -430,8 +445,12 @@ class Server: # handle server connection
 		if id == 0x03:
 			if self.state == 2:
 				data = self.read("varint:threshold")
-				self.packet.compression = True
-				self.packet.compressThreshold = data["threshold"]
+				if not data["threshold"] == -1:
+					self.packet.compression = True
+					self.packet.compressThreshold = data["threshold"]
+				else:
+					self.packet.compression = False
+					self.packet.compressThreshold = -1
 #				self.client.packet.setCompression(50000000000)
 #				self.client.turnItUp = data["threshold"]
 				time.sleep(1)
@@ -469,6 +488,8 @@ class Server: # handle server connection
 			message = json.loads(self.read("string:string"))
 			self.log.info("Disconnected from Server: %s" % message["message"])
 			self.disconnect(message)
+		if id == 0x46:
+			print "PISSSSSSSSSSSSSSSSSSSSSSSSS"
 		if id == 0x47:
 			print "player list header/footer", original.encode("hex")
 		if id == 0x38:
@@ -520,12 +541,12 @@ class Server: # handle server connection
 				try:
 					id, original = self.packet.grabPacket()
 				except EOFError:
-					print traceback.format_exc()
+#					print traceback.format_exc()
 					self.close()
 					break
 				except:
 					print "Failed to grab packet (SERVER):"
-					print traceback.format_exc()
+#					print traceback.format_exc()
 					#self.disconnect("Internal Wrapper.py Error")
 #					break
 				if self.client.abort:
@@ -544,7 +565,7 @@ class Server: # handle server connection
 #					self.client.packet.compressThreshold = self.turnItUp
 		except:
 			print "error server->client, blah"
-			print traceback.format_exc()
+#			print traceback.format_exc()
 
 
 class Packet: # PACKET PARSING CODE
@@ -652,7 +673,7 @@ class Packet: # PACKET PARSING CODE
 				if type == "metadata": result[name] = self.read_metadata()
 				if type == "rest": result[name] = self.read_rest()
 			except:
-				print traceback.format_exc()
+#				print traceback.format_exc()
 				result[name] = None
 		return result
 	def send(self, id, expression, payload):
@@ -671,6 +692,7 @@ class Packet: # PACKET PARSING CODE
 					if type == "varint": result += self.send_varInt(pay)
 					if type == "float": result += self.send_float(pay)
 					if type == "double": result += self.send_double(pay)
+					if type == "long": result += self.send_long(pay)
 					if type == "json": result += self.send_json(pay)
 					if type == "bytearray": result += self.send_bytearray(pay)
 					if type == "uuid": result += self.send_uuid(pay)
@@ -689,6 +711,8 @@ class Packet: # PACKET PARSING CODE
 		return self.send_varInt(len(payload)) + payload.encode("utf8")
 	def send_int(self, payload):
 		return struct.pack(">i", payload)
+	def send_long(self, payload):
+		return struct.pack(">q", payload)
 	def send_short(self, payload):
 		return struct.pack(">h", payload)
 	def send_ushort(self, payload):
@@ -757,7 +781,9 @@ class Packet: # PACKET PARSING CODE
 	def read_position(self):
 		position = self.read_long()
 		if position == -1: return None
-		position = (position >> 38, (position >> 26) & 0xFFF, position & 0x3FFFFFF)
+		if position < 1: z = -(-position & 0x3FFFFFF)
+		else: z = position & 0x3FFFFFF
+		position = (position >> 38, (position >> 26) & 0xFFF, z)
 		return position
 	def read_slot(self):
 		id = self.read_short()

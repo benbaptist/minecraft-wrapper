@@ -44,15 +44,15 @@ proxy-bind = 0.0.0.0
 server-port = 25564
 motd = Minecraft Server
 online-mode = True
+"""
 
-[Web]
+"""[Web]
 ;; This is a web UI. ;;
 enabled = False
 bind = 0.0.0.0
 port = 8070
 password = blahblah98
-public-stats = True
-"""
+public-stats = True"""
 
 class Config:
 	version = "0.7"
@@ -72,7 +72,7 @@ class Config:
 		self.parser = ConfigParser.ConfigParser(allow_no_value = True)
 		self.parser.readfp(open("wrapper.properties"))
 
-		sections = ["General", "Backups", "IRC", "Death", "Proxy", "Web"]
+		sections = ["General", "Backups", "IRC", "Death", "Proxy"]
 		defaults = {"General":{
 			"command": "java -jar minecraft_server.1.7.10.jar",
 			"auto-restart": True,
@@ -112,8 +112,9 @@ class Config:
 			"proxy-bind": "0.0.0.0",
 			"motd": "Minecraft Server",
 			"online-mode": True
-		},
-		"Web":{
+		}}
+		# Removed from the list above until fully implemented.
+		{"Web":{
 			"web-enabled": False,
 			"web-bind": "0.0.0.0",
 			"web-port": 8070,

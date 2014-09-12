@@ -212,6 +212,8 @@ class Player:
 			if client.username == username:
 				self.client = client
 				break
+	def __str__(self):
+		return self.username
 	def getClient(self):
 		if self.client == None:
 			for client in self.wrapper.proxy.clients:

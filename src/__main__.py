@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import socket, datetime, time, sys, threading, random, subprocess, os, json, signal, traceback, ConfigParser, ast, proxy, web
+import socket, datetime, time, sys, threading, random, subprocess, os, json, signal, traceback, ConfigParser, ast, proxy, web, globals
 from log import *
 from config import Config
 from irc import IRC
@@ -91,12 +91,13 @@ class Wrapper:
 			self.log.error("A serious runtime error occurred - if you notice any strange behaviour, please restart immediately")
 		return True
 	def playerCommand(self, payload):
-		self.log.info("%s executed: /%s %s" % (payload["player"], payload["command"], " ".join(payload["args"])))
+		self.log.info("%s executed: /%s %s" % (str(payload["player"]), payload["command"], " ".join(payload["args"])))
 		if payload["command"] == "wrapper":
-			self.api.minecraft.getPlayer(payload["player"]).message({"text": "Wrapper.py version %s" % Config.version, "color": "green"})
+			player = payload["player"]
+			player.message({"text": "Wrapper.py Version %s (build %d)" % (Config.version, globals.build), "color": "gray", "italic": True})
 			return False
 		if payload["command"] == "plugins" or payload["command"] == "pl":
-			player = self.api.minecraft.getPlayer(payload["player"])
+			player = payload["player"]
 			if player.isOp():
 				player.message({"text": "List of plugins installed:", "color": "red", "italic": True})
 				for plugin in self.plugins:
@@ -110,20 +111,20 @@ class Wrapper:
 					player.message({"text": "%s" % plugin, "color": "gold", "extra":[{"text": " v%s - %s" % (version, description), "color": "gray"}]})
 				return False
 		if payload["command"] == "reload":
-			player = self.api.minecraft.getPlayer(payload["player"])
+			player = payload["player"]
 			if player.isOp():
 				try:
 					self.reloadPlugins()
-					self.api.minecraft.getPlayer(payload["player"]).message({"text": "Plugins reloaded.", "color": "green"})
+					player.message({"text": "Plugins reloaded.", "color": "green"})
 				except:
 					self.log.error("Failure to reload plugins:")
 					self.log.error(traceback.format_exc())
-					self.api.minecraft.getPlayer(payload["player"]).message({"text": "An error occurred while reloading plugins. Please check the console immediately for a traceback.", "color": "red"})
+					player.message({"text": "An error occurred while reloading plugins. Please check the console immediately for a traceback.", "color": "red"})
 				return False
 		for pluginID in self.commands:
 			if pluginID == "Wrapper.py":
 				try: 
-					self.commands[pluginID][command](self.api.minecraft.getPlayer(payload["player"]), payload["args"])
+					self.commands[pluginID][command](payload["player"], payload["args"])
 				except: pass
 				continue
 			plugin = self.plugins[pluginID]
@@ -131,13 +132,13 @@ class Wrapper:
 			command = payload["command"]
 			if command in self.commands[pluginID]:
 				try:
-					self.commands[pluginID][command](self.api.minecraft.getPlayer(payload["player"]), payload["args"])
+					self.commands[pluginID][command](payload["player"], payload["args"])
 					return False
 				except:
 					self.log.error("Plugin '%s' errored out when executing command: '<%s> /%s':" % (pluginID, payload["player"], command))
 					for line in traceback.format_exc().split("\n"):
 						self.log.error(line)
-					self.api.minecraft.getPlayer(payload["player"]).message({"text": "An internal error occurred on the server side while trying to execute this command. Apologies.", "color": "red"})
+					payload["player"].message({"text": "An internal error occurred on the server side while trying to execute this command. Apologies.", "color": "red"})
 					return False
 		return True
 	def getUUID(self, name):
@@ -165,15 +166,15 @@ class Wrapper:
 			t = threading.Thread(target=self.irc.init, args=())
 			t.daemon = True
 			t.start()
-		if self.config["Web"]["web-enabled"]:
-			if web.IMPORT_SUCCESS:
-				self.web = web.Web(self)
-				t = threading.Thread(target=self.web.wrap, args=())
-				t.daemon = True
-				t.start()
-			else:
-				self.log.error("Web remote could not be started because you do not have the required modules installed: pkg_resources")
-				self.log.error("Hint: http://stackoverflow.com/questions/7446187")
+		#if self.config["Web"]["web-enabled"]:
+#			if web.IMPORT_SUCCESS:
+#				self.web = web.Web(self)
+#				t = threading.Thread(target=self.web.wrap, args=())
+#				t.daemon = True
+#				t.start()
+#			else:
+#				self.log.error("Web remote could not be started because you do not have the required modules installed: pkg_resources")
+#				self.log.error("Hint: http://stackoverflow.com/questions/7446187")
 		if len(sys.argv) < 2:
 			wrapper.server.serverArgs = wrapper.configManager.config["General"]["command"].split(" ")
 		else:

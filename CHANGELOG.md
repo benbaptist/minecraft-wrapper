@@ -1,8 +1,11 @@
 #Changelog#
 
 <h4>To-do List</h4>
-- Web interface for server management
-- Multi-server mode
+- Web interface for server management (partially implemented, not sure when it'll be done)
+- Multi-server mode (This might actually become a separate project for managing multiple servers and accounts, rather than being a Wrapper.py feature)
+<ul>
+<li>If I make it a separate project, it might use Wrapper.py as a backend</li>
+</ul>
 - Proxy system (like Bungeecord, perhaps)
 <ul>
 <strike>
