@@ -545,7 +545,7 @@ class Server: # handle server connection
 					self.close()
 					break
 				except:
-					print "Failed to grab packet (SERVER):"
+					print "Failed to grab packet (SERVER)"
 #					print traceback.format_exc()
 					#self.disconnect("Internal Wrapper.py Error")
 #					break

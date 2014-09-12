@@ -127,8 +127,6 @@ class Minecraft:
 					obfuscated = False
 					strikethrough = False
 					color = "white"
-				else:
-					current += "&" + code
 				it.next()
 		extras.append({"text": current, "color": color, "obfuscated": obfuscated, 
 			"underlined": underline, "bold": bold, "italic": italic, "strikethrough": strikethrough})
