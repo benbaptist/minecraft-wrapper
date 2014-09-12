@@ -175,7 +175,7 @@ class Minecraft:
 		pass
 	def getPlayer(self, name=""):
 		try:
-			return self.wrapper.server.players[name]
+			return self.wrapper.server.players[str(name)]
 		except:
 			raise Exception("No such player %s is logged in" % name)
 	# get world-based information
