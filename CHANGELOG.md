@@ -21,6 +21,14 @@
 - First-run setup wizard for new setups
 - Potentially implement a way to reload the config - but that might be too difficult/bug prone
 - UHC-style timer mode
+- Fix support for pre-1.7 Minecraft servers (especially Forge/modded servers still on 1.6.4 and earlier)
+- Add permissions system
+- Improve configuration system/redo from scratch
+<ul>
+<li>Add support for comments</li>
+<li>Allow manual ordering of the options, to make configuration files a bit easier on the eyes</li>
+</ul>
+- Fix ban system for proxy-based setups
 - Clean up & organize code... it's a tad cluttery right now! (this is only semi-true now, I've cleaned it up quite a bit)
 <ul>
 <li> Move backup code into a new class, backup.py</li>
@@ -38,6 +46,7 @@
 <ul>
 <li>self.api.registerCommand() for making real /commands in-game</li>
 <li>self.api.minecraft.changeResourcePack() for changing resource packs on the fly</li>
+<li>Events containing the player's username should now contain the Player class</li>
 </ul> 
 - Added a proxy mode - this is necessary for additional features of the API such as /commands and other special features
 <ul>
