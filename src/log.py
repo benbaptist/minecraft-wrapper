@@ -4,14 +4,14 @@ class Log:
 	def __init__(self):
 		self.file = open("wrapper.log", "a")
 	def timestamp(self):
-		return time.strftime("[%H:%M:%S]")
+		return time.strftime("[%Y-%m-%d %H:%M:%S]")
 	def write(self, payload):
-		print payload
 		self.file.write("%s\n" % payload)
 		self.file.flush()
 	def prefix(self, type="INFO", string=""):
 		for line in string.split("\n"):
-			self.write("%s [Wrapper.py/%s] %s" % (self.timestamp(), type, line))
+			self.write("%s [Wrapper.py/%s] %s" % (self.timestamp(), type, line)) 
+			print("%s [Wrapper.py/%s] %s" % (time.strftime("[%H:%M:%S]"), type, line))
 	def info(self, string):
 		self.prefix("INFO", string)
 	def error(self, string):
@@ -24,7 +24,7 @@ class PluginLog:
 		self.log = log
 		self.PluginName = PluginName
 	def timestamp(self):
-		return time.strftime("[%H:%M:%S]")
+		return time.strftime("[%Y-%m-%d %H:%M:%S]")
 	def write(self, payload):
 		self.log.write(payload)
 	def info(self, string):

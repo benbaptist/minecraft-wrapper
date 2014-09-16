@@ -89,7 +89,6 @@ class Client: # handle client/game connection
 		self.uuid = None
 		self.serverUUID = None
 		self.isProxyConnection = isProxyConnection
-		self.fake = False
 		
 		self.state = 0 # 0 = init, 1 = motd, 2 = login, 3 = active, 4 = authorizing
 		
@@ -132,7 +131,7 @@ class Client: # handle client/game connection
 			if client.username == self.username:
 				del self.wrapper.proxy.clients[i]
 	def disconnect(self, message):
-		#print "Disconnecting client: %s" % message
+		print "Disconnecting client: %s" % message
 		if self.state == 3:
 			self.send(0x40, "json", ({"text": message, "color": "red"},))
 		else:
@@ -367,9 +366,8 @@ class Server: # handle server connection
 		self.wrapper = wrapper
 		self.abort = False
 		self.isServer = True
-		self.turnItUp = False
 		self.proxy = wrapper.proxy
-		self.spam = False
+		self.lastPacketIDs = []
 		
 		self.state = 0 # 0 = init, 1 = motd, 2 = login, 3 = active, 4 = authorizing
 		self.packet = None
@@ -394,6 +392,8 @@ class Server: # handle server connection
 		t.daemon = True
 		t.start()
 	def close(self, reason="Disconnected"):
+		print "Last packet IDs (Server->Client) before disconnection:"
+		print self.lastPacketIDs
 		self.abort = True
 		self.packet = None
 		try:
@@ -429,10 +429,13 @@ class Server: # handle server connection
 					self.send(0x00, "varint", (self.read("int:i")["i"],))
 				return False
 		if id == 0x01:
-			data = self.read("int:eid|ubyte:gamemode|byte:dimension|ubyte:difficulty|ubyte:max_players|string:level_type")
-			self.client.gamemode = data["gamemode"]
-			self.client.dimension = data["dimension"]
-			self.spam = True
+			if self.state == 3:
+				data = self.read("int:eid|ubyte:gamemode|byte:dimension|ubyte:difficulty|ubyte:max_players|string:level_type")
+				self.client.gamemode = data["gamemode"]
+				self.client.dimension = data["dimension"]
+			elif self.state == 2:
+				self.disconnect("Server is online mode. Please turn it off in server.properties.\n\nWrapper.py will handle authentication on its own, so do not worry about hackers.")
+				return False
 		if id == 0x02:
 			if self.state == 2:
 				self.state = 3
@@ -453,7 +456,7 @@ class Server: # handle server connection
 					self.packet.compressThreshold = -1
 #				self.client.packet.setCompression(50000000000)
 #				self.client.turnItUp = data["threshold"]
-				time.sleep(1)
+				#time.sleep(1)
 				return False
 		if id == 0x05:
 			data = self.read("int:x|int:y|int:z")
@@ -485,9 +488,12 @@ class Server: # handle server connection
 			if data["wid"] == 0:
 				self.client.inventory[data["slot"]] = data["data"]
 		if id == 0x40:
-			message = json.loads(self.read("string:string"))
-			self.log.info("Disconnected from Server: %s" % message["message"])
-			self.disconnect(message)
+			message = self.read("json:json")["json"]
+#			print "asdiojasidj"
+#			print message
+			self.log.info("Disconnected from server: %s" % message)
+			self.client.disconnect(message)
+			return False
 		if id == 0x46:
 			print "PISSSSSSSSSSSSSSSSSSSSSSSSS"
 		if id == 0x47:
@@ -540,29 +546,30 @@ class Server: # handle server connection
 			while not self.abort:
 				try:
 					id, original = self.packet.grabPacket()
+					self.lastPacketIDs.append(hex(id))
+					if len(self.lastPacketIDs) > 10:
+						for i,v in enumerate(self.lastPacketIDs):
+							del self.lastPacketIDs[i]
+							break
 				except EOFError:
 #					print traceback.format_exc()
 					self.close()
 					break
 				except:
+					pass
 					print "Failed to grab packet (SERVER)"
-#					print traceback.format_exc()
+					print traceback.format_exc()
 					#self.disconnect("Internal Wrapper.py Error")
 #					break
 				if self.client.abort:
 					self.close()
 					break
 				try:
-					if self.parse(id, original) and self.client.fake == False:
+					if self.parse(id, original):
 						self.client.sendRaw(original)
 				except:
 					self.log.debug("Could not parse packet, connection may crumble:")
 					self.log.debug(traceback.format_exc())
-				#if self.client.turnItUp:
-#					print "COMPRESSION ENABLED - QUEUE AND TURNITUP"
-#					self.client.turnItUp = False
-#					self.client.packet.turnItUp = True
-#					self.client.packet.compressThreshold = self.turnItUp
 		except:
 			print "error server->client, blah"
 #			print traceback.format_exc()
@@ -577,9 +584,7 @@ class Packet: # PACKET PARSING CODE
 		self.recvCipher = None
 		self.sendCipher = None
 		self.compressThreshold = -1
-		self.turnItUp = False
 		self.version = 5
-		self.HASS = False
 		
 		self.buffer = StringIO.StringIO()
 		self.queue = []
@@ -590,6 +595,9 @@ class Packet: # PACKET PARSING CODE
 		return "%x" % d
 	def grabPacket(self):
 		length = self.unpack_varInt()
+#		if length == 0: return None
+#		if length > 256:
+#			print "Length: %d" % length
 		dataLength = 0
 		if not self.compressThreshold == -1:
 			dataLength = self.unpack_varInt()
@@ -656,6 +664,7 @@ class Packet: # PACKET PARSING CODE
 			name = exp.split(":")[1]
 			try:
 				if type == "string": result[name] = self.read_string()
+				if type == "json": result[name] = self.read_json()
 				if type == "ubyte": result[name] = self.read_ubyte()
 				if type == "byte": result[name] = self.read_byte()
 				if type == "int": result[name] = self.read_int()
@@ -699,7 +708,8 @@ class Packet: # PACKET PARSING CODE
 					if type == "metadata": result += self.send_metadata(pay)
 					if type == "raw": result += pay
 				except:
-					print traceback.format_exc()
+					pass
+					#print traceback.format_exc()
 		self.sendRaw(result)
 		return result
 	# -- SENDING DATA TYPES -- #
@@ -743,9 +753,23 @@ class Packet: # PACKET PARSING CODE
 		
 	# -- READING DATA TYPES -- #
 	def recv(self, length):
-		d = self.socket.recv(length)
-		if len(d) == 0 and length is not len(d):
-			raise EOFError("Actual length of packet was not as long as expected!")
+		if length > 5000:
+			d = ""
+			while len(d) < length:
+				m = length - len(d)
+				if m > 5000: m = 5000
+				d += self.socket.recv(m)
+		else:
+			d = self.socket.recv(length)
+			if len(d) == 0:
+				raise EOFError("Packet was zero length, disconnecting")
+#		while length > len(d):
+#			print "Need %d more" % length - len(d)
+#			d += self.socket.recv(length - len(d))
+#			if not length == len(d):
+#				print "ACTUAL PACKET NOT LONG %d %d" % (length, len(d))
+#				print "Read more: %d" % len(self.socket.recv(1024))
+			#raise EOFError("Actual length of packet was not as long as expected!")
 		if self.recvCipher is None:
 			return d
 		return self.recvCipher.decrypt(d)
@@ -812,6 +836,8 @@ class Packet: # PACKET PARSING CODE
 		return i
 	def read_string(self):
 		return self.read_data(self.read_varInt())
+	def read_json(self):
+		return json.loads(self.read_string())
 	def read_rest(self):
 		return self.read_data(1024 * 1024)
 	def read_metadata(self):
