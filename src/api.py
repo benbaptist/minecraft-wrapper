@@ -176,6 +176,8 @@ class Minecraft:
 			return self.wrapper.server.players[str(name)]
 		except:
 			raise Exception("No such player %s is logged in" % name)
+	def getPlayers(self): # returns a list of players
+		return self.wrapper.server.players
 	# get world-based information
 	def getLevelInfo(self, worldName=False):
 		if not worldName: worldName = self.wrapper.server.worldName
@@ -196,6 +198,8 @@ class Minecraft:
 				except: return ""
 			if args(3) == "The" and args(4) == "block" and args(6) == "%d,%d,%d" % (x, y, z):
 				return {"block": args(8)}
+	def getServer(self):
+		return self.wrapper.server
 class Player:
 	def __init__(self, username, wrapper):
 		self.wrapper = wrapper

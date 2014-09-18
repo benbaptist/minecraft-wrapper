@@ -1,4 +1,4 @@
-import socket, datetime, time, sys, threading, random, subprocess, os, json, signal, traceback, api
+import socket, datetime, time, sys, threading, random, subprocess, os, json, signal, traceback, api, world
 class Server:
 	def __init__(self, args, log, config, wrapper):
 		self.log = log
@@ -17,6 +17,7 @@ class Server:
 		self.worldName = None
 		self.protocolVersion = 5 # the protocol version is unknown until the first proxy mode connection is made
 		self.version = None
+		self.world = world.World()
 	def login(self, user):
 		try:
 			if user not in self.players:
@@ -124,7 +125,7 @@ class Server:
 			while True:
 				# timer & backup
 				if self.currentSecond == int(time.time()): # don't make fun of me for this
-					""
+					pass
 				else:
 					self.backupInterval += 1
 					self.currentSecond = int(time.time())

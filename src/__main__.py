@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import socket, datetime, time, sys, threading, random, subprocess, os, json, signal, traceback, ConfigParser, ast, proxy, web, globals
+import socket, datetime, time, sys, threading, random, subprocess, os, json, signal, traceback, ConfigParser, ast, proxy, web, globals, storage
 from log import *
 from config import Config
 from irc import IRC
@@ -16,6 +16,7 @@ class Wrapper:
 		self.plugins = {}
 		self.server = False
 		self.listeners = []
+		self.storage = storage.Storage("main", self.log)
 		
 		self.commands = {}
 		self.events = {}

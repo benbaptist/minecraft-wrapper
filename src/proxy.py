@@ -1,4 +1,4 @@
-import socket, threading, struct, StringIO, time, traceback, json, random, requests, hashlib, os, zlib, binascii, uuid, md5
+import socket, threading, struct, StringIO, time, traceback, json, random, requests, hashlib, os, zlib, binascii, uuid, md5, storage, world
 try:
 	import encryption
 	IMPORT_SUCCESS = True
@@ -12,6 +12,7 @@ class Proxy:
 		self.isServer = False
 		self.clients = []
 		self.skins = {}
+		self.storage = storage.Storage("proxy-data")
 		
 		self.privateKey = encryption.generate_key_pair()
 		self.publicKey = encryption.encode_public_key(self.privateKey)
@@ -28,11 +29,12 @@ class Proxy:
 				self.socket.bind((self.wrapper.config["Proxy"]["proxy-bind"], self.wrapper.config["Proxy"]["proxy-port"]))
 				self.socket.listen(5)
 			except:
+				print "Proxy mode could not bind"
 				self.socket = False
 	 	while not self.wrapper.halt:
 	 		try:
 		 		sock, addr = self.socket.accept()
-		 		client = Client(sock, addr, self.wrapper, self.publicKey, self.privateKey, True)
+		 		client = Client(sock, addr, self.wrapper, self.publicKey, self.privateKey, self)
 		 		
 		 		t = threading.Thread(target=client.handle, args=())
 		 		t.daemon = True
@@ -72,23 +74,58 @@ class Proxy:
 		for client in self.clients:
 			if str(client.serverUUID) == str(id):
 				return client
+	def lookupUUID(self, uuid):
+		if not self.storage.key("uuid-cache"):
+			self.storage.key("uuid-cache", {})
+		if uuid in self.storage.key("uuid-cache"):
+			return self.storage.key("uuid-cache")[uuid]
+		with open("usercache.json", "r") as f:
+			usercache = json.loads(f.read())
+		for i in usercache:
+			if i["uuid"] == str(uuid):
+				return i
+		return None
+	def setUUID(self, uuid, name):
+		if not self.storage.key("uuid-cache"):
+			self.storage.key("uuid-cache", {})
+		self.storage.key("uuid-cache")[str(uuid)] = {"uuid": str(uuid), "name": name, "expiresOn": time.strftime("%Y-%m-%d %H:%M:%S %z")}
+	def banUUID(self, uuid, reason="Banned by an operator", source="Server"):
+		if not self.storage.key("banned-uuid"):
+			self.storage.key("banned-uuid", {})
+		self.storage.key("banned-uuid")[str(uuid)] = {"reason": reason, "source": source, "created": time.time(), "name": self.lookupUUID(uuid)["name"]}
+	def isUUIDBanned(self, uuid): # Check if the UUID of the user is banned
+		if not self.storage.key("banned-uuid"):
+			self.storage.key("banned-uuid", {})
+		if uuid in self.storage.key("banned-uuid"):
+			return True
+		else:
+			return False
+	def isAddressBanned(self, address): # Check if the IP address is banned
+		if not self.storage.key("banned-address"):
+			self.storage.key("banned-address", {})
+		if address in self.storage.key("banned-address"):
+			return True
+		else:
+			return False
 class Client: # handle client/game connection
-	def __init__(self, socket, addr, wrapper, publicKey, privateKey, isProxyConnection):
+	def __init__(self, socket, addr, wrapper, publicKey, privateKey, proxy):
 		self.socket = socket
 		self.wrapper = wrapper
 		self.config = wrapper.config
 		self.socket = socket
 		self.publicKey = publicKey
 		self.privateKey = privateKey
-		self.proxy = wrapper.proxy
+		self.proxy = proxy
+		self.addr = addr
+		
 		self.abort = False
+		self.log = wrapper.log
 		self.tPing = time.time()
 		self.server = None
 		self.isServer = False
 		self.turnItUp = False
 		self.uuid = None
 		self.serverUUID = None
-		self.isProxyConnection = isProxyConnection
 		
 		self.state = 0 # 0 = init, 1 = motd, 2 = login, 3 = active, 4 = authorizing
 		
@@ -131,7 +168,6 @@ class Client: # handle client/game connection
 			if client.username == self.username:
 				del self.wrapper.proxy.clients[i]
 	def disconnect(self, message):
-		print "Disconnecting client: %s" % message
 		if self.state == 3:
 			self.send(0x40, "json", ({"text": message, "color": "red"},))
 		else:
@@ -206,6 +242,7 @@ class Client: # handle client/game connection
 					self.uuid = uuid.uuid3(uuid.NAMESPACE_OID, "OfflinePlayer: %s" % self.username)
 					self.send(0x02, "string|string", (str(self.uuid), self.username))
 					self.state = 3
+					self.log.info("%s logged in (IP: %s)" % (self.username, self.addr[0]))
 				return False
 			elif self.state == 3:
 				return False
@@ -258,19 +295,21 @@ class Client: # handle client/game connection
 							self.wrapper.proxy.skins[self.uuid] = self.skinBlob
 					self.properties = data["properties"]
 				except:
-#					print traceback.format_exc()
 					self.disconnect("Session Server Error")
 					return False
-				#self.uuid = "b5c6c2f1-2cb8-30d8-807e-8a75ddf765af" # static UUID because Mojang SessionServer sux
 				self.serverUUID = self.UUIDFromName("OfflinePlayer:" + self.username)
 				
 				if self.version > 26:
 					self.packet.setCompression(256)
+					
+				# Ban code should go here
 				
 				self.send(0x02, "string|string", (str(self.uuid), self.username))
-#				self.send(0x38, "varint|varint|uuid|boolean|json", (3, ))
 				self.state = 3
 				self.connect()
+				
+				self.log.info("%s logged in (UUID: %s | IP: %s)" % (self.username, self.uuid, self.addr[0]))
+				self.proxy.setUUID(self.uuid, self.username)
 				
 				return False
 			elif self.state == 5: # ping packet during status request
@@ -479,7 +518,31 @@ class Server: # handle server connection
 #			if self.client.packet.compressThreshold == -1:
 #				print "CLIENT COMPRESSION ENABLED"
 #				self.client.packet.setCompression(256)
-		if id == 0x2b: # change game state
+		if id == 0x26: # Map Chunk Bulk
+			data = self.read("bool:skylight|varint:chunks")
+			chunks = []
+			for i in range(data["chunks"]):
+				meta = self.read("int:x|int:z|ushort:primary")
+				chunks.append(meta)
+			for i in range(data["chunks"]):
+				meta = chunks[i]
+				bitmask = bin(meta["primary"])[2:].zfill(16)
+				primary = []
+				for i in bitmask:
+					if i == "0": primary.append(False)
+					if i == "1": primary.append(True)
+				chunkColumn = bytearray()
+				for i in primary:
+					if i == True:
+						chunkColumn += bytearray(self.packet.read_data(16*16*16)) # packetanisc
+						metalight = bytearray(self.packet.read_data(16*16*256))
+						if data["skylight"]:
+							skylight = bytearray(self.packet.read_data(16*16*256))
+					else:
+						chunkColumn += bytearray(16*16*16) # Null Chunk
+				self.wrapper.server.world.setChunk(meta["x"], meta["z"], world.Chunk(chunkColumn, meta["x"], meta["z"]))
+				#print "Reading chunk %d,%d" % (meta["x"], meta["z"])
+		if id == 0x2b: # Change Game State
 			data = self.read("ubyte:reason|float:value")
 			if data["reason"] == 3:
 				self.client.gamemode = data["value"]
