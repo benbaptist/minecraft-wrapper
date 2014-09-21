@@ -297,6 +297,9 @@ class Client: # handle client/game connection
 				except:
 					self.disconnect("Session Server Error")
 					return False
+				if self.proxy.lookupUUID(self.uuid):
+					self.username = self.proxy.lookupUUID(self.uuid)["name"]
+					
 				self.serverUUID = self.UUIDFromName("OfflinePlayer:" + self.username)
 				
 				if self.version > 26:

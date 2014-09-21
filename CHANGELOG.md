@@ -38,9 +38,7 @@
 - Finish adding all block IDs, item IDs and their respective damage values to items.py
 - Proxy mode error: Error -3 while decompressing data: incorrect header check
 - Proxy mode error: Error -5 while decompressing data: incomplete or truncated stream
-- The "Z" in Position packets don't parse properly.
-- Players might not appear to disconnect from the tab menu
-- Disable name-changing. i.e. Wrapper.py will always use the same username with this server forever (unless it's changed manually in the data file)
+- Negative Position packets are completely screwed up
 
 <h4>0.7.0</h4>
 - Huge Improvements to APIs
@@ -70,6 +68,7 @@
 </ul> 
 - Fixed crash when typing 'list' command in console (I thought I fixed this crash long ago, but apparently not!)
 - Added .about command in IRC to see Wrapper.py version
+
 I had more planned for this update, but I got busy, haven't really been able to work much on Wrapper.py as much. 
 I've written part of the code for a web panel, but the code is not even close to being finished. I released 0.6 earlier
 because some people really wanted the plugin functionality ASAP.

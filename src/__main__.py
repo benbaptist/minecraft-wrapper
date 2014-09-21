@@ -11,10 +11,11 @@ from api import API
 class Wrapper:
 	def __init__(self):
 		self.log = Log()
-		self.halt = False
 		self.configManager = Config(self.log)
 		self.plugins = {}
 		self.server = False
+		self.proxy = False
+		self.halt = False
 		self.listeners = []
 		self.storage = storage.Storage("main", self.log)
 		

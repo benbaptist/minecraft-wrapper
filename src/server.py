@@ -26,6 +26,9 @@ class Server:
 		except:
 			traceback.print_exc()
 	def logout(self, user):
+		if self.wrapper.proxy:
+			for client in self.wrapper.proxy.clients:
+				client.send(0x38, "varint|varint|uuid", (4, 1, self.players[user].uuid))
 		if user in self.players:
 			del self.players[user]
 	def argserver(self, i):

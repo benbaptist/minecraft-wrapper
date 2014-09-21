@@ -25,6 +25,10 @@ If you run into any bugs, please report them!
 #Features#
 Wrapper.py supports the following features:
 - Automatic Backups
+<ul>
+<li>Automatically delete the oldest backups once you reach amount of backups</li>
+<li>Specify precisely what folders and files get backed up</li>
+</ul>
 - IRC bridge
 <ul>
 <li> Controlling server from IRC</li>
@@ -41,6 +45,7 @@ Wrapper.py supports the following features:
 More documentation will be released for working with the plugin API, but for now, here's a few things.</br></br>
 
 <b>List of events</b>: https://docs.google.com/spreadsheet/ccc?key=0AoWx24EFSt80dDRiSGVxcW1xQkVLb2dWTUN4WE5aNmc&usp=sharing</br>
+
 </br></br>Check the 'plugins' folder to see some example plugins. (note: plugins are supposed to go into the wrapper-plugins folder on your Wrapper.py installation)
 <ul> 
 <li>template.py literally does nothing - it is just the shell of a plugin to work off of.</li>
