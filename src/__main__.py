@@ -7,7 +7,7 @@ from server import Server
 from importlib import import_module
 import importlib
 from api import API
-			
+
 class Wrapper:
 	def __init__(self):
 		self.log = Log()
@@ -40,7 +40,10 @@ class Wrapper:
 	def unloadPlugin(self, plugin):
 		del self.commands[plugin]
 		del self.events[plugin]
-		self.plugins[plugin]["main"].onDisable()
+		try:
+			self.plugins[plugin]["main"].onDisable()
+		except:
+			self.log.error("Error while disabling plugin '%s'" % plugin)
 		reload(self.plugins[plugin]["module"])
 	def loadPlugins(self):
 		self.log.info("Loading plugins...")

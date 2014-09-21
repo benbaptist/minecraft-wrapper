@@ -344,15 +344,28 @@ class Client: # handle client/game connection
 			if self.server.state is not 3: return False
 		if id == 0x08: # Player Block Placement
 			if self.version < 6:
-				data = self.read("int:x|ubyte:y|int:z|byte:direction|slot:item")
+				data = self.read("int:x|ubyte:y|int:z|byte:face|slot:item")
 				position = (data["x"], data["y"], data["z"])
 			else:
-				data = self.read("position:position|byte:direction|slot:item")
+				data = self.read("position:position|byte:face|slot:item")
 				position = data["position"]
 			position = data["position"]
 			if position == None:
 				if not self.wrapper.callEvent("player.action", {"player": self.getPlayerObject()}): return False
 			else:
+				face = data["face"]
+				if face == 0: # Compensate
+					position = (position[0], position[1] - 1, position[2])
+				elif face == 1:
+					position = (position[0], position[1] + 1, position[2])
+				elif face == 2:
+					position = (position[0], position[1], position[2] - 1)
+				elif face == 3:
+					position = (position[0], position[1], position[2] + 1)
+				elif face == 4:
+					position = (position[0] - 1, position[1], position[2])
+				elif face == 5:
+					position = (position[0] + 1, position[1], position[2])
 				if not self.wrapper.callEvent("player.place", {"player": self.getPlayerObject(), "position": position, "item": data["item"]}): return False
 			if self.server.state is not 3: return False
 		if id == 0x09: # Held Item Change
@@ -534,12 +547,12 @@ class Server: # handle server connection
 				chunkColumn = bytearray()
 				for i in primary:
 					if i == True:
-						chunkColumn += bytearray(self.packet.read_data(16*16*16)) # packetanisc
-						metalight = bytearray(self.packet.read_data(16*16*256))
+						chunkColumn += bytearray(self.packet.read_data(16*16*16 * 2)) # packetanisc
+						metalight = bytearray(self.packet.read_data(16*16*16))
 						if data["skylight"]:
-							skylight = bytearray(self.packet.read_data(16*16*256))
+							skylight = bytearray(self.packet.read_data(16*16*16))
 					else:
-						chunkColumn += bytearray(16*16*16) # Null Chunk
+						chunkColumn += bytearray(16*16*16 * 2) # Null Chunk
 				self.wrapper.server.world.setChunk(meta["x"], meta["z"], world.Chunk(chunkColumn, meta["x"], meta["z"]))
 				#print "Reading chunk %d,%d" % (meta["x"], meta["z"])
 		if id == 0x2b: # Change Game State
@@ -868,7 +881,7 @@ class Packet: # PACKET PARSING CODE
 	def read_position(self):
 		position = self.read_long()
 		if position == -1: return None
-		if position < 1: z = -(-position & 0x3FFFFFF)
+		if False: z = -(-position & 0x3FFFFFF) # position < 1
 		else: z = position & 0x3FFFFFF
 		position = (position >> 38, (position >> 26) & 0xFFF, z)
 		return position

@@ -40,6 +40,7 @@
 - Proxy mode error: Error -5 while decompressing data: incomplete or truncated stream
 - The "Z" in Position packets don't parse properly.
 - Players might not appear to disconnect from the tab menu
+- Disable name-changing. i.e. Wrapper.py will always use the same username with this server forever (unless it's changed manually in the data file)
 
 <h4>0.7.0</h4>
 - Huge Improvements to APIs
