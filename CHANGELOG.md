@@ -21,7 +21,6 @@
 - First-run setup wizard for new setups
 - Potentially implement a way to reload the config - but that might be too difficult/bug prone
 - UHC-style timer mode
-- Fix support for pre-1.7 Minecraft servers (especially Forge/modded servers still on 1.6.4 and earlier)
 - Add permissions system
 - Improve configuration system/redo from scratch
 <ul>
@@ -39,6 +38,7 @@
 - Proxy mode error: Error -3 while decompressing data: incorrect header check
 - Proxy mode error: Error -5 while decompressing data: incomplete or truncated stream
 - Negative Position packets are completely screwed up
+- The server.py and irc.py code SERIOUSLY needs a total rewrite. (I noticed this while fixing pre-1.7 support)
 
 <h4>0.7.0</h4>
 - Huge Improvements to APIs

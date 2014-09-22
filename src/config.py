@@ -4,6 +4,7 @@ DEFAULT_CONFIG = """[General]
 command = java -jar minecraft_server.1.7.10.jar nogui
 auto-restart = True
 debug = False
+pre-1.7-mode = False
 
 [Backups]
 ;; Automatic backups with automatic backup pruning. Interval is in seconds. ;; 
@@ -76,7 +77,8 @@ class Config:
 		defaults = {"General":{
 			"command": "java -jar minecraft_server.1.7.10.jar",
 			"auto-restart": True,
-			"debug": False
+			"debug": False,
+			"pre-1.7-mode": False
 		},		
 		"IRC":{ 
 			"enabled": True, 

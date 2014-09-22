@@ -185,7 +185,10 @@ class Wrapper:
 		else:
 			wrapper.server.serverArgs = sys.argv[1:]
 		
-		captureThread = threading.Thread(target=self.server.capture, args=())
+		captureThread = threading.Thread(target=self.server.captureSTDOUT, args=())
+		captureThread.daemon = True
+		captureThread.start()
+		captureThread = threading.Thread(target=self.server.captureSTDERR, args=())
 		captureThread.daemon = True
 		captureThread.start()
 		consoleDaemon = threading.Thread(target=self.console, args=())

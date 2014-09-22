@@ -13,11 +13,16 @@ class Server:
 		self.uuid = {}
 		self.data = ""
 		self.backups = []
+		self.oldServer = []
 		
 		self.worldName = None
 		self.protocolVersion = 5 # the protocol version is unknown until the first proxy mode connection is made
 		self.version = None
 		self.world = world.World()
+		
+		#t = threading.Thread(target=self.readServerLog, args=())
+#		t.daemon = True
+#		t.start()
 	def login(self, user):
 		try:
 			if user not in self.players:
@@ -54,19 +59,35 @@ class Server:
 			self.send('PRIVMSG %s :%s' % (channel, text))
 #		self.console()
 	def console(self, text):
-#		if not self.config["General"]["pre-1.7-mode"]:
-		self.run("tellraw @a %s" % json.dumps(text, encoding='utf-8'))
-#		else:
-#			self.run("say %s" % text)
+		if not self.config["General"]["pre-1.7-mode"]:
+			self.run("tellraw @a %s" % json.dumps(text, encoding='utf-8'))
+		else:
+			say = ""
+			print text
+			for i in text:
+				if i == "extra":
+					for x in text[i]:
+						say += x["text"]
+				elif i == "text":
+					say += text[i]
+			self.run("say %s" % say)
 	def run(self, text):
 		try:
 			self.proc.stdin.write("%s\n" % text)
 		except:
 			pass
-	def capture(self):
+	def captureSTDOUT(self):
 		while not self.wrapper.halt:
 			try:
 				data = self.proc.stdout.readline()
+				if len(data) > 0:
+					self.data += data
+			except:
+				continue
+	def captureSTDERR(self):
+		while not self.wrapper.halt:
+			try:
+				data = self.proc.stderr.readline()
 				if len(data) > 0:
 					self.data += data
 			except:
@@ -115,6 +136,19 @@ class Server:
 			value = value.replace("\x03%d" % i, "")
 		value = value.replace("\x0f", "")
 		return value
+	def readServerLog(self):
+		if os.path.exists("server.log"):
+			ln = os.path.getsize("server.log")
+			f = open("server.log", "r")
+			f.seek(ln)
+			while not self.wrapper.halt:
+				buffer = f.read(1024 * 8)
+				if len(buffer) == 0:
+					time.sleep(0.1)
+					continue
+				lines = buffer.split("\n")
+				for i in lines:
+					self.oldServer.append(i)
 	def startServer(self):
 		while not self.wrapper.halt:
 			if not self.start:
@@ -124,7 +158,7 @@ class Server:
 			self.status = 1
 			self.log.info("Starting server...")
 			self.wrapper.callEvent("server.start", {})
-			self.proc = subprocess.Popen(self.serverArgs, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+			self.proc = subprocess.Popen(self.serverArgs, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
 			while True:
 				# timer & backup
 				if self.currentSecond == int(time.time()): # don't make fun of me for this
@@ -213,18 +247,22 @@ class Server:
 					self.data = ""
 				else:
 					data = ""
+				data = data.split("\n")
+				#for i in self.oldServer:
+#					data.append(i)
+#				self.oldServer = []
 				
 				# parse server console output
 				deathPrefixes = ['fell', 'was', 'drowned', 'blew', 'walked', 'went', 'burned', 'hit', 'tried', 
 					'died', 'got', 'starved', 'suffocated', 'withered']
-				for line in data.split('\n'):
+				for line in data:
 					if len(line) < 1: continue
 					self.line = line
 					self.wrapper.callEvent("server.consoleMessage", {"message": line})
 					print line
 					if self.argserver(3) is not False:
 						try:
-		#					if not self.config["General"]["pre-1.7-mode"]:
+							if not self.config["General"]["pre-1.7-mode"]:
 								if self.argserver(3)[0] == "<":
 									name = self.formatForIRC(self.filterName(self.argserver(3)[1:self.argserver(3).find('>')]))
 									message = self.formatForIRC(" ".join(line.split(' ')[4:]).replace('\x1b', '').replace("\xc2\xfa", ""))
@@ -247,11 +285,6 @@ class Server:
 									command = message = ' '.join(line.split(' ')[7:])
 									if self.config["IRC"]["forward-commands-to-irc"]:
 										self.msg("%s issued command: %s" % (name, command))
-								elif self.argserver(1) == "[User" and self.argserver(4) == "UUID":
-									uuid = self.argserver(9)
-									username = self.argserver(7)
-									
-									self.uuid[username] = uuid
 								elif self.argserver(3) == 'Done':
 									self.status = 2
 									self.msg("Server started")
@@ -276,38 +309,48 @@ class Server:
 									achievement = ' '.join(line.split(' ')[9:])
 									self.msg("%s has just earned the achievement %s" % (name, achievement))
 									self.wrapper.callEvent("player.achievement", {"player": name, "achievement": achievement})
-						#	else: # -- FOR 1.6.4 AND PREVIOUSLY ONLY!!!!! -- 
-#								if self.argserver(2)[0] == '<':
-#									name = self.filterName(self.argserver(2)[1:self.argserver(2).find('>')].replace("\xc2\xfa", ""))
-#									message = ' '.join(line.split(' ')[3:]).replace('\x1b', '').replace("\xc2\xfa", "")
-#									self.msg('<%s> %s' % (name, message))
-#								elif self.argserver(3) == 'logged':
-#									name = self.argserver(2)[0:self.argserver(2).find('[')]
-#									self.msg('[%s connected]' % name)
-#									self.login(name)
-#								elif self.argserver(3) == 'lost':
-#									name = self.argserver(2)
-#									reason = self.argserver(5)
-#									self.msg('[%s disconnected] (%s)' % (name, reason))
-#									self.logout(name)
-#								elif self.argserver(3) == 'Kicked':
-#									name = self.argserver(6)
-#									self.msg('[%s disconnected] (kicked)' % name)
-#									self.logout(name)
-#								elif self.argserver(3) == 'issued':
-#									name = self.argserver(2)
-#									command = message = ' '.join(line.split(' ')[6:])
-#									if self.config["forwardCommandsToIRC"]:
-#										self.msg('%s issued command: %s' % (name, command))
-#								elif self.argserver(2) == 'Done':
-#									self.status = 2
-#									self.msg('Server started')
-#								elif self.argserver(3) in deathPrefixes:
-#									self.msg(' '.join(self.line.split(' ')[2:]))
-#									name = self.argserver(2)
-#									randThing = self.config["deathKickMessages"][random.randrange(0, len(self.config["deathKickMessages"]))]
-#									if self.config["deathKick"] and name in self.config["deathKickers"]:
-#										self.run("kick %s %s" % (name, randThing))
+							else: # -- FOR 1.6.4 AND PREVIOUSLY ONLY!!!!! -- 
+								if self.argserver(3)[0] == '<':
+									name = self.filterName(self.argserver(3)[1:self.argserver(3).find('>')].replace("\xc2\xfa", ""))
+									message = ' '.join(line.split(' ')[4:]).replace('\x1b', '').replace("\xc2\xfa", "")
+									self.msg('<%s> %s' % (name, message))
+									self.wrapper.callEvent("player.message", {"player": self.stripSpecialIRCChars(name), "message": message})
+								elif self.argserver(4) == 'logged':
+									name = self.argserver(3)[0:self.argserver(3).find('[')]
+									self.msg('[%s connected]' % name)
+									self.login(name)
+									self.wrapper.callEvent("player.join", {"player": name})
+								elif self.argserver(4) == 'lost':
+									name = self.argserver(3)
+									reason = self.argserver(6)
+									self.msg('[%s disconnected] (%s)' % (name, reason))
+									self.logout(name)
+									self.wrapper.callEvent("player.logout", {"player": name})
+								elif self.argserver(3) == "*":
+									name = self.formatForIRC(self.filterName(self.argserver(4)))
+									message = message = ' '.join(line.split(' ')[5:])
+									self.msg("* %s %s" % (name, message))
+									self.wrapper.callEvent("player.action", {"player": name, "action": message})
+								elif self.argserver(3) == 'Kicked':
+									name = self.argserver(6)
+									self.msg('[%s disconnected] (Kicked :O)' % name)
+									self.logout(name)
+									self.wrapper.callEvent("player.logout", {"player": name})
+								elif self.argserver(3) == 'issued':
+									name = self.argserver(2)
+									command = message = ' '.join(line.split(' ')[6:])
+									if self.config["forwardCommandsToIRC"]:
+										self.msg('%s issued command: %s' % (name, command))
+								elif self.argserver(3) == 'Done':
+									self.status = 2
+									self.msg('Server started')
+								elif self.argserver(3) in deathPrefixes:
+									self.msg(' '.join(self.line.split(' ')[2:]))
+									name = self.argserver(2)
+									randThing = self.config["deathKickMessages"][random.randrange(0, len(self.config["deathKickMessages"]))]
+									if self.config["deathKick"] and name in self.config["deathKickers"]:
+										self.run("kick %s %s" % (name, randThing))
+									self.wrapper.callEvent("player.death", {"player": self.stripSpecialIRCChars(name), "death": self.argsAfter(4)})
 						except:
 							pass
 				time.sleep(0.1)

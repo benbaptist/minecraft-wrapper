@@ -155,7 +155,7 @@ class Minecraft:
 		self.wrapper.server.run("summon %s %d %d %d %s" % (entity, x, y, z, json.dumps(dataTag)))
 	def message(self, destination="", json_message={}):
 		self.console("tellraw %s %s" % (destination, json.dumps(json_message)))
-	def broadcast(self, message=""):
+	def broadcast(self, message="", irc=True):
 		if isinstance(message, dict):
 			self.wrapper.server.run("tellraw @a %s" % json.dumps(message))
 		else:
