@@ -168,6 +168,7 @@ class Client: # handle client/game connection
 			if client.username == self.username:
 				del self.wrapper.proxy.clients[i]
 	def disconnect(self, message):
+		print "Client disconnecting: %s" % message
 		if self.state == 3:
 			self.send(0x40, "json", ({"text": message, "color": "red"},))
 		else:
@@ -568,15 +569,9 @@ class Server: # handle server connection
 				self.client.inventory[data["slot"]] = data["data"]
 		if id == 0x40:
 			message = self.read("json:json")["json"]
-#			print "asdiojasidj"
-#			print message
 			self.log.info("Disconnected from server: %s" % message)
 			self.client.disconnect(message)
 			return False
-		if id == 0x46:
-			print "PISSSSSSSSSSSSSSSSSSSSSSSSS"
-		if id == 0x47:
-			print "player list header/footer", original.encode("hex")
 		if id == 0x38:
 			head = self.read("varint:action|varint:length")
 			z = 0
@@ -717,6 +712,9 @@ class Packet: # PACKET PARSING CODE
 	def flush(self):
 		for p in self.queue:
 			packet = p[1]
+			id = struct.unpack("B", packet[0])[0]
+			if self.obj.isServer == False:
+				print "ID: %d" % id
 			if p[0] > -1: #  p[0] > -1:
 				if len(packet) > self.compressThreshold:
 					packetCompressed = self.pack_varInt(len(packet)) + zlib.compress(packet)
