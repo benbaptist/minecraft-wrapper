@@ -77,9 +77,10 @@ class IRC:
 				self.parse()
 	def queue(self):
 		while self.socket:
-			for message in self.msgQueue:
+			for i,message in enumerate(self.msgQueue):
 				for channel in self.channels:
 					self.send("PRIVMSG %s :%s" % (channel, message))
+				del self.msgQueue[i]
 			self.msgQueue = []
 			time.sleep(0.1)
 	def filterName(self, name):

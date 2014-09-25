@@ -77,13 +77,9 @@ class Server:
 		except:
 			pass
 	def captureSTDOUT(self):
-		f = open("raw-stdout-cap.log", "a")
 		while not self.wrapper.halt:
 			try:
 				data = self.proc.stdout.readline()
-				f.write("RAW DUMP FROM STDOUT: %s\n" % data)
-				f.write("self.data at time: %s\n" % data)
-				f.flush()
 				if len(data) > 0:
 					self.data += data
 			except:
@@ -145,7 +141,6 @@ class Server:
 			if not self.start:
 				time.sleep(0.1)
 				continue
-			f = open("server-debug-log.log", "a")
 			self.players = {}
 			self.status = 1
 			self.log.info("Starting server...")
@@ -237,9 +232,6 @@ class Server:
 				if len(self.data) > 0:
 					data = self.data.split("\n")
 					self.data = ""
-					f.write("crap inside self.data: %s\n" % self.data)
-					f.write("crap inside data: %s\n" % data)
-					f.flush()
 				else:
 					data = []
 				
