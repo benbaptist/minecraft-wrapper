@@ -16,7 +16,7 @@ class Server:
 		self.oldServer = []
 		
 		self.worldName = None
-		self.protocolVersion = 5 # the protocol version is unknown until the first proxy mode connection is made
+		self.protocolVersion = -1 # -1 until proxy mode checks the server's MOTD on boot
 		self.version = None
 		self.world = world.World()
 		
@@ -31,9 +31,9 @@ class Server:
 		except:
 			traceback.print_exc()
 	def logout(self, user):
-		if self.wrapper.proxy:
-			for client in self.wrapper.proxy.clients:
-				client.send(0x38, "varint|varint|uuid", (4, 1, self.players[user].uuid))
+		#if self.wrapper.proxy:
+			#for client in self.wrapper.proxy.clients:
+				#client.send(0x38, "varint|varint|uuid", (4, 1, self.players[user].uuid))
 		if user in self.players:
 			del self.players[user]
 	def argserver(self, i):
@@ -77,9 +77,13 @@ class Server:
 		except:
 			pass
 	def captureSTDOUT(self):
+		f = open("raw-stdout-cap.log", "a")
 		while not self.wrapper.halt:
 			try:
 				data = self.proc.stdout.readline()
+				f.write("RAW DUMP FROM STDOUT: %s\n" % data)
+				f.write("self.data at time: %s\n" % data)
+				f.flush()
 				if len(data) > 0:
 					self.data += data
 			except:
@@ -136,24 +140,12 @@ class Server:
 			value = value.replace("\x03%d" % i, "")
 		value = value.replace("\x0f", "")
 		return value
-	def readServerLog(self):
-		if os.path.exists("server.log"):
-			ln = os.path.getsize("server.log")
-			f = open("server.log", "r")
-			f.seek(ln)
-			while not self.wrapper.halt:
-				buffer = f.read(1024 * 8)
-				if len(buffer) == 0:
-					time.sleep(0.1)
-					continue
-				lines = buffer.split("\n")
-				for i in lines:
-					self.oldServer.append(i)
 	def startServer(self):
 		while not self.wrapper.halt:
 			if not self.start:
 				time.sleep(0.1)
 				continue
+			f = open("server-debug-log.log", "a")
 			self.players = {}
 			self.status = 1
 			self.log.info("Starting server...")
@@ -243,14 +235,13 @@ class Server:
 						sys.exit(0)
 					break
 				if len(self.data) > 0:
-					data = self.data[:]
+					data = self.data.split("\n")
 					self.data = ""
+					f.write("crap inside self.data: %s\n" % self.data)
+					f.write("crap inside data: %s\n" % data)
+					f.flush()
 				else:
-					data = ""
-				data = data.split("\n")
-				#for i in self.oldServer:
-#					data.append(i)
-#				self.oldServer = []
+					data = []
 				
 				# parse server console output
 				deathPrefixes = ['fell', 'was', 'drowned', 'blew', 'walked', 'went', 'burned', 'hit', 'tried', 
