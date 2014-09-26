@@ -12,6 +12,7 @@ class Proxy:
 		self.isServer = False
 		self.clients = []
 		self.skins = {}
+		self.uuidTranslate = {}
 		self.storage = storage.Storage("proxy-data")
 		
 		self.privateKey = encryption.generate_key_pair()
@@ -73,7 +74,10 @@ class Proxy:
 	def getClientByServerUUID(self, id):
 		for client in self.clients:
 			if str(client.serverUUID) == str(id):
+				self.uuidTranslate[str(id)] = str(client.serverUUID) 
 				return client
+		if str(id) in self.uuidTranslate:
+			return self.uuidTranslate[str(id)]
 	def lookupUUID(self, uuid):
 		if not self.storage.key("uuid-cache"):
 			self.storage.key("uuid-cache", {})
@@ -392,8 +396,8 @@ class Client: # handle client/game connection
 					self.close()
 					break
 				except:
-					print "Failed to grab packet (CLIENT):"
-					print traceback.format_exc()
+			#		print "Failed to grab packet (CLIENT):"
+#					print traceback.format_exc()
 					self.close()
 					break
 				if time.time() - self.tPing > 1 and self.state == 3:
@@ -482,7 +486,9 @@ class Server: # handle server connection
 				self.log.info("Disconnected from Server: %s" % message["string"])
 			elif self.state == 3:
 				if self.client.version > 7:
-					self.send(0x00, "varint", (self.read("int:i")["i"],))
+					id = self.read("int:i")["i"]
+					if not id == None:
+						self.send(0x00, "varint", (id,))
 				return False
 		if id == 0x01:
 			if self.state == 3:
@@ -610,9 +616,8 @@ class Server: # handle server connection
 						self.client.send(0x38, "varint|varint|uuid|bool|string", (3, 1, client.uuid, True, data["displayname"]))
 					else:
 						self.client.send(0x38, "varint|varint|uuid|varint", (3, 1, client.uuid, False))
-				elif head["action"] == 4:
-					print "Log off", client.uuid
-					self.client.send(0x38, "varint|varint|uuid", (4, 1, client.uuid))
+#				elif head["action"] == 4:
+#					self.client.send(0x38, "varint|varint|uuid", (4, 1, client))
 				return False
 		return True
 	def handle(self):
@@ -631,8 +636,8 @@ class Server: # handle server connection
 					break
 				except:
 					pass
-					print "Failed to grab packet (SERVER)"
-					print traceback.format_exc()
+				#	print "Failed to grab packet (SERVER)"
+#					print traceback.format_exc()
 					#self.disconnect("Internal Wrapper.py Error")
 #					break
 				if self.client.abort:
@@ -659,6 +664,7 @@ class Packet: # PACKET PARSING CODE
 		self.sendCipher = None
 		self.compressThreshold = -1
 		self.version = 5
+		self.bonk = False
 		
 		self.buffer = StringIO.StringIO()
 		self.queue = []
@@ -713,8 +719,6 @@ class Packet: # PACKET PARSING CODE
 		for p in self.queue:
 			packet = p[1]
 			id = struct.unpack("B", packet[0])[0]
-			if self.obj.isServer == False:
-				print "ID: %d" % id
 			if p[0] > -1: #  p[0] > -1:
 				if len(packet) > self.compressThreshold:
 					packetCompressed = self.pack_varInt(len(packet)) + zlib.compress(packet)
@@ -764,7 +768,7 @@ class Packet: # PACKET PARSING CODE
 		return result
 	def send(self, id, expression, payload):
 		result = ""
-		result += self.send_varInt(id) 
+		result += self.send_varInt(id)
 		if len(expression) > 0:
 			for i,type in enumerate(expression.split("|")):
 				try:
