@@ -563,7 +563,7 @@ class Server: # handle server connection
 							skylight = bytearray(self.packet.read_data(16*16*16))
 					else:
 						chunkColumn += bytearray(16*16*16 * 2) # Null Chunk
-				self.wrapper.server.world.setChunk(meta["x"], meta["z"], world.Chunk(chunkColumn, meta["x"], meta["z"]))
+				#self.wrapper.server.world.setChunk(meta["x"], meta["z"], world.Chunk(chunkColumn, meta["x"], meta["z"]))
 				#print "Reading chunk %d,%d" % (meta["x"], meta["z"])
 		if id == 0x2b: # Change Game State
 			data = self.read("ubyte:reason|float:value")
@@ -831,7 +831,6 @@ class Packet: # PACKET PARSING CODE
 	def send_bool(self, payload):
 		if payload == False: return self.send_byte(0)
 		if payload == True: return self.send_byte(1)
-		
 	# -- READING DATA TYPES -- #
 	def recv(self, length):
 		if length > 5000:

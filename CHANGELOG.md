@@ -39,6 +39,7 @@
 - Proxy mode error: Error -5 while decompressing data: incomplete or truncated stream
 - Negative Position packets are completely screwed up
 - The server.py and irc.py code SERIOUSLY needs a total rewrite. (I noticed this while fixing pre-1.7 support)
+- Duplicate IRC messages (possibily fixed)
 
 <h4>0.7.0</h4>
 - Huge Improvements to APIs

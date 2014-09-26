@@ -1,4 +1,4 @@
-import socket, traceback, time, threading, api
+import socket, traceback, time, threading, api, globals
 from config import Config
 class IRC:
 	def __init__(self, server, config, log, wrapper, address, port, nickname, channels):
@@ -222,7 +222,7 @@ class IRC:
 							else:
 								msg("Server is in unknown state. This is probably a Wrapper.py bug - report it!")
 						elif args(0) == "about":
-							msg("Wrapper.py by benbaptist - version %s" % Config.version)
+							msg("Wrapper.py by benbaptist - version %s (build #%d)" % (Config.version, globals.build))
 						else:
 							msg('Unknown command. Type help for more commands')
 					else:
