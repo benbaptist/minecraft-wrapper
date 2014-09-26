@@ -145,7 +145,7 @@ class IRC:
 						users += "%s " % user
 					self.send("PRIVMSG %s :There are currently %s users on the server: %s" % (channel, len(self.server.players), users))
 				elif message.strip() == ".about":
-					self.send("PRIVMSG %s :Wrapper.py version %s" % (channel, Config.version))
+					self.send("PRIVMSG %s :Wrapper.py version %s (build #%d)" % (channel, Config.version, globals.build))
 				else:
 					self.log.info('[%s] (%s) %s' % (channel, nick, message))
 					message = message.decode("utf-8", "ignore")
