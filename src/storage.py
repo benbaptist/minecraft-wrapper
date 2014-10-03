@@ -27,7 +27,7 @@ class Storage:
 			time.sleep(1)
 	def load(self):
 		l = ""
-		for i in self.root.split("/")
+		for i in self.root.split("/"):
 			l += i + "/"
 			if not os.path.exists(l):
 				print "Making %s" % l
