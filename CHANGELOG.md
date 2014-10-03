@@ -20,7 +20,6 @@
 - Update Wrapper.py automatically or with a one-click update
 - First-run setup wizard for new setups
 - Potentially implement a way to reload the config - but that might be too difficult/bug prone
-- UHC-style timer mode
 - Add permissions system
 - Improve configuration system/redo from scratch
 <ul>

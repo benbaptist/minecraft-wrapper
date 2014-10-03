@@ -1,4 +1,4 @@
-import json, time, StringIO, nbt, items
+import json, time, StringIO, nbt, items, storage
 class API:
 	statusEffects = {
 		"speed": 1,

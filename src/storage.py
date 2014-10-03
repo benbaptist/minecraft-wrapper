@@ -1,8 +1,8 @@
 import json, os, threading, time
 class Storage:
-	def __init__(self, name, log=None):
-		self.log = log
+	def __init__(self, name, isWorld=None, root=".wrapper-data/json"):
 		self.name = name
+		self.root = root
 		
 		self.data = {}
 		self.load()
@@ -26,19 +26,20 @@ class Storage:
 					self.time = time.time()
 			time.sleep(1)
 	def load(self):
-		if not os.path.exists(".wrapper-data/json"):
-			try: os.mkdir(".wrapper-data")
-			except: pass 
-			os.mkdir(".wrapper-data/json")
-		if not os.path.exists(".wrapper-data/json/%s.json" % self.name):
+		l = ""
+		for i in self.root.split("/")
+			l += i + "/"
+			if not os.path.exists(l):
+				print "Making %s" % l
+				try: os.mkdir(l)
+				except: pass 
+		if not os.path.exists("%s/%s.json" % (self.root, self.name)):
 			self.save()
-		with open(".wrapper-data/json/%s.json" % self.name, "r") as f:
+		with open("%s/%s.json" % (self.root, self.name), "r") as f:
 			self.data = json.loads(f.read())
 		self.flush = False
 	def save(self):
-		if not os.path.exists(".wrapper-data"):
-			os.mkdir(".wrapper-data")
-		with open(".wrapper-data/json/%s.json" % self.name, "w") as f:
+		with open("%s/%s.json" % (self.root, self.name) , "w") as f:
 			f.write(json.dumps(self.data))
 		self.flush = False
 	def key(self, key, value=None):

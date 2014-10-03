@@ -34,7 +34,7 @@ class Server:
 		if self.wrapper.proxy:
 			for client in self.wrapper.proxy.clients:
 				uuid = self.players[user].uuid
-				client.send(0x02, "json|byte", ({"text": "%s left the game BOIIIi (uuid %s)" % (user, uuid), "color":"purple"}, 0))
+#				client.send(0x02, "json|byte", ({"text": "%s left the game BOIIIi (uuid %s)" % (user, uuid), "color":"purple"}, 0))
 #				print len(client.send(0x38, "varint|varint|uuid", (4, 1, self.players[user].uuid)))
 		if user in self.players:
 			del self.players[user]
