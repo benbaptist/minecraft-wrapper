@@ -21,8 +21,6 @@ class Wrapper:
 		
 		self.commands = {}
 		self.events = {}
-	def ponk(self, player, args):
-		player.message("&aHey man, you just ran ponk! That's cool!")
 	def loadPlugin(self, i):
 		self.log.info("Loading plugin %s..." % i)
 		if os.path.isdir("wrapper-plugins/%s" % i):
@@ -33,10 +31,25 @@ class Wrapper:
 			name = i[:-3]
 		else:
 			return False
-		self.commands[name] = {}
-		self.events[name] = {}
-		main = plugin.Main(API(self, name), PluginLog(self.log, name))
-		self.plugins[name] = {"main": main, "name": name, "good": True, "module": plugin} #  "events": {}, "commands": {}, 
+		try: name = plugin.NAME
+		except: pass
+		try: id = plugin.ID
+		except: id = name
+		try: version = plugin.VERSION
+		except: version = (0, 1)
+		try: description = plugin.DESCRIPTION
+		except: description = None
+		try: summary = plugin.SUMMARY
+		except: summary = None
+		main = plugin.Main(API(self, name, id), PluginLog(self.log, name))
+		self.plugins[id] = {"main": main, "good": True, "module": plugin} #  "events": {}, "commands": {},
+		self.plugins[id]["name"] = name
+		self.plugins[id]["version"] = version
+		self.plugins[id]["summary"] = summary
+		self.plugins[id]["description"] = description 
+		self.plugins[id]["filename"] = i
+		self.commands[id] = {}
+		self.events[id] = {}
 		main.onEnable()
 	def unloadPlugin(self, plugin):
 		del self.commands[plugin]
@@ -99,21 +112,36 @@ class Wrapper:
 		self.log.info("%s executed: /%s %s" % (str(payload["player"]), payload["command"], " ".join(payload["args"])))
 		if payload["command"] == "wrapper":
 			player = payload["player"]
-			player.message({"text": "Wrapper.py Version %s (build %d)" % (Config.version, globals.build), "color": "gray", "italic": True})
+			player.message({"text": "Wrapper.py Version %s (build #%d)" % (Config.version, globals.build), "color": "gray", "italic": True})
 			return False
-		if payload["command"] == "plugins" or payload["command"] == "pl":
+		if payload["command"] in ("plugins", "pl"):
 			player = payload["player"]
 			if player.isOp():
 				player.message({"text": "List of plugins installed:", "color": "red", "italic": True})
-				for plugin in self.plugins:
-					try: description = self.plugins[plugin]["main"].description
-					except: description = "No description available for this plugin"
+				for id in self.plugins:
+					plugin = self.plugins[id]
+					if plugin["good"]:
+						name = plugin["name"]
+						version = plugin["version"]
+						summary = plugin["summary"]
+						description = plugin["description"]
+					else:
+						name = id
+						version = None
+						summary = None
+						description = ""
+					if summary == None:
+						summary = {"text": "No description is available for this plugin", "color": "gray", "italic": True, 
+							"hoverEvent": {"action": "show_text", "value": description}}
+					else:
+						summary = {"text": summary, "color": "white", "hoverEvent": {"action": "show_text", "value": description}}
 					
-					try: version = self.plugins[plugin]["main"].version
-					except: version = (1, 0, 0)
-					
-					version = ".".join([str(_) for _ in version])
-					player.message({"text": "%s" % plugin, "color": "gold", "extra":[{"text": " v%s - %s" % (version, description), "color": "gray"}]})
+					if version == None: version = "v?.?"
+					else: version = ".".join([str(_) for _ in version])
+					if plugin["good"]:
+						player.message({"text": name, "color": "dark_green", "hoverEvent": {"action": "show_text", "value": "Filename: %s | ID: %s" % (plugin["filename"], id)}, "extra":[{"text": " v%s" % version, "color": "dark_gray"}, {"text": " - ", "color": "white"}, summary]})
+					else:
+						player.message({"text": name, "color": "dark_red", "extra":[{"text": " - ", "color": "white"}, {"text": "Failed to import this plugin!", "color": "red", "italic": "true"}]})
 				return False
 		if payload["command"] == "reload":
 			player = payload["player"]
@@ -132,6 +160,7 @@ class Wrapper:
 					self.commands[pluginID][command](payload["player"], payload["args"])
 				except: pass
 				continue
+			if pluginID not in self.plugins: continue
 			plugin = self.plugins[pluginID]
 			if not plugin["good"]: continue
 			command = payload["command"]
@@ -160,17 +189,17 @@ class Wrapper:
 		signal.signal(signal.SIGINT, self.SIGINT)
 		
 		self.api = API(self, "Wrapper.py")
-		self.api.registerCommand("ponk", self.ponk)
-		
-		self.loadPlugins()
 		
 		self.server = Server(sys.argv, self.log, self.configManager.config, self)
+		
+		self.loadPlugins()
 		
 		if self.config["IRC"]["enabled"]:
 			self.irc = IRC(self.server, self.config, self.log, self, self.config["IRC"]["server"], self.config["IRC"]["port"], self.config["IRC"]["nick"], self.config["IRC"]["channels"])
 			t = threading.Thread(target=self.irc.init, args=())
 			t.daemon = True
 			t.start()
+		# Old, deactivated web interface code. Will work on this more soon after the release of 0.7.0.
 		#if self.config["Web"]["web-enabled"]:
 #			if web.IMPORT_SUCCESS:
 #				self.web = web.Web(self)

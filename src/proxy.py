@@ -1,6 +1,8 @@
-import socket, threading, struct, StringIO, time, traceback, json, random, requests, hashlib, os, zlib, binascii, uuid, md5, storage, world
-try:
-	import encryption
+# I'll probably split this file into more parts later on, like such: 
+# proxy folder: __init__.py (Proxy), client.py (Client), server.py (Server), network.py (Packet), bot.py (will contain Bot, for bot code)  
+import socket, threading, struct, StringIO, time, traceback, json, random, hashlib, os, zlib, binascii, uuid, md5, storage, world
+try: # Weird system for handling non-standard modules
+	import encryption, requests
 	IMPORT_SUCCESS = True
 except:
 	IMPORT_SUCCESS = False
@@ -30,7 +32,7 @@ class Proxy:
 				self.socket.bind((self.wrapper.config["Proxy"]["proxy-bind"], self.wrapper.config["Proxy"]["proxy-port"]))
 				self.socket.listen(5)
 			except:
-				print "Proxy mode could not bind"
+				print "Proxy mode could not bind - retrying"
 				self.socket = False
 	 	while not self.wrapper.halt:
 	 		try:
@@ -79,15 +81,17 @@ class Proxy:
 		if str(id) in self.uuidTranslate:
 			return self.uuidTranslate[str(id)]
 	def lookupUUID(self, uuid):
-		if not self.storage.key("uuid-cache"):
-			self.storage.key("uuid-cache", {})
-		if uuid in self.storage.key("uuid-cache"):
-			return self.storage.key("uuid-cache")[uuid]
-		with open("usercache.json", "r") as f:
-			usercache = json.loads(f.read())
-		for i in usercache:
-			if i["uuid"] == str(uuid):
-				return i
+		#if not self.storage.key("uuid-cache"):
+#			self.storage.key("uuid-cache", {})
+		if "uuid-cache" not in self.storage:
+			self.storage["uuid-cache"] = {}
+		if uuid in self.storage["uuid-cache"]:
+			return self.storage["uuid-cache"][uuid]
+		#with open("usercache.json", "r") as f:
+		#	usercache = json.loads(f.read())
+		#for i in usercache:
+		#	if i["uuid"] == str(uuid):
+		#		return i
 		return None
 	def setUUID(self, uuid, name):
 		if not self.storage.key("uuid-cache"):
@@ -245,6 +249,7 @@ class Client: # handle client/game connection
 				else:
 					self.connect()
 					self.uuid = uuid.uuid3(uuid.NAMESPACE_OID, "OfflinePlayer: %s" % self.username)
+					self.serverUUID = self.UUIDFromName("OfflinePlayer:" + self.username)
 					self.send(0x02, "string|string", (str(self.uuid), self.username))
 					self.state = 3
 					self.log.info("%s logged in (IP: %s)" % (self.username, self.addr[0]))
@@ -865,6 +870,8 @@ class Packet: # PACKET PARSING CODE
 		return struct.unpack("B", self.read_data(1))[0]
 	def read_long(self):
 		return struct.unpack(">q", self.read_data(8))[0]
+	def read_ulong(self):
+		return struct.unpack(">Q", self.read_data(8))[0]
 	def read_float(self):
 		return struct.unpack(">f", self.read_data(4))[0]
 	def read_int(self):
@@ -885,7 +892,7 @@ class Packet: # PACKET PARSING CODE
 	def read_position(self):
 		position = self.read_long()
 		if position == -1: return None
-		if False: z = -(-position & 0x3FFFFFF) # position < 1
+		if position & 0x3FFFFFF > 67100000: z = -(-position & 0x3FFFFFF)
 		else: z = position & 0x3FFFFFF
 		position = (position >> 38, (position >> 26) & 0xFFF, z)
 		return position

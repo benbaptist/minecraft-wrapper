@@ -49,19 +49,23 @@ class API:
 		"n": "\xc2\xa7n", # underline
 		"o": "\xc2\xa7o", # italic,
 	}
-	def __init__(self, wrapper, name=""):
+	def __init__(self, wrapper, name="", id=None):
 		self.wrapper = wrapper
 		self.name = name
 		self.minecraft = Minecraft(wrapper)
 		self.server = wrapper.server
+		if id == None:
+			self.id = name
+		else:
+			self.id = id
 	def registerCommand(self, name, callback):
 		self.wrapper.log.debug("[%s] Registered command '%s'" % (self.name, name))
-		if self.name not in self.wrapper.commands: self.wrapper.commands[self.name] = {}
-		self.wrapper.commands[self.name][name] = callback
+		if self.id not in self.wrapper.commands: self.wrapper.commands[self.id] = {}
+		self.wrapper.commands[self.id][name] = callback
 	def registerEvent(self, eventType, callback):
 		self.wrapper.log.debug("[%s] Registered event '%s'" % (self.name, eventType))
-		if self.name not in self.wrapper.events: self.wrapper.events[self.name] = {}
-		self.wrapper.events[self.name][eventType] = callback
+		if self.id not in self.wrapper.events: self.wrapper.events[self.id] = {}
+		self.wrapper.events[self.id][eventType] = callback
 	def blockForEvent(self, eventType):
 		sock = []
 		self.wrapper.listeners.append(sock)
@@ -80,7 +84,12 @@ class API:
 		if pluginID in self.wrapper.plugins:
 			return self.wrapper.plugins[pluginID]
 		else:
-			raise Exception("Plugin %s does not exist!")
+			raise Exception("Plugin %s does not exist!" % pluginID)
+	def getStorage(self, name, world=False):
+		if world == False:
+			return storage.Storage(name, False, root=".wrapper-data/plugins/%s" % self.id)
+		else:
+			return storage.Storage(name, True, root="%s/plugins/%s" % (self.minecraft.getWorldName(), self.id))
 class Minecraft:
 	def __init__(self, wrapper):
 		self.wrapper = wrapper
@@ -155,7 +164,10 @@ class Minecraft:
 		self.wrapper.server.run("summon %s %d %d %d %s" % (entity, x, y, z, json.dumps(dataTag)))
 	def message(self, destination="", json_message={}):
 		self.console("tellraw %s %s" % (destination, json.dumps(json_message)))
-	def broadcast(self, message="", irc=True):
+	def broadcast(self, message="", irc=False):
+		if irc:
+			try: self.wrapper.irc.msgQueue.append(message)
+			except: pass
 		if isinstance(message, dict):
 			self.wrapper.server.run("tellraw @a %s" % json.dumps(message))
 		else:
@@ -171,11 +183,13 @@ class Minecraft:
 		pass
 	def getPlayerDat(self, name):
 		pass
-	def getPlayer(self, name=""):
+	def getPlayer(self, username=""):
 		try:
 			return self.wrapper.server.players[str(name)]
 		except:
 			raise Exception("No such player %s is logged in" % name)
+	def lookupUUID(self, uuid):
+		return self.wrapper.proxy.lookupUUID(uuid)
 	def getPlayers(self): # returns a list of players
 		return self.wrapper.server.players
 	# get world-based information
@@ -213,6 +227,7 @@ class Player:
 		for client in self.wrapper.proxy.clients:
 			if client.username == username:
 				self.client = client
+				self.uuid = client.uuid
 				break
 	def __str__(self):
 		return self.username

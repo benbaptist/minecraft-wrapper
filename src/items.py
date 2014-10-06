@@ -1,3 +1,5 @@
+# This was probably a dumb idea. 
+# I might use http://minecraft-ids.grahamedgecombe.com/items.json instead
 Blocks = {
 0: {"TileName": "air", "Items": [{"Name": "Air"}]},
 1: {"TileName": "stone", "Items": [ 
@@ -42,5 +44,34 @@ Blocks = {
 ]},
 13: {"TileName": "gravel", "Items": [{"Name": "Gravel"}]},
 14: {"TileName": "gold_ore", "Items": [{"Name": "Gold Ore"}]},
+15: {"TileName": "gold_ore", "Items": [{"Name": "Gold Ore"}]},
+16: {"TileName": "coal_ore", "Items": [{"Name": "Coal Ore"}]},
+17: {"TileName": "log", "Items": [
+	{"Name": "Log"}, 
+	{"Name": "Spruce Wood"}, 
+	{"Name": "Birch Wood"},
+	{"Name": "Jungle Wood"}
+]},
+18: {"TileName": "leaves", "Items": [
+	{"Name": "Oak Leaves"},
+	{"Name": "Spruce Leaves"},
+	{"Name": "Birch Leaves"},
+	{"Name": "Jungle Leaves"},
+]},
+19: {"TileName": "sponge", "Items": [
+	{"Name": "Sponge"},
+	{"Name": "Wet Sponge"}
+]},
+20: {"TileName": "glass", "Items": [{"Name": "Glass"}]},
+21: {"TileName": "lapis_ore", "Items": [{"Name": "Lapis Lazuli Ore"}]},
+22: {"TileName": "lapis_lazuli_block", "Items": [{"Name": "Lapis Lazuli Block"}]},
+23: {"TileName": "", "Items": [{"Name": "Glass"}]},
+24: {"TileName": "glass", "Items": [{"Name": "Glass"}]},
+25: {"TileName": "glass", "Items": [{"Name": "Glass"}]},
+26: {"TileName": "glass", "Items": [{"Name": "Glass"}]},
+27: {"TileName": "glass", "Items": [{"Name": "Glass"}]},
+28: {"TileName": "glass", "Items": [{"Name": "Glass"}]},
+29: {"TileName": "glass", "Items": [{"Name": "Glass"}]},
+30: {"TileName": "glass", "Items": [{"Name": "Glass"}]},
 }
 # 0: {"TileName": "air", [{"Name": "Air"}]},

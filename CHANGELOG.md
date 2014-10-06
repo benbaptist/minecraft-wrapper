@@ -39,6 +39,9 @@
 - Negative Position packets are completely screwed up
 - The server.py and irc.py code SERIOUSLY needs a total rewrite. (I noticed this while fixing pre-1.7 support)
 - Duplicate IRC messages (possibily fixed)
+- Make URLs posted in IRC clickable inside of Minecraft
+- Allow !commands to be made with api.registerCommand()
+- Hibernation mode: Wrapper.py will be able to stop the server, but listen for incoming connections and will fire the server up when someone connects. It will make logging into the server slower if the server is hibernated, but otherwise it will reduce the average load of a server box running multiple servers. 
 
 <h4>0.7.0</h4>
 - Huge Improvements to APIs
@@ -56,6 +59,7 @@
 - Added /plugins command - was removed in the last update by mistake
 - Removed IRC -> Server Line-Wrapping (each message was divided automatically every 80 characters - it was annoying)
 - Fixed bug where serious plugin errors resulted in that plugin not being reloadable
+- Fixed quit messages not being displayed in IRC (finally!)
 
 
 <h4>0.6.0</h4>

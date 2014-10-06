@@ -1,4 +1,4 @@
-import socket, datetime, time, sys, threading, random, subprocess, os, json, signal, traceback, api, world
+import socket, datetime, time, sys, threading, random, subprocess, os, json, signal, traceback, api, world, StringIO, ConfigParser
 class Server:
 	def __init__(self, args, log, config, wrapper):
 		self.log = log
@@ -20,13 +20,22 @@ class Server:
 		self.version = None
 		self.world = world.World()
 		
+		# Read server.properties and extract some information out of it
+		s = StringIO.StringIO() # Stupid StringIO doesn't support __exit__()
+		config = open("server.properties", "r").read()
+		s.write("[main]\n" + config)
+		s.seek(0)
+		self.properties = ConfigParser.ConfigParser(allow_no_value = True)
+		self.properties.readfp(s)
+		self.worldName = self.properties.get("main", "level-name")
+		
 		#t = threading.Thread(target=self.readServerLog, args=())
 #		t.daemon = True
 #		t.start()
 	def login(self, user):
 		try:
 			if user not in self.players:
-				time.sleep(1)
+#				time.sleep(1)
 				self.players[user] = api.Player(user, self.wrapper)
 		except:
 			traceback.print_exc()
@@ -183,7 +192,7 @@ class Server:
 							for backupI in backupTimestamps:
 								self.backups.append((int(backupI), "backup-%s.tar" % str(backupI)))
 					if self.config["Backups"]["backup-notification"]:
-						self.msg("Backing up, IRC bridge will freeze and lag may occur")
+						self.msg("Backing up... prepare for lag")
 						self.console("\xc2\xa7bBacking up, IRC bridge will freeze and lag may occur")
 					timestamp = int(time.time())
 					filename = "backup-%s.tar" % datetime.datetime.fromtimestamp(int(timestamp)).strftime("%Y-%m-%d_%H:%M:%S")
@@ -260,6 +269,10 @@ class Server:
 									self.msg("[%s connected]" % name)
 									self.login(name)
 									self.wrapper.callEvent("player.join", {"player": name})
+								elif self.argserver(3)[0] == "[" and self.argserver(3)[-1] == "]":
+									name = self.argserver(3)[1:-1]
+									message = self.formatForIRC(" ".join(line.split(' ')[4:]).replace('\x1b', '').replace("\xc2\xfa", ""))
+									self.wrapper.callEvent("server.say", {"player": name, "message": message})
 								elif self.argserver(4) == 'lost':
 									name = self.filterName(self.argserver(3))
 									self.msg("[%s disconnected]" % (name))

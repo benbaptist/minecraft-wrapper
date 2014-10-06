@@ -14,8 +14,9 @@ class IRC:
 		self.timeout = False
 		self.msgQueue = []
 		
-		self.api = api.API(self.wrapper)
+		self.api = api.API(self.wrapper, "IRC")
 		self.api.registerEvent("player.message", self.playerMessageHandle)
+		self.api.registerEvent("server.say", self.sayMessageHandle)
 	def init(self):
 		while not self.wrapper.halt:
 			try:
@@ -54,6 +55,10 @@ class IRC:
 		player = payload["player"]
 		message = payload["message"]
 		self.msgQueue.append("<%s> %s" % (player, message))
+	def sayMessageHandle(self, payload):
+		player = payload["player"]
+		message = payload["message"]
+		self.msgQueue.append("[%s] %s" % (player, message))
 	def handle(self):
 		while self.socket:
 			try:
@@ -126,12 +131,12 @@ class IRC:
 				pass
 		if self.args(0) == "PING":
 			self.send("PONG %s" % self.args(1))
-		if self.args(0) == "QUIT":
+		if self.args(1) == "QUIT":
 			nick = self.args(0)[1:self.args(0).find("!")]
 			message = " ".join(self.line.split(" ")[2:])[1:].strip("\n").strip("\r")
 			
-			self.wrapper.callEvent("irc.quit", {"user": nick, "quit": message})
-			self.rawConsole({"text": nick, "color": "green", extra:[{"text": " quit", "color": "white"}]})
+			self.wrapper.callEvent("irc.quit", {"user": nick, "message": message})
+			self.rawConsole({"text": "[IRC] ", "color": "gold", "extra":[{"text": nick, "color": "green"}, {"text": " quit from IRC", "color": "white"}]})
 		if self.args(1) == "PRIVMSG":
 			channel = self.args(2)
 			nick = self.args(0)[1:self.args(0).find("!")]

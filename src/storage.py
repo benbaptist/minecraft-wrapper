@@ -1,12 +1,12 @@
-import json, os, threading, time
+import json, os, threading, time, copy
 class Storage:
 	def __init__(self, name, isWorld=None, root=".wrapper-data/json"):
 		self.name = name
 		self.root = root
 		
 		self.data = {}
+		self.dataOld = {}
 		self.load()
-		self.flush = False
 		self.abort = False
 		self.time = time.time()
 		
@@ -14,14 +14,29 @@ class Storage:
 		t.daemon = True
 		t.start()
 	def __del__(self):
-		print "STORAGE OBJECT '%s' BEING DESTROYED - SAVING" % self.name
+		print "STORAGE OBJECT DESTROYED"
 		self.abort = True
 		self.save()
+	def __getitem__(self, index):
+		if not type(index) == str:
+			raise Exception("A string must be passed to the stuff")
+		return self.data[index]
+	def __setitem__(self, index, value):
+		if not type(index) == str:
+			raise Exception("A string must be passed to the stuff")
+		self.data[index] = value
+		return self.data[index]
+	def __delattr__(self, index):
+		if not type(index) == str:
+			raise Exception("A string must be passed to the stuff")
+		del self.data[index]
+	def __iter__(self):
+		for i in self.data:
+			yield i
 	def periodicSave(self):
 		while not self.abort:
-			if time.time() - self.time > 60 * 5:
-				if self.flush:
-					print "Automatic save for %s" % self.name
+			if time.time() - self.time > 60 * 2:
+				if self.data == self.dataOld:
 					self.save()
 					self.time = time.time()
 			time.sleep(1)
@@ -30,14 +45,13 @@ class Storage:
 		for i in self.root.split("/"):
 			l += i + "/"
 			if not os.path.exists(l):
-				print "Making %s" % l
 				try: os.mkdir(l)
 				except: pass 
 		if not os.path.exists("%s/%s.json" % (self.root, self.name)):
 			self.save()
 		with open("%s/%s.json" % (self.root, self.name), "r") as f:
 			self.data = json.loads(f.read())
-		self.flush = False
+		self.dataOld = copy.deepcopy(self.data)
 	def save(self):
 		with open("%s/%s.json" % (self.root, self.name) , "w") as f:
 			f.write(json.dumps(self.data))
