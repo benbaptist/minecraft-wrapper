@@ -35,8 +35,8 @@ class Storage:
 			yield i
 	def periodicSave(self):
 		while not self.abort:
-			if time.time() - self.time > 60 * 2:
-				if self.data == self.dataOld:
+			if time.time() - self.time > 30:
+				if not self.data == self.dataOld:
 					self.save()
 					self.time = time.time()
 			time.sleep(1)

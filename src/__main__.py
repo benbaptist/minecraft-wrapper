@@ -18,6 +18,7 @@ class Wrapper:
 		self.halt = False
 		self.listeners = []
 		self.storage = storage.Storage("main", self.log)
+		self.permissions = storage.Storage("permissions", self.log)
 		
 		self.commands = {}
 		self.events = {}
@@ -154,6 +155,86 @@ class Wrapper:
 					self.log.error(traceback.format_exc())
 					player.message({"text": "An error occurred while reloading plugins. Please check the console immediately for a traceback.", "color": "red"})
 				return False
+		if payload["command"] in ("permissions", "perm", "perms", "super"):
+			player = payload["player"]
+			if not "groups" in self.permissions: self.permissions["groups"] = {}
+			if not "users" in self.permissions: self.permissions["users"] = {}
+			if player.isOp():
+				def args(i):
+					try: return payload["args"][i]
+					except: return ""
+				def argsAfter(i):
+					try: return " ".join(payload["args"][i:])
+					except: return ""
+				def usage(l):
+					player.message("&cUsage: /%s %s" % (payload["command"], l))
+				command = args(0)
+				if command == "groups":
+					group = args(1)
+					subcommand = args(2)
+					if subcommand == "new":
+						self.permissions["groups"][group] = {"permissions": {}}
+						player.message("&aCreated a new permissions group '%s'!" % group)
+					elif subcommand == "delete":
+						if not group in self.permissions["groups"]:
+							player.message("&cGroup '%s' does not exist!" % group)
+							return
+						del self.permissions["groups"][group]
+						player.message("&aDeleted permissions group '%s'." % group)
+					elif subcommand == "set":
+						if not group in self.permissions["groups"]:
+							player.message("&cGroup '%s' does not exist!" % group)
+							return
+						node = args(3)
+						value = argsAfter(4)
+						if len(value) == 0: value = True
+						if len(node) > 0:
+							self.permissions["groups"][group]["permissions"][node] = value
+							player.message("&aAdded permission node '%s' to group '%s'!" % (node, group))
+						else:
+							usage("groups %s set <permissionNode> [value]" % group)
+					elif subcommand == "remove":
+						if not group in self.permissions["groups"]:
+							player.message("&cGroup '%s' does not exist!" % group)
+							return
+						node = args(3)
+						if node in self.permissions["groups"][group]["permissions"]:
+							del self.permissions["groups"][group]["permissions"][node]
+							player.message("&aRemoved permission node '%s' from group '%s'." % (node, group))
+					elif subcommand == "info":
+						if not group in self.permissions["groups"]:
+							player.message("&cGroup '%s' does not exist!" % group)
+							return
+						player.message("&aPermissions for the group '%s':" % group)
+						for node in self.permissions["groups"][group]["permissions"]:
+							player.message("- %s: %s" % (node, self.permissions["groups"][group]["permissions"][node]))
+						player.message("&aUsers in the group '%s':" % group)
+						for uuid in self.permissions["users"]:
+							if group in self.permissions["users"]:
+								player.message(uuid)
+					else:
+						usage("groups <groupName> [new/delete/set/remove/info]")
+				elif command == "users":
+					username = args(1)
+					subcommand = args(2)
+					if username not in self.permissions["users"]:
+						self.permissions["users"][username] = {"groups": [], "permissions": {}}
+					if subcommand == "group":
+						group = args(3)
+						if len(group) > 0:
+							if not group in self.permissions["groups"]:
+								player.message("&cGroup '%s' does not exist!" % group)
+							return
+							if group not in self.permissions["users"][username]["groups"]:
+								self.permissions["users"][username]["groups"].append(group)
+							player.message("&aAdded user '%s' to group '%s'!" % (username, group))
+						else:
+							usage("users <username> groups <groupName>")
+					else:
+						usage("users <username> [group/set]")
+				else:
+					usage("[groups/users/RESET] (Note: RESET is case-sensitive!)")
+				return False
 		for pluginID in self.commands:
 			if pluginID == "Wrapper.py":
 				try: 
@@ -271,14 +352,18 @@ class Wrapper:
 				self.reloadPlugins()
 			elif command == "plugins":
 				self.log.info("List of Wrapper.py plugins installed:")
-				for plug in self.plugins:
-					try: description = self.plugins[plug]["main"].description
-					except: description = "No description available for this plugin"
-					
-					try: version = self.plugins[plug]["main"].version
-					except: version = (1, 0, 0)
+				for id in self.plugins:
+					plugin = self.plugins[id]
+					if plugin["good"]:
+						name = self.plugins[plug]["name"]
+						summary = self.plugins[plug]["summary"]
+						if summary == None: summary = "No description available for this plugin"
 						
-					self.log.info("%s v%s - %s" % (plug, ".".join([str(_) for _ in version]), description))
+						version = self.plugins[plug]["version"]
+							
+						self.log.info("%s v%s - %s" % (plug, ".".join([str(_) for _ in version]), description))
+					else:
+						self.log.info("%s failed to load!" % (plug))
 			elif command == "help":
 				self.log.info("/reload - reload plugins")	
 				self.log.info("/plugins - lists plugins")	

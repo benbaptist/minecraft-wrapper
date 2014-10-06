@@ -501,7 +501,7 @@ class Server: # handle server connection
 				self.client.gamemode = data["gamemode"]
 				self.client.dimension = data["dimension"]
 			elif self.state == 2:
-				self.disconnect("Server is online mode. Please turn it off in server.properties.\n\nWrapper.py will handle authentication on its own, so do not worry about hackers.")
+				self.client.disconnect("Server is online mode. Please turn it off in server.properties.\n\nWrapper.py will handle authentication on its own, so do not worry about hackers.")
 				return False
 		if id == 0x02:
 			if self.state == 2:

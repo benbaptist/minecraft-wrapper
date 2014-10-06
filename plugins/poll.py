@@ -1,4 +1,17 @@
-# -- Poll Plugin -- 
+# -- Poll Plugin --
+NAME = "Poll"
+ID = "com.benbaptist.plugins.vote"
+SUMMARY = "Voting plugin for Wrapper.py!"
+VERSION = (1, 0)
+DESCRIPTION = """I need to make this plugin use more modern Wrapper.py APIs - currently it is a bad example.
+
+For one, it uses the old player.message event to capture 
+fake !commands instead of using .registerCommand() for real /slash commands.
+It's also not using the new storage API for making per-world and global 
+storage of JSON information easy.
+
+Plus, it's not really well written overall. It could be cleaner, probably.
+"""
 
 import time, json, os
 class Main:
@@ -6,9 +19,6 @@ class Main:
 		self.api = api
 		self.minecraft = api.minecraft
 		self.log = log
-		
-		self.version = (0, 1)
-		self.description = "Poll position"
 	def onEnable(self):
 		self.api.registerEvent("player.message", self.command)
 		self.api.registerEvent("player.join", self.join)

@@ -268,7 +268,7 @@ class Server:
 									name = self.formatForIRC(self.filterName(self.argserver(3)[0:self.argserver(3).find('[')]))
 									self.msg("[%s connected]" % name)
 									self.login(name)
-									self.wrapper.callEvent("player.join", {"player": name})
+									self.wrapper.callEvent("player.join", {"player": self.players[name]})
 								elif self.argserver(3)[0] == "[" and self.argserver(3)[-1] == "]":
 									name = self.argserver(3)[1:-1]
 									message = self.formatForIRC(" ".join(line.split(' ')[4:]).replace('\x1b', '').replace("\xc2\xfa", ""))
@@ -276,8 +276,8 @@ class Server:
 								elif self.argserver(4) == 'lost':
 									name = self.filterName(self.argserver(3))
 									self.msg("[%s disconnected]" % (name))
+									self.wrapper.callEvent("player.logout", {"player": self.players[name]})
 									self.logout(name)
-									self.wrapper.callEvent("player.logout", {"player": name})
 								elif self.argserver(4) == 'issued': # this kinda doesn't work anymore unless you have a bukkit plugin.
 									name = self.filterName(self.argserver(3))
 									command = message = ' '.join(line.split(' ')[7:])
