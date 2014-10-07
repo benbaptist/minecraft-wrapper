@@ -1,4 +1,4 @@
-import json, time, StringIO, nbt, items, storage
+import json, time, StringIO, nbt, items, storage, fnmatch
 class API:
 	statusEffects = {
 		"speed": 1,
@@ -58,14 +58,18 @@ class API:
 			self.id = name
 		else:
 			self.id = id
-	def registerCommand(self, name, callback):
+	def registerCommand(self, name, callback, permission=None):
 		self.wrapper.log.debug("[%s] Registered command '%s'" % (self.name, name))
 		if self.id not in self.wrapper.commands: self.wrapper.commands[self.id] = {}
-		self.wrapper.commands[self.id][name] = callback
+		self.wrapper.commands[self.id][name] = {"callback": callback, "permission": permission}
 	def registerEvent(self, eventType, callback):
 		self.wrapper.log.debug("[%s] Registered event '%s'" % (self.name, eventType))
 		if self.id not in self.wrapper.events: self.wrapper.events[self.id] = {}
 		self.wrapper.events[self.id][eventType] = callback
+	def registerPermission(self, permission=None, value=False):
+		self.wrapper.log.debug("[%s] Registered permission '%s' with default value: %s" % (self.name, permission, value))
+		if self.id not in self.wrapper.permission: self.wrapper.permission[self.id] = {}
+		self.wrapper.permission[self.id][permission] = value 
 	def blockForEvent(self, eventType):
 		sock = []
 		self.wrapper.listeners.append(sock)
@@ -218,6 +222,7 @@ class Player:
 	def __init__(self, username, wrapper):
 		self.wrapper = wrapper
 		self.server = wrapper.server
+		self.permissions = wrapper.permissions
 		self.name = username
 		self.username = self.name # just an alias - same variable
 		self.loggedIn = time.time()
@@ -324,14 +329,33 @@ class Player:
 		if self.getClient().version > 10:
 			self.getClient().send(0x2d, "ubyte|string|json|ubyte", (self.getClient().windowCounter, "0", {"text": title}, slots))
 		return None # return a Window object soon
-	# Abilities & visual
+	# Abilities & Client-Side Stuff
 	def setPlayerFlying(self, fly): # UNFINISHED FUNCTION
 		if fly:
 			self.getClient().send(0x13, "byte|float|float", (255, 1, 1))
 		else:
 			self.getClient().send(0x13, "byte|float|float", (0, 1, 1))
+	def setBlock(self, position): # Unfinished function, will be used to make phantom blocks visible ONLY to the client
+		pass
 	# Inventory-related actions
 	def getItemInSlot(self, slot):
 		return self.getClient().inventory[slot]
 	def getHeldItem(self):
 		return self.getClient().inventory[36 + self.getClient().slot]
+	# Permissions-related
+	def hasPermission(self, node):
+		if node == None: return True
+		uuid = str(self.uuid)
+		if uuid in self.permissions["users"]:
+			for perm in self.permissions["users"][uuid]["permissions"]:	
+				if node in fnmatch.filter([node], perm):
+					return self.permissions["users"][uuid]["permissions"][perm]
+		if uuid not in self.permissions["users"]: return False
+		for group in self.permissions["users"][uuid]["groups"]:
+			for perm in self.permissions["groups"][group]["permissions"]:
+				if node in fnmatch.filter([node], perm):
+					return self.permissions["groups"][group]["permissions"][perm]
+		for id in self.wrapper.permission:
+			if node in self.wrapper.permission[id]:
+				return self.wrapper.permission[id][node]
+		return False

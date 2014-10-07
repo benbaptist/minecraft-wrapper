@@ -1,5 +1,6 @@
 # I'll probably split this file into more parts later on, like such: 
-# proxy folder: __init__.py (Proxy), client.py (Client), server.py (Server), network.py (Packet), bot.py (will contain Bot, for bot code)  
+# proxy folder: __init__.py (Proxy), client.py (Client), server.py (Server), network.py (Packet), bot.py (will contain Bot, for bot code)
+# this could definitely use some code-cleaning.  
 import socket, threading, struct, StringIO, time, traceback, json, random, hashlib, os, zlib, binascii, uuid, md5, storage, world
 try: # Weird system for handling non-standard modules
 	import encryption, requests
@@ -93,6 +94,18 @@ class Proxy:
 		#	if i["uuid"] == str(uuid):
 		#		return i
 		return None
+	def lookupUsername(self, username):
+		if "uuid-cache" not in self.storage:
+			self.storage["uuid-cache"] = {}
+		for uuid in self.storage["uuid-cache"]:
+			if self.storage["uuid-cache"][uuid]["name"] == username:
+				return uuid
+		r = requests.get("https://api.mojang.com/users/profiles/minecraft/%s" % username)
+		uuid = self.formatUUID(r.json()["id"])
+		self.setUUID(uuid, username)
+		return uuid
+	def formatUUID(self, name):
+		return uuid.UUID(bytes=name.decode("hex")).hex
 	def setUUID(self, uuid, name):
 		if not self.storage.key("uuid-cache"):
 			self.storage.key("uuid-cache", {})

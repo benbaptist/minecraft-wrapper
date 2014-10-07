@@ -22,6 +22,7 @@ class Wrapper:
 		
 		self.commands = {}
 		self.events = {}
+		self.permission = {}
 	def loadPlugin(self, i):
 		self.log.info("Loading plugin %s..." % i)
 		if os.path.isdir("wrapper-plugins/%s" % i):
@@ -51,6 +52,7 @@ class Wrapper:
 		self.plugins[id]["filename"] = i
 		self.commands[id] = {}
 		self.events[id] = {}
+		self.permission[id] = {}
 		main.onEnable()
 	def unloadPlugin(self, plugin):
 		del self.commands[plugin]
@@ -188,6 +190,7 @@ class Wrapper:
 						node = args(3)
 						value = argsAfter(4)
 						if len(value) == 0: value = True
+						if value in ("True", "False"): value = ast.literal_eval(value) 
 						if len(node) > 0:
 							self.permissions["groups"][group]["permissions"][node] = value
 							player.message("&aAdded permission node '%s' to group '%s'!" % (node, group))
@@ -205,33 +208,71 @@ class Wrapper:
 						if not group in self.permissions["groups"]:
 							player.message("&cGroup '%s' does not exist!" % group)
 							return
-						player.message("&aPermissions for the group '%s':" % group)
-						for node in self.permissions["groups"][group]["permissions"]:
-							player.message("- %s: %s" % (node, self.permissions["groups"][group]["permissions"][node]))
 						player.message("&aUsers in the group '%s':" % group)
 						for uuid in self.permissions["users"]:
-							if group in self.permissions["users"]:
+							if group in self.permissions["users"][uuid]["groups"]:
 								player.message(uuid)
+						player.message("&aPermissions for the group '%s':" % group)
+						for node in self.permissions["groups"][group]["permissions"]:
+							value = self.permissions["groups"][group]["permissions"][node]
+							if value == True:
+								player.message("- %s: &2%s" % (node, value))
+							elif value == False:
+								player.message("- %s: &4%s" % (node, value))
+							else:
+								player.message("- %s: &7%s" % (node, value))
 					else:
+						player.message("&cList of groups: %s" % ", ".join(self.permissions["groups"]))
 						usage("groups <groupName> [new/delete/set/remove/info]")
 				elif command == "users":
 					username = args(1)
 					subcommand = args(2)
-					if username not in self.permissions["users"]:
-						self.permissions["users"][username] = {"groups": [], "permissions": {}}
+					try:
+						if len(username) > 0: uuid = self.proxy.lookupUsername(username)
+					except:
+						player.message("&cUsername '%s' does not exist." % username)
+						return False
+					if len(username) > 0:
+						if uuid not in self.permissions["users"]:
+							self.permissions["users"][uuid] = {"groups": [], "permissions": {}}
 					if subcommand == "group":
 						group = args(3)
 						if len(group) > 0:
 							if not group in self.permissions["groups"]:
 								player.message("&cGroup '%s' does not exist!" % group)
-							return
-							if group not in self.permissions["users"][username]["groups"]:
-								self.permissions["users"][username]["groups"].append(group)
-							player.message("&aAdded user '%s' to group '%s'!" % (username, group))
+								return
+							if group not in self.permissions["users"][uuid]["groups"]:
+								self.permissions["users"][uuid]["groups"].append(group)
+								player.message("&aAdded user '%s' to group '%s'!" % (username, group))
+							else:
+								player.message("&aAlready added user '%s' to group '%s'!" % (username, group))
 						else:
 							usage("users <username> groups <groupName>")
+					elif subcommand == "set":
+						node = args(3)
+						value = argsAfter(4)
+						if len(value) == 0: value = True
+						if value in ("True", "False"): value = ast.literal_eval(value) 
+						if len(node) > 0:
+							self.permissions["users"][uuid]["permissions"][node] = value
+							player.message("&aAdded permission node '%s' to user '%s'!" % (node, username))
+						else:
+							usage("users %s set <permissionNode> [value]" % username)
+					elif subcommand == "info":
+						player.message("&aUser '%s' is in these groups: " % username)
+						for group in self.permissions["users"][uuid]["groups"]:
+							player.message("- %s" % group)
+						player.message("&aUser '%s' is granted these individual permissions (not including permissions inherited from groups): " % username)
+						for node in self.permissions["users"][uuid]["permissions"]:
+							value = self.permissions["users"][uuid]["permissions"][node]
+							if value == True:
+								player.message("- %s: &2%s" % (node, value))
+							elif value == False:
+								player.message("- %s: &4%s" % (node, value))
+							else:
+								player.message("- %s: &7%s" % (node, value))
 					else:
-						usage("users <username> [group/set]")
+						usage("users <username> [group/set/info]")
 				else:
 					usage("[groups/users/RESET] (Note: RESET is case-sensitive!)")
 				return False
@@ -244,10 +285,15 @@ class Wrapper:
 			if pluginID not in self.plugins: continue
 			plugin = self.plugins[pluginID]
 			if not plugin["good"]: continue
-			command = payload["command"]
-			if command in self.commands[pluginID]:
+			commandName = payload["command"]
+			if commandName in self.commands[pluginID]:
 				try:
-					self.commands[pluginID][command](payload["player"], payload["args"])
+					command = self.commands[pluginID][commandName]
+					player = payload["player"]
+					if player.hasPermission(command["permission"]):
+						command["callback"](payload["player"], payload["args"])
+					else:
+						player.message({"translate": "commands.generic.permission", "color": "red"})
 					return False
 				except:
 					self.log.error("Plugin '%s' errored out when executing command: '<%s> /%s':" % (pluginID, payload["player"], command))
