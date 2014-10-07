@@ -59,18 +59,27 @@ class API:
 		else:
 			self.id = id
 	def registerCommand(self, name, callback, permission=None):
+		""" This registers a command that, when executed in Minecraft, will execute callback(player, args). 
+		permission is an optional attribute if you want your command to only be executable if the player has a specified permission node.
+		"""
 		self.wrapper.log.debug("[%s] Registered command '%s'" % (self.name, name))
 		if self.id not in self.wrapper.commands: self.wrapper.commands[self.id] = {}
 		self.wrapper.commands[self.id][name] = {"callback": callback, "permission": permission}
 	def registerEvent(self, eventType, callback):
+		""" Register an event and a callback. See [doc link needed here] for a list of events. callback(payload) when an event occurs, and the contents of payload varies between events."""
 		self.wrapper.log.debug("[%s] Registered event '%s'" % (self.name, eventType))
 		if self.id not in self.wrapper.events: self.wrapper.events[self.id] = {}
 		self.wrapper.events[self.id][eventType] = callback
 	def registerPermission(self, permission=None, value=False):
+		""" Used to set a default for a specific permission node. 
+		
+		Note: You do not need to run this function unless you want certain permission nodes to be granted by default. 
+		i.e. `essentials.list` should be on by default, so players can run /list without having any permissions."""
 		self.wrapper.log.debug("[%s] Registered permission '%s' with default value: %s" % (self.name, permission, value))
 		if self.id not in self.wrapper.permission: self.wrapper.permission[self.id] = {}
 		self.wrapper.permission[self.id][permission] = value 
 	def blockForEvent(self, eventType):
+		""" Blocks until the specified event is called. """
 		sock = []
 		self.wrapper.listeners.append(sock)
 		while True:
@@ -83,29 +92,41 @@ class API:
 					sock.remove(event)
 			time.sleep(0.05)
 	def callEvent(self, event, payload):
+		""" Invokes the specific event. Payload is extra information relating to the event. Errors may occur if you don't specify the right payload information. """
 		self.wrapper.callEvent(event, payload)
-	def getPluginContext(self, pluginID):
-		if pluginID in self.wrapper.plugins:
-			return self.wrapper.plugins[pluginID]
+	def getPluginContext(self, id):
+		""" Returns the content of another plugin with the specified ID. 
+		
+		i.e. api.getPluginContext(\"com.benbaptist.plugins.essentials\")"""
+		if id in self.wrapper.plugins:
+			return self.wrapper.plugins[id]["main"]
 		else:
-			raise Exception("Plugin %s does not exist!" % pluginID)
+			raise Exception("Plugin %s does not exist!" % id)
 	def getStorage(self, name, world=False):
+		""" Return a storage object for storing configurations, player data, and anything else your plugin will need to remember. 
+		
+		Setting world=True will store the data inside the current world folder.  
+		"""
 		if world == False:
 			return storage.Storage(name, False, root=".wrapper-data/plugins/%s" % self.id)
 		else:
 			return storage.Storage(name, True, root="%s/plugins/%s" % (self.minecraft.getWorldName(), self.id))
 class Minecraft:
+	""" This class contains functions related to in-game features directly. These methods are located at self.api.minecraft."""
 	def __init__(self, wrapper):
 		self.wrapper = wrapper
 		
 		self.blocks = items.Blocks
 	def getWorldName(self):
+		""" Returns the world's name. """
 		return self.wrapper.server.worldName
 	def isServerStarted(self):
+		""" Returns a boolean if the server is fully booted or not. """
 		if self.wrapper.server:
 			if self.wrapper.server.status == 2: return True
 		return False
 	def processColorCodes(self, message):
+		""" Used internally to process old-style color-codes with the & symbol, and returns a JSON chat object. """
 		extras = []
 		bold = False
 		italic = False
@@ -145,13 +166,16 @@ class Minecraft:
 			"underlined": underline, "bold": bold, "italic": italic, "strikethrough": strikethrough})
 		return json.dumps({"text": "", "extra": extras})
 	def console(self, string):
+		""" Run a command in the Minecraft server's console. """
 		try:
 			self.wrapper.server.run(string)
 		except:
 			pass
 	def setBlock(self, x, y, z, tileName, dataValue=0, oldBlockHandling="replace", dataTag={}):
+		""" Sets a block at the specified coordinates with the specific details. Will fail if the chunk is not loaded. """
 		self.wrapper.server.run("setblock %d %d %d %s %d %s %s" % (x, y, z, tileName, dataValue, oldBlockHandling, json.dumps(dataTag).replace('"', "")))
 	def giveStatusEffect(self, player, effect, duration=30, amplifier=30):
+		""" Gives the specified status effect to the specified target. """
 		if type(effect) == int: effectConverted = str(effect)
 		else:
 			try: 
@@ -165,10 +189,16 @@ class Minecraft:
 			raise Exception("Invalid status effect given!") 
 		self.wrapper.server.run("effect %s %s %d %d" % (player, effectConverted, duration, amplifier))
 	def summonEntity(self, entity, x=0, y=0, z=0, dataTag={}):
+		""" Summons an entity at the specified coordinates with the specified data tag. """
 		self.wrapper.server.run("summon %s %d %d %d %s" % (entity, x, y, z, json.dumps(dataTag)))
 	def message(self, destination="", json_message={}):
+		""" WILL BE CHANGED. Used to message some specific target. """
 		self.console("tellraw %s %s" % (destination, json.dumps(json_message)))
 	def broadcast(self, message="", irc=False):
+		""" Broadcasts the specified message to all clients connected. message can be a JSON chat object, or a string with formatting codes using the & as a prefix.
+		
+		Setting irc=True will also broadcast the specified message on IRC channels that Wrapper.py is connected to. Formatting might not work properly.
+		"""
 		if irc:
 			try: self.wrapper.irc.msgQueue.append(message)
 			except: pass
@@ -176,49 +206,54 @@ class Minecraft:
 			self.wrapper.server.run("tellraw @a %s" % json.dumps(message))
 		else:
 			self.wrapper.server.run("tellraw @a %s" % self.processColorCodes(message))
-	def changeResourcePack(self, name, url):
-		if self.getPlayer(name).client is False:
-			raise Exception("User %s is not connected via proxy" % name)
-		else:
-			self.getPlayer(name).client.send(0x3f, "string|bytearray", ("MC|RPack", url))
 	def teleportAllEntities(self, entity, x, y, z):
+		""" Teleports all of the specific entity type to the specified coordinates. """
 		self.wrapper.server.run("tp @e[type=%s] %d %d %d" % (entity, x, y, z))
-	def teleportPlayer(self):
-		pass
-	def getPlayerDat(self, name):
-		pass
+#	def teleportPlayer(self):
+#		pass
+#	def getPlayerDat(self, name):
+#		pass
 	def getPlayer(self, username=""):
+		""" Returns the player object of the specified logged-in player. Will raise an exception if the player is not logged in. """
 		try:
 			return self.wrapper.server.players[str(name)]
 		except:
 			raise Exception("No such player %s is logged in" % name)
 	def lookupUUID(self, uuid):
+		""" Returns the username from the specified UUID. If the player has never logged in before and isn't in the user cache, it will poll Mojang's API. The function will raise an exception if the UUID is invalid. """
 		return self.wrapper.proxy.lookupUUID(uuid)
 	def getPlayers(self): # returns a list of players
+		""" Returns a list of the currently connected players. """
 		return self.wrapper.server.players
 	# get world-based information
 	def getLevelInfo(self, worldName=False):
+		""" Return an NBT object of the world's level.dat. """
 		if not worldName: worldName = self.wrapper.server.worldName
 		if not worldName: raise Exception("Server Uninitiated")
 		f = nbt.NBTFile("%s/level.dat" % worldName, "rb")
 		return f["Data"]
 	def getSpawnPoint(self):
+		""" Returns the spawn point of the current world. """
 		return (int(str(self.getLevelInfo()["SpawnX"])), int(str(self.getLevelInfo()["SpawnY"])), int(str(self.getLevelInfo()["SpawnZ"])))
 	def getTime(self):
+		""" Returns the time of the world in ticks. """
 		return int(str(self.getLevelInfo()["Time"]))
-	def getBlock(self, x, y, z):
-		# this function doesn't really work well yet
-		self.wrapper.server.run("testforblock %d %d %d air" % (x, y, z))
-		while True:
-			event = self.api.blockForEvent("server.consoleMessage")
-			def args(i):
-				try: return event["message"].split(" ")[i]
-				except: return ""
-			if args(3) == "The" and args(4) == "block" and args(6) == "%d,%d,%d" % (x, y, z):
-				return {"block": args(8)}
+	#def getBlock(self, x, y, z):
+#		""" UNIMPLEMENTED FUNCTION. """
+#		# this function doesn't really work well yet
+#		self.wrapper.server.run("testforblock %d %d %d air" % (x, y, z))
+#		while True:
+#			event = self.api.blockForEvent("server.consoleMessage")
+#			def args(i):
+#				try: return event["message"].split(" ")[i]
+#				except: return ""
+#			if args(3) == "The" and args(4) == "block" and args(6) == "%d,%d,%d" % (x, y, z):
+#				return {"block": args(8)}
 	def getServer(self):
+		""" Returns the server object. """
 		return self.wrapper.server
 class Player:
+	""" Player objects contains methods and data of a currently logged-in player. This object is destroyed upon logging off. """
 	def __init__(self, username, wrapper):
 		self.wrapper = wrapper
 		self.server = wrapper.server
@@ -248,6 +283,7 @@ class Player:
 		else:
 			return self.client
 	def processColorCodes(self, message):
+		""" Used internally to process old-style color-codes with the & symbol, and returns a JSON chat object. """
 		message = message.encode('ascii', 'ignore')
 		extras = []
 		bold = False
@@ -287,23 +323,29 @@ class Player:
 		extras.append({"text": current, "color": color, "obfuscated": obfuscated, 
 			"underlined": underline, "bold": bold, "italic": italic, "strikethrough": strikethrough})
 		return json.dumps({"text": "", "extra": extras})
-	def processColorCodesOld(self, message):
+	def processColorCodesOld(self, message): # Not sure if this is used anymore. Might delete.
 		for i in API.colorCodes:
 			message = message.replace("&" + i, "\xc2\xa7" + i)
 		return message
 	def getPosition(self):
+		""" Returns a tuple of the player's current position. """
 		return self.getClient().position
 	def getGamemode(self):
+		""" Returns the player's current gamemode. """
 		return self.getClient().gamemode
 	def getDimension(self):
+		""" Returns the player's current dimension. -1 for Nether, 0 for Overworld, and 1 for End. """
 		return self.getClient().dimension
 	def setGamemode(self, gm=0):
+		""" Sets the user's gamemode. """
 		if gm in (0, 1, 2, 3):
 			self.client.gamemode = gm
 			self.wrapper.server.run("gamemode %d %s" % (gm, self.username))
 	def setResourcePack(self, url):
+		""" Sets the player's resource pack to a different URL. If the user hasn't already allowed resource packs, the user will be prompted to change to the specified resource pack. Probably broken right now. """
 		self.client.send(0x3f, "string|bytearray", ("MC|RPack", url))
 	def isOp(self):
+		""" Returns whether or not the player is currently a server operator.  """
 		operators = json.loads(open("ops.json", "r").read())
 		for i in operators:
 			if i["uuid"] == self.uuid or i["name"] == self.username:
@@ -337,13 +379,15 @@ class Player:
 			self.getClient().send(0x13, "byte|float|float", (0, 1, 1))
 	def setBlock(self, position): # Unfinished function, will be used to make phantom blocks visible ONLY to the client
 		pass
-	# Inventory-related actions
+	# Inventory-related actions. These will probably be split into a specific Inventory class.
 	def getItemInSlot(self, slot):
 		return self.getClient().inventory[slot]
 	def getHeldItem(self):
+		""" Returns the item object of an item currently being held. """
 		return self.getClient().inventory[36 + self.getClient().slot]
 	# Permissions-related
 	def hasPermission(self, node):
+		""" If the player has the specified node (either directly, or inherited from a group that the player is in), it will return the value (usually True) of the node. Otherwise, it returns False. """
 		if node == None: return True
 		uuid = str(self.uuid)
 		if uuid in self.permissions["users"]:

@@ -1,3 +1,4 @@
+# Unfinished web UI code. Yeah, I know. The code is awful. Probably not even a HTTP-compliant web server anyways. I just wrote it at like 3AM in like an hour.
 import socket, traceback, zipfile, threading, time, json, random, urlparse
 from api import API
 try:
