@@ -5,6 +5,7 @@ from config import Config
 from irc import IRC
 from server import Server
 from importlib import import_module
+from scripts import Scripts
 import importlib
 from api import API
 
@@ -61,6 +62,7 @@ class Wrapper:
 			self.plugins[plugin]["main"].onDisable()
 		except:
 			self.log.error("Error while disabling plugin '%s'" % plugin)
+			self.log.getTraceback()
 		reload(self.plugins[plugin]["module"])
 	def loadPlugins(self):
 		self.log.info("Loading plugins...")
@@ -77,6 +79,10 @@ class Wrapper:
 				self.log.error("Failed to import plugin '%s'" % i)
 				self.plugins[i] = {"name": i, "good": False}
 		self.callEvent("helloworld.event", {"testValue": True})
+	def disablePlugins(self):
+		self.log.error("Disabling plugins...")
+		for i in self.plugins:
+			self.unloadPlugin(i)
 	def reloadPlugins(self):
 		for i in self.plugins:
 			try:
@@ -114,8 +120,8 @@ class Wrapper:
 	def playerCommand(self, payload):
 		self.log.info("%s executed: /%s %s" % (str(payload["player"]), payload["command"], " ".join(payload["args"])))
 		if payload["command"] == "wrapper":
-			player = payload["player"]
-			player.message({"text": "Wrapper.py Version %s (build #%d)" % (Config.version, globals.build), "color": "gray", "italic": True})
+			buildString = self.getBuildString()
+			player.message({"text": "Wrapper.py Version %s" % (buildString), "color": "gray", "italic": True})
 			return False
 		if payload["command"] in ("plugins", "pl"):
 			player = payload["player"]
@@ -351,11 +357,19 @@ class Wrapper:
 		consoleDaemon.daemon = True
 		consoleDaemon.start()
 		
+		if self.config["General"]["shell-scripts"]:
+			if os.name in ("posix", "mac"):
+				self.scripts = Scripts(self)
+			else:
+				self.log.error("Sorry, but shell scripts only work on *NIX-based systems! If you are using a *NIX-based system, please file a bug report.")
+		
 		if self.config["Proxy"]["proxy-enabled"]:
 			t = threading.Thread(target=self.startProxy, args=())
 			t.daemon = True
 			t.start()
 		self.server.startServer()
+		
+		self.disablePlugins()
 	def startProxy(self):
 		if proxy.IMPORT_SUCCESS:
 			self.proxy = proxy.Proxy(self)
@@ -363,12 +377,17 @@ class Wrapper:
 			proxyThread.daemon = True
 			proxyThread.start()
 		else:
-			self.log.error("Proxy mode could not be started because you do not have the required modules installed: pycrypt")
+			self.log.error("Proxy mode could not be started because you do not have one or more of the following modules installed: pycrypt and requests")
 	def SIGINT(self, s, f):
 		self.shutdown()
 	def shutdown(self):
 		self.halt = True
 		sys.exit(0)
+	def getBuildString(self):
+		if globals.type == "dev":
+			return "%s (development build #%d)" % (Config.version, globals.build)
+		else:
+			return "%s (stable)" % Config.version
 	def console(self):
 		while not self.halt:
 			input = raw_input("")
@@ -416,13 +435,13 @@ class Wrapper:
 				self.log.info("/start & /stop - start and stop the server without auto-restarting respectively without shutting down Wrapper.py")
 				self.log.info("/restart - restarts the server, obviously")				
 				self.log.info("/halt - shutdown Wrapper.py completely")
-				self.log.info("Wrapper.py version %s" % Config.version)
+				self.log.info("Wrapper.py Version %s" % self.getBuildString())
 			else:
 				self.log.error("Invalid command %s" % command)
 if __name__ == "__main__":
 	wrapper = Wrapper()
 	log = wrapper.log
-	log.info("Wrapper.py started - version %s" % Config.version)
+	log.info("Wrapper.py started - Version %s" % wrapper.getBuildString())
 	
 	try:
 		t = threading.Thread(target=wrapper.start(), args=())
@@ -430,6 +449,7 @@ if __name__ == "__main__":
 		t.start()
 	except SystemExit:
 		#log.error("Wrapper.py received SystemExit")
+		wrapper.disablePlugins()
 		wrapper.halt = True
 		try:
 			for player in wrapper.server.players:
@@ -444,6 +464,7 @@ if __name__ == "__main__":
 		for line in traceback.format_exc().split("\n"):
 			log.error(line)
 		wrapper.halt = True
+		wrapper.disablePlugins()
 		try:
 			for player in wrapper.server.players:
 				wrapper.server.run("kick %s Wrapper.py crashed - please contact a server admin instantly" % player)

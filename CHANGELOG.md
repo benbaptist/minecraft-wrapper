@@ -6,21 +6,12 @@
 <ul>
 <li>If I make it a separate project, it might use Wrapper.py as a backend</li>
 </ul>
-- Proxy system (like Bungeecord, perhaps)
-<ul>
-<strike>
-<li> Add more custom in-game Wrapper.py commands such as /halt</li>
-<li> Log player actions such as block manipulation, etc.</li>
-</strike>
-<li>The above is possible now with the proxy mode, using plugins.</li>
-</ul>
 - Ability to halt server without shutting down wrapper - for fine server control
 - Potentially implement region-fixer in Wrapper.py
 - Update version of Minecraft server automatically
 - Update Wrapper.py automatically or with a one-click update
 - First-run setup wizard for new setups
 - Potentially implement a way to reload the config - but that might be too difficult/bug prone
-- Add permissions system
 - Improve configuration system/redo from scratch
 <ul>
 <li>Add support for comments</li>
@@ -36,7 +27,6 @@
 - Finish adding all block IDs, item IDs and their respective damage values to items.py
 - Proxy mode error: Error -3 while decompressing data: incorrect header check
 - Proxy mode error: Error -5 while decompressing data: incomplete or truncated stream
-- Negative Position packets are completely screwed up
 - The server.py and irc.py code SERIOUSLY needs a total rewrite. (I noticed this while fixing pre-1.7 support)
 - Duplicate IRC messages (possibily fixed)
 - Make URLs posted in IRC clickable inside of Minecraft
@@ -60,7 +50,11 @@
 - Removed IRC -> Server Line-Wrapping (each message was divided automatically every 80 characters - it was annoying)
 - Fixed bug where serious plugin errors resulted in that plugin not being reloadable
 - Fixed quit messages not being displayed in IRC (finally!)
-
+- Added new shell scripting setting where you can execute certain shell scripts on specific events (NIX-only systems)
+<ul>
+<li> The schell scripts' are pregenerated with content, and has a short description of when each script is executed, and what arguments are passed to the script, if any </li>
+<li> Shell scripts are in wrapper-data/scripts </li>
+</ul>
 
 <h4>0.6.0</h4>
 - Added an in-development plugin system! Super early, but it works great, it seems.

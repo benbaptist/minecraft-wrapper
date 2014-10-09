@@ -34,6 +34,11 @@ It isn't finished, nor is it pretty, but it should help give you an idea of the 
 
 #Features#
 Wrapper.py supports the following features:
+- Plugin system for modifying the Wrapper or adding Bukkit-like features to a vanilla server
+<ul>
+<li> Proxy mode allows you to add extra functionality to plugins, such as real /commands</li>
+<li> Permissions system with group support </li>
+</ul>
 - Automatic Backups
 <ul>
 <li>Automatically delete the oldest backups once you reach amount of backups</li>
@@ -44,10 +49,6 @@ Wrapper.py supports the following features:
 <li> Controlling server from IRC</li>
 <li> Achievements, deaths, and whatnot appear on IRC</li>
 <li> Chat between Minecraft server and IRC channels</li>
-</ul>
-- Plugin system for modifying the Wrapper or adding Bukkit-like features to a vanilla server
-<ul>
-<li> Proxy mode allows you to add extra functionality to plugins, such as real /commands</li>
 </ul>
 - Minecraft 1.7 and later support (uses tellraw!)
 

@@ -14,6 +14,7 @@ class Server:
 		self.data = ""
 		self.backups = []
 		self.oldServer = []
+		self.bootTime = time.time()
 		
 		self.worldName = None
 		self.protocolVersion = -1 # -1 until proxy mode checks the server's MOTD on boot
@@ -165,6 +166,11 @@ class Server:
 					self.backupInterval += 1
 					self.currentSecond = int(time.time())
 					self.wrapper.callEvent("timer.second", {})
+					if self.config["General"]["timed-reboot"]:
+						if time.time() - self.bootTime > self.config["General"]["timed-reboot-seconds"]:
+							self.stop("Server is conducting a scheduled reboot. The server will be back momentarily!")
+							self.start = True
+							self.bootTime = time.time()
 				if self.backupInterval == self.config["Backups"]["backup-interval"] and self.config["Backups"]["enabled"] and self.wrapper.callEvent("wrapper.backupBegin", {}):
 					self.backupInterval = 0
 					if not os.path.exists(self.config["Backups"]["backup-location"]):
@@ -288,6 +294,7 @@ class Server:
 									self.msg("Server started")
 									self.log.info("Server started")
 									self.wrapper.callEvent("server.started", {})
+									self.bootTime = time.time()
 								elif self.argserver(3) == 'Starting' and self.argserver(4) == "minecraft":
 									self.version = self.argserver(7)
 								elif self.argserver(4) in deathPrefixes:

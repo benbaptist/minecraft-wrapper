@@ -3,8 +3,11 @@ import traceback, ConfigParser, ast, time, os, sys
 DEFAULT_CONFIG = """[General]
 command = java -jar minecraft_server.1.7.10.jar nogui
 auto-restart = True
-debug = False
 pre-1.7-mode = False
+timed-reboot = False
+timed-reboot-seconds = 86400
+debug = False 
+shell-scripts = False
 
 [Backups]
 ;; Automatic backups with automatic backup pruning. Interval is in seconds. ;; 
@@ -78,7 +81,10 @@ class Config:
 			"command": "java -jar minecraft_server.1.7.10.jar",
 			"auto-restart": True,
 			"debug": False,
-			"pre-1.7-mode": False
+			"pre-1.7-mode": False,
+			"timed-reboot": False,
+			"timed-reboot-seconds": 86400,
+			"shell-scripts": False
 		},		
 		"IRC":{ 
 			"enabled": True, 

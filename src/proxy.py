@@ -1,7 +1,7 @@
 # I'll probably split this file into more parts later on, like such: 
 # proxy folder: __init__.py (Proxy), client.py (Client), server.py (Server), network.py (Packet), bot.py (will contain Bot, for bot code)
 # this could definitely use some code-cleaning.  
-import socket, threading, struct, StringIO, time, traceback, json, random, hashlib, os, zlib, binascii, uuid, md5, storage, world
+import socket, threading, struct, StringIO, time, traceback, json, random, hashlib, os, zlib, binascii, uuid, md5, storage, world, config
 try: # Weird system for handling non-standard modules
 	import encryption, requests
 	IMPORT_SUCCESS = True
@@ -228,6 +228,9 @@ class Client: # handle client/game connection
 				self.version = data["version"]
 				self.wrapper.server.protocolVersion = self.version
 				self.packet.version = self.version
+				if not self.wrapper.server.status == 2:
+					self.disconnect("Server has not finished booting. Please try connecting again in a few seconds")
+					return
 				if data["state"] in (1, 2):
 					self.state = data["state"]
 				else:
@@ -470,8 +473,9 @@ class Server: # handle server connection
 		t.daemon = True
 		t.start()
 	def close(self, reason="Disconnected"):
-		print "Last packet IDs (Server->Client) before disconnection:"
-		print self.lastPacketIDs
+		if Config.debug:
+			print "Last packet IDs (Server->Client) before disconnection:"
+			print self.lastPacketIDs
 		self.abort = True
 		self.packet = None
 		try:

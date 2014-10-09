@@ -1,6 +1,6 @@
 import json, os, threading, time, copy
 class Storage:
-	def __init__(self, name, isWorld=None, root=".wrapper-data/json"):
+	def __init__(self, name, isWorld=None, root="wrapper-data/json"):
 		self.name = name
 		self.root = root
 		
@@ -14,7 +14,6 @@ class Storage:
 		t.daemon = True
 		t.start()
 	def __del__(self):
-		print "STORAGE OBJECT DESTROYED"
 		self.abort = True
 		self.save()
 	def __getitem__(self, index):

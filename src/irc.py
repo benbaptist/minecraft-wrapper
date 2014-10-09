@@ -181,7 +181,7 @@ class IRC:
 							msg("kill - force server restart without clean shutdown - only use when server is unresponsive")
 							msg("start/restart/stop - start the server/automatically stop and start server/stop the server without shutting down Wrapper")
 							msg('status - show status of the server')
-							msg("Wrapper.py version %s by benbaptist" % Config.version)
+							msg("Wrapper.py Version %s by benbaptist" % self.wrapper.getBuildString())
 							#msg('console - toggle console output to this private message')
 						elif args(0) == 'togglebackups':
 							self.config["Backups"]["enabled"] = not self.config["Backups"]["enabled"]

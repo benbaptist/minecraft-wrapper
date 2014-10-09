@@ -1,4 +1,4 @@
-import time
+import time, traceback
 from config import Config
 class Log:
 	def __init__(self):
@@ -19,6 +19,10 @@ class Log:
 	def debug(self, string):
 		if Config.debug:
 			self.prefix("DEBUG", string)
+	def getTraceback(self):
+		for line in traceback.format_exc().split("\n"):
+			if len(line.strip()) > 0: # Remove empty lines
+				self.error(line)
 class PluginLog:
 	def __init__(self, log, PluginName="Hello"):
 		self.log = log
