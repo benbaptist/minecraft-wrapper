@@ -31,7 +31,8 @@
 - Duplicate IRC messages (possibily fixed)
 - Make URLs posted in IRC clickable inside of Minecraft
 - Allow !commands to be made with api.registerCommand()
-- Hibernation mode: Wrapper.py will be able to stop the server, but listen for incoming connections and will fire the server up when someone connects. It will make logging into the server slower if the server is hibernated, but otherwise it will reduce the average load of a server box running multiple servers. 
+- Hibernation mode: Wrapper.py will be able to stop the server, but listen for incoming connections and will fire the server up when someone connects. It will make logging into the server slower if the server is hibernated, but otherwise it will reduce the average load of a server box running multiple servers.
+- Add /help command (the current /help command is the vanilla help command, and it doesn't show any Wrapper.py commands) 
 
 <h4>0.7.0</h4>
 - Huge Improvements to APIs

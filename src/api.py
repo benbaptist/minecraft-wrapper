@@ -399,6 +399,9 @@ class Player:
 			for perm in self.permissions["groups"][group]["permissions"]:
 				if node in fnmatch.filter([node], perm):
 					return self.permissions["groups"][group]["permissions"][perm]
+		for perm in self.permissions["groups"]["Default"]["permissions"]:
+			if node in fnmatch.filter([node], perm):
+				return self.permissions["groups"]["Default"]["permissions"][perm]
 		for id in self.wrapper.permission:
 			if node in self.wrapper.permission[id]:
 				return self.wrapper.permission[id][node]

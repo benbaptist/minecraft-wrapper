@@ -26,12 +26,6 @@ Any console command beginning with a slash (/) will be interpreted as a Wrapper.
 Type /help to see a list of Wrapper.py commands. To completely shutdown the wrapper, type /halt.</br>  
 If you run into any bugs, please report them!
 
-#Documentation#
-The doucmentation for Wrapper.py is not complete, but you can find a quick reference on the plugin API here:
-</br><a href="http://wrapper.benbaptist.com/docs/api.html">http://wrapper.benbaptist.com/docs/api.html</a>
-
-It isn't finished, nor is it pretty, but it should help give you an idea of the methods that can be used.
-
 #Features#
 Wrapper.py supports the following features:
 - Plugin system for modifying the Wrapper or adding Bukkit-like features to a vanilla server
@@ -50,18 +44,25 @@ Wrapper.py supports the following features:
 <li> Achievements, deaths, and whatnot appear on IRC</li>
 <li> Chat between Minecraft server and IRC channels</li>
 </ul>
+- Shell scripts that are called upon certain events (similar to plugin events, but quicker and easier)
 - Minecraft 1.7 and later support (uses tellraw!)
 
 #API#
-More documentation will be released for working with the plugin API, but for now, here's a few things.</br></br>
+The doucmentation for Wrapper.py is not complete, but you can find a quick reference on the plugin API here:
+</br><a href="http://wrapper.benbaptist.com/docs/api.html">http://wrapper.benbaptist.com/docs/api.html</a>
+
+It isn't finished, nor is it pretty, but it should help give you an idea of the methods that can be used. More documentation will be released 
+for working with the plugin API, but for now, here's a few things.</br></br>
 
 <b>List of events</b>: https://docs.google.com/spreadsheet/ccc?key=0AoWx24EFSt80dDRiSGVxcW1xQkVLb2dWTUN4WE5aNmc&usp=sharing</br>
 
-</br></br>Check the 'plugins' folder to see some example plugins. (note: plugins are supposed to go into the wrapper-plugins folder on your Wrapper.py installation)
+</br></br>Check the 'example-plugins' folder to see some example plugins.
 <ul> 
-<li>template.py literally does nothing - it is just the shell of a plugin to work off of.</li>
+<li>template.py does nothing - it is just the shell of a plugin to work off of.</li>
 <li>example.py contains some actual functions. </li>
 <li>zombie.py is a fun test plugin that leaves behind undead versions of people when killed by undead mobs.</li>
+<li>speedboost.py gives everyone a speedboost when someone dies - similar to survival games.</li>
+<li>poll.py allows players to vote for certain things on the server. It isn't very up-to-date at the moment, however. </li>
 </ul>
 </br>Tip: Open config.py and change debug to True in the 'Config' class if you want to see more error messages and other useful messages 
 while developing plugins.

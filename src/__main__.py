@@ -167,6 +167,7 @@ class Wrapper:
 			player = payload["player"]
 			if not "groups" in self.permissions: self.permissions["groups"] = {}
 			if not "users" in self.permissions: self.permissions["users"] = {}
+			if not "Default" in self.permissions["groups"]: self.permissions["groups"]["Default"] = {"permissions": {}}
 			if player.isOp():
 				def args(i):
 					try: return payload["args"][i]
