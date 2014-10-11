@@ -406,3 +406,7 @@ class Player:
 			if node in self.wrapper.permission[id]:
 				return self.wrapper.permission[id][node]
 		return False
+	# Cross-server commands
+	def connect(self, ip, address):
+		""" Upon calling, the player object will become defunct and the client will be transferred to another server (provided it has offline-mode turned on). """
+		self.client.connect(ip, address)

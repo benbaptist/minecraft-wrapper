@@ -32,6 +32,7 @@ Wrapper.py supports the following features:
 <ul>
 <li> Proxy mode allows you to add extra functionality to plugins, such as real /commands</li>
 <li> Permissions system with group support </li>
+<li> Jump to different servers without reconnecting (extremely experimental, can be used by calling api.minecraft.connect(ip, port) )</li>
 </ul>
 - Automatic Backups
 <ul>
