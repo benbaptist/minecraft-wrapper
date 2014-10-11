@@ -50,7 +50,6 @@ class Proxy:
 		 		# remove stale clients
 		 		for i, client in enumerate(self.wrapper.proxy.clients):
 					if client.abort:
-						print "Removed stale client for %s" % client.username
 						del self.wrapper.proxy.clients[i]
 		 	except:
 		 		print traceback.print_exc()
@@ -164,8 +163,8 @@ class Client: # handle client/game connection
 		self.slot = 0
 		self.windowCounter = 2
 		for i in range(45): self.inventory[i] = None
-	def connect(self):
-		self.server = Server(self, self.wrapper)
+	def connect(self, ip=None, port=None):
+		self.server = Server(self, self.wrapper, ip, port)
 		self.server.connect()
 		t = threading.Thread(target=self.server.handle, args=())
 		t.daemon = True
@@ -418,8 +417,9 @@ class Client: # handle client/game connection
 					self.close()
 					break
 				except:
-			#		print "Failed to grab packet (CLIENT):"
-#					print traceback.format_exc()
+					if Config.debug:
+						print "Failed to grab packet (CLIENT):"
+						print traceback.format_exc()
 					self.close()
 					break
 				if time.time() - self.tPing > 1 and self.state == 3:
@@ -429,23 +429,17 @@ class Client: # handle client/game connection
 						self.send(0x00, "int", (random.randrange(0, 99999),))
 					self.tPing = time.time()
 				if self.parse(id) and self.server:
-					self.server.sendRaw(original)
+					if self.server.state == 3:
+						self.server.sendRaw(original)
 		except:
-			print "error client->server, blah"
+			print "Error in the Client->Server method:"
 			print traceback.format_exc()
-		
-class FakeClient:
-	def __init__(self, version):
-		self.packet = {}
-		self.version = version
-		self.abort = False
-		self.fake = True
-	def send(self):
-		pass
 class Server: # handle server connection
-	def __init__(self, client, wrapper):
+	def __init__(self, client, wrapper, ip=None, port=None):
 		self.client = client
 		self.wrapper = wrapper
+		self.ip = ip
+		self.port = port
 		self.abort = False
 		self.isServer = True
 		self.proxy = wrapper.proxy
@@ -455,12 +449,12 @@ class Server: # handle server connection
 		self.packet = None
 		self.version = self.wrapper.server.protocolVersion
 		self.log = wrapper.log
-		
-		if client == None:
-			self.client = FakeClient(self.wrapper.server.protocolVersion)
 	def connect(self):
 		self.socket = socket.socket()
-		self.socket.connect(("localhost", self.wrapper.config["Proxy"]["server-port"]))
+		if self.ip == None:
+			self.socket.connect(("localhost", self.wrapper.config["Proxy"]["server-port"]))
+		else:
+			self.socket.connect((self.ip, self.port))
 		
 		self.packet = Packet(self.socket, self)
 		self.packet.version = self.client.version
@@ -654,13 +648,13 @@ class Server: # handle server connection
 							del self.lastPacketIDs[i]
 							break
 				except EOFError:
-#					print traceback.format_exc()
+					print traceback.format_exc()
 					self.close()
 					break
 				except:
-					pass
-				#	print "Failed to grab packet (SERVER)"
-#					print traceback.format_exc()
+					if Config.debug:
+						print "Failed to grab packet (SERVER)"
+						print traceback.format_exc()
 					#self.disconnect("Internal Wrapper.py Error")
 #					break
 				if self.client.abort:
@@ -673,8 +667,9 @@ class Server: # handle server connection
 					self.log.debug("Could not parse packet, connection may crumble:")
 					self.log.debug(traceback.format_exc())
 		except:
-			print "error server->client, blah"
-#			print traceback.format_exc()
+			if Config.debug:
+				print "Error in the Server->Client method:"
+				print traceback.format_exc()
 
 
 class Packet: # PACKET PARSING CODE
@@ -945,12 +940,11 @@ class Packet: # PACKET PARSING CODE
 		return json.loads(self.read_string())
 	def read_rest(self):
 		return self.read_data(1024 * 1024)
-	def read_metadata(self):
+	def read_metadata(self): # This function is completely broken and needs fixing!
 		data = {}
 		while True:
 			a = self.read_ubyte()
 			if a == 0x7f: return data
-			print "Metadata byte: %d" % a
 			index = a & 0x1f
 			type = a >> 5
 			if type == 0: data[index] = ("byte", self.read_byte())

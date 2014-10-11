@@ -45,6 +45,7 @@
 <ul>
 <li>If you've used BungeeCord before - proxy mode should make sense. The only difference is that you don't need to make the server in offline mode.</li>
 <li>Built-in commands such as /reload, /wrapper, /pl(ugins), etc.</li>
+<li>Extremely experimental, near-useless server-jumping mode (doesn't work quite yet)</li>
 </ul> 
 - Write date to log files as well as a timestamp
 - Added /plugins command - was removed in the last update by mistake
