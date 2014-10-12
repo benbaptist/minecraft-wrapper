@@ -1,4 +1,4 @@
-import socket, traceback, time, threading
+import socket, traceback, time, threading, api, globals
 from config import Config
 class IRC:
 	def __init__(self, server, config, log, wrapper, address, port, nickname, channels):
@@ -13,6 +13,10 @@ class IRC:
 		self.log = log
 		self.timeout = False
 		self.msgQueue = []
+		
+		self.api = api.API(self.wrapper, "IRC")
+		self.api.registerEvent("player.message", self.playerMessageHandle)
+		self.api.registerEvent("server.say", self.sayMessageHandle)
 	def init(self):
 		while not self.wrapper.halt:
 			try:
@@ -27,6 +31,7 @@ class IRC:
 					self.log.error(line)
 				self.disconnect("Error in Wrapper.py - restarting")
 			self.log.info("Disconnected from IRC")
+			time.sleep(5)
 	def connect(self):
 		self.socket = socket.socket()
 		self.socket.connect((self.address, self.port))
@@ -46,20 +51,14 @@ class IRC:
 			self.socket.send("%s\n" % payload)
 		else:
 			return False
-	def everyNth(self, str, j):
-		a = []
-		z = 0
-		b = 0
-		a.append("")
-		for i in str:
-			a[b] += i
-			if z == j:
-				z = 0
-				b+=1
-				a.append("")
-			else:
-				z+=1
-		return a
+	def playerMessageHandle(self, payload):
+		player = payload["player"]
+		message = payload["message"]
+		self.msgQueue.append("<%s> %s" % (player, message))
+	def sayMessageHandle(self, payload):
+		player = payload["player"]
+		message = payload["message"]
+		self.msgQueue.append("[%s] %s" % (player, message))
 	def handle(self):
 		while self.socket:
 			try:
@@ -83,9 +82,10 @@ class IRC:
 				self.parse()
 	def queue(self):
 		while self.socket:
-			for message in self.msgQueue:
+			for i,message in enumerate(self.msgQueue):
 				for channel in self.channels:
 					self.send("PRIVMSG %s :%s" % (channel, message))
+				del self.msgQueue[i]
 			self.msgQueue = []
 			time.sleep(0.1)
 	def filterName(self, name):
@@ -131,12 +131,12 @@ class IRC:
 				pass
 		if self.args(0) == "PING":
 			self.send("PONG %s" % self.args(1))
-		if self.args(0) == "QUIT":
+		if self.args(1) == "QUIT":
 			nick = self.args(0)[1:self.args(0).find("!")]
 			message = " ".join(self.line.split(" ")[2:])[1:].strip("\n").strip("\r")
 			
-			self.wrapper.callEvent("irc.quit", {"user": nick, "quit": message})
-			self.rawConsole({"text": nick, "color": "green", extra:[{"text": " quit", "color": "white"}]})
+			self.wrapper.callEvent("irc.quit", {"user": nick, "message": message})
+			self.rawConsole({"text": "[IRC] ", "color": "gold", "extra":[{"text": nick, "color": "green"}, {"text": " quit from IRC", "color": "white"}]})
 		if self.args(1) == "PRIVMSG":
 			channel = self.args(2)
 			nick = self.args(0)[1:self.args(0).find("!")]
@@ -150,12 +150,11 @@ class IRC:
 						users += "%s " % user
 					self.send("PRIVMSG %s :There are currently %s users on the server: %s" % (channel, len(self.server.players), users))
 				elif message.strip() == ".about":
-					self.send("PRIVMSG %s :Wrapper.py version %s" % (channel, Config.version))
+					self.send("PRIVMSG %s :Wrapper.py version %s (build #%d)" % (channel, Config.version, globals.build))
 				else:
 					self.log.info('[%s] (%s) %s' % (channel, nick, message))
 					message = message.decode("utf-8", "ignore")
-					for msg in self.everyNth(message, 80):
-						self.console(channel, [{"text": "(%s) " % nick, "color": "green"}, {"text": msg, "color": "white"}])
+					self.console(channel, [{"text": "(%s) " % nick, "color": "green"}, {"text": message, "color": "white"}])
 			elif self.config["IRC"]["control-from-irc"]:
 				self.log.info('[PRIVATE] (%s) %s' % (nick, message))
 				def args(i):
@@ -182,7 +181,7 @@ class IRC:
 							msg("kill - force server restart without clean shutdown - only use when server is unresponsive")
 							msg("start/restart/stop - start the server/automatically stop and start server/stop the server without shutting down Wrapper")
 							msg('status - show status of the server')
-							msg("Wrapper.py version %s by benbaptist" % Config.version)
+							msg("Wrapper.py Version %s by benbaptist" % self.wrapper.getBuildString())
 							#msg('console - toggle console output to this private message')
 						elif args(0) == 'togglebackups':
 							self.config["Backups"]["enabled"] = not self.config["Backups"]["enabled"]
@@ -228,7 +227,7 @@ class IRC:
 							else:
 								msg("Server is in unknown state. This is probably a Wrapper.py bug - report it!")
 						elif args(0) == "about":
-							msg("Wrapper.py by benbaptist - version %s" % Config.version)
+							msg("Wrapper.py by benbaptist - version %s (build #%d)" % (Config.version, globals.build))
 						else:
 							msg('Unknown command. Type help for more commands')
 					else:

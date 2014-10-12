@@ -1,11 +1,16 @@
 import traceback, ConfigParser, ast, time, os, sys
 # configuration
 DEFAULT_CONFIG = """[General]
-command = java -jar minecraft_server.1.7.4.jar nogui
-pre-1.7-mode = False
+command = java -jar minecraft_server.1.7.10.jar nogui
 auto-restart = True
+pre-1.7-mode = False
+timed-reboot = False
+timed-reboot-seconds = 86400
+debug = False 
+shell-scripts = False
 
 [Backups]
+;; Automatic backups with automatic backup pruning. Interval is in seconds. ;; 
 enabled = False
 backup-folders = ['server.properties', 'world', 'white-list.txt']
 backup-interval = 3600
@@ -14,26 +19,39 @@ backup-location = backup-directory
 backups-keep = 10
 
 [IRC]
+;; This allows your users to communicate to and from the server via IRC and vise versa. ;;
 enabled = False
 server = benbaptist.com
 port = 6667
-nick = MinecraftServ
+nick = MinecraftServer
 channels = ['#main']
 command-character = !
 show-channel-server = True
 autorun-irc-commands = ['COMMAND 1', 'COMMAND 2']
-control-from-irc = True
 obstruct-nicknames = False
+control-from-irc = True
 control-irc-pass = password
-forward-commands-to-irc = False
 
 [Death]
+;; This kicks a player upon death. I don't recall why I implemented this. ;;
 kick-on-death = False
 users-to-kick = ['username1', 'username2', 'remove these usernames to kick ALL users upon death']
 death-kick-messages = ['You died!']
+
+[Proxy]
+;; This is a man-in-the-middle proxy mode similar to BungeeCord, but allows for extra plugin functionality. ;;
+;; The server must be on offline mode. Make sure that the server is inaccessible directly from the outside world. ;;
+;; Note: the online-mode option here refers to the proxy only, not to the server's offline mode. ;;
+proxy-enabled = False
+proxy-port = 25565
+proxy-bind = 0.0.0.0
+server-port = 25564
+motd = Minecraft Server
+online-mode = True
 """
 
 """[Web]
+;; This is a web UI. ;;
 enabled = False
 bind = 0.0.0.0
 port = 8070
@@ -41,7 +59,8 @@ password = blahblah98
 public-stats = True"""
 
 class Config:
-	version = "0.6.0"
+	version = "0.7"
+	buildType = "dev" # dev, beta, or release
 	debug = False
 	def __init__(self, log):
 		self.log = log
@@ -53,19 +72,23 @@ class Config:
 			f.write(DEFAULT_CONFIG)
 			f.close()
 			self.exit = True
-		open("wrapper.properties", "a").close()
-		self.parser = ConfigParser.ConfigParser()
+#		open("wrapper.properties", "a").close()
+		self.parser = ConfigParser.ConfigParser(allow_no_value = True)
 		self.parser.readfp(open("wrapper.properties"))
 
-		sections = ["General", "Backups", "IRC", "Death"]
+		sections = ["General", "Backups", "IRC", "Death", "Proxy"]
 		defaults = {"General":{
-			"command": "java -jar minecraft_server.1.7.7.jar",
+			"command": "java -jar minecraft_server.1.7.10.jar",
 			"auto-restart": True,
-			"pre-1.7-mode": False
+			"debug": False,
+			"pre-1.7-mode": False,
+			"timed-reboot": False,
+			"timed-reboot-seconds": 86400,
+			"shell-scripts": False
 		},		
 		"IRC":{ 
 			"enabled": True, 
-			"nick": "MinecraftIRC", 
+			"nick": "MinecraftServer", 
 			"server": "benbaptist.com", 
 			"port": 6667, 
 			"channels": ["#main"], 
@@ -89,15 +112,24 @@ class Config:
 			"kick-on-death": False,
 			"death-kick-messages": ["You died!"],
 			"users-to-kick": ["username1", "username2", "remove these usernames to kick ALL users upon death"]
+		},
+		"Proxy":{
+			"proxy-enabled": False,
+			"server-port": 25564,
+			"proxy-port": 25565,
+			"proxy-bind": "0.0.0.0",
+			"motd": "Minecraft Server",
+			"online-mode": True
 		}}
-		
-	#	"Web":{
-#			"enabled": False,
-#			"bind": "0.0.0.0",
-#			"port": 8070,
-#			"password": "usefulpass",
-#			"public-stats": True
-#		},
+		# Removed from the list above until fully implemented.
+		{"Web":{
+			"web-enabled": False,
+			"web-bind": "0.0.0.0",
+			"web-port": 8070,
+			"web-password": "usefulpass",
+			"public-stats": True
+		}}
+
 		
 		for section in sections:
 			try:
@@ -120,7 +152,7 @@ class Config:
 				if item not in self.config[section]:
 					self.config[section][item] = defaults[section][item]
 					self.parser.set(section, item, defaults[section][item])
-					self.log.debug("key %s in section %s not in wrapper.properties - adding" % (item, section))
+					self.log.debug("Key %s in section %s not in wrapper.properties - adding" % (item, section))
 					self.exit = True
 				else:
 					for key in keys:
@@ -129,8 +161,9 @@ class Config:
 						except:
 							self.config[section][key[0]] = key[1]
 		self.save()
+		Config.debug = self.config["General"]["debug"]
 		if self.exit:
-			self.log.info("Updated wrapper.properties with new entries - edit configuration if needed and start again")
+			self.log.info("Updated wrapper.properties file - check and edit configuration if needed and start again.")
 			sys.exit()
 	def save(self):
 		self.parser.write(open("wrapper.properties", "wb"))

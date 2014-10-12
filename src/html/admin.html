@@ -1,98 +1,91 @@
-<html>
-	<head>
-		<title>[server_name] - Server Stats</title>
-		<style type="text/css">
-			@font-face {
-			  font-family: 'AndroidFont';
-			  src: url('/RobotoCondensed-Light.ttf')
-			}
-			body{
-				margin: 0px;
-			}
-			.top{ 
-				background-color: lightgrey; /*#0099FF 33CCFF*/
-/*				width: 100%;*/
-				padding: 10px;
-			}
-			.top span{
-				font-family: UnDotum;
-				color: #333333;
-				margin: 0px;
-				font-size: 20px;
-				font-weight: bold;
-			}
-			.sidebar{
-				background-color: #aaaaaa;
-				height: 100%;
-				width: 2in;
-				float: left;
-			}
-			.sidebar .item{
-				font-family: AndroidFont;
-				font-size: 25px;
-				font-weight: light;
-				padding-left: 25px;
-				padding-top: 10px;
-				padding-bottom: 10px;
-			}
-			.sidebar .item:hover{
-				background-color: #666666;
-				cursor: pointer;
-			}
-			.main{
-				float: left;
-				padding: 5px;
-				font-family: Arial;
-				font-size: 14px;
-			}
-			#login{
-				background-color: #eeeeee;
-				height: 100%;
-				font-family: AndroidFont;
-			}
-			#login .login-box{
-				display:box;
-				box-pack:center;
-				box-align:center;
-			}
-		</style>
-		<script type="text/javascript" >
-			current = "dashboard"
-			function select(id){
-				document.getElementById(current).style.display = "none"
-				document.getElementById(id.innerHTML.toLowerCase()).style.display = "block"
-				current = id.innerHTML.toLowerCase()
-			}
-		</script>
-	</head>
-	<body>
-		<div id="admin" style="display:none">
-			<div class="top">
-				<span>Admin Control Panel</span>
-				<span style="color:grey;font-size:9px;text-align:right;float:right;vertical-align: middle;">powered by Wrapper.py</span>
-			</div>
-			<div class="sidebar">
-				<div class="item" onclick="select(this)">Dashboard</div>
-				<div class="item" onclick="select(this)">Chat</div>
-				<div class="item" onclick="select(this)">Files</div>
-			</div>
-			<div class="main">
-				<div id="dashboard">stats</div>
-				<div id="chat" style="display:none;">
-					
-				</div>
-				<div id="files" style="display:none;">
-					
-				</div>
-			</div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="description" content="">
+	<meta name="author" content="benbaptist" >
+
+	<title>Theme Template for Bootstrap</title>
+
+	<style type="text/css">
+		.theme-showcase{
+			margin-top: 50px;
+		}
+	</style>
+	<!-- Bootstrap core CSS -->
+	<link href="css/bootstrap.min.css" rel="stylesheet">
+	<!-- Bootstrap theme -->
+	<link href="css/bootstrap-theme.min.css" rel="stylesheet">
+	<link href="css/bootstrap-theme.css" rel="stylesheet">
+<body role="document">
+
+	<!-- Fixed navbar -->
+	<div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+		<div class="container">
+		<div class="navbar-header">
+			<button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+				<span class="sr-only">Toggle navigation</span>
+				<span class="icon-bar"></span>
+				<span class="icon-bar"></span>
+				<span class="icon-bar"></span>
+			</button>
+			<a class="navbar-brand" href="#">Wrapper.py</a>
 		</div>
-		<div id="login">
-			<div class="login-box">
-				<form action="/action/login" method="get">
-					<input type="password" name="password"/>
-					<input type="submit" value="Login"/>
-				</form>
-			</div>
+		<div class="navbar-collapse collapse">
+			<ul class="nav navbar-nav">
+				<li><a href="/">Home</a></li>
+				<li class="active"><a href="admin.html">Admin</a></li>
+			</ul>
+		</div><!--/.nav-collapse -->
 		</div>
-	</body>
+	</div>
+
+	<div class="container theme-showcase" role="main">
+		<div class="page-header">
+		<h1>Players</h1>
+		</div>
+		<table class="table table-condensed">
+		<thead>
+		<tr>
+			<th>Skin</th>
+			<th>Player</th>
+			<th>Login Date</th>
+		</tr>
+		</thead>
+		<tbody>
+		<tr>
+			<td><img src="/face/benbaptist.png"/></td>
+			<td>benbaptist</td>
+			<td>0</td>
+		</tr>
+		</tbody>
+	</table>
+
+
+
+		<div class="page-header">
+		<h1>Navs</h1>
+		</div>
+		<ul class="nav nav-tabs" role="tablist">
+		<li class="active"><a href="#">Home</a></li>
+		<li><a href="#">Profile</a></li>
+		<li><a href="#">Messages</a></li>
+		</ul>
+		<ul class="nav nav-pills">
+		<li class="active"><a href="#">Home</a></li>
+		<li><a href="#">Profile</a></li>
+		<li><a href="#">Messages</a></li>
+		</ul>
+	</div> <!-- /container -->
+
+
+	<!-- Bootstrap core JavaScript
+	================================================== -->
+	<!-- Placed at the end of the document so the pages load faster -->
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+	<script src="js/bootstrap.min.js"></script>
+	<script src="js/docs.min.js"></script>
+</body>
 </html>
