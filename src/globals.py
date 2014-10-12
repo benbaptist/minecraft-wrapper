@@ -1,2 +1,2 @@
 build=30
-type='dev'
+type='stable'
