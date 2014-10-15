@@ -120,6 +120,7 @@ class Wrapper:
 	def playerCommand(self, payload):
 		self.log.info("%s executed: /%s %s" % (str(payload["player"]), payload["command"], " ".join(payload["args"])))
 		if payload["command"] == "wrapper":
+			player = payload["player"]
 			buildString = self.getBuildString()
 			player.message({"text": "Wrapper.py Version %s" % (buildString), "color": "gray", "italic": True})
 			return False
@@ -421,13 +422,13 @@ class Wrapper:
 				for id in self.plugins:
 					plugin = self.plugins[id]
 					if plugin["good"]:
-						name = self.plugins[plug]["name"]
-						summary = self.plugins[plug]["summary"]
+						name = plugin["name"]
+						summary = plugin["summary"]
 						if summary == None: summary = "No description available for this plugin"
 						
-						version = self.plugins[plug]["version"]
+						version = plugin["version"]
 							
-						self.log.info("%s v%s - %s" % (plug, ".".join([str(_) for _ in version]), description))
+						self.log.info("%s v%s - %s" % (name, ".".join([str(_) for _ in version]), summary))
 					else:
 						self.log.info("%s failed to load!" % (plug))
 			elif command == "help":
