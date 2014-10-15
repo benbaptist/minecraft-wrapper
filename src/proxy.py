@@ -144,9 +144,12 @@ class Client: # handle client/game connection
 		self.tPing = time.time()
 		self.server = None
 		self.isServer = False
-		self.turnItUp = False
+		self.isLocal = True
 		self.uuid = None
 		self.serverUUID = None
+		self.server = None
+		self.address = None
+		self.handshake = False
 		
 		self.state = 0 # 0 = init, 1 = motd, 2 = login, 3 = active, 4 = authorizing
 		
@@ -164,8 +167,23 @@ class Client: # handle client/game connection
 		self.windowCounter = 2
 		for i in range(45): self.inventory[i] = None
 	def connect(self, ip=None, port=None):
-		self.server = Server(self, self.wrapper, ip, port)
-		self.server.connect()
+		if not self.server == None:
+			self.address = (ip, port)
+		if not ip == None:
+			self.server_temp = Server(self, self.wrapper, ip, port)
+			try:
+				self.server_temp.connect()
+				self.server.close(kill_client=False)
+				self.server = self.server_temp
+			except:
+				self.server_temp.close(kill_client=False)
+				self.server_temp = None	
+				self.send(0x02, "string|byte", ("{text:'Could not connect to that server!', color:red, bold:true}", 0))
+				self.address = None
+				return
+		else:
+			self.server = Server(self, self.wrapper, ip, port)
+			self.server.connect()
 		t = threading.Thread(target=self.server.handle, args=())
 		t.daemon = True
 		t.start()
@@ -274,6 +292,7 @@ class Client: # handle client/game connection
 				return False
 		if id == 0x01:
 			if self.state == 3: # chat packet
+				if not self.isLocal == True: return True
 				data = self.read("string:message")
 				if data is None: return False
 				try:
@@ -356,6 +375,7 @@ class Client: # handle client/game connection
 			self.position = (data["x"], data["y"], data["z"])
 			if self.server.state is not 3: return False
 		if id == 0x07: # Player Block Dig
+			if not self.isLocal == True: return True
 			if self.version < 6:
 				data = self.read("byte:status|int:x|ubyte:y|int:z|byte:face")
 				position = (data["x"], data["y"], data["z"])
@@ -372,6 +392,7 @@ class Client: # handle client/game connection
 					if not self.wrapper.callEvent("player.dig", {"player": self.getPlayerObject(), "position": position, "action": "end_break", "face": data["face"]}): return False
 			if self.server.state is not 3: return False
 		if id == 0x08: # Player Block Placement
+			if not self.isLocal == True: return True
 			if self.version < 6:
 				data = self.read("int:x|ubyte:y|int:z|byte:face|slot:item")
 				position = (data["x"], data["y"], data["z"])
@@ -434,7 +455,7 @@ class Client: # handle client/game connection
 		except:
 			print "Error in the Client->Server method:"
 			print traceback.format_exc()
-class Server: # handle server connection
+class Server: # Handle Server Connection
 	def __init__(self, client, wrapper, ip=None, port=None):
 		self.client = client
 		self.wrapper = wrapper
@@ -449,12 +470,14 @@ class Server: # handle server connection
 		self.packet = None
 		self.version = self.wrapper.server.protocolVersion
 		self.log = wrapper.log
+		self.safe = False
 	def connect(self):
 		self.socket = socket.socket()
 		if self.ip == None:
 			self.socket.connect(("localhost", self.wrapper.config["Proxy"]["server-port"]))
 		else:
 			self.socket.connect((self.ip, self.port))
+			self.client.isLocal = False
 		
 		self.packet = Packet(self.socket, self)
 		self.packet.version = self.client.version
@@ -467,7 +490,7 @@ class Server: # handle server connection
 		t = threading.Thread(target=self.flush, args=())
 		t.daemon = True
 		t.start()
-	def close(self, reason="Disconnected"):
+	def close(self, reason="Disconnected", kill_client=True):
 		if Config.debug:
 			print "Last packet IDs (Server->Client) before disconnection:"
 			print self.lastPacketIDs
@@ -477,14 +500,20 @@ class Server: # handle server connection
 			self.socket.close()
 		except:
 			pass
+		if self.client.isLocal == False and kill_client:
+			self.client.isLocal = True
+			self.client.send(0x02, "string|byte", ("{text:'Disconnected from server: %s', color:red}" % reason.replace("'", "\\'"), 0))
+			self.client.connect()
+			return
 		
 		# I may remove this later so the client can remain connected upon server disconnection
 #		self.client.send(0x02, "string|byte", (json.dumps({"text": "Disconnected from server. Reason: %s" % reason, "color": "red"}),0))
 #		self.abort = True
 #		self.client.connect()
-		self.client.abort = True
-		self.client.server = None
-		self.client.close()
+		if kill_client:
+			self.client.abort = True
+			self.client.server = None
+			self.client.close()
 	def flush(self):
 		while not self.abort:
 			self.packet.flush()
@@ -512,15 +541,25 @@ class Server: # handle server connection
 				data = self.read("int:eid|ubyte:gamemode|byte:dimension|ubyte:difficulty|ubyte:max_players|string:level_type")
 				self.client.gamemode = data["gamemode"]
 				self.client.dimension = data["dimension"]
+				if self.client.handshake:
+					self.client.send(0x07, "int|ubyte|ubyte|string", (self.client.dimension, data["difficulty"], data["gamemode"], data["level_type"]))
+					self.safe = True
+					return False
+				else:
+					self.safe = True
+				self.client.handshake = True
 			elif self.state == 2:
 				self.client.disconnect("Server is online mode. Please turn it off in server.properties.\n\nWrapper.py will handle authentication on its own, so do not worry about hackers.")
 				return False
 		if id == 0x02:
-			if self.state == 2:
+			if self.state == 2: # Login Success - UUID & Username are sent in this packet
 				self.state = 3
 				return False
 			elif self.state == 3:
-				data = json.loads(self.read("string:json")["json"])
+				try:
+					data = json.loads(self.read("string:json")["json"])
+				except: pass
+				if not self.wrapper.callEvent("player.chatbox", {"player": self.client.getPlayerObject(), "json": data}): return False
 				try: 
 					if data["translate"] == "chat.type.admin": return False
 				except: pass
@@ -533,9 +572,6 @@ class Server: # handle server connection
 				else:
 					self.packet.compression = False
 					self.packet.compressThreshold = -1
-#				self.client.packet.setCompression(50000000000)
-#				self.client.turnItUp = data["threshold"]
-				#time.sleep(1)
 				return False
 		if id == 0x05:
 			data = self.read("int:x|int:y|int:z")
@@ -593,7 +629,10 @@ class Server: # handle server connection
 		if id == 0x40:
 			message = self.read("json:json")["json"]
 			self.log.info("Disconnected from server: %s" % message)
-			self.client.disconnect(message)
+			if self.client.isLocal == False:
+				self.server.close(message)
+			else:
+				self.client.disconnect(message)
 			return False
 		if id == 0x38:
 			head = self.read("varint:action|varint:length")
@@ -642,7 +681,7 @@ class Server: # handle server connection
 			while not self.abort:
 				try:
 					id, original = self.packet.grabPacket()
-					self.lastPacketIDs.append(hex(id))
+					self.lastPacketIDs.append((hex(id), len(original)))
 					if len(self.lastPacketIDs) > 10:
 						for i,v in enumerate(self.lastPacketIDs):
 							del self.lastPacketIDs[i]
@@ -661,7 +700,7 @@ class Server: # handle server connection
 					self.close()
 					break
 				try:
-					if self.parse(id, original):
+					if self.parse(id, original) and self.safe:
 						self.client.sendRaw(original)
 				except:
 					self.log.debug("Could not parse packet, connection may crumble:")
@@ -792,6 +831,7 @@ class Packet: # PACKET PARSING CODE
 				try:
 					pay = payload[i]
 					if type == "string": result += self.send_string(pay)
+					if type == "json": result += self.send_json(pay)
 					if type == "ubyte": result += self.send_ubyte(pay)
 					if type == "byte": result += self.send_byte(pay)
 					if type == "int": result += self.send_int(pay)
@@ -805,6 +845,8 @@ class Packet: # PACKET PARSING CODE
 					if type == "bytearray": result += self.send_bytearray(pay)
 					if type == "uuid": result += self.send_uuid(pay)
 					if type == "metadata": result += self.send_metadata(pay)
+					if type == "bool": result += self.send_bool(pay)
+					if type == "position": result += self.send_position(pay)
 					if type == "raw": result += pay
 				except:
 					pass
@@ -818,6 +860,8 @@ class Packet: # PACKET PARSING CODE
 	 	return struct.pack("B", payload)
 	def send_string(self, payload):
 		return self.send_varInt(len(payload)) + payload.encode("utf8")
+	def send_json(self, payload):
+		return self.send_string(json.dumps(payload))
 	def send_int(self, payload):
 		return struct.pack(">i", payload)
 	def send_long(self, payload):
@@ -838,6 +882,9 @@ class Packet: # PACKET PARSING CODE
 		return self.send_string(json.dumps(payload))
 	def send_uuid(self, payload):
 		return payload.bytes
+	def send_position(self, payload):
+		x, y, z = position
+		return self.send_long(((x & 0x3FFFFFF) << 38) | ((y & 0xFFF) << 26) | (z & 0x3FFFFFF))
 	def send_metadata(self, payload):
 		b = ""
 		for i in payload:
