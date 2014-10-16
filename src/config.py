@@ -1,7 +1,7 @@
 import traceback, ConfigParser, ast, time, os, sys
 # configuration
 DEFAULT_CONFIG = """[General]
-command = java -jar minecraft_server.1.7.10.jar nogui
+command = java -jar minecraft_server.1.8.jar nogui
 auto-restart = True
 pre-1.7-mode = False
 timed-reboot = False
@@ -59,7 +59,7 @@ password = blahblah98
 public-stats = True"""
 
 class Config:
-	version = "0.7.1"
+	version = "0.7.2"
 	buildType = "dev" # dev, beta, or release
 	debug = False
 	def __init__(self, log):
@@ -78,7 +78,7 @@ class Config:
 
 		sections = ["General", "Backups", "IRC", "Death", "Proxy"]
 		defaults = {"General":{
-			"command": "java -jar minecraft_server.1.7.10.jar",
+			"command": "java -jar minecraft_server.1.8.jar",
 			"auto-restart": True,
 			"debug": False,
 			"pre-1.7-mode": False,

@@ -1,5 +1,11 @@
 #Changelog#
 
+<h4>0.7.2</h4>
+- Fixed Wrapper.py not ignoring hidden files wrapper-plugins (files prefixed with a period)
+- Wrapper.py now logs information, such as when a player first logged in or if the player is new to the server (not FINISH)
+- Added APIs for checking group information about a player (player.getGroups, player.hasGroup) (not FINISH)
+- Maybe actually make server-jumping (player.connect) functional (not finish)
+
 <h4>0.7.1</h4>
 - Fixed /wrapper not working in-game
 - Fixed /plugins not working in the console
