@@ -71,6 +71,7 @@ class Wrapper:
 		sys.path.append("wrapper-plugins")
 		for i in os.listdir("wrapper-plugins"):
 			try:
+				if i[0] == ".": continue
 				if os.path.isdir("wrapper-plugins/%s" % i): self.loadPlugin(i)
 				elif i[-3:] == ".py": self.loadPlugin(i)
 			except:

@@ -48,6 +48,11 @@ class Server:
 #				print len(client.send(0x38, "varint|varint|uuid", (4, 1, self.players[user].uuid)))
 		if user in self.players:
 			del self.players[user]
+	def getPlayer(self, username):
+		""" Returns a player object with the specified name, or False if the user is not logged in/doesn't exist. """
+		if username in self.players:
+			return self.players[username]
+		return False
 	def argserver(self, i):
 		try: return self.line.split(" ")[i]
 		except: return ""
@@ -267,14 +272,16 @@ class Server:
 									name = self.formatForIRC(self.filterName(self.argserver(3)[1:self.argserver(3).find('>')]))
 									message = self.formatForIRC(" ".join(line.split(' ')[4:]).replace('\x1b', '').replace("\xc2\xfa", ""))
 #									self.msg("<%s> %s" % (name, message))
-									self.wrapper.callEvent("player.message", {"player": self.stripSpecialIRCChars(name), "message": message})
+									player = self.getPlayer(self.stripSpecialIRCChars(name))
+									self.wrapper.callEvent("player.message", {"player": player, "message": message})
 								elif self.argserver(3) == "Preparing" and self.argserver(4) == "level":
 									self.worldName = self.argserver(5).replace('"', "")
 								elif self.argserver(4) == "logged":
 									name = self.formatForIRC(self.filterName(self.argserver(3)[0:self.argserver(3).find('[')]))
 									self.msg("[%s connected]" % name)
 									self.login(name)
-									self.wrapper.callEvent("player.join", {"player": self.players[name]})
+									player = self.getPlayer(self.stripSpecialIRCChars(name))
+									self.wrapper.callEvent("player.join", {"player": player})
 								elif self.argserver(3)[0] == "[" and self.argserver(3)[-1] == "]":
 									name = self.argserver(3)[1:-1]
 									message = self.formatForIRC(" ".join(line.split(' ')[4:]).replace('\x1b', '').replace("\xc2\xfa", ""))
@@ -282,7 +289,8 @@ class Server:
 								elif self.argserver(4) == 'lost':
 									name = self.filterName(self.argserver(3))
 									self.msg("[%s disconnected]" % (name))
-									self.wrapper.callEvent("player.logout", {"player": self.players[name]})
+									player = self.getPlayer(self.stripSpecialIRCChars(name))
+									self.wrapper.callEvent("player.logout", {"player": player})
 									self.logout(name)
 								elif self.argserver(4) == 'issued': # this kinda doesn't work anymore unless you have a bukkit plugin.
 									name = self.filterName(self.argserver(3))
@@ -303,12 +311,14 @@ class Server:
 									deathMessage = self.config["Death"]["death-kick-messages"][random.randrange(0, len(self.config["Death"]["death-kick-messages"]))]
 									if self.config["Death"]["kick-on-death"] and name in self.config["Death"]["users-to-kick"]:
 										server.proc.stdin.write('kick %s %s\n\r' % (name, deathMessage))
-									self.wrapper.callEvent("player.death", {"player": self.stripSpecialIRCChars(name), "death": self.argsAfter(4)})
+									player = self.getPlayer(self.stripSpecialIRCChars(name))
+									self.wrapper.callEvent("player.death", {"player": player, "death": self.argsAfter(4)})
 								elif self.argserver(3) == "*":
 									name = self.formatForIRC(self.filterName(self.argserver(4)))
 									message = message = ' '.join(line.split(' ')[5:])
 									self.msg("* %s %s" % (name, message))
-									self.wrapper.callEvent("player.action", {"player": name, "action": message})
+									player = self.getPlayer(self.stripSpecialIRCChars(name))
+									self.wrapper.callEvent("player.action", {"player": player, "action": message})
 								elif self.argserver(4) == "has" and self.argserver(8) == "achievement":
 									name = self.filterName(self.argserver(3))
 									achievement = ' '.join(line.split(' ')[9:])

@@ -71,16 +71,16 @@ class Proxy:
 			if id == 0x00:
 				data = json.loads(packet.read("string:response")["response"])
 				self.wrapper.server.protocolVersion = data["version"]["protocol"]
-				self.wrapper.server.maxPlayers = 1024
+				self.wrapper.server.maxPlayers = self.wrapper.config["Proxy"]["max-players"]
 				break
 		sock.close()
 	def getClientByServerUUID(self, id):
 		for client in self.clients:
 			if str(client.serverUUID) == str(id):
-				self.uuidTranslate[str(id)] = str(client.serverUUID) 
+				self.uuidTranslate[str(id)] = str(client.uuid)
 				return client
 		if str(id) in self.uuidTranslate:
-			return self.uuidTranslate[str(id)]
+			return uuid.UUID(hex=self.uuidTranslate[str(id)])
 	def lookupUUID(self, uuid):
 		#if not self.storage.key("uuid-cache"):
 #			self.storage.key("uuid-cache", {})
@@ -672,8 +672,8 @@ class Server: # Handle Server Connection
 						self.client.send(0x38, "varint|varint|uuid|bool|string", (3, 1, client.uuid, True, data["displayname"]))
 					else:
 						self.client.send(0x38, "varint|varint|uuid|varint", (3, 1, client.uuid, False))
-#				elif head["action"] == 4:
-#					self.client.send(0x38, "varint|varint|uuid", (4, 1, client))
+				elif head["action"] == 4:
+					self.client.send(0x38, "varint|varint|uuid", (4, 1, client))
 				return False
 		return True
 	def handle(self):

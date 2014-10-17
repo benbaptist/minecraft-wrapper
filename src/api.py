@@ -1,5 +1,11 @@
 import json, time, StringIO, nbt, items, storage, fnmatch
+""" api.py contains the majority of code for the plugin API. """
 class API:
+	""" 
+	The API class contains methods for basic plugin functionality, such as handling events, registering commands, and more. 
+		
+	Most methods aren't related to gameplay, aside from commands, but for core stuff. See the Minecraft class (accessible at self.api.minecraft) for more gameplay-related methods. 
+	"""
 	statusEffects = {
 		"speed": 1,
 		"slowness": 2,
@@ -103,16 +109,16 @@ class API:
 		else:
 			raise Exception("Plugin %s does not exist!" % id)
 	def getStorage(self, name, world=False):
-		""" Return a storage object for storing configurations, player data, and anything else your plugin will need to remember. 
+		""" Return a storage object for storing configurations, player data, and any other data your plugin will need to remember across reboots.
 		
-		Setting world=True will store the data inside the current world folder.  
+		Setting world=True will store the data inside the current world folder, for world-specific data.  
 		"""
 		if world == False:
 			return storage.Storage(name, False, root=".wrapper-data/plugins/%s" % self.id)
 		else:
 			return storage.Storage(name, True, root="%s/plugins/%s" % (self.minecraft.getWorldName(), self.id))
 class Minecraft:
-	""" This class contains functions related to in-game features directly. These methods are located at self.api.minecraft."""
+	""" This class contains functions related to in-game features directly. These methods are located at self.api.minecraft. """
 	def __init__(self, wrapper):
 		self.wrapper = wrapper
 		
@@ -192,7 +198,7 @@ class Minecraft:
 		""" Summons an entity at the specified coordinates with the specified data tag. """
 		self.wrapper.server.run("summon %s %d %d %d %s" % (entity, x, y, z, json.dumps(dataTag)))
 	def message(self, destination="", json_message={}):
-		""" WILL BE CHANGED. Used to message some specific target. """
+		""" **THIS METHOD WILL BE CHANGED.** Used to message some specific target. """
 		self.console("tellraw %s %s" % (destination, json.dumps(json_message)))
 	def broadcast(self, message="", irc=False):
 		""" Broadcasts the specified message to all clients connected. message can be a JSON chat object, or a string with formatting codes using the & as a prefix.
@@ -269,6 +275,9 @@ class Player:
 				self.client = client
 				self.uuid = client.uuid
 				break
+		
+		self.data = storage.Storage(self.uuid, root="wrapper-data/players")
+		if "firstLoggedIn" not in self.data: self.data["firstLoggedIn"] = (time.time(), time.tzname)
 	def __str__(self):
 		return self.username
 	def getClient(self):
@@ -387,7 +396,7 @@ class Player:
 		return self.getClient().inventory[36 + self.getClient().slot]
 	# Permissions-related
 	def hasPermission(self, node):
-		""" If the player has the specified node (either directly, or inherited from a group that the player is in), it will return the value (usually True) of the node. Otherwise, it returns False. """
+		""" If the player has the specified permission node (either directly, or inherited from a group that the player is in), it will return the value (usually True) of the node. Otherwise, it returns False. """
 		if node == None: return True
 		uuid = str(self.uuid)
 		if uuid in self.permissions["users"]:
@@ -406,6 +415,21 @@ class Player:
 			if node in self.wrapper.permission[id]:
 				return self.wrapper.permission[id][node]
 		return False
+	def hasGroup(self, group):
+		""" Returns a boolean of whether or not the player is in the specified permission group. """
+		for uuid in self.permissions["users"]:
+			if uuid == self.uuid:
+				return group in self.permissions["users"][uuid]["groups"]
+	def getGroups(self):
+		""" Returns a list of permission groups that the player is in. """
+		for uuid in self.permissions["users"]:
+			if uuid == self.uuid:
+				return self.permissions["users"][uuid]["groups"]
+		return [] # If the user is not in the permission database, return this
+	# Player Information 
+	def getFirstLogin(self):
+		""" Returns a tuple containing the timestamp of when the user first logged in for the first time, and the timezone (same as time.tzname). """
+		return self.data["firstLoggedIn"]
 	# Cross-server commands
 	def connect(self, ip, address):
 		""" Upon calling, the player object will become defunct and the client will be transferred to another server (provided it has offline-mode turned on). """

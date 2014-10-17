@@ -1,5 +1,21 @@
 #Changelog#
 
+<h4>0.7.2</h4>
+Server jumping still seems super buggy and weird. It only works in my test environment, but fails in other environments. I have no clue why.
+- Fixed Wrapper.py not ignoring hidden files wrapper-plugins (files prefixed with a period)
+- Fixed players not disappearing from tab menu with proxy mode enabled
+- Wrapper.py now logs when a player joined the server for the first time
+- Added APIs for checking group information about a player (player.getGroups, player.hasGroup)
+- Cleaned up inconsistencies in the following events (events returning the player's name instead of the player object)
+<ul>
+<li> player.message </li>
+<li> player.action </li>
+<li> player.death </li>
+<li> player.login </li>
+<li> player.logout </li>
+</ul>
+- Added max-players option to proxy mode (thanks melair!)
+
 <h4>0.7.1</h4>
 - Fixed /wrapper not working in-game
 - Fixed /plugins not working in the console
@@ -105,6 +121,8 @@ Small update, but brings one much-needed change: the new configuration file syst
 - The server.py and irc.py code SERIOUSLY needs a total rewrite. (I noticed this while fixing pre-1.7 support)
 - Duplicate IRC messages (possibily fixed)
 - Make URLs posted in IRC clickable inside of Minecraft
-- Allow !commands to be made with api.registerCommand()
+- Allow fake !commands to be made with api.registerCommand()
 - Hibernation mode: Wrapper.py will be able to stop the server, but listen for incoming connections and will fire the server up when someone connects. It will make logging into the server slower if the server is hibernated, but otherwise it will reduce the average load of a server box running multiple servers.
-- Add /help command (the current /help command is the vanilla help command, and it doesn't show any Wrapper.py commands)
+- Add custom /help command (the current /help command is the vanilla help command, and it doesn't show any Wrapper.py commands)
+- Move backup code, permissions code, plugin loading code, and command code into separate files for more organized code
+- Split proxy.py into three files: __init__.py for the main proxy class, client.py for client class, server.py for server class, and network.py for core networking code (Packet class)
