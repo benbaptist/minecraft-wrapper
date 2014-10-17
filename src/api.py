@@ -109,16 +109,16 @@ class API:
 		else:
 			raise Exception("Plugin %s does not exist!" % id)
 	def getStorage(self, name, world=False):
-		""" Return a storage object for storing configurations, player data, and anything else your plugin will need to remember. 
+		""" Return a storage object for storing configurations, player data, and any other data your plugin will need to remember across reboots.
 		
-		Setting world=True will store the data inside the current world folder.  
+		Setting world=True will store the data inside the current world folder, for world-specific data.  
 		"""
 		if world == False:
 			return storage.Storage(name, False, root=".wrapper-data/plugins/%s" % self.id)
 		else:
 			return storage.Storage(name, True, root="%s/plugins/%s" % (self.minecraft.getWorldName(), self.id))
 class Minecraft:
-	""" This class contains functions related to in-game features directly. These methods are located at self.api.minecraft."""
+	""" This class contains functions related to in-game features directly. These methods are located at self.api.minecraft. """
 	def __init__(self, wrapper):
 		self.wrapper = wrapper
 		
@@ -198,7 +198,7 @@ class Minecraft:
 		""" Summons an entity at the specified coordinates with the specified data tag. """
 		self.wrapper.server.run("summon %s %d %d %d %s" % (entity, x, y, z, json.dumps(dataTag)))
 	def message(self, destination="", json_message={}):
-		""" WILL BE CHANGED. Used to message some specific target. """
+		""" **THIS METHOD WILL BE CHANGED.** Used to message some specific target. """
 		self.console("tellraw %s %s" % (destination, json.dumps(json_message)))
 	def broadcast(self, message="", irc=False):
 		""" Broadcasts the specified message to all clients connected. message can be a JSON chat object, or a string with formatting codes using the & as a prefix.

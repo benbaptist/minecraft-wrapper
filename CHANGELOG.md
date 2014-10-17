@@ -124,5 +124,5 @@ Small update, but brings one much-needed change: the new configuration file syst
 - Allow fake !commands to be made with api.registerCommand()
 - Hibernation mode: Wrapper.py will be able to stop the server, but listen for incoming connections and will fire the server up when someone connects. It will make logging into the server slower if the server is hibernated, but otherwise it will reduce the average load of a server box running multiple servers.
 - Add custom /help command (the current /help command is the vanilla help command, and it doesn't show any Wrapper.py commands)
-- Move backup code, permissions code, plugin loading code, and more into separate files for more organized code
+- Move backup code, permissions code, plugin loading code, and command code into separate files for more organized code
 - Split proxy.py into three files: __init__.py for the main proxy class, client.py for client class, server.py for server class, and network.py for core networking code (Packet class)

@@ -4,8 +4,7 @@ Wrapper.py is a simple Minecraft server wrapper for implementing various functio
 </br></br>It also comes with a relatively simple and straight-forward plugin API that can be used to create small Bukkit-like plugins on vanilla. 
 
 #Usage#
-Wrapper.py depends on the following modules: `pkg_resources`, `requests`, and `pycrypto`. 
-These modules are only required for proxy mode and web mode to work. Other features will still work without them.
+Wrapper.py doesn't require any special modules for most of the basic features to work, but web mode and proxy mode require the following: `pkg_resources`, `requests`, and `pycrypto`. 
 
 </br></br>
 You only need to download Wrapper.py, the src folder is just the extracted version of Wrapper.py.</br>  
@@ -19,7 +18,9 @@ or the following to download the unstable, development version of Wrapper.py:
 
 wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/Wrapper.py
 ```
-Run `python Wrapper.py` to start. Wrapper.py is a Python-executable zipped-up folder, hence why viewing it results in garbled text. If you want to view the source code, open it
+Run `python Wrapper.py` to start. On first start, it'll create a wrapper.properties file for you to configure and exit. Set it to boot the jar file of your choice, and then start Wrapper.py again. 
+
+Wrapper.py is a Python-executable zipped-up folder, rather than a plain text file. If you want to view the source code, open it
 with a zip file viewer OR download the src folder.</br>   
 On first run, it'll create the configuration file 'wrapper.properties' and exit. Tune this file to your needs, and then run `python Wrapper.py` again.</br>  
 Any console command beginning with a slash (/) will be interpreted as a Wrapper.py command. 
@@ -65,5 +66,4 @@ for working with the plugin API, but for now, here's a few things.</br></br>
 <li>speedboost.py gives everyone a speedboost when someone dies - similar to survival games.</li>
 <li>poll.py allows players to vote for certain things on the server. It isn't very up-to-date at the moment, however. </li>
 </ul>
-</br>Tip: Open config.py and change debug to True in the 'Config' class if you want to see more error messages and other useful messages 
-while developing plugins.
+</br>Tip: Set debug=True in wrapper.properties if you want to see more error messages and other useful messages while developing plugins.
