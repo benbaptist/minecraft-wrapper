@@ -48,6 +48,7 @@ proxy-bind = 0.0.0.0
 server-port = 25564
 motd = Minecraft Server
 online-mode = True
+max-players = 1024
 """
 
 """[Web]
@@ -119,7 +120,8 @@ class Config:
 			"proxy-port": 25565,
 			"proxy-bind": "0.0.0.0",
 			"motd": "Minecraft Server",
-			"online-mode": True
+			"online-mode": True,
+			"max-players": 1024
 		}}
 		# Removed from the list above until fully implemented.
 		{"Web":{
