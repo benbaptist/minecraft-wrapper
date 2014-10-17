@@ -1,5 +1,11 @@
 import json, time, StringIO, nbt, items, storage, fnmatch
+""" api.py contains the majority of code for the plugin API. """
 class API:
+	""" 
+	The API class contains methods for basic plugin functionality, such as handling events, registering commands, and more. 
+		
+	Most methods aren't related to gameplay, aside from commands, but for core stuff. See the Minecraft class (accessible at self.api.minecraft) for more gameplay-related methods. 
+	"""
 	statusEffects = {
 		"speed": 1,
 		"slowness": 2,
