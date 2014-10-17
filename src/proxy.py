@@ -71,7 +71,7 @@ class Proxy:
 			if id == 0x00:
 				data = json.loads(packet.read("string:response")["response"])
 				self.wrapper.server.protocolVersion = data["version"]["protocol"]
-				self.wrapper.server.maxPlayers = 1024
+				self.wrapper.server.maxPlayers = self.wrapper.config["Proxy"]["max-players"]
 				break
 		sock.close()
 	def getClientByServerUUID(self, id):
