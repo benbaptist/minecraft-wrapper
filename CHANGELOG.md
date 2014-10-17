@@ -1,10 +1,19 @@
 #Changelog#
 
 <h4>0.7.2</h4>
+Server jumping still seems super buggy and weird. It only works in my test environment, but fails in other environments. I have no clue why.
 - Fixed Wrapper.py not ignoring hidden files wrapper-plugins (files prefixed with a period)
-- Wrapper.py now logs information, such as when a player first logged in or if the player is new to the server (not FINISH)
-- Added APIs for checking group information about a player (player.getGroups, player.hasGroup) (not FINISH)
-- Maybe actually make server-jumping (player.connect) functional (not finish)
+- Fixed players not disappearing from tab menu with proxy mode enabled
+- Wrapper.py now logs when a player joined the server for the first time
+- Added APIs for checking group information about a player (player.getGroups, player.hasGroup)
+- Cleaned up inconsistencies in the following events (events returning the player's name instead of the player object)
+<ul>
+<li> player.message </li>
+<li> player.action </li>
+<li> player.death </li>
+<li> player.login </li>
+<li> player.logout </li>
+</ul>
 
 <h4>0.7.1</h4>
 - Fixed /wrapper not working in-game

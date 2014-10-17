@@ -269,6 +269,9 @@ class Player:
 				self.client = client
 				self.uuid = client.uuid
 				break
+		
+		self.data = storage.Storage(self.uuid, root="wrapper-data/players")
+		if "firstLoggedIn" not in self.data: self.data["firstLoggedIn"] = (time.time(), time.tzname)
 	def __str__(self):
 		return self.username
 	def getClient(self):
@@ -387,7 +390,7 @@ class Player:
 		return self.getClient().inventory[36 + self.getClient().slot]
 	# Permissions-related
 	def hasPermission(self, node):
-		""" If the player has the specified node (either directly, or inherited from a group that the player is in), it will return the value (usually True) of the node. Otherwise, it returns False. """
+		""" If the player has the specified permission node (either directly, or inherited from a group that the player is in), it will return the value (usually True) of the node. Otherwise, it returns False. """
 		if node == None: return True
 		uuid = str(self.uuid)
 		if uuid in self.permissions["users"]:
@@ -406,6 +409,21 @@ class Player:
 			if node in self.wrapper.permission[id]:
 				return self.wrapper.permission[id][node]
 		return False
+	def hasGroup(self, group):
+		""" Returns a boolean of whether or not the player is in the specified permission group. """
+		for uuid in self.permissions["users"]:
+			if uuid == self.uuid:
+				return group in self.permissions["users"][uuid]["groups"]
+	def getGroups(self):
+		""" Returns a list of permission groups that the player is in. """
+		for uuid in self.permissions["users"]:
+			if uuid == self.uuid:
+				return self.permissions["users"][uuid]["groups"]
+		return [] # If the user is not in the permission database, return this
+	# Player Information 
+	def getFirstLogin(self):
+		""" Returns a tuple containing the timestamp of when the user first logged in for the first time, and the timezone (same as time.tzname). """
+		return self.data["firstLoggedIn"]
 	# Cross-server commands
 	def connect(self, ip, address):
 		""" Upon calling, the player object will become defunct and the client will be transferred to another server (provided it has offline-mode turned on). """
