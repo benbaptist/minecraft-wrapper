@@ -29,7 +29,7 @@ If you run into any bugs, please report them!
 
 #Features#
 Wrapper.py supports the following features:
-- Plugin system for modifying the Wrapper or adding Bukkit-like features to a vanilla server
+- Plugin system for adding Bukkit-like features to a vanilla server
 <ul>
 <li> Proxy mode allows you to add extra functionality to plugins, such as real /commands</li>
 <li> Permissions system with group support </li>

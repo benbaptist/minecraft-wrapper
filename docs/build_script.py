@@ -24,7 +24,7 @@ with open("globals.py", "w") as f:
 with open("../docs/version.json", "w") as f:
 	f.write(json.dumps(version))
 os.remove("../Wrapper.py") # Time to start with a clean Wrapper.py!
-os.system("zip ../Wrapper.py -r . -x *~") # Hooray for calling zip from os.system() instead of using proper modules! :D
+os.system("zip ../Wrapper.py -r . -x *~ -x *pyc") # Hooray for calling zip from os.system() instead of using proper modules! :D
 if COMMIT: # Mainly just for me (benbaptist), since most people will probably want to build locally without committing to anything
 	os.system("git add --update :/")
 	os.system("git commit -m 'Build %s %d | %s'" % (buildType, version["build"], sys.argv[2]))

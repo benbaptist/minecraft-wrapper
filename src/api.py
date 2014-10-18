@@ -131,55 +131,15 @@ class Minecraft:
 		if self.wrapper.server:
 			if self.wrapper.server.status == 2: return True
 		return False
-	def processColorCodes(self, message):
-		""" Used internally to process old-style color-codes with the & symbol, and returns a JSON chat object. """
-		extras = []
-		bold = False
-		italic = False
-		underline = False
-		obfuscated = False
-		strikethrough = False
-		color = "white"
-		current = ""; it = iter(xrange(len(message)))
-		for i in it:
-			char = message[i]
-			if char is not "&":
-				current += char
-			else:
-				extras.append({"text": current, "color": color, "obfuscated": obfuscated, 
-					"underlined": underline, "bold": bold, "italic": italic, "strikethrough": strikethrough})
-				current = ""
-				try: code = message[i+1]
-				except: break
-				if code in "abcdef0123456789":
-					try: color = API.colorCodes[code]
-					except: color = "white"
-				if code == "k": obfuscated = True
-				elif code == "l": bold = True
-				elif code == "m": strikethrough = True
-				elif code == "n": underline = True
-				elif code == "o": italic = True
-				elif code == "&": current += "&"
-				elif code == "r":
-					bold = False
-					italic = False
-					underline = False
-					obfuscated = False
-					strikethrough = False
-					color = "white"
-				it.next()
-		extras.append({"text": current, "color": color, "obfuscated": obfuscated, 
-			"underlined": underline, "bold": bold, "italic": italic, "strikethrough": strikethrough})
-		return json.dumps({"text": "", "extra": extras})
 	def console(self, string):
 		""" Run a command in the Minecraft server's console. """
 		try:
-			self.wrapper.server.run(string)
+			self.wrapper.server.console(string)
 		except:
 			pass
 	def setBlock(self, x, y, z, tileName, dataValue=0, oldBlockHandling="replace", dataTag={}):
 		""" Sets a block at the specified coordinates with the specific details. Will fail if the chunk is not loaded. """
-		self.wrapper.server.run("setblock %d %d %d %s %d %s %s" % (x, y, z, tileName, dataValue, oldBlockHandling, json.dumps(dataTag).replace('"', "")))
+		self.console("setblock %d %d %d %s %d %s %s" % (x, y, z, tileName, dataValue, oldBlockHandling, json.dumps(dataTag).replace('"', "")))
 	def giveStatusEffect(self, player, effect, duration=30, amplifier=30):
 		""" Gives the specified status effect to the specified target. """
 		if type(effect) == int: effectConverted = str(effect)
@@ -193,10 +153,10 @@ class Minecraft:
 					raise Exception("Invalid status effect given!")
 		if int(effectConverted) > 24 or int(effectConverted) < 1:
 			raise Exception("Invalid status effect given!") 
-		self.wrapper.server.run("effect %s %s %d %d" % (player, effectConverted, duration, amplifier))
+		self.console("effect %s %s %d %d" % (player, effectConverted, duration, amplifier))
 	def summonEntity(self, entity, x=0, y=0, z=0, dataTag={}):
 		""" Summons an entity at the specified coordinates with the specified data tag. """
-		self.wrapper.server.run("summon %s %d %d %d %s" % (entity, x, y, z, json.dumps(dataTag)))
+		self.console("summon %s %d %d %d %s" % (entity, x, y, z, json.dumps(dataTag)))
 	def message(self, destination="", json_message={}):
 		""" **THIS METHOD WILL BE CHANGED.** Used to message some specific target. """
 		self.console("tellraw %s %s" % (destination, json.dumps(json_message)))
@@ -208,13 +168,10 @@ class Minecraft:
 		if irc:
 			try: self.wrapper.irc.msgQueue.append(message)
 			except: pass
-		if isinstance(message, dict):
-			self.wrapper.server.run("tellraw @a %s" % json.dumps(message))
-		else:
-			self.wrapper.server.run("tellraw @a %s" % self.processColorCodes(message))
+		self.wrapper.server.broadcast(message)
 	def teleportAllEntities(self, entity, x, y, z):
 		""" Teleports all of the specific entity type to the specified coordinates. """
-		self.wrapper.server.run("tp @e[type=%s] %d %d %d" % (entity, x, y, z))
+		self.console("tp @e[type=%s] %d %d %d" % (entity, x, y, z))
 #	def teleportPlayer(self):
 #		pass
 #	def getPlayerDat(self, name):
@@ -247,7 +204,7 @@ class Minecraft:
 	#def getBlock(self, x, y, z):
 #		""" UNIMPLEMENTED FUNCTION. """
 #		# this function doesn't really work well yet
-#		self.wrapper.server.run("testforblock %d %d %d air" % (x, y, z))
+#		self.console("testforblock %d %d %d air" % (x, y, z))
 #		while True:
 #			event = self.api.blockForEvent("server.consoleMessage")
 #			def args(i):
@@ -291,47 +248,6 @@ class Player:
 					pass
 		else:
 			return self.client
-	def processColorCodes(self, message):
-		""" Used internally to process old-style color-codes with the & symbol, and returns a JSON chat object. """
-		message = message.encode('ascii', 'ignore')
-		extras = []
-		bold = False
-		italic = False
-		underline = False
-		obfuscated = False
-		strikethrough = False
-		color = "white"
-		current = ""; it = iter(xrange(len(message)))
-		for i in it:
-			char = message[i]
-			if char is not "&":
-				current += char
-			else:
-				extras.append({"text": current, "color": color, "obfuscated": obfuscated, 
-					"underlined": underline, "bold": bold, "italic": italic, "strikethrough": strikethrough})
-				current = ""
-				code = message[i+1]
-				if code in "abcdef0123456789":
-					try: color = API.colorCodes[code]
-					except: color = "white"
-				if code == "k": obfuscated = True
-				if code == "l": bold = True
-				if code == "m": strikethrough = True
-				if code == "n": underline = True
-				if code == "o": italic = True
-				if code == "r":
-					bold = False
-					italic = False
-					underline = False
-					obfuscated = False
-					strikethrough = False
-					color = "white"
-				if code == "&":
-					current += "&"
-				it.next()
-		extras.append({"text": current, "color": color, "obfuscated": obfuscated, 
-			"underlined": underline, "bold": bold, "italic": italic, "strikethrough": strikethrough})
-		return json.dumps({"text": "", "extra": extras})
 	def processColorCodesOld(self, message): # Not sure if this is used anymore. Might delete.
 		for i in API.colorCodes:
 			message = message.replace("&" + i, "\xc2\xa7" + i)
@@ -349,7 +265,7 @@ class Player:
 		""" Sets the user's gamemode. """
 		if gm in (0, 1, 2, 3):
 			self.client.gamemode = gm
-			self.wrapper.server.run("gamemode %d %s" % (gm, self.username))
+			self.console("gamemode %d %s" % (gm, self.username))
 	def setResourcePack(self, url):
 		""" Sets the player's resource pack to a different URL. If the user hasn't already allowed resource packs, the user will be prompted to change to the specified resource pack. Probably broken right now. """
 		self.client.send(0x3f, "string|bytearray", ("MC|RPack", url))
@@ -363,13 +279,14 @@ class Player:
 	# Visual notifications
 	def message(self, message=""):
 		if isinstance(message, dict):
-			self.wrapper.server.run("tellraw %s %s" % (self.username, json.dumps(message)))
+			self.wrapper.server.console("tellraw %s %s" % (self.username, json.dumps(message)))
 		else:
-			self.wrapper.server.run("tellraw %s %s" % (self.username, self.processColorCodes(message)))
+			self.wrapper.server.console("tellraw %s %s" % (self.username, self.wrapper.server.processColorCodes(message)))
 	def actionMessage(self, message=""):
 		if self.getClient().version > 10:
 			self.getClient().send(0x02, "string|byte", (json.dumps({"text": self.processColorCodesOld(message)}), 2))
 	def setVisualXP(self, progress, level, total):
+		""" Change the XP bar on the client's side only. Does not affect actual XP levels. """
 		if self.getClient().version > 10:
 			self.getClient().send(0x1f, "float|varint|varint", (progress, level, total))
 		else:

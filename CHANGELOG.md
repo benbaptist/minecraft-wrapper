@@ -1,5 +1,19 @@
 #Changelog#
 
+<h4>0.7.3</h4>
+- Complete rewrite of the Server class, and partial rewrite of the IRC class
+- New events:
+  - server.starting: Called just before the server begins to boot
+  - server.started: Once the server reports Done in the console and is ready for players
+  - server.stopping: Called as the server starts to shutdown
+  - server.stopped: Once the server is completely shutdown, and is safe to modify the world files
+  - server.state(state): All of the above events consolidated into one event
+- Cleaned up MORE incosistencies in these events:
+  - player.achievement
+ 
+Backups are currently broken on this particular dev build of 0.7.3, since I removed all of the server code and redid it from scratch. Will re-enable backups soon.
+IRC is also partially broken (IRC->Server) for the same reason. In fact, a lot of stuff will probably be broken. But it's for the best!
+
 <h4>0.7.2</h4>
 Server jumping still seems super buggy and weird. It only works in my test environment, but fails in other environments. I have no clue why.
 - Fixed Wrapper.py not ignoring hidden files wrapper-plugins (files prefixed with a period)
@@ -11,9 +25,12 @@ Server jumping still seems super buggy and weird. It only works in my test envir
 <li> player.message </li>
 <li> player.action </li>
 <li> player.death </li>
-<li> player.login </li>
-<li> player.logout </li>
+<li> player.join </li>
+<li> player.leave </li>
 </ul>
+- New events: 
+  - server.say(message): When /say is used in the console or by a player.
+  - player.chatbox(player, json): Anything that appears in a player's chatbox. Can be aborted by returning False.
 - Added max-players option to proxy mode (thanks melair!)
 
 <h4>0.7.1</h4>

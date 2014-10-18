@@ -327,6 +327,7 @@ class Wrapper:
 		self.api = API(self, "Wrapper.py")
 		
 		self.server = Server(sys.argv, self.log, self.configManager.config, self)
+		self.server.init()
 		
 		self.loadPlugins()
 		
@@ -346,16 +347,10 @@ class Wrapper:
 #				self.log.error("Web remote could not be started because you do not have the required modules installed: pkg_resources")
 #				self.log.error("Hint: http://stackoverflow.com/questions/7446187")
 		if len(sys.argv) < 2:
-			wrapper.server.serverArgs = wrapper.configManager.config["General"]["command"].split(" ")
+			wrapper.server.args = wrapper.configManager.config["General"]["command"].split(" ")
 		else:
-			wrapper.server.serverArgs = sys.argv[1:]
+			wrapper.server.args = sys.argv[1:]
 		
-		captureThread = threading.Thread(target=self.server.captureSTDOUT, args=())
-		captureThread.daemon = True
-		captureThread.start()
-		captureThread = threading.Thread(target=self.server.captureSTDERR, args=())
-		captureThread.daemon = True
-		captureThread.start()
 		consoleDaemon = threading.Thread(target=self.console, args=())
 		consoleDaemon.daemon = True
 		consoleDaemon.start()
@@ -370,7 +365,7 @@ class Wrapper:
 			t = threading.Thread(target=self.startProxy, args=())
 			t.daemon = True
 			t.start()
-		self.server.startServer()
+		self.server.__handle_server__()
 		
 		self.disablePlugins()
 	def startProxy(self):
@@ -391,13 +386,17 @@ class Wrapper:
 			return "%s (development build #%d)" % (Config.version, globals.build)
 		else:
 			return "%s (stable)" % Config.version
+	def timer(self):
+		while not self.halt:
+			self.callEvent("timer.second", None)
+			time.sleep(1)
 	def console(self):
 		while not self.halt:
 			input = raw_input("")
 			if len(input) < 1: continue
 			if input[0] is not "/": 
 				try:
-					self.server.run(input)
+					self.server.console(input)
 				except:
 					break
 				continue
@@ -406,16 +405,15 @@ class Wrapper:
 				except:pass;
 			command = args(0)
 			if command == "halt":
-				self.server.run("stop")
+				self.server.stop("Halting server...")
 				self.halt = True
 				sys.exit()
 			elif command == "stop":
-				self.server.run("stop")
-				self.server.start = False
+				self.server.stop("Stopping server...")
 			elif command == "start":
-				self.server.start = True
+				self.server.start()
 			elif command == "restart":
-				self.server.run("stop")
+				self.server.stop("Server restarting, be right back!")
 			elif command == "reload":
 				self.reloadPlugins()
 			elif command == "plugins":
@@ -469,9 +467,6 @@ if __name__ == "__main__":
 		wrapper.halt = True
 		wrapper.disablePlugins()
 		try:
-			for player in wrapper.server.players:
-				wrapper.server.run("kick %s Wrapper.py crashed - please contact a server admin instantly" % player)
-			wrapper.server.run("save-all")
-			wrapper.server.run("stop")
+			wrapper.server.stop("Wrapper.py crashed - please contact a server admin instantly")
 		except:
-			pass
+			print "Failure to shutdown servder cleanly!"

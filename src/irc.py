@@ -15,8 +15,11 @@ class IRC:
 		self.msgQueue = []
 		
 		self.api = api.API(self.wrapper, "IRC")
-		self.api.registerEvent("player.message", self.playerMessageHandle)
-		self.api.registerEvent("server.say", self.sayMessageHandle)
+		self.api.registerEvent("player.login", self.onPlayerLogin)
+		self.api.registerEvent("player.message", self.onPlayerMessage)
+		self.api.registerEvent("player.logout", self.onPlayerLogout)
+		self.api.registerEvent("player.achievement", self.onPlayerAchievement)
+		self.api.registerEvent("server.say", self.onPlayerSay)
 	def init(self):
 		while not self.wrapper.halt:
 			try:
@@ -51,14 +54,25 @@ class IRC:
 			self.socket.send("%s\n" % payload)
 		else:
 			return False
-	def playerMessageHandle(self, payload):
+	def onPlayerLogin(self, payload):
+		player = payload["player"]
+		print "%s logged in :D" % player
+		self.msgQueue.append("[%s connected]" % player)
+	def onPlayerLogout(self, payload):
+		player = payload["player"]
+		self.msgQueue.append("[%s disconnected]" % player)
+	def onPlayerMessage(self, payload):
 		player = payload["player"]
 		message = payload["message"]
 		self.msgQueue.append("<%s> %s" % (player, message))
-	def sayMessageHandle(self, payload):
+	def onPlayerSay(self, payload):
 		player = payload["player"]
 		message = payload["message"]
 		self.msgQueue.append("[%s] %s" % (player, message))
+	def onPlayerAchievement(self, payload):
+		player = payload["player"]
+		achievement = payload["achievement"]
+		self.msgQueue.append("%s has just earned the achievement %s" % (player, achievement))
 	def handle(self):
 		while self.socket:
 			try:

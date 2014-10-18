@@ -60,8 +60,7 @@ password = blahblah98
 public-stats = True"""
 
 class Config:
-	version = "0.7.2"
-	buildType = "dev" # dev, beta, or release
+	version = "0.7.3"
 	debug = False
 	def __init__(self, log):
 		self.log = log
