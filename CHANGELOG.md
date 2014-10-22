@@ -29,8 +29,6 @@
 - All irc.* events use "nick" instead of "user" for the payload
  
 This update is relatively big and definitely makes some methods cleaner and more straight forward.
-Backups are currently broken on this particular dev build of 0.7.3, since I removed all of the server code and redid it from scratch. Will re-enable backups soon.
-IRC is also partially broken (IRC->Server) for the same reason. In fact, a lot of stuff will probably be broken. But it's for the best!
 
 <h4>0.7.2</h4>
 Server jumping still seems super buggy and weird. It only works in my test environment, but fails in other environments. I have no clue why.
