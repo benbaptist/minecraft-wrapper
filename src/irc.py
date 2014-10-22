@@ -12,11 +12,17 @@ class IRC:
 		self.channels = channels
 		self.log = log
 		self.timeout = False
+		self.ready = False
 		self.msgQueue = []
 		
 		self.api = api.API(self.wrapper, "IRC")
+		self.api.registerEvent("server.starting", self.onServerStarting)
+		self.api.registerEvent("server.started", self.onServerStarted)
+		self.api.registerEvent("server.stopping", self.onServerStopping)
+		self.api.registerEvent("server.stopped", self.onServerStopped)
 		self.api.registerEvent("player.login", self.onPlayerLogin)
 		self.api.registerEvent("player.message", self.onPlayerMessage)
+		self.api.registerEvent("player.action", self.onPlayerAction)
 		self.api.registerEvent("player.logout", self.onPlayerLogout)
 		self.api.registerEvent("player.achievement", self.onPlayerAchievement)
 		self.api.registerEvent("server.say", self.onPlayerSay)
@@ -56,7 +62,6 @@ class IRC:
 			return False
 	def onPlayerLogin(self, payload):
 		player = payload["player"]
-		print "%s logged in :D" % player
 		self.msgQueue.append("[%s connected]" % player)
 	def onPlayerLogout(self, payload):
 		player = payload["player"]
@@ -65,6 +70,10 @@ class IRC:
 		player = payload["player"]
 		message = payload["message"]
 		self.msgQueue.append("<%s> %s" % (player, message))
+	def onPlayerAction(self, payload):
+		player = payload["player"]
+		action = payload["action"]
+		self.msgQueue.append("* %s %s" % (player, action))
 	def onPlayerSay(self, payload):
 		player = payload["player"]
 		message = payload["message"]
@@ -73,6 +82,14 @@ class IRC:
 		player = payload["player"]
 		achievement = payload["achievement"]
 		self.msgQueue.append("%s has just earned the achievement %s" % (player, achievement))
+	def onServerStarting(self, payload):
+		self.msgQueue.append("Server starting...")
+	def onServerStarted(self, payload):
+		self.msgQueue.append("Server started!")
+	def onServerStopping(self, payload):
+		self.msgQueue.append("Server stopping...")
+	def onServerStopped(self, payload):
+		self.msgQueue.append("Server stopped!")
 	def handle(self):
 		while self.socket:
 			try:
@@ -80,6 +97,7 @@ class IRC:
 				if buffer == "":
 					self.log.error("Disconnected from IRC")
 					self.socket = False
+					self.ready = False
 					break
 			except socket.timeout:
 				if self.timeout:
@@ -96,6 +114,9 @@ class IRC:
 				self.parse()
 	def queue(self):
 		while self.socket:
+			if not self.ready: 
+				time.sleep(0.1)
+				continue
 			for i,message in enumerate(self.msgQueue):
 				for channel in self.channels:
 					self.send("PRIVMSG %s :%s" % (channel, message))
@@ -120,20 +141,19 @@ class IRC:
 				self.send(command)
 			for channel in self.channels:
 				self.send("JOIN %s" % channel)
+			self.ready = True
 			self.log.info("Connected to IRC!")
 			self.state = True
 		if self.args(1) == "JOIN":
 			nick = self.args(0)[1:self.args(0).find("!")]
 			channel = self.args(2)[1:][:-1]
 			self.log.info("%s joined %s" % (nick, channel))
-			self.console(channel, [{"text": nick, "color": "green"}, {"text": " joined the channel", "color": "white"}])
-			self.wrapper.callEvent("irc.channelJoin", {"user": nick, "channel": channel})
+			self.wrapper.callEvent("irc.join", {"nick": nick, "channel": channel})
 		if self.args(1) == "PART":
 			nick = self.args(0)[1:self.args(0).find("!")]
 			channel = self.args(2)
-			self.log.info("%s parted from %s" % (nick, channel))
-			self.console(channel, [{"text": nick, "color": "green"}, {"text": " left the channel", "color": "white"}])
-			self.wrapper.callEvent("irc.channelPart", {"user": nick, "channel": channel})
+			self.log.info("%s parted %s" % (nick, channel))
+			self.wrapper.callEvent("irc.part", {"nick": nick, "channel": channel})
 		if self.args(1) == "MODE":
 			try:
 				nick = self.args(0)[1:self.args(0).find('!')]
@@ -149,15 +169,20 @@ class IRC:
 			nick = self.args(0)[1:self.args(0).find("!")]
 			message = " ".join(self.line.split(" ")[2:])[1:].strip("\n").strip("\r")
 			
-			self.wrapper.callEvent("irc.quit", {"user": nick, "message": message})
-			self.rawConsole({"text": "[IRC] ", "color": "gold", "extra":[{"text": nick, "color": "green"}, {"text": " quit from IRC", "color": "white"}]})
+			self.wrapper.callEvent("irc.quit", {"nick": nick, "message": message, "channel": None})
 		if self.args(1) == "PRIVMSG":
 			channel = self.args(2)
 			nick = self.args(0)[1:self.args(0).find("!")]
 			message = " ".join(self.line.split(" ")[3:])[1:].strip("\n").strip("\r")
 			
+			def args(i):
+				try: return message.split(" ")[i]
+				except: return ""
+			def argsAfter(i):
+				try: return " ".join(message.split(" ")[i:])
+				except: return ""
+			
 			if channel[0] == "#":
-				self.wrapper.callEvent("irc.channelMessage", {"user": nick, "channel": channel, "message": message})
 				if message.strip() == ".players":
 					users = ""
 					for user in self.server.players:
@@ -166,16 +191,15 @@ class IRC:
 				elif message.strip() == ".about":
 					self.send("PRIVMSG %s :Wrapper.py version %s (build #%d)" % (channel, Config.version, globals.build))
 				else:
-					self.log.info('[%s] (%s) %s' % (channel, nick, message))
 					message = message.decode("utf-8", "ignore")
-					self.console(channel, [{"text": "(%s) " % nick, "color": "green"}, {"text": message, "color": "white"}])
+					if args(0) == "\x01ACTION":
+						self.wrapper.callEvent("irc.action", {"nick": nick, "channel": channel, "action": argsAfter(1)})
+						self.log.info("[%s] * %s %s" % (channel, nick, argsAfter(1)))
+					else:
+						self.wrapper.callEvent("irc.message", {"nick": nick, "channel": channel, "message": message})
+						self.log.info("[%s] (%s) %s" % (channel, nick, message))
 			elif self.config["IRC"]["control-from-irc"]:
-				self.log.info('[PRIVATE] (%s) %s' % (nick, message))
-				def args(i):
-					try:
-						return message.split(" ")[i]
-					except:
-						return ""
+				self.log.info("[PRIVATE] (%s) %s" % (nick, message))
 				def msg(string):
 					print "[PRIVATE] (%s) %s" % (self.config["IRC"]["nick"], string)
 					self.send("PRIVMSG %s :%s" % (nick, string))
@@ -209,7 +233,7 @@ class IRC:
 								msg('Usage: run [command]')
 							else:
 								command = " ".join(message.split(' ')[1:])
-								self.server.run(command)
+								self.server.console(command)
 						elif args(0) == 'halt':
 							self.wrapper.halt = True
 							self.server.run("stop")
@@ -230,16 +254,11 @@ class IRC:
 							self.server.proc.kill()
 							msg("Server terminated.")
 						elif args(0) == 'status':
-							if self.server.status == 2:
-								msg("Server is running.")
-							elif self.server.status == 1:
-								msg("Server is currently starting/frozen.")
-							elif self.server.status == 0:
-								msg("Server is stopped. Type 'start' to fire it back up.")
-							elif self.server.status == 3:
-								msg("Server is in the process of shutting down/restarting.")
-							else:
-								msg("Server is in unknown state. This is probably a Wrapper.py bug - report it!")
+							if self.server.status == 2: msg("Server is running.")
+							elif self.server.status == 1: msg("Server is currently starting/frozen.")
+							elif self.server.status == 0: msg("Server is stopped. Type 'start' to fire it back up.")
+							elif self.server.status == 3: msg("Server is in the process of shutting down/restarting.")
+							else: msg("Server is in unknown state. This is probably a Wrapper.py bug - report it! (state #%d)" % self.server.status)
 						elif args(0) == "about":
 							msg("Wrapper.py by benbaptist - version %s (build #%d)" % (Config.version, globals.build))
 						else:

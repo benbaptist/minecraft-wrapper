@@ -355,6 +355,10 @@ class Wrapper:
 		consoleDaemon.daemon = True
 		consoleDaemon.start()
 		
+		t = threading.Thread(target=self.timer, args=())
+		t.daemon = True
+		t.start()
+		
 		if self.config["General"]["shell-scripts"]:
 			if os.name in ("posix", "mac"):
 				self.scripts = Scripts(self)
@@ -469,4 +473,4 @@ if __name__ == "__main__":
 		try:
 			wrapper.server.stop("Wrapper.py crashed - please contact a server admin instantly")
 		except:
-			print "Failure to shutdown servder cleanly!"
+			print "Failure to shutdown server cleanly!"

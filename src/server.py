@@ -1,10 +1,12 @@
-import socket, datetime, time, sys, threading, random, subprocess, os, json, signal, traceback, api, world, StringIO, ConfigParser
+import socket, datetime, time, sys, threading, random, subprocess, os, json, signal, traceback, api, world, StringIO, ConfigParser, backups
 class Server:
 	def __init__(self, args, log, config, wrapper):
 		self.log = log
 		self.config = config
 		self.wrapper =  wrapper
 		self.args = args
+		self.api = api.API(wrapper, "Server", internal=True)
+		self.backups = backups.Backups(wrapper)
 		
 		self.players = {}
 		self.status = 0 # 0 is off, 1 is starting, 2 is started, 3 is shutting down
@@ -19,13 +21,21 @@ class Server:
 		self.world = world.World() 
 		
 		# Read server.properties and extract some information out of it
-		s = StringIO.StringIO() # Stupid StringIO doesn't support __exit__()
-		config = open("server.properties", "r").read()
-		s.write("[main]\n" + config)
-		s.seek(0)
-		self.properties = ConfigParser.ConfigParser(allow_no_value = True)
-		self.properties.readfp(s)
-		self.worldName = self.properties.get("main", "level-name")
+		if os.path.exists("server.properties"):
+			s = StringIO.StringIO() # Stupid StringIO doesn't support __exit__()
+			config = open("server.properties", "r").read()
+			s.write("[main]\n" + config)
+			s.seek(0)
+			self.properties = ConfigParser.ConfigParser(allow_no_value = True)
+			self.properties.readfp(s)
+			self.worldName = self.properties.get("main", "level-name")
+		
+		self.api.registerEvent("irc.message", self.onChannelMessage)
+		self.api.registerEvent("irc.action", self.onChannelAction)
+		self.api.registerEvent("irc.join", self.onChannelJoin)
+		self.api.registerEvent("irc.part", self.onChannelPart)
+		self.api.registerEvent("irc.quit", self.onChannelQuit)
+		self.api.registerEvent("timer.second", self.onTick)
 	def init(self):
 		""" Start up the listen threads for reading server console output """
 		captureThread = threading.Thread(target=self.__stdout__, args=())
@@ -37,8 +47,15 @@ class Server:
 	def start(self):
 		""" Start the Minecraft server """
 		self.boot = True
+	def restart(self, reason="Restarting Server"):
+		""" Restart the Minecraft server, and kick people with the specified reason """
+		self.log.info("Restarting Minecraft server with reason: %s" % reason)
+		self.changeState(3)
+		for player in self.players:
+			self.console("kick %s %s" % (player, reason))
+		self.console("stop")
 	def stop(self, reason="Stopping Server"):
-		""" Stop the Minecraft server, and kick people with the specified reason """
+		""" Stop the Minecraft server, prevent it from auto-restarting and kick people with the specified reason """
 		self.log.info("Stopping Minecraft server with reason: %s" % reason)
 		self.changeState(3)
 		self.boot = False
@@ -97,12 +114,12 @@ class Server:
 		try:
 			if username not in self.players:
 				self.players[username] = api.Player(username, self.wrapper)
-			self.wrapper.callEvent("player.join", {"player": self.getPlayer(username)})
+			self.wrapper.callEvent("player.login", {"player": self.getPlayer(username)})
 		except:
 			self.log.getTraceback()
 	def logout(self, username):
 		""" Called when a player logs out """
-		self.wrapper.callEvent("player.leave", {"player": self.getPlayer(username)})
+		self.wrapper.callEvent("player.logout", {"player": self.getPlayer(username)})
 		if self.wrapper.proxy:
 			for client in self.wrapper.proxy.clients:
 				uuid = self.players[username].uuid
@@ -119,7 +136,7 @@ class Server:
 		except: pass
 		
 	def changeState(self, state):
-		""" Change the boot state of the server. Eventually I'll put a callEvent here """
+		""" Change the boot state of the server """
 		self.state = state
 		if self.state == 0: self.wrapper.callEvent("server.stopped", None)
 		if self.state == 1: self.wrapper.callEvent("server.starting", None)
@@ -190,7 +207,7 @@ class Server:
 		deathPrefixes = ["fell", "was", "drowned", "blew", "walked", "went", "burned", "hit", "tried", 
 			"died", "got", "starved", "suffocated", "withered"]
 		if not self.config["General"]["pre-1.7-mode"]:
-			if len(args(3)) < 2: return
+			if len(args(3)) < 1: return
 			if args(3) == "Done": # Confirmation that the server finished booting
 				self.changeState(2)
 				self.log.info("Server started")
@@ -208,6 +225,10 @@ class Server:
 			elif args(4) == "lost": # Player Logout
 				name = args(3)
 				self.logout(name)
+			elif args(3) == "*":
+				name = self.stripSpecial(args(4))
+				message = self.stripSpecial(argsAfter(5))
+				self.wrapper.callEvent("player.action", {"player": self.getPlayer(name), "action": message})
 			elif args(3)[0] == "[" and args(3)[-1] == "]": # /say command
 				name = self.stripSpecial(args(3)[1:-1])
 				message = self.stripSpecial(argsAfter(4))
@@ -217,3 +238,25 @@ class Server:
 				name = self.stripSpecial(args(3))
 				achievement = argsAfter(9)
 				self.wrapper.callEvent("player.achievement", {"player": name, "achievement": achievement})
+	# Event Handlers
+	def onChannelJoin(self, payload):
+		channel, nick = payload["channel"], payload["nick"]
+		self.broadcast("&6[%s] &a%s &rjoined the channel" % (channel, nick))
+	def onChannelPart(self, payload):
+		channel, nick = payload["channel"], payload["nick"]
+		self.broadcast("&6[%s] &a%s &rparted the channel" % (channel, nick))
+	def onChannelMessage(self, payload):
+		channel, nick, message = payload["channel"], payload["nick"], payload["message"]
+		self.broadcast("&6[%s] &a(%s) &r%s" % (channel, nick, message))
+	def onChannelAction(self, payload):
+		channel, nick, action = payload["channel"], payload["nick"], payload["action"]
+		self.broadcast("&6[%s] &a* %s &r%s" % (channel, nick, action))
+	def onChannelQuit(self, payload):
+		channel, nick, message = payload["channel"], payload["nick"], payload["message"]
+		self.broadcast("&6[%s] &a%s &rquit: %s" % (channel, nick, message))
+	def onTick(self, payload):
+		""" Called every second, and used for handling cron-like jobs """
+		if self.config["General"]["timed-reboot"]:
+			if time.time() - self.bootTime > self.config["General"]["timed-reboot-seconds"]:
+				self.restart("Server is conducting a scheduled reboot. The server will be back momentarily!")
+				self.bootTime = time.time()

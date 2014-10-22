@@ -1,16 +1,33 @@
 #Changelog#
 
 <h4>0.7.3</h4>
+- Fixed "Backup file '%s' does not exist - will not backup" when conducting a backup
+- Fixed "AttributeError: 'bool' object has no attribute 'clients'" when not using proxy mode
+- Fixed users doing /me or /action in IRC displaying inappropriately on server
 - Complete rewrite of the Server class, and partial rewrite of the IRC class
+  - Backup code has now been separated into the Backups class of backups.py
 - New events:
   - server.starting: Called just before the server begins to boot
   - server.started: Once the server reports Done in the console and is ready for players
   - server.stopping: Called as the server starts to shutdown
   - server.stopped: Once the server is completely shutdown, and is safe to modify the world files
   - server.state(state): All of the above events consolidated into one event
+  - irc.action(nick, channel, message): User doing /me or /action in an IRC channel
+  - irc.quit(nick, channel, message): User quitting from IRC. 'channel' returns None currently. 'message' is their QUIT message
+- Renamed events:
+  - irc.message(nick, channel, message) from irc.channelMessage
+  - irc.join(nick, channel) from irc.channelJoin
+  - irc.part(nick, channel) from irc.channelPart
+- New Server class methods (accessable with api.minecraft.getServer):
+  - server.start(): Start the server (if it isn't already started)
+  - server.restart(reason): Restart the server, and kick users with an optional reason (default: "Restarting server...")
+  - server.stop(reason): Stop the server, kick users with a reason (default: "Stopping server..."), don't automatically start back up, but keep Wrapper.py running. 
 - Cleaned up MORE incosistencies in these events:
   - player.achievement
+- New method: self.log.warn
+- All irc.* events use "nick" instead of "user" for the payload
  
+This update is relatively big and definitely makes some methods cleaner and more straight forward.
 Backups are currently broken on this particular dev build of 0.7.3, since I removed all of the server code and redid it from scratch. Will re-enable backups soon.
 IRC is also partially broken (IRC->Server) for the same reason. In fact, a lot of stuff will probably be broken. But it's for the best!
 
@@ -143,3 +160,4 @@ Small update, but brings one much-needed change: the new configuration file syst
 - Add custom /help command (the current /help command is the vanilla help command, and it doesn't show any Wrapper.py commands)
 - Move backup code, permissions code, plugin loading code, and command code into separate files for more organized code
 - Split proxy.py into three files: __init__.py for the main proxy class, client.py for client class, server.py for server class, and network.py for core networking code (Packet class)
+- "Request too long" in IRC due to certain messages being too big

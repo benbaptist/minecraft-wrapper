@@ -43,5 +43,5 @@ class Scripts:
 	def _backupBegin(self, payload):
 		os.system("wrapper-data/scripts/backup-begin.sh")
 	def _backupEnd(self, payload):
-		os.system("wrapper-data/scripts/backup-end.sh %s" % payload["backupFile"])
+		os.system("wrapper-data/scripts/backup-finish.sh %s" % payload["backupFile"])
 	

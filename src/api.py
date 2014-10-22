@@ -55,11 +55,12 @@ class API:
 		"n": "\xc2\xa7n", # underline
 		"o": "\xc2\xa7o", # italic,
 	}
-	def __init__(self, wrapper, name="", id=None):
+	def __init__(self, wrapper, name="", id=None, internal=False):
 		self.wrapper = wrapper
 		self.name = name
 		self.minecraft = Minecraft(wrapper)
 		self.server = wrapper.server
+		self.internal = internal
 		if id == None:
 			self.id = name
 		else:
@@ -68,12 +69,14 @@ class API:
 		""" This registers a command that, when executed in Minecraft, will execute callback(player, args). 
 		permission is an optional attribute if you want your command to only be executable if the player has a specified permission node.
 		"""
-		self.wrapper.log.debug("[%s] Registered command '%s'" % (self.name, name))
+		if not self.internal:
+			self.wrapper.log.debug("[%s] Registered command '%s'" % (self.name, name))
 		if self.id not in self.wrapper.commands: self.wrapper.commands[self.id] = {}
 		self.wrapper.commands[self.id][name] = {"callback": callback, "permission": permission}
 	def registerEvent(self, eventType, callback):
 		""" Register an event and a callback. See [doc link needed here] for a list of events. callback(payload) when an event occurs, and the contents of payload varies between events."""
-		self.wrapper.log.debug("[%s] Registered event '%s'" % (self.name, eventType))
+		if not self.internal:
+			self.wrapper.log.debug("[%s] Registered event '%s'" % (self.name, eventType))
 		if self.id not in self.wrapper.events: self.wrapper.events[self.id] = {}
 		self.wrapper.events[self.id][eventType] = callback
 	def registerPermission(self, permission=None, value=False):
@@ -81,7 +84,8 @@ class API:
 		
 		Note: You do not need to run this function unless you want certain permission nodes to be granted by default. 
 		i.e. `essentials.list` should be on by default, so players can run /list without having any permissions."""
-		self.wrapper.log.debug("[%s] Registered permission '%s' with default value: %s" % (self.name, permission, value))
+		if not self.internal:
+			self.wrapper.log.debug("[%s] Registered permission '%s' with default value: %s" % (self.name, permission, value))
 		if self.id not in self.wrapper.permission: self.wrapper.permission[self.id] = {}
 		self.wrapper.permission[self.id][permission] = value 
 	def blockForEvent(self, eventType):
@@ -168,7 +172,8 @@ class Minecraft:
 		if irc:
 			try: self.wrapper.irc.msgQueue.append(message)
 			except: pass
-		self.wrapper.server.broadcast(message)
+		try: self.wrapper.server.broadcast(message)
+		except: pass
 	def teleportAllEntities(self, entity, x, y, z):
 		""" Teleports all of the specific entity type to the specified coordinates. """
 		self.console("tp @e[type=%s] %d %d %d" % (entity, x, y, z))
@@ -227,11 +232,12 @@ class Player:
 		
 		self.uuid = self.wrapper.getUUID(username)
 		self.client = None
-		for client in self.wrapper.proxy.clients:
-			if client.username == username:
-				self.client = client
-				self.uuid = client.uuid
-				break
+		if not self.wrapper.proxy == False:
+			for client in self.wrapper.proxy.clients:
+				if client.username == username:
+					self.client = client
+					self.uuid = client.uuid
+					break
 		
 		self.data = storage.Storage(self.uuid, root="wrapper-data/players")
 		if "firstLoggedIn" not in self.data: self.data["firstLoggedIn"] = (time.time(), time.tzname)

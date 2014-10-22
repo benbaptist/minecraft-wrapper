@@ -12,7 +12,7 @@ shell-scripts = False
 [Backups]
 ;; Automatic backups with automatic backup pruning. Interval is in seconds. ;; 
 enabled = False
-backup-folders = ['server.properties', 'world', 'white-list.txt']
+backup-folders = ['server.properties', 'world']
 backup-interval = 3600
 backup-notification = True
 backup-location = backup-directory
