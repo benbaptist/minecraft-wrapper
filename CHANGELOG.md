@@ -4,6 +4,7 @@
 - Fixed "Backup file '%s' does not exist - will not backup" when conducting a backup
 - Fixed "AttributeError: 'bool' object has no attribute 'clients'" when not using proxy mode
 - Fixed users doing /me or /action in IRC displaying inappropriately on server
+- Fixed quit messages from IRC not displaying in-game (FINALLY!)
 - Complete rewrite of the Server class, and partial rewrite of the IRC class
   - Backup code has now been separated into the Backups class of backups.py
 - New events:
