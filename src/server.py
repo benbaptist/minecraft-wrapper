@@ -238,6 +238,12 @@ class Server:
 				name = self.stripSpecial(args(3))
 				achievement = argsAfter(9)
 				self.wrapper.callEvent("player.achievement", {"player": name, "achievement": achievement})
+			elif args(4) in deathPrefixes: # Player Death
+				name = self.stripSpecial(args(3))
+				deathMessage = self.config["Death"]["death-kick-messages"][random.randrange(0, len(self.config["Death"]["death-kick-messages"]))]
+				if self.config["Death"]["kick-on-death"] and name in self.config["Death"]["users-to-kick"]:
+					self.console("kick %s %s" % (name, deathMessage))
+				self.wrapper.callEvent("player.death", {"player": self.getPlayer(name), "death": argsAfter(4)})
 	# Event Handlers
 	def onChannelJoin(self, payload):
 		channel, nick = payload["channel"], payload["nick"]

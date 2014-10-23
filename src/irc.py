@@ -25,6 +25,7 @@ class IRC:
 		self.api.registerEvent("player.action", self.onPlayerAction)
 		self.api.registerEvent("player.logout", self.onPlayerLogout)
 		self.api.registerEvent("player.achievement", self.onPlayerAchievement)
+		self.api.registerEvent("player.death", self.onPlayerDeath)
 		self.api.registerEvent("server.say", self.onPlayerSay)
 	def init(self):
 		while not self.wrapper.halt:
@@ -61,27 +62,31 @@ class IRC:
 		else:
 			return False
 	def onPlayerLogin(self, payload):
-		player = payload["player"]
+		player = self.filterName(payload["player"])
 		self.msgQueue.append("[%s connected]" % player)
 	def onPlayerLogout(self, payload):
-		player = payload["player"]
+		player = self.filterName(payload["player"])
 		self.msgQueue.append("[%s disconnected]" % player)
 	def onPlayerMessage(self, payload):
-		player = payload["player"]
+		player = self.filterName(payload["player"])
 		message = payload["message"]
 		self.msgQueue.append("<%s> %s" % (player, message))
 	def onPlayerAction(self, payload):
-		player = payload["player"]
+		player = self.filterName(payload["player"])
 		action = payload["action"]
 		self.msgQueue.append("* %s %s" % (player, action))
 	def onPlayerSay(self, payload):
-		player = payload["player"]
+		player = self.filterName(payload["player"])
 		message = payload["message"]
 		self.msgQueue.append("[%s] %s" % (player, message))
 	def onPlayerAchievement(self, payload):
-		player = payload["player"]
+		player = self.filterName(payload["player"])
 		achievement = payload["achievement"]
 		self.msgQueue.append("%s has just earned the achievement %s" % (player, achievement))
+	def onPlayerDeath(self, payload):
+		player = self.filterName(payload["player"])
+		death = payload["death"]
+		self.msgQueue.append("%s %s" % (player, death))
 	def onServerStarting(self, payload):
 		self.msgQueue.append("Server starting...")
 	def onServerStarted(self, payload):
