@@ -1,4 +1,4 @@
-import socket, traceback, time, threading, api, globals
+import socket, traceback, time, threading, api, globals, random
 from config import Config
 class IRC:
 	def __init__(self, server, config, log, wrapper, address, port, nickname, channels):
@@ -9,6 +9,8 @@ class IRC:
 		self.address = address
 		self.port = port
 		self.nickname = nickname
+		self.originalNickname = nickname[0:]
+		self.nickAttempts = 0
 		self.channels = channels
 		self.log = log
 		self.timeout = False
@@ -43,10 +45,13 @@ class IRC:
 			self.log.info("Disconnected from IRC")
 			time.sleep(5)
 	def connect(self):
+		self.nickname = self.originalNickname[0:]
 		self.socket = socket.socket()
 		self.socket.connect((self.address, self.port))
 		self.socket.setblocking(120)
 		
+		self.auth()
+	def auth(self):
 		self.send("NICK %s" % self.nickname)
 		self.send("USER %s 0 * :%s" % (self.nickname, self.nickname))
 	def disconnect(self, message):
@@ -130,7 +135,7 @@ class IRC:
 			time.sleep(0.1)
 	def filterName(self, name):
 		if self.config["IRC"]["obstruct-nicknames"]:
-			return "_" + name[1:]
+			return "_" + str(name)[1:]
 		else:
 			return name 
 	def rawConsole(self, payload):
@@ -149,6 +154,18 @@ class IRC:
 			self.ready = True
 			self.log.info("Connected to IRC!")
 			self.state = True
+			self.nickAttempts = 0
+		if self.args(1) == "433":
+			self.log.info("Nickname '%s' already in use." % self.nickname)
+			self.nickAttempts += 1
+			if self.nickAttempts > 2:
+				name = bytearray(self.nickname)
+				for i in range(3):
+					name[len(self.nickname) / 3 * i] = chr(random.randrange(97, 122))
+				self.nickname = str(name)
+			else: self.nickname = self.nickname + "_"
+			self.auth()
+			self.log.info("Attemping to use nickname '%s'." % self.nickname)
 		if self.args(1) == "JOIN":
 			nick = self.args(0)[1:self.args(0).find("!")]
 			channel = self.args(2)[1:][:-1]

@@ -5,6 +5,9 @@
 - Fixed "AttributeError: 'bool' object has no attribute 'clients'" when not using proxy mode
 - Fixed users doing /me or /action in IRC displaying inappropriately on server
 - Fixed quit messages from IRC not displaying in-game (FINALLY!)
+- IRC will attempt different nicknames if the nick is already taken now
+  - The first two attempts will just tack two underscores to the end of the name
+  - Any futher attempts will randomize three different characters in the nickname
 - Complete rewrite of the Server class, and partial rewrite of the IRC class
   - Backup code has now been separated into the Backups class of backups.py
 - New events:
@@ -47,7 +50,7 @@ Server jumping still seems super buggy and weird. It only works in my test envir
 - New events: 
   - server.say(message): When /say is used in the console or by a player.
   - player.chatbox(player, json): Anything that appears in a player's chatbox. Can be aborted by returning False.
-- Added max-players option to proxy mode (thanks melair!)
+- Added max-players option to proxy mode (thanks Melair!)
 
 <h4>0.7.1</h4>
 - Fixed /wrapper not working in-game
@@ -151,12 +154,11 @@ Small update, but brings one much-needed change: the new configuration file syst
 - Finish adding all block IDs, item IDs and their respective damage values to items.py
 - Proxy mode error: Error -3 while decompressing data: incorrect header check
 - Proxy mode error: Error -5 while decompressing data: incomplete or truncated stream
-- The server.py and irc.py code SERIOUSLY needs a total rewrite. (I noticed this while fixing pre-1.7 support)
 - Duplicate IRC messages (possibily fixed)
 - Make URLs posted in IRC clickable inside of Minecraft
 - Allow fake !commands to be made with api.registerCommand()
 - Hibernation mode: Wrapper.py will be able to stop the server, but listen for incoming connections and will fire the server up when someone connects. It will make logging into the server slower if the server is hibernated, but otherwise it will reduce the average load of a server box running multiple servers.
 - Add custom /help command (the current /help command is the vanilla help command, and it doesn't show any Wrapper.py commands)
-- Move backup code, permissions code, plugin loading code, and command code into separate files for more organized code
+- Move permissions code, plugin loading code, and command code into separate files for more organized code
 - Split proxy.py into three files: __init__.py for the main proxy class, client.py for client class, server.py for server class, and network.py for core networking code (Packet class)
 - "Request too long" in IRC due to certain messages being too big

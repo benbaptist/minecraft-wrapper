@@ -38,7 +38,7 @@ Wrapper.py supports the following features:
 - Automatic Backups
 <ul>
 <li>Automatically delete the oldest backups once you reach amount of backups</li>
-<li>Specify precisely what folders and files get backed up</li>
+<li>Specify which folders and files get backed up</li>
 </ul>
 - IRC bridge
 <ul>

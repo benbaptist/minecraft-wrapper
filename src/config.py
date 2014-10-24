@@ -1,5 +1,6 @@
 import traceback, ConfigParser, ast, time, os, sys
-# configuration
+# I'm going to redo the configuration code soon!
+# Default Configuration File
 DEFAULT_CONFIG = """[General]
 command = java -jar minecraft_server.1.8.jar nogui
 auto-restart = True
@@ -25,7 +26,7 @@ server = benbaptist.com
 port = 6667
 nick = MinecraftServer
 channels = ['#main']
-command-character = !
+command-character = .
 show-channel-server = True
 autorun-irc-commands = ['COMMAND 1', 'COMMAND 2']
 obstruct-nicknames = False
@@ -92,11 +93,10 @@ class Config:
 			"server": "benbaptist.com", 
 			"port": 6667, 
 			"channels": ["#main"], 
-			"command-character": "!",
+			"command-character": ".",
 			"obstruct-nicknames": False,
 			"autorun-irc-commands": ['COMMAND 1', 'COMMAND 2'],
 			"show-channel-server": True,
-			"forward-commands-to-irc": False,
 			"control-from-irc": False,
 			"control-irc-pass": "password"
 		},
