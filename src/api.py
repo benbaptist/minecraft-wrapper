@@ -133,7 +133,7 @@ class Minecraft:
 	def isServerStarted(self):
 		""" Returns a boolean if the server is fully booted or not. """
 		if self.wrapper.server:
-			if self.wrapper.server.status == 2: return True
+			if self.wrapper.server.state == 2: return True
 		return False
 	def console(self, string):
 		""" Run a command in the Minecraft server's console. """
@@ -218,7 +218,7 @@ class Minecraft:
 #			if args(3) == "The" and args(4) == "block" and args(6) == "%d,%d,%d" % (x, y, z):
 #				return {"block": args(8)}
 	def getServer(self):
-		""" Returns the server object. """
+		""" Returns the server context. """
 		return self.wrapper.server
 class Player:
 	""" Player objects contains methods and data of a currently logged-in player. This object is destroyed upon logging off. """

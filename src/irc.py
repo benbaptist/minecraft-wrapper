@@ -259,28 +259,28 @@ class IRC:
 						elif args(0) == 'halt':
 							self.wrapper.halt = True
 							self.server.run("stop")
-							self.server.status = 3
+							self.server.state = 3
 						elif args(0) == 'restart':
 							self.server.run('stop')
-							self.server.status = 3
+							self.server.state = 3
 						elif args(0) == 'stop':
 							self.server.run('stop')
 							self.server.start = False
-							self.server.status = 3
+							self.server.state = 3
 							msg("Server stopping")
 						elif args(0) == 'start':
 							self.server.start = True
 							msg("Server starting")
 						elif args(0) == 'kill':
-							self.server.status = 0
+							self.server.state = 0
 							self.server.proc.kill()
 							msg("Server terminated.")
 						elif args(0) == 'status':
-							if self.server.status == 2: msg("Server is running.")
-							elif self.server.status == 1: msg("Server is currently starting/frozen.")
-							elif self.server.status == 0: msg("Server is stopped. Type 'start' to fire it back up.")
-							elif self.server.status == 3: msg("Server is in the process of shutting down/restarting.")
-							else: msg("Server is in unknown state. This is probably a Wrapper.py bug - report it! (state #%d)" % self.server.status)
+							if self.server.state == 2: msg("Server is running.")
+							elif self.server.state == 1: msg("Server is currently starting/frozen.")
+							elif self.server.state == 0: msg("Server is stopped. Type 'start' to fire it back up.")
+							elif self.server.state == 3: msg("Server is in the process of shutting down/restarting.")
+							else: msg("Server is in unknown state. This is probably a Wrapper.py bug - report it! (state #%d)" % self.server.state)
 						elif args(0) == "about":
 							msg("Wrapper.py by benbaptist - version %s (build #%d)" % (Config.version, globals.build))
 						else:

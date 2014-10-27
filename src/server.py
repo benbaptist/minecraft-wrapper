@@ -9,7 +9,7 @@ class Server:
 		self.backups = backups.Backups(wrapper)
 		
 		self.players = {}
-		self.status = 0 # 0 is off, 1 is starting, 2 is started, 3 is shutting down
+		self.state = 0 # 0 is off, 1 is starting, 2 is started, 3 is shutting down
 		self.bootTime = time.time()
 		self.boot = True
 		self.data = []
@@ -137,11 +137,11 @@ class Server:
 		
 	def changeState(self, state):
 		""" Change the boot state of the server """
-		self.status = state
-		if self.status == 0: self.wrapper.callEvent("server.stopped", None)
-		if self.status == 1: self.wrapper.callEvent("server.starting", None)
-		if self.status == 2: self.wrapper.callEvent("server.started", None)
-		if self.status == 3: self.wrapper.callEvent("server.stopping", None)
+		self.state = state
+		if self.state == 0: self.wrapper.callEvent("server.stopped", None)
+		if self.state == 1: self.wrapper.callEvent("server.starting", None)
+		if self.state == 2: self.wrapper.callEvent("server.started", None)
+		if self.state == 3: self.wrapper.callEvent("server.stopping", None)
 		self.wrapper.callEvent("server.state", {"state": state})
 	def __stdout__(self):
 		while not self.wrapper.halt:

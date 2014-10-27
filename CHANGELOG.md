@@ -1,6 +1,7 @@
 #Changelog#
 
 <h4>0.7.3</h4>
+** Bug Fixes **
 - Fixed "Backup file '%s' does not exist - will not backup" when conducting a backup
 - Fixed "AttributeError: 'bool' object has no attribute 'clients'" when not using proxy mode
 - Fixed users doing /me or /action in IRC displaying inappropriately on server
@@ -8,6 +9,8 @@
 - IRC will attempt different nicknames if the nick is already taken now
   - The first two attempts will just tack two underscores to the end of the name
   - Any futher attempts will randomize three different characters in the nickname
+  
+** Developer Changes **
 - Complete rewrite of the Server class, and partial rewrite of the IRC class
   - Backup code has now been separated into the Backups class of backups.py
 - New events:
@@ -22,6 +25,7 @@
   - irc.message(nick, channel, message) from irc.channelMessage
   - irc.join(nick, channel) from irc.channelJoin
   - irc.part(nick, channel) from irc.channelPart
+  - player.interact from player.action (player.action from right clicking blocks, not from /me)
 - New Server class methods (accessable with api.minecraft.getServer):
   - server.start(): Start the server (if it isn't already started)
   - server.restart(reason): Restart the server, and kick users with an optional reason (default: "Restarting server...")
@@ -30,6 +34,7 @@
   - player.achievement
 - New method: self.log.warn
 - All irc.* events use "nick" instead of "user" for the payload
+- server.status renamed to server.state (from api.minecraft.getServer())
  
 This update is relatively big and definitely makes some methods cleaner and more straight forward.
 

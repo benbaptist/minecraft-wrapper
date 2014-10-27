@@ -23,7 +23,7 @@ class Proxy:
 		self.publicKey = encryption.encode_public_key(self.privateKey)
 	def host(self):
 		# get the protocol version from the server
-		while not self.wrapper.server.status == 2:
+		while not self.wrapper.server.state == 2:
 			time.sleep(.2)
 		self.pollServer()
 		while not self.socket:
@@ -400,11 +400,10 @@ class Client: # handle client/game connection
 				data = self.read("position:position|byte:face|slot:item")
 				position = data["position"]
 			position = data["position"]
-			if position == None:
-				if not self.wrapper.callEvent("player.action", {"player": self.getPlayerObject()}): return False
-			else:
+			if not position == None:
 				face = data["face"]
-				if face == 0: # Compensate
+				if not self.wrapper.callEvent("player.interact", {"player": self.getPlayerObject(), "position": position}): return False
+				if face == 0: # Compensate for block placement coordinates
 					position = (position[0], position[1] - 1, position[2])
 				elif face == 1:
 					position = (position[0], position[1] + 1, position[2])
