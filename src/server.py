@@ -214,6 +214,7 @@ class Server:
 				self.bootTime = time.time()
 			elif args(3) == "Preparing" and args(4) == "level": # Getting world name
 				self.worldName = args(5).replace('"', "")
+				self.world = world.World()
 			elif args(3)[0] == "<": # Player Message
 				name = self.stripSpecial(args(3)[1:-1])
 				message = self.stripSpecial(argsAfter(4))

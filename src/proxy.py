@@ -3,6 +3,7 @@
 # this could definitely use some code-cleaning.  
 import socket, threading, struct, StringIO, time, traceback, json, random, hashlib, os, zlib, binascii, uuid, md5, storage, world
 from config import Config
+from api.entity import Entity
 try: # Weird system for handling non-standard modules
 	import encryption, requests
 	IMPORT_SUCCESS = True
@@ -164,6 +165,7 @@ class Client: # handle client/game connection
 		self.position = (0, 0, 0)
 		self.inventory = {}
 		self.slot = 0
+		self.riding = None
 		self.windowCounter = 2
 		for i in range(45): self.inventory[i] = None
 	def connect(self, ip=None, port=None):
@@ -246,7 +248,7 @@ class Client: # handle client/game connection
 				self.version = data["version"]
 				self.wrapper.server.protocolVersion = self.version
 				self.packet.version = self.version
-				if not self.wrapper.server.status == 2:
+				if not self.wrapper.server.state == 2:
 					self.disconnect("Server has not finished booting. Please try connecting again in a few seconds")
 					return
 				if data["state"] in (1, 2):
@@ -513,6 +515,13 @@ class Server: # Handle Server Connection
 			self.client.abort = True
 			self.client.server = None
 			self.client.close()
+	def getPlayerByEID(self, eid):
+		for client in self.wrapper.proxy.clients:
+			if client.server.eid == eid: return self.getPlayerContext(client.username)
+		return False
+	def getPlayerContext(self, username):
+		try: return self.wrapper.server.players[username]
+		except: return False
 	def flush(self):
 		while not self.abort:
 			self.packet.flush()
@@ -540,11 +549,14 @@ class Server: # Handle Server Connection
 				data = self.read("int:eid|ubyte:gamemode|byte:dimension|ubyte:difficulty|ubyte:max_players|string:level_type")
 				self.client.gamemode = data["gamemode"]
 				self.client.dimension = data["dimension"]
+				self.eid = data["eid"]  # This is the EID of the player on this particular server - not always the EID that the client is aware of 
 				if self.client.handshake:
 					self.client.send(0x07, "int|ubyte|ubyte|string", (self.client.dimension, data["difficulty"], data["gamemode"], data["level_type"]))
+					self.eid = data["eid"]
 					self.safe = True
 					return False
 				else:
+					self.client.eid = data["eid"]
 					self.safe = True
 				self.client.handshake = True
 			elif self.state == 2:
@@ -575,6 +587,10 @@ class Server: # Handle Server Connection
 		if id == 0x05:
 			data = self.read("int:x|int:y|int:z")
 			self.wrapper.server.spawnPoint = (data["x"], data["y"], data["z"])
+		if id == 0x08: # Player Position and Look
+			data = self.read("double:x|double:y|double:z|float:yaw|float:pitch")
+			x, y, z, yaw, pitch = data["x"], data["y"], data["z"], data["yaw"], data["pitch"]
+			self.client.position = (x, y, z)
 		if id == 0x0c: # Spawn Player
 			data = self.read("varint:eid|uuid:uuid|int:x|int:y|int:z|byte:yaw|byte:pitch|short:item|rest:metadata")
 			if self.proxy.getClientByServerUUID(data["uuid"]):
@@ -589,10 +605,34 @@ class Server: # Handle Server Connection
 					data["item"],
 					data["metadata"]))
 				return False
+		if id == 0x0e: # Spawn Object
+			data = self.read("varint:eid|byte:type|int:x|int:y|int:z|byte:pitch|byte:yaw")
+			eid, type, x, y, z, pitch, yaw = data["eid"], data["type"], data["x"], data["y"], data["z"], data["pitch"], data["yaw"]
+			self.wrapper.server.world.entities[data["eid"]] = Entity(eid, type, (x, y, z), (pitch, yaw), True)
+		if id == 0x0f: # Spawn Mob
+			data = self.read("varint:eid|ubyte:type|int:x|int:y|int:z|byte:pitch|byte:yaw|byte:head_pitch")
+			eid, type, x, y, z, pitch, yaw, head_pitch = data["eid"], data["type"], data["x"], data["y"], data["z"], data["pitch"], data["yaw"], data["head_pitch"]
+			self.wrapper.server.world.entities[data["eid"]] = Entity(eid, type, (x, y, z), (pitch, yaw, head_pitch), False)
 	#	if id == 0x21: # Chunk Data
 #			if self.client.packet.compressThreshold == -1:
 #				print "CLIENT COMPRESSION ENABLED"
 #				self.client.packet.setCompression(256)
+		if id == 0x15: # Entity Relative Move
+			data = self.read("varint:eid|byte:dx|byte:dy|byte:dz")
+			if not self.wrapper.server.world.getEntityByEID(data["eid"]) == None:
+				self.wrapper.server.world.getEntityByEID(data["eid"]).move((data["dx"], data["dy"], data["dz"]))
+		if id == 0x1b: # Attach Entity
+			data = self.read("int:eid|int:vid|bool:leash")
+			eid, vid, leash = data["eid"], data["vid"], data["leash"]
+			player = self.getPlayerByEID(eid)
+			if player == None: return
+			if eid == self.eid:
+				if vid == -1:
+					self.wrapper.callEvent("player.unmount", {"player": player})
+					self.client.riding = None
+				else:
+					self.wrapper.callEvent("player.mount", {"player": player, "vehicle_id": vid, "leash": leash})
+					self.client.riding = self.wrapper.server.world.getEntityByEID(vid)
 		if id == 0x26: # Map Chunk Bulk
 			data = self.read("bool:skylight|varint:chunks")
 			chunks = []

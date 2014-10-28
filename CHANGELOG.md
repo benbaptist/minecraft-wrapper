@@ -1,7 +1,7 @@
 #Changelog#
 
 <h4>0.7.3</h4>
-** Bug Fixes **
+**Bug Fixes**
 - Fixed "Backup file '%s' does not exist - will not backup" when conducting a backup
 - Fixed "AttributeError: 'bool' object has no attribute 'clients'" when not using proxy mode
 - Fixed users doing /me or /action in IRC displaying inappropriately on server
@@ -10,7 +10,7 @@
   - The first two attempts will just tack two underscores to the end of the name
   - Any futher attempts will randomize three different characters in the nickname
   
-** Developer Changes **
+**Developer Changes**
 - Complete rewrite of the Server class, and partial rewrite of the IRC class
   - Backup code has now been separated into the Backups class of backups.py
 - New events:
@@ -21,6 +21,8 @@
   - server.state(state): All of the above events consolidated into one event
   - irc.action(nick, channel, message): User doing /me or /action in an IRC channel
   - irc.quit(nick, channel, message): User quitting from IRC. 'channel' returns None currently. 'message' is their QUIT message
+  - player.mount(player, vehicle_id, leash): Called when a player enters a vehicle, such as a boat, minecart, or horse.
+  - player.unmount(player): Called when a player leaves a vehicle that they previously entered.
 - Renamed events:
   - irc.message(nick, channel, message) from irc.channelMessage
   - irc.join(nick, channel) from irc.channelJoin
@@ -35,8 +37,9 @@
 - New method: self.log.warn
 - All irc.* events use "nick" instead of "user" for the payload
 - server.status renamed to server.state (from api.minecraft.getServer())
+- Entity system being implemented
  
-This update is relatively big and definitely makes some methods cleaner and more straight forward.
+This update is relatively big and definitely makes some API methods cleaner. 
 
 <h4>0.7.2</h4>
 Server jumping still seems super buggy and weird. It only works in my test environment, but fails in other environments. I have no clue why.

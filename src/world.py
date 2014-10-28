@@ -2,6 +2,7 @@ import math, struct
 class World:
 	def __init__(self):
 		self.chunks = {}
+		self.entities = {}
 	def getBlock(self, pos):
 		x, y, z = pos
 		chunkX, chunkZ = int(x / 16), int(z / 16)
@@ -11,6 +12,9 @@ class World:
 	def setChunk(self, x, z, chunk):
 		if x not in self.chunks: self.chunks[x] = {}
 		self.chunks[x][z] = chunk
+	def getEntityByEID(self, eid):
+		""" Returns the entity context, or None if the specified entity ID doesn't exist. """
+		if eid in self.entities: return self.entities[eid]
 class Chunk:
 	def __init__(self, bytearray, x, z):
 		self.ids = struct.unpack("<" + ("H" * (len(bytearray) / 2)), bytearray)
