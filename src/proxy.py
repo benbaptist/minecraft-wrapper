@@ -1,9 +1,10 @@
 # I'll probably split this file into more parts later on, like such: 
 # proxy folder: __init__.py (Proxy), client.py (Client), server.py (Server), network.py (Packet), bot.py (will contain Bot, for bot code)
 # this could definitely use some code-cleaning.  
-import socket, threading, struct, StringIO, time, traceback, json, random, hashlib, os, zlib, binascii, uuid, md5, storage, world
+import socket, threading, struct, StringIO, time, traceback, json, random, hashlib, os, zlib, binascii, uuid, md5, storage
 from config import Config
 from api.entity import Entity
+from api.world import World
 try: # Weird system for handling non-standard modules
 	import encryption, requests
 	IMPORT_SUCCESS = True

@@ -1,6 +1,9 @@
 #Changelog#
 
 <h4>0.7.3</h4>
+Before I release 0.7.3, I'd like to add support for pre-1.7 back again, fix #38, and make [#channelName] clickable in-game.
+If I have time, I'll add web mode, albiet with an inferior design and perhaps not all of the features. 
+
 **Bug Fixes**
 - Fixed "Backup file '%s' does not exist - will not backup" when conducting a backup
 - Fixed "AttributeError: 'bool' object has no attribute 'clients'" when not using proxy mode
@@ -47,7 +50,7 @@
 - All irc.* events use "nick" instead of "user" for the payload
 - server.status renamed to server.state (from api.minecraft.getServer())
 - Entity system being implemented
- 
+
 This update is relatively big and definitely makes some API methods cleaner. 
 
 <h4>0.7.2</h4>

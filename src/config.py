@@ -30,7 +30,7 @@ command-character = .
 show-channel-server = True
 autorun-irc-commands = ['COMMAND 1', 'COMMAND 2']
 obstruct-nicknames = False
-control-from-irc = True
+control-from-irc = False
 control-irc-pass = password
 
 [Death]
