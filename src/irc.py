@@ -215,11 +215,11 @@ class IRC:
 				else:
 					message = message.decode("utf-8", "ignore")
 					if args(0) == "\x01ACTION":
-						self.wrapper.callEvent("irc.action", {"nick": nick, "channel": channel, "action": argsAfter(1)})
-						self.log.info("[%s] * %s %s" % (channel, nick, argsAfter(1)))
+						self.wrapper.callEvent("irc.action", {"nick": nick, "channel": channel, "action": argsAfter(1)[:-1]})
+						self.log.info("[%s] * %s %s" % (channel, nick, argsAfter(1)[:-1]))
 					else:
 						self.wrapper.callEvent("irc.message", {"nick": nick, "channel": channel, "message": message})
-						self.log.info("[%s] (%s) %s" % (channel, nick, message))
+						self.log.info("[%s] <%s> %s" % (channel, nick, message))
 			elif self.config["IRC"]["control-from-irc"]:
 				self.log.info("[PRIVATE] (%s) %s" % (nick, message))
 				def msg(string):

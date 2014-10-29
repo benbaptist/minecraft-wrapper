@@ -630,9 +630,11 @@ class Server: # Handle Server Connection
 				if vid == -1:
 					self.wrapper.callEvent("player.unmount", {"player": player})
 					self.client.riding = None
+					self.wrapper.server.world.getEntityByEID(vid).rodeBy = None
 				else:
 					self.wrapper.callEvent("player.mount", {"player": player, "vehicle_id": vid, "leash": leash})
 					self.client.riding = self.wrapper.server.world.getEntityByEID(vid)
+					self.wrapper.server.world.getEntityByEID(vid).rodeBy = player
 		if id == 0x26: # Map Chunk Bulk
 			data = self.read("bool:skylight|varint:chunks")
 			chunks = []

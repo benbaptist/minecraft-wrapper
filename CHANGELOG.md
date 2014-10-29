@@ -9,10 +9,19 @@
 - IRC will attempt different nicknames if the nick is already taken now
   - The first two attempts will just tack two underscores to the end of the name
   - Any futher attempts will randomize three different characters in the nickname
+- Links posted inside of IRC will be clickable in-game
   
 **Developer Changes**
-- Complete rewrite of the Server class, and partial rewrite of the IRC class
+- New formatting code: &@ for opening URLs when clicked in game chat
+  - Anything sandwiched between two &@ codes will be clickable. i.e. &@http://benbaptist.com/&@
+- Big rewrites and internal code organization:
+  - Complete rewrite of the Server class, and partial rewrite of the IRC class
   - Backup code has now been separated into the Backups class of backups.py
+  - api.py is now a folder with four individual files:
+    - __init__.py contains API class
+    - minecraft.py contains Minecraft class
+    - player.py contains Player class
+    - entity.py contains Entity class and list
 - New events:
   - server.starting: Called just before the server begins to boot
   - server.started: Once the server reports Done in the console and is ready for players
@@ -158,12 +167,9 @@ Small update, but brings one much-needed change: the new configuration file syst
 <li> Move backup code into a new class, backup.py</li>
 <li> Redo function names and general cleanup in in server.py - names are very confusing at the moment (fix start & stop functions, console functions)</li>
 </ul>
-- Fix messages not sending from IRC to server with show-channel off
 - Finish adding all block IDs, item IDs and their respective damage values to items.py
 - Proxy mode error: Error -3 while decompressing data: incorrect header check
 - Proxy mode error: Error -5 while decompressing data: incomplete or truncated stream
-- Duplicate IRC messages (possibily fixed)
-- Make URLs posted in IRC clickable inside of Minecraft
 - Allow fake !commands to be made with api.registerCommand()
 - Hibernation mode: Wrapper.py will be able to stop the server, but listen for incoming connections and will fire the server up when someone connects. It will make logging into the server slower if the server is hibernated, but otherwise it will reduce the average load of a server box running multiple servers.
 - Add custom /help command (the current /help command is the vanilla help command, and it doesn't show any Wrapper.py commands)

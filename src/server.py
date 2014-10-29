@@ -1,4 +1,6 @@
-import socket, datetime, time, sys, threading, random, subprocess, os, json, signal, traceback, api, world, StringIO, ConfigParser, backups
+import socket, datetime, time, sys, threading, random, subprocess, os, json, signal, traceback, api, StringIO, ConfigParser, backups
+from api.player import Player
+from api.world import World
 class Server:
 	def __init__(self, args, log, config, wrapper):
 		self.log = log
@@ -18,7 +20,7 @@ class Server:
 		self.worldName = None
 		self.protocolVersion = -1 # -1 until proxy mode checks the server's MOTD on boot
 		self.version = None
-		self.world = world.World() 
+		self.world = None
 		
 		# Read server.properties and extract some information out of it
 		if os.path.exists("server.properties"):
@@ -77,15 +79,19 @@ class Server:
 		underline = False
 		obfuscated = False
 		strikethrough = False
+		url = False
 		color = "white"
 		current = ""; it = iter(xrange(len(message)))
 		for i in it:
 			char = message[i]
 			if char is not "&":
+				if char == " ": url = False
 				current += char
 			else:
+				if url: clickEvent = {"action": "open_url", "value": current}
+				else: clickEvent = {}
 				extras.append({"text": current, "color": color, "obfuscated": obfuscated, 
-					"underlined": underline, "bold": bold, "italic": italic, "strikethrough": strikethrough})
+					"underlined": underline, "bold": bold, "italic": italic, "strikethrough": strikethrough, "clickEvent": clickEvent})
 				current = ""
 				try: code = message[i+1]
 				except: break
@@ -98,12 +104,14 @@ class Server:
 				elif code == "n": underline = True
 				elif code == "o": italic = True
 				elif code == "&": current += "&"
+				elif code == "@": url = not url
 				elif code == "r":
 					bold = False
 					italic = False
 					underline = False
 					obfuscated = False
 					strikethrough = False
+					url = False
 					color = "white"
 				it.next()
 		extras.append({"text": current, "color": color, "obfuscated": obfuscated, 
@@ -214,7 +222,7 @@ class Server:
 				self.bootTime = time.time()
 			elif args(3) == "Preparing" and args(4) == "level": # Getting world name
 				self.worldName = args(5).replace('"', "")
-				self.world = world.World()
+				self.world = World(self.worldName)
 			elif args(3)[0] == "<": # Player Message
 				name = self.stripSpecial(args(3)[1:-1])
 				message = self.stripSpecial(argsAfter(4))
@@ -246,21 +254,33 @@ class Server:
 					self.console("kick %s %s" % (name, deathMessage))
 				self.wrapper.callEvent("player.death", {"player": self.getPlayer(name), "death": argsAfter(4)})
 	# Event Handlers
+	def messageFromChannel(self, channel, message):
+		if self.config["IRC"]["show-channel-server"]:
+			self.broadcast("&6[%s] %s" % (channel, message))
+		else:
+			self.broadcast(message)
 	def onChannelJoin(self, payload):
 		channel, nick = payload["channel"], payload["nick"]
-		self.broadcast("&6[%s] &a%s &rjoined the channel" % (channel, nick))
+		self.messageFromChannel(channel, "&a%s &rjoined the channel" % nick)
 	def onChannelPart(self, payload):
 		channel, nick = payload["channel"], payload["nick"]
-		self.broadcast("&6[%s] &a%s &rparted the channel" % (channel, nick))
+		self.messageFromChannel(channel, "&a%s &rparted the channel" % nick)
 	def onChannelMessage(self, payload):
 		channel, nick, message = payload["channel"], payload["nick"], payload["message"]
-		self.broadcast("&6[%s] &a(%s) &r%s" % (channel, nick, message))
+		final = ""
+		for i,chunk in enumerate(message.split(" ")):
+			if not i == 0: final += " "
+			try: 
+				if chunk[0:7] == "http://": final += "&b&n&@%s&@&r" % chunk
+				else: final += chunk
+			except: final += chunk
+		self.messageFromChannel(channel, "&a<%s> &r%s" % (nick, final))
 	def onChannelAction(self, payload):
 		channel, nick, action = payload["channel"], payload["nick"], payload["action"]
-		self.broadcast("&6[%s] &a* %s &r%s" % (channel, nick, action))
+		self.messageFromChannel(channel, "&a* %s &r%s" % (nick, action))
 	def onChannelQuit(self, payload):
 		channel, nick, message = payload["channel"], payload["nick"], payload["message"]
-		self.broadcast("&6[%s] &a%s &rquit: %s" % (channel, nick, message))
+		self.messageFromChannel(channel, "&a%s &rquit: %s" % (nick, message))
 	def onTick(self, payload):
 		""" Called every second, and used for handling cron-like jobs """
 		if self.config["General"]["timed-reboot"]:
