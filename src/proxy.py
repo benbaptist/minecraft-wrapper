@@ -354,7 +354,11 @@ class Client: # handle client/game connection
 					self.packet.setCompression(256)
 					
 				# Ban code should go here
-				
+
+				if not self.wrapper.callEvent("player.preLogin", {"player": self.username, "online_uuid": self.uuid, "offline_uuid": self.serverUUID, "ip": self.addr[0]}):
+					self.disconnect("Login denied.")
+					return False
+
 				self.send(0x02, "string|string", (str(self.uuid), self.username))
 				self.state = 3
 				self.connect()
