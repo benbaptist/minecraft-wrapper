@@ -131,7 +131,6 @@ class Config:
 			"public-stats": True
 		}}
 
-		
 		for section in sections:
 			try:
 				keys = self.parser.items(section)

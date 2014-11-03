@@ -35,6 +35,7 @@ If I have time, I'll add web mode, albiet with an inferior design and perhaps no
   - irc.quit(nick, channel, message): User quitting from IRC. 'channel' returns None currently. 'message' is their QUIT message
   - player.mount(player, vehicle_id, leash): Called when a player enters a vehicle, such as a boat, minecart, or horse.
   - player.unmount(player): Called when a player leaves a vehicle that they previously entered.
+  - player.preLogin(player, online_uuid, offline_uuid, ip): 
 - Renamed events:
   - irc.message(nick, channel, message) from irc.channelMessage
   - irc.join(nick, channel) from irc.channelJoin
@@ -171,9 +172,8 @@ Small update, but brings one much-needed change: the new configuration file syst
 <li> Redo function names and general cleanup in in server.py - names are very confusing at the moment (fix start & stop functions, console functions)</li>
 </ul>
 - Finish adding all block IDs, item IDs and their respective damage values to items.py
-- Proxy mode error: Error -3 while decompressing data: incorrect header check
-- Proxy mode error: Error -5 while decompressing data: incomplete or truncated stream
-- Allow fake !commands to be made with api.registerCommand()
+  - Might be better just to use some sort of pre-existing JSON list
+- Allow fake !commands to be made with api.registerCommand() (for non-proxy mode setups)
 - Hibernation mode: Wrapper.py will be able to stop the server, but listen for incoming connections and will fire the server up when someone connects. It will make logging into the server slower if the server is hibernated, but otherwise it will reduce the average load of a server box running multiple servers.
 - Add custom /help command (the current /help command is the vanilla help command, and it doesn't show any Wrapper.py commands)
 - Move permissions code, plugin loading code, and command code into separate files for more organized code

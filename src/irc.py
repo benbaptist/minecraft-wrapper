@@ -211,7 +211,7 @@ class IRC:
 						users += "%s " % user
 					self.send("PRIVMSG %s :There are currently %s users on the server: %s" % (channel, len(self.server.players), users))
 				elif message.strip() == ".about":
-					self.send("PRIVMSG %s :Wrapper.py version %s (build #%d)" % (channel, Config.version, globals.build))
+					self.send("PRIVMSG %s :Wrapper.py Version %s" % (channel, self.wrapper.getBuildString()))
 				else:
 					message = message.decode("utf-8", "ignore")
 					if args(0) == "\x01ACTION":
