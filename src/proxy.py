@@ -580,7 +580,7 @@ class Server: # Handle Server Connection
 					if data["translate"] == "chat.type.admin": return False
 				except: pass
 		if id == 0x03:
-			if self.state == 2:
+			if self.state == 2: # Set Compression 
 				data = self.read("varint:threshold")
 				if not data["threshold"] == -1:
 					self.packet.compression = True
@@ -635,7 +635,6 @@ class Server: # Handle Server Connection
 				if vid == -1:
 					self.wrapper.callEvent("player.unmount", {"player": player})
 					self.client.riding = None
-					self.wrapper.server.world.getEntityByEID(vid).rodeBy = None
 				else:
 					self.wrapper.callEvent("player.mount", {"player": player, "vehicle_id": vid, "leash": leash})
 					self.client.riding = self.wrapper.server.world.getEntityByEID(vid)

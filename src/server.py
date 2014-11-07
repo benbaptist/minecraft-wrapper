@@ -1,4 +1,4 @@
-import socket, datetime, time, sys, threading, random, subprocess, os, json, signal, traceback, api, StringIO, ConfigParser, backups
+import socket, datetime, time, sys, threading, random, subprocess, os, json, signal, traceback, api, StringIO, ConfigParser, backups, sys, codecs
 from api.player import Player
 from api.world import World
 class Server:
@@ -67,9 +67,33 @@ class Server:
 	def broadcast(self, message=""):
 		""" Broadcasts the specified message to all clients connected. message can be a JSON chat object, or a string with formatting codes using the & as a prefix """
 		if isinstance(message, dict):
-			self.console("tellraw @a %s" % json.dumps(message))
+			if self.config["General"]["pre-1.7-mode"]:
+				self.console("say %s" % self.chatToColorCodes(message))
+			else:
+				self.console("tellraw @a %s" % json.dumps(message))
 		else:
-			self.console("tellraw @a %s" % self.processColorCodes(message))
+			if self.config["General"]["pre-1.7-mode"]:
+				print self.chatToColorCodes(json.loads(self.processColorCodes(message)))
+				self.console("say %s" % self.chatToColorCodes(json.loads(self.processColorCodes(message))))
+			else:
+				self.console("tellraw @a %s" % json.dumps(self.processColorCodes(message)))
+	def chatToColorCodes(self, json):
+		total = ""
+		def getColorCode(i):
+			for l in api.API.colorCodes:
+				if api.API.colorCodes[l] == i:
+					return "\xa7\xc2" + l
+			return ""
+		def handleChunk(j):
+			total = ""
+			if "color" in j: total += getColorCode(j["color"]).decode("ascii")
+			if "text" in j: total += j["text"].decode("ascii")
+			return total
+		total += handleChunk(json)
+		if "extra" in json:
+			for i in json["extra"]:
+				total += handleChunk(i)
+		return total
 	def processColorCodes(self, message):
 		""" Used internally to process old-style color-codes with the & symbol, and returns a JSON chat object. """
 		message = message.encode('ascii', 'ignore')
@@ -141,8 +165,7 @@ class Server:
 	def console(self, command):
 		""" Execute a console command on the server """
 		try: self.proc.stdin.write("%s\n" % command)
-		except: pass
-		
+		except: self.log.getTraceback()
 	def changeState(self, state):
 		""" Change the boot state of the server """
 		self.state = state
@@ -167,7 +190,7 @@ class Server:
 				data = self.proc.stderr.readline()
 				if len(data) > 0:
 					for line in data.split("\n"):
-						self.data.append(line)
+						self.data.append(line.replace("\r", ""))
 			except:
 				time.sleep(0.1)
 				continue
@@ -242,6 +265,46 @@ class Server:
 				name = self.stripSpecial(args(3)[1:-1])
 				message = self.stripSpecial(argsAfter(4))
 				original = argsAfter(3)
+				self.wrapper.callEvent("server.say", {"player": name, "message": message, "original": original})
+			elif args(4) == "has" and args(8) == "achievement": # Player Achievement
+				name = self.stripSpecial(args(3))
+				achievement = argsAfter(9)
+				self.wrapper.callEvent("player.achievement", {"player": name, "achievement": achievement})
+			elif args(4) in deathPrefixes: # Player Death
+				name = self.stripSpecial(args(3))
+				deathMessage = self.config["Death"]["death-kick-messages"][random.randrange(0, len(self.config["Death"]["death-kick-messages"]))]
+				if self.config["Death"]["kick-on-death"] and name in self.config["Death"]["users-to-kick"]:
+					self.console("kick %s %s" % (name, deathMessage))
+				self.wrapper.callEvent("player.death", {"player": self.getPlayer(name), "death": argsAfter(4)})
+		else:
+			if len(args(3)) < 1: return
+			if args(3) == "Done": # Confirmation that the server finished booting
+				self.changeState(2)
+				self.log.info("Server started")
+				self.bootTime = time.time()
+			elif args(3) == "Preparing" and args(4) == "level": # Getting world name
+				self.worldName = args(5).replace('"', "")
+				self.world = World(self.worldName)
+			elif args(3)[0] == "<": # Player Message
+				name = self.stripSpecial(args(3)[1:-1])
+				message = self.stripSpecial(argsAfter(4))
+				original = argsAfter(3)
+				self.wrapper.callEvent("player.message", {"player": self.getPlayer(name), "message": message, "original": original})
+			elif args(4) == "logged": # Player Login
+				name = self.stripSpecial(args(3)[0:args(3).find("[")])
+				self.login(name)
+			elif args(4) == "lost": # Player Logout
+				name = args(3)
+				self.logout(name)
+			elif args(3) == "*":
+				name = self.stripSpecial(args(4))
+				message = self.stripSpecial(argsAfter(5))
+				self.wrapper.callEvent("player.action", {"player": self.getPlayer(name), "action": message})
+			elif args(3)[0] == "[" and args(3)[-1] == "]": # /say command
+				name = self.stripSpecial(args(3)[1:-1])
+				message = self.stripSpecial(argsAfter(4))
+				original = argsAfter(3)
+				if name == "Server": return
 				self.wrapper.callEvent("server.say", {"player": name, "message": message, "original": original})
 			elif args(4) == "has" and args(8) == "achievement": # Player Achievement
 				name = self.stripSpecial(args(3))

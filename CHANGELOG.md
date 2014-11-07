@@ -1,8 +1,9 @@
 #Changelog#
 
 <h4>0.7.3</h4>
-Before I release 0.7.3, I'd like to add support for pre-1.7 back again, fix #38, and make [#channelName] clickable in-game.
-If I have time, I'll add web mode, albiet with an inferior design and perhaps not all of the features. 
+Before I release 0.7.3, I'd like to add support for pre-1.7 back again, and fix #38. Maybe I should add the auto-updater too.
+
+Pre-1.7 support is mostly there, but Python gives errors on stdin.write() due to the color codes causing encoding errors. I hate Python 2.x's encoding bullcrap. 
 
 **Bug Fixes**
 - Fixed "Backup file '%s' does not exist - will not backup" when conducting a backup
@@ -13,6 +14,7 @@ If I have time, I'll add web mode, albiet with an inferior design and perhaps no
   - The first two attempts will just tack two underscores to the end of the name
   - Any futher attempts will randomize three different characters in the nickname
 - Links posted inside of IRC will be clickable in-game
+- Players can now leave boats/minecarts again
   
 **Developer Changes**
 - New formatting code: &@ for opening URLs when clicked in game chat
@@ -155,7 +157,6 @@ Small update, but brings one much-needed change: the new configuration file syst
 <li>If I make it a separate project, it might use Wrapper.py as a backend for booting servers for extra features, for the sake of not duping code across projects</li>
 </ul>
 - Ability to halt server without shutting down wrapper - for fine server control
-- Potentially implement region-fixer in Wrapper.py
 - Update version of Minecraft server automatically
 - Update Wrapper.py automatically or with a one-click update
 - First-run setup wizard for new setups
@@ -165,12 +166,7 @@ Small update, but brings one much-needed change: the new configuration file syst
 <li>Add support for comments</li>
 <li>Allow manual ordering of the options, to make configuration files a bit easier on the eyes</li>
 </ul>
-- Fix ban system for proxy-based setups
-- Clean up & organize code... it's a tad cluttery right now! (this is only semi-true now, I've cleaned it up quite a bit)
-<ul>
-<li> Move backup code into a new class, backup.py</li>
-<li> Redo function names and general cleanup in in server.py - names are very confusing at the moment (fix start & stop functions, console functions)</li>
-</ul>
+- Import bans from the vanilla server when using proxy mode for the first time
 - Finish adding all block IDs, item IDs and their respective damage values to items.py
   - Might be better just to use some sort of pre-existing JSON list
 - Allow fake !commands to be made with api.registerCommand() (for non-proxy mode setups)
@@ -179,3 +175,4 @@ Small update, but brings one much-needed change: the new configuration file syst
 - Move permissions code, plugin loading code, and command code into separate files for more organized code
 - Split proxy.py into three files: __init__.py for the main proxy class, client.py for client class, server.py for server class, and network.py for core networking code (Packet class)
 - "Request too long" in IRC due to certain messages being too big
+- Can't dismount entities for some reason
