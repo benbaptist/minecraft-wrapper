@@ -50,7 +50,6 @@ class Backups:
 			if self.config["Backups"]["backup-notification"]:
 				self.broadcast("&cBacking up... lag may occur!")
 			timestamp = int(time.time())
-			filename = "backup-%s.tar" % datetime.datetime.fromtimestamp(int(timestamp)).strftime("%Y-%m-%d_%H:%M:%S")
 			self.console("save-all")
 			self.console("save-off")
 			time.sleep(0.5)
@@ -58,12 +57,17 @@ class Backups:
 			if not os.path.exists(str(self.config["Backups"]["backup-location"])):
 				os.mkdir(self.config["Backups"]["backup-location"])
 			
-			arguments = ["tar", "cfpv", '%s/%s' % (self.config["Backups"]["backup-location"], filename)]
+			filename = "backup-%s.tar" % datetime.datetime.fromtimestamp(int(timestamp)).strftime("%Y-%m-%d_%H:%M:%S")
+			if self.config["Backups"]["backup-compression"]:
+				filename += ".gz"
+				arguments = ["tar", "czf", "%s/%s" % (self.config["Backups"]["backup-location"], filename)]
+			else:
+				arguments = ["tar", "cfpv", "%s/%s" % (self.config["Backups"]["backup-location"], filename)]
 			for file in self.config["Backups"]["backup-folders"]:
 				if os.path.exists(file):
 					arguments.append(file)
 				else:
-					self.log.error("Backup file '%s' does not exist - will not backup" % file)
+					self.log.warn("Backup file '%s' does not exist" % file)
 			statusCode = os.system(" ".join(arguments))
 			self.console("save-on")
 			if self.config["Backups"]["backup-notification"]:

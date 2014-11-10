@@ -17,6 +17,7 @@ backup-folders = ['server.properties', 'world']
 backup-interval = 3600
 backup-notification = True
 backup-location = backup-directory
+backup-compression = False
 backups-keep = 10
 
 [IRC]
@@ -106,7 +107,8 @@ class Config:
 			"backup-location": "backup-directory",
 			"backup-folders": ['server.properties', 'world'],
 			"backup-interval": 3600,
-			"backup-notification": True
+			"backup-notification": True,
+			"backup-compression": False
 		},
 		"Death":{
 			"kick-on-death": False,

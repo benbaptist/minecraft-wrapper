@@ -247,8 +247,10 @@ class Client: # handle client/game connection
 			if self.state == 0:
 				data = self.read("varint:version|string:address|ushort:port|varint:state")
 				self.version = data["version"]
-				self.wrapper.server.protocolVersion = self.version
 				self.packet.version = self.version
+				if not self.wrapper.server.protocolVersion == self.version:
+					self.disconnect("You're not identical with the server")
+					return
 				if not self.wrapper.server.state == 2:
 					self.disconnect("Server has not finished booting. Please try connecting again in a few seconds")
 					return
@@ -282,7 +284,10 @@ class Client: # handle client/game connection
 					self.state = 4
 					self.verifyToken = encryption.generate_challenge_token()
 					self.serverID = encryption.generate_server_id()
-					self.send(0x01, "string|bytearray|bytearray", (self.serverID, self.publicKey, self.verifyToken))
+					if self.wrapper.server.protocolVersion < 6: # 1.7.x versions
+						self.send(0x01, "string|bytearray_short|bytearray_short", (self.serverID, self.publicKey, self.verifyToken))
+					else:
+						self.send(0x01, "string|bytearray|bytearray", (self.serverID, self.publicKey, self.verifyToken))
 				else:
 					self.connect()
 					self.uuid = uuid.uuid3(uuid.NAMESPACE_OID, "OfflinePlayer: %s" % self.username)
@@ -310,8 +315,8 @@ class Client: # handle client/game connection
 						return self.wrapper.callEvent("player.runCommand", {"player": self.getPlayerObject(), "command": args(0)[1:], "args": argsAfter(1)})
 				except:
 					print traceback.format_exc()
-			elif self.state == 4: # encryption response packet
-				data = self.read("bytearray:shared_secret|bytearray:verify_token")
+			elif self.state == 4: # Encryption Response Packet
+				data = self.read("bytearray_short:shared_secret|bytearray_short:verify_token")
 				sharedSecret = encryption.decrypt_shared_secret(data["shared_secret"], self.privateKey)
 				verifyToken = encryption.decrypt_shared_secret(data["verify_token"], self.privateKey)
 				h = hashlib.sha1()
@@ -406,7 +411,8 @@ class Client: # handle client/game connection
 			else:
 				data = self.read("position:position|byte:face|slot:item")
 				position = data["position"]
-			position = data["position"]
+			position = None
+			if self.version > 6: position = data["position"]
 			if not position == None:
 				face = data["face"]
 				if not self.wrapper.callEvent("player.interact", {"player": self.getPlayerObject(), "position": position}): return False
@@ -859,6 +865,7 @@ class Packet: # PACKET PARSING CODE
 				if type == "bool": result[name] = self.read_bool()
 				if type == "varint": result[name] = self.read_varInt()
 				if type == "bytearray": result[name] = self.read_bytearray()
+				if type == "bytearray_short": result[name] = self.read_bytearray_short()
 				if type == "position": result[name] = self.read_position()
 				if type == "slot": result[name] = self.read_slot()
 				if type == "uuid": result[name] = self.read_uuid()
@@ -888,6 +895,7 @@ class Packet: # PACKET PARSING CODE
 					if type == "long": result += self.send_long(pay)
 					if type == "json": result += self.send_json(pay)
 					if type == "bytearray": result += self.send_bytearray(pay)
+					if type == "bytearray_short": result += self.send_bytearray_short(pay)
 					if type == "uuid": result += self.send_uuid(pay)
 					if type == "metadata": result += self.send_metadata(pay)
 					if type == "bool": result += self.send_bool(pay)
@@ -923,6 +931,8 @@ class Packet: # PACKET PARSING CODE
 		return self.pack_varInt(payload)
 	def send_bytearray(self, payload):
 		return self.send_varInt(len(payload)) + payload
+	def send_bytearray_short(self, payload):
+		return self.send_short(len(payload)) + payload
 	def send_json(self, payload):
 		return self.send_string(json.dumps(payload))
 	def send_uuid(self, payload):
@@ -992,7 +1002,7 @@ class Packet: # PACKET PARSING CODE
 		return struct.unpack(">H", self.read_data(2))[0]
 	def read_bytearray(self):
 		return self.read_data(self.read_varInt())
-	def read_short_bytearray(self):
+	def read_bytearray_short(self):
 		return self.read_data(self.read_short())
 	def read_position(self):
 		position = self.read_long()
