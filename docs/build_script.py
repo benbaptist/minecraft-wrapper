@@ -5,7 +5,7 @@ Also, I just realized: Why do I have the build and commit/push functionality all
 """
 import os, time, sys, json, sys, hashlib
 COMMIT = False
-if os.path.exists("ZOMG_OHAI"): COMMIT = True # This script is a work of art. Creating a file named ZOMG_OHAI to turn on git committing? Pure genius.
+if os.path.exists("ZOMG_OHAI"): COMMIT = True# This script is a work of art. Creating a file named ZOMG_OHAI to turn on git committing? Pure genius.
 if len(sys.argv) < 2:
 	print "Usage: build.py <stable/dev>" # Note: an extra argument, "commit message", should be passed to the script if COMMIT is turned on. You must pass that argument in quotes or escape spaces with \. 
 	print "Unless you intend this build to be used in the main repository, set it to dev!"

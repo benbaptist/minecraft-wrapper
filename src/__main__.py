@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import socket, datetime, time, sys, threading, random, subprocess, os, json, signal, traceback, ConfigParser, ast, proxy, web, globals, storage, hashlib, __main__
+import socket, datetime, time, sys, threading, random, subprocess, os, json, signal, traceback, ConfigParser, ast, proxy, web, globals, storage, hashlib
 from log import *
 from config import Config
 from irc import IRC
@@ -421,7 +421,11 @@ class Wrapper:
 						self.log.info("Because you are running a development build, you must manually update Wrapper.py To update Wrapper.py manually, please type /update-wrapper.")
 					else:
 						self.log.info("New Wrapper.py development build #%d available! Updating... (currently on #%d)" % (data["build"], globals.build))
-						self.performUpdate("dev", data["version"], data["build"])
+						try:
+							self.performUpdate("dev", data["version"], data["build"])
+						except:
+							self.log.error("Error while performing update:")
+							self.log.getTraceback()
 				else:
 					self.log.info("No new versions available.")
 			except:
@@ -432,7 +436,11 @@ class Wrapper:
 				data = r.json()
 				if data["build"] > globals.build and data["type"] == "stable":
 					self.log.info("New Wrapper.py %s available! Updating... (currently on %s)" % (data["version"], Config.version))
-					self.performUpdate("stable", data["version"], data["build"])
+					try:
+						self.performUpdate("stable", data["version"], data["build"])
+					except:
+						self.log.error("Error while performing update:")
+						self.log.getTraceback()
 				else:
 					self.log.info("No new versions available.")
 			except:
@@ -445,7 +453,7 @@ class Wrapper:
 		self.log.info("Verifying Wrapper.py...")
 		if hashlib.md5(wrapperFile).hexdigest() == wrapperHash:
 			self.log.info("Wrapper.py successfully verified.")
-			with open(__main__.__file__, "w") as f:
+			with open(sys.argv[0], "w") as f:
 				f.write(wrapperFile)
 			self.log.info("Wrapper.py %s (#%d) installed. Please reboot the Wrapper.py." % (version, build))
 	def timer(self):
