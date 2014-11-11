@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import socket, datetime, time, sys, threading, random, subprocess, os, json, signal, traceback, ConfigParser, ast, proxy, web, globals, storage
+import socket, datetime, time, sys, threading, random, subprocess, os, json, signal, traceback, ConfigParser, ast, proxy, web, globals, storage, hashlib, __main__
 from log import *
 from config import Config
 from irc import IRC
@@ -8,6 +8,11 @@ from importlib import import_module
 from scripts import Scripts
 import importlib
 from api import API
+try:
+	import requests
+	IMPORT_REQUESTS = True
+except:
+	IMPORT_REQUESTS = False
 
 class Wrapper:
 	def __init__(self):
@@ -369,6 +374,10 @@ class Wrapper:
 			t = threading.Thread(target=self.startProxy, args=())
 			t.daemon = True
 			t.start()
+		if self.config["General"]["auto-update-wrapper"]:
+			t = threading.Thread(target=self.checkForUpdates, args=())
+			t.daemon = True
+			t.start()
 		self.server.__handle_server__()
 		
 		self.disablePlugins()
@@ -385,11 +394,60 @@ class Wrapper:
 	def shutdown(self):
 		self.halt = True
 		sys.exit(0)
+	def rebootWrapper(self):
+		self.halt = True
+		os.system(" ".join(sys.argv) + "&")
 	def getBuildString(self):
 		if globals.type == "dev":
 			return "%s (development build #%d)" % (Config.version, globals.build)
 		else:
 			return "%s (stable)" % Config.version
+	def checkForUpdates(self):
+		if not IMPORT_REQUESTS:
+			self.log.error("Can't automatically check for new Wrapper.py versions because you do not have the requests module installed!")
+			return
+		while not self.halt:
+			time.sleep(3600)
+			self.checkForUpdate(True)
+	def checkForUpdate(self, auto):
+		self.log.info("Checking for new builds...")
+		if globals.type == "dev":
+			try:
+				r = requests.get("https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/docs/version.json")
+				data = r.json()
+				if data["build"] > globals.build and data["type"] == "dev":
+					if auto:
+						self.log.info("New Wrapper.py development build #%d available for download! (currently on #%d)" % (data["build"], globals.build))
+						self.log.info("Because you are running a development build, you must manually update Wrapper.py To update Wrapper.py manually, please type /update-wrapper.")
+					else:
+						self.log.info("New Wrapper.py development build #%d available! Updating... (currently on #%d)" % (data["build"], globals.build))
+						self.performUpdate("dev", data["version"], data["build"])
+				else:
+					self.log.info("No new versions available.")
+			except:
+				self.log.warn("Failed to check for updates - are you connected to the internet?")
+		else:
+			try:
+				r = requests.get("https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master/docs/version.json")
+				data = r.json()
+				if data["build"] > globals.build and data["type"] == "stable":
+					self.log.info("New Wrapper.py %s available! Updating... (currently on %s)" % (data["version"], Config.version))
+					self.performUpdate("stable", data["version"], data["build"])
+				else:
+					self.log.info("No new versions available.")
+			except:
+				self.log.warn("Failed to check for updates - are you connected to the internet?")
+	def performUpdate(self, type, version, build):
+		if type == "dev": repo = "development"
+		else: repo = "master"
+		wrapperHash = requests.get("https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/%s/docs/Wrapper.py.md5" % repo).text
+		wrapperFile = requests.get("https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/%s/Wrapper.py" % repo).content
+		self.log.info("Verifying Wrapper.py...")
+		if hashlib.md5(wrapperFile).hexdigest() == wrapperHash:
+			self.log.info("Wrapper.py successfully verified.")
+			with open(__main__.__file__, "w") as f:
+				f.write(wrapperFile)
+			self.log.info("Wrapper.py %s (#%d) installed. Please reboot the Wrapper.py." % (version, build))
 	def timer(self):
 		while not self.halt:
 			self.callEvent("timer.second", None)
@@ -420,6 +478,8 @@ class Wrapper:
 				self.server.stop("Server restarting, be right back!")
 			elif command == "reload":
 				self.reloadPlugins()
+			elif command == "update-wrapper":
+				self.checkForUpdate(False)
 			elif command == "plugins":
 				self.log.info("List of Wrapper.py plugins installed:")
 				for id in self.plugins:

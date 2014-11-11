@@ -2,11 +2,15 @@
 
 <h4>0.7.3</h4>
 Before I release 0.7.3, I'd like to add support for pre-1.7 back again, and fix #38. Maybe I should add the auto-updater too.
+Make sure to add dimension client updating thingy player.getDimension()
 
 Pre-1.7 support is mostly there, but Python gives errors on stdin.write() due to the color codes causing encoding errors. I hate Python 2.x's string encoding bullcrap.
 
+I might need to re-implement the auto-server-restarter. People with colored names don't appear in /say on IRC, apparently.
+
 **Features**
 - Optional backup compression (tar.gz) 
+- Optional auto-update system (can be turned off)
 
 **Bug Fixes**
 - Fixed "Backup file '%s' does not exist - will not backup" when conducting a backup

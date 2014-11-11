@@ -3,7 +3,7 @@
 
 Also, I just realized: Why do I have the build and commit/push functionality all in one file? I really ought to do that separately. I'm weird. 
 """
-import os, time, sys, json, sys
+import os, time, sys, json, sys, hashlib
 COMMIT = False
 if os.path.exists("ZOMG_OHAI"): COMMIT = True # This script is a work of art. Creating a file named ZOMG_OHAI to turn on git committing? Pure genius.
 if len(sys.argv) < 2:
@@ -25,6 +25,8 @@ with open("../docs/version.json", "w") as f:
 	f.write(json.dumps(version))
 os.remove("../Wrapper.py") # Time to start with a clean Wrapper.py!
 os.system("zip ../Wrapper.py -r . -x *~ -x *pyc") # Hooray for calling zip from os.system() instead of using proper modules! :D
+with open("../docs/Wrapper.py.md5", "w") as f:
+	f.write(hashlib.md5(open("../Wrapper.py", "r").read()).hexdigest())
 if COMMIT: # Mainly just for me (benbaptist), since most people will probably want to build locally without committing to anything
 	os.system("git add --update :/")
 	os.system("git commit -m 'Build %s %d | %s'" % (buildType, version["build"], sys.argv[2]))
