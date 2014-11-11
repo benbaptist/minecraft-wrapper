@@ -258,21 +258,21 @@ class IRC:
 								self.server.console(command)
 						elif args(0) == 'halt':
 							self.wrapper.halt = True
-							self.server.run("stop")
-							self.server.state = 3
+							self.server.console("stop")
+							self.server.changeState(3)
 						elif args(0) == 'restart':
-							self.server.run('stop')
-							self.server.state = 3
+							self.server.console('stop')
+							self.server.changeState(3)
 						elif args(0) == 'stop':
-							self.server.run('stop')
+							self.server.console('stop')
 							self.server.start = False
-							self.server.state = 3
+							self.server.changeState(3)
 							msg("Server stopping")
 						elif args(0) == 'start':
 							self.server.start = True
 							msg("Server starting")
 						elif args(0) == 'kill':
-							self.server.state = 0
+							self.server.changeState(0)
 							self.server.proc.kill()
 							msg("Server terminated.")
 						elif args(0) == 'status':

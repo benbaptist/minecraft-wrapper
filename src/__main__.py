@@ -497,6 +497,7 @@ class Wrapper:
 			elif command == "help":
 				self.log.info("/reload - reload plugins")	
 				self.log.info("/plugins - lists plugins")	
+				self.log.info("/update-wrapper - Checks for new updates, and will install them automatically if one is available")
 				self.log.info("/start & /stop - start and stop the server without auto-restarting respectively without shutting down Wrapper.py")
 				self.log.info("/restart - restarts the server, obviously")				
 				self.log.info("/halt - shutdown Wrapper.py completely")

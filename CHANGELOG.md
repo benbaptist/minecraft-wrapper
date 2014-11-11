@@ -9,8 +9,12 @@ Pre-1.7 support is mostly there, but Python gives errors on stdin.write() due to
 I might need to re-implement the auto-server-restarter. People with colored names don't appear in /say on IRC, apparently.
 
 **Features**
-- Optional backup compression (tar.gz) 
-- Optional auto-update system (can be turned off)
+- Optional backup compression (tar.gz)
+- Optional auto-update system (turned off by default)
+  - If auto-update-wrapper is turned on in wrapper.properties, the Wrapper will check for updates every 24 hours
+  - If you are on a stable build, and a new version exists, it will download the update and will be applied when you start Wrapper.py next time
+  - If you are on a development build, it won't automatically update - it will just tell you that an update is available and you can do /update-wrapper to allow it to update
+  - You can also use /update-wrapper to force check for new updates, and apply them. This works even if you turned off auto-update-wrapper.
 
 **Bug Fixes**
 - Fixed "Backup file '%s' does not exist - will not backup" when conducting a backup

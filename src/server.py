@@ -165,7 +165,7 @@ class Server:
 	def console(self, command):
 		""" Execute a console command on the server """
 		try: self.proc.stdin.write("%s\n" % command)
-		except: self.log.getTraceback()
+		except: pass #self.log.getTraceback()
 	def changeState(self, state):
 		""" Change the boot state of the server """
 		self.state = state
