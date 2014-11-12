@@ -73,10 +73,9 @@ class Server:
 				self.console("tellraw @a %s" % json.dumps(message))
 		else:
 			if self.config["General"]["pre-1.7-mode"]:
-				print self.chatToColorCodes(json.loads(self.processColorCodes(message)))
 				self.console("say %s" % self.chatToColorCodes(json.loads(self.processColorCodes(message))))
 			else:
-				self.console("tellraw @a %s" % json.dumps(self.processColorCodes(message)))
+				self.console("tellraw @a %s" % self.processColorCodes(message))
 	def chatToColorCodes(self, json):
 		total = ""
 		def getColorCode(i):
