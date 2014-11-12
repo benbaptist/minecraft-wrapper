@@ -342,15 +342,15 @@ class Wrapper:
 			t.daemon = True
 			t.start()
 		# Old, deactivated web interface code. Will work on this more soon after the release of 0.7.0.
-		#if self.config["Web"]["web-enabled"]:
-#			if web.IMPORT_SUCCESS:
-#				self.web = web.Web(self)
-#				t = threading.Thread(target=self.web.wrap, args=())
-#				t.daemon = True
-#				t.start()
-#			else:
-#				self.log.error("Web remote could not be started because you do not have the required modules installed: pkg_resources")
-#				self.log.error("Hint: http://stackoverflow.com/questions/7446187")
+		if self.config["Web"]["web-enabled"]:
+			if web.IMPORT_SUCCESS:
+				self.web = web.Web(self)
+				t = threading.Thread(target=self.web.wrap, args=())
+				t.daemon = True
+				t.start()
+			else:
+				self.log.error("Web remote could not be started because you do not have the required modules installed: pkg_resources")
+				self.log.error("Hint: http://stackoverflow.com/questions/7446187")
 		if len(sys.argv) < 2:
 			wrapper.server.args = wrapper.configManager.config["General"]["command"].split(" ")
 		else:
@@ -455,7 +455,7 @@ class Wrapper:
 			self.log.info("Wrapper.py successfully verified.")
 			with open(sys.argv[0], "w") as f:
 				f.write(wrapperFile)
-			self.log.info("Wrapper.py %s (#%d) installed. Please reboot the Wrapper.py." % (version, build))
+			self.log.info("Wrapper.py %s (#%d) installed. Please reboot the Wrapper.py." % (".".join(version), build))
 	def timer(self):
 		while not self.halt:
 			self.callEvent("timer.second", None)

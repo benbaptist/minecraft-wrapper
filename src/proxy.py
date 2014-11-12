@@ -248,8 +248,8 @@ class Client: # handle client/game connection
 				data = self.read("varint:version|string:address|ushort:port|varint:state")
 				self.version = data["version"]
 				self.packet.version = self.version
-				if not self.wrapper.server.protocolVersion == self.version:
-					self.disconnect("You're not identical with the server")
+				if not self.wrapper.server.protocolVersion == self.version and data["state"] == 2:
+					self.disconnect("You're not running the same Minecraft version as the server!")
 					return
 				if not self.wrapper.server.state == 2:
 					self.disconnect("Server has not finished booting. Please try connecting again in a few seconds")
@@ -316,7 +316,10 @@ class Client: # handle client/game connection
 				except:
 					print traceback.format_exc()
 			elif self.state == 4: # Encryption Response Packet
-				data = self.read("bytearray_short:shared_secret|bytearray_short:verify_token")
+				if self.wrapper.server.protocolVersion < 6:
+					data = self.read("bytearray_short:shared_secret|bytearray_short:verify_token")
+				else:
+					data = self.read("bytearray:shared_secret|bytearray:verify_token")
 				sharedSecret = encryption.decrypt_shared_secret(data["shared_secret"], self.privateKey)
 				verifyToken = encryption.decrypt_shared_secret(data["verify_token"], self.privateKey)
 				h = hashlib.sha1()

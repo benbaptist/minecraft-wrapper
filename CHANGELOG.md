@@ -8,6 +8,8 @@ Pre-1.7 support is mostly there, but Python gives errors on stdin.write() due to
 
 I might need to re-implement the auto-server-restarter. People with colored names don't appear in /say on IRC, apparently.
 
+I also need to implement the sub-commands for /update-wrapper, and I need to put a /wrapper update command in-game.
+
 **Features**
 - Optional backup compression (tar.gz)
 - Optional auto-update system (turned off by default)
@@ -15,6 +17,8 @@ I might need to re-implement the auto-server-restarter. People with colored name
   - If you are on a stable build, and a new version exists, it will download the update and will be applied when you start Wrapper.py next time
   - If you are on a development build, it won't automatically update - it will just tell you that an update is available and you can do /update-wrapper to allow it to update
   - You can also use /update-wrapper to force check for new updates, and apply them. This works even if you turned off auto-update-wrapper.
+  - If you want to jump from a stable build to the latest dev build, run /wrapper-update dev
+  - If you want to jump from a dev build to the latest stable (if a newer stable version exists), run /wrapper-update stable
 
 **Bug Fixes**
 - Fixed "Backup file '%s' does not exist - will not backup" when conducting a backup

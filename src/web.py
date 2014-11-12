@@ -1,5 +1,5 @@
 # Unfinished web UI code. Yeah, I know. The code is awful. Probably not even a HTTP-compliant web server anyways. I just wrote it at like 3AM in like an hour.
-import socket, traceback, zipfile, threading, time, json, random, urlparse
+import socket, traceback, zipfile, threading, time, json, random, urlparse, storage
 from api import API
 try:
 	import pkg_resources
@@ -12,13 +12,14 @@ class Web:
 		self.log = wrapper.log
 		self.config = wrapper.config
 		self.socket = False
-		self.keys = []
+		self.data = storage.Storage("web", self.log)
+		if "keys" not in self.data: self.data["keys"] = []
 	def makeKey(self):
 		a = ""; z = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@-_"
 		for i in range(32):
 			a += z[random.randrange(0, len(z))]
 #			a += chr(random.randrange(97, 122))
-		self.keys.append(a)
+		self.data["keys"].append(a)
 		return a
 	def wrap(self):
 		while not self.wrapper.halt:
@@ -83,14 +84,14 @@ class Client:
 	def wrap(self):
 		try: self.handle()
 		except:
-			for line in traceback.format_exc().split("\n"):
-				self.log.error(line)
+			self.log.error("Internal error while handling web mode request:")
+			self.log.getTraceback()
 			self.headers(status="300 Internal Server Error")
 			self.write("<h1>300 Internal Server Error</h1>")
 			self.close()
-	def runAction(self):
+	def runAction(self, request):
 		def args(i): 
-			try: return self.request.split("/")[1:][i]
+			try: return request.split("/")[1:][i]
 			except: return ""
 		def get(i): 
 			for a in args(1).split("?")[1].split("&"):
@@ -105,7 +106,7 @@ class Client:
 				return {"type": "error", "error": "permission_denied"}
 			players = []
 			for i in self.wrapper.server.players:
-				players.append({"name": i, "loggedIn": self.wrapper.server.players[i].loggedIn})
+				players.append({"name": i, "loggedIn": self.wrapper.server.players[i].loggedIn, "uuid": self.wrapper.server.players[i].uuid})
 			return {"type": "stats", "playerCount": len(self.wrapper.server.players), "players": players}
 		if action == "login":
 			password = get("password")
@@ -113,6 +114,7 @@ class Client:
 				key = self.web.makeKey()
 				return {"type": "login", "value": key}
 		return {"type": "error", "error": "unknown_key"}
+	def getAuth
 	def getContentType(self, filename):
 		ext = filename[filename.rfind("."):][1:]
 		if ext == "js": return "application/javascript"
@@ -120,13 +122,16 @@ class Client:
 		if ext in ("txt", "html"): return "text/html"
 		if ext in ("ico"): return "image/x-icon"
 		return "application/octet-stream"
-	def get(self):
-		request = self.request
+	def get(self, request):
+		print "GET request: %s" % request
+		def args(i): 
+			try: return request.split("/")[1:][i]
+			except: return ""
 		if request == "/":
 			file = "index.html"
-		elif request == "action":
+		elif args(0) == "action":
 			try:
-				self.write(json.dumps(self.runAction()))
+				self.write(json.dumps(self.runAction(request)))
 			except:
 				self.headers(status="300 Internal Server Error")
 			self.close()
@@ -166,8 +171,7 @@ class Client:
 					try: return " ".join(line.split(" ")[i:])
 					except: return ""
 				if args(0) == "GET":
-					self.request = args(1)
-					self.get()
+					self.get(args(1))
 				if args(0) == "POST":
 					self.request = args(1)
 					self.headers(status="400 Bad Request")
