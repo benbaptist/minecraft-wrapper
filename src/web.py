@@ -114,7 +114,6 @@ class Client:
 				key = self.web.makeKey()
 				return {"type": "login", "value": key}
 		return {"type": "error", "error": "unknown_key"}
-	def getAuth
 	def getContentType(self, filename):
 		ext = filename[filename.rfind("."):][1:]
 		if ext == "js": return "application/javascript"
