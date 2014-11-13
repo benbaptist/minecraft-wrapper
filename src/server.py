@@ -52,18 +52,25 @@ class Server:
 	def restart(self, reason="Restarting Server"):
 		""" Restart the Minecraft server, and kick people with the specified reason """
 		self.log.info("Restarting Minecraft server with reason: %s" % reason)
-		self.changeState(3)
+		self.changeState(3, reason)
 		for player in self.players:
 			self.console("kick %s %s" % (player, reason))
 		self.console("stop")
 	def stop(self, reason="Stopping Server"):
 		""" Stop the Minecraft server, prevent it from auto-restarting and kick people with the specified reason """
 		self.log.info("Stopping Minecraft server with reason: %s" % reason)
-		self.changeState(3)
+		self.changeState(3, reason)
 		self.boot = False
 		for player in self.players:
 			self.console("kick %s %s" % (player, reason))
 		self.console("stop")
+	def kill(self, reason="Killing Server"):
+		""" Forcefully kill the server. It will auto-restart if set in the configuration file """
+		self.log.info("Killing Minecraft server with reason: %s" % reason)
+		for player in self.players:
+			self.console("kick %s %s" % (player, reason))
+		self.changeState(0, reason)
+		self.proc.kill()
 	def broadcast(self, message=""):
 		""" Broadcasts the specified message to all clients connected. message can be a JSON chat object, or a string with formatting codes using the & as a prefix """
 		if isinstance(message, dict):
@@ -165,14 +172,14 @@ class Server:
 		""" Execute a console command on the server """
 		try: self.proc.stdin.write("%s\n" % command)
 		except: pass #self.log.getTraceback()
-	def changeState(self, state):
-		""" Change the boot state of the server """
+	def changeState(self, state, reason=None):
+		""" Change the boot state of the server, with a reason message """
 		self.state = state
-		if self.state == 0: self.wrapper.callEvent("server.stopped", None)
-		if self.state == 1: self.wrapper.callEvent("server.starting", None)
-		if self.state == 2: self.wrapper.callEvent("server.started", None)
-		if self.state == 3: self.wrapper.callEvent("server.stopping", None)
-		self.wrapper.callEvent("server.state", {"state": state})
+		if self.state == 0: self.wrapper.callEvent("server.stopped", {"reason": reason})
+		if self.state == 1: self.wrapper.callEvent("server.starting", {"reason": reason})
+		if self.state == 2: self.wrapper.callEvent("server.started", {"reason": reason})
+		if self.state == 3: self.wrapper.callEvent("server.stopping", {"reason": reason})
+		self.wrapper.callEvent("server.state", {"state": state, "reason": reason})
 	def __stdout__(self):
 		while not self.wrapper.halt:
 			try:
@@ -216,13 +223,17 @@ class Server:
 					except: self.log.getTraceback()
 				self.data = []
 	def stripSpecial(self, text):
-		a = ""; b = 0
-		while len(a) < len(text):
-			i = text[b]
-			if i == "\xa7": b += 2
+		a = ""; it = iter(xrange(len(text)))
+		for i in it:
+			char = text[i]
+			if char == "\xc2":
+				try: 
+					it.next()
+					it.next()
+				except:
+					pass 
 			else: 
-				a += i
-				b += 1
+				a += char
 		return a
 	def readConsole(self, line):
 		""" Internally-use function that parses a particular console line """

@@ -19,6 +19,7 @@ with open("../docs/version.json", "r") as f:
 	version = json.loads(f.read())
 	version["build"] += 1
 	version["type"] = buildType
+	version["release_time"] = time.time()
 with open("globals.py", "w") as f:
 	f.write("build=%d\ntype='%s'" % (version["build"], buildType))
 with open("../docs/version.json", "w") as f:

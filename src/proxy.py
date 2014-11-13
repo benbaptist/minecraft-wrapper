@@ -74,6 +74,7 @@ class Proxy:
 				data = json.loads(packet.read("string:response")["response"])
 				self.wrapper.server.protocolVersion = data["version"]["protocol"]
 				self.wrapper.server.maxPlayers = self.wrapper.config["Proxy"]["max-players"]
+				self.wrapper.server.version = data["version"]["name"]
 				break
 		sock.close()
 	def getClientByServerUUID(self, id):
@@ -264,6 +265,7 @@ class Client: # handle client/game connection
 				for i in self.wrapper.server.players:
 					player = self.wrapper.server.players[i]
 					sample.append({"name": player.username, "id": str(player.uuid)})
+					if len(sample) > 5: break
 				MOTD = {"description": self.config["Proxy"]["motd"], 
 					"players": {"max": self.wrapper.server.maxPlayers, "online": len(self.wrapper.server.players), "sample": sample},
 					"version": {"name": self.wrapper.server.version, "protocol": self.wrapper.server.protocolVersion}
@@ -598,9 +600,13 @@ class Server: # Handle Server Connection
 					self.packet.compression = False
 					self.packet.compressThreshold = -1
 				return False
-		if id == 0x05:
+		if id == 0x05: # Spawn Point
 			data = self.read("int:x|int:y|int:z")
 			self.wrapper.server.spawnPoint = (data["x"], data["y"], data["z"])
+		if id == 0x07: # Respawn Packet
+			data = self.read("int:dimension|ubyte:difficulty|ubyte:gamemode|level_type:string")
+			self.client.gamemode = data["gamemode"]
+			self.client.dimension = data["dimension"]
 		if id == 0x08: # Player Position and Look
 			data = self.read("double:x|double:y|double:z|float:yaw|float:pitch")
 			x, y, z, yaw, pitch = data["x"], data["y"], data["z"], data["yaw"], data["pitch"]

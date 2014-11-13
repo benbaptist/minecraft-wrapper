@@ -125,10 +125,35 @@ class Wrapper:
 		return True
 	def playerCommand(self, payload):
 		self.log.info("%s executed: /%s %s" % (str(payload["player"]), payload["command"], " ".join(payload["args"])))
+		def args(i):
+			try: return payload["args"][i]
+			except: return ""
+		def argsAfter(i):
+			try: return " ".join(payload["args"][i:])
+			except: return ""
 		if payload["command"] == "wrapper":
 			player = payload["player"]
 			buildString = self.getBuildString()
-			player.message({"text": "Wrapper.py Version %s" % (buildString), "color": "gray", "italic": True})
+			if len(args(0)) > 0:
+				subcommand = args(0)
+				if subcommand == "update":
+					player.message({"text": "Checking for new Wrapper.py updates...","color":"yellow"})
+					update = self.checkForNewUpdate()
+					if update:
+						version, build, type = update
+						player.message("&bNew Wrapper.py Version %s (Build #%d) available!)" % (".".join(version), build))
+						player.message("&bYou are currently on %s." % self.getBuildString())
+						player.message("&aPerforming update...")
+						if self.performUpdate(version, build, type):
+							player.message("&aUpdate completed! Version %s #%d (%s) is now installed. Please reboot Wrapper.py to apply changes." % (version, build, type))
+						else:
+							player.message("&cAn error occured while performing update. Please check the Wrapper.py console as soon as possible for an explanation and traceback. If you are unsure of the cause, please file a bug report on http://github.com/benbaptist/minecraft-wrapper with the traceback.")
+					else:
+						player.message("&cNo new Wrapper.py versions available.")
+				else:
+					player.message("&cUnknown sub-command /wrapper '%s'." % subcommand)
+			else:
+				player.message({"text": "Wrapper.py Version %s" % (buildString), "color": "gray", "italic": True})
 			return False
 		if payload["command"] in ("plugins", "pl"):
 			player = payload["player"]
@@ -176,12 +201,6 @@ class Wrapper:
 			if not "users" in self.permissions: self.permissions["users"] = {}
 			if not "Default" in self.permissions["groups"]: self.permissions["groups"]["Default"] = {"permissions": {}}
 			if player.isOp():
-				def args(i):
-					try: return payload["args"][i]
-					except: return ""
-				def argsAfter(i):
-					try: return " ".join(payload["args"][i:])
-					except: return ""
 				def usage(l):
 					player.message("&cUsage: /%s %s" % (payload["command"], l))
 				command = args(0)
@@ -411,51 +430,58 @@ class Wrapper:
 			self.checkForUpdate(True)
 	def checkForUpdate(self, auto):
 		self.log.info("Checking for new builds...")
+		update = self.checkForNewUpdate()
+		if update:
+			version, build, type = update
+			if type == "dev":
+				if auto and not self.config["General"]["auto-update-dev-build"]:
+					self.log.info("New Wrapper.py development build #%d available for download! (currently on #%d)" % (build, globals.build))
+					self.log.info("Because you are running a development build, you must manually update Wrapper.py To update Wrapper.py manually, please type /update-wrapper.")
+				else:
+					self.log.info("New Wrapper.py development build #%d available! Updating... (currently on #%d)" % (build, globals.build))
+				self.performUpdate(version, build, type)
+			else:
+				self.log.info("New Wrapper.py stable %s available! Updating... (currently on %s)" % (".".join(version), Config.version))
+				self.performUpdate(version, build, type)
+		else:
+			self.log.info("No new versions available.")
+	def checkForNewUpdate(self):
 		if globals.type == "dev":
 			try:
 				r = requests.get("https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/docs/version.json")
 				data = r.json()
-				if data["build"] > globals.build and data["type"] == "dev":
-					if auto:
-						self.log.info("New Wrapper.py development build #%d available for download! (currently on #%d)" % (data["build"], globals.build))
-						self.log.info("Because you are running a development build, you must manually update Wrapper.py To update Wrapper.py manually, please type /update-wrapper.")
-					else:
-						self.log.info("New Wrapper.py development build #%d available! Updating... (currently on #%d)" % (data["build"], globals.build))
-						try:
-							self.performUpdate("dev", data["version"], data["build"])
-						except:
-							self.log.error("Error while performing update:")
-							self.log.getTraceback()
-				else:
-					self.log.info("No new versions available.")
+				if data["build"] > globals.build and data["type"] == "dev": return (data["version"], data["build"], data["type"])
+				else: return False
 			except:
 				self.log.warn("Failed to check for updates - are you connected to the internet?")
 		else:
 			try:
 				r = requests.get("https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master/docs/version.json")
 				data = r.json()
-				if data["build"] > globals.build and data["type"] == "stable":
-					self.log.info("New Wrapper.py %s available! Updating... (currently on %s)" % (data["version"], Config.version))
-					try:
-						self.performUpdate("stable", data["version"], data["build"])
-					except:
-						self.log.error("Error while performing update:")
-						self.log.getTraceback()
-				else:
-					self.log.info("No new versions available.")
+				if data["build"] > globals.build and data["type"] == "stable":  return (data["version"], data["build"], data["type"])
+				else: return False
 			except:
 				self.log.warn("Failed to check for updates - are you connected to the internet?")
-	def performUpdate(self, type, version, build):
+		return False
+	def performUpdate(self, version, build, type):
 		if type == "dev": repo = "development"
 		else: repo = "master"
-		wrapperHash = requests.get("https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/%s/docs/Wrapper.py.md5" % repo).text
-		wrapperFile = requests.get("https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/%s/Wrapper.py" % repo).content
-		self.log.info("Verifying Wrapper.py...")
-		if hashlib.md5(wrapperFile).hexdigest() == wrapperHash:
-			self.log.info("Wrapper.py successfully verified.")
-			with open(sys.argv[0], "w") as f:
-				f.write(wrapperFile)
-			self.log.info("Wrapper.py %s (#%d) installed. Please reboot the Wrapper.py." % (".".join(version), build))
+		try:
+			wrapperHash = requests.get("https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/%s/docs/Wrapper.py.md5" % repo).text
+			wrapperFile = requests.get("https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/%s/Wrapper.py" % repo).content
+			self.log.info("Verifying Wrapper.py...")
+			if hashlib.md5(wrapperFile).hexdigest() == wrapperHash:
+				self.log.info("Wrapper.py successfully verified.")
+				with open(sys.argv[0], "w") as f:
+					f.write(wrapperFile)
+				self.log.info("Wrapper.py %s (#%d) installed. Please reboot the Wrapper.py." % (".".join(version), build))
+				return True
+			else:
+				return False
+		except:
+			self.log.error("Failed to update due to an internal error:")
+			self.log.getTraceback()
+			return False
 	def timer(self):
 		while not self.halt:
 			self.callEvent("timer.second", None)
@@ -540,6 +566,6 @@ if __name__ == "__main__":
 		wrapper.halt = True
 		wrapper.disablePlugins()
 		try:
-			wrapper.server.stop("Wrapper.py crashed - please contact a server admin instantly")
+			wrapper.server.stop("Wrapper.py crashed - please contact the server host instantly")
 		except:
-			print "Failure to shutdown server cleanly!"
+			print "Failure to shutdown server cleanly! Server could still be running, or it might rollback/corrupt!"

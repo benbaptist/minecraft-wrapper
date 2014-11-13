@@ -240,7 +240,9 @@ class IRC:
 							msg("halt - shutdown server and Wrapper.py, will not auto-restart")
 							msg("kill - force server restart without clean shutdown - only use when server is unresponsive")
 							msg("start/restart/stop - start the server/automatically stop and start server/stop the server without shutting down Wrapper")
-							msg('status - show status of the server')
+							msg("status - show status of the server")
+							msg("check-update - check for new Wrapper.py updates, but don't install them")
+							msg("update-wrapper - check and install new Wrapper.py updates")
 							msg("Wrapper.py Version %s by benbaptist" % self.wrapper.getBuildString())
 							#msg('console - toggle console output to this private message')
 						elif args(0) == 'togglebackups':
@@ -261,19 +263,17 @@ class IRC:
 							self.server.console("stop")
 							self.server.changeState(3)
 						elif args(0) == 'restart':
-							self.server.console('stop')
+							self.server.restart("Restarting server from IRC remote")
 							self.server.changeState(3)
 						elif args(0) == 'stop':
 							self.server.console('stop')
-							self.server.start = False
-							self.server.changeState(3)
+							self.server.stop("Stopped from IRC remote")
 							msg("Server stopping")
 						elif args(0) == 'start':
-							self.server.start = True
+							self.server.start()
 							msg("Server starting")
 						elif args(0) == 'kill':
-							self.server.changeState(0)
-							self.server.proc.kill()
+							self.server.kill("Killing server from IRC remote")
 							msg("Server terminated.")
 						elif args(0) == 'status':
 							if self.server.state == 2: msg("Server is running.")
@@ -281,8 +281,46 @@ class IRC:
 							elif self.server.state == 0: msg("Server is stopped. Type 'start' to fire it back up.")
 							elif self.server.state == 3: msg("Server is in the process of shutting down/restarting.")
 							else: msg("Server is in unknown state. This is probably a Wrapper.py bug - report it! (state #%d)" % self.server.state)
+						elif args(0) == 'check-update':
+							msg("Checking for new updates...")
+							update = self.wrapper.checkForNewUpdate()
+							if update:
+								version, build, type = update
+								if type == "stable":
+									msg("New Wrapper.py Version %s available! (you have %s)" % (".".join(version), self.wrapper.getBuildString()))
+								elif type == "dev":
+									msg("New Wrapper.py development build %s #%d available! (you have %s #%d)" % (".".join(version),build,Config.version,globals.build))
+								else:
+									msg("Unknown new version: %s | %d | %s" % (version, build, type))
+								msg("To perform the update, type update-wrapper.")
+							else:
+								if globals.type == "stable":
+									msg("No new stable Wrapper.py versions available.")
+								elif globals.type == "dev":
+									msg("No new development Wrapper.py versions available.")
+						elif args(0) == 'update-wrapper':
+							msg("Checking for new updates...")
+							update = self.wrapper.checkForNewUpdate()
+							if update:
+								version, build, type = update
+								if type == "stable":
+									msg("New Wrapper.py Version %s available! (you have %s)" % (".".join(version), self.wrapper.getBuildString()))
+								elif type == "dev":
+									msg("New Wrapper.py development build %s #%d available! (you have %s #%d)" % (".".join(version),build,Config.version,globals.build))
+								else:
+									msg("Unknown new version: %s | %d | %s" % (version, build, type))
+								msg("Performing update..")
+								if self.wrapper.performUpdate(version, build, type):
+									msg("Update completed! Version %s #%d (%s) is now installed. Please reboot Wrapper.py to apply changes." % (version, build, type))
+								else:
+									msg("An error occured while performing update. Please check the Wrapper.py console as soon as possible for an explanation and traceback. If you are unsure of the cause, please file a bug report on http://github.com/benbaptist/minecraft-wrapper.")
+							else:
+								if globals.type == "stable":
+									msg("No new stable Wrapper.py versions available.")
+								elif globals.type == "dev":
+									msg("No new development Wrapper.py versions available.")
 						elif args(0) == "about":
-							msg("Wrapper.py by benbaptist - version %s (build #%d)" % (Config.version, globals.build))
+							msg("Wrapper.py by benbaptist - Version %s (build #%d)" % (Config.version, globals.build))
 						else:
 							msg('Unknown command. Type help for more commands')
 					else:

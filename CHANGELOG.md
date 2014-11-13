@@ -6,19 +6,23 @@ Make sure to add dimension client updating thingy player.getDimension()
 
 Pre-1.7 support is mostly there, but Python gives errors on stdin.write() due to the color codes causing encoding errors. I hate Python 2.x's string encoding bullcrap.
 
-I might need to re-implement the auto-server-restarter. People with colored names don't appear in /say on IRC, apparently.
+I also need to implement the sub-commands for /update-wrapper.
 
-I also need to implement the sub-commands for /update-wrapper, and I need to put a /wrapper update command in-game.
+Still shows this:
+ &cBacking up... lag may occur!
+ &aBackup complete!
 
 **Features**
 - Optional backup compression (tar.gz)
 - Optional auto-update system (turned off by default)
   - If auto-update-wrapper is turned on in wrapper.properties, the Wrapper will check for updates every 24 hours
   - If you are on a stable build, and a new version exists, it will download the update and will be applied when you start Wrapper.py next time
-  - If you are on a development build, it won't automatically update - it will just tell you that an update is available and you can do /update-wrapper to allow it to update
+  - If you are on a development build, it won't automatically update unless auto-update-dev-build is on - it will just tell you that an update is available and you can do /update-wrapper to allow it to update
   - You can also use /update-wrapper to force check for new updates, and apply them. This works even if you turned off auto-update-wrapper.
   - If you want to jump from a stable build to the latest dev build, run /wrapper-update dev
   - If you want to jump from a dev build to the latest stable (if a newer stable version exists), run /wrapper-update stable
+  - Updates can be performed in-game with the `/wrapper update` command
+  - Updates can be performed from the IRC remote control interface with the 'wrapper-update' command
 
 **Bug Fixes**
 - Fixed "Backup file '%s' does not exist - will not backup" when conducting a backup
@@ -31,6 +35,7 @@ I also need to implement the sub-commands for /update-wrapper, and I need to put
 - Links posted inside of IRC will be clickable in-game
 - Players can now leave boats/minecarts again
 - Proxy mode should work with 1.7.10 now
+- Fixed 'stop' in IRC remote not keeping the server off
   
 **Developer Changes**
 - New formatting code: &@ for opening URLs when clicked in game chat
@@ -71,6 +76,7 @@ I also need to implement the sub-commands for /update-wrapper, and I need to put
 - Entity tracking system being implemented
   - Very early, buggy junk
   - Doesn't handle despawning very well quite yet, or multiple players
+- player.getDimension() now properly updates when switching dimensions
 
 This update is relatively big and definitely makes some API methods cleaner. 
 

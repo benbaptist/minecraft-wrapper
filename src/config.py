@@ -5,12 +5,12 @@ DEFAULT_CONFIG = """[General]
 command = java -jar minecraft_server.1.8.jar nogui
 auto-restart = True
 auto-update-wrapper = False
+auto-update-dev-builds = False
 pre-1.7-mode = False
 timed-reboot = False
 timed-reboot-seconds = 86400
 debug = False 
 shell-scripts = False
-
 
 [Backups]
 ;; Automatic backups with automatic backup pruning. Interval is in seconds. ;; 
@@ -35,12 +35,6 @@ autorun-irc-commands = ['COMMAND 1', 'COMMAND 2']
 obstruct-nicknames = False
 control-from-irc = False
 control-irc-pass = password
-
-[Death]
-;; This kicks a player upon death. I don't recall why I implemented this. ;;
-kick-on-death = False
-users-to-kick = ['username1', 'username2', 'remove these usernames to kick ALL users upon death']
-death-kick-messages = ['You died!']
 
 [Proxy]
 ;; This is a man-in-the-middle proxy mode similar to BungeeCord, but allows for extra plugin functionality. ;;
@@ -80,11 +74,12 @@ class Config:
 		self.parser = ConfigParser.ConfigParser(allow_no_value = True)
 		self.parser.readfp(open("wrapper.properties"))
 
-		sections = ["General", "Backups", "IRC", "Death", "Proxy"]
+		sections = ["General", "Backups", "IRC", "Proxy"]
 		defaults = {"General":{
 			"command": "java -jar minecraft_server.1.8.jar",
 			"auto-restart": True,
 			"auto-update-wrapper": False,
+			"auto-update-dev-build": False,
 			"debug": False,
 			"pre-1.7-mode": False,
 			"timed-reboot": False,
@@ -112,11 +107,6 @@ class Config:
 			"backup-interval": 3600,
 			"backup-notification": True,
 			"backup-compression": False
-		},
-		"Death":{
-			"kick-on-death": False,
-			"death-kick-messages": ["You died!"],
-			"users-to-kick": ["username1", "username2", "remove these usernames to kick ALL users upon death"]
 		},
 		"Proxy":{
 			"proxy-enabled": False,

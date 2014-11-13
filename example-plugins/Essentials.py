@@ -37,6 +37,7 @@ class Main:
 		self.api.registerCommand("i", self.i, "essentials.give")
 		self.api.registerCommand("spawn", self.spawn, "essentials.spawn")
 		self.api.registerCommand("block", self.block, "essentials.block")
+		self.api.registerCommand("whois", self.whois, "essentials.whois")
 		self.api.registerEvent("player.login", self.login)
 		self.api.registerEvent("player.dig", self.click)
 	def onDisable(self):
@@ -207,3 +208,5 @@ class Main:
 			player.message(str(self.minecraft.getServer().world.getBlock((int(args[0]), int(args[1]), int(args[2])))))
 		else:
 			player.message("&cUsage: /block <x> <y> <z>")
+	def whois(self, player, args):
+		player.message("&7You are %s. You are in dimension %d, in gamemode %d and are currently located at %s." % (player.username, player.getDimension(), player.getGamemode(), player.getPosition()))
