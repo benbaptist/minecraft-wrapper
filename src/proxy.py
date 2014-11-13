@@ -640,7 +640,11 @@ class Server: # Handle Server Connection
 		if id == 0x15: # Entity Relative Move
 			data = self.read("varint:eid|byte:dx|byte:dy|byte:dz")
 			if not self.wrapper.server.world.getEntityByEID(data["eid"]) == None:
-				self.wrapper.server.world.getEntityByEID(data["eid"]).move((data["dx"], data["dy"], data["dz"]))
+				self.wrapper.server.world.getEntityByEID(data["eid"]).moveRelative((data["dx"], data["dy"], data["dz"]))
+		if id == 0x18: # Entity Teleport
+			data = self.read("varint:eid|int:x|int:y|int:z|byte:yaw|byte:pitch")
+			if not self.wrapper.server.world.getEntityByEID(data["eid"]) == None:
+				self.wrapper.server.world.getEntityByEID(data["eid"]).teleport((data["x"], data["y"], data["z"]))
 		if id == 0x1b: # Attach Entity
 			data = self.read("int:eid|int:vid|bool:leash")
 			eid, vid, leash = data["eid"], data["vid"], data["leash"]
@@ -653,7 +657,7 @@ class Server: # Handle Server Connection
 				else:
 					self.wrapper.callEvent("player.mount", {"player": player, "vehicle_id": vid, "leash": leash})
 					self.client.riding = self.wrapper.server.world.getEntityByEID(vid)
-					self.wrapper.server.world.getEntityByEID(vid).rodeBy = player
+					self.wrapper.server.world.getEntityByEID(vid).rodeBy = self.client
 		if id == 0x26: # Map Chunk Bulk
 			data = self.read("bool:skylight|varint:chunks")
 			chunks = []

@@ -42,3 +42,7 @@ class PluginLog:
 	def debug(self, string):
 		if Config.debug:
 			self.write("%s [%s/DEBUG] %s" % (self.timestamp(), self.PluginName, string))
+	def getTraceback(self):
+		for line in traceback.format_exc().split("\n"):
+			if len(line.strip()) > 0: # Remove empty lines
+				self.error(line)

@@ -1,90 +1,14 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-	<meta charset="utf-8">
-	<meta http-equiv="X-UA-Compatible" content="IE=edge">
-	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<meta name="description" content="">
-	<meta name="author" content="benbaptist" >
-
-	<title>Theme Template for Bootstrap</title>
-
-	<style type="text/css">
-		.theme-showcase{
-			margin-top: 50px;
-		}
-	</style>
-	<!-- Bootstrap core CSS -->
-	<link href="css/bootstrap.min.css" rel="stylesheet">
-	<!-- Bootstrap theme -->
-	<link href="css/bootstrap-theme.min.css" rel="stylesheet">
-	<link href="css/bootstrap-theme.css" rel="stylesheet">
-<body role="document">
-	<!-- Fixed navbar -->
-	<div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
-		<div class="container">
-		<div class="navbar-header">
-			<button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
-				<span class="sr-only">Toggle navigation</span>
-				<span class="icon-bar"></span>
-				<span class="icon-bar"></span>
-				<span class="icon-bar"></span>
-			</button>
-			<a class="navbar-brand" href="#">Wrapper.py</a>
-		</div>
-		<div class="navbar-collapse collapse">
-			<ul class="nav navbar-nav">
-				<li class="active"><a href="/">Home</a></li>
-				<li><a href="admin.html">Admin</a></li>
-			</ul>
-		</div><!--/.nav-collapse -->
-		</div>
-	</div>
-
-	<div class="container theme-showcase" role="main">
-		<div class="page-header">
-		<h1>Players</h1>
-		</div>
-		<table class="table table-condensed">
-		<thead>
-		<tr>
-			<th>Skin</th>
-			<th>Player</th>
-			<th>Login Date</th>
-		</tr>
-		</thead>
-		<tbody>
-		<tr>
-			<td><img src="/face/benbaptist.png"/></td>
-			<td>benbaptist</td>
-			<td>0</td>
-		</tr>
-		</tbody>
-	</table>
-
-
-
-		<div class="page-header">
-		<h1>Navs</h1>
-		</div>
-		<ul class="nav nav-tabs" role="tablist">
-		<li class="active"><a href="#">Home</a></li>
-		<li><a href="#">Profile</a></li>
-		<li><a href="#">Messages</a></li>
-		</ul>
-		<ul class="nav nav-pills">
-		<li class="active"><a href="#">Home</a></li>
-		<li><a href="#">Profile</a></li>
-		<li><a href="#">Messages</a></li>
-		</ul>
-	</div> <!-- /container -->
-
-
-	<!-- Bootstrap core JavaScript
-	================================================== -->
-	<!-- Placed at the end of the document so the pages load faster -->
-	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
-	<script src="js/bootstrap.min.js"></script>
-	<script src="js/docs.min.js"></script>
-</body>
+<html>
+	<head>
+		<title>Public Stats</title>
+		<script type="text/javascript" >
+			
+		</script>	
+	</head>
+	<body>
+		<h1>Welcome to the Wrapper.py stats page</h1>
+		Here you'll find public stats about the server.
+		
+		</br><a href="">Admin Login</a>
+	</body>
 </html>

@@ -74,7 +74,7 @@ class Config:
 		self.parser = ConfigParser.ConfigParser(allow_no_value = True)
 		self.parser.readfp(open("wrapper.properties"))
 
-		sections = ["General", "Backups", "IRC", "Proxy"]
+		sections = ["General", "Backups", "IRC", "Proxy", "Web"]
 		defaults = {"General":{
 			"command": "java -jar minecraft_server.1.8.jar",
 			"auto-restart": True,
@@ -116,6 +116,13 @@ class Config:
 			"motd": "Minecraft Server",
 			"online-mode": True,
 			"max-players": 1024
+		},
+		"Web":{
+			"web-enabled": False,
+			"web-bind": "0.0.0.0",
+			"web-port": 8070,
+			"web-password": "usefulpass",
+			"public-stats": True
 		}}
 		# Removed from the list above until fully implemented.
 		{"Web":{

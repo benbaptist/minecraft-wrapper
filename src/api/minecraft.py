@@ -5,9 +5,6 @@ class Minecraft:
 		self.wrapper = wrapper
 		
 		self.blocks = items.Blocks
-	def getWorldName(self):
-		""" Returns the world's name. """
-		return self.getServer().worldName
 	def isServerStarted(self):
 		""" Returns a boolean if the server is fully booted or not. """
 		if self.getServer():
@@ -101,3 +98,6 @@ class Minecraft:
 	def getWorld(self):
 		""" Returns the world context. """
 		return self.getServer().world 
+	def getWorldName(self):
+		""" Returns the world's name. """
+		return self.getServer().worldName

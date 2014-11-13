@@ -1,9 +1,10 @@
-import math, struct
+import math, struct, json
 class World:
-	def __init__(self, name):
+	def __init__(self, name, server):
 		self.chunks = {}
 		self.entities = {}
 		self.name = name
+		self.server = server
 	def __str__(self):
 		return self.name
 	def getBlock(self, pos):
@@ -18,6 +19,28 @@ class World:
 	def getEntityByEID(self, eid):
 		""" Returns the entity context, or None if the specified entity ID doesn't exist. """
 		if eid in self.entities: return self.entities[eid]
+	def setBlock(self, x, y, z, TileName, damage=0, mode="replace", data={}):
+		self.server.console("setblock %d %d %d %s %d %s %s" % (x, y, z, TileName, dataValue, mode, json.dumps(data)))
+	def fill(self, pos1, pos2, TileName, damage=0, mode="destroy", data={}):
+		""" Fill a 3D cube with a certain block.
+		
+		Modes: destroy, hollow, keep, outline"""
+		if mode not in ("destroy", "hollow", "keep", "outline"):
+			raise Exception("Invalid mode: %s" % mode)
+		x1, y1, z1 = pos1
+		x2, y2, z2 = pos2
+		if self.server.protocolVersion < 6:
+			print "Can't do /fill on a non-1.8 server"
+		else:
+			self.server.console("fill %d %d %d %d %d %d %s %d %s %s" % (x1, y1, z1, x2, y2, z2, TileName, damage, mode, json.dumps(data)))
+	def replace(self, pos1, pos2, TileName1, damage1, TileName2, damage2=0):
+		""" Replace specified blocks within a 3D cube with another specified block. """
+		x1, y1, z1 = pos1
+		x2, y2, z2 = pos2
+		if self.server.protocolVersion < 6:
+			raise Exception("Must be running Minecraft 1.8 or above to use the world.replace() method.")
+		else:
+			self.server.console("fill %d %d %d %d %d %d %s %d replace %s %d" % (x1, y1, z1, x2, y2, z2, TileName2, damage2, TileName1, damage1))
 class Chunk:
 	def __init__(self, bytearray, x, z):
 		self.ids = struct.unpack("<" + ("H" * (len(bytearray) / 2)), bytearray)

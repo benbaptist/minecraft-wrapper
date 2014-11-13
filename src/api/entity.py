@@ -17,11 +17,25 @@ class Entity:
 		self.type = type # Type of Entity
 		self.position = position # (x, y, z)
 		self.look = look # Head Position
+		self.rodeBy = False
+		self.riding = False
 		
 		if type in ENTITIES: self.type = ENTITIES[type]
 		self.isObject = isObject # Boat/Minecart/other non-living Entities are objects
 	def __str__(self):
 		return str(self.type)
-	def move(self, position):
+	def moveRelative(self, position):
 		""" Move the entity relative to their position, unless it is illegal. """
-		#self.position = position
+		x, y, z = position
+		oldPosition = [self.position[0], self.position[1], self.position[2]]
+		oldPosition[0] += x / 32.0
+		oldPosition[1] += y / 32.0
+		oldPosition[2] += z / 32.0
+		self.position = (oldPosition[0], oldPosition[1], oldPosition[2])
+		if self.rodeBy:
+			self.rodeBy.position = self.position 
+	def teleport(self, position):
+		""" Teleport the entity to a specific location. """
+		self.position = (position[0] / 32, position[1] / 32, position[2] / 32)
+		if self.rodeBy:
+			self.rodeBy.position = self.position

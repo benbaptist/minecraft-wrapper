@@ -19,8 +19,17 @@ class Web:
 		for i in range(32):
 			a += z[random.randrange(0, len(z))]
 #			a += chr(random.randrange(97, 122))
-		self.data["keys"].append(a)
+		self.data["keys"].append([a, time.time()])
 		return a
+	def validateKey(self, key):
+		for i in self.data["keys"]:
+			if i[0] == key and time.time() - i[1] < 604800: # Validate key and ensure it's under a week old
+				return True
+		return False
+	def removeKey(self, key):
+		for i,v in enumerate(self.data["keys"]):
+			if v[0] == key:
+				del self.data["keys"][i]
 	def wrap(self):
 		while not self.wrapper.halt:
 			try:
@@ -89,7 +98,7 @@ class Client:
 			self.headers(status="300 Internal Server Error")
 			self.write("<h1>300 Internal Server Error</h1>")
 			self.close()
-	def runAction(self, request):
+	def handleAction(self, request):
 		def args(i): 
 			try: return request.split("/")[1:][i]
 			except: return ""
@@ -98,22 +107,66 @@ class Client:
 				if a[0:a.find("=")]:
 					return a[a.find("=")+1:]
 			return ""
+		info = self.runAction(request)
+		if info == False:
+			return {"status": "error", "payload": "unknown_key"}
+		elif info == EOFError:
+			return {"status": "error", "payload": "permission_denied"}
+		else:
+			return {"status": "good", "payload": info}
+	def runAction(self, request):
+		def args(i): 
+			try: return request.split("/")[1:][i]
+			except: return ""
+		def get(i): 
+			for a in args(1).split("?")[1].split("&"):
+				if a[0:a.find("=")] == i:
+					return a[a.find("=")+1:]
+			return ""
 		action = args(1).split("?")[0]
-		if action == "test":
-			return {"type": "test", "value": "YAY"}
 		if action == "stats":
-			if not self.wrapper.config["Web"]["public-stats"]:
-				return {"type": "error", "error": "permission_denied"}
+			if not self.wrapper.config["Web"]["public-stats"]: return EOFError
 			players = []
 			for i in self.wrapper.server.players:
-				players.append({"name": i, "loggedIn": self.wrapper.server.players[i].loggedIn, "uuid": self.wrapper.server.players[i].uuid})
-			return {"type": "stats", "playerCount": len(self.wrapper.server.players), "players": players}
+				players.append({"name": i, "loggedIn": self.wrapper.server.players[i].loggedIn, "uuid": str(self.wrapper.server.players[i].uuid)})
+			return {"playerCount": len(self.wrapper.server.players), "players": players}
 		if action == "login":
 			password = get("password")
 			if password == self.wrapper.config["Web"]["web-password"]:
 				key = self.web.makeKey()
-				return {"type": "login", "value": key}
-		return {"type": "error", "error": "unknown_key"}
+				return {"session-key": key}
+			return EOFError
+		if action == "is_admin":
+			if self.web.validateKey(get("key")): return {"status": "good"}
+			return EOFError
+		if action == "logout":
+			if self.web.validateKey(get("key")):
+				self.web.removeKey(get("key"))
+				return "goodbye"
+			return EOFError
+		if action == "admin_stats":
+			if not self.web.validateKey(get("key")): return EOFError
+			players = []
+			for i in self.wrapper.server.players:
+				players.append({"name": i, "loggedIn": self.wrapper.server.players[i].loggedIn, "uuid": str(self.wrapper.server.players[i].uuid)})
+			return {"playerCount": len(self.wrapper.server.players), "players": players, "server_state": self.wrapper.server.state}
+		if action == "server_action":
+			if not self.web.validateKey(get("key")): return EOFError
+			type = get("action")
+			if type == "stop":
+				reason = get("reason")
+				self.wrapper.server.stop(reason)
+				return "success"
+			elif type == "restart":
+				reason = get("reason")
+				self.wrapper.server.restart(reason)
+				return "success"
+			elif type == "start":
+				reason = get("reason")
+				self.wrapper.server.start()
+				return "success"
+			return {"error": "invalid_server_action"}
+		return False
 	def getContentType(self, filename):
 		ext = filename[filename.rfind("."):][1:]
 		if ext == "js": return "application/javascript"
@@ -122,7 +175,7 @@ class Client:
 		if ext in ("ico"): return "image/x-icon"
 		return "application/octet-stream"
 	def get(self, request):
-		print "GET request: %s" % request
+		#print "GET request: %s" % request
 		def args(i): 
 			try: return request.split("/")[1:][i]
 			except: return ""
@@ -130,9 +183,10 @@ class Client:
 			file = "index.html"
 		elif args(0) == "action":
 			try:
-				self.write(json.dumps(self.runAction(request)))
+				self.write(json.dumps(self.handleAction(request)))
 			except:
 				self.headers(status="300 Internal Server Error")
+				print traceback.format_exc()
 			self.close()
 			return False
 		else:
@@ -160,7 +214,7 @@ class Client:
 				#self.log.debug("(WEB) Connection %s closed" % str(self.addr))
 				break
 			if len(self.buffer) < 1:
-				print "connection closed" 
+				print "Web connection closed suddenly" 
 				return False
 			for line in self.buffer:
 				def args(i): 

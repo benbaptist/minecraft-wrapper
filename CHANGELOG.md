@@ -1,8 +1,7 @@
 #Changelog#
 
 <h4>0.7.3</h4>
-Before I release 0.7.3, I'd like to add support for pre-1.7 back again, and fix #38. Maybe I should add the auto-updater too.
-Make sure to add dimension client updating thingy player.getDimension()
+Before I release 0.7.3, I'd like to add support for pre-1.7 back again, and fix #38. 
 
 Pre-1.7 support is mostly there, but Python gives errors on stdin.write() due to the color codes causing encoding errors. I hate Python 2.x's string encoding bullcrap.
 
@@ -23,6 +22,8 @@ Still shows this:
   - If you want to jump from a dev build to the latest stable (if a newer stable version exists), run /wrapper-update stable
   - Updates can be performed in-game with the `/wrapper update` command
   - Updates can be performed from the IRC remote control interface with the 'wrapper-update' command
+- Web admin panel for controlling the wrapper & the server from a browser
+  - It is extremely ugly, and primitive. Don't except much yet.
 
 **Bug Fixes**
 - Fixed "Backup file '%s' does not exist - will not backup" when conducting a backup
@@ -36,6 +37,7 @@ Still shows this:
 - Players can now leave boats/minecarts again
 - Proxy mode should work with 1.7.10 now
 - Fixed 'stop' in IRC remote not keeping the server off
+- Fixed player position not changing while riding an entity
   
 **Developer Changes**
 - New formatting code: &@ for opening URLs when clicked in game chat
@@ -67,11 +69,16 @@ Still shows this:
 - New Server class methods (accessable with api.minecraft.getServer()):
   - server.start(): Start the server (if it isn't already started)
   - server.restart(reason): Restart the server, and kick users with an optional reason (default: "Restarting server...")
-  - server.stop(reason): Stop the server, kick users with a reason (default: "Stopping server..."), don't automatically start back up, but keep Wrapper.py running. 
-- Cleaned up MORE incosistencies in these events:
+  - server.stop(reason): Stop the server, kick users with a reason (default: "Stopping server..."), don't automatically start back up, but keep Wrapper.py running.
+- New World class methods (accessable with api.minecraft.getWorld()):
+  - world.setBlock()
+  - world.fill()
+  - world.replace()
+  - world.getEntityByEID() 
+- Cleaned up MORE inconsistencies in these events:
   - player.achievement
 - New method: self.log.warn
-- All irc.* events use "nick" instead of "user" for the payload
+- All irc.* events use "nick" instead of "user" for the payload now
 - server.status renamed to server.state (from api.minecraft.getServer())
 - Entity tracking system being implemented
   - Very early, buggy junk
@@ -174,11 +181,11 @@ Small update, but brings one much-needed change: the new configuration file syst
 
 #To-do List#
 - Web interface for server management (partially implemented, not sure when it'll be done)
+  - There's technically a functional web mode now - but it's super primitive. It does work, however.
 - Multi-server mode (This might actually become a separate project for managing multiple servers and accounts, rather than being a Wrapper.py feature)
   - If I make it a separate project, it might use Wrapper.py as a backend for booting servers for extra features, for the sake of not duping code across projects</li>
 - Ability to halt server without shutting down wrapper - for fine server control
 - Update version of Minecraft server automatically
-- Update Wrapper.py automatically or with a one-click update
 - First-run setup wizard for new setups
 - Potentially implement a way to reload the config - but that might be too difficult/bug prone
 - Improve configuration system/redo from scratch
