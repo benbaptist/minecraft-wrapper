@@ -141,6 +141,7 @@ class Wrapper:
 					update = self.checkForNewUpdate()
 					if update:
 						version, build, type = update
+						print version, build, type
 						player.message("&bNew Wrapper.py Version %s (Build #%d) available!)" % (".".join(version), build))
 						player.message("&bYou are currently on %s." % self.getBuildString())
 						player.message("&aPerforming update...")

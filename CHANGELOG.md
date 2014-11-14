@@ -5,13 +5,22 @@ Before I release 0.7.3, I'd like to add support for pre-1.7 back again, and fix 
 
 Pre-1.7 support is mostly there, but Python gives errors on stdin.write() due to the color codes causing encoding errors. I hate Python 2.x's string encoding bullcrap.
 
-I also need to implement the sub-commands for /update-wrapper.
+I also need to implement the sub-commands for /update-wrapper. Oh, also, I just realized that until you reboot the Wrapper, it'll probably continue to try to automatically install new updates.
 
-Still shows this:
+Traceback (most recent call last):
+  File "Wrapper.py/proxy.py", line 317, in parse
+    return self.wrapper.callEvent("player.runCommand", {"player": self.getPlayerObject(), "command": args(0)[1:], "args": argsAfter(1)})
+  File "Wrapper.py/__main__.py", line 109, in callEvent
+  File "Wrapper.py/__main__.py", line 144, in playerCommand
+TypeError: sequence item 0: expected string, int found
+
+IRC when backing up still shows this:
  &cBacking up... lag may occur!
  &aBackup complete!
 
 **Features**
+- Web admin panel for controlling the wrapper & the server from a browser
+  - It is extremely ugly, and primitive. Don't except much yet.
 - Optional backup compression (tar.gz)
 - Optional auto-update system (turned off by default)
   - If auto-update-wrapper is turned on in wrapper.properties, the Wrapper will check for updates every 24 hours
@@ -22,8 +31,6 @@ Still shows this:
   - If you want to jump from a dev build to the latest stable (if a newer stable version exists), run /wrapper-update stable
   - Updates can be performed in-game with the `/wrapper update` command
   - Updates can be performed from the IRC remote control interface with the 'wrapper-update' command
-- Web admin panel for controlling the wrapper & the server from a browser
-  - It is extremely ugly, and primitive. Don't except much yet.
 
 **Bug Fixes**
 - Fixed "Backup file '%s' does not exist - will not backup" when conducting a backup

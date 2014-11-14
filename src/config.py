@@ -47,15 +47,15 @@ server-port = 25564
 motd = Minecraft Server
 online-mode = True
 max-players = 1024
-"""
 
-"""[Web]
+[Web]
 ;; This is a web UI. ;;
-enabled = False
-bind = 0.0.0.0
-port = 8070
-password = blahblah98
-public-stats = True"""
+web-enabled = False
+web-bind = 0.0.0.0
+web-port = 8070
+web-password = blahblah98
+public-stats = True
+"""
 
 class Config:
 	version = "0.7.3"
@@ -118,14 +118,6 @@ class Config:
 			"max-players": 1024
 		},
 		"Web":{
-			"web-enabled": False,
-			"web-bind": "0.0.0.0",
-			"web-port": 8070,
-			"web-password": "usefulpass",
-			"public-stats": True
-		}}
-		# Removed from the list above until fully implemented.
-		{"Web":{
 			"web-enabled": False,
 			"web-bind": "0.0.0.0",
 			"web-port": 8070,
