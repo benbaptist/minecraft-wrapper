@@ -139,10 +139,10 @@ class Wrapper:
 				if subcommand == "update":
 					player.message({"text": "Checking for new Wrapper.py updates...","color":"yellow"})
 					update = self.checkForNewUpdate()
-					if update:
+					if not update:
 						version, build, type = update
 						print version, build, type
-						player.message("&bNew Wrapper.py Version %s (Build #%d) available!)" % (".".join(version), build))
+						player.message("&bNew Wrapper.py Version %s (Build #%d) available!)" % (".".join([str(_) for _ in version]), build))
 						player.message("&bYou are currently on %s." % self.getBuildString())
 						player.message("&aPerforming update...")
 						if self.performUpdate(version, build, type):
@@ -442,7 +442,7 @@ class Wrapper:
 					self.log.info("New Wrapper.py development build #%d available! Updating... (currently on #%d)" % (build, globals.build))
 				self.performUpdate(version, build, type)
 			else:
-				self.log.info("New Wrapper.py stable %s available! Updating... (currently on %s)" % (".".join(version), Config.version))
+				self.log.info("New Wrapper.py stable %s available! Updating... (currently on %s)" % (".".join([str(_) for _ in version]), Config.version))
 				self.performUpdate(version, build, type)
 		else:
 			self.log.info("No new versions available.")
@@ -475,7 +475,7 @@ class Wrapper:
 				self.log.info("Update file successfully verified. Installing...")
 				with open(sys.argv[0], "w") as f:
 					f.write(wrapperFile)
-				self.log.info("Wrapper.py %s (#%d) installed. Please reboot the Wrapper.py." % (".".join(version), build))
+				self.log.info("Wrapper.py %s (#%d) installed. Please reboot the Wrapper.py." % (".".join([str(_) for _ in version]), build))
 				return True
 			else:
 				return False
