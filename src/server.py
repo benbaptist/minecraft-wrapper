@@ -1,378 +1,361 @@
-import socket, datetime, time, sys, threading, random, subprocess, os, json, signal, traceback, api, world, StringIO, ConfigParser
+import socket, datetime, time, sys, threading, random, subprocess, os, json, signal, traceback, api, StringIO, ConfigParser, backups, sys, codecs
+from api.player import Player
+from api.world import World
 class Server:
 	def __init__(self, args, log, config, wrapper):
 		self.log = log
 		self.config = config
 		self.wrapper =  wrapper
-		self.players = {}
-		self.status = 0 # 0 is off, 1 is starting, 2 is started, 3 is shutting down
-		self.start = True
-		self.sock = False
-		self.currentSecond = 0
-		self.backupInterval = 0
-		self.uuid = {}
-		self.data = ""
-		self.backups = []
-		self.oldServer = []
-		self.bootTime = time.time()
+		self.args = args
+		self.api = api.API(wrapper, "Server", internal=True)
+		self.backups = backups.Backups(wrapper)
 		
+		self.players = {}
+		self.state = 0 # 0 is off, 1 is starting, 2 is started, 3 is shutting down
+		self.bootTime = time.time()
+		self.boot = True
+		self.data = []
+		
+		# Server Information 
 		self.worldName = None
 		self.protocolVersion = -1 # -1 until proxy mode checks the server's MOTD on boot
 		self.version = None
-		self.world = world.World()
+		self.world = None
 		
 		# Read server.properties and extract some information out of it
-		s = StringIO.StringIO() # Stupid StringIO doesn't support __exit__()
-		config = open("server.properties", "r").read()
-		s.write("[main]\n" + config)
-		s.seek(0)
-		self.properties = ConfigParser.ConfigParser(allow_no_value = True)
-		self.properties.readfp(s)
-		self.worldName = self.properties.get("main", "level-name")
+		if os.path.exists("server.properties"):
+			s = StringIO.StringIO() # Stupid StringIO doesn't support __exit__()
+			config = open("server.properties", "r").read()
+			s.write("[main]\n" + config)
+			s.seek(0)
+			self.properties = ConfigParser.ConfigParser(allow_no_value = True)
+			self.properties.readfp(s)
+			self.worldName = self.properties.get("main", "level-name")
 		
-		#t = threading.Thread(target=self.readServerLog, args=())
-#		t.daemon = True
-#		t.start()
-	def login(self, user):
+		self.api.registerEvent("irc.message", self.onChannelMessage)
+		self.api.registerEvent("irc.action", self.onChannelAction)
+		self.api.registerEvent("irc.join", self.onChannelJoin)
+		self.api.registerEvent("irc.part", self.onChannelPart)
+		self.api.registerEvent("irc.quit", self.onChannelQuit)
+		self.api.registerEvent("timer.second", self.onTick)
+	def init(self):
+		""" Start up the listen threads for reading server console output """
+		captureThread = threading.Thread(target=self.__stdout__, args=())
+		captureThread.daemon = True
+		captureThread.start()
+		captureThread = threading.Thread(target=self.__stderr__, args=())
+		captureThread.daemon = True
+		captureThread.start()
+	def start(self):
+		""" Start the Minecraft server """
+		self.boot = True
+	def restart(self, reason="Restarting Server"):
+		""" Restart the Minecraft server, and kick people with the specified reason """
+		self.log.info("Restarting Minecraft server with reason: %s" % reason)
+		self.changeState(3, reason)
+		for player in self.players:
+			self.console("kick %s %s" % (player, reason))
+		self.console("stop")
+	def stop(self, reason="Stopping Server"):
+		""" Stop the Minecraft server, prevent it from auto-restarting and kick people with the specified reason """
+		self.log.info("Stopping Minecraft server with reason: %s" % reason)
+		self.changeState(3, reason)
+		self.boot = False
+		for player in self.players:
+			self.console("kick %s %s" % (player, reason))
+		self.console("stop")
+	def kill(self, reason="Killing Server"):
+		""" Forcefully kill the server. It will auto-restart if set in the configuration file """
+		self.log.info("Killing Minecraft server with reason: %s" % reason)
+		self.changeState(0, reason)
+		self.proc.kill()
+	def broadcast(self, message=""):
+		""" Broadcasts the specified message to all clients connected. message can be a JSON chat object, or a string with formatting codes using the & as a prefix """
+		if isinstance(message, dict):
+			if self.config["General"]["pre-1.7-mode"]:
+				self.console("say %s" % self.chatToColorCodes(message))
+			else:
+				self.console("tellraw @a %s" % json.dumps(message))
+		else:
+			if self.config["General"]["pre-1.7-mode"]:
+				self.console("say %s" % self.chatToColorCodes(json.loads(self.processColorCodes(message))))
+			else:
+				self.console("tellraw @a %s" % self.processColorCodes(message))
+	def chatToColorCodes(self, json):
+		total = ""
+		def getColorCode(i):
+			for l in api.API.colorCodes:
+				if api.API.colorCodes[l] == i:
+					return "\xa7\xc2" + l
+			return ""
+		def handleChunk(j):
+			total = ""
+			if "color" in j: total += getColorCode(j["color"]).decode("ascii")
+			if "text" in j: total += j["text"].decode("ascii")
+			return total
+		total += handleChunk(json)
+		if "extra" in json:
+			for i in json["extra"]:
+				total += handleChunk(i)
+		return total
+	def processColorCodes(self, message):
+		""" Used internally to process old-style color-codes with the & symbol, and returns a JSON chat object. """
+		message = message.encode('ascii', 'ignore')
+		extras = []
+		bold = False
+		italic = False
+		underline = False
+		obfuscated = False
+		strikethrough = False
+		url = False
+		color = "white"
+		current = ""; it = iter(xrange(len(message)))
+		for i in it:
+			char = message[i]
+			if char is not "&":
+				if char == " ": url = False
+				current += char
+			else:
+				if url: clickEvent = {"action": "open_url", "value": current}
+				else: clickEvent = {}
+				extras.append({"text": current, "color": color, "obfuscated": obfuscated, 
+					"underlined": underline, "bold": bold, "italic": italic, "strikethrough": strikethrough, "clickEvent": clickEvent})
+				current = ""
+				try: code = message[i+1]
+				except: break
+				if code in "abcdef0123456789":
+					try: color = api.API.colorCodes[code]
+					except: color = "white"
+				if code == "k": obfuscated = True
+				elif code == "l": bold = True
+				elif code == "m": strikethrough = True
+				elif code == "n": underline = True
+				elif code == "o": italic = True
+				elif code == "&": current += "&"
+				elif code == "@": url = not url
+				elif code == "r":
+					bold = False
+					italic = False
+					underline = False
+					obfuscated = False
+					strikethrough = False
+					url = False
+					color = "white"
+				it.next()
+		extras.append({"text": current, "color": color, "obfuscated": obfuscated, 
+			"underlined": underline, "bold": bold, "italic": italic, "strikethrough": strikethrough})
+		return json.dumps({"text": "", "extra": extras})
+	def login(self, username):
+		""" Called when a player logs in """
 		try:
-			if user not in self.players:
-#				time.sleep(1)
-				self.players[user] = api.Player(user, self.wrapper)
+			if username not in self.players:
+				self.players[username] = api.Player(username, self.wrapper)
+			self.wrapper.callEvent("player.login", {"player": self.getPlayer(username)})
 		except:
-			traceback.print_exc()
-	def logout(self, user):
+			self.log.getTraceback()
+	def logout(self, username):
+		""" Called when a player logs out """
+		self.wrapper.callEvent("player.logout", {"player": self.getPlayer(username)})
 		if self.wrapper.proxy:
 			for client in self.wrapper.proxy.clients:
-				uuid = self.players[user].uuid
-#				client.send(0x02, "json|byte", ({"text": "%s left the game BOIIIi (uuid %s)" % (user, uuid), "color":"purple"}, 0))
-#				print len(client.send(0x38, "varint|varint|uuid", (4, 1, self.players[user].uuid)))
-		if user in self.players:
-			del self.players[user]
+				uuid = self.players[username].uuid
+		if username in self.players:
+			del self.players[username]
 	def getPlayer(self, username):
-		""" Returns a player object with the specified name, or False if the user is not logged in/doesn't exist. """
+		""" Returns a player object with the specified name, or False if the user is not logged in/doesn't exist """
 		if username in self.players:
 			return self.players[username]
 		return False
-	def argserver(self, i):
-		try: return self.line.split(" ")[i]
-		except: return ""
-	def argsAfter(self, i):
-		try: return " ".join(self.line.split(" ")[i:])
-		except: return ""
-	def getName(self):
-		return "Minecraft Server"
-	# -- IRC functions -- #
-	def msg(self, message):
-		if self.config["IRC"]["enabled"]:
-			self.wrapper.irc.msgQueue.append(message)
-	def filterName(self, name):
-		if self.config["IRC"]["obstruct-nicknames"]:
-			return "_" + name[1:]
-		else:
-			return name 
-	# -- server management -- #
-	def announce(self, text):
-		for channel in self.config["IRC"]["channels"]:
-			self.send('PRIVMSG %s :%s' % (channel, text))
-#		self.console()
-	def console(self, text):
-		if not self.config["General"]["pre-1.7-mode"]:
-			self.run("tellraw @a %s" % json.dumps(text, encoding='utf-8'))
-		else:
-			say = ""
-			print text
-			for i in text:
-				if i == "extra":
-					for x in text[i]:
-						say += x["text"]
-				elif i == "text":
-					say += text[i]
-			self.run("say %s" % say)
-	def run(self, text):
-		try:
-			self.proc.stdin.write("%s\n" % text)
-		except:
-			pass
-	def captureSTDOUT(self):
+	def console(self, command):
+		""" Execute a console command on the server """
+		try: self.proc.stdin.write("%s\n" % command)
+		except: pass #self.log.getTraceback()
+	def changeState(self, state, reason=None):
+		""" Change the boot state of the server, with a reason message """
+		self.state = state
+		if self.state == 0: self.wrapper.callEvent("server.stopped", {"reason": reason})
+		if self.state == 1: self.wrapper.callEvent("server.starting", {"reason": reason})
+		if self.state == 2: self.wrapper.callEvent("server.started", {"reason": reason})
+		if self.state == 3: self.wrapper.callEvent("server.stopping", {"reason": reason})
+		self.wrapper.callEvent("server.state", {"state": state, "reason": reason})
+	def __stdout__(self):
 		while not self.wrapper.halt:
 			try:
 				data = self.proc.stdout.readline()
-				if len(data) > 0:
-					self.data += data
+				for line in data.split("\n"):
+					if len(line) < 1: continue
+					self.data.append(line)
 			except:
+				time.sleep(0.1)
 				continue
-	def captureSTDERR(self):
+	def __stderr__(self):
 		while not self.wrapper.halt:
 			try:
 				data = self.proc.stderr.readline()
 				if len(data) > 0:
-					self.data += data
+					for line in data.split("\n"):
+						self.data.append(line.replace("\r", ""))
 			except:
-				continue
-	def formatForIRC(self, string):
-		colorCodes = {"0": "1", 
-			"1": "2",
-			"2": "3", 
-			"3": "10",
-			"4": "4",
-			"5": "6",
-			"6": "5",
-			"7": "15",
-			"8": "14",
-			"9": "11",
-			"a": "9", 
-			"b": "13", 
-			"c": "4", 
-			"d": "6", 
-			"e": "8", 
-			"f": "0",
-			"k": "1",
-			"l": "",
-			"m": "",
-			"n": "",
-			"o": ""}
-		converted = ""
-		skipNext = False
-		for i,char in enumerate(string):
-			if skipNext: # wow this code just got really lazy and dumb looking
-				skipNext = False
-				continue
-			if char == "\xa7":
-				color = string[i + 1]
-				converted = converted[0:-1]
-				if color == "r":
-					converted += "\x0f"
-				else:
-					converted += "\x03%s" % colorCodes[color]
-				skipNext = True
-			else:
-				converted += char
-		return converted
-	def stripSpecialIRCChars(self, value):
-		for i in range(16):
-			value = value.replace("\x03%d" % i, "")
-		value = value.replace("\x0f", "")
-		return value
-	def startServer(self):
-		while not self.wrapper.halt:
-			if not self.start:
 				time.sleep(0.1)
 				continue
-			self.players = {}
-			self.status = 1
+	def __handle_server__(self):
+		""" Internally-used function that handles booting the server, parsing console output, and etc. """
+		while not self.wrapper.halt:
+			if not self.boot:
+				time.sleep(0.1)
+				continue
+			self.changeState(1)
 			self.log.info("Starting server...")
 			self.wrapper.callEvent("server.start", {})
-			self.proc = subprocess.Popen(self.serverArgs, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+			self.proc = subprocess.Popen(self.args, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+			self.players = {}	
 			while True:
-				# timer & backup
-				if self.currentSecond == int(time.time()): # don't make fun of me for this
-					pass
-				else:
-					self.backupInterval += 1
-					self.currentSecond = int(time.time())
-					self.wrapper.callEvent("timer.second", {})
-					if self.config["General"]["timed-reboot"]:
-						if time.time() - self.bootTime > self.config["General"]["timed-reboot-seconds"]:
-							self.stop("Server is conducting a scheduled reboot. The server will be back momentarily!")
-							self.start = True
-							self.bootTime = time.time()
-				if self.backupInterval == self.config["Backups"]["backup-interval"] and self.config["Backups"]["enabled"] and self.wrapper.callEvent("wrapper.backupBegin", {}):
-					self.backupInterval = 0
-					if not os.path.exists(self.config["Backups"]["backup-location"]):
-						os.mkdir(self.config["Backups"]["backup-location"])
-					if len(self.backups) == 0 and os.path.exists(self.config["Backups"]["backup-location"] + "/backups.json"):
-						f = open(self.config["Backups"]["backup-location"] + "/backups.json", "r")
-						try:
-							self.backups = json.loads(f.read())
-						except:
-							self.log.error("NOTE - backups.json was unreadable. This might be due to corruption. This might lead to backups never being deleted.")
-							for channel in self.config["IRC"]["channels"]:
-								self.send("PRIVMSG %s :ERROR - backups.json is corrupted. Please contact an administer instantly, this may be critical." % (channel))
-							self.backups = []
-						f.close()
-					else:
-						if len(os.listdir(self.config["Backups"]["backup-location"])) > 0:
-							# import old backups from previous versions of Wrapper.py
-							backupTimestamps = []
-							for backupNames in os.listdir(self.config["Backups"]["backup-location"]):
-								try:
-									backupTimestamps.append(int(backupNames[backupNames.find('-')+1:backupNames.find('.')]))
-								except:
-									pass
-							backupTimestamps.sort()
-							for backupI in backupTimestamps:
-								self.backups.append((int(backupI), "backup-%s.tar" % str(backupI)))
-					if self.config["Backups"]["backup-notification"]:
-						self.msg("Backing up... prepare for lag")
-						self.console("\xc2\xa7bBacking up, IRC bridge will freeze and lag may occur")
-					timestamp = int(time.time())
-					filename = "backup-%s.tar" % datetime.datetime.fromtimestamp(int(timestamp)).strftime("%Y-%m-%d_%H:%M:%S")
-					self.run("save-all")
-					self.run("save-off")
-					time.sleep(0.5)
-	
-					if not os.path.exists(str(self.config["Backups"]["backup-location"])):
-						os.mkdir(self.config["Backups"]["backup-location"])
-					
-					arguments = ["tar", "cfpv", '%s/%s' % (self.config["Backups"]["backup-location"], filename)]
-					for file in self.config["Backups"]["backup-folders"]:
-						if os.path.exists(file):
-							arguments.append(file)
-						self.log.error("Backup file '%s' does not exist - will not backup")
-					statusCode = os.system(" ".join(arguments))
-					self.run("save-on")
-					if self.config["Backups"]["backup-notification"]:
-						self.console("\xc2\xa7aBackup complete!")
-						self.msg("Backup complete!")
-						self.wrapper.callEvent("wrapper.backupEnd", {"backupFile": filename, "status": statusCode})
-					self.backups.append((timestamp, 'backup-%s.tar' % datetime.datetime.fromtimestamp(int(timestamp)).strftime('%Y-%m-%d_%H:%M:%S')))
-					
-					if len(self.backups) > self.config["Backups"]["backups-keep"]:
-						self.log.info("Deleting old backups...")
-						while len(self.backups) > self.config["Backups"]["backups-keep"]:
-							backup = self.backups[0]
-							if not self.wrapper.callEvent("wrapper.backupDelete", {"backupFile": filename}): break
-							try:
-								os.remove('%s/%s' % (self.config["Backups"]["backup-location"], backup[1]))
-							except:
-								print "Failed to delete"
-							self.log.info("Deleting old backup: %s" % datetime.datetime.fromtimestamp(int(backup[0])).strftime('%Y-%m-%d_%H:%M:%S'))
-							hink = self.backups[0][1][:]
-							del self.backups[0]
-					f = open(self.config["Backups"]["backup-location"] + "/backups.json", "w")
-					f.write(json.dumps(self.backups))
-					f.close()
-				
-				if self.proc.poll() is not None:
-					self.status = 0
-					self.msg("Server shutdown")
-					self.log.info("Server shutdown")
-					if not self.config["General"]["auto-restart"]:
-						self.halt = True
-						sys.exit(0)
-					break
-				if len(self.data) > 0:
-					data = self.data.split("\n")
-					self.data = ""
-				else:
-					data = []
-				
-				# parse server console output
-				deathPrefixes = ['fell', 'was', 'drowned', 'blew', 'walked', 'went', 'burned', 'hit', 'tried', 
-					'died', 'got', 'starved', 'suffocated', 'withered']
-				for line in data:
-					if len(line) < 1: continue
-					self.line = line
-					self.wrapper.callEvent("server.consoleMessage", {"message": line})
-					print line
-					if self.argserver(3) is not False:
-						try:
-							if not self.config["General"]["pre-1.7-mode"]:
-								if self.argserver(3)[0] == "<":
-									name = self.formatForIRC(self.filterName(self.argserver(3)[1:self.argserver(3).find('>')]))
-									message = self.formatForIRC(" ".join(line.split(' ')[4:]).replace('\x1b', '').replace("\xc2\xfa", ""))
-#									self.msg("<%s> %s" % (name, message))
-									player = self.getPlayer(self.stripSpecialIRCChars(name))
-									self.wrapper.callEvent("player.message", {"player": player, "message": message})
-								elif self.argserver(3) == "Preparing" and self.argserver(4) == "level":
-									self.worldName = self.argserver(5).replace('"', "")
-								elif self.argserver(4) == "logged":
-									name = self.formatForIRC(self.filterName(self.argserver(3)[0:self.argserver(3).find('[')]))
-									self.msg("[%s connected]" % name)
-									self.login(name)
-									player = self.getPlayer(self.stripSpecialIRCChars(name))
-									self.wrapper.callEvent("player.join", {"player": player})
-								elif self.argserver(3)[0] == "[" and self.argserver(3)[-1] == "]":
-									name = self.argserver(3)[1:-1]
-									message = self.formatForIRC(" ".join(line.split(' ')[4:]).replace('\x1b', '').replace("\xc2\xfa", ""))
-									self.wrapper.callEvent("server.say", {"player": name, "message": message})
-								elif self.argserver(4) == 'lost':
-									name = self.filterName(self.argserver(3))
-									self.msg("[%s disconnected]" % (name))
-									player = self.getPlayer(self.stripSpecialIRCChars(name))
-									self.wrapper.callEvent("player.logout", {"player": player})
-									self.logout(name)
-								elif self.argserver(4) == 'issued': # this kinda doesn't work anymore unless you have a bukkit plugin.
-									name = self.filterName(self.argserver(3))
-									command = message = ' '.join(line.split(' ')[7:])
-									if self.config["IRC"]["forward-commands-to-irc"]:
-										self.msg("%s issued command: %s" % (name, command))
-								elif self.argserver(3) == 'Done':
-									self.status = 2
-									self.msg("Server started")
-									self.log.info("Server started")
-									self.wrapper.callEvent("server.started", {})
-									self.bootTime = time.time()
-								elif self.argserver(3) == 'Starting' and self.argserver(4) == "minecraft":
-									self.version = self.argserver(7)
-								elif self.argserver(4) in deathPrefixes:
-									self.msg(' '.join(self.line.split(' ')[3:]))
-									name = self.filterName(self.argserver(3))
-									deathMessage = self.config["Death"]["death-kick-messages"][random.randrange(0, len(self.config["Death"]["death-kick-messages"]))]
-									if self.config["Death"]["kick-on-death"] and name in self.config["Death"]["users-to-kick"]:
-										server.proc.stdin.write('kick %s %s\n\r' % (name, deathMessage))
-									player = self.getPlayer(self.stripSpecialIRCChars(name))
-									self.wrapper.callEvent("player.death", {"player": player, "death": self.argsAfter(4)})
-								elif self.argserver(3) == "*":
-									name = self.formatForIRC(self.filterName(self.argserver(4)))
-									message = message = ' '.join(line.split(' ')[5:])
-									self.msg("* %s %s" % (name, message))
-									player = self.getPlayer(self.stripSpecialIRCChars(name))
-									self.wrapper.callEvent("player.action", {"player": player, "action": message})
-								elif self.argserver(4) == "has" and self.argserver(8) == "achievement":
-									name = self.filterName(self.argserver(3))
-									achievement = ' '.join(line.split(' ')[9:])
-									self.msg("%s has just earned the achievement %s" % (name, achievement))
-									self.wrapper.callEvent("player.achievement", {"player": name, "achievement": achievement})
-							else: # -- FOR 1.6.4 AND PREVIOUSLY ONLY!!!!! -- 
-								if self.argserver(3)[0] == '<':
-									name = self.filterName(self.argserver(3)[1:self.argserver(3).find('>')].replace("\xc2\xfa", ""))
-									message = ' '.join(line.split(' ')[4:]).replace('\x1b', '').replace("\xc2\xfa", "")
-									self.msg('<%s> %s' % (name, message))
-									self.wrapper.callEvent("player.message", {"player": self.stripSpecialIRCChars(name), "message": message})
-								elif self.argserver(4) == 'logged':
-									name = self.argserver(3)[0:self.argserver(3).find('[')]
-									self.msg('[%s connected]' % name)
-									self.login(name)
-									self.wrapper.callEvent("player.join", {"player": name})
-								elif self.argserver(4) == 'lost':
-									name = self.argserver(3)
-									reason = self.argserver(6)
-									self.msg('[%s disconnected] (%s)' % (name, reason))
-									self.logout(name)
-									self.wrapper.callEvent("player.logout", {"player": name})
-								elif self.argserver(3) == "*":
-									name = self.formatForIRC(self.filterName(self.argserver(4)))
-									message = message = ' '.join(line.split(' ')[5:])
-									self.msg("* %s %s" % (name, message))
-									self.wrapper.callEvent("player.action", {"player": name, "action": message})
-								elif self.argserver(3) == 'Kicked':
-									name = self.argserver(6)
-									self.msg('[%s disconnected] (Kicked :O)' % name)
-									self.logout(name)
-									self.wrapper.callEvent("player.logout", {"player": name})
-								elif self.argserver(3) == 'issued':
-									name = self.argserver(2)
-									command = message = ' '.join(line.split(' ')[6:])
-									if self.config["forwardCommandsToIRC"]:
-										self.msg('%s issued command: %s' % (name, command))
-								elif self.argserver(3) == 'Done':
-									self.status = 2
-									self.msg('Server started')
-								elif self.argserver(3) in deathPrefixes:
-									self.msg(' '.join(self.line.split(' ')[2:]))
-									name = self.argserver(2)
-									randThing = self.config["deathKickMessages"][random.randrange(0, len(self.config["deathKickMessages"]))]
-									if self.config["deathKick"] and name in self.config["deathKickers"]:
-										self.run("kick %s %s" % (name, randThing))
-									self.wrapper.callEvent("player.death", {"player": self.stripSpecialIRCChars(name), "death": self.argsAfter(4)})
-						except:
-							pass
 				time.sleep(0.1)
-	# functions useful for the API
-	def stop(self, message="Server going down for maintenance"):
-		self.start = False
-		for name in self.players:
-			self.run("kick %s %s" % (name, message))
-		time.sleep(0.2)
-		self.run("stop")
+				if self.proc.poll() is not None:
+					self.changeState(0)
+					if not self.config["General"]["auto-restart"]:
+						self.wrapper.halt = True
+					self.log.info("Server stopped")
+					break
+				for line in self.data:
+					try: self.readConsole(line.replace("\r", ""))
+					except: self.log.getTraceback()
+				self.data = []
+	def stripSpecial(self, text):
+		a = ""; it = iter(xrange(len(text)))
+		for i in it:
+			char = text[i]
+			if char == "\xc2":
+				try: 
+					it.next()
+					it.next()
+				except:
+					pass 
+			else: 
+				a += char
+		return a
+	def readConsole(self, line):
+		""" Internally-use function that parses a particular console line """
+		def args(i):
+			try: return line.split(" ")[i]
+			except: return ""
+		def argsAfter(i):
+			try: return " ".join(line.split(" ")[i:])
+			except: return ""
+		if not self.wrapper.callEvent("server.consoleMessage", {"message": line}): return False
+		print line
+		deathPrefixes = ["fell", "was", "drowned", "blew", "walked", "went", "burned", "hit", "tried", 
+			"died", "got", "starved", "suffocated", "withered"]
+		if not self.config["General"]["pre-1.7-mode"]:
+			if len(args(3)) < 1: return
+			if args(3) == "Done": # Confirmation that the server finished booting
+				self.changeState(2)
+				self.log.info("Server started")
+				self.bootTime = time.time()
+			elif args(3) == "Preparing" and args(4) == "level": # Getting world name
+				self.worldName = args(5).replace('"', "")
+				self.world = World(self.worldName, self)
+			elif args(3)[0] == "<": # Player Message
+				name = self.stripSpecial(args(3)[1:-1])
+				message = self.stripSpecial(argsAfter(4))
+				original = argsAfter(3)
+				self.wrapper.callEvent("player.message", {"player": self.getPlayer(name), "message": message, "original": original})
+			elif args(4) == "logged": # Player Login
+				name = self.stripSpecial(args(3)[0:args(3).find("[")])
+				self.login(name)
+			elif args(4) == "lost": # Player Logout
+				name = args(3)
+				self.logout(name)
+			elif args(3) == "*":
+				name = self.stripSpecial(args(4))
+				message = self.stripSpecial(argsAfter(5))
+				self.wrapper.callEvent("player.action", {"player": self.getPlayer(name), "action": message})
+			elif args(3)[0] == "[" and args(3)[-1] == "]": # /say command
+				name = self.stripSpecial(args(3)[1:-1])
+				message = self.stripSpecial(argsAfter(4))
+				original = argsAfter(3)
+				self.wrapper.callEvent("server.say", {"player": name, "message": message, "original": original})
+			elif args(4) == "has" and args(8) == "achievement": # Player Achievement
+				name = self.stripSpecial(args(3))
+				achievement = argsAfter(9)
+				self.wrapper.callEvent("player.achievement", {"player": name, "achievement": achievement})
+			elif args(4) in deathPrefixes: # Player Death
+				name = self.stripSpecial(args(3))
+				deathMessage = self.config["Death"]["death-kick-messages"][random.randrange(0, len(self.config["Death"]["death-kick-messages"]))]
+				if self.config["Death"]["kick-on-death"] and name in self.config["Death"]["users-to-kick"]:
+					self.console("kick %s %s" % (name, deathMessage))
+				self.wrapper.callEvent("player.death", {"player": self.getPlayer(name), "death": argsAfter(4)})
+		else:
+			if len(args(3)) < 1: return
+			if args(3) == "Done": # Confirmation that the server finished booting
+				self.changeState(2)
+				self.log.info("Server started")
+				self.bootTime = time.time()
+			elif args(3) == "Preparing" and args(4) == "level": # Getting world name
+				self.worldName = args(5).replace('"', "")
+				self.world = World(self.worldName)
+			elif args(3)[0] == "<": # Player Message
+				name = self.stripSpecial(args(3)[1:-1])
+				message = self.stripSpecial(argsAfter(4))
+				original = argsAfter(3)
+				self.wrapper.callEvent("player.message", {"player": self.getPlayer(name), "message": message, "original": original})
+			elif args(4) == "logged": # Player Login
+				name = self.stripSpecial(args(3)[0:args(3).find("[")])
+				self.login(name)
+			elif args(4) == "lost": # Player Logout
+				name = args(3)
+				self.logout(name)
+			elif args(3) == "*":
+				name = self.stripSpecial(args(4))
+				message = self.stripSpecial(argsAfter(5))
+				self.wrapper.callEvent("player.action", {"player": self.getPlayer(name), "action": message})
+			elif args(3)[0] == "[" and args(3)[-1] == "]": # /say command
+				name = self.stripSpecial(args(3)[1:-1])
+				message = self.stripSpecial(argsAfter(4))
+				original = argsAfter(3)
+				if name == "Server": return
+				self.wrapper.callEvent("server.say", {"player": name, "message": message, "original": original})
+			elif args(4) == "has" and args(8) == "achievement": # Player Achievement
+				name = self.stripSpecial(args(3))
+				achievement = argsAfter(9)
+				self.wrapper.callEvent("player.achievement", {"player": name, "achievement": achievement})
+			elif args(4) in deathPrefixes: # Player Death
+				name = self.stripSpecial(args(3))
+				deathMessage = self.config["Death"]["death-kick-messages"][random.randrange(0, len(self.config["Death"]["death-kick-messages"]))]
+				if self.config["Death"]["kick-on-death"] and name in self.config["Death"]["users-to-kick"]:
+					self.console("kick %s %s" % (name, deathMessage))
+				self.wrapper.callEvent("player.death", {"player": self.getPlayer(name), "death": argsAfter(4)})
+	# Event Handlers
+	def messageFromChannel(self, channel, message):
+		if self.config["IRC"]["show-channel-server"]:
+			self.broadcast("&6[%s] %s" % (channel, message))
+		else:
+			self.broadcast(message)
+	def onChannelJoin(self, payload):
+		channel, nick = payload["channel"], payload["nick"]
+		self.messageFromChannel(channel, "&a%s &rjoined the channel" % nick)
+	def onChannelPart(self, payload):
+		channel, nick = payload["channel"], payload["nick"]
+		self.messageFromChannel(channel, "&a%s &rparted the channel" % nick)
+	def onChannelMessage(self, payload):
+		channel, nick, message = payload["channel"], payload["nick"], payload["message"]
+		final = ""
+		for i,chunk in enumerate(message.split(" ")):
+			if not i == 0: final += " "
+			try: 
+				if chunk[0:7] == "http://": final += "&b&n&@%s&@&r" % chunk
+				else: final += chunk
+			except: final += chunk
+		self.messageFromChannel(channel, "&a<%s> &r%s" % (nick, final))
+	def onChannelAction(self, payload):
+		channel, nick, action = payload["channel"], payload["nick"], payload["action"]
+		self.messageFromChannel(channel, "&a* %s &r%s" % (nick, action))
+	def onChannelQuit(self, payload):
+		channel, nick, message = payload["channel"], payload["nick"], payload["message"]
+		self.messageFromChannel(channel, "&a%s &rquit: %s" % (nick, message))
+	def onTick(self, payload):
+		""" Called every second, and used for handling cron-like jobs """
+		if self.config["General"]["timed-reboot"]:
+			if time.time() - self.bootTime > self.config["General"]["timed-reboot-seconds"]:
+				self.restart("Server is conducting a scheduled reboot. The server will be back momentarily!")
+				self.bootTime = time.time()

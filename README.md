@@ -29,7 +29,7 @@ If you run into any bugs, please report them!
 
 #Features#
 Wrapper.py supports the following features:
-- Plugin system for modifying the Wrapper or adding Bukkit-like features to a vanilla server
+- Plugin system for adding Bukkit-like features to a vanilla server
 <ul>
 <li> Proxy mode allows you to add extra functionality to plugins, such as real /commands</li>
 <li> Permissions system with group support </li>
@@ -38,7 +38,7 @@ Wrapper.py supports the following features:
 - Automatic Backups
 <ul>
 <li>Automatically delete the oldest backups once you reach amount of backups</li>
-<li>Specify precisely what folders and files get backed up</li>
+<li>Specify which folders and files get backed up</li>
 </ul>
 - IRC bridge
 <ul>

@@ -1,8 +1,11 @@
 import traceback, ConfigParser, ast, time, os, sys
-# configuration
+# I'm going to redo the configuration code soon!
+# Default Configuration File
 DEFAULT_CONFIG = """[General]
 command = java -jar minecraft_server.1.8.jar nogui
 auto-restart = True
+auto-update-wrapper = False
+auto-update-dev-builds = False
 pre-1.7-mode = False
 timed-reboot = False
 timed-reboot-seconds = 86400
@@ -12,10 +15,11 @@ shell-scripts = False
 [Backups]
 ;; Automatic backups with automatic backup pruning. Interval is in seconds. ;; 
 enabled = False
-backup-folders = ['server.properties', 'world', 'white-list.txt']
+backup-folders = ['server.properties', 'world']
 backup-interval = 3600
 backup-notification = True
 backup-location = backup-directory
+backup-compression = False
 backups-keep = 10
 
 [IRC]
@@ -25,18 +29,12 @@ server = benbaptist.com
 port = 6667
 nick = MinecraftServer
 channels = ['#main']
-command-character = !
+command-character = .
 show-channel-server = True
 autorun-irc-commands = ['COMMAND 1', 'COMMAND 2']
 obstruct-nicknames = False
-control-from-irc = True
+control-from-irc = False
 control-irc-pass = password
-
-[Death]
-;; This kicks a player upon death. I don't recall why I implemented this. ;;
-kick-on-death = False
-users-to-kick = ['username1', 'username2', 'remove these usernames to kick ALL users upon death']
-death-kick-messages = ['You died!']
 
 [Proxy]
 ;; This is a man-in-the-middle proxy mode similar to BungeeCord, but allows for extra plugin functionality. ;;
@@ -49,19 +47,18 @@ server-port = 25564
 motd = Minecraft Server
 online-mode = True
 max-players = 1024
+
+[Web]
+;; This is a web UI. ;;
+web-enabled = False
+web-bind = 0.0.0.0
+web-port = 8070
+web-password = password
+public-stats = True
 """
 
-"""[Web]
-;; This is a web UI. ;;
-enabled = False
-bind = 0.0.0.0
-port = 8070
-password = blahblah98
-public-stats = True"""
-
 class Config:
-	version = "0.7.2"
-	buildType = "dev" # dev, beta, or release
+	version = "0.7.3"
 	debug = False
 	def __init__(self, log):
 		self.log = log
@@ -77,10 +74,12 @@ class Config:
 		self.parser = ConfigParser.ConfigParser(allow_no_value = True)
 		self.parser.readfp(open("wrapper.properties"))
 
-		sections = ["General", "Backups", "IRC", "Death", "Proxy"]
+		sections = ["General", "Backups", "IRC", "Proxy", "Web"]
 		defaults = {"General":{
 			"command": "java -jar minecraft_server.1.8.jar",
 			"auto-restart": True,
+			"auto-update-wrapper": False,
+			"auto-update-dev-build": False,
 			"debug": False,
 			"pre-1.7-mode": False,
 			"timed-reboot": False,
@@ -93,11 +92,10 @@ class Config:
 			"server": "benbaptist.com", 
 			"port": 6667, 
 			"channels": ["#main"], 
-			"command-character": "!",
+			"command-character": ".",
 			"obstruct-nicknames": False,
 			"autorun-irc-commands": ['COMMAND 1', 'COMMAND 2'],
 			"show-channel-server": True,
-			"forward-commands-to-irc": False,
 			"control-from-irc": False,
 			"control-irc-pass": "password"
 		},
@@ -107,12 +105,8 @@ class Config:
 			"backup-location": "backup-directory",
 			"backup-folders": ['server.properties', 'world'],
 			"backup-interval": 3600,
-			"backup-notification": True
-		},
-		"Death":{
-			"kick-on-death": False,
-			"death-kick-messages": ["You died!"],
-			"users-to-kick": ["username1", "username2", "remove these usernames to kick ALL users upon death"]
+			"backup-notification": True,
+			"backup-compression": False
 		},
 		"Proxy":{
 			"proxy-enabled": False,
@@ -122,17 +116,15 @@ class Config:
 			"motd": "Minecraft Server",
 			"online-mode": True,
 			"max-players": 1024
-		}}
-		# Removed from the list above until fully implemented.
-		{"Web":{
+		},
+		"Web":{
 			"web-enabled": False,
 			"web-bind": "0.0.0.0",
 			"web-port": 8070,
-			"web-password": "usefulpass",
+			"web-password": "password",
 			"public-stats": True
 		}}
 
-		
 		for section in sections:
 			try:
 				keys = self.parser.items(section)

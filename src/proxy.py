@@ -1,8 +1,10 @@
 # I'll probably split this file into more parts later on, like such: 
 # proxy folder: __init__.py (Proxy), client.py (Client), server.py (Server), network.py (Packet), bot.py (will contain Bot, for bot code)
 # this could definitely use some code-cleaning.  
-import socket, threading, struct, StringIO, time, traceback, json, random, hashlib, os, zlib, binascii, uuid, md5, storage, world
+import socket, threading, struct, StringIO, time, traceback, json, random, hashlib, os, zlib, binascii, uuid, md5, storage
 from config import Config
+from api.entity import Entity
+from api.world import World
 try: # Weird system for handling non-standard modules
 	import encryption, requests
 	IMPORT_SUCCESS = True
@@ -23,7 +25,7 @@ class Proxy:
 		self.publicKey = encryption.encode_public_key(self.privateKey)
 	def host(self):
 		# get the protocol version from the server
-		while not self.wrapper.server.status == 2:
+		while not self.wrapper.server.state == 2:
 			time.sleep(.2)
 		self.pollServer()
 		while not self.socket:
@@ -72,6 +74,7 @@ class Proxy:
 				data = json.loads(packet.read("string:response")["response"])
 				self.wrapper.server.protocolVersion = data["version"]["protocol"]
 				self.wrapper.server.maxPlayers = self.wrapper.config["Proxy"]["max-players"]
+				self.wrapper.server.version = data["version"]["name"]
 				break
 		sock.close()
 	def getClientByServerUUID(self, id):
@@ -164,6 +167,7 @@ class Client: # handle client/game connection
 		self.position = (0, 0, 0)
 		self.inventory = {}
 		self.slot = 0
+		self.riding = None
 		self.windowCounter = 2
 		for i in range(45): self.inventory[i] = None
 	def connect(self, ip=None, port=None):
@@ -244,9 +248,11 @@ class Client: # handle client/game connection
 			if self.state == 0:
 				data = self.read("varint:version|string:address|ushort:port|varint:state")
 				self.version = data["version"]
-				self.wrapper.server.protocolVersion = self.version
 				self.packet.version = self.version
-				if not self.wrapper.server.status == 2:
+				if not self.wrapper.server.protocolVersion == self.version and data["state"] == 2:
+					self.disconnect("You're not running the same Minecraft version as the server!")
+					return
+				if not self.wrapper.server.state == 2:
 					self.disconnect("Server has not finished booting. Please try connecting again in a few seconds")
 					return
 				if data["state"] in (1, 2):
@@ -259,6 +265,7 @@ class Client: # handle client/game connection
 				for i in self.wrapper.server.players:
 					player = self.wrapper.server.players[i]
 					sample.append({"name": player.username, "id": str(player.uuid)})
+					if len(sample) > 5: break
 				MOTD = {"description": self.config["Proxy"]["motd"], 
 					"players": {"max": self.wrapper.server.maxPlayers, "online": len(self.wrapper.server.players), "sample": sample},
 					"version": {"name": self.wrapper.server.version, "protocol": self.wrapper.server.protocolVersion}
@@ -279,7 +286,10 @@ class Client: # handle client/game connection
 					self.state = 4
 					self.verifyToken = encryption.generate_challenge_token()
 					self.serverID = encryption.generate_server_id()
-					self.send(0x01, "string|bytearray|bytearray", (self.serverID, self.publicKey, self.verifyToken))
+					if self.wrapper.server.protocolVersion < 6: # 1.7.x versions
+						self.send(0x01, "string|bytearray_short|bytearray_short", (self.serverID, self.publicKey, self.verifyToken))
+					else:
+						self.send(0x01, "string|bytearray|bytearray", (self.serverID, self.publicKey, self.verifyToken))
 				else:
 					self.connect()
 					self.uuid = uuid.uuid3(uuid.NAMESPACE_OID, "OfflinePlayer: %s" % self.username)
@@ -307,8 +317,11 @@ class Client: # handle client/game connection
 						return self.wrapper.callEvent("player.runCommand", {"player": self.getPlayerObject(), "command": args(0)[1:], "args": argsAfter(1)})
 				except:
 					print traceback.format_exc()
-			elif self.state == 4: # encryption response packet
-				data = self.read("bytearray:shared_secret|bytearray:verify_token")
+			elif self.state == 4: # Encryption Response Packet
+				if self.wrapper.server.protocolVersion < 6:
+					data = self.read("bytearray_short:shared_secret|bytearray_short:verify_token")
+				else:
+					data = self.read("bytearray:shared_secret|bytearray:verify_token")
 				sharedSecret = encryption.decrypt_shared_secret(data["shared_secret"], self.privateKey)
 				verifyToken = encryption.decrypt_shared_secret(data["verify_token"], self.privateKey)
 				h = hashlib.sha1()
@@ -351,7 +364,11 @@ class Client: # handle client/game connection
 					self.packet.setCompression(256)
 					
 				# Ban code should go here
-				
+
+				if not self.wrapper.callEvent("player.preLogin", {"player": self.username, "online_uuid": self.uuid, "offline_uuid": self.serverUUID, "ip": self.addr[0]}):
+					self.disconnect("Login denied.")
+					return False
+
 				self.send(0x02, "string|string", (str(self.uuid), self.username))
 				self.state = 3
 				self.connect()
@@ -399,12 +416,12 @@ class Client: # handle client/game connection
 			else:
 				data = self.read("position:position|byte:face|slot:item")
 				position = data["position"]
-			position = data["position"]
-			if position == None:
-				if not self.wrapper.callEvent("player.action", {"player": self.getPlayerObject()}): return False
-			else:
+			position = None
+			if self.version > 6: position = data["position"]
+			if not position == None:
 				face = data["face"]
-				if face == 0: # Compensate
+				if not self.wrapper.callEvent("player.interact", {"player": self.getPlayerObject(), "position": position}): return False
+				if face == 0: # Compensate for block placement coordinates
 					position = (position[0], position[1] - 1, position[2])
 				elif face == 1:
 					position = (position[0], position[1] + 1, position[2])
@@ -514,6 +531,13 @@ class Server: # Handle Server Connection
 			self.client.abort = True
 			self.client.server = None
 			self.client.close()
+	def getPlayerByEID(self, eid):
+		for client in self.wrapper.proxy.clients:
+			if client.server.eid == eid: return self.getPlayerContext(client.username)
+		return False
+	def getPlayerContext(self, username):
+		try: return self.wrapper.server.players[username]
+		except: return False
 	def flush(self):
 		while not self.abort:
 			self.packet.flush()
@@ -541,11 +565,14 @@ class Server: # Handle Server Connection
 				data = self.read("int:eid|ubyte:gamemode|byte:dimension|ubyte:difficulty|ubyte:max_players|string:level_type")
 				self.client.gamemode = data["gamemode"]
 				self.client.dimension = data["dimension"]
+				self.eid = data["eid"]  # This is the EID of the player on this particular server - not always the EID that the client is aware of 
 				if self.client.handshake:
 					self.client.send(0x07, "int|ubyte|ubyte|string", (self.client.dimension, data["difficulty"], data["gamemode"], data["level_type"]))
+					self.eid = data["eid"]
 					self.safe = True
 					return False
 				else:
+					self.client.eid = data["eid"]
 					self.safe = True
 				self.client.handshake = True
 			elif self.state == 2:
@@ -564,7 +591,7 @@ class Server: # Handle Server Connection
 					if data["translate"] == "chat.type.admin": return False
 				except: pass
 		if id == 0x03:
-			if self.state == 2:
+			if self.state == 2: # Set Compression 
 				data = self.read("varint:threshold")
 				if not data["threshold"] == -1:
 					self.packet.compression = True
@@ -573,9 +600,17 @@ class Server: # Handle Server Connection
 					self.packet.compression = False
 					self.packet.compressThreshold = -1
 				return False
-		if id == 0x05:
+		if id == 0x05: # Spawn Point
 			data = self.read("int:x|int:y|int:z")
 			self.wrapper.server.spawnPoint = (data["x"], data["y"], data["z"])
+		if id == 0x07: # Respawn Packet
+			data = self.read("int:dimension|ubyte:difficulty|ubyte:gamemode|level_type:string")
+			self.client.gamemode = data["gamemode"]
+			self.client.dimension = data["dimension"]
+		if id == 0x08: # Player Position and Look
+			data = self.read("double:x|double:y|double:z|float:yaw|float:pitch")
+			x, y, z, yaw, pitch = data["x"], data["y"], data["z"], data["yaw"], data["pitch"]
+			self.client.position = (x, y, z)
 		if id == 0x0c: # Spawn Player
 			data = self.read("varint:eid|uuid:uuid|int:x|int:y|int:z|byte:yaw|byte:pitch|short:item|rest:metadata")
 			if self.proxy.getClientByServerUUID(data["uuid"]):
@@ -590,10 +625,39 @@ class Server: # Handle Server Connection
 					data["item"],
 					data["metadata"]))
 				return False
+		if id == 0x0e: # Spawn Object
+			data = self.read("varint:eid|byte:type|int:x|int:y|int:z|byte:pitch|byte:yaw")
+			eid, type, x, y, z, pitch, yaw = data["eid"], data["type"], data["x"], data["y"], data["z"], data["pitch"], data["yaw"]
+			self.wrapper.server.world.entities[data["eid"]] = Entity(eid, type, (x, y, z), (pitch, yaw), True)
+		if id == 0x0f: # Spawn Mob
+			data = self.read("varint:eid|ubyte:type|int:x|int:y|int:z|byte:pitch|byte:yaw|byte:head_pitch")
+			eid, type, x, y, z, pitch, yaw, head_pitch = data["eid"], data["type"], data["x"], data["y"], data["z"], data["pitch"], data["yaw"], data["head_pitch"]
+			self.wrapper.server.world.entities[data["eid"]] = Entity(eid, type, (x, y, z), (pitch, yaw, head_pitch), False)
 	#	if id == 0x21: # Chunk Data
 #			if self.client.packet.compressThreshold == -1:
 #				print "CLIENT COMPRESSION ENABLED"
 #				self.client.packet.setCompression(256)
+		if id == 0x15: # Entity Relative Move
+			data = self.read("varint:eid|byte:dx|byte:dy|byte:dz")
+			if not self.wrapper.server.world.getEntityByEID(data["eid"]) == None:
+				self.wrapper.server.world.getEntityByEID(data["eid"]).moveRelative((data["dx"], data["dy"], data["dz"]))
+		if id == 0x18: # Entity Teleport
+			data = self.read("varint:eid|int:x|int:y|int:z|byte:yaw|byte:pitch")
+			if not self.wrapper.server.world.getEntityByEID(data["eid"]) == None:
+				self.wrapper.server.world.getEntityByEID(data["eid"]).teleport((data["x"], data["y"], data["z"]))
+		if id == 0x1b: # Attach Entity
+			data = self.read("int:eid|int:vid|bool:leash")
+			eid, vid, leash = data["eid"], data["vid"], data["leash"]
+			player = self.getPlayerByEID(eid)
+			if player == None: return
+			if eid == self.eid:
+				if vid == -1:
+					self.wrapper.callEvent("player.unmount", {"player": player})
+					self.client.riding = None
+				else:
+					self.wrapper.callEvent("player.mount", {"player": player, "vehicle_id": vid, "leash": leash})
+					self.client.riding = self.wrapper.server.world.getEntityByEID(vid)
+					self.wrapper.server.world.getEntityByEID(vid).rodeBy = self.client
 		if id == 0x26: # Map Chunk Bulk
 			data = self.read("bool:skylight|varint:chunks")
 			chunks = []
@@ -814,6 +878,7 @@ class Packet: # PACKET PARSING CODE
 				if type == "bool": result[name] = self.read_bool()
 				if type == "varint": result[name] = self.read_varInt()
 				if type == "bytearray": result[name] = self.read_bytearray()
+				if type == "bytearray_short": result[name] = self.read_bytearray_short()
 				if type == "position": result[name] = self.read_position()
 				if type == "slot": result[name] = self.read_slot()
 				if type == "uuid": result[name] = self.read_uuid()
@@ -843,6 +908,7 @@ class Packet: # PACKET PARSING CODE
 					if type == "long": result += self.send_long(pay)
 					if type == "json": result += self.send_json(pay)
 					if type == "bytearray": result += self.send_bytearray(pay)
+					if type == "bytearray_short": result += self.send_bytearray_short(pay)
 					if type == "uuid": result += self.send_uuid(pay)
 					if type == "metadata": result += self.send_metadata(pay)
 					if type == "bool": result += self.send_bool(pay)
@@ -878,6 +944,8 @@ class Packet: # PACKET PARSING CODE
 		return self.pack_varInt(payload)
 	def send_bytearray(self, payload):
 		return self.send_varInt(len(payload)) + payload
+	def send_bytearray_short(self, payload):
+		return self.send_short(len(payload)) + payload
 	def send_json(self, payload):
 		return self.send_string(json.dumps(payload))
 	def send_uuid(self, payload):
@@ -947,7 +1015,7 @@ class Packet: # PACKET PARSING CODE
 		return struct.unpack(">H", self.read_data(2))[0]
 	def read_bytearray(self):
 		return self.read_data(self.read_varInt())
-	def read_short_bytearray(self):
+	def read_bytearray_short(self):
 		return self.read_data(self.read_short())
 	def read_position(self):
 		position = self.read_long()

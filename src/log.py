@@ -14,6 +14,8 @@ class Log:
 			print("%s [Wrapper.py/%s] %s" % (time.strftime("[%H:%M:%S]"), type, line))
 	def info(self, string):
 		self.prefix("INFO", string)
+	def warn(self, string):
+		self.prefix("WARN", string)
 	def error(self, string):
 		self.prefix("ERROR", string)
 	def debug(self, string):
@@ -33,8 +35,14 @@ class PluginLog:
 		self.log.write(payload)
 	def info(self, string):
 		self.write("%s [%s/INFO] %s" % (self.timestamp(), self.PluginName, string))
+	def warn(self, string):
+		self.write("%s [%s/WARN] %s" % (self.timestamp(), self.PluginName, string))
 	def error(self, string):
 		self.write("%s [%s/ERROR] %s" % (self.timestamp(), self.PluginName, string))
 	def debug(self, string):
 		if Config.debug:
 			self.write("%s [%s/DEBUG] %s" % (self.timestamp(), self.PluginName, string))
+	def getTraceback(self):
+		for line in traceback.format_exc().split("\n"):
+			if len(line.strip()) > 0: # Remove empty lines
+				self.error(line)
