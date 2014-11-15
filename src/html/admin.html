@@ -3,6 +3,7 @@
 	<head>
 		<script type="text/javascript" src="requests.js"></script>
 		<script type="text/javascript" >
+			hasScrolled = false
 			_ = function(id) {return document.getElementById(id)}
 			function isAuthed(){
 				if(!localStorage.sessionKey) return false
@@ -27,8 +28,13 @@
 					tick()
 				}
 			}
+			function handleScroll(z){
+				console.log("has scrolled")
+				hasScrolled = true
+				if(z.scrollTop == z.scrollHeight) {hasScrolled = false;console.log('no scroll')}
+			}
 			function tick(){
-				setTimeout("tick()", 3000)
+				setTimeout("tick()", 2000)
 				stats = requests.admin("admin_stats", {})
 				if(stats["status"] == "error"){
 					console.log("Error while refreshing stats. Connection lost?")
@@ -37,6 +43,25 @@
 				statusMessages = {0: "<r>Server stopped</r>", 1: "<y>Server starting...</y>", 2: "<g>Running</g>", 3: "<y>Server stopping...</y>"}
 				if(stats["server_state"] in statusMessages) _("server_status").innerHTML = statusMessages[stats["server_state"]]
 				_("playercount_status").innerHTML = stats["playerCount"] + " players"
+				_("levelname_status").innerHTML = stats["level-name"] + ""
+				_("server_version").innerHTML = stats["server-version"] + ""
+				
+				_("playerlist").innerHTML = "<th>Username</th><th>UUID</th><th>Options</th></tr>"
+				for(i in stats["players"]){
+					var player = stats["players"][i]
+					_("playerlist").innerHTML += "<td>"+player.name+"</td><td>"+player.uuid+"</td><td><button onclick='_kick("+i+")'>Kick</button><button onclick='_ban("+i+")'>Ban</button></td></tr>"
+				}
+				players = stats["players"]
+				
+				var doScroll = false
+				var p = _("server_console") 
+				if(p.scrollTop + p.clientHeight == p.scrollHeight){
+					var doScroll = true
+				}
+				p.innerHTML = stats["console"].join("\n")
+				if(doScroll) p.scrollTop = p.scrollHeight
+				
+				_("buildstring").innerHTML = "Wrapper.py " + stats["wrapper_build"]
 			}
 
 			// admining functions
@@ -44,10 +69,40 @@
 				requests.admin("server_action", {"action": "start"})
 			}
 			function _stop(){
-				requests.admin("server_action", {"action": "stop"})
+				message = prompt("Please enter a stop reason (will be shown to all players currently active on the server:", "Server stopping...")
+				if(!message) return
+				requests.admin("server_action", {"action": "stop", "reason": message})
 			}
 			function _restart(){
-				requests.admin("server_action", {"action": "restart"})
+				message = prompt("Please enter a restart reason (will be shown to all players currently active on the server:", "Server restarting...")
+				if(!message) return
+				requests.admin("server_action", {"action": "restart", "reason": message})
+			}
+			function _kill(){
+				if(confirm("Are you sure you want to forcefully kill the server process? This can corrupt the world file, and should only be used if the server is completely unresponsive.")){
+					requests.admin("server_action", {"action": "kill"})
+				}
+			}
+			function _kick(i){
+				player = players[i]
+				message = prompt("Please enter a kick message for "+player.name+":")
+				if(message){
+					requests.admin("kick_player", {"player": player.name, "reason": message})
+				}else{
+					alert("Won't kick "+player.name+".")
+				}
+			}
+			function _ban(i){
+				player = players[i]
+				message = prompt("Please enter a ban message for "+player.name+":")
+				if(message){
+					requests.admin("ban_player", {"player": player.name, "reason": message})
+				}else{
+					alert("Won't ban "+player.name+".")
+				}
+			}
+			function _console(line){
+				requests.admin("console", {"execute":line})
 			}
 			function _login(){
 				loginWithPassword(_('login_password').value)
@@ -61,6 +116,10 @@
 			r{color:red;}
 			y{color:gold;}
 			g{color:green;}
+			.small{
+				font-style: italic;
+				font-size: 12px;
+			}
 		</style>
 	</head>
 	<body>
@@ -73,9 +132,22 @@
 			<h1>Wrapper.py Admin Page</h1>
 			<button onclick="_logout()">Logout</button></br></br>
 			This information refreshes every three seconds.</br>
-			<b>Server Status: </b> <span id="server_status">Running</span></br>
-			<b>Player Count: </b> <span id="playercount_status">2 players</span></br>
-			</br></br>Server: <button onclick="_start()">Start</button> <button onclick="_restart()">Restart</button> <button onclick="_stop()">Stop</button>
+			<b>Server Status: </b> <span id="server_status">Unknown</span></br>
+			<b>Server Version: </b> <span id="server_version">Unknown</span></br>
+			<b>Level Name: </b> <span id="levelname_status">Unknown</span></br>
+			<b>Player Count: </b> <span id="playercount_status">n/a players</span></br>
+			<br/>
+			<table border="1">
+				<tbody id="playerlist">
+					<th>Username</th><th>UUID</th><th>Options</th></tr>
+				</tbody>
+			</table>
+			</br></br>Server: <button onclick="_start()">Start</button> <button onclick="_restart()">Restart</button> <button onclick="_stop()">Stop</button> <button onclick="_kill()">Force Kill</button>
+			</br></br><b>Server Console</b></br>
+			<textarea disabled="" cols="80" rows="20" id="server_console" onscroll="handleScroll(this)"></textarea>
+			<br/><input type="text" onkeydown="if(event.keyCode == 13){_console(this.value);this.value='';}" size="80"/>
 		</div>
+		<div class="small">Copyright Ben Baptist 2014</div>
+		<div class="small" id="buildstring"></div>
 	</body>
 </html>

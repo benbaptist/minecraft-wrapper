@@ -1,22 +1,7 @@
 #Changelog#
 
 <h4>0.7.3</h4>
-Before I release 0.7.3, I'd like to add support for pre-1.7 back again, and fix #38. 
-
-Pre-1.7 support is mostly there, but Python gives errors on stdin.write() due to the color codes causing encoding errors. I hate Python 2.x's string encoding bullcrap.
-
-I also need to implement the sub-commands for /update-wrapper. Oh, also, I just realized that until you reboot the Wrapper, it'll probably continue to try to automatically install new updates.
-
-Traceback (most recent call last):
-  File "Wrapper.py/proxy.py", line 317, in parse
-    return self.wrapper.callEvent("player.runCommand", {"player": self.getPlayerObject(), "command": args(0)[1:], "args": argsAfter(1)})
-  File "Wrapper.py/__main__.py", line 109, in callEvent
-  File "Wrapper.py/__main__.py", line 144, in playerCommand
-TypeError: sequence item 0: expected string, int found
-
-IRC when backing up still shows this:
- &cBacking up... lag may occur!
- &aBackup complete!
+At last, Wrapper.py 0.7.3 release! This is a relatively big update, and will fix a bunch of random inconsistencies in the APIs. It also adds a ton of new APIs, some big new features, and a bunch of bug fixes.
 
 **Features**
 - Web admin panel for controlling the wrapper & the server from a browser
@@ -31,6 +16,7 @@ IRC when backing up still shows this:
   - If you want to jump from a dev build to the latest stable (if a newer stable version exists), run /wrapper-update stable
   - Updates can be performed in-game with the `/wrapper update` command
   - Updates can be performed from the IRC remote control interface with the 'wrapper-update' command
+- IRC Remote & Web Remote will now be disabled if the password is set to 'password'
 
 **Bug Fixes**
 - Fixed "Backup file '%s' does not exist - will not backup" when conducting a backup
@@ -61,13 +47,17 @@ IRC when backing up still shows this:
   - server.starting: Called just before the server begins to boot
   - server.started: Once the server reports Done in the console and is ready for players
   - server.stopping: Called as the server starts to shutdown
-  - server.stopped: Once the server is completely shutdown, and is safe to modify the world files
+  - server.stopped: Once the server has completely shutdown, and is safe to modify the world files
   - server.state(state): All of the above events consolidated into one event
   - irc.action(nick, channel, message): User doing /me or /action in an IRC channel
   - irc.quit(nick, channel, message): User quitting from IRC. 'channel' returns None currently. 'message' is their QUIT message
   - player.mount(player, vehicle_id, leash): Called when a player enters a vehicle, such as a boat, minecart, or horse.
   - player.unmount(player): Called when a player leaves a vehicle that they previously entered.
-  - player.preLogin(player, online_uuid, offline_uuid, ip): 
+  - player.preLogin(player, online_uuid, offline_uuid, ip):
+- Changed events:
+  - wrapper.backupBegin(file): file argument added
+  - wrapper.backupEnd(file, status): backupFile argument renamed to file
+  - wrapper.backupDelete(file): backupFile argument renamed to file
 - Renamed events:
   - irc.message(nick, channel, message) from irc.channelMessage
   - irc.join(nick, channel) from irc.channelJoin
@@ -78,10 +68,10 @@ IRC when backing up still shows this:
   - server.restart(reason): Restart the server, and kick users with an optional reason (default: "Restarting server...")
   - server.stop(reason): Stop the server, kick users with a reason (default: "Stopping server..."), don't automatically start back up, but keep Wrapper.py running.
 - New World class methods (accessable with api.minecraft.getWorld()):
-  - world.setBlock()
-  - world.fill()
-  - world.replace()
-  - world.getEntityByEID() 
+  - world.setBlock(x, y, z, tilename, damage=0, mode="replace", data={})
+  - world.fill(position1, position2, tilename, damage=0, mode="destroy", data={}): Fills the area between two coordinates with the specified block
+  - world.replace(position1, position2, tilename1, damage1, tilename2, damage2=0): Replaces the blocks within two coordinates from a specific block to the specified block
+  - world.getEntityByEID(eid)
 - Cleaned up MORE inconsistencies in these events:
   - player.achievement
 - New method: self.log.warn
@@ -92,7 +82,7 @@ IRC when backing up still shows this:
   - Doesn't handle despawning very well quite yet, or multiple players
 - player.getDimension() now properly updates when switching dimensions
 
-This update is relatively big and definitely makes some API methods cleaner. 
+This update definitely makes some API methods cleaner. 
 
 <h4>0.7.2</h4>
 Server jumping still seems super buggy and weird. It only works in my test environment, but fails in other environments. I have no clue why.
@@ -189,6 +179,11 @@ Small update, but brings one much-needed change: the new configuration file syst
 #To-do List#
 - Web interface for server management (partially implemented, not sure when it'll be done)
   - There's technically a functional web mode now - but it's super primitive. It does work, however.
+  - Add buttons to update the wrapper from it
+  - Halting the wrapper
+  - IRC control
+  - Changing all settings on wrapper.properties and server.properties from it
+- /wrapper halt
 - Multi-server mode (This might actually become a separate project for managing multiple servers and accounts, rather than being a Wrapper.py feature)
   - If I make it a separate project, it might use Wrapper.py as a backend for booting servers for extra features, for the sake of not duping code across projects</li>
 - Ability to halt server without shutting down wrapper - for fine server control
@@ -199,6 +194,7 @@ Small update, but brings one much-needed change: the new configuration file syst
   - Add support for comments
   - Allow manual ordering of the options, to make configuration files a bit easier on the eyes
 - Import bans from the vanilla server when using proxy mode for the first time
+  - Something with whitelists too. Whitelisting and stuff is super broken with proxy mode being enabled.
 - Finish adding all block IDs, item IDs and their respective damage values to items.py
   - Might be better just to use some sort of pre-existing JSON list
 - Allow fake !commands to be made with api.registerCommand() (for non-proxy mode setups)

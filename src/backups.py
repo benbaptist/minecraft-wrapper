@@ -14,7 +14,7 @@ class Backups:
 		self.backups = []
 		self.api.registerEvent("timer.second", self.onTick)
 	def broadcast(self, message):
-		self.api.minecraft.broadcast(message, irc=True)
+		self.api.minecraft.broadcast(message, irc=False)
 	def console(self, msg):
 		self.api.minecraft.console(msg)
 	def onTick(self, payload):
@@ -22,9 +22,6 @@ class Backups:
 		if not self.config["Backups"]["enabled"]: return
 		if time.time() - self.time > self.config["Backups"]["backup-interval"]:
 			self.time = time.time()
-			if not self.wrapper.callEvent("wrapper.backupBegin", None):
-				self.log.warn("A backup was scheduled, but was cancelled by a plugin!")
-				return
 			if not os.path.exists(self.config["Backups"]["backup-location"]):
 				os.mkdir(self.config["Backups"]["backup-location"])
 			if len(self.backups) == 0 and os.path.exists(self.config["Backups"]["backup-location"] + "/backups.json"):
@@ -47,8 +44,6 @@ class Backups:
 					backupTimestamps.sort()
 					for backupI in backupTimestamps:
 						self.backups.append((int(backupI), "backup-%s.tar" % str(backupI)))
-			if self.config["Backups"]["backup-notification"]:
-				self.broadcast("&cBacking up... lag may occur!")
 			timestamp = int(time.time())
 			self.console("save-all")
 			self.console("save-off")
@@ -63,6 +58,13 @@ class Backups:
 				arguments = ["tar", "czf", "%s/%s" % (self.config["Backups"]["backup-location"], filename)]
 			else:
 				arguments = ["tar", "cfpv", "%s/%s" % (self.config["Backups"]["backup-location"], filename)]
+			
+			if not self.wrapper.callEvent("wrapper.backupBegin", {"file": filename}):
+				self.log.warn("A backup was scheduled, but was cancelled by a plugin!")
+				return
+			if self.config["Backups"]["backup-notification"]:
+				self.broadcast("&cBacking up... lag may occur!")
+			
 			for file in self.config["Backups"]["backup-folders"]:
 				if os.path.exists(file):
 					arguments.append(file)
@@ -72,14 +74,14 @@ class Backups:
 			self.console("save-on")
 			if self.config["Backups"]["backup-notification"]:
 				self.broadcast("&aBackup complete!")
-				self.wrapper.callEvent("wrapper.backupEnd", {"backupFile": filename, "status": statusCode})
+			self.wrapper.callEvent("wrapper.backupEnd", {"file": filename, "status": statusCode})
 			self.backups.append((timestamp, 'backup-%s.tar' % datetime.datetime.fromtimestamp(int(timestamp)).strftime('%Y-%m-%d_%H:%M:%S')))
 			
 			if len(self.backups) > self.config["Backups"]["backups-keep"]:
 				self.log.info("Deleting old backups...")
 				while len(self.backups) > self.config["Backups"]["backups-keep"]:
 					backup = self.backups[0]
-					if not self.wrapper.callEvent("wrapper.backupDelete", {"backupFile": filename}): break
+					if not self.wrapper.callEvent("wrapper.backupDelete", {"file": filename}): break
 					try:
 						os.remove('%s/%s' % (self.config["Backups"]["backup-location"], backup[1]))
 					except:

@@ -41,7 +41,7 @@ class Scripts:
 	def _stopServer(self, payload):
 		os.system("wrapper-data/scripts/server-stop.sh")
 	def _backupBegin(self, payload):
-		os.system("wrapper-data/scripts/backup-begin.sh")
+		os.system("wrapper-data/scripts/backup-begin.sh %s" % payload["file"])
 	def _backupEnd(self, payload):
-		os.system("wrapper-data/scripts/backup-finish.sh %s" % payload["backupFile"])
+		os.system("wrapper-data/scripts/backup-finish.sh %s" % payload["file"])
 	

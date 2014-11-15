@@ -28,6 +28,8 @@ class IRC:
 		self.api.registerEvent("player.logout", self.onPlayerLogout)
 		self.api.registerEvent("player.achievement", self.onPlayerAchievement)
 		self.api.registerEvent("player.death", self.onPlayerDeath)
+		self.api.registerEvent("wrapper.backupBegin", self.onBackupBegin)
+		self.api.registerEvent("wrapper.backupEnd", self.onBackupEnd)
 		self.api.registerEvent("server.say", self.onPlayerSay)
 	def init(self):
 		while not self.wrapper.halt:
@@ -92,6 +94,11 @@ class IRC:
 		player = self.filterName(payload["player"])
 		death = payload["death"]
 		self.msgQueue.append("%s %s" % (player, death))
+	def onBackupBegin(self, payload):
+		self.msgQueue.append("Backing up... lag may occur!")
+	def onBackupEnd(self, payload):
+		time.sleep(1)
+		self.msgQueue.append("Backup complete!")
 	def onServerStarting(self, payload):
 		self.msgQueue.append("Server starting...")
 	def onServerStarted(self, payload):
@@ -223,8 +230,14 @@ class IRC:
 			elif self.config["IRC"]["control-from-irc"]:
 				self.log.info("[PRIVATE] (%s) %s" % (nick, message))
 				def msg(string):
-					print "[PRIVATE] (%s) %s" % (self.config["IRC"]["nick"], string)
+					self.log.info("[PRIVATE] (%s) %s" % (self.config["IRC"]["nick"], string))
 					self.send("PRIVMSG %s :%s" % (nick, string))
+				if self.config["IRC"]["control-irc-pass"] == "password":
+					msg("Please change your password from 'password' in wrapper.properties. I will not allow you to use that password. It's an awful password. Please change it.")	
+					return
+				if "password" in self.config["IRC"]["control-irc-pass"]:
+					msg("Please choose a password that doesn't contain the term 'password'.")
+					return
 				try:
 					self.authorized
 				except:
@@ -287,9 +300,9 @@ class IRC:
 							if update:
 								version, build, type = update
 								if type == "stable":
-									msg("New Wrapper.py Version %s available! (you have %s)" % (".".join(version), self.wrapper.getBuildString()))
+									msg("New Wrapper.py Version %s available! (you have %s)" % (".".join([str(_) for _ in version]), self.wrapper.getBuildString()))
 								elif type == "dev":
-									msg("New Wrapper.py development build %s #%d available! (you have %s #%d)" % (".".join(version),build,Config.version,globals.build))
+									msg("New Wrapper.py development build %s #%d available! (you have %s #%d)" % (".".join([str(_) for _ in version]),build,Config.version,globals.build))
 								else:
 									msg("Unknown new version: %s | %d | %s" % (version, build, type))
 								msg("To perform the update, type update-wrapper.")
@@ -304,7 +317,7 @@ class IRC:
 							if update:
 								version, build, type = update
 								if type == "stable":
-									msg("New Wrapper.py Version %s available! (you have %s)" % (".".join(version), self.wrapper.getBuildString()))
+									msg("New Wrapper.py Version %s available! (you have %s)" % (".".join([str(_) for _ in version]), self.wrapper.getBuildString()))
 								elif type == "dev":
 									msg("New Wrapper.py development build %s #%d available! (you have %s #%d)" % (".".join(version),build,Config.version,globals.build))
 								else:

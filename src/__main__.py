@@ -23,6 +23,7 @@ class Wrapper:
 		self.proxy = False
 		self.halt = False
 		self.listeners = []
+		self.update = False
 		self.storage = storage.Storage("main", self.log)
 		self.permissions = storage.Storage("permissions", self.log)
 		
@@ -139,9 +140,8 @@ class Wrapper:
 				if subcommand == "update":
 					player.message({"text": "Checking for new Wrapper.py updates...","color":"yellow"})
 					update = self.checkForNewUpdate()
-					if not update:
+					if update:
 						version, build, type = update
-						print version, build, type
 						player.message("&bNew Wrapper.py Version %s (Build #%d) available!)" % (".".join([str(_) for _ in version]), build))
 						player.message("&bYou are currently on %s." % self.getBuildString())
 						player.message("&aPerforming update...")
@@ -446,11 +446,14 @@ class Wrapper:
 				self.performUpdate(version, build, type)
 		else:
 			self.log.info("No new versions available.")
-	def checkForNewUpdate(self):
-		if globals.type == "dev":
+	def checkForNewUpdate(self, type=None):
+		if type == None: type = globals.type
+		if type == "dev":
 			try:
 				r = requests.get("https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/docs/version.json")
 				data = r.json()
+				if self.update: 
+					if self.update > data["build"]: return False
 				if data["build"] > globals.build and data["type"] == "dev": return (data["version"], data["build"], data["type"])
 				else: return False
 			except:
@@ -459,6 +462,8 @@ class Wrapper:
 			try:
 				r = requests.get("https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master/docs/version.json")
 				data = r.json()
+				if self.update: 
+					if self.update > data["build"]: return False
 				if data["build"] > globals.build and data["type"] == "stable":  return (data["version"], data["build"], data["type"])
 				else: return False
 			except:
@@ -476,6 +481,7 @@ class Wrapper:
 				with open(sys.argv[0], "w") as f:
 					f.write(wrapperFile)
 				self.log.info("Wrapper.py %s (#%d) installed. Please reboot the Wrapper.py." % (".".join([str(_) for _ in version]), build))
+				self.update = build
 				return True
 			else:
 				return False

@@ -67,8 +67,6 @@ class Server:
 	def kill(self, reason="Killing Server"):
 		""" Forcefully kill the server. It will auto-restart if set in the configuration file """
 		self.log.info("Killing Minecraft server with reason: %s" % reason)
-		for player in self.players:
-			self.console("kick %s %s" % (player, reason))
 		self.changeState(0, reason)
 		self.proc.kill()
 	def broadcast(self, message=""):
@@ -209,7 +207,8 @@ class Server:
 			self.changeState(1)
 			self.log.info("Starting server...")
 			self.wrapper.callEvent("server.start", {})
-			self.proc = subprocess.Popen(self.args, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)	
+			self.proc = subprocess.Popen(self.args, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+			self.players = {}	
 			while True:
 				time.sleep(0.1)
 				if self.proc.poll() is not None:

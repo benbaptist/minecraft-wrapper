@@ -53,7 +53,7 @@ max-players = 1024
 web-enabled = False
 web-bind = 0.0.0.0
 web-port = 8070
-web-password = blahblah98
+web-password = password
 public-stats = True
 """
 
@@ -121,7 +121,7 @@ class Config:
 			"web-enabled": False,
 			"web-bind": "0.0.0.0",
 			"web-port": 8070,
-			"web-password": "usefulpass",
+			"web-password": "password",
 			"public-stats": True
 		}}
 
