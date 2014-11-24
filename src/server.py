@@ -21,6 +21,7 @@ class Server:
 		self.protocolVersion = -1 # -1 until proxy mode checks the server's MOTD on boot
 		self.version = None
 		self.world = None
+		self.motd = None
 		
 		# Read server.properties and extract some information out of it
 		if os.path.exists("server.properties"):
@@ -28,9 +29,14 @@ class Server:
 			config = open("server.properties", "r").read()
 			s.write("[main]\n" + config)
 			s.seek(0)
-			self.properties = ConfigParser.ConfigParser(allow_no_value = True)
-			self.properties.readfp(s)
-			self.worldName = self.properties.get("main", "level-name")
+			try:
+				self.properties = ConfigParser.ConfigParser(allow_no_value = True)
+				self.properties.readfp(s)
+				self.worldName = self.properties.get("main", "level-name")
+				self.motd = self.properties.get("main", "motd")
+				self.maxPlayers = int(self.properties.get("main", "max-players"))
+			except:
+				self.log.getTraceback()
 		
 		self.api.registerEvent("irc.message", self.onChannelMessage)
 		self.api.registerEvent("irc.action", self.onChannelAction)
@@ -281,9 +287,6 @@ class Server:
 				self.wrapper.callEvent("player.achievement", {"player": name, "achievement": achievement})
 			elif args(4) in deathPrefixes: # Player Death
 				name = self.stripSpecial(args(3))
-				deathMessage = self.config["Death"]["death-kick-messages"][random.randrange(0, len(self.config["Death"]["death-kick-messages"]))]
-				if self.config["Death"]["kick-on-death"] and name in self.config["Death"]["users-to-kick"]:
-					self.console("kick %s %s" % (name, deathMessage))
 				self.wrapper.callEvent("player.death", {"player": self.getPlayer(name), "death": argsAfter(4)})
 		else:
 			if len(args(3)) < 1: return

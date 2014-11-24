@@ -1,9 +1,14 @@
 <!-- I'm sorry for how sloppy this code is. I truly am. -->
+<!-- document.title = "Piops"("server_name").innerHTML = stats["server_name"] -->
 <html>
 	<head>
+		<title>Wrapper.py Admin Page</title>
 		<script type="text/javascript" src="requests.js"></script>
 		<script type="text/javascript" >
 			hasScrolled = false
+			skins = {}
+			invalidLogins = 0
+			lastRefresh = 0
 			_ = function(id) {return document.getElementById(id)}
 			function isAuthed(){
 				if(!localStorage.sessionKey) return false
@@ -12,13 +17,17 @@
 			}
 			function loginWithPassword(password){
 				r = requests.action("login", {"password": password})
-				if (r["payload"] != "unknown_key"){
+				if (r["payload"] == "permission_denied"){
+					_("login_invalid").style.display = "block"
+					invalidLogins += 1
+					if(invalidLogins > 1){
+						_("login_invalid").innerHTML = "The password was invalid. (" + invalidLogins + ")"
+					}
+				}
+				else{
 					localStorage.sessionKey = r["payload"]["session-key"]
 					console.log("Login Success!")
 					window.location = ""
-				}
-				else{
-					_("login_invalid").style.display = "block"
 				}
 			}
 			window.onload = function() {
@@ -29,38 +38,66 @@
 				}
 			}
 			function handleScroll(z){
-				console.log("has scrolled")
 				hasScrolled = true
 				if(z.scrollTop == z.scrollHeight) {hasScrolled = false;console.log('no scroll')}
 			}
 			function tick(){
 				setTimeout("tick()", 2000)
-				stats = requests.admin("admin_stats", {})
+				stats = requests.admin("admin_stats", {"last_refresh": lastRefresh})
 				if(stats["status"] == "error"){
 					console.log("Error while refreshing stats. Connection lost?")
 					return
 				}
+				lastRefresh = stats["refresh_time"]
 				statusMessages = {0: "<r>Server stopped</r>", 1: "<y>Server starting...</y>", 2: "<g>Running</g>", 3: "<y>Server stopping...</y>"}
 				if(stats["server_state"] in statusMessages) _("server_status").innerHTML = statusMessages[stats["server_state"]]
 				_("playercount_status").innerHTML = stats["playerCount"] + " players"
-				_("levelname_status").innerHTML = stats["level-name"] + ""
-				_("server_version").innerHTML = stats["server-version"] + ""
+				_("levelname_status").innerHTML = stats["level_name"]
+				_("server_version").innerHTML = stats["server_version"]
+				_("server_motd").innerHTML = stats["motd"]
+				_("server_name").innerHTML = stats["server_name"]
+				document.title = stats["server_name"]
 				
-				_("playerlist").innerHTML = "<th>Username</th><th>UUID</th><th>Options</th></tr>"
+				// draw player list
+				_("playerlist").innerHTML = "<th>?</th><th>Username</th><th>UUID</th><th>Options</th></tr>"
 				for(i in stats["players"]){
 					var player = stats["players"][i]
-					_("playerlist").innerHTML += "<td>"+player.name+"</td><td>"+player.uuid+"</td><td><button onclick='_kick("+i+")'>Kick</button><button onclick='_ban("+i+")'>Ban</button></td></tr>"
+					if(!(player.uuid in skins)){
+						skins[player.uuid] = atob(requests.admin("get_player_skin", {"uuid": player.uuid}))
+					}
+					
+					if(player.isOp) var isOp = " class='op'"
+					else isOp = ""					
+					_("playerlist").innerHTML += "<td><canvas id='playerskin-"+player.name+"' width=16 height=16></canvas></td><td"+isOp+">"+player.name+"</td><td>"+player.uuid+"</td><td><button onclick='_kick("+i+")'>Kick</button> <button onclick='_ban("+i+")'>Ban</button> <button onclick='_op("+i+")'>OP</button> <button onclick='_deop("+i+")'>De-OP</button></td></tr>"
+					/*if(skins[player.uuid] == null) return
+					var pic = new Image()
+					pic.src = "data:image/png," + skins[player.uuid]
+					var ctx = _("playerskin-" + player.name).getContext("2d")
+					ctx.webkitImageSmoothingEnabled = false
+					ctx.drawImage(pic, 8, 8, 8, 8, 0, 0, 16, 16)*/
 				}
 				players = stats["players"]
 				
+				// draw plugin list
+				_("pluginlist").innerHTML = "<th>Name</th><th>Description</th><th>Options</th></tr>"
+				for(i in stats["plugins"]){
+					var plugin = stats["plugins"][i]
+					if(plugin.description) var description = plugin.description.replace("\n", "</br></br>")
+					else var description = "<i>No description is available for this plugin.</i>"
+					_("pluginlist").innerHTML += "<td style='white-space:nowrap;'>"+plugin.name+"</td><td>"+description+"</td><td style='white-space:nowrap;'><button onclick='_toggle_plugin(\""+plugin.id+"\", this)'>Disable</button></td></tr>"
+				}
+								
+				// draw console
 				var doScroll = false
 				var p = _("server_console") 
 				if(p.scrollTop + p.clientHeight == p.scrollHeight){
 					var doScroll = true
 				}
-				p.innerHTML = stats["console"].join("\n")
+				if(stats["console"].length > 0)
+					p.innerHTML += "\n" + stats["console"].join("\n")
 				if(doScroll) p.scrollTop = p.scrollHeight
 				
+				// set wrapper.py build string
 				_("buildstring").innerHTML = "Wrapper.py " + stats["wrapper_build"]
 			}
 
@@ -84,7 +121,7 @@
 				}
 			}
 			function _kick(i){
-				player = players[i]
+				var player = players[i]
 				message = prompt("Please enter a kick message for "+player.name+":")
 				if(message){
 					requests.admin("kick_player", {"player": player.name, "reason": message})
@@ -93,7 +130,7 @@
 				}
 			}
 			function _ban(i){
-				player = players[i]
+				var player = players[i]
 				message = prompt("Please enter a ban message for "+player.name+":")
 				if(message){
 					requests.admin("ban_player", {"player": player.name, "reason": message})
@@ -101,8 +138,36 @@
 					alert("Won't ban "+player.name+".")
 				}
 			}
+			function _op(i){
+				var player = players[i]
+				if(confirm("Are you sure you want to give operator to "+player.name+"?")){
+					_console("op "+player.name)
+				}
+			}
+			function _deop(i){
+				var player = players[i]
+				if(confirm("Are you sure you want to remove operator from "+player.name+"?")){
+					_console("deop "+player.name)
+				}
+			}
 			function _console(line){
 				requests.admin("console", {"execute":line})
+			}
+			function _reload_plugins(){
+				if(!confirm("Are you sure you want to reload all plugins?")) return
+				requests.admin("reload_plugins", {})
+				alert("Reloaded plugins.")
+			}
+			function _toggle_plugin(id, el){
+				alert("Enabling and disabling plugins is not supported yet!")
+				return
+				// Doesn't actually do anything yet
+				if(!confirm("Are you sure you want to disable the plugin '"+id+"'? Disabling a plugin will force a plugin reload.")) return
+				if(el.innerHTML == "Disable"){
+					el.innerHTML = "Enable"
+				}else if(el.innerHTML == "Enable"){
+					el.innerHTML = "Disable"
+				}
 			}
 			function _login(){
 				loginWithPassword(_('login_password').value)
@@ -120,20 +185,22 @@
 				font-style: italic;
 				font-size: 12px;
 			}
+			.op{color:darkgoldenrod;}
 		</style>
 	</head>
 	<body>
 		<div id="login_page">
 			<h1>Wrapper.py Admin Login</h1>
 			<div id="login_invalid" style="display:none;color:red;font-weight:bold;">The password was invalid.</div>
-			Password: <input type="password" id="login_password" onkeydown="if(event.keyCode==13)_login();"/><button onclick="_login()">Login</button>
+			Password: <input type="password" id="login_password" onkeydown="if(event.keyCode==13){_login();this.value='';}"/><button onclick="_login()">Login</button>
 		</div>
 		<div id="admin_page" style="display:none;">
-			<h1>Wrapper.py Admin Page</h1>
+			<h1 id="server_name">Minecraft Server</h1>
 			<button onclick="_logout()">Logout</button></br></br>
 			This information refreshes every three seconds.</br>
 			<b>Server Status: </b> <span id="server_status">Unknown</span></br>
 			<b>Server Version: </b> <span id="server_version">Unknown</span></br>
+			<b>Server MOTD: </b> <span id="server_motd">Unknown</span></br>
 			<b>Level Name: </b> <span id="levelname_status">Unknown</span></br>
 			<b>Player Count: </b> <span id="playercount_status">n/a players</span></br>
 			<br/>
@@ -142,10 +209,18 @@
 					<th>Username</th><th>UUID</th><th>Options</th></tr>
 				</tbody>
 			</table>
+			Gold names are operators.
 			</br></br>Server: <button onclick="_start()">Start</button> <button onclick="_restart()">Restart</button> <button onclick="_stop()">Stop</button> <button onclick="_kill()">Force Kill</button>
 			</br></br><b>Server Console</b></br>
 			<textarea disabled="" cols="80" rows="20" id="server_console" onscroll="handleScroll(this)"></textarea>
-			<br/><input type="text" onkeydown="if(event.keyCode == 13){_console(this.value);this.value='';}" size="80"/>
+			<br/><input type="text" onkeydown="if(event.keyCode == 13){_console(this.value);this.value='';}" placeholder="Run a command in the Minecraft server console..." size="80"/>
+			</br></br><b>Plugins</b></br>
+			<button onclick="_reload_plugins()">Reload Plugins</button>
+			<table border="1">
+				<tbody id="pluginlist">
+					<th>Name</th><th>Description</th><th>Options</th></tr>
+				</tbody>
+			</table>
 		</div>
 		<div class="small">Copyright Ben Baptist 2014</div>
 		<div class="small" id="buildstring"></div>

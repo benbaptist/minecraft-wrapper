@@ -1,4 +1,4 @@
-import socket, traceback, time, threading, api, globals, random
+import socket, traceback, time, threading, api, globals, random, math
 from config import Config
 class IRC:
 	def __init__(self, server, config, log, wrapper, address, port, nickname, channels):
@@ -136,10 +136,16 @@ class IRC:
 				continue
 			for i,message in enumerate(self.msgQueue):
 				for channel in self.channels:
-					self.send("PRIVMSG %s :%s" % (channel, message))
+					if len(message) > 400:
+						for l in range(int(math.ceil(len(message) / 400.0))):
+							chunk = message[l*400:(l+1)*400]
+							self.send("PRIVMSG %s :%s" % (channel, chunk))
+							time.sleep(0.5)
+					else:
+						self.send("PRIVMSG %s :%s" % (channel, message))
 				del self.msgQueue[i]
 			self.msgQueue = []
-			time.sleep(0.1)
+			time.sleep(0.1)	
 	def filterName(self, name):
 		if self.config["IRC"]["obstruct-nicknames"]:
 			return "_" + str(name)[1:]

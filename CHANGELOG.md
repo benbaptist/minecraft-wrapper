@@ -1,5 +1,23 @@
 #Changelog#
 
+<h4>0.7.4</h4>
+Just a small little update, to fix a few things. 
+**Features**
+- `/wrapper halt` in-game command for killing Wrapper.py
+- Improvements to the web interface:
+  - Manage plugins (list plugins and their info, reload all plugins, disable plugins)
+  - Give/take operator through player list
+  - Increased server console scrollback and 
+  - Minor improvements
+- Proxy mode now reads server MOTD from server.properties
+- 'server-name' in wrapper.properties for naming servers (used in web interface)
+**Bug Fixes**
+- Fixed error when player dies
+- Fixed "Request Too Long" error in IRC when messages exceed the 512-byte limit
+- Fixed packet error when player was kicked from server with proxy mode
+- Improved login rate-limit system
+- Fixed issues with compressed backups not being pruned
+
 <h4>0.7.3</h4>
 At last, Wrapper.py 0.7.3 release! This is a relatively big update, and will fix a bunch of random inconsistencies in the APIs. It also adds a ton of new APIs, some big new features, and a bunch of bug fixes.
 
@@ -53,7 +71,7 @@ At last, Wrapper.py 0.7.3 release! This is a relatively big update, and will fix
   - irc.quit(nick, channel, message): User quitting from IRC. 'channel' returns None currently. 'message' is their QUIT message
   - player.mount(player, vehicle_id, leash): Called when a player enters a vehicle, such as a boat, minecart, or horse.
   - player.unmount(player): Called when a player leaves a vehicle that they previously entered.
-  - player.preLogin(player, online_uuid, offline_uuid, ip):
+  - player.preLogin(player, online_uuid, offline_uuid, ip): Called after a client authorizees, but hasn't connected to the server yet. Can be use to prevent logins
 - Changed events:
   - wrapper.backupBegin(file): file argument added
   - wrapper.backupEnd(file, status): backupFile argument renamed to file
@@ -177,16 +195,16 @@ Small update, but brings one much-needed change: the new configuration file syst
 </ul>
 
 #To-do List#
-- Web interface for server management (partially implemented, not sure when it'll be done)
+- Web interface improvements:
   - There's technically a functional web mode now - but it's super primitive. It does work, however.
   - Add buttons to update the wrapper from it
   - Halting the wrapper
   - IRC control
   - Changing all settings on wrapper.properties and server.properties from it
-- /wrapper halt
+  - Rolling back world file from backups
+  - Show server ports (proxy and internal, unless proxy is disabled, then just internal.) 
 - Multi-server mode (This might actually become a separate project for managing multiple servers and accounts, rather than being a Wrapper.py feature)
-  - If I make it a separate project, it might use Wrapper.py as a backend for booting servers for extra features, for the sake of not duping code across projects</li>
-- Ability to halt server without shutting down wrapper - for fine server control
+  - If I make it a separate project, it might use Wrapper.py as a backend for booting servers for extra features, for the sake of not duplicating code across projects
 - Update version of Minecraft server automatically
 - First-run setup wizard for new setups
 - Potentially implement a way to reload the config - but that might be too difficult/bug prone
@@ -202,4 +220,3 @@ Small update, but brings one much-needed change: the new configuration file syst
 - Add custom /help command (the current /help command is the vanilla help command, and it doesn't show any Wrapper.py commands)
 - Move permissions code, plugin loading code, and command code into separate files for more organized code
 - Split proxy.py into three files: __init__.py for the main proxy class, client.py for client class, server.py for server class, and network.py for core networking code (Packet class)
-- "Request too long" in IRC due to certain messages being too big

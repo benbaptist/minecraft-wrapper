@@ -2,6 +2,7 @@ import traceback, ConfigParser, ast, time, os, sys
 # I'm going to redo the configuration code soon!
 # Default Configuration File
 DEFAULT_CONFIG = """[General]
+server-name = Minecraft Server
 command = java -jar minecraft_server.1.8.jar nogui
 auto-restart = True
 auto-update-wrapper = False
@@ -44,7 +45,6 @@ proxy-enabled = False
 proxy-port = 25565
 proxy-bind = 0.0.0.0
 server-port = 25564
-motd = Minecraft Server
 online-mode = True
 max-players = 1024
 
@@ -58,7 +58,7 @@ public-stats = True
 """
 
 class Config:
-	version = "0.7.3"
+	version = "0.7.4"
 	debug = False
 	def __init__(self, log):
 		self.log = log
@@ -76,6 +76,7 @@ class Config:
 
 		sections = ["General", "Backups", "IRC", "Proxy", "Web"]
 		defaults = {"General":{
+			"server-name": "Minecraft Server",
 			"command": "java -jar minecraft_server.1.8.jar",
 			"auto-restart": True,
 			"auto-update-wrapper": False,
@@ -113,7 +114,6 @@ class Config:
 			"server-port": 25564,
 			"proxy-port": 25565,
 			"proxy-bind": "0.0.0.0",
-			"motd": "Minecraft Server",
 			"online-mode": True,
 			"max-players": 1024
 		},

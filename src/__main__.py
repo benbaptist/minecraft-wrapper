@@ -31,6 +31,7 @@ class Wrapper:
 		self.events = {}
 		self.permission = {}
 	def loadPlugin(self, i):
+		if "disabled_plugins" not in self.storage: self.storage["disabled_plugins"] = []
 		self.log.info("Loading plugin %s..." % i)
 		if os.path.isdir("wrapper-plugins/%s" % i):
 			plugin = import_module(i)
@@ -50,6 +51,9 @@ class Wrapper:
 		except: description = None
 		try: summary = plugin.SUMMARY
 		except: summary = None
+		if id in self.storage["disabled_plugins"]:
+			self.log.warn("Plugin '%s' disabled - not loading" % name)
+			return
 		main = plugin.Main(API(self, name, id), PluginLog(self.log, name))
 		self.plugins[id] = {"main": main, "good": True, "module": plugin} #  "events": {}, "commands": {},
 		self.plugins[id]["name"] = name
@@ -151,6 +155,9 @@ class Wrapper:
 							player.message("&cAn error occured while performing update. Please check the Wrapper.py console as soon as possible for an explanation and traceback. If you are unsure of the cause, please file a bug report on http://github.com/benbaptist/minecraft-wrapper with the traceback.")
 					else:
 						player.message("&cNo new Wrapper.py versions available.")
+				elif subcommand == "halt":
+					player.message("&cHalting Wrapper.py... goodbye!")
+					self.shutdown()
 				else:
 					player.message("&cUnknown sub-command /wrapper '%s'." % subcommand)
 			else:
@@ -411,9 +418,9 @@ class Wrapper:
 			self.log.error("Proxy mode could not be started because you do not have one or more of the following modules installed: pycrypt and requests")
 	def SIGINT(self, s, f):
 		self.shutdown()
-	def shutdown(self):
+	def shutdown(self, status=0):
 		self.halt = True
-		sys.exit(0)
+		sys.exit(status)
 	def rebootWrapper(self):
 		self.halt = True
 		os.system(" ".join(sys.argv) + "&")

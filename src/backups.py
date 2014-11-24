@@ -75,7 +75,7 @@ class Backups:
 			if self.config["Backups"]["backup-notification"]:
 				self.broadcast("&aBackup complete!")
 			self.wrapper.callEvent("wrapper.backupEnd", {"file": filename, "status": statusCode})
-			self.backups.append((timestamp, 'backup-%s.tar' % datetime.datetime.fromtimestamp(int(timestamp)).strftime('%Y-%m-%d_%H:%M:%S')))
+			self.backups.append((timestamp, filename))
 			
 			if len(self.backups) > self.config["Backups"]["backups-keep"]:
 				self.log.info("Deleting old backups...")
