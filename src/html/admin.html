@@ -56,25 +56,28 @@
 				_("server_version").innerHTML = stats["server_version"]
 				_("server_motd").innerHTML = stats["motd"]
 				_("server_name").innerHTML = stats["server_name"]
-				document.title = stats["server_name"]
+				document.title = stats["server_name"] + " - Wrapper.py Admin"
 				
 				// draw player list
 				_("playerlist").innerHTML = "<th>?</th><th>Username</th><th>UUID</th><th>Options</th></tr>"
 				for(i in stats["players"]){
 					var player = stats["players"][i]
 					if(!(player.uuid in skins)){
-						skins[player.uuid] = atob(requests.admin("get_player_skin", {"uuid": player.uuid}))
+						skins[player.uuid] = requests.admin("get_player_skin", {"uuid": player.uuid})
 					}
 					
 					if(player.isOp) var isOp = " class='op'"
 					else isOp = ""					
 					_("playerlist").innerHTML += "<td><canvas id='playerskin-"+player.name+"' width=16 height=16></canvas></td><td"+isOp+">"+player.name+"</td><td>"+player.uuid+"</td><td><button onclick='_kick("+i+")'>Kick</button> <button onclick='_ban("+i+")'>Ban</button> <button onclick='_op("+i+")'>OP</button> <button onclick='_deop("+i+")'>De-OP</button></td></tr>"
-					/*if(skins[player.uuid] == null) return
-					var pic = new Image()
-					pic.src = "data:image/png," + skins[player.uuid]
-					var ctx = _("playerskin-" + player.name).getContext("2d")
-					ctx.webkitImageSmoothingEnabled = false
-					ctx.drawImage(pic, 8, 8, 8, 8, 0, 0, 16, 16)*/
+					if(skins[player.uuid] == null) return
+					// the worst code ever. written in about five minutes.
+					try{
+						var pic = new Image()
+						pic.src = "data:image/png;base64," + skins[player.uuid]
+						var ctx = _("playerskin-" + player.name).getContext("2d")
+						ctx.webkitImageSmoothingEnabled = false
+						ctx.drawImage(pic, 8, 8, 8, 8, 0, 0, 16, 16)
+					}catch(err){}
 				}
 				players = stats["players"]
 				

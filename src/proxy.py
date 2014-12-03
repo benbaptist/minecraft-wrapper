@@ -30,15 +30,16 @@ class Proxy:
 			time.sleep(.2)
 		self.pollServer()
 		while not self.socket:
-			time.sleep(1)
 			try:
 				self.socket = socket.socket()
 				self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 				self.socket.bind((self.wrapper.config["Proxy"]["proxy-bind"], self.wrapper.config["Proxy"]["proxy-port"]))
 				self.socket.listen(5)
 			except:
-				print "Proxy mode could not bind - retrying"
+				self.wrapper.log.error("Proxy mode could not bind - retrying in five seconds")
+				self.wrapper.log.debug(traceback.format_exc())
 				self.socket = False
+			time.sleep(5)
 	 	while not self.wrapper.halt:
 	 		try:
 		 		sock, addr = self.socket.accept()
@@ -138,7 +139,6 @@ class Proxy:
 		skinBlob = json.loads(self.skins[uuid].decode("base64"))
 		r = requests.get(skinBlob["textures"]["SKIN"]["url"])
 		self.skinTextures[uuid] = r.content.encode("base64")
-		print "Returning skin..."
 		return self.skinTextures[uuid]
 class Client: # handle client/game connection
 	def __init__(self, socket, addr, wrapper, publicKey, privateKey, proxy):

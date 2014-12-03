@@ -1,22 +1,31 @@
 #Changelog#
 
 <h4>0.7.4</h4>
-Just a small little update, to fix a few things. 
+Just a small little update, to fix a few things, and improve upon some existing features.
 **Features**
 - `/wrapper halt` in-game command for killing Wrapper.py
 - Improvements to the web interface:
   - Manage plugins (list plugins and their info, reload all plugins, disable plugins)
   - Give/take operator through player list
-  - Increased server console scrollback and 
+  - Increased server console scrollback and
+  - See the faces of the players in the player list 
   - Minor improvements
-- Proxy mode now reads server MOTD from server.properties
+- Proxy mode now reads server MOTD and max player count from server.properties
 - 'server-name' in wrapper.properties for naming servers (used in web interface)
+- Warn users of tar not being installed when a backup begins
 **Bug Fixes**
 - Fixed error when player dies
 - Fixed "Request Too Long" error in IRC when messages exceed the 512-byte limit
 - Fixed packet error when player was kicked from server with proxy mode
 - Improved login rate-limit system
 - Fixed issues with compressed backups not being pruned
+- Fixed arrow key support (pull request #46)
+**Developer Changes**
+- New events: 
+  - wrapper.backupFailure(reasonCode, reasonText): Called when a backup fails for some reason.
+    - reasonCode: The error code of the failure
+    - reasonText: Text explaining the error
+    - reasonCode types: 1: tar is not installed | 2: backup file wasn't created after backup started | 3: one or more backup files didn't exist
 
 <h4>0.7.3</h4>
 At last, Wrapper.py 0.7.3 release! This is a relatively big update, and will fix a bunch of random inconsistencies in the APIs. It also adds a ton of new APIs, some big new features, and a bunch of bug fixes.
@@ -128,27 +137,21 @@ Server jumping still seems super buggy and weird. It only works in my test envir
 
 <h4>0.7.0</h4>
 - Huge Improvements to APIs
-<ul>
-<li>self.api.registerCommand() for making real /commands in-game</li>
-<li>self.api.minecraft.changeResourcePack() for changing resource packs on the fly</li>
-<li>Events containing the player's username should now contain the Player class</li>
-</ul> 
+  - self.api.registerCommand() for making real /commands in-game
+  - self.api.minecraft.changeResourcePack() for changing resource packs on the fly
+  - Events containing the player's username should now contain the Player class
 - Added a proxy mode - this is necessary for additional features of the API such as /commands and other special features
-<ul>
-<li>If you've used BungeeCord before - proxy mode should make sense. The only difference is that you don't need to make the server in offline mode.</li>
-<li>Built-in commands such as /reload, /wrapper, /pl(ugins), etc.</li>
-<li>Extremely experimental, near-useless server-jumping mode (doesn't work quite yet)</li>
-</ul> 
+  - If you've used BungeeCord before - proxy mode should make sense. The only difference is that you don't need to make the server in offline mode.
+  - Built-in commands such as /reload, /wrapper, /pl(ugins), etc.
+  - Extremely experimental, near-useless server-jumping mode (doesn't work quite yet)
 - Write date to log files as well as a timestamp
 - Added /plugins command - was removed in the last update by mistake
 - Removed IRC -> Server Line-Wrapping (each message was divided automatically every 80 characters - it was annoying)
 - Fixed bug where serious plugin errors resulted in that plugin not being reloadable
 - Fixed quit messages not being displayed in IRC (finally!)
 - Added new shell scripting setting where you can execute certain shell scripts on specific events (NIX-only systems)
-<ul>
-<li> The schell scripts' are pregenerated with content, and has a short description of when each script is executed, and what arguments are passed to the script, if any </li>
-<li> Shell scripts are in wrapper-data/scripts </li>
-</ul>
+  - The schell scripts' are pregenerated with content, and has a short description of when each script is executed, and what arguments are passed to the script, if any 
+  - Shell scripts are in wrapper-data/scripts
 
 <h4>0.6.0</h4>
 - Added an in-development plugin system! Super early, but it works great, it seems.
@@ -202,7 +205,12 @@ Small update, but brings one much-needed change: the new configuration file syst
   - IRC control
   - Changing all settings on wrapper.properties and server.properties from it
   - Rolling back world file from backups
-  - Show server ports (proxy and internal, unless proxy is disabled, then just internal.) 
+  - Show server ports (proxy and internal, unless proxy is disabled, then just internal.)
+  - Show chat as an individual tab
+  - Fix question marks and other filtered characters in packets that involve typing manually (e.g. question marks, &, etc.)
+- Fix backups happening upon start (potentially)
+- Refresh MOTD and such when the server restarts
+- Fix packet error when teleporting long distances
 - Multi-server mode (This might actually become a separate project for managing multiple servers and accounts, rather than being a Wrapper.py feature)
   - If I make it a separate project, it might use Wrapper.py as a backend for booting servers for extra features, for the sake of not duplicating code across projects
 - Update version of Minecraft server automatically

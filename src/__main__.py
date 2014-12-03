@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# I ought to clean these imports up a bit.
 import socket, datetime, time, sys, threading, random, subprocess, os, json, signal, traceback, ConfigParser, ast, proxy, web, globals, storage, hashlib
 from log import *
 from config import Config
@@ -6,8 +7,12 @@ from irc import IRC
 from server import Server
 from importlib import import_module
 from scripts import Scripts
-import importlib
 from api import API
+import importlib
+# I'm not 100% sure if readline works under Windows or not
+try: import readline
+except: pass
+# Sloppy import catch system
 try:
 	import requests
 	IMPORT_REQUESTS = True
@@ -127,6 +132,7 @@ class Wrapper:
 							self.log.error(line)
 		except:
 			self.log.error("A serious runtime error occurred - if you notice any strange behaviour, please restart immediately")
+			self.log.getTraceback()
 		return True
 	def playerCommand(self, payload):
 		self.log.info("%s executed: /%s %s" % (str(payload["player"]), payload["command"], " ".join(payload["args"])))

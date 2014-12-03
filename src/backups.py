@@ -59,6 +59,15 @@ class Backups:
 			else:
 				arguments = ["tar", "cfpv", "%s/%s" % (self.config["Backups"]["backup-location"], filename)]
 			
+			# Check if tar is installed
+			which = "where" if platform.system() == "Windows" else "which"
+			if not subprocess.call([which, "tar"]) == 0:
+				self.wrapper.callEvent("wrapper.backupFailure", {"reasonCode": 1, "reasonText": "Tar is not installed!"})
+				self.log.error("The backup could not begin, because tar does not appear to be installed!")
+				self.log.error("If you are on a Linux-based system, please install it through your preferred package manager.")
+				self.log.error("If you are on Windows, you can find GNU/Tar from this link: http://goo.gl/SpJSVM")
+				return
+			
 			if not self.wrapper.callEvent("wrapper.backupBegin", {"file": filename}):
 				self.log.warn("A backup was scheduled, but was cancelled by a plugin!")
 				return

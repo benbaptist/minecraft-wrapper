@@ -140,7 +140,6 @@ class IRC:
 						for l in range(int(math.ceil(len(message) / 400.0))):
 							chunk = message[l*400:(l+1)*400]
 							self.send("PRIVMSG %s :%s" % (channel, chunk))
-							time.sleep(0.5)
 					else:
 						self.send("PRIVMSG %s :%s" % (channel, message))
 				del self.msgQueue[i]

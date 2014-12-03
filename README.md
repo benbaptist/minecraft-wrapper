@@ -3,8 +3,12 @@ Wrapper.py is a simple Minecraft server wrapper for implementing various functio
 
 </br></br>It also comes with a relatively simple and straight-forward plugin API that can be used to create small Bukkit-like plugins on vanilla. 
 
-#Usage#
-Wrapper.py doesn't require any special modules for most of the basic features to work, but web mode and proxy mode require the following: `pkg_resources`, `requests`, and `pycrypto`. 
+#Installation#
+Wrapper.py doesn't require any special modules for most of the basic features to work, but web mode and proxy mode require the following: `pkg_resources`, `requests`, and `pycrypto`.  To install them, use pip:
+
+`pip install requests pkg_resources pycrypto`
+
+You will also need `tar` installed if you need backups. Most Linux distros have this pre-installed, but you may need to install it manually on Windows: http://gnuwin32.sourceforge.net/packages/gtar.htm
 
 </br></br>
 You only need to download Wrapper.py, the src folder is just the extracted version of Wrapper.py.</br>  
@@ -26,6 +30,8 @@ On first run, it'll create the configuration file 'wrapper.properties' and exit.
 Any console command beginning with a slash (/) will be interpreted as a Wrapper.py command. 
 Type /help to see a list of Wrapper.py commands. To completely shutdown the wrapper, type /halt.</br>  
 If you run into any bugs, please report them!
+
+Wrapper.py is made to work with 1.7.10 and later, but it will work on 1.7.4 and earlier if you don't use proxy mode. If you're using 1.6 and earlier, please turn on pre-1.7-mode in wrapper.properties.
 
 #Features#
 Wrapper.py supports the following features:

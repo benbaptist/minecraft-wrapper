@@ -169,8 +169,6 @@ class Client:
 			uuid = get("uuid")
 			if uuid in self.wrapper.proxy.skins:
 				skin = self.wrapper.proxy.getSkinTexture(uuid)
-				print "Returning skin"
-				print skin
 				if skin: return skin
 				else: return None
 			else: return None
