@@ -1,5 +1,5 @@
 # Unfinished web UI code. Yeah, I know. The code is awful. Probably not even a HTTP-compliant web server anyways. I just wrote it at like 3AM in like an hour.
-import socket, traceback, zipfile, threading, time, json, random, urlparse, storage, log
+import socket, traceback, zipfile, threading, time, json, random, urlparse, storage, log, urllib
 from api import API
 try:
 	import pkg_resources, requests
@@ -122,7 +122,7 @@ class Client:
 		def get(i): 
 			for a in args(1).split("?")[1].split("&"):
 				if a[0:a.find("=")]:
-					return a[a.find("=")+1:]
+					return urllib.unquote(a[a.find("=")+1:])
 			return ""
 		info = self.runAction(request)
 		if info == False:
@@ -138,7 +138,7 @@ class Client:
 		def get(i):
 			for a in args(1).split("?")[1].split("&"):
 				if a[0:a.find("=")] == i:
-					return a[a.find("=")+1:].replace("%20", " ")
+					return urllib.unquote(a[a.find("=")+1:])
 			return ""
 		action = args(1).split("?")[0]
 		if action == "stats":

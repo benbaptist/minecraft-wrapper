@@ -2,6 +2,7 @@
 
 <h4>0.7.4</h4>
 Just a small little update, to fix a few things, and improve upon some existing features.
+
 **Features**
 - `/wrapper halt` in-game command for killing Wrapper.py
 - Improvements to the web interface:
@@ -13,6 +14,7 @@ Just a small little update, to fix a few things, and improve upon some existing 
 - Proxy mode now reads server MOTD and max player count from server.properties
 - 'server-name' in wrapper.properties for naming servers (used in web interface)
 - Warn users of tar not being installed when a backup begins
+
 **Bug Fixes**
 - Fixed error when player dies
 - Fixed "Request Too Long" error in IRC when messages exceed the 512-byte limit
@@ -20,12 +22,16 @@ Just a small little update, to fix a few things, and improve upon some existing 
 - Improved login rate-limit system
 - Fixed issues with compressed backups not being pruned
 - Fixed arrow key support (pull request #46)
+- Fixed https:// links not being clickable from IRC->Game
+- Fixed other players being invisible and not showing up in tab menu when using proxy mode offline (issue #47)
+- Fixed URL-unsafe characters not working in the web interface (e.g. typing a question mark in the server console would cause issues) 
+
 **Developer Changes**
 - New events: 
   - wrapper.backupFailure(reasonCode, reasonText): Called when a backup fails for some reason.
     - reasonCode: The error code of the failure
     - reasonText: Text explaining the error
-    - reasonCode types: 1: tar is not installed | 2: backup file wasn't created after backup started | 3: one or more backup files didn't exist
+    - reasonCode types: 1: tar is not installed | 2: backup file didn't exist after backup finished | 3: one or more of the files slated to backup didn't exist, so backup was cancelled
 
 <h4>0.7.3</h4>
 At last, Wrapper.py 0.7.3 release! This is a relatively big update, and will fix a bunch of random inconsistencies in the APIs. It also adds a ton of new APIs, some big new features, and a bunch of bug fixes.

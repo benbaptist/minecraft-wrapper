@@ -346,7 +346,7 @@ class Server:
 		for i,chunk in enumerate(message.split(" ")):
 			if not i == 0: final += " "
 			try: 
-				if chunk[0:7] == "http://": final += "&b&n&@%s&@&r" % chunk
+				if chunk[0:7] in ("http://", "https://"): final += "&b&n&@%s&@&r" % chunk
 				else: final += chunk
 			except: final += chunk
 		self.messageFromChannel(channel, "&a<%s> &r%s" % (nick, final))

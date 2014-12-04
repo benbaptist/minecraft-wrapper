@@ -178,6 +178,7 @@ class Client: # handle client/game connection
 		self.slot = 0
 		self.riding = None
 		self.windowCounter = 2
+		self.properties = {}
 		for i in range(45): self.inventory[i] = None
 	def connect(self, ip=None, port=None):
 		if not self.server == None:
