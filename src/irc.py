@@ -299,6 +299,8 @@ class IRC:
 							elif self.server.state == 0: msg("Server is stopped. Type 'start' to fire it back up.")
 							elif self.server.state == 3: msg("Server is in the process of shutting down/restarting.")
 							else: msg("Server is in unknown state. This is probably a Wrapper.py bug - report it! (state #%d)" % self.server.state)
+							if self.wrapper.server.getMemoryUsage():
+								msg("Server Memory Usage: %d bytes" % self.wrapper.server.getMemoryUsage())
 						elif args(0) == 'check-update':
 							msg("Checking for new updates...")
 							update = self.wrapper.checkForNewUpdate()

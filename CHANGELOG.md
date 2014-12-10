@@ -6,14 +6,20 @@ Just a small little update, to fix a few things, and improve upon some existing 
 **Features**
 - `/wrapper halt` in-game command for killing Wrapper.py
 - Improvements to the web interface:
-  - Manage plugins (list plugins and their info, reload all plugins, disable plugins)
+  - Manage plugins (list plugins and their info, reload all plugins)
+    - Disabling plugins will be implemented in a future update
   - Give/take operator through player list
   - Increased server console scrollback and
-  - See the faces of the players in the player list 
+  - See the faces of the players in the player list
+  - Check server memory usage
   - Minor improvements
 - Proxy mode now reads server MOTD and max player count from server.properties
 - 'server-name' in wrapper.properties for naming servers (used in web interface)
 - Warn users of tar not being installed when a backup begins
+- Warn users of a scheduled reboot (timed-reboot-warning-minutes)
+  - timed-reboot-warning-minutes actually adds extra minutes to the reboot, so if you have it setup to reboot every hour, and timed-reboot-warning-minutes is set to 5 minutes, it will reboot once every hour+five minutes.
+- Check memory usage of server in IRC, console, and in-game with /wrapper mem
+- Wrapper.py shuts down cleanly when it receives SIGTERM signal
 
 **Bug Fixes**
 - Fixed error when player dies
@@ -205,15 +211,16 @@ Small update, but brings one much-needed change: the new configuration file syst
 
 #To-do List#
 - Web interface improvements:
-  - There's technically a functional web mode now - but it's super primitive. It does work, however.
   - Add buttons to update the wrapper from it
   - Halting the wrapper
   - IRC control
   - Changing all settings on wrapper.properties and server.properties from it
   - Rolling back world file from backups
   - Show server ports (proxy and internal, unless proxy is disabled, then just internal.)
-  - Show chat as an individual tab
+  - Show chat as an individual tab (without any console messages)
   - Fix question marks and other filtered characters in packets that involve typing manually (e.g. question marks, &, etc.)
+  - Add "remember me" checkmark, make all current sessions last 30 days instead of the default week, and then extend lifetime of session when accessed
+  - Make it stream information rather than polling for the sake of bandwidth efficiency and speed
 - Fix backups happening upon start (potentially)
 - Refresh MOTD and such when the server restarts
 - Fix packet error when teleporting long distances
@@ -234,3 +241,7 @@ Small update, but brings one much-needed change: the new configuration file syst
 - Add custom /help command (the current /help command is the vanilla help command, and it doesn't show any Wrapper.py commands)
 - Move permissions code, plugin loading code, and command code into separate files for more organized code
 - Split proxy.py into three files: __init__.py for the main proxy class, client.py for client class, server.py for server class, and network.py for core networking code (Packet class)
+- Update code:
+  - Allow auto-updating from dev build to stable, if it's the latest
+  - Jumping from stable to dev manually, if the dev build is newer than the stable build
+  - Create a difference between "checking for updates" and "auto-updating"

@@ -35,7 +35,7 @@ class Web:
 	def validateKey(self, key):
 		if time.time() - self.disableLogins < 30: return False # Threshold for logins
 		for i in self.data["keys"]:
-			if i[0] == key and time.time() - i[1] < 604800: # Validate key and ensure it's under a week old
+			if i[0] == key and time.time() - i[1] < 2592000: # Validate key and ensure it's under a week old
 				self.loginAttempts = 0
 				return True
 		self.loginAttempts += 1
@@ -153,6 +153,8 @@ class Client:
 				key = self.web.makeKey()
 				self.log.warn("%s logged in to web mode" % self.addr[0])
 				return {"session-key": key}
+			else:
+				self.log.warn("%s failed to login" % self.addr[0])
 			return EOFError
 		if action == "is_admin":
 			if self.web.validateKey(get("key")): return {"status": "good"}
@@ -210,7 +212,8 @@ class Client:
 				"server_version": self.wrapper.server.version,
 				"motd": self.wrapper.server.motd,
 				"refresh_time": time.time(),
-				"server_name": self.wrapper.config["General"]["server-name"]}
+				"server_name": self.wrapper.config["General"]["server-name"],
+				"server_memory": self.wrapper.server.getMemoryUsage()}
 		if action == "console":
 			if not self.web.validateKey(get("key")): return EOFError
 			self.wrapper.server.console(get("execute"))

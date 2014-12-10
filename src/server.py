@@ -1,4 +1,4 @@
-import socket, datetime, time, sys, threading, random, subprocess, os, json, signal, traceback, api, StringIO, ConfigParser, backups, sys, codecs
+import socket, datetime, time, sys, threading, random, subprocess, os, json, signal, traceback, api, StringIO, ConfigParser, backups, sys, codecs, resource
 from api.player import Player
 from api.world import World
 class Server:
@@ -14,6 +14,7 @@ class Server:
 		self.state = 0 # 0 is off, 1 is starting, 2 is started, 3 is shutting down
 		self.bootTime = time.time()
 		self.boot = True
+		self.rebootWarnings = 0
 		self.data = []
 		
 		# Server Information 
@@ -227,6 +228,13 @@ class Server:
 					try: self.readConsole(line.replace("\r", ""))
 					except: self.log.getTraceback()
 				self.data = []
+	def getMemoryUsage(self):
+		""" Returns allocated memory in bytes """
+		if not os.name == "posix": return None
+		if self.proc == False: return None
+		with open("/proc/%d/statm" % self.proc.pid, "r") as f:
+			bytes = int(f.read().split(" ")[1]) * resource.getpagesize()
+		return bytes
 	def stripSpecial(self, text):
 		a = ""; it = iter(xrange(len(text)))
 		for i in it:
@@ -360,5 +368,14 @@ class Server:
 		""" Called every second, and used for handling cron-like jobs """
 		if self.config["General"]["timed-reboot"]:
 			if time.time() - self.bootTime > self.config["General"]["timed-reboot-seconds"]:
+				if self.config["General"]["timed-reboot-warning-minutes"] > 0:
+					if self.rebootWarnings - 1 < self.config["General"]["timed-reboot-warning-minutes"]:
+						l = (time.time() - self.bootTime - self.config["General"]["timed-reboot-seconds"]) / 60
+						if l > self.rebootWarnings:
+							self.rebootWarnings += 1
+							if int(self.config["General"]["timed-reboot-warning-minutes"] - l + 1) > 0:
+								self.broadcast("&cServer will be rebooting in %d minute(s)!" % int(self.config["General"]["timed-reboot-warning-minutes"] - l + 1))
+						return
 				self.restart("Server is conducting a scheduled reboot. The server will be back momentarily!")
 				self.bootTime = time.time()
+				self.rebootWarnings = 0

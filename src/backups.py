@@ -1,7 +1,7 @@
 # Plans for this: separate backup code into its own method, allow for plugins to control backups more freely.
 # I also should probably not use irc=True when broadcasting, and instead should just rely on events and having server.py and irc.py print messages themselves
 # for the sake of consistency.
-import datetime, time, sys, threading, random, subprocess, os, json, signal, api
+import datetime, time, sys, threading, random, subprocess, os, json, signal, api, platform
 class Backups:
 	def __init__(self, wrapper):
 		self.wrapper = wrapper
@@ -55,14 +55,14 @@ class Backups:
 			filename = "backup-%s.tar" % datetime.datetime.fromtimestamp(int(timestamp)).strftime("%Y-%m-%d_%H:%M:%S")
 			if self.config["Backups"]["backup-compression"]:
 				filename += ".gz"
-				arguments = ["tar", "czf", "%s/%s" % (self.config["Backups"]["backup-location"], filename)]
+				arguments = ["tar", "czf", "%s/%s" % (self.config["Backups"]["backup-location"].replace(" ", "\\ "), filename)]
 			else:
 				arguments = ["tar", "cfpv", "%s/%s" % (self.config["Backups"]["backup-location"], filename)]
 			
 			# Check if tar is installed
 			which = "where" if platform.system() == "Windows" else "which"
 			if not subprocess.call([which, "tar"]) == 0:
-				self.wrapper.callEvent("wrapper.backupFailure", {"reasonCode": 1, "reasonText": "Tar is not installed!"})
+				self.wrapper.callEvent("wrapper.backupFailure", {"reasonCode": 1, "reasonText": "tar is not installed."})
 				self.log.error("The backup could not begin, because tar does not appear to be installed!")
 				self.log.error("If you are on a Linux-based system, please install it through your preferred package manager.")
 				self.log.error("If you are on Windows, you can find GNU/Tar from this link: http://goo.gl/SpJSVM")
@@ -78,7 +78,9 @@ class Backups:
 				if os.path.exists(file):
 					arguments.append(file)
 				else:
-					self.log.warn("Backup file '%s' does not exist" % file)
+					self.log.warn("Backup file '%s' does not exist - cancelling backup" % file)
+					self.wrapper.callEvent("wrapper.backupFailure", {"reasonCode": 3, "reasonText": "Backup file '%s' does not exist." % file})
+					return 
 			statusCode = os.system(" ".join(arguments))
 			self.console("save-on")
 			if self.config["Backups"]["backup-notification"]:
@@ -101,3 +103,6 @@ class Backups:
 			f = open(self.config["Backups"]["backup-location"] + "/backups.json", "w")
 			f.write(json.dumps(self.backups))
 			f.close()	
+			
+			if not os.path.exists(self.config["Backups"]["backup-location"] + "/" + filename):
+				self.wrapper.callEvent("wrapper.backupFailure", {"reasonCode": 2, "reasonText": "Backup file didn't exist after the tar command executed - assuming failure."})

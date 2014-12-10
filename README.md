@@ -46,6 +46,7 @@ Wrapper.py supports the following features:
   - Controlling server from IRC
   - Achievements, deaths, and whatnot appear on IRC
   - Chat between Minecraft server and IRC channels
+- Scheduled reboots
 - Web remote for controlling server through your web browser
 - Shell scripts that are called upon certain events (similar to plugin events, but quicker and easier)
 - Minecraft 1.7 and later support (uses tellraw!)

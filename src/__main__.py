@@ -164,6 +164,11 @@ class Wrapper:
 				elif subcommand == "halt":
 					player.message("&cHalting Wrapper.py... goodbye!")
 					self.shutdown()
+				elif subcommand in ("mem", "memory"):
+					if self.server.getMemoryUsage():
+						player.message("&cServer Memory: %d bytes" % self.server.getMemoryUsage())
+					else:
+						player.message("&cError: Couldn't retrieve memory usage for an unknown reason")
 				else:
 					player.message("&cUnknown sub-command /wrapper '%s'." % subcommand)
 			else:
@@ -361,6 +366,7 @@ class Wrapper:
 		self.configManager.loadConfig()
 		self.config = self.configManager.config
 		signal.signal(signal.SIGINT, self.SIGINT)
+		signal.signal(signal.SIGTERM, self.SIGINT)
 		
 		self.api = API(self, "Wrapper.py")
 		
@@ -426,6 +432,8 @@ class Wrapper:
 		self.shutdown()
 	def shutdown(self, status=0):
 		self.halt = True
+		self.server.stop(reason="Wrapper.py Shutting Down")
+		time.sleep(1)
 		sys.exit(status)
 	def rebootWrapper(self):
 		self.halt = True
@@ -548,13 +556,17 @@ class Wrapper:
 						self.log.info("%s v%s - %s" % (name, ".".join([str(_) for _ in version]), summary))
 					else:
 						self.log.info("%s failed to load!" % (plug))
+			elif command in ("mem", "memory"):
+				if self.server.getMemoryUsage():
+					self.log.info("Server Memory Usage: %d bytes" % self.server.getMemoryUsage())
 			elif command == "help":
-				self.log.info("/reload - reload plugins")	
-				self.log.info("/plugins - lists plugins")	
+				self.log.info("/reload - Reload plugins")	
+				self.log.info("/plugins - Lists plugins")	
 				self.log.info("/update-wrapper - Checks for new updates, and will install them automatically if one is available")
-				self.log.info("/start & /stop - start and stop the server without auto-restarting respectively without shutting down Wrapper.py")
-				self.log.info("/restart - restarts the server, obviously")				
-				self.log.info("/halt - shutdown Wrapper.py completely")
+				self.log.info("/start & /stop - Start and stop the server without auto-restarting respectively without shutting down Wrapper.py")
+				self.log.info("/restart - Restarts the server, obviously")				
+				self.log.info("/halt - Shutdown Wrapper.py completely")
+				self.log.info("/mem - Get memory usage of the server")
 				self.log.info("Wrapper.py Version %s" % self.getBuildString())
 			else:
 				self.log.error("Invalid command %s" % command)
@@ -569,6 +581,7 @@ if __name__ == "__main__":
 		t.start()
 	except SystemExit:
 		#log.error("Wrapper.py received SystemExit")
+		os.system("reset")
 		wrapper.disablePlugins()
 		wrapper.halt = True
 		try:

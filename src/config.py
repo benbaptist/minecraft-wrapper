@@ -1,5 +1,5 @@
 import traceback, ConfigParser, ast, time, os, sys
-# I'm going to redo the configuration code soon!
+# I'm going to redo the configuration code soon! Don't you worry!
 # Default Configuration File
 DEFAULT_CONFIG = """[General]
 server-name = Minecraft Server
@@ -10,6 +10,7 @@ auto-update-dev-builds = False
 pre-1.7-mode = False
 timed-reboot = False
 timed-reboot-seconds = 86400
+timed-reboot-warning-minutes = 5 
 debug = False 
 shell-scripts = False
 
@@ -85,6 +86,7 @@ class Config:
 			"pre-1.7-mode": False,
 			"timed-reboot": False,
 			"timed-reboot-seconds": 86400,
+			"timed-reboot-warning-minutes": 5,
 			"shell-scripts": False
 		},		
 		"IRC":{ 

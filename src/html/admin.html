@@ -9,6 +9,8 @@
 			skins = {}
 			invalidLogins = 0
 			lastRefresh = 0
+			speed = 500
+			check = true
 			_ = function(id) {return document.getElementById(id)}
 			function isAuthed(){
 				if(!localStorage.sessionKey) return false
@@ -37,12 +39,29 @@
 					tick()
 				}
 			}
+			window.onfocus = function(){
+				check = true
+			}
+			window.onblur = function(){
+				check = false
+			}
 			function handleScroll(z){
 				hasScrolled = true
 				if(z.scrollTop == z.scrollHeight) {hasScrolled = false;console.log('no scroll')}
 			}
+			// Shamelessly copied from http://stackoverflow.com/questions/10420352/converting-file-size-in-bytes-to-human-readable
+			function getReadableFileSizeString(fileSizeInBytes){
+				var i = -1;
+				var byteUnits = [' kB', ' MB', ' GB', ' TB', 'PB', 'EB', 'ZB', 'YB'];
+				do {
+					fileSizeInBytes = fileSizeInBytes / 1024
+					i++;
+				} while (fileSizeInBytes > 1024);
+				return Math.max(fileSizeInBytes, 0.1).toFixed(1) + byteUnits[i];
+			}
 			function tick(){
-				setTimeout("tick()", 2000)
+				setTimeout("tick()", speed)
+				if(!check) return false
 				stats = requests.admin("admin_stats", {"last_refresh": lastRefresh})
 				if(stats["status"] == "error"){
 					console.log("Error while refreshing stats. Connection lost?")
@@ -56,6 +75,7 @@
 				_("server_version").innerHTML = stats["server_version"]
 				_("server_motd").innerHTML = stats["motd"]
 				_("server_name").innerHTML = stats["server_name"]
+				_("memory_status").innerHTML = getReadableFileSizeString(stats["server_memory"])
 				document.title = stats["server_name"] + " - Wrapper.py Admin"
 				
 				// draw player list
@@ -200,12 +220,12 @@
 		<div id="admin_page" style="display:none;">
 			<h1 id="server_name">Minecraft Server</h1>
 			<button onclick="_logout()">Logout</button></br></br>
-			This information refreshes every three seconds.</br>
 			<b>Server Status: </b> <span id="server_status">Unknown</span></br>
 			<b>Server Version: </b> <span id="server_version">Unknown</span></br>
 			<b>Server MOTD: </b> <span id="server_motd">Unknown</span></br>
 			<b>Level Name: </b> <span id="levelname_status">Unknown</span></br>
 			<b>Player Count: </b> <span id="playercount_status">n/a players</span></br>
+			<b>Memory usage: </b> <span id="memory_status">n/a</span>
 			<br/>
 			<table border="1">
 				<tbody id="playerlist">
@@ -213,7 +233,7 @@
 				</tbody>
 			</table>
 			Gold names are operators. Skins only show up when proxy mode is enabled.
-			</br></br>Server: <button onclick="_start()">Start</button> <button onclick="_restart()">Restart</button> <button onclick="_stop()">Stop</button> <button onclick="_kill()">Force Kill</button>
+			</br></br>Actions: <button onclick="_start()">Start</button> <button onclick="_restart()">Restart</button> <button onclick="_stop()">Stop</button> <button onclick="_kill()">Force Kill</button>
 			</br></br><b>Server Console</b></br>
 			<textarea disabled="" cols="80" rows="20" id="server_console" onscroll="handleScroll(this)"></textarea>
 			<br/><input type="text" onkeydown="if(event.keyCode == 13){_console(this.value);this.value='';}" placeholder="Run a command in the Minecraft server console..." size="80"/>
