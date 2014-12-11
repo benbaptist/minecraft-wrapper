@@ -6,6 +6,7 @@ Just a small little update, to fix a few things, and improve upon some existing 
 **Features**
 - `/wrapper halt` in-game command for killing Wrapper.py
 - Improvements to the web interface:
+  - Bootstrap design! Looks way nicer, but still not the final design
   - Manage plugins (list plugins and their info, reload all plugins)
     - Disabling plugins will be implemented in a future update
   - Give/take operator through player list
@@ -20,12 +21,13 @@ Just a small little update, to fix a few things, and improve upon some existing 
   - timed-reboot-warning-minutes actually adds extra minutes to the reboot, so if you have it setup to reboot every hour, and timed-reboot-warning-minutes is set to 5 minutes, it will reboot once every hour+five minutes.
 - Check memory usage of server in IRC, console, and in-game with /wrapper mem
 - Wrapper.py shuts down cleanly when it receives SIGTERM signal
+- Wrapper.py remembers server state upon exit - i.e. if you `/stop` the server from the console, it will remain stopped until you `/start` it again
 
 **Bug Fixes**
 - Fixed error when player dies
 - Fixed "Request Too Long" error in IRC when messages exceed the 512-byte limit
 - Fixed packet error when player was kicked from server with proxy mode
-- Improved login rate-limit system
+- Fixed login rate-limit system
 - Fixed issues with compressed backups not being pruned
 - Fixed arrow key support (pull request #46)
 - Fixed https:// links not being clickable from IRC->Game
@@ -38,6 +40,8 @@ Just a small little update, to fix a few things, and improve upon some existing 
     - reasonCode: The error code of the failure
     - reasonText: Text explaining the error
     - reasonCode types: 1: tar is not installed | 2: backup file didn't exist after backup finished | 3: one or more of the files slated to backup didn't exist, so backup was cancelled
+    
+Make it so server start/stop state is preserved, and check filesize of world folder and whole current directory for web mode. Also fix start/stop preservation because sometimes, when you /halt or control+c, it'll remember that it stopped the server when you didn't really do it. I need to fix the memory graph too. Console might be broken as well.
 
 <h4>0.7.3</h4>
 At last, Wrapper.py 0.7.3 release! This is a relatively big update, and will fix a bunch of random inconsistencies in the APIs. It also adds a ton of new APIs, some big new features, and a bunch of bug fixes.
@@ -46,6 +50,7 @@ At last, Wrapper.py 0.7.3 release! This is a relatively big update, and will fix
 - Web admin panel for controlling the wrapper & the server from a browser
   - It is extremely ugly, and primitive. Don't except much yet.
 - Optional backup compression (tar.gz)
+
 - Optional auto-update system (turned off by default)
   - If auto-update-wrapper is turned on in wrapper.properties, the Wrapper will check for updates every 24 hours
   - If you are on a stable build, and a new version exists, it will download the update and will be applied when you start Wrapper.py next time
@@ -70,6 +75,7 @@ At last, Wrapper.py 0.7.3 release! This is a relatively big update, and will fix
 - Proxy mode should work with 1.7.10 now
 - Fixed 'stop' in IRC remote not keeping the server off
 - Fixed player position not changing while riding an entity
+- Fixed backup paths with spaces not working right
   
 **Developer Changes**
 - New formatting code: &@ for opening URLs when clicked in game chat
@@ -218,7 +224,6 @@ Small update, but brings one much-needed change: the new configuration file syst
   - Rolling back world file from backups
   - Show server ports (proxy and internal, unless proxy is disabled, then just internal.)
   - Show chat as an individual tab (without any console messages)
-  - Fix question marks and other filtered characters in packets that involve typing manually (e.g. question marks, &, etc.)
   - Add "remember me" checkmark, make all current sessions last 30 days instead of the default week, and then extend lifetime of session when accessed
   - Make it stream information rather than polling for the sake of bandwidth efficiency and speed
 - Fix backups happening upon start (potentially)

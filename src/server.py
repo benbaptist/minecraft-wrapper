@@ -10,12 +10,19 @@ class Server:
 		self.api = api.API(wrapper, "Server", internal=True)
 		self.backups = backups.Backups(wrapper)
 		
+		if "serverState" not in self.wrapper.storage:
+			self.wrapper.storage["serverState"] = True
 		self.players = {}
 		self.state = 0 # 0 is off, 1 is starting, 2 is started, 3 is shutting down
 		self.bootTime = time.time()
-		self.boot = True
+		self.boot = self.wrapper.storage["serverState"]
+		self.proc = False
 		self.rebootWarnings = 0
 		self.data = []
+		
+		if not self.wrapper.storage["serverState"]:
+			self.log.warn("NOTE: Server was in 'STOP' state last time Wrapper.py was running. To start the server, run /start.")
+			time.sleep(5)
 		
 		# Server Information 
 		self.worldName = None
@@ -56,6 +63,7 @@ class Server:
 	def start(self):
 		""" Start the Minecraft server """
 		self.boot = True
+		self.wrapper.storage["serverState"] = True
 	def restart(self, reason="Restarting Server"):
 		""" Restart the Minecraft server, and kick people with the specified reason """
 		self.log.info("Restarting Minecraft server with reason: %s" % reason)
@@ -68,6 +76,7 @@ class Server:
 		self.log.info("Stopping Minecraft server with reason: %s" % reason)
 		self.changeState(3, reason)
 		self.boot = False
+		self.wrapper.storage["serverState"] = False
 		for player in self.players:
 			self.console("kick %s %s" % (player, reason))
 		self.console("stop")
@@ -208,6 +217,7 @@ class Server:
 	def __handle_server__(self):
 		""" Internally-used function that handles booting the server, parsing console output, and etc. """
 		while not self.wrapper.halt:
+			self.proc = False
 			if not self.boot:
 				time.sleep(0.1)
 				continue
@@ -232,9 +242,14 @@ class Server:
 		""" Returns allocated memory in bytes """
 		if not os.name == "posix": return None
 		if self.proc == False: return None
-		with open("/proc/%d/statm" % self.proc.pid, "r") as f:
-			bytes = int(f.read().split(" ")[1]) * resource.getpagesize()
+		try:
+			with open("/proc/%d/statm" % self.proc.pid, "r") as f:
+				bytes = int(f.read().split(" ")[1]) * resource.getpagesize()
+		except: return None
 		return bytes
+	def getWorldSize(self):
+		""" Returns the size of the currently used world folder in bytes. Not implemented yet """
+		return 0
 	def stripSpecial(self, text):
 		a = ""; it = iter(xrange(len(text)))
 		for i in it:

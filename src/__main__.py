@@ -169,6 +169,8 @@ class Wrapper:
 						player.message("&cServer Memory: %d bytes" % self.server.getMemoryUsage())
 					else:
 						player.message("&cError: Couldn't retrieve memory usage for an unknown reason")
+				elif subcommand == "random":
+					player.message("&cRandom number: &a%d" % random.randrange(0, 99999999))
 				else:
 					player.message("&cUnknown sub-command /wrapper '%s'." % subcommand)
 			else:
@@ -559,6 +561,8 @@ class Wrapper:
 			elif command in ("mem", "memory"):
 				if self.server.getMemoryUsage():
 					self.log.info("Server Memory Usage: %d bytes" % self.server.getMemoryUsage())
+				else:
+					self.log.error("Server not booted or another error occurred while getting memory usage!")
 			elif command == "help":
 				self.log.info("/reload - Reload plugins")	
 				self.log.info("/plugins - Lists plugins")	

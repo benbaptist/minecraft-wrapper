@@ -18,30 +18,45 @@ class Web:
 		
 		self.api.registerEvent("server.consoleMessage", self.onServerConsole)
 		self.consoleScrollback = []
+		self.memoryGraph = []
 		self.loginAttempts = 0
 		self.lastAttempt = 0
 		self.disableLogins = 0
+		
+		t = threading.Thread(target=self.updateGraph, args=())
+		t.daemon = True
+		t.start()
 	def onServerConsole(self, payload):
 		while len(self.consoleScrollback) > 200:
 			del self.consoleScrollback[0]
 		self.consoleScrollback.append((time.time(), payload["message"]))
+	def updateGraph(self):
+		while not self.wrapper.halt:
+			while len(self.memoryGraph) > 200:
+				del self.memoryGraph[0]
+			if self.wrapper.server.getMemoryUsage():
+				self.memoryGraph.append([time.time(), self.wrapper.server.getMemoryUsage()])
+			time.sleep(1)
+	def checkLogin(self, password):
+		if time.time() - self.disableLogins < 60: return False # Threshold for logins
+		if password == self.wrapper.config["Web"]["web-password"]: return True
+		self.loginAttempts += 1
+		if self.loginAttempts > 10 and time.time() - self.lastAttempt < 60:
+			self.disableLogins = time.time()
+			self.log.warn("Disabled login attempts for one minute")
+		self.lastAttempt = time.time()
 	def makeKey(self):
 		a = ""; z = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@-_"
-		for i in range(32):
+		for i in range(64):
 			a += z[random.randrange(0, len(z))]
 #			a += chr(random.randrange(97, 122))
 		self.data["keys"].append([a, time.time()])
 		return a
 	def validateKey(self, key):
-		if time.time() - self.disableLogins < 30: return False # Threshold for logins
 		for i in self.data["keys"]:
 			if i[0] == key and time.time() - i[1] < 2592000: # Validate key and ensure it's under a week old
 				self.loginAttempts = 0
 				return True
-		self.loginAttempts += 1
-		if self.loginAttempts > 10 and time.time() - self.lastAttempt < 60:
-			self.disableLogins = time.time()
-		self.lastAttempt = time.time()
 		return False
 	def removeKey(self, key):
 		for i,v in enumerate(self.data["keys"]):
@@ -149,7 +164,7 @@ class Client:
 			return {"playerCount": len(self.wrapper.server.players), "players": players}
 		if action == "login":
 			password = get("password")
-			if password == self.wrapper.config["Web"]["web-password"]:
+			if self.web.checkLogin(password):
 				key = self.web.makeKey()
 				self.log.warn("%s logged in to web mode" % self.addr[0])
 				return {"session-key": key}
@@ -202,6 +217,10 @@ class Client:
 			for line in self.web.consoleScrollback:
 				if line[0] > refreshTime:
 					scrollBack.append(line[1])
+			memoryGraph = []
+			for line in self.web.memoryGraph:
+				if line[0] > refreshTime:
+					memoryGraph.append(line[1])
 			return {"playerCount": len(self.wrapper.server.players), 
 				"players": players,
 				"plugins": plugins,
@@ -213,7 +232,8 @@ class Client:
 				"motd": self.wrapper.server.motd,
 				"refresh_time": time.time(),
 				"server_name": self.wrapper.config["General"]["server-name"],
-				"server_memory": self.wrapper.server.getMemoryUsage()}
+				"server_memory": self.wrapper.server.getMemoryUsage(),
+				"server_memory_graph": memoryGraph}
 		if action == "console":
 			if not self.web.validateKey(get("key")): return EOFError
 			self.wrapper.server.console(get("execute"))
@@ -267,7 +287,7 @@ class Client:
 			elif type == "start":
 				reason = get("reason")
 				self.wrapper.server.start()
-				self.log.warn("[%s] Server start with reason: %s" % (self.addr[0], reason))
+				self.log.warn("[%s] Server started" % (self.addr[0]))
 				return "success"
 			elif type == "kill":
 				self.wrapper.server.kill()
