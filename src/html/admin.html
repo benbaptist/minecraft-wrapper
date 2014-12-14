@@ -22,7 +22,7 @@
 				if(requests.action("is_admin", {"key": localStorage.sessionKey})["status"] == "good") return true
 				return false
 			}
-			window.onload = function() {
+			window.onload = function(){
 				if(isAuthed()){
 					tick()
 					/*try{
@@ -40,7 +40,7 @@
 				check = true
 			}
 			window.onblur = function(){
-//				check = false
+				check = false
 			}
 			function handleScroll(z){
 				hasScrolled = true
@@ -73,6 +73,7 @@
 				_("server_motd").innerHTML = stats["motd"]
 				_("server_name").innerHTML = stats["server_name"]
 				_("memory_status").innerHTML = getReadableFileSizeString(stats["server_memory"])
+				_("world_size").innerHTML = getReadableFileSizeString(stats["world_size"])
 				document.title = stats["server_name"] + " - Wrapper.py"
 				
 				// draw player list
@@ -128,21 +129,25 @@
 					}
 				}
 				for(i in stats["server_memory_graph"]){
-					memoryGraph[memoryGraph.length] = [memoryGraph.length, (stats["server_memory_graph"][i] / 1024000000)*100]
+					if(isNaN(stats["server_memory_graph"][i])) continue;
+					var point = [memoryGraph.length, (stats["server_memory_graph"][i] / 1024000000)*100]
+					if(isNaN(point[1])) point[1] = 0
+					memoryGraph[memoryGraph.length] = point
 					memoryGraphPoints += 1
 				}
 				/*if(memoryGraph.getLength() > 200)
 					memoryGraph.splice(-200)*/
-				/*var p = 0
+				var p = 0
 				while(memoryGraph.getLength() > 200){
-					delete memoryGraph[memoryGraph.getLength()-201]
+					delete memoryGraph[0]
 					console.log("Deleted")
 					p += 1
 					if (p > 300) {
 						break
 					}
+					memoryGraph.shift(0)
 				}
-				var m = []
+				/*var m = []
 				for (i in memoryGraph){
 					if(memoryGraph[i] == undefined) continue
 					m[m.length] = [m.length, memoryGraph[i][1]]
@@ -236,6 +241,7 @@
 				_("tab-"+id).className = "active"
 				_("screen-"+currentTab).style.display = "none"
 				_("screen-"+id).style.display = "block"
+				console.log("Switching from "+currentTab+" to "+id)
 				currentTab = id
 			}
 			window.onhashchange = function(){
@@ -298,7 +304,8 @@
 				<b>Server MOTD: </b> <span id="server_motd">Unknown</span></br>
 				<b>Level Name: </b> <span id="levelname_status">Unknown</span></br>
 				<b>Player Count: </b> <span id="playercount_status">n/a players</span></br>
-				<b>Memory usage: </b> <span id="memory_status">n/a</span>
+				<b>Memory Usage: </b> <span id="memory_status">n/a</span></br>
+				<b>World Size: </b> <span id="world_size">n/a</span>
 				<br/>
 				<div class="col-lg-6">
 					<div class="panel panel-default">
@@ -332,22 +339,22 @@
 				Gold names are operators. Skins only show up when proxy mode is enabled.
 				</br></br>Actions: <button onclick="_start()">Start</button> <button onclick="_restart()">Restart</button> <button onclick="_stop()">Stop</button> <button onclick="_kill()">Force Kill</button>
 			</div>
-			<div id="screen-console" style="display:none;">
-				<textarea disabled="" cols="80" rows="20" id="server_console" onscroll="handleScroll(this)"></textarea>
-				<br/><input type="text" onkeydown="if(event.keyCode == 13){_console(this.value);this.value='';}" placeholder="Run a command in the Minecraft server console..." size="80"/>
-			</div>
-			<div id="screen-plugins" style="display:none;">
-				<button onclick="_reload_plugins()">Reload Plugins</button>
-				<table border="1">
-					<tbody id="pluginlist">
-						<th>Name</th><th>Description</th><th>Options</th></tr>
-					</tbody>
-				</table>
-			</div>
+		</div>
+		<div id="screen-console" style="display:none;">
+			<textarea disabled="" style="width:100%;" rows="20" id="server_console" onscroll="handleScroll(this)"></textarea>
+			<br/><br/><input type="text" onkeydown="if(event.keyCode == 13){_console(this.value);this.value='';}" placeholder="Run a command in the Minecraft server console..." style="width:100%;"/>
+		</div>
+		<div id="screen-plugins" style="display:none;">
+			<button onclick="_reload_plugins()">Reload Plugins</button>
+			<table class="table table-striped">
+				<tbody id="pluginlist">
+					<th>Name</th><th>Description</th><th>Options</th></tr>
+				</tbody>
+			</table>
 		</div>
 		<div class="small">Copyright Ben Baptist 2014</div>
 		<div class="small" id="buildstring"></div>
-		<div class="small">Designed with bootstrap - the best thing ever</div>
+		<div class="small">bootstrap - the best thing ever. design is not final.</div>
 
 		<script src="js/jquery.js"></script>
 		<script src="js/bootstrap.min.js"></script>

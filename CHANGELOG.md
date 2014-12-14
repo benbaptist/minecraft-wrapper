@@ -13,7 +13,8 @@ Just a small little update, to fix a few things, and improve upon some existing 
   - Increased server console scrollback and
   - See the faces of the players in the player list
   - Check server memory usage
-  - Minor improvements
+    - Featuring a pretty memory graph, as well!
+  - Other minor improvements
 - Proxy mode now reads server MOTD and max player count from server.properties
 - 'server-name' in wrapper.properties for naming servers (used in web interface)
 - Warn users of tar not being installed when a backup begins

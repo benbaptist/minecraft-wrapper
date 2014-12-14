@@ -45,16 +45,19 @@ class Web:
 			self.disableLogins = time.time()
 			self.log.warn("Disabled login attempts for one minute")
 		self.lastAttempt = time.time()
-	def makeKey(self):
+	def makeKey(self, rememberMe):
 		a = ""; z = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@-_"
 		for i in range(64):
 			a += z[random.randrange(0, len(z))]
 #			a += chr(random.randrange(97, 122))
-		self.data["keys"].append([a, time.time()])
+		self.data["keys"].append([a, time.time(), rememberMe])
 		return a
 	def validateKey(self, key):
 		for i in self.data["keys"]:
-			if i[0] == key and time.time() - i[1] < 2592000: # Validate key and ensure it's under a week old
+			expireTime = 2592000
+			if len(i) > 2:
+				if i[2]: expireTime = 21600
+			if i[0] == key and time.time() - i[1] < expireTime: # Validate key and ensure it's under a week old
 				self.loginAttempts = 0
 				return True
 		return False
@@ -164,9 +167,12 @@ class Client:
 			return {"playerCount": len(self.wrapper.server.players), "players": players}
 		if action == "login":
 			password = get("password")
+			rememberMe = get("remember-me")
+			if rememberMe == "true": rememberMe = True
+			else: rememberMe = False
 			if self.web.checkLogin(password):
-				key = self.web.makeKey()
-				self.log.warn("%s logged in to web mode" % self.addr[0])
+				key = self.web.makeKey(rememberMe)
+				self.log.warn("%s logged in to web mode (remember me: %s)" % (self.addr[0], rememberMe))
 				return {"session-key": key}
 			else:
 				self.log.warn("%s failed to login" % self.addr[0])
@@ -233,7 +239,8 @@ class Client:
 				"refresh_time": time.time(),
 				"server_name": self.wrapper.config["General"]["server-name"],
 				"server_memory": self.wrapper.server.getMemoryUsage(),
-				"server_memory_graph": memoryGraph}
+				"server_memory_graph": memoryGraph,
+				"world_size": self.wrapper.server.worldSize}
 		if action == "console":
 			if not self.web.validateKey(get("key")): return EOFError
 			self.wrapper.server.console(get("execute"))

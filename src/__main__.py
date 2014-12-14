@@ -434,7 +434,7 @@ class Wrapper:
 		self.shutdown()
 	def shutdown(self, status=0):
 		self.halt = True
-		self.server.stop(reason="Wrapper.py Shutting Down")
+		self.server.stop(reason="Wrapper.py Shutting Down", save=False)
 		time.sleep(1)
 		sys.exit(status)
 	def rebootWrapper(self):
@@ -531,7 +531,7 @@ class Wrapper:
 				except:pass;
 			command = args(0)
 			if command == "halt":
-				self.server.stop("Halting server...")
+				self.server.stop("Halting server...", save=False)
 				self.halt = True
 				sys.exit()
 			elif command == "stop":
@@ -539,7 +539,7 @@ class Wrapper:
 			elif command == "start":
 				self.server.start()
 			elif command == "restart":
-				self.server.stop("Server restarting, be right back!")
+				self.server.restart("Server restarting, be right back!")
 			elif command == "reload":
 				self.reloadPlugins()
 			elif command == "update-wrapper":

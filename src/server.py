@@ -18,6 +18,7 @@ class Server:
 		self.boot = self.wrapper.storage["serverState"]
 		self.proc = False
 		self.rebootWarnings = 0
+		self.pollSize = 0
 		self.data = []
 		
 		if not self.wrapper.storage["serverState"]:
@@ -26,6 +27,7 @@ class Server:
 		
 		# Server Information 
 		self.worldName = None
+		self.worldSize = 0
 		self.protocolVersion = -1 # -1 until proxy mode checks the server's MOTD on boot
 		self.version = None
 		self.world = None
@@ -60,10 +62,11 @@ class Server:
 		captureThread = threading.Thread(target=self.__stderr__, args=())
 		captureThread.daemon = True
 		captureThread.start()
-	def start(self):
+	def start(self, save=True):
 		""" Start the Minecraft server """
 		self.boot = True
-		self.wrapper.storage["serverState"] = True
+		if save:
+			self.wrapper.storage["serverState"] = True
 	def restart(self, reason="Restarting Server"):
 		""" Restart the Minecraft server, and kick people with the specified reason """
 		self.log.info("Restarting Minecraft server with reason: %s" % reason)
@@ -71,12 +74,13 @@ class Server:
 		for player in self.players:
 			self.console("kick %s %s" % (player, reason))
 		self.console("stop")
-	def stop(self, reason="Stopping Server"):
+	def stop(self, reason="Stopping Server", save=True):
 		""" Stop the Minecraft server, prevent it from auto-restarting and kick people with the specified reason """
 		self.log.info("Stopping Minecraft server with reason: %s" % reason)
 		self.changeState(3, reason)
 		self.boot = False
-		self.wrapper.storage["serverState"] = False
+		if save:
+			self.wrapper.storage["serverState"] = False
 		for player in self.players:
 			self.console("kick %s %s" % (player, reason))
 		self.console("stop")
@@ -249,7 +253,7 @@ class Server:
 		return bytes
 	def getWorldSize(self):
 		""" Returns the size of the currently used world folder in bytes. Not implemented yet """
-		return 0
+		return self.worldSize
 	def stripSpecial(self, text):
 		a = ""; it = iter(xrange(len(text)))
 		for i in it:
@@ -394,3 +398,11 @@ class Server:
 				self.restart("Server is conducting a scheduled reboot. The server will be back momentarily!")
 				self.bootTime = time.time()
 				self.rebootWarnings = 0
+		if time.time() - self.pollSize > 120:
+			if self.worldName == None: return True
+			self.pollSize = time.time()
+			size = 0
+			for i in os.walk(self.worldName):
+				for f in os.listdir(i[0]):
+					size += os.path.getsize(os.path.join(i[0], f))
+			self.worldSize = size
