@@ -18,6 +18,7 @@ class Proxy:
 		self.isServer = False
 		self.clients = []
 		self.skins = {}
+		self.skinTextures = {}
 		self.uuidTranslate = {}
 		self.storage = storage.Storage("proxy-data")
 		
@@ -29,15 +30,16 @@ class Proxy:
 			time.sleep(.2)
 		self.pollServer()
 		while not self.socket:
-			time.sleep(1)
 			try:
 				self.socket = socket.socket()
 				self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 				self.socket.bind((self.wrapper.config["Proxy"]["proxy-bind"], self.wrapper.config["Proxy"]["proxy-port"]))
 				self.socket.listen(5)
 			except:
-				print "Proxy mode could not bind - retrying"
+				self.wrapper.log.error("Proxy mode could not bind - retrying in five seconds")
+				self.wrapper.log.debug(traceback.format_exc())
 				self.socket = False
+			time.sleep(5)
 	 	while not self.wrapper.halt:
 	 		try:
 		 		sock, addr = self.socket.accept()
@@ -73,7 +75,6 @@ class Proxy:
 			if id == 0x00:
 				data = json.loads(packet.read("string:response")["response"])
 				self.wrapper.server.protocolVersion = data["version"]["protocol"]
-				self.wrapper.server.maxPlayers = self.wrapper.config["Proxy"]["max-players"]
 				self.wrapper.server.version = data["version"]["name"]
 				break
 		sock.close()
@@ -131,6 +132,14 @@ class Proxy:
 			return True
 		else:
 			return False
+	def getSkinTexture(self, uuid):
+		if uuid not in self.skins: return False
+		if uuid in self.skinTextures:
+			return self.skinTextures[uuid]
+		skinBlob = json.loads(self.skins[uuid].decode("base64"))
+		r = requests.get(skinBlob["textures"]["SKIN"]["url"])
+		self.skinTextures[uuid] = r.content.encode("base64")
+		return self.skinTextures[uuid]
 class Client: # handle client/game connection
 	def __init__(self, socket, addr, wrapper, publicKey, privateKey, proxy):
 		self.socket = socket
@@ -169,6 +178,7 @@ class Client: # handle client/game connection
 		self.slot = 0
 		self.riding = None
 		self.windowCounter = 2
+		self.properties = {}
 		for i in range(45): self.inventory[i] = None
 	def connect(self, ip=None, port=None):
 		if not self.server == None:
@@ -211,11 +221,11 @@ class Client: # handle client/game connection
 			if client.username == self.username:
 				del self.wrapper.proxy.clients[i]
 	def disconnect(self, message):
-		print "Client disconnecting: %s" % message
 		if self.state == 3:
 			self.send(0x40, "json", ({"text": message, "color": "red"},))
 		else:
 			self.send(0x00, "json", ({"text": message, "color": "red"},))
+		#self.packet.close()
 		time.sleep(1)
 		self.close()
 	def flush(self):
@@ -266,7 +276,7 @@ class Client: # handle client/game connection
 					player = self.wrapper.server.players[i]
 					sample.append({"name": player.username, "id": str(player.uuid)})
 					if len(sample) > 5: break
-				MOTD = {"description": self.config["Proxy"]["motd"], 
+				MOTD = {"description": self.wrapper.server.motd, 
 					"players": {"max": self.wrapper.server.maxPlayers, "online": len(self.wrapper.server.players), "sample": sample},
 					"version": {"name": self.wrapper.server.version, "protocol": self.wrapper.server.protocolVersion}
 				}
@@ -350,7 +360,7 @@ class Client: # handle client/game connection
 					for property in data["properties"]:
 						if property["name"] == "textures":
 							self.skinBlob = property["value"]
-							self.wrapper.proxy.skins[self.uuid] = self.skinBlob
+							self.wrapper.proxy.skins[str(self.uuid)] = self.skinBlob
 					self.properties = data["properties"]
 				except:
 					self.disconnect("Session Server Error")
@@ -786,9 +796,12 @@ class Packet: # PACKET PARSING CODE
 		self.compressThreshold = -1
 		self.version = 5
 		self.bonk = False
+		self.abort = False
 		
 		self.buffer = StringIO.StringIO()
 		self.queue = []
+	def close(self):
+		self.abort = True
 	def hexdigest(self, sh):
 		d = long(sh.hexdigest(), 16)
 		if d >> 39 * 4 & 0x8:
@@ -857,7 +870,8 @@ class Packet: # PACKET PARSING CODE
 				self.socket.send(self.sendCipher.encrypt(packet))
 		self.queue = []
 	def sendRaw(self, payload):
-		self.queue.append((self.compressThreshold, payload))
+		if not self.abort:
+			self.queue.append((self.compressThreshold, payload))
 	# -- SENDING AND PARSING PACKETS -- #
 	def read(self, expression):
 		result = {}
@@ -906,7 +920,6 @@ class Packet: # PACKET PARSING CODE
 					if type == "float": result += self.send_float(pay)
 					if type == "double": result += self.send_double(pay)
 					if type == "long": result += self.send_long(pay)
-					if type == "json": result += self.send_json(pay)
 					if type == "bytearray": result += self.send_bytearray(pay)
 					if type == "bytearray_short": result += self.send_bytearray_short(pay)
 					if type == "uuid": result += self.send_uuid(pay)
@@ -946,8 +959,6 @@ class Packet: # PACKET PARSING CODE
 		return self.send_varInt(len(payload)) + payload
 	def send_bytearray_short(self, payload):
 		return self.send_short(len(payload)) + payload
-	def send_json(self, payload):
-		return self.send_string(json.dumps(payload))
 	def send_uuid(self, payload):
 		return payload.bytes
 	def send_position(self, payload):

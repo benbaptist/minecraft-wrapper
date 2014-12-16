@@ -3,8 +3,12 @@ Wrapper.py is a simple Minecraft server wrapper for implementing various functio
 
 </br></br>It also comes with a relatively simple and straight-forward plugin API that can be used to create small Bukkit-like plugins on vanilla. 
 
-#Usage#
-Wrapper.py doesn't require any special modules for most of the basic features to work, but web mode and proxy mode require the following: `pkg_resources`, `requests`, and `pycrypto`. 
+#Installation#
+Wrapper.py doesn't require any special modules for most of the basic features to work, but web mode and proxy mode require the following: `pkg_resources`, `requests`, and `pycrypto`.  To install them, use pip:
+
+`pip install requests pkg_resources pycrypto`
+
+You will also need `tar` installed if you need backups. Most Linux distros have this pre-installed, but you may need to install it manually on Windows: http://gnuwin32.sourceforge.net/packages/gtar.htm
 
 </br></br>
 You only need to download Wrapper.py, the src folder is just the extracted version of Wrapper.py.</br>  
@@ -27,25 +31,23 @@ Any console command beginning with a slash (/) will be interpreted as a Wrapper.
 Type /help to see a list of Wrapper.py commands. To completely shutdown the wrapper, type /halt.</br>  
 If you run into any bugs, please report them!
 
+Wrapper.py is made to work with 1.7.10 and later, but it will work on 1.7.4 and earlier if you don't use proxy mode. If you're using 1.6 and earlier, please turn on pre-1.7-mode in wrapper.properties.
+
 #Features#
 Wrapper.py supports the following features:
 - Plugin system for adding Bukkit-like features to a vanilla server
-<ul>
-<li> Proxy mode allows you to add extra functionality to plugins, such as real /commands</li>
-<li> Permissions system with group support </li>
-<li> Jump to different servers without reconnecting (extremely experimental, can be used by calling api.minecraft.connect(ip, port) )</li>
-</ul>
+  - Proxy mode allows you to add extra functionality to plugins, such as real /commands
+  - Permissions system with group support 
+  - Jump to different servers without reconnecting (extremely experimental, can be used by calling api.minecraft.connect(ip, port) )
 - Automatic Backups
-<ul>
-<li>Automatically delete the oldest backups once you reach amount of backups</li>
-<li>Specify which folders and files get backed up</li>
-</ul>
+  - Automatically delete the oldest backups once you reach amount of backups
+  - Specify which folders and files get backed up
 - IRC bridge
-<ul>
-<li> Controlling server from IRC</li>
-<li> Achievements, deaths, and whatnot appear on IRC</li>
-<li> Chat between Minecraft server and IRC channels</li>
-</ul>
+  - Controlling server from IRC
+  - Achievements, deaths, and whatnot appear on IRC
+  - Chat between Minecraft server and IRC channels
+- Scheduled reboots
+- Web remote for controlling server through your web browser
 - Shell scripts that are called upon certain events (similar to plugin events, but quicker and easier)
 - Minecraft 1.7 and later support (uses tellraw!)
 

@@ -1,4 +1,4 @@
-import socket, datetime, time, sys, threading, random, subprocess, os, json, signal, traceback, api, StringIO, ConfigParser, backups, sys, codecs
+import socket, datetime, time, sys, threading, random, subprocess, os, json, signal, traceback, api, StringIO, ConfigParser, backups, sys, codecs, resource
 from api.player import Player
 from api.world import World
 class Server:
@@ -10,27 +10,30 @@ class Server:
 		self.api = api.API(wrapper, "Server", internal=True)
 		self.backups = backups.Backups(wrapper)
 		
+		if "serverState" not in self.wrapper.storage:
+			self.wrapper.storage["serverState"] = True
 		self.players = {}
 		self.state = 0 # 0 is off, 1 is starting, 2 is started, 3 is shutting down
 		self.bootTime = time.time()
-		self.boot = True
+		self.boot = self.wrapper.storage["serverState"]
+		self.proc = False
+		self.rebootWarnings = 0
+		self.pollSize = 0
 		self.data = []
+		
+		if not self.wrapper.storage["serverState"]:
+			self.log.warn("NOTE: Server was in 'STOP' state last time Wrapper.py was running. To start the server, run /start.")
+			time.sleep(5)
 		
 		# Server Information 
 		self.worldName = None
+		self.worldSize = 0
 		self.protocolVersion = -1 # -1 until proxy mode checks the server's MOTD on boot
 		self.version = None
 		self.world = None
+		self.motd = None
 		
-		# Read server.properties and extract some information out of it
-		if os.path.exists("server.properties"):
-			s = StringIO.StringIO() # Stupid StringIO doesn't support __exit__()
-			config = open("server.properties", "r").read()
-			s.write("[main]\n" + config)
-			s.seek(0)
-			self.properties = ConfigParser.ConfigParser(allow_no_value = True)
-			self.properties.readfp(s)
-			self.worldName = self.properties.get("main", "level-name")
+		self.reloadProperties()
 		
 		self.api.registerEvent("irc.message", self.onChannelMessage)
 		self.api.registerEvent("irc.action", self.onChannelAction)
@@ -46,9 +49,11 @@ class Server:
 		captureThread = threading.Thread(target=self.__stderr__, args=())
 		captureThread.daemon = True
 		captureThread.start()
-	def start(self):
+	def start(self, save=True):
 		""" Start the Minecraft server """
 		self.boot = True
+		if save:
+			self.wrapper.storage["serverState"] = True
 	def restart(self, reason="Restarting Server"):
 		""" Restart the Minecraft server, and kick people with the specified reason """
 		self.log.info("Restarting Minecraft server with reason: %s" % reason)
@@ -56,11 +61,13 @@ class Server:
 		for player in self.players:
 			self.console("kick %s %s" % (player, reason))
 		self.console("stop")
-	def stop(self, reason="Stopping Server"):
+	def stop(self, reason="Stopping Server", save=True):
 		""" Stop the Minecraft server, prevent it from auto-restarting and kick people with the specified reason """
 		self.log.info("Stopping Minecraft server with reason: %s" % reason)
 		self.changeState(3, reason)
 		self.boot = False
+		if save:
+			self.wrapper.storage["serverState"] = False
 		for player in self.players:
 			self.console("kick %s %s" % (player, reason))
 		self.console("stop")
@@ -166,6 +173,21 @@ class Server:
 		if username in self.players:
 			return self.players[username]
 		return False
+	def reloadProperties(self):
+		# Read server.properties and extract some information out of it
+		if os.path.exists("server.properties"):
+			s = StringIO.StringIO() # Stupid StringIO doesn't support __exit__()
+			config = open("server.properties", "r").read()
+			s.write("[main]\n" + config)
+			s.seek(0)
+			try:
+				self.properties = ConfigParser.ConfigParser(allow_no_value = True)
+				self.properties.readfp(s)
+				self.worldName = self.properties.get("main", "level-name")
+				self.motd = self.properties.get("main", "motd")
+				self.maxPlayers = int(self.properties.get("main", "max-players"))
+			except:
+				self.log.getTraceback()
 	def console(self, command):
 		""" Execute a console command on the server """
 		try: self.proc.stdin.write("%s\n" % command)
@@ -201,12 +223,14 @@ class Server:
 	def __handle_server__(self):
 		""" Internally-used function that handles booting the server, parsing console output, and etc. """
 		while not self.wrapper.halt:
+			self.proc = False
 			if not self.boot:
 				time.sleep(0.1)
 				continue
 			self.changeState(1)
 			self.log.info("Starting server...")
 			self.wrapper.callEvent("server.start", {})
+			self.reloadProperties()
 			self.proc = subprocess.Popen(self.args, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
 			self.players = {}	
 			while True:
@@ -221,6 +245,18 @@ class Server:
 					try: self.readConsole(line.replace("\r", ""))
 					except: self.log.getTraceback()
 				self.data = []
+	def getMemoryUsage(self):
+		""" Returns allocated memory in bytes """
+		if not os.name == "posix": return None
+		if self.proc == False: return None
+		try:
+			with open("/proc/%d/statm" % self.proc.pid, "r") as f:
+				bytes = int(f.read().split(" ")[1]) * resource.getpagesize()
+		except: return None
+		return bytes
+	def getWorldSize(self):
+		""" Returns the size of the currently used world folder in bytes. Not implemented yet """
+		return self.worldSize
 	def stripSpecial(self, text):
 		a = ""; it = iter(xrange(len(text)))
 		for i in it:
@@ -281,9 +317,6 @@ class Server:
 				self.wrapper.callEvent("player.achievement", {"player": name, "achievement": achievement})
 			elif args(4) in deathPrefixes: # Player Death
 				name = self.stripSpecial(args(3))
-				deathMessage = self.config["Death"]["death-kick-messages"][random.randrange(0, len(self.config["Death"]["death-kick-messages"]))]
-				if self.config["Death"]["kick-on-death"] and name in self.config["Death"]["users-to-kick"]:
-					self.console("kick %s %s" % (name, deathMessage))
 				self.wrapper.callEvent("player.death", {"player": self.getPlayer(name), "death": argsAfter(4)})
 		else:
 			if len(args(3)) < 1: return
@@ -343,7 +376,7 @@ class Server:
 		for i,chunk in enumerate(message.split(" ")):
 			if not i == 0: final += " "
 			try: 
-				if chunk[0:7] == "http://": final += "&b&n&@%s&@&r" % chunk
+				if chunk[0:7] in ("http://", "https://"): final += "&b&n&@%s&@&r" % chunk
 				else: final += chunk
 			except: final += chunk
 		self.messageFromChannel(channel, "&a<%s> &r%s" % (nick, final))
@@ -357,5 +390,22 @@ class Server:
 		""" Called every second, and used for handling cron-like jobs """
 		if self.config["General"]["timed-reboot"]:
 			if time.time() - self.bootTime > self.config["General"]["timed-reboot-seconds"]:
+				if self.config["General"]["timed-reboot-warning-minutes"] > 0:
+					if self.rebootWarnings - 1 < self.config["General"]["timed-reboot-warning-minutes"]:
+						l = (time.time() - self.bootTime - self.config["General"]["timed-reboot-seconds"]) / 60
+						if l > self.rebootWarnings:
+							self.rebootWarnings += 1
+							if int(self.config["General"]["timed-reboot-warning-minutes"] - l + 1) > 0:
+								self.broadcast("&cServer will be rebooting in %d minute(s)!" % int(self.config["General"]["timed-reboot-warning-minutes"] - l + 1))
+						return
 				self.restart("Server is conducting a scheduled reboot. The server will be back momentarily!")
 				self.bootTime = time.time()
+				self.rebootWarnings = 0
+		if time.time() - self.pollSize > 120:
+			if self.worldName == None: return True
+			self.pollSize = time.time()
+			size = 0
+			for i in os.walk(self.worldName):
+				for f in os.listdir(i[0]):
+					size += os.path.getsize(os.path.join(i[0], f))
+			self.worldSize = size

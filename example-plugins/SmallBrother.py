@@ -82,7 +82,7 @@ class Main:
 			if subcommand == "area":
 				radius = args[1] # squareRadius, not circular. not really a true radius.
 				
-				player.message("area")
+				player.message("&cApologies, but this command has not been implemented yet.")
 			elif subcommand == "toggle":
 				if player.username in self.toggled:
 					self.toggled.remove(player.username)

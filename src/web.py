@@ -1,15 +1,15 @@
 # Unfinished web UI code. Yeah, I know. The code is awful. Probably not even a HTTP-compliant web server anyways. I just wrote it at like 3AM in like an hour.
-import socket, traceback, zipfile, threading, time, json, random, urlparse, storage, log
+import socket, traceback, zipfile, threading, time, json, random, urlparse, storage, log, urllib
 from api import API
 try:
-	import pkg_resources
+	import pkg_resources, requests
 	IMPORT_SUCCESS = True
 except:
 	IMPORT_SUCCESS = False
 class Web:
 	def __init__(self, wrapper):
 		self.wrapper = wrapper
-		self.api = API(wrapper, "Web")
+		self.api = API(wrapper, "Web", internal=True)
 		self.log = log.PluginLog(self.wrapper.log, "Web")
 		self.config = wrapper.config
 		self.socket = False
@@ -18,30 +18,48 @@ class Web:
 		
 		self.api.registerEvent("server.consoleMessage", self.onServerConsole)
 		self.consoleScrollback = []
+		self.memoryGraph = []
 		self.loginAttempts = 0
 		self.lastAttempt = 0
 		self.disableLogins = 0
+		
+		t = threading.Thread(target=self.updateGraph, args=())
+		t.daemon = True
+		t.start()
 	def onServerConsole(self, payload):
-		while len(self.consoleScrollback) > 30:
+		while len(self.consoleScrollback) > 200:
 			del self.consoleScrollback[0]
-		self.consoleScrollback.append(payload["message"])
-	def makeKey(self):
+		self.consoleScrollback.append((time.time(), payload["message"]))
+	def updateGraph(self):
+		while not self.wrapper.halt:
+			while len(self.memoryGraph) > 200:
+				del self.memoryGraph[0]
+			if self.wrapper.server.getMemoryUsage():
+				self.memoryGraph.append([time.time(), self.wrapper.server.getMemoryUsage()])
+			time.sleep(1)
+	def checkLogin(self, password):
+		if time.time() - self.disableLogins < 60: return False # Threshold for logins
+		if password == self.wrapper.config["Web"]["web-password"]: return True
+		self.loginAttempts += 1
+		if self.loginAttempts > 10 and time.time() - self.lastAttempt < 60:
+			self.disableLogins = time.time()
+			self.log.warn("Disabled login attempts for one minute")
+		self.lastAttempt = time.time()
+	def makeKey(self, rememberMe):
 		a = ""; z = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@-_"
-		for i in range(32):
+		for i in range(64):
 			a += z[random.randrange(0, len(z))]
 #			a += chr(random.randrange(97, 122))
-		self.data["keys"].append([a, time.time()])
+		self.data["keys"].append([a, time.time(), rememberMe])
 		return a
 	def validateKey(self, key):
-		if time.time() - self.disableLogins < 2000: return False # Threshold for logins
 		for i in self.data["keys"]:
-			if i[0] == key and time.time() - i[1] < 604800: # Validate key and ensure it's under a week old
+			expireTime = 2592000
+			if len(i) > 2:
+				if i[2]: expireTime = 21600
+			if i[0] == key and time.time() - i[1] < expireTime: # Validate key and ensure it's under a week old
 				self.loginAttempts = 0
 				return True
-		self.loginAttempts += 1
-		if self.loginAttempts > 10 and time.time() - self.lastAttempt < 30:
-			self.disableLogins = time.time()
-		self.lastAttempt = time.time()
 		return False
 	def removeKey(self, key):
 		for i,v in enumerate(self.data["keys"]):
@@ -122,7 +140,7 @@ class Client:
 		def get(i): 
 			for a in args(1).split("?")[1].split("&"):
 				if a[0:a.find("=")]:
-					return a[a.find("=")+1:]
+					return urllib.unquote(a[a.find("=")+1:])
 			return ""
 		info = self.runAction(request)
 		if info == False:
@@ -138,7 +156,7 @@ class Client:
 		def get(i):
 			for a in args(1).split("?")[1].split("&"):
 				if a[0:a.find("=")] == i:
-					return a[a.find("=")+1:].replace("%20", " ")
+					return urllib.unquote(a[a.find("=")+1:])
 			return ""
 		action = args(1).split("?")[0]
 		if action == "stats":
@@ -149,10 +167,15 @@ class Client:
 			return {"playerCount": len(self.wrapper.server.players), "players": players}
 		if action == "login":
 			password = get("password")
-			if password == self.wrapper.config["Web"]["web-password"]:
-				key = self.web.makeKey()
-				self.log.warn("%s logged in to web mode" % self.addr[0])
+			rememberMe = get("remember-me")
+			if rememberMe == "true": rememberMe = True
+			else: rememberMe = False
+			if self.web.checkLogin(password):
+				key = self.web.makeKey(rememberMe)
+				self.log.warn("%s logged in to web mode (remember me: %s)" % (self.addr[0], rememberMe))
 				return {"session-key": key}
+			else:
+				self.log.warn("%s failed to login" % self.addr[0])
 			return EOFError
 		if action == "is_admin":
 			if self.web.validateKey(get("key")): return {"status": "good"}
@@ -163,19 +186,61 @@ class Client:
 				self.log.warn("[%s] Logged out." % self.addr[0])
 				return "goodbye"
 			return EOFError
+		if action == "get_player_skin":
+			if not self.web.validateKey(get("key")): return EOFError
+			if self.wrapper.proxy == False: return {"error": "Proxy mode not enabled."}
+			uuid = get("uuid")
+			if uuid in self.wrapper.proxy.skins:
+				skin = self.wrapper.proxy.getSkinTexture(uuid)
+				if skin: return skin
+				else: return None
+			else: return None
 		if action == "admin_stats":
 			if not self.web.validateKey(get("key")): return EOFError
 			if self.wrapper.server == False: return
+			refreshTime = float(get("last_refresh"))
 			players = []
 			for i in self.wrapper.server.players:
-				players.append({"name": i, "loggedIn": self.wrapper.server.players[i].loggedIn, "uuid": str(self.wrapper.server.players[i].uuid)})
+				player = self.wrapper.server.players[i]
+				players.append({
+					"name": i, 
+					"loggedIn": player.loggedIn, 
+					"uuid": str(player.uuid),
+					"isOp": player.isOp()
+				})
+			plugins = []
+			for id in self.wrapper.plugins:
+				plugin = self.wrapper.plugins[id]
+				if plugin["description"]: description = plugin["description"]
+				else: description = plugin["summary"]
+				plugins.append({
+					"name": plugin["name"],
+					"version": plugin["version"],
+					"description": description,
+					"id": id
+				})
+			scrollBack = []
+			for line in self.web.consoleScrollback:
+				if line[0] > refreshTime:
+					scrollBack.append(line[1])
+			memoryGraph = []
+			for line in self.web.memoryGraph:
+				if line[0] > refreshTime:
+					memoryGraph.append(line[1])
 			return {"playerCount": len(self.wrapper.server.players), 
-				"players": players, 
+				"players": players,
+				"plugins": plugins,
 				"server_state": self.wrapper.server.state,
 				"wrapper_build": self.wrapper.getBuildString(),
-				"console": self.web.consoleScrollback,
-				"level-name": self.wrapper.server.worldName,
-				"server-version": self.wrapper.server.version}
+				"console": scrollBack,
+				"level_name": self.wrapper.server.worldName,
+				"server_version": self.wrapper.server.version,
+				"motd": self.wrapper.server.motd,
+				"refresh_time": time.time(),
+				"server_name": self.wrapper.config["General"]["server-name"],
+				"server_memory": self.wrapper.server.getMemoryUsage(),
+				"server_memory_graph": memoryGraph,
+				"world_size": self.wrapper.server.worldSize}
 		if action == "console":
 			if not self.web.validateKey(get("key")): return EOFError
 			self.wrapper.server.console(get("execute"))
@@ -195,6 +260,24 @@ class Client:
 			self.log.warn("[%s] %s was banned with reason: %s" % (self.addr[0], player, reason))
 			self.wrapper.server.console("ban %s %s" % (player, reason))
 			return True
+		if action == "change_plugin":
+			if not self.web.validateKey(get("key")): return EOFError
+			plugin = get("plugin")
+			state = get("state")
+			if state == "enable":
+				if plugin in self.wrapper.storage["disabled_plugins"]:
+					self.wrapper.storage["disabled_plugins"].remove(plugin)
+					self.log.warn("[%s] Enabled plugin '%'" % (self.addr[0], plugin))
+					self.wrapper.reloadPlugins()
+			else:
+				if not plugin in self.wrapper.storage["disabled_plugins"]:
+					self.wrapper.storage["disabled_plugins"].append(plugin)
+					self.log.warn("[%s] Disabled plugin '%'" % (self.addr[0], plugin))
+					self.wrapper.reloadPlugins()
+		if action == "reload_plugins":
+			if not self.web.validateKey(get("key")): return EOFError
+			self.wrapper.reloadPlugins()
+			return True
 		if action == "server_action":
 			if not self.web.validateKey(get("key")): return EOFError
 			type = get("action")
@@ -211,7 +294,7 @@ class Client:
 			elif type == "start":
 				reason = get("reason")
 				self.wrapper.server.start()
-				self.log.warn("[%s] Server start with reason: %s" % (self.addr[0], reason))
+				self.log.warn("[%s] Server started" % (self.addr[0]))
 				return "success"
 			elif type == "kill":
 				self.wrapper.server.kill()
@@ -281,62 +364,3 @@ class Client:
 					self.request = args(1)
 					self.headers(status="400 Bad Request")
 					self.write("<h1>Invalid request. Sorry.</h1>")
-	def handleold(self):
-		while True:
-			try:
-				self.buffer = self.socket.recv(1024).split("\n")
-			except:
-				self.close()
-				#self.log.debug("(WEB) Connection %s closed" % str(self.addr))
-				break
-			if len(self.buffer) < 1:
-				print "connection closed" 
-				return False
-			for line in self.buffer:
-				def args(i): 
-					try: return line.split(" ")[i]
-					except: return ""
-				def argsAfter(i): 
-					try: return " ".join(line.split(" ")[i:])
-					except: return ""
-				if args(0) == "GET":
-					self.request = args(1)
-					#self.log.info("(WEB) Request [%s] GET %s" % (str(self.addr[0]), self.request))
-				if args(0) == "POST":
-					self.request = args(1)
-					self.headers(status="400 Bad Request")
-					self.write("<h1>Invalid request. Sorry.</h1>")
-					#self.log.info("(WEB) Request [%s] POST %s" % (str(self.addr[0]), self.request))
-					return False
-				if args(0) == "Cookie:":
-					self.cookies = argsAfter(1)
-				if line == "":
-					break
-			if self.request.find("?") is not -1:
-				self.path = self.request[0:self.request.find("?")].split("/")[1:]
-			else:
-				self.path = self.request.split("/")[1:]
-			self.arguments = self.request[self.request.find("?")+1:].split("&")
-			if self.request == "/" or self.request == "/index.html":
-				if self.wrapper.config["Web"]["public-stats"]:
-					self.headers()
-					self.write(self.read("/index.html").replace("[server_name]", self.wrapper.server.getName()))
-				else:
-					self.headers(location="/admin", status="301 Moved Permanently")
-			elif self.request == "/admin":
-				self.headers()
-				self.write(self.read("admin.html"))
-			elif self.request == "/favicon.ico":
-				self.headers(contentType="image/x-icon")
-				self.write(self.read("favicon.ico"))
-			elif self.request == "/RobotoCondensed-Light.ttf":
-				self.headers(contentType="application/octet-stream")
-				self.write(self.read("RobotoCondensed-Light.ttf"))
-			elif self.path[0] == "action":
-				actionData = self.runAction()
-				self.headers()
-				self.write(json.dumps(actionData))
-			else:
-				self.headers(status="404 Not Found")
-				self.write(self.read("404.html"))
-			self.close()

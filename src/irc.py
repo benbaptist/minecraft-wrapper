@@ -1,4 +1,4 @@
-import socket, traceback, time, threading, api, globals, random
+import socket, traceback, time, threading, api, globals, random, math
 from config import Config
 class IRC:
 	def __init__(self, server, config, log, wrapper, address, port, nickname, channels):
@@ -17,7 +17,7 @@ class IRC:
 		self.ready = False
 		self.msgQueue = []
 		
-		self.api = api.API(self.wrapper, "IRC")
+		self.api = api.API(self.wrapper, "IRC", internal=True)
 		self.api.registerEvent("server.starting", self.onServerStarting)
 		self.api.registerEvent("server.started", self.onServerStarted)
 		self.api.registerEvent("server.stopping", self.onServerStopping)
@@ -136,10 +136,15 @@ class IRC:
 				continue
 			for i,message in enumerate(self.msgQueue):
 				for channel in self.channels:
-					self.send("PRIVMSG %s :%s" % (channel, message))
+					if len(message) > 400:
+						for l in range(int(math.ceil(len(message) / 400.0))):
+							chunk = message[l*400:(l+1)*400]
+							self.send("PRIVMSG %s :%s" % (channel, chunk))
+					else:
+						self.send("PRIVMSG %s :%s" % (channel, message))
 				del self.msgQueue[i]
 			self.msgQueue = []
-			time.sleep(0.1)
+			time.sleep(0.1)	
 	def filterName(self, name):
 		if self.config["IRC"]["obstruct-nicknames"]:
 			return "_" + str(name)[1:]
@@ -294,6 +299,8 @@ class IRC:
 							elif self.server.state == 0: msg("Server is stopped. Type 'start' to fire it back up.")
 							elif self.server.state == 3: msg("Server is in the process of shutting down/restarting.")
 							else: msg("Server is in unknown state. This is probably a Wrapper.py bug - report it! (state #%d)" % self.server.state)
+							if self.wrapper.server.getMemoryUsage():
+								msg("Server Memory Usage: %d bytes" % self.wrapper.server.getMemoryUsage())
 						elif args(0) == 'check-update':
 							msg("Checking for new updates...")
 							update = self.wrapper.checkForNewUpdate()

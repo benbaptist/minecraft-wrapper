@@ -1,66 +1,172 @@
 <!-- I'm sorry for how sloppy this code is. I truly am. -->
+<!-- document.title = "Piops"("server_name").innerHTML = stats["server_name"] -->
 <html>
 	<head>
+		<title>Admin Page - Wrapper.py</title>
 		<script type="text/javascript" src="requests.js"></script>
+		<script src="js/ie-emulation-modes-warning.js"></script>
+		<link href="css/bootstrap.min.css" rel="stylesheet">
+		<link href="css/offcanvas.css" rel="stylesheet">
 		<script type="text/javascript" >
 			hasScrolled = false
+			skins = {}
+			lastRefresh = 0
+			speed = 500
+			check = true
+			currentTab = "dash"
+			memoryGraph = []
 			_ = function(id) {return document.getElementById(id)}
 			function isAuthed(){
 				if(!localStorage.sessionKey) return false
 				if(requests.action("is_admin", {"key": localStorage.sessionKey})["status"] == "good") return true
 				return false
 			}
-			function loginWithPassword(password){
-				r = requests.action("login", {"password": password})
-				if (r["payload"] != "unknown_key"){
-					localStorage.sessionKey = r["payload"]["session-key"]
-					console.log("Login Success!")
-					window.location = ""
-				}
-				else{
-					_("login_invalid").style.display = "block"
+			window.onload = function(){
+				if(isAuthed()){
+					tick()
+					/*try{
+						tick()
+					}catch(err){}*/
+					path = window.location.hash.substr(1)
+					if(path.length > 0){
+						_switchTab(path)
+					}
+				}else{
+					window.location = "login.html"
 				}
 			}
-			window.onload = function() {
-				if(isAuthed()){
-					_("login_page").style.display = 'none'
-					_("admin_page").style.display = 'block'
-					tick()
-				}
+			window.onfocus = function(){
+				check = true
+			}
+			window.onblur = function(){
+				check = false
 			}
 			function handleScroll(z){
-				console.log("has scrolled")
 				hasScrolled = true
 				if(z.scrollTop == z.scrollHeight) {hasScrolled = false;console.log('no scroll')}
 			}
+			// Shamelessly copied from http://stackoverflow.com/questions/10420352/converting-file-size-in-bytes-to-human-readable
+			function getReadableFileSizeString(fileSizeInBytes){
+				var i = -1;
+				var byteUnits = [' kB', ' MB', ' GB', ' TB', 'PB', 'EB', 'ZB', 'YB'];
+				do {
+					fileSizeInBytes = fileSizeInBytes / 1024
+					i++;
+				} while (fileSizeInBytes > 1024);
+				return Math.max(fileSizeInBytes, 0.1).toFixed(1) + byteUnits[i];
+			}
 			function tick(){
-				setTimeout("tick()", 2000)
-				stats = requests.admin("admin_stats", {})
-				if(stats["status"] == "error"){
+				setTimeout("tick()", speed)
+				if(!check) return false
+				stats = requests.admin("admin_stats", {"last_refresh": lastRefresh})
+				if(stats["status"] == "error" || stats == ""){
 					console.log("Error while refreshing stats. Connection lost?")
+					_("lost_connection_page").style.display = "block"
+					_("admin_page").style.display = "none"
 					return
 				}
+				_("lost_connection_page").style.display = "none"
+				_("admin_page").style.display = "block"
+				lastRefresh = stats["refresh_time"]
 				statusMessages = {0: "<r>Server stopped</r>", 1: "<y>Server starting...</y>", 2: "<g>Running</g>", 3: "<y>Server stopping...</y>"}
 				if(stats["server_state"] in statusMessages) _("server_status").innerHTML = statusMessages[stats["server_state"]]
 				_("playercount_status").innerHTML = stats["playerCount"] + " players"
-				_("levelname_status").innerHTML = stats["level-name"] + ""
-				_("server_version").innerHTML = stats["server-version"] + ""
+				_("levelname_status").innerHTML = stats["level_name"]
+				_("server_version").innerHTML = stats["server_version"]
+				_("server_motd").innerHTML = stats["motd"]
+				_("server_name").innerHTML = stats["server_name"]
+				_("memory_status").innerHTML = getReadableFileSizeString(stats["server_memory"])
+				_("world_size").innerHTML = getReadableFileSizeString(stats["world_size"])
+				document.title = stats["server_name"] + " - Wrapper.py"
 				
-				_("playerlist").innerHTML = "<th>Username</th><th>UUID</th><th>Options</th></tr>"
+				// draw player list
+				_("playerlist").innerHTML = "<th>Face</th><th>Username</th><th>UUID</th><th>Options</th></tr>"
 				for(i in stats["players"]){
+					if(i == "getLength") continue
 					var player = stats["players"][i]
-					_("playerlist").innerHTML += "<td>"+player.name+"</td><td>"+player.uuid+"</td><td><button onclick='_kick("+i+")'>Kick</button><button onclick='_ban("+i+")'>Ban</button></td></tr>"
+					if(!(player.uuid in skins)){
+						var skin = requests.admin("get_player_skin", {"uuid": player.uuid})
+						if(!skin) continue // Might make players not draw in player list
+						skins[player.uuid] = skin
+					}
+					
+					if(player.isOp) var isOp = " class='op'"
+					else isOp = ""					
+					_("playerlist").innerHTML += "<td><canvas id='playerskin-"+player.name+"' width=16 height=16></canvas></td><td"+isOp+">"+player.name+"</td><td>"+player.uuid+"</td><td><button onclick='_kick("+i+")' class='btn btn-xs btn-default'>Kick</button> <button onclick='_ban("+i+")' class='btn btn-xs btn-default'>Ban</button> <button onclick='_op("+i+")' class='btn btn-xs btn-default'>OP</button> <button onclick='_deop("+i+")' class='btn btn-xs btn-default'>De-OP</button></td></tr>"
+					if(skins[player.uuid] == null) return
+					// the worst code ever. written in about five minutes.
+					try{
+						var pic = new Image()
+						pic.src = "data:image/png;base64," + skins[player.uuid]
+						_("playerskin-" + player.name).width = 32;_("playerskin-" + player.name).height = 32;
+						var ctx = _("playerskin-" + player.name).getContext("2d")
+						ctx.webkitImageSmoothingEnabled = false
+						ctx.drawImage(pic, 8, 8, 8, 8, 0, 0, ctx.canvas.width, ctx.canvas.height)
+					}catch(err){}
 				}
 				players = stats["players"]
 				
+				// draw plugin list
+				_("pluginlist").innerHTML = "<th>Name</th><th>Description</th><th>Options</th></tr>"
+				for(i in stats["plugins"]){
+					if(i == "getLength") continue
+					var plugin = stats["plugins"][i]
+					if(plugin.description) var description = plugin.description.replace("\n", "</br></br>")
+					else var description = "<i>No description is available for this plugin.</i>"
+					_("pluginlist").innerHTML += "<td style='white-space:nowrap;'>"+plugin.name+"</td><td>"+description+"</td><td style='white-space:nowrap;'><button onclick='_toggle_plugin(\""+plugin.id+"\", this)'>Disable</button></td></tr>"
+				}
+								
+				// draw console
 				var doScroll = false
 				var p = _("server_console") 
 				if(p.scrollTop + p.clientHeight == p.scrollHeight){
 					var doScroll = true
 				}
-				p.innerHTML = stats["console"].join("\n")
+				if(stats["console"].length > 0)
+					p.innerHTML += "\n" + stats["console"].join("\n")
 				if(doScroll) p.scrollTop = p.scrollHeight
 				
+				// memory usage graph code, ew
+				/*if(memoryGraph.length == 0){
+					while(memoryGraphPoints < 200){
+						memoryGraph[memoryGraph.length] = [memoryGraph.length, 0]
+						memoryGraphPoints += 1
+					}
+				}
+				for(i in stats["server_memory_graph"]){
+					if(isNaN(stats["server_memory_graph"][i])) continue;
+					var point = [memoryGraph.length, (stats["server_memory_graph"][i] / 1024000000)*100]
+					if(isNaN(point[1])) point[1] = 0
+					memoryGraph[memoryGraph.length] = point
+					memoryGraphPoints += 1
+				}
+				if(memoryGraph.getLength() > 200)
+					console.log(memoryGraph.getLength())
+					memoryGraph.splice(0, memoryGraph.getLength() - 199)
+					memoryGraph.shift(0)*/
+				/*var p = 0
+				while(memoryGraph.getLength() > 200){
+					delete memoryGraph[0]
+					console.log("Deleted")
+					p += 1
+					if (p > 300) {
+						break
+					}
+					memoryGraph.shift(0)
+				}*/
+				/*var m = []
+				for (i in memoryGraph){
+					if(memoryGraph[i] == undefined) continue
+					m[m.length] = [m.length, memoryGraph[i][1]]
+				}
+				memoryGraph = m*/
+				/*$.plot($("#flot-memory-usage"), [
+					{"label": "Free", data:0.4, "color": "#1E8BC3"},
+					{"label": "Other", data:0.5},
+					{"label": "Used", data:0.1, "color": "#D64541"}], 
+				{ series:{pie:{show:true}}, tooltip:true});*/
+				
+				// set wrapper.py build string
 				_("buildstring").innerHTML = "Wrapper.py " + stats["wrapper_build"]
 			}
 
@@ -79,12 +185,12 @@
 				requests.admin("server_action", {"action": "restart", "reason": message})
 			}
 			function _kill(){
-				if(confirm("Are you sure you want to forcefully kill the server process? This can corrupt the world file, and should only be used if the server is completely unresponsive.")){
+				if(confirm("WARNING!!!\n\nAre you sure you want to forcefully kill the server process? This can corrupt the world file, and should only be used as a last-resort if the server is completely unresponsive/frozen.")){
 					requests.admin("server_action", {"action": "kill"})
 				}
 			}
 			function _kick(i){
-				player = players[i]
+				var player = players[i]
 				message = prompt("Please enter a kick message for "+player.name+":")
 				if(message){
 					requests.admin("kick_player", {"player": player.name, "reason": message})
@@ -93,7 +199,7 @@
 				}
 			}
 			function _ban(i){
-				player = players[i]
+				var player = players[i]
 				message = prompt("Please enter a ban message for "+player.name+":")
 				if(message){
 					requests.admin("ban_player", {"player": player.name, "reason": message})
@@ -101,18 +207,69 @@
 					alert("Won't ban "+player.name+".")
 				}
 			}
+			function _op(i){
+				var player = players[i]
+				if(confirm("Are you sure you want to give operator to "+player.name+"?")){
+					_console("op "+player.name)
+				}
+			}
+			function _deop(i){
+				var player = players[i]
+				if(confirm("Are you sure you want to remove operator from "+player.name+"?")){
+					_console("deop "+player.name)
+				}
+			}
 			function _console(line){
 				requests.admin("console", {"execute":line})
 			}
-			function _login(){
-				loginWithPassword(_('login_password').value)
+			function _reload_plugins(){
+				if(!confirm("Are you sure you want to reload all plugins?")) return
+				requests.admin("reload_plugins", {})
+				alert("Reloaded plugins.")
+			}
+			function _toggle_plugin(id, el){
+				alert("Enabling and disabling plugins is not supported yet!")
+				return
+				// Doesn't actually do anything yet
+				if(!confirm("Are you sure you want to disable the plugin '"+id+"'? Disabling a plugin will force a plugin reload.")) return
+				if(el.innerHTML == "Disable"){
+					el.innerHTML = "Enable"
+				}else if(el.innerHTML == "Enable"){
+					el.innerHTML = "Disable"
+				}
 			}
 			function _logout(){
 				requests.admin("logout", {})
-				window.location = ""
+				window.location = "login.html"
+			}
+			function _switchTab(id){
+				if(id == currentTab) return
+				_("tab-"+currentTab).className = ""
+				_("tab-"+id).className = "active"
+				_("screen-"+currentTab).style.display = "none"
+				_("screen-"+id).style.display = "block"
+				console.log("Switching from "+currentTab+" to "+id)
+				currentTab = id
+			}
+			window.onhashchange = function(){
+				path = window.location.hash.substr(1)
+				if(!(path.length == 0))
+					_switchTab(path)
+			}
+			Array.prototype.getLength = function(){
+				var l = 0;
+				for(i in this){
+					if(this.hasOwnProperty(i)){
+						l += 1
+					}
+				}
+				return l
 			}
 		</script>
 		<style type="text/css">
+			body{
+				margin: 20px;
+			}
 			r{color:red;}
 			y{color:gold;}
 			g{color:green;}
@@ -120,34 +277,177 @@
 				font-style: italic;
 				font-size: 12px;
 			}
+			.op{color:darkgoldenrod;}
 		</style>
 	</head>
 	<body>
-		<div id="login_page">
-			<h1>Wrapper.py Admin Login</h1>
-			<div id="login_invalid" style="display:none;color:red;font-weight:bold;">The password was invalid.</div>
-			Password: <input type="password" id="login_password" onkeydown="if(event.keyCode==13)_login();"/><button onclick="_login()">Login</button>
+		<div id="admin_page">
+			<nav class="navbar navbar-fixed-top navbar-inverse" role="navigation">
+				<div class="container">
+				<div class="navbar-header">
+					<button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+						<span class="sr-only">Toggle navigation</span>
+						<span class="icon-bar"></span>
+						<span class="icon-bar"></span>
+						<span class="icon-bar"></span>
+					</button>
+					<a class="navbar-brand" id="server_name">Project name</a>
+				</div>
+				<div id="navbar" class="collapse navbar-collapse">
+					<ul class="nav navbar-nav">
+						<li id="tab-dash" class="active"><a href="#dash">Dashboard</a></li>
+						<li id="tab-console"><a href="#console">Console</a></li>
+						<li id="tab-plugins"><a href="#plugins">Plugins</a></li>
+						<li id="tab-about"><a href="#about">About</a></li>
+					</ul>
+					<ul class="nav navbar-nav navbar-right">
+						<li><a href="javascript:_logout();">Logout</a></li>
+					</ul>
+				</div>
+				</div>
+			</nav>
+			<div id="screen-dash">
+				<!--<div class="col-lg-6">
+					<div class="panel panel-default">
+						<div class="panel-heading">Memory Usage</div>
+						<div class="panel-body">
+							<div class="flot-chart">
+								<div class="flot-chart-content" id="flot-memory-usage" style="width:100%;height:300px;"></div>
+							</div>
+						</div>
+					</div>
+				</div>-->
+				<!--<div class="col-lg-6 right">
+					<div class="panel panel-default">
+						<div class="panel-heading">CPU Usage</div>
+						<div class="panel-body">
+							<div class="flot-chart">
+								<div class="flot-chart-content" id="flot-pie-chart"></div>
+							</div>
+						</div>
+					</div>
+				</div>-->
+				<div class="col-lg-6">
+					<div class="panel panel-default">
+						<div class="panel-heading">Stats</div>
+						<div class="panel-body">
+							<b>Server Status: </b> <span id="server_status">Unknown</span></br>
+							<b>Server Version: </b> <span id="server_version">Unknown</span></br>
+							<b>Server MOTD: </b> <span id="server_motd">Unknown</span></br>
+							<b>Level Name: </b> <span id="levelname_status">Unknown</span></br>
+							<b>Player Count: </b> <span id="playercount_status">n/a players</span></br>
+							<b>Memory Usage: </b> <span id="memory_status">n/a</span></br>
+							<b>World Size: </b> <span id="world_size">n/a</span>
+							</br></br>Actions: <button onclick="_start()">Start</button> <button onclick="_restart()">Restart</button> <button onclick="_stop()">Stop</button> <button onclick="_kill()">Force Kill</button>
+						</div>
+					</div>
+				</div>
+				<div class="col-lg-6">
+					<div class="panel panel-default">
+						<div class="panel-heading">Players</div>
+						<table class="table table-striped">
+							<tbody id="playerlist">
+								<th>Face</th><th>Username</th><th>UUID</th><th>Options</th></tr>
+							</tbody>
+						</table>
+						<div class="panel-body">
+							Gold names are operators. Skins only show up when proxy mode is enabled.
+						</div>
+					</div>
+				</div>
+			</div>
+			<div id="screen-console" style="display:none;">
+				<textarea disabled="" style="width:100%;" rows="20" id="server_console" onscroll="handleScroll(this)"></textarea>
+				<br/><br/><input type="text" onkeydown="if(event.keyCode == 13){_console(this.value);this.value='';}" placeholder="Run a command in the Minecraft server console..." style="width:100%;"/>
+			</div>
+			<div id="screen-plugins" style="display:none;">
+				<button onclick="_reload_plugins()" class="btn btn-primary">Reload Plugins</button>
+				<div class="panel panel-default" style="margin-top:10px;">
+					<table class="table table-striped">
+						<tbody id="pluginlist">
+							<th>Name</th><th>Description</th><th>Options</th></tr>
+						</tbody>
+					</table>
+				</div>
+			</div>
+			<div id="screen-about" style="display:none;">
+				<div class="small">Copyright Ben Baptist 2014</div>
+				<div class="small" id="buildstring"></div>
+				<div class="small">bootstrap - the best thing ever. design is not final.</div>
+			</div>
 		</div>
-		<div id="admin_page" style="display:none;">
-			<h1>Wrapper.py Admin Page</h1>
-			<button onclick="_logout()">Logout</button></br></br>
-			This information refreshes every three seconds.</br>
-			<b>Server Status: </b> <span id="server_status">Unknown</span></br>
-			<b>Server Version: </b> <span id="server_version">Unknown</span></br>
-			<b>Level Name: </b> <span id="levelname_status">Unknown</span></br>
-			<b>Player Count: </b> <span id="playercount_status">n/a players</span></br>
-			<br/>
-			<table border="1">
-				<tbody id="playerlist">
-					<th>Username</th><th>UUID</th><th>Options</th></tr>
-				</tbody>
-			</table>
-			</br></br>Server: <button onclick="_start()">Start</button> <button onclick="_restart()">Restart</button> <button onclick="_stop()">Stop</button> <button onclick="_kill()">Force Kill</button>
-			</br></br><b>Server Console</b></br>
-			<textarea disabled="" cols="80" rows="20" id="server_console" onscroll="handleScroll(this)"></textarea>
-			<br/><input type="text" onkeydown="if(event.keyCode == 13){_console(this.value);this.value='';}" size="80"/>
+
+		<div id="lost_connection_page" style="display:none;position:fixed;top:40%;left:50%;transform: translate(-50%, -50%);text-align:center;">
+			<h1>Connection lost</h1>
+			<h4>Make sure Wrapper.py is running. Try reloading the page in a few seconds if this doesn't go away.</h4>
 		</div>
-		<div class="small">Copyright Ben Baptist 2014</div>
-		<div class="small" id="buildstring"></div>
+		<script src="js/jquery.js"></script>
+		<script src="js/bootstrap.min.js"></script>
+		<script src="js/offcanvas.js"></script>
+		
+		<script src="js/jquery.flot.js"></script>
+		<script src="js/jquery.flot.pie.js"></script>
+		<script src="js/jquery.flot.resize.js"></script>
+		<script src="js/excanvas.min.js"></script>
+		
+		<script type="text/javascript" >
+			/*jQuery.browser = {};
+			(function () {
+				jQuery.browser.msie = false;
+				jQuery.browser.version = 0;
+				if (navigator.userAgent.match(/MSIE ([0-9]+)\./)) {
+					jQuery.browser.msie = true;
+					jQuery.browser.version = RegExp.$1;
+				}
+			})();
+			$(function() {
+			var container = $("#flot-memory-usage")
+			var data = []
+			function getRandomData() {
+				res = []; h = 0
+				while(res.length < 100){
+					res[res.length] = [h, 90]
+					h += 1
+				}
+				return res
+			}
+			series = [{
+				data: memoryGraph,
+				lines: {
+					fill: true
+				}
+			}];
+			var plot = $.plot(container, series, {
+				grid: {
+						borderWidth: 1,
+						minBorderMargin: 20,
+						labelMargin: 10,
+						margin: {
+							top: 8,
+							bottom: 20,
+							left: 20
+						}
+				},
+				xaxis: {
+						tickFormatter: function() {
+							return "";
+						}
+				},
+				yaxis: {
+						min: 0,
+						max: 100
+				},
+				legend: {
+						show: true
+				}
+			});
+			setInterval(function updateRandom() {
+				series[0].data = memoryGraph
+				plot.setData(series);
+				plot.draw();
+			}, 200);
+		
+		});*/
+		</script>
 	</body>
 </html>

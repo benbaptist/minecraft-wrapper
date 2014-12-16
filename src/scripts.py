@@ -16,7 +16,7 @@ scripts = {"server-start.sh": """ # This script is called just before the server
 """}
 class Scripts:
 	def __init__(self, wrapper):
-		self.api = api.API(wrapper, "Scripts")
+		self.api = api.API(wrapper, "Scripts", internal=True)
 		self.wrapper = wrapper
 		
 		# Register the events

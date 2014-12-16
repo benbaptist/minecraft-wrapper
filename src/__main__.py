@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# I ought to clean these imports up a bit.
 import socket, datetime, time, sys, threading, random, subprocess, os, json, signal, traceback, ConfigParser, ast, proxy, web, globals, storage, hashlib
 from log import *
 from config import Config
@@ -6,8 +7,12 @@ from irc import IRC
 from server import Server
 from importlib import import_module
 from scripts import Scripts
-import importlib
 from api import API
+import importlib
+# I'm not 100% sure if readline works under Windows or not
+try: import readline
+except: pass
+# Sloppy import catch system
 try:
 	import requests
 	IMPORT_REQUESTS = True
@@ -31,6 +36,7 @@ class Wrapper:
 		self.events = {}
 		self.permission = {}
 	def loadPlugin(self, i):
+		if "disabled_plugins" not in self.storage: self.storage["disabled_plugins"] = []
 		self.log.info("Loading plugin %s..." % i)
 		if os.path.isdir("wrapper-plugins/%s" % i):
 			plugin = import_module(i)
@@ -50,6 +56,9 @@ class Wrapper:
 		except: description = None
 		try: summary = plugin.SUMMARY
 		except: summary = None
+		if id in self.storage["disabled_plugins"]:
+			self.log.warn("Plugin '%s' disabled - not loading" % name)
+			return
 		main = plugin.Main(API(self, name, id), PluginLog(self.log, name))
 		self.plugins[id] = {"main": main, "good": True, "module": plugin} #  "events": {}, "commands": {},
 		self.plugins[id]["name"] = name
@@ -123,6 +132,7 @@ class Wrapper:
 							self.log.error(line)
 		except:
 			self.log.error("A serious runtime error occurred - if you notice any strange behaviour, please restart immediately")
+			self.log.getTraceback()
 		return True
 	def playerCommand(self, payload):
 		self.log.info("%s executed: /%s %s" % (str(payload["player"]), payload["command"], " ".join(payload["args"])))
@@ -151,6 +161,16 @@ class Wrapper:
 							player.message("&cAn error occured while performing update. Please check the Wrapper.py console as soon as possible for an explanation and traceback. If you are unsure of the cause, please file a bug report on http://github.com/benbaptist/minecraft-wrapper with the traceback.")
 					else:
 						player.message("&cNo new Wrapper.py versions available.")
+				elif subcommand == "halt":
+					player.message("&cHalting Wrapper.py... goodbye!")
+					self.shutdown()
+				elif subcommand in ("mem", "memory"):
+					if self.server.getMemoryUsage():
+						player.message("&cServer Memory: %d bytes" % self.server.getMemoryUsage())
+					else:
+						player.message("&cError: Couldn't retrieve memory usage for an unknown reason")
+				elif subcommand == "random":
+					player.message("&cRandom number: &a%d" % random.randrange(0, 99999999))
 				else:
 					player.message("&cUnknown sub-command /wrapper '%s'." % subcommand)
 			else:
@@ -348,6 +368,7 @@ class Wrapper:
 		self.configManager.loadConfig()
 		self.config = self.configManager.config
 		signal.signal(signal.SIGINT, self.SIGINT)
+		signal.signal(signal.SIGTERM, self.SIGINT)
 		
 		self.api = API(self, "Wrapper.py")
 		
@@ -411,9 +432,11 @@ class Wrapper:
 			self.log.error("Proxy mode could not be started because you do not have one or more of the following modules installed: pycrypt and requests")
 	def SIGINT(self, s, f):
 		self.shutdown()
-	def shutdown(self):
+	def shutdown(self, status=0):
 		self.halt = True
-		sys.exit(0)
+		self.server.stop(reason="Wrapper.py Shutting Down", save=False)
+		time.sleep(1)
+		sys.exit(status)
 	def rebootWrapper(self):
 		self.halt = True
 		os.system(" ".join(sys.argv) + "&")
@@ -508,7 +531,7 @@ class Wrapper:
 				except:pass;
 			command = args(0)
 			if command == "halt":
-				self.server.stop("Halting server...")
+				self.server.stop("Halting server...", save=False)
 				self.halt = True
 				sys.exit()
 			elif command == "stop":
@@ -516,7 +539,7 @@ class Wrapper:
 			elif command == "start":
 				self.server.start()
 			elif command == "restart":
-				self.server.stop("Server restarting, be right back!")
+				self.server.restart("Server restarting, be right back!")
 			elif command == "reload":
 				self.reloadPlugins()
 			elif command == "update-wrapper":
@@ -535,13 +558,19 @@ class Wrapper:
 						self.log.info("%s v%s - %s" % (name, ".".join([str(_) for _ in version]), summary))
 					else:
 						self.log.info("%s failed to load!" % (plug))
+			elif command in ("mem", "memory"):
+				if self.server.getMemoryUsage():
+					self.log.info("Server Memory Usage: %d bytes" % self.server.getMemoryUsage())
+				else:
+					self.log.error("Server not booted or another error occurred while getting memory usage!")
 			elif command == "help":
-				self.log.info("/reload - reload plugins")	
-				self.log.info("/plugins - lists plugins")	
+				self.log.info("/reload - Reload plugins")	
+				self.log.info("/plugins - Lists plugins")	
 				self.log.info("/update-wrapper - Checks for new updates, and will install them automatically if one is available")
-				self.log.info("/start & /stop - start and stop the server without auto-restarting respectively without shutting down Wrapper.py")
-				self.log.info("/restart - restarts the server, obviously")				
-				self.log.info("/halt - shutdown Wrapper.py completely")
+				self.log.info("/start & /stop - Start and stop the server without auto-restarting respectively without shutting down Wrapper.py")
+				self.log.info("/restart - Restarts the server, obviously")				
+				self.log.info("/halt - Shutdown Wrapper.py completely")
+				self.log.info("/mem - Get memory usage of the server")
 				self.log.info("Wrapper.py Version %s" % self.getBuildString())
 			else:
 				self.log.error("Invalid command %s" % command)
@@ -556,6 +585,7 @@ if __name__ == "__main__":
 		t.start()
 	except SystemExit:
 		#log.error("Wrapper.py received SystemExit")
+		os.system("reset")
 		wrapper.disablePlugins()
 		wrapper.halt = True
 		try:

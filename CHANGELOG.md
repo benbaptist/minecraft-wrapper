@@ -1,5 +1,50 @@
 #Changelog#
 
+<h4>0.7.4</h4>
+Just a small little update, to fix a few things, and improve upon some existing features.
+
+**Features**
+- `/wrapper halt` in-game command for killing Wrapper.py
+- Improvements to the web interface:
+  - Bootstrap design! Looks way nicer, but still not the final design
+  - Manage plugins (list plugins and their info, reload all plugins)
+    - Disabling plugins will be implemented in a future update
+  - Give/take operator through player list
+  - Increased server console scrollback and
+  - See the faces of the players in the player list
+  - Check server memory usage
+    - Featuring a pretty memory graph, as well!
+  - Check the filesize of the currently-loaded world
+  - Other minor improvements
+- Proxy mode now reads server MOTD and max player count from server.properties
+- 'server-name' in wrapper.properties for naming servers (used in web interface)
+- Warn users of tar not being installed when a backup begins
+- Warn users of a scheduled reboot (timed-reboot-warning-minutes)
+  - timed-reboot-warning-minutes actually adds extra minutes to the reboot, so if you have it setup to reboot every hour, and timed-reboot-warning-minutes is set to 5 minutes, it will reboot once every hour+five minutes.
+- Check memory usage of server in IRC, console, and in-game with /wrapper mem
+- Wrapper.py shuts down cleanly when it receives SIGTERM signal
+- Wrapper.py remembers server state upon exit - i.e. if you `/stop` the server from the console, it will remain stopped until you `/start` it again
+
+**Bug Fixes**
+- Fixed error when player dies
+- Fixed "Request Too Long" error in IRC when messages exceed the 512-byte limit
+- Fixed packet error when player was kicked from server with proxy mode
+- Fixed login rate-limit system
+- Fixed issues with compressed backups not being pruned
+- Fixed arrow key support (pull request #46)
+- Fixed https:// links not being clickable from IRC->Game
+- Fixed other players being invisible and not showing up in tab menu when using proxy mode offline (issue #47)
+- Fixed URL-unsafe characters not working in the web interface (e.g. typing a question mark in the server console would cause issues) 
+
+**Developer Changes**
+- New events: 
+  - wrapper.backupFailure(reasonCode, reasonText): Called when a backup fails for some reason.
+    - reasonCode: The error code of the failure
+    - reasonText: Text explaining the error
+    - reasonCode types: 1: tar is not installed | 2: backup file didn't exist after backup finished | 3: one or more of the files slated to backup didn't exist, so backup was cancelled
+    
+Remove memory graph, unless I can fix it, because it (or something else) is making the page freeze/lag. Undefined UUID for player when nobody logged in. Ghost plugin when no plugins are installed. Server version is not always showing up.
+
 <h4>0.7.3</h4>
 At last, Wrapper.py 0.7.3 release! This is a relatively big update, and will fix a bunch of random inconsistencies in the APIs. It also adds a ton of new APIs, some big new features, and a bunch of bug fixes.
 
@@ -7,6 +52,7 @@ At last, Wrapper.py 0.7.3 release! This is a relatively big update, and will fix
 - Web admin panel for controlling the wrapper & the server from a browser
   - It is extremely ugly, and primitive. Don't except much yet.
 - Optional backup compression (tar.gz)
+
 - Optional auto-update system (turned off by default)
   - If auto-update-wrapper is turned on in wrapper.properties, the Wrapper will check for updates every 24 hours
   - If you are on a stable build, and a new version exists, it will download the update and will be applied when you start Wrapper.py next time
@@ -31,6 +77,7 @@ At last, Wrapper.py 0.7.3 release! This is a relatively big update, and will fix
 - Proxy mode should work with 1.7.10 now
 - Fixed 'stop' in IRC remote not keeping the server off
 - Fixed player position not changing while riding an entity
+- Fixed backup paths with spaces not working right
   
 **Developer Changes**
 - New formatting code: &@ for opening URLs when clicked in game chat
@@ -53,7 +100,7 @@ At last, Wrapper.py 0.7.3 release! This is a relatively big update, and will fix
   - irc.quit(nick, channel, message): User quitting from IRC. 'channel' returns None currently. 'message' is their QUIT message
   - player.mount(player, vehicle_id, leash): Called when a player enters a vehicle, such as a boat, minecart, or horse.
   - player.unmount(player): Called when a player leaves a vehicle that they previously entered.
-  - player.preLogin(player, online_uuid, offline_uuid, ip):
+  - player.preLogin(player, online_uuid, offline_uuid, ip): Called after a client authorizees, but hasn't connected to the server yet. Can be use to prevent logins
 - Changed events:
   - wrapper.backupBegin(file): file argument added
   - wrapper.backupEnd(file, status): backupFile argument renamed to file
@@ -110,27 +157,21 @@ Server jumping still seems super buggy and weird. It only works in my test envir
 
 <h4>0.7.0</h4>
 - Huge Improvements to APIs
-<ul>
-<li>self.api.registerCommand() for making real /commands in-game</li>
-<li>self.api.minecraft.changeResourcePack() for changing resource packs on the fly</li>
-<li>Events containing the player's username should now contain the Player class</li>
-</ul> 
+  - self.api.registerCommand() for making real /commands in-game
+  - self.api.minecraft.changeResourcePack() for changing resource packs on the fly
+  - Events containing the player's username should now contain the Player class
 - Added a proxy mode - this is necessary for additional features of the API such as /commands and other special features
-<ul>
-<li>If you've used BungeeCord before - proxy mode should make sense. The only difference is that you don't need to make the server in offline mode.</li>
-<li>Built-in commands such as /reload, /wrapper, /pl(ugins), etc.</li>
-<li>Extremely experimental, near-useless server-jumping mode (doesn't work quite yet)</li>
-</ul> 
+  - If you've used BungeeCord before - proxy mode should make sense. The only difference is that you don't need to make the server in offline mode.
+  - Built-in commands such as /reload, /wrapper, /pl(ugins), etc.
+  - Extremely experimental, near-useless server-jumping mode (doesn't work quite yet)
 - Write date to log files as well as a timestamp
 - Added /plugins command - was removed in the last update by mistake
 - Removed IRC -> Server Line-Wrapping (each message was divided automatically every 80 characters - it was annoying)
 - Fixed bug where serious plugin errors resulted in that plugin not being reloadable
 - Fixed quit messages not being displayed in IRC (finally!)
 - Added new shell scripting setting where you can execute certain shell scripts on specific events (NIX-only systems)
-<ul>
-<li> The schell scripts' are pregenerated with content, and has a short description of when each script is executed, and what arguments are passed to the script, if any </li>
-<li> Shell scripts are in wrapper-data/scripts </li>
-</ul>
+  - The schell scripts' are pregenerated with content, and has a short description of when each script is executed, and what arguments are passed to the script, if any 
+  - Shell scripts are in wrapper-data/scripts
 
 <h4>0.6.0</h4>
 - Added an in-development plugin system! Super early, but it works great, it seems.
@@ -177,16 +218,23 @@ Small update, but brings one much-needed change: the new configuration file syst
 </ul>
 
 #To-do List#
-- Web interface for server management (partially implemented, not sure when it'll be done)
-  - There's technically a functional web mode now - but it's super primitive. It does work, however.
+- Web interface improvements:
   - Add buttons to update the wrapper from it
   - Halting the wrapper
   - IRC control
   - Changing all settings on wrapper.properties and server.properties from it
-- /wrapper halt
+  - Rolling back world file from backups
+  - Show server ports (proxy and internal, unless proxy is disabled, then just internal.)
+  - Show chat as an individual tab (without any console messages)
+  - Add "remember me" checkmark, make all current sessions last 30 days instead of the default week, and then extend lifetime of session when accessed
+  - Make it stream information rather than polling for the sake of bandwidth efficiency and speed
+  - Change password from web panel
+  - Move password from the config file to a hashed password in web.py's data object
+  - Perhaps move to Flask?
+- Fix backups happening upon start (potentially an issue, not 100% sure)
+- Fix packet error when teleporting long distances
 - Multi-server mode (This might actually become a separate project for managing multiple servers and accounts, rather than being a Wrapper.py feature)
-  - If I make it a separate project, it might use Wrapper.py as a backend for booting servers for extra features, for the sake of not duping code across projects</li>
-- Ability to halt server without shutting down wrapper - for fine server control
+  - If I make it a separate project, it might use Wrapper.py as a backend for booting servers for extra features, for the sake of not duplicating code across projects
 - Update version of Minecraft server automatically
 - First-run setup wizard for new setups
 - Potentially implement a way to reload the config - but that might be too difficult/bug prone
@@ -202,4 +250,7 @@ Small update, but brings one much-needed change: the new configuration file syst
 - Add custom /help command (the current /help command is the vanilla help command, and it doesn't show any Wrapper.py commands)
 - Move permissions code, plugin loading code, and command code into separate files for more organized code
 - Split proxy.py into three files: __init__.py for the main proxy class, client.py for client class, server.py for server class, and network.py for core networking code (Packet class)
-- "Request too long" in IRC due to certain messages being too big
+- Update code:
+  - Allow auto-updating from dev build to stable, if it's the latest
+  - Jumping from stable to dev manually, if the dev build is newer than the stable build
+  - Create a difference between "checking for updates" and "auto-updating"
