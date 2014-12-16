@@ -14,6 +14,7 @@ Just a small little update, to fix a few things, and improve upon some existing 
   - See the faces of the players in the player list
   - Check server memory usage
     - Featuring a pretty memory graph, as well!
+  - Check the filesize of the currently-loaded world
   - Other minor improvements
 - Proxy mode now reads server MOTD and max player count from server.properties
 - 'server-name' in wrapper.properties for naming servers (used in web interface)
@@ -42,7 +43,7 @@ Just a small little update, to fix a few things, and improve upon some existing 
     - reasonText: Text explaining the error
     - reasonCode types: 1: tar is not installed | 2: backup file didn't exist after backup finished | 3: one or more of the files slated to backup didn't exist, so backup was cancelled
     
-Make it so server start/stop state is preserved, and check filesize of world folder and whole current directory for web mode. Also fix start/stop preservation because sometimes, when you /halt or control+c, it'll remember that it stopped the server when you didn't really do it. I need to fix the memory graph too. Console might be broken as well.
+Remove memory graph, unless I can fix it, because it (or something else) is making the page freeze/lag. Undefined UUID for player when nobody logged in. Ghost plugin when no plugins are installed. Server version is not always showing up.
 
 <h4>0.7.3</h4>
 At last, Wrapper.py 0.7.3 release! This is a relatively big update, and will fix a bunch of random inconsistencies in the APIs. It also adds a ton of new APIs, some big new features, and a bunch of bug fixes.
@@ -227,8 +228,10 @@ Small update, but brings one much-needed change: the new configuration file syst
   - Show chat as an individual tab (without any console messages)
   - Add "remember me" checkmark, make all current sessions last 30 days instead of the default week, and then extend lifetime of session when accessed
   - Make it stream information rather than polling for the sake of bandwidth efficiency and speed
-- Fix backups happening upon start (potentially)
-- Refresh MOTD and such when the server restarts
+  - Change password from web panel
+  - Move password from the config file to a hashed password in web.py's data object
+  - Perhaps move to Flask?
+- Fix backups happening upon start (potentially an issue, not 100% sure)
 - Fix packet error when teleporting long distances
 - Multi-server mode (This might actually become a separate project for managing multiple servers and accounts, rather than being a Wrapper.py feature)
   - If I make it a separate project, it might use Wrapper.py as a backend for booting servers for extra features, for the sake of not duplicating code across projects

@@ -33,20 +33,7 @@ class Server:
 		self.world = None
 		self.motd = None
 		
-		# Read server.properties and extract some information out of it
-		if os.path.exists("server.properties"):
-			s = StringIO.StringIO() # Stupid StringIO doesn't support __exit__()
-			config = open("server.properties", "r").read()
-			s.write("[main]\n" + config)
-			s.seek(0)
-			try:
-				self.properties = ConfigParser.ConfigParser(allow_no_value = True)
-				self.properties.readfp(s)
-				self.worldName = self.properties.get("main", "level-name")
-				self.motd = self.properties.get("main", "motd")
-				self.maxPlayers = int(self.properties.get("main", "max-players"))
-			except:
-				self.log.getTraceback()
+		self.reloadProperties()
 		
 		self.api.registerEvent("irc.message", self.onChannelMessage)
 		self.api.registerEvent("irc.action", self.onChannelAction)
@@ -186,6 +173,21 @@ class Server:
 		if username in self.players:
 			return self.players[username]
 		return False
+	def reloadProperties(self):
+		# Read server.properties and extract some information out of it
+		if os.path.exists("server.properties"):
+			s = StringIO.StringIO() # Stupid StringIO doesn't support __exit__()
+			config = open("server.properties", "r").read()
+			s.write("[main]\n" + config)
+			s.seek(0)
+			try:
+				self.properties = ConfigParser.ConfigParser(allow_no_value = True)
+				self.properties.readfp(s)
+				self.worldName = self.properties.get("main", "level-name")
+				self.motd = self.properties.get("main", "motd")
+				self.maxPlayers = int(self.properties.get("main", "max-players"))
+			except:
+				self.log.getTraceback()
 	def console(self, command):
 		""" Execute a console command on the server """
 		try: self.proc.stdin.write("%s\n" % command)
@@ -228,6 +230,7 @@ class Server:
 			self.changeState(1)
 			self.log.info("Starting server...")
 			self.wrapper.callEvent("server.start", {})
+			self.reloadProperties()
 			self.proc = subprocess.Popen(self.args, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
 			self.players = {}	
 			while True:

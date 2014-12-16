@@ -15,7 +15,6 @@
 			check = true
 			currentTab = "dash"
 			memoryGraph = []
-			memoryGraphPoints = 0
 			_ = function(id) {return document.getElementById(id)}
 			function isAuthed(){
 				if(!localStorage.sessionKey) return false
@@ -62,8 +61,12 @@
 				stats = requests.admin("admin_stats", {"last_refresh": lastRefresh})
 				if(stats["status"] == "error" || stats == ""){
 					console.log("Error while refreshing stats. Connection lost?")
+					_("lost_connection_page").style.display = "block"
+					_("admin_page").style.display = "none"
 					return
 				}
+				_("lost_connection_page").style.display = "none"
+				_("admin_page").style.display = "block"
 				lastRefresh = stats["refresh_time"]
 				statusMessages = {0: "<r>Server stopped</r>", 1: "<y>Server starting...</y>", 2: "<g>Running</g>", 3: "<y>Server stopping...</y>"}
 				if(stats["server_state"] in statusMessages) _("server_status").innerHTML = statusMessages[stats["server_state"]]
@@ -77,12 +80,13 @@
 				document.title = stats["server_name"] + " - Wrapper.py"
 				
 				// draw player list
-				_("playerlist").innerHTML = "<th>?</th><th>Username</th><th>UUID</th><th>Options</th></tr>"
+				_("playerlist").innerHTML = "<th>Face</th><th>Username</th><th>UUID</th><th>Options</th></tr>"
 				for(i in stats["players"]){
+					if(i == "getLength") continue
 					var player = stats["players"][i]
 					if(!(player.uuid in skins)){
 						var skin = requests.admin("get_player_skin", {"uuid": player.uuid})
-						if(!skin) continue
+						if(!skin) continue // Might make players not draw in player list
 						skins[player.uuid] = skin
 					}
 					
@@ -105,6 +109,7 @@
 				// draw plugin list
 				_("pluginlist").innerHTML = "<th>Name</th><th>Description</th><th>Options</th></tr>"
 				for(i in stats["plugins"]){
+					if(i == "getLength") continue
 					var plugin = stats["plugins"][i]
 					if(plugin.description) var description = plugin.description.replace("\n", "</br></br>")
 					else var description = "<i>No description is available for this plugin.</i>"
@@ -121,8 +126,8 @@
 					p.innerHTML += "\n" + stats["console"].join("\n")
 				if(doScroll) p.scrollTop = p.scrollHeight
 				
-				// memory usage graph
-				if(memoryGraph.length == 0){
+				// memory usage graph code, ew
+				/*if(memoryGraph.length == 0){
 					while(memoryGraphPoints < 200){
 						memoryGraph[memoryGraph.length] = [memoryGraph.length, 0]
 						memoryGraphPoints += 1
@@ -135,9 +140,11 @@
 					memoryGraph[memoryGraph.length] = point
 					memoryGraphPoints += 1
 				}
-				/*if(memoryGraph.getLength() > 200)
-					memoryGraph.splice(-200)*/
-				var p = 0
+				if(memoryGraph.getLength() > 200)
+					console.log(memoryGraph.getLength())
+					memoryGraph.splice(0, memoryGraph.getLength() - 199)
+					memoryGraph.shift(0)*/
+				/*var p = 0
 				while(memoryGraph.getLength() > 200){
 					delete memoryGraph[0]
 					console.log("Deleted")
@@ -146,7 +153,7 @@
 						break
 					}
 					memoryGraph.shift(0)
-				}
+				}*/
 				/*var m = []
 				for (i in memoryGraph){
 					if(memoryGraph[i] == undefined) continue
@@ -178,7 +185,7 @@
 				requests.admin("server_action", {"action": "restart", "reason": message})
 			}
 			function _kill(){
-				if(confirm("Are you sure you want to forcefully kill the server process? This can corrupt the world file, and should only be used if the server is completely unresponsive.")){
+				if(confirm("WARNING!!!\n\nAre you sure you want to forcefully kill the server process? This can corrupt the world file, and should only be used as a last-resort if the server is completely unresponsive/frozen.")){
 					requests.admin("server_action", {"action": "kill"})
 				}
 			}
@@ -291,6 +298,7 @@
 						<li id="tab-dash" class="active"><a href="#dash">Dashboard</a></li>
 						<li id="tab-console"><a href="#console">Console</a></li>
 						<li id="tab-plugins"><a href="#plugins">Plugins</a></li>
+						<li id="tab-about"><a href="#about">About</a></li>
 					</ul>
 					<ul class="nav navbar-nav navbar-right">
 						<li><a href="javascript:_logout();">Logout</a></li>
@@ -299,15 +307,7 @@
 				</div>
 			</nav>
 			<div id="screen-dash">
-				<b>Server Status: </b> <span id="server_status">Unknown</span></br>
-				<b>Server Version: </b> <span id="server_version">Unknown</span></br>
-				<b>Server MOTD: </b> <span id="server_motd">Unknown</span></br>
-				<b>Level Name: </b> <span id="levelname_status">Unknown</span></br>
-				<b>Player Count: </b> <span id="playercount_status">n/a players</span></br>
-				<b>Memory Usage: </b> <span id="memory_status">n/a</span></br>
-				<b>World Size: </b> <span id="world_size">n/a</span>
-				<br/>
-				<div class="col-lg-6">
+				<!--<div class="col-lg-6">
 					<div class="panel panel-default">
 						<div class="panel-heading">Memory Usage</div>
 						<div class="panel-body">
@@ -316,7 +316,7 @@
 							</div>
 						</div>
 					</div>
-				</div>
+				</div>-->
 				<!--<div class="col-lg-6 right">
 					<div class="panel panel-default">
 						<div class="panel-heading">CPU Usage</div>
@@ -329,33 +329,58 @@
 				</div>-->
 				<div class="col-lg-6">
 					<div class="panel panel-default">
-						<div class="panel-heading">Players</div>
-							<table class="table table-striped">
-								<tbody id="playerlist">
-									<th>Username</th><th>UUID</th><th>Options</th></tr>
-								</tbody>
-							</table>
+						<div class="panel-heading">Stats</div>
+						<div class="panel-body">
+							<b>Server Status: </b> <span id="server_status">Unknown</span></br>
+							<b>Server Version: </b> <span id="server_version">Unknown</span></br>
+							<b>Server MOTD: </b> <span id="server_motd">Unknown</span></br>
+							<b>Level Name: </b> <span id="levelname_status">Unknown</span></br>
+							<b>Player Count: </b> <span id="playercount_status">n/a players</span></br>
+							<b>Memory Usage: </b> <span id="memory_status">n/a</span></br>
+							<b>World Size: </b> <span id="world_size">n/a</span>
+							</br></br>Actions: <button onclick="_start()">Start</button> <button onclick="_restart()">Restart</button> <button onclick="_stop()">Stop</button> <button onclick="_kill()">Force Kill</button>
+						</div>
+					</div>
 				</div>
-				Gold names are operators. Skins only show up when proxy mode is enabled.
-				</br></br>Actions: <button onclick="_start()">Start</button> <button onclick="_restart()">Restart</button> <button onclick="_stop()">Stop</button> <button onclick="_kill()">Force Kill</button>
+				<div class="col-lg-6">
+					<div class="panel panel-default">
+						<div class="panel-heading">Players</div>
+						<table class="table table-striped">
+							<tbody id="playerlist">
+								<th>Face</th><th>Username</th><th>UUID</th><th>Options</th></tr>
+							</tbody>
+						</table>
+						<div class="panel-body">
+							Gold names are operators. Skins only show up when proxy mode is enabled.
+						</div>
+					</div>
+				</div>
+			</div>
+			<div id="screen-console" style="display:none;">
+				<textarea disabled="" style="width:100%;" rows="20" id="server_console" onscroll="handleScroll(this)"></textarea>
+				<br/><br/><input type="text" onkeydown="if(event.keyCode == 13){_console(this.value);this.value='';}" placeholder="Run a command in the Minecraft server console..." style="width:100%;"/>
+			</div>
+			<div id="screen-plugins" style="display:none;">
+				<button onclick="_reload_plugins()" class="btn btn-primary">Reload Plugins</button>
+				<div class="panel panel-default" style="margin-top:10px;">
+					<table class="table table-striped">
+						<tbody id="pluginlist">
+							<th>Name</th><th>Description</th><th>Options</th></tr>
+						</tbody>
+					</table>
+				</div>
+			</div>
+			<div id="screen-about" style="display:none;">
+				<div class="small">Copyright Ben Baptist 2014</div>
+				<div class="small" id="buildstring"></div>
+				<div class="small">bootstrap - the best thing ever. design is not final.</div>
 			</div>
 		</div>
-		<div id="screen-console" style="display:none;">
-			<textarea disabled="" style="width:100%;" rows="20" id="server_console" onscroll="handleScroll(this)"></textarea>
-			<br/><br/><input type="text" onkeydown="if(event.keyCode == 13){_console(this.value);this.value='';}" placeholder="Run a command in the Minecraft server console..." style="width:100%;"/>
-		</div>
-		<div id="screen-plugins" style="display:none;">
-			<button onclick="_reload_plugins()">Reload Plugins</button>
-			<table class="table table-striped">
-				<tbody id="pluginlist">
-					<th>Name</th><th>Description</th><th>Options</th></tr>
-				</tbody>
-			</table>
-		</div>
-		<div class="small">Copyright Ben Baptist 2014</div>
-		<div class="small" id="buildstring"></div>
-		<div class="small">bootstrap - the best thing ever. design is not final.</div>
 
+		<div id="lost_connection_page" style="display:none;position:fixed;top:40%;left:50%;transform: translate(-50%, -50%);text-align:center;">
+			<h1>Connection lost</h1>
+			<h4>Make sure Wrapper.py is running. Try reloading the page in a few seconds if this doesn't go away.</h4>
+		</div>
 		<script src="js/jquery.js"></script>
 		<script src="js/bootstrap.min.js"></script>
 		<script src="js/offcanvas.js"></script>
@@ -366,7 +391,7 @@
 		<script src="js/excanvas.min.js"></script>
 		
 		<script type="text/javascript" >
-			jQuery.browser = {};
+			/*jQuery.browser = {};
 			(function () {
 				jQuery.browser.msie = false;
 				jQuery.browser.version = 0;
@@ -401,20 +426,6 @@
 							top: 8,
 							bottom: 20,
 							left: 20
-						},
-						markings: function(axes) {
-							var markings = [];
-							var xaxis = axes.xaxis;
-							for (var x = Math.floor(xaxis.min); x < xaxis.max; x += xaxis.tickSize * 2) {
-								markings.push({
-										xaxis: {
-											from: x,
-											to: x + xaxis.tickSize
-										},
-										color: "rgba(232, 232, 255, 0.2)"
-								});
-							}
-							return markings;
 						}
 				},
 				xaxis: {
@@ -436,7 +447,7 @@
 				plot.draw();
 			}, 200);
 		
-		});
+		});*/
 		</script>
 	</body>
 </html>

@@ -9,7 +9,7 @@ except:
 class Web:
 	def __init__(self, wrapper):
 		self.wrapper = wrapper
-		self.api = API(wrapper, "Web")
+		self.api = API(wrapper, "Web", internal=True)
 		self.log = log.PluginLog(self.wrapper.log, "Web")
 		self.config = wrapper.config
 		self.socket = False

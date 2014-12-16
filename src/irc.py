@@ -17,7 +17,7 @@ class IRC:
 		self.ready = False
 		self.msgQueue = []
 		
-		self.api = api.API(self.wrapper, "IRC")
+		self.api = api.API(self.wrapper, "IRC", internal=True)
 		self.api.registerEvent("server.starting", self.onServerStarting)
 		self.api.registerEvent("server.started", self.onServerStarted)
 		self.api.registerEvent("server.stopping", self.onServerStopping)
