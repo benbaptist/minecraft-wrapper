@@ -966,10 +966,22 @@ class Packet: # PACKET PARSING CODE
 		return self.send_long(((x & 0x3FFFFFF) << 38) | ((y & 0xFFF) << 26) | (z & 0x3FFFFFF))
 	def send_metadata(self, payload):
 		b = ""
-		for i in payload:
-			item = payload[i]
-			b+= chr(int("3", 2))
-			continue
+		for index in payload:
+			type = payload[index][0]
+			value = payload[index][1]
+			header = (type << 5) | index
+			b += self.send_ubyte(header)
+			if type == 0: b += self.send_byte(value)
+			if type == 1: b += self.send_short(value)
+			if type == 2: b += self.send_int(value)
+			if type == 3: b += self.send_float(value)
+			if type == 4: b += self.send_string(value)
+			if type == 5: 
+				print "WIP 5"
+			if type == 6:
+				print "WIP 6"
+			if type == 6:
+				print "WIP 7"
 		b += self.send_ubyte(0x7f)
 		return b
 	def send_bool(self, payload):
@@ -1066,19 +1078,27 @@ class Packet: # PACKET PARSING CODE
 		return json.loads(self.read_string())
 	def read_rest(self):
 		return self.read_data(1024 * 1024)
-	def read_metadata(self): # This function is completely broken and needs fixing!
+	def read_metadata(self):
 		data = {}
 		while True:
 			a = self.read_ubyte()
 			if a == 0x7f: return data
 			index = a & 0x1f
 			type = a >> 5
-			if type == 0: data[index] = ("byte", self.read_byte())
-			if type == 1: data[index] = ("short", self.read_short())
-			if type == 2: data[index] = ("int", self.read_int())
-			if type == 3: data[index] = ("float", self.read_float())
-			if type == 4: data[index] = ("string", self.read_string())
-			if type == 5: data[index] = ("slot", self.read_slot())
+			if type == 0:
+				data[index] = (0, self.read_byte())
+			if type == 1: 
+				data[index] = (1, self.read_short())
+			if type == 2: 
+				data[index] = (2, self.read_int())
+			if type == 3: 
+				data[index] = (3, self.read_float())
+			if type == 4: 
+				data[index] = (4, self.read_string())
+			if type == 5: 
+				data[index] = (5, self.read_slot())
 			if type == 6: 
-				data[index] = ("position", (self.read_int(), self.read_int(), self.read_int()))
+				data[index] = (6, (self.read_int(), self.read_int(), self.read_int()))
+			#if type == 7: 
+			#	data[index] = ("float", (self.read_int(), self.read_int(), self.read_int()))
 		return data
