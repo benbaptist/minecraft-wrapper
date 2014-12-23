@@ -1,4 +1,4 @@
-<!-- I'm sorry for how sloppy this code is. I truly am. -->
+<!-- I'm sorry for how sloppy this code is. I truly am. I'll try to clean it up some day. -->
 <!-- document.title = "Piops"("server_name").innerHTML = stats["server_name"] -->
 <html>
 	<head>
@@ -6,7 +6,7 @@
 		<script type="text/javascript" src="requests.js"></script>
 		<script src="js/ie-emulation-modes-warning.js"></script>
 		<link href="css/bootstrap.min.css" rel="stylesheet">
-		<link href="css/offcanvas.css" rel="stylesheet">
+		<link href="css/admin.css" rel="stylesheet">
 		<script type="text/javascript" >
 			hasScrolled = false
 			skins = {}
@@ -14,6 +14,7 @@
 			speed = 500
 			check = true
 			currentTab = "dash"
+			currentSubTab = "console"
 			memoryGraph = []
 			_ = function(id) {return document.getElementById(id)}
 			function isAuthed(){
@@ -29,7 +30,7 @@
 					}catch(err){}*/
 					path = window.location.hash.substr(1)
 					if(path.length > 0){
-						_switchTab(path)
+						window.onhashchange()
 					}
 				}else{
 					window.location = "login.html"
@@ -41,12 +42,8 @@
 			window.onblur = function(){
 				check = false
 			}
-			function handleScroll(z){
-				hasScrolled = true
-				if(z.scrollTop == z.scrollHeight) {hasScrolled = false;console.log('no scroll')}
-			}
 			// Shamelessly copied from http://stackoverflow.com/questions/10420352/converting-file-size-in-bytes-to-human-readable
-			function getReadableFileSizeString(fileSizeInBytes){
+			function getReadableFilesize(fileSizeInBytes){
 				var i = -1;
 				var byteUnits = [' kB', ' MB', ' GB', ' TB', 'PB', 'EB', 'ZB', 'YB'];
 				do {
@@ -55,10 +52,8 @@
 				} while (fileSizeInBytes > 1024);
 				return Math.max(fileSizeInBytes, 0.1).toFixed(1) + byteUnits[i];
 			}
-			function tick(){
-				setTimeout("tick()", speed)
-				if(!check) return false
-				stats = requests.admin("admin_stats", {"last_refresh": lastRefresh})
+			function statsCallback(stats){
+				console.log(stats)
 				if(stats["status"] == "error" || stats == ""){
 					console.log("Error while refreshing stats. Connection lost?")
 					_("lost_connection_page").style.display = "block"
@@ -75,8 +70,8 @@
 				_("server_version").innerHTML = stats["server_version"]
 				_("server_motd").innerHTML = stats["motd"]
 				_("server_name").innerHTML = stats["server_name"]
-				_("memory_status").innerHTML = getReadableFileSizeString(stats["server_memory"])
-				_("world_size").innerHTML = getReadableFileSizeString(stats["world_size"])
+				_("memory_status").innerHTML = getReadableFilesize(stats["server_memory"])
+				_("world_size").innerHTML = getReadableFilesize(stats["world_size"])
 				document.title = stats["server_name"] + " - Wrapper.py"
 				
 				// draw player list
@@ -111,9 +106,16 @@
 				for(i in stats["plugins"]){
 					if(i == "getLength") continue
 					var plugin = stats["plugins"][i]
-					if(plugin.description) var description = plugin.description.replace("\n", "</br></br>")
+					if(plugin.description) var description = "<span style='font-size:14px;'>" + plugin.description.replace(/\n/g, "</br>") + "</span>"
 					else var description = "<i>No description is available for this plugin.</i>"
-					_("pluginlist").innerHTML += "<td style='white-space:nowrap;'>"+plugin.name+"</td><td>"+description+"</td><td style='white-space:nowrap;'><button onclick='_toggle_plugin(\""+plugin.id+"\", this)'>Disable</button></td></tr>"
+					if(plugin.summary) var summary = plugin.summary.replace("\n", "</br></br>") + "<hr/>"
+					else var summary = ""
+					if(!plugin.author) plugin.author = "anonymous developer"
+					if(plugin.website)
+						var website = "<a href='"+plugin.website+"'>Website</a>"
+					else
+						var website = ""
+					_("pluginlist").innerHTML += "<td style='white-space:nowrap'><b>"+plugin.name+"</b> v"+plugin.version+"<div class='small'>by "+plugin.author+"<br/>"+website+"</div></td><td>"+summary+description+"</td><td style='white-space:nowrap;'><button onclick='_toggle_plugin(\""+plugin.id+"\", this)' class='btn btn-default'>Disable</button></td></tr>"
 				}
 								
 				// draw console
@@ -123,51 +125,33 @@
 					var doScroll = true
 				}
 				if(stats["console"].length > 0)
-					p.innerHTML += "\n" + stats["console"].join("\n")
+					p.innerHTML += "\n" + stats["console"].join("\n").replace(/</g,"&lt;").replace(/>/g,"&gt;")
 				if(doScroll) p.scrollTop = p.scrollHeight
 				
-				// memory usage graph code, ew
-				/*if(memoryGraph.length == 0){
-					while(memoryGraphPoints < 200){
-						memoryGraph[memoryGraph.length] = [memoryGraph.length, 0]
-						memoryGraphPoints += 1
-					}
+				// draw chat
+				for(i in stats["chat"]){
+					var line = stats["chat"][i]; payload = line.payload
+					if(line.type == "irc")
+						_("chatbox").innerHTML += "["+payload["channel"]+"] &lt;"+payload["nick"]+"&gt; "+payload["message"]+"\n"
+					if(line.type == "playerJoin")
+						_("chatbox").innerHTML += "&lt;"+payload["player"]+"&gt; joined the game\n"
+					if(line.type == "player")
+						_("chatbox").innerHTML += "&lt;"+payload["player"]+"&gt; "+payload["message"]+"\n"
 				}
-				for(i in stats["server_memory_graph"]){
-					if(isNaN(stats["server_memory_graph"][i])) continue;
-					var point = [memoryGraph.length, (stats["server_memory_graph"][i] / 1024000000)*100]
-					if(isNaN(point[1])) point[1] = 0
-					memoryGraph[memoryGraph.length] = point
-					memoryGraphPoints += 1
-				}
-				if(memoryGraph.getLength() > 200)
-					console.log(memoryGraph.getLength())
-					memoryGraph.splice(0, memoryGraph.getLength() - 199)
-					memoryGraph.shift(0)*/
-				/*var p = 0
-				while(memoryGraph.getLength() > 200){
-					delete memoryGraph[0]
-					console.log("Deleted")
-					p += 1
-					if (p > 300) {
-						break
-					}
-					memoryGraph.shift(0)
-				}*/
-				/*var m = []
-				for (i in memoryGraph){
-					if(memoryGraph[i] == undefined) continue
-					m[m.length] = [m.length, memoryGraph[i][1]]
-				}
-				memoryGraph = m*/
-				/*$.plot($("#flot-memory-usage"), [
-					{"label": "Free", data:0.4, "color": "#1E8BC3"},
-					{"label": "Other", data:0.5},
-					{"label": "Used", data:0.1, "color": "#D64541"}], 
-				{ series:{pie:{show:true}}, tooltip:true});*/
 				
 				// set wrapper.py build string
 				_("buildstring").innerHTML = "Wrapper.py " + stats["wrapper_build"]
+			}
+			function tick(){
+				setTimeout("tick()", speed)
+				if(!check) return false
+				try{
+					stats = requests.adminThreaded("admin_stats", {"last_refresh": lastRefresh}, statsCallback)
+				}catch(err){
+					console.log("Error while refreshing stats. Connection lost?")
+					_("lost_connection_page").style.display = "block"
+					_("admin_page").style.display = "none"
+				}
 			}
 
 			// admining functions
@@ -238,23 +222,53 @@
 					el.innerHTML = "Disable"
 				}
 			}
+			function _halt_wrapper(){
+				if(confirm("WARNING! Are you sure you want to halt Wrapper.py? Once you shut it down, you probably won't be able to access this web interface and you'll have to ask your administer to boot Wrapper.py back up."))
+					requests.admin("halt_wrapper", {})
+			}
 			function _logout(){
 				requests.admin("logout", {})
 				window.location = "login.html"
 			}
+			// I wrote this while very tired. Blah!
 			function _switchTab(id){
+				console.log(id)
 				if(id == currentTab) return
 				_("tab-"+currentTab).className = ""
 				_("tab-"+id).className = "active"
 				_("screen-"+currentTab).style.display = "none"
 				_("screen-"+id).style.display = "block"
 				console.log("Switching from "+currentTab+" to "+id)
+				if(id == "server"){
+					var p = _("server_console") 
+					p.scrollTop = p.scrollHeight
+				}
 				currentTab = id
+			}
+			function _switchSubTab(id){
+				if(id == currentSubTab) return
+				_("nav-"+currentSubTab).className = ""
+				_("nav-"+id).className = "active"
+				_("tab-"+currentSubTab).style.display = "none"
+				_("tab-"+id).style.display = "block"
+				console.log("Switching from sub-tab "+currentTab+" to sub-tab "+id)
+				if(id == "files") onFilesLoaded()
+				currentSubTab = id
 			}
 			window.onhashchange = function(){
 				path = window.location.hash.substr(1)
-				if(!(path.length == 0))
-					_switchTab(path)
+				if(!(path.length == 0)){
+					if(path.substr(0, 1) == "-"){
+						window.location.hash = "#"+currentTab+"/"+path.substr(1)
+						//_switchSubTab(path.substr(1))
+					}else{
+						tab = path.split("/")[0]; subtab = path.split("/")[1]
+						console.log("Regular tab: " + tab + " | Subtab: " + subtab)
+						_switchTab(tab)
+						if(subtab.length > 0)
+							_switchSubTab(subtab)
+					}
+				}
 			}
 			Array.prototype.getLength = function(){
 				var l = 0;
@@ -278,32 +292,34 @@
 				font-size: 12px;
 			}
 			.op{color:darkgoldenrod;}
+			.console{height: 100%;display: table-row;}
+			.command{display: table-row;}
 		</style>
 	</head>
 	<body>
 		<div id="admin_page">
 			<nav class="navbar navbar-fixed-top navbar-inverse" role="navigation">
 				<div class="container">
-				<div class="navbar-header">
-					<button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
-						<span class="sr-only">Toggle navigation</span>
-						<span class="icon-bar"></span>
-						<span class="icon-bar"></span>
-						<span class="icon-bar"></span>
-					</button>
-					<a class="navbar-brand" id="server_name">Project name</a>
-				</div>
-				<div id="navbar" class="collapse navbar-collapse">
-					<ul class="nav navbar-nav">
-						<li id="tab-dash" class="active"><a href="#dash">Dashboard</a></li>
-						<li id="tab-console"><a href="#console">Console</a></li>
-						<li id="tab-plugins"><a href="#plugins">Plugins</a></li>
-						<li id="tab-about"><a href="#about">About</a></li>
-					</ul>
-					<ul class="nav navbar-nav navbar-right">
-						<li><a href="javascript:_logout();">Logout</a></li>
-					</ul>
-				</div>
+					<div class="navbar-header">
+						<button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+							<span class="sr-only">Toggle navigation</span>
+							<span class="icon-bar"></span>
+							<span class="icon-bar"></span>
+							<span class="icon-bar"></span>
+						</button>
+						<a class="navbar-brand" id="server_name">Wrapper.py</a>
+					</div>
+					<div id="navbar" class="collapse navbar-collapse">
+						<ul class="nav navbar-nav">
+							<li id="tab-dash" class="active"><a href="#dash">Dashboard</a></li>
+							<li id="tab-server"><a href="#server">Server</a></li>
+							<li id="tab-plugins"><a href="#plugins">Plugins</a></li>
+							<li id="tab-about"><a href="#about">About</a></li>
+						</ul>
+						<ul class="nav navbar-nav navbar-right">
+							<li><a href="javascript:_logout();">Logout</a></li>
+						</ul>
+					</div>
 				</div>
 			</nav>
 			<div id="screen-dash">
@@ -338,7 +354,7 @@
 							<b>Player Count: </b> <span id="playercount_status">n/a players</span></br>
 							<b>Memory Usage: </b> <span id="memory_status">n/a</span></br>
 							<b>World Size: </b> <span id="world_size">n/a</span>
-							</br></br>Actions: <button onclick="_start()">Start</button> <button onclick="_restart()">Restart</button> <button onclick="_stop()">Stop</button> <button onclick="_kill()">Force Kill</button>
+							</br></br><button onclick="_start()" class="btn btn-default">Start</button> <button onclick="_restart()" class="btn btn-default">Restart</button> <button onclick="_stop()" class="btn btn-default">Stop</button> <button onclick="_kill()" class="btn btn-default">Force Kill</button>
 						</div>
 					</div>
 				</div>
@@ -356,9 +372,126 @@
 					</div>
 				</div>
 			</div>
-			<div id="screen-console" style="display:none;">
-				<textarea disabled="" style="width:100%;" rows="20" id="server_console" onscroll="handleScroll(this)"></textarea>
-				<br/><br/><input type="text" onkeydown="if(event.keyCode == 13){_console(this.value);this.value='';}" placeholder="Run a command in the Minecraft server console..." style="width:100%;"/>
+			<div id="screen-server" style="display:none;">
+				<ul class="nav nav-pills nav-stacked col-md-2">
+				  <li role="presentation" id="nav-console" class="active"><a href="#-console">Console</a></li>
+				  <li role="presentation" id="nav-chat"><a href="#-chat">Chat</a></li>
+				  <li role="presentation" id="nav-files"><a href="#-files">Files</a></li>
+				  <li role="presentation" id="nav-settings"><a href="#-settings">Settings</a></li>
+				</ul>
+				<div class="col-md-10">
+					<div id="tab-console" class="container-fluid">
+						<pre id="server_console" style="overflow-y:scroll;height:90%;"></pre>
+						<input type="text" onkeydown="if(event.keyCode == 13){_console(this.value);this.value='';}" placeholder="Run a command in the Minecraft server console..." class="form-control"/>
+					</div>
+					<div id="tab-chat" style="display:none;">
+						<pre id="chatbox" style="overflow-y:scroll;height:90%;"></pre>
+						<input type="text" onkeydown="if(event.keyCode == 13){_console('say '+this.value);this.value='';}" placeholder="Send a message..." class="form-control"/>
+					</div>
+					<div id="tab-files" style="display:none;">
+						<script type="text/javascript">
+							locationPath = ""
+							filesLoaded = false
+							reloadFiles = function(z){
+								if(z == undefined) z = locationPath
+								console.log(locationPath)
+								var payload = requests.admin("listdir", {"path": z})
+								_("files").innerHTML = "<th>Filename</th><th>Actions</th><tr/>"
+								files = payload.files; folders = payload.folders;
+								for(i in folders){
+									if(isNaN(i)) continue
+									var file = folders[i]
+									_("files").innerHTML += "<tr><td><b><a href='javascript:appendPath("+i+")'>"+file.filename+"</a></b><div class='subtext'>"+file.count+" files</div></td><td><a href='javascript:renameFile("+i+", true)'>Rename</a> | <a href='javascript:deleteFile("+i+", true)'>Delete</a></td></tr>"
+								}
+								for(i in files){
+									if(isNaN(i)) continue
+									var file = files[i]
+									_("files").innerHTML += "<tr><td>"+file.filename+"<div class='subtext'>"+getReadableFilesize(file.size)+" bytes</div></td><td><a href='javascript:renameFile("+i+", false)'>Rename</a> | <a href='javascript:deleteFile("+i+", false)'>Delete</a></td></tr>"
+								}
+								var crumbs = z.split("/")
+								_("crumbs").innerHTML = "<li><a href='javascript:gotoPath(\"\")'>Root</a></li>"
+								var thusFar = "" 
+								for(i in crumbs){
+									if(isNaN(i)) continue
+									if(thusFar.length > 0)
+										thusFar += "/" + crumbs[i]
+									else
+										thusFar += crumbs[i]
+									_("crumbs").innerHTML += "<li><a href='javascript:gotoPath(\""+thusFar+"\")'>"+crumbs[i]+"</a></li>" 
+								}
+								locationPath = z
+							}
+							gotoPath = function(path){
+								locationPath = path
+								reloadFiles()
+							}
+							appendPath = function(i){
+								if(locationPath.length > 0)
+									reloadFiles(locationPath + "/"+folders[i].filename)
+								else
+									reloadFiles(folders[i].filename)
+							}
+							renameFile = function(i, folder){
+								if(folder)
+									var name = folders[i].filename
+								else
+									var name = files[i].filename
+								if (locationPath.length > 0)
+									var path = locationPath + "/" + name
+								else
+									var path = name
+								var rename = prompt("Rename '"+name+"' to the following: ", name)
+								if(!rename) return
+								if (locationPath.length > 0)
+									var newPath = locationPath + "/" + rename
+								else
+									var newPath = rename
+								var status = requests.admin("rename_file", {"path": path, "rename": newPath})
+								if(status)
+									alert("Successfully renamed '"+name+"' to '"+rename+"'!")
+								else
+									alert("An error occurred while renaming. Maybe you don't have permission to modify the file?")
+								reloadFiles()
+							}
+							deleteFile = function(i, folder){
+								if(folder)
+									var name = folders[i].filename
+								else
+									var name = files[i].filename
+								if (locationPath.length > 0)
+									var path = locationPath + "/" + name
+								else
+									var path = name
+								if(!confirm("Are you sure you want to delete '"+name+"'?")) return
+								var status = requests.admin("delete_file", {"path": path})
+								if(status)
+									alert("Successfully deleted '"+name+"'.")
+								else
+									alert("An error occurred while deleting.")
+								reloadFiles()
+							}
+							onFilesLoaded = function(){
+								if(!filesLoaded){
+									reloadFiles()
+								}
+								filesLoaded = true
+							}
+						</script>
+						<ol class="breadcrumb col-md-10" id="crumbs"></ol>
+						<div class="container">
+						 	<button class="btn btn-default">New Directory</button>
+						 	<button class="btn btn-default" onclick="reloadFiles()">Refresh</button>
+						</div>
+						<div class="table-responsive">
+							<table class="table table-striped">
+								<tbody id="files"></tbody>
+							</table>
+						</div>
+					</div>
+					<div id="tab-settings" style="display:none;">
+						settings
+					</div>
+				</div>
 			</div>
 			<div id="screen-plugins" style="display:none;">
 				<button onclick="_reload_plugins()" class="btn btn-primary">Reload Plugins</button>
@@ -371,9 +504,10 @@
 				</div>
 			</div>
 			<div id="screen-about" style="display:none;">
+				<button onclick="_halt_wrapper();" class="btn btn-primary">Halt Wrapper.py</button>
 				<div class="small">Copyright Ben Baptist 2014</div>
 				<div class="small" id="buildstring"></div>
-				<div class="small">bootstrap - the best thing ever. design is not final.</div>
+				<div class="small">bootstrap - the best thing ever. current design is not final, and is subject to change.</div>
 			</div>
 		</div>
 
@@ -384,70 +518,5 @@
 		<script src="js/jquery.js"></script>
 		<script src="js/bootstrap.min.js"></script>
 		<script src="js/offcanvas.js"></script>
-		
-		<script src="js/jquery.flot.js"></script>
-		<script src="js/jquery.flot.pie.js"></script>
-		<script src="js/jquery.flot.resize.js"></script>
-		<script src="js/excanvas.min.js"></script>
-		
-		<script type="text/javascript" >
-			/*jQuery.browser = {};
-			(function () {
-				jQuery.browser.msie = false;
-				jQuery.browser.version = 0;
-				if (navigator.userAgent.match(/MSIE ([0-9]+)\./)) {
-					jQuery.browser.msie = true;
-					jQuery.browser.version = RegExp.$1;
-				}
-			})();
-			$(function() {
-			var container = $("#flot-memory-usage")
-			var data = []
-			function getRandomData() {
-				res = []; h = 0
-				while(res.length < 100){
-					res[res.length] = [h, 90]
-					h += 1
-				}
-				return res
-			}
-			series = [{
-				data: memoryGraph,
-				lines: {
-					fill: true
-				}
-			}];
-			var plot = $.plot(container, series, {
-				grid: {
-						borderWidth: 1,
-						minBorderMargin: 20,
-						labelMargin: 10,
-						margin: {
-							top: 8,
-							bottom: 20,
-							left: 20
-						}
-				},
-				xaxis: {
-						tickFormatter: function() {
-							return "";
-						}
-				},
-				yaxis: {
-						min: 0,
-						max: 100
-				},
-				legend: {
-						show: true
-				}
-			});
-			setInterval(function updateRandom() {
-				series[0].data = memoryGraph
-				plot.setData(series);
-				plot.draw();
-			}, 200);
-		
-		});*/
-		</script>
 	</body>
 </html>

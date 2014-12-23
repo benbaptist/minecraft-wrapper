@@ -55,11 +55,12 @@ web-enabled = False
 web-bind = 0.0.0.0
 web-port = 8070
 web-password = password
+web-allow-file-management = True
 public-stats = True
 """
 
 class Config:
-	version = "0.7.4"
+	version = "0.7.5"
 	debug = False
 	def __init__(self, log):
 		self.log = log
@@ -124,6 +125,7 @@ class Config:
 			"web-bind": "0.0.0.0",
 			"web-port": 8070,
 			"web-password": "password",
+			"web-allow-file-management": False,
 			"public-stats": True
 		}}
 

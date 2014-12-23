@@ -1,5 +1,23 @@
 #Changelog#
 
+<h4>0.7.5</h4>
+**Features**
+- Web interface improvements:
+  - Increased console scrollback from 200 lines to 1000 lines 
+  - Added 'Server' tab with sub-tabs:
+    - Moved the server console into the Server tab
+    - Chat tab for chatting with both the server and IRC simutaniously
+    - File manager for viewing, renaming, and deleting, in the server folder
+    - Settings tab for changing server.properties and other settings
+  - Other slight design improvements
+- `/raw` console command
+
+**Bug Fixes**
+- Fixed error message when backups.json was corrupt with IRC turned on
+
+**Developer Changes**
+- "AUTHOR" and "WEBSITE" plugin metadata variables added (see template.py for example)
+
 <h4>0.7.4</h4>
 Just a small little update, to fix a few things, and improve upon some existing features.
 
@@ -231,6 +249,7 @@ Small update, but brings one much-needed change: the new configuration file syst
   - Change password from web panel
   - Move password from the config file to a hashed password in web.py's data object
   - Perhaps move to Flask?
+  - Implement a logged notification system - useful for critical errors that happened in the past, etc. 
 - Fix backups happening upon start (potentially an issue, not 100% sure)
 - Fix packet error when teleporting long distances
 - Multi-server mode (This might actually become a separate project for managing multiple servers and accounts, rather than being a Wrapper.py feature)

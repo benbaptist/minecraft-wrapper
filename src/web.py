@@ -1,5 +1,5 @@
 # Unfinished web UI code. Yeah, I know. The code is awful. Probably not even a HTTP-compliant web server anyways. I just wrote it at like 3AM in like an hour.
-import socket, traceback, zipfile, threading, time, json, random, urlparse, storage, log, urllib
+import socket, traceback, zipfile, threading, time, json, random, urlparse, storage, log, urllib, os
 from api import API
 try:
 	import pkg_resources, requests
@@ -17,19 +17,40 @@ class Web:
 		if "keys" not in self.data: self.data["keys"] = []
 		
 		self.api.registerEvent("server.consoleMessage", self.onServerConsole)
+		self.api.registerEvent("player.message", self.onPlayerMessage)
+		self.api.registerEvent("player.join", self.onPlayerJoin)
+		self.api.registerEvent("player.leave", self.onPlayerLeave)
+		self.api.registerEvent("irc.message", self.onChannelMessage)
 		self.consoleScrollback = []
+		self.chatScrollback = []
 		self.memoryGraph = []
 		self.loginAttempts = 0
 		self.lastAttempt = 0
 		self.disableLogins = 0
 		
-		t = threading.Thread(target=self.updateGraph, args=())
-		t.daemon = True
-		t.start()
+	#	t = threading.Thread(target=self.updateGraph, args=())
+#		t.daemon = True
+#		t.start()
 	def onServerConsole(self, payload):
-		while len(self.consoleScrollback) > 200:
+		while len(self.consoleScrollback) > 1000:
 			del self.consoleScrollback[0]
 		self.consoleScrollback.append((time.time(), payload["message"]))
+	def onPlayerMessage(self, payload):
+		while len(self.chatScrollback) > 200:
+			del self.consoleScrollback[0]
+		self.chatScrollback.append((time.time(), {"type": "player", "payload": {"player": payload["player"].username, "message": payload["message"]}}))
+	def onPlayerJoin(self, payload):
+		while len(self.chatScrollback) > 200:
+			del self.consoleScrollback[0]
+		self.chatScrollback.append((time.time(), {"type": "playerJoin", "payload": {"player": payload["player"].username}}))
+	def onPlayerLeave(self, payload):
+		while len(self.chatScrollback) > 200:
+			del self.consoleScrollback[0]
+		self.chatScrollback.append((time.time(), {"type": "playerLeave", "payload": {"player": payload["player"].username}}))
+	def onChannelMessage(self, payload):
+		while len(self.chatScrollback) > 200:
+			del self.consoleScrollback[0]
+		self.chatScrollback.append((time.time(), {"type": "irc", "payload": payload}))
 	def updateGraph(self):
 		while not self.wrapper.halt:
 			while len(self.memoryGraph) > 200:
@@ -149,6 +170,8 @@ class Client:
 			return {"status": "error", "payload": "permission_denied"}
 		else:
 			return {"status": "good", "payload": info}
+	def safePath(self, path):
+		os.getcwd()
 	def runAction(self, request):
 		def args(i): 
 			try: return request.split("/")[1:][i]
@@ -186,6 +209,53 @@ class Client:
 				self.log.warn("[%s] Logged out." % self.addr[0])
 				return "goodbye"
 			return EOFError
+		if action == "listdir":
+			if not self.web.validateKey(get("key")): return EOFError
+			if not self.wrapper.config["Web"]["web-allow-file-management"]: return EOFError
+			safe = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWYXZ0123456789_-/ "
+			pathUnfiltered = get("path"); path = ""
+			for i in pathUnfiltered:
+				if i in safe: path+=i
+			if path == "": path = "."
+			files = []; folders = []; listdir = os.listdir(path); listdir.sort()
+			for p in listdir:
+				fullpath = path + "/" + p
+				if p[-1] == "~": continue
+				if p[0] == ".": continue
+				if os.path.isdir(fullpath):
+					folders.append({"filename": p, "count": len(os.listdir(fullpath))})
+				else:
+					files.append({"filename": p, "size": os.path.getsize(fullpath)})
+			return {"files": files, "folders": folders}
+		if action == "rename_file":
+			if not self.web.validateKey(get("key")): return EOFError
+			if not self.wrapper.config["Web"]["web-allow-file-management"]: return EOFError
+			file = get("path"); rename = get("rename")
+			if os.path.exists(file):
+				try: os.rename(file, rename)
+				except:
+					print traceback.format_exc() 
+					return False
+				return True
+			return False
+		if action == "delete_file":
+			if not self.web.validateKey(get("key")): return EOFError
+			if not self.wrapper.config["Web"]["web-allow-file-management"]: return EOFError
+			file = get("path");
+			if os.path.exists(file):
+				try:
+					if os.path.isdir(file):
+						os.removedirs(file)
+					else: 
+						os.remove(file)
+				except:
+					print traceback.format_exc()  
+					return False
+				return True
+			return False
+		if action == "halt_wrapper":
+			if not self.web.validateKey(get("key")): return EOFError
+			self.wrapper.shutdown()
 		if action == "get_player_skin":
 			if not self.web.validateKey(get("key")): return EOFError
 			if self.wrapper.proxy == False: return {"error": "Proxy mode not enabled."}
@@ -212,17 +282,25 @@ class Client:
 			for id in self.wrapper.plugins:
 				plugin = self.wrapper.plugins[id]
 				if plugin["description"]: description = plugin["description"]
-				else: description = plugin["summary"]
+				else: description = None
 				plugins.append({
 					"name": plugin["name"],
 					"version": plugin["version"],
 					"description": description,
+					"summary": plugin["summary"],
+					"author": plugin["author"],
+					"website": plugin["website"],
+					"version": (".".join([str(_) for _ in plugin["version"]])),
 					"id": id
 				})
-			scrollBack = []
+			consoleScrollback = []
 			for line in self.web.consoleScrollback:
 				if line[0] > refreshTime:
-					scrollBack.append(line[1])
+					consoleScrollback.append(line[1])
+			chatScrollback = []
+			for line in self.web.chatScrollback:
+				if line[0] > refreshTime:
+					chatScrollback.append(line[1])
 			memoryGraph = []
 			for line in self.web.memoryGraph:
 				if line[0] > refreshTime:
@@ -232,7 +310,8 @@ class Client:
 				"plugins": plugins,
 				"server_state": self.wrapper.server.state,
 				"wrapper_build": self.wrapper.getBuildString(),
-				"console": scrollBack,
+				"console": consoleScrollback,
+				"chat": chatScrollback,
 				"level_name": self.wrapper.server.worldName,
 				"server_version": self.wrapper.server.version,
 				"motd": self.wrapper.server.motd,

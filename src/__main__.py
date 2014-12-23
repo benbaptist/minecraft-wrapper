@@ -56,6 +56,10 @@ class Wrapper:
 		except: description = None
 		try: summary = plugin.SUMMARY
 		except: summary = None
+		try: author = plugin.AUTHOR
+		except: author = None
+		try: website = plugin.WEBSITE
+		except: website = None
 		if id in self.storage["disabled_plugins"]:
 			self.log.warn("Plugin '%s' disabled - not loading" % name)
 			return
@@ -65,6 +69,8 @@ class Wrapper:
 		self.plugins[id]["version"] = version
 		self.plugins[id]["summary"] = summary
 		self.plugins[id]["description"] = description 
+		self.plugins[id]["author"] = author 
+		self.plugins[id]["website"] = website 
 		self.plugins[id]["filename"] = i
 		self.commands[id] = {}
 		self.events[id] = {}
@@ -78,7 +84,11 @@ class Wrapper:
 		except:
 			self.log.error("Error while disabling plugin '%s'" % plugin)
 			self.log.getTraceback()
-		reload(self.plugins[plugin]["module"])
+		try:
+			reload(self.plugins[plugin]["module"])
+		except:
+			self.log.error("Error while reloading plugin '%s' -- it was probably deleted or is a bugged version" % plugin)
+			self.log.getTraceback()
 	def loadPlugins(self):
 		self.log.info("Loading plugins...")
 		if not os.path.exists("wrapper-plugins"):
@@ -527,8 +537,11 @@ class Wrapper:
 					break
 				continue
 			def args(i): 
-				try: return input[1:].split(" ")[i];
-				except:pass;
+				try: return input[1:].split(" ")[i]
+				except: pass
+			def argsAfter(i): 
+				try: return " ".join(input[1:].split(" ")[i:]);
+				except: pass;
 			command = args(0)
 			if command == "halt":
 				self.server.stop("Halting server...", save=False)
@@ -563,6 +576,14 @@ class Wrapper:
 					self.log.info("Server Memory Usage: %d bytes" % self.server.getMemoryUsage())
 				else:
 					self.log.error("Server not booted or another error occurred while getting memory usage!")
+			elif command == "raw":
+				if self.server.state in (1, 2, 3):
+					if len(argsAfter(1)) > 0:
+						self.server.console(argsAfter(1))
+					else:
+						self.log.info("Usage: /raw [command]")
+				else:
+					self.log.error("Server is not started. Please run `/start` to boot it up.")
 			elif command == "help":
 				self.log.info("/reload - Reload plugins")	
 				self.log.info("/plugins - Lists plugins")	
@@ -571,6 +592,7 @@ class Wrapper:
 				self.log.info("/restart - Restarts the server, obviously")				
 				self.log.info("/halt - Shutdown Wrapper.py completely")
 				self.log.info("/mem - Get memory usage of the server")
+				self.log.info("/raw [command] - Send command to the Minecraft Server. Useful for Forge commands like `/fml confirm`.")
 				self.log.info("Wrapper.py Version %s" % self.getBuildString())
 			else:
 				self.log.error("Invalid command %s" % command)
@@ -603,6 +625,6 @@ if __name__ == "__main__":
 		wrapper.halt = True
 		wrapper.disablePlugins()
 		try:
-			wrapper.server.stop("Wrapper.py crashed - please contact the server host instantly")
+			wrapper.server.stop("Wrapper.py crashed - please contact the server host instantly", save=False)
 		except:
 			print "Failure to shutdown server cleanly! Server could still be running, or it might rollback/corrupt!"

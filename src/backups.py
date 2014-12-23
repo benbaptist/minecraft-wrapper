@@ -28,9 +28,8 @@ class Backups:
 				with open(self.config["Backups"]["backup-location"] + "/backups.json", "r") as f:
 					try: self.backups = json.loads(f.read())
 					except:
-						self.log.error("NOTE - backups.json was unreadable. This might be due to corruption. This might lead to backups never being deleted.")
-						for channel in self.config["IRC"]["channels"]:
-							self.send("PRIVMSG %s :ERROR - backups.json is corrupted. Please contact an administer instantly, this may be critical." % (channel))
+						self.log.error("NOTE - backups.json was unreadable. It might be corrupted. Backups will no longer be automatically pruned.")
+						self.wrapper.callEvent("wrapper.backupFailure", {"reasonCode": 4, "reasonText": "backups.json is corrupted. Please contact an administer instantly, as this may be critical."})
 						self.backups = []
 			else:
 				if len(os.listdir(self.config["Backups"]["backup-location"])) > 0:
@@ -62,7 +61,7 @@ class Backups:
 			# Check if tar is installed
 			which = "where" if platform.system() == "Windows" else "which"
 			if not subprocess.call([which, "tar"]) == 0:
-				self.wrapper.callEvent("wrapper.backupFailure", {"reasonCode": 1, "reasonText": "tar is not installed."})
+				self.wrapper.callEvent("wrapper.backupFailure", {"reasonCode": 1, "reasonText": "Tar is not installed. Please install tar before trying to make backups."})
 				self.log.error("The backup could not begin, because tar does not appear to be installed!")
 				self.log.error("If you are on a Linux-based system, please install it through your preferred package manager.")
 				self.log.error("If you are on Windows, you can find GNU/Tar from this link: http://goo.gl/SpJSVM")
