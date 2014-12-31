@@ -209,6 +209,17 @@ class Client:
 				self.log.warn("[%s] Logged out." % self.addr[0])
 				return "goodbye"
 			return EOFError
+		if action == "read_server_props":
+			if not self.web.validateKey(get("key")): return EOFError
+			return open("server.properties", "r").read()
+		if action == "save_server_props":
+			if not self.web.validateKey(get("key")): return EOFError
+			props = get("props")
+			if not props: return False
+			if len(props) < 10: return False
+			with open("server.properties", "w") as f:
+				f.write(props)
+			return "ok"
 		if action == "listdir":
 			if not self.web.validateKey(get("key")): return EOFError
 			if not self.wrapper.config["Web"]["web-allow-file-management"]: return EOFError
@@ -325,6 +336,12 @@ class Client:
 			self.wrapper.server.console(get("execute"))
 			self.log.warn("[%s] Executed: %s" % (self.addr[0], get("execute")))
 			return True
+		if action == "chat":
+			if not self.web.validateKey(get("key")): return EOFError
+			message = get("message")
+			self.web.chatScrollback.append((time.time(), {"type": "raw", "payload": "[WEB ADMIN] " + message}))
+			self.wrapper.server.broadcast("&c[WEB ADMIN] " + message)
+			return True
 		if action == "kick_player":
 			if not self.web.validateKey(get("key")): return EOFError
 			player = get("player")
@@ -422,7 +439,11 @@ class Client:
 	def handle(self):
 		while True:
 			try:
-				self.buffer = self.socket.recv(1024).split("\n")
+				data = self.socket.recv(1024)
+				if len(data) < 1:
+					self.close()
+					return
+				self.buffer = data.split("\n")
 			except:
 				self.close()
 				#self.log.debug("(WEB) Connection %s closed" % str(self.addr))

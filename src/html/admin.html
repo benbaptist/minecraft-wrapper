@@ -137,6 +137,8 @@
 						_("chatbox").innerHTML += "&lt;"+payload["player"]+"&gt; joined the game\n"
 					if(line.type == "player")
 						_("chatbox").innerHTML += "&lt;"+payload["player"]+"&gt; "+payload["message"]+"\n"
+					if(line.type == "raw")
+						_("chatbox").innerHTML += payload
 				}
 				
 				// set wrapper.py build string
@@ -206,6 +208,9 @@
 			function _console(line){
 				requests.admin("console", {"execute":line})
 			}
+			function _chat(line){
+				requests.admin("chat", {"message": line})
+			}
 			function _reload_plugins(){
 				if(!confirm("Are you sure you want to reload all plugins?")) return
 				requests.admin("reload_plugins", {})
@@ -253,6 +258,7 @@
 				_("tab-"+id).style.display = "block"
 				console.log("Switching from sub-tab "+currentTab+" to sub-tab "+id)
 				if(id == "files") onFilesLoaded()
+				if(id == "settings") onSettingsLoaded()
 				currentSubTab = id
 			}
 			window.onhashchange = function(){
@@ -380,13 +386,13 @@
 				  <li role="presentation" id="nav-settings"><a href="#-settings">Settings</a></li>
 				</ul>
 				<div class="col-md-10">
-					<div id="tab-console" class="container-fluid">
+					<div id="tab-console">
 						<pre id="server_console" style="overflow-y:scroll;height:90%;"></pre>
 						<input type="text" onkeydown="if(event.keyCode == 13){_console(this.value);this.value='';}" placeholder="Run a command in the Minecraft server console..." class="form-control"/>
 					</div>
 					<div id="tab-chat" style="display:none;">
 						<pre id="chatbox" style="overflow-y:scroll;height:90%;"></pre>
-						<input type="text" onkeydown="if(event.keyCode == 13){_console('say '+this.value);this.value='';}" placeholder="Send a message..." class="form-control"/>
+						<input type="text" onkeydown="if(event.keyCode == 13){_chat(this.value);this.value='';}" placeholder="Send a message..." class="form-control"/>
 					</div>
 					<div id="tab-files" style="display:none;">
 						<script type="text/javascript">
@@ -489,7 +495,33 @@
 						</div>
 					</div>
 					<div id="tab-settings" style="display:none;">
-						settings
+						<script type="text/javascript">
+							var settingsLoaded = false
+							reloadProperties = function(){
+								var props = requests.admin("read_server_props", {})
+								if(!props) return
+								_("server_properties").value = props
+							}
+							saveProperties = function(){
+								var result = requests.admin("save_server_props", {"props": _("server_properties").value})
+								if(result == "ok") 
+									alert("Successfully saved server.properties! It is recommended that you restart the server for the changes to take effect.")
+								else
+									alert("An unknown error occurred while saving.")
+							}
+							onSettingsLoaded = function(){
+								if(!settingsLoaded){ 
+									reloadProperties()
+								}
+								settingsLoaded = true
+							}
+						</script>
+						<div style="margin-bottom: 5px;">
+							<button onclick="reloadProperties()" class="btn btn-default">Reload server.properties</button>
+							<button style="float:right;" class="btn btn-primary" onclick="saveProperties()">Save</button>
+						</div>
+						<textarea id="server_properties" style="width:100%;height:90%;" class="form-control"></textarea>
+						Warning: Be careful about changing these settings. Changing them could break the server if you don't know what you're doing. 
 					</div>
 				</div>
 			</div>

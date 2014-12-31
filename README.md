@@ -1,7 +1,7 @@
 #Overview#
-Wrapper.py is a simple Minecraft server wrapper for implementing various functions into the server without the need for bukkit.
+Wrapper.py is an easy to use Minecraft server wrapper for adding extra functionality into the server without modifying the 
 
-</br></br>It also comes with a relatively simple and straight-forward plugin API that can be used to create small Bukkit-like plugins on vanilla. 
+</br></br>It also comes with a relatively simple and straight-forward - yet powerful - plugin API that can be used to create Bukkit-like plugins on vanilla. 
 
 #Installation#
 Wrapper.py doesn't require any special modules for most of the basic features to work, but web mode and proxy mode require the following: `pkg_resources`, `requests`, and `pycrypto`.  To install them, use pip:
@@ -47,7 +47,7 @@ Wrapper.py supports the following features:
   - Achievements, deaths, and whatnot appear on IRC
   - Chat between Minecraft server and IRC channels
 - Scheduled reboots
-- Web remote for controlling server through your web browser
+- Web remote for controlling the server and the wrapper through your web browser
 - Shell scripts that are called upon certain events (similar to plugin events, but quicker and easier)
 - Minecraft 1.7 and later support (uses tellraw!)
 

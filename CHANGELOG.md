@@ -14,6 +14,7 @@
 
 **Bug Fixes**
 - Fixed error message when backups.json was corrupt with IRC turned on
+- Potentially fixed CPU leak with web/proxy mode. I'm still not 100% sure what caused it and if it is actually fixed yet, though.
 
 **Developer Changes**
 - "AUTHOR" and "WEBSITE" plugin metadata variables added (see template.py for example)
