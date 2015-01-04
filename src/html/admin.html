@@ -138,7 +138,7 @@
 					if(line.type == "player")
 						_("chatbox").innerHTML += "&lt;"+payload["player"]+"&gt; "+payload["message"]+"\n"
 					if(line.type == "raw")
-						_("chatbox").innerHTML += payload
+						_("chatbox").innerHTML += payload + "\n"
 				}
 				
 				// set wrapper.py build string

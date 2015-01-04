@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # I ought to clean these imports up a bit.
-import socket, datetime, time, sys, threading, random, subprocess, os, json, signal, traceback, ConfigParser, ast, proxy, web, globals, storage, hashlib
+import socket, datetime, time, sys, threading, random, subprocess, os, json, signal, traceback, ConfigParser, ast, proxy, web, globals, storage, hashlib, cProfile
 from log import *
 from config import Config
 from irc import IRC
@@ -392,7 +392,6 @@ class Wrapper:
 			t = threading.Thread(target=self.irc.init, args=())
 			t.daemon = True
 			t.start()
-		# Old, deactivated web interface code. Will work on this more soon after the release of 0.7.0.
 		if self.config["Web"]["web-enabled"]:
 			if web.IMPORT_SUCCESS:
 				self.web = web.Web(self)
@@ -513,7 +512,7 @@ class Wrapper:
 				self.log.info("Update file successfully verified. Installing...")
 				with open(sys.argv[0], "w") as f:
 					f.write(wrapperFile)
-				self.log.info("Wrapper.py %s (#%d) installed. Please reboot the Wrapper.py." % (".".join([str(_) for _ in version]), build))
+				self.log.info("Wrapper.py %s (#%d) installed. Please reboot Wrapper.py." % (".".join([str(_) for _ in version]), build))
 				self.update = build
 				return True
 			else:
@@ -602,12 +601,11 @@ if __name__ == "__main__":
 	log.info("Wrapper.py started - Version %s" % wrapper.getBuildString())
 	
 	try:
-		t = threading.Thread(target=wrapper.start(), args=())
-		t.daemon = True
-		t.start()
+		wrapper.start()
+#		cProfile.run("wrapper.start()", "cProfile-debug")
 	except SystemExit:
 		#log.error("Wrapper.py received SystemExit")
-		os.system("reset")
+		#os.system("reset")
 		wrapper.disablePlugins()
 		wrapper.halt = True
 		try:

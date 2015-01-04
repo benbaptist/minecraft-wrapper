@@ -1,5 +1,5 @@
 # Unfinished web UI code. Yeah, I know. The code is awful. Probably not even a HTTP-compliant web server anyways. I just wrote it at like 3AM in like an hour.
-import socket, traceback, zipfile, threading, time, json, random, urlparse, storage, log, urllib, os
+import socket, traceback, zipfile, threading, time, json, random, urlparse, storage, log, urllib, os, cProfile
 from api import API
 try:
 	import pkg_resources, requests
@@ -90,6 +90,7 @@ class Web:
 		while not self.wrapper.halt:
 			try:
 				if self.bind():
+					#cProfile.run("self.listen()", "cProfile-debug")
 					self.listen()
 				else:
 					self.log.error("Could not bind web to %s:%d - retrying in 5 seconds" % (self.config["Web"]["web-bind"], self.config["Web"]["web-port"]))
@@ -114,6 +115,9 @@ class Web:
 			sock, addr = self.socket.accept()
 #			self.log.debug("(WEB) Connection %s started" % str(addr))
 			client = Client(self.wrapper, sock, addr, self)
+			#t = threading.Thread(target=cProfile.runctx, args=("client.wrap()", globals(), locals(), "cProfile-debug"))
+			#t.daemon = True
+			#t.start()
 			t = threading.Thread(target=client.wrap, args=())
 			t.daemon = True
 			t.start()
@@ -440,6 +444,7 @@ class Client:
 		while True:
 			try:
 				data = self.socket.recv(1024)
+				print "Reading %d amount of data" % len(data)
 				if len(data) < 1:
 					self.close()
 					return
