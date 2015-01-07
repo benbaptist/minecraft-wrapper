@@ -1,4 +1,8 @@
-import socket, datetime, time, sys, threading, random, subprocess, os, json, signal, traceback, api, StringIO, ConfigParser, backups, sys, codecs, resource
+import socket, datetime, time, sys, threading, random, subprocess, os, json, signal, traceback, api, StringIO, ConfigParser, backups, sys, codecs
+try: 
+	import resource
+	IMPORT_RESOURCE_SUCCESS = True
+except: IMPORT_RESOURCE_SUCCESS = False
 from api.player import Player
 from api.world import World
 class Server:
@@ -247,6 +251,7 @@ class Server:
 				self.data = []
 	def getMemoryUsage(self):
 		""" Returns allocated memory in bytes """
+		if IMPORT_RESOURCE_SUCCESS: return None
 		if not os.name == "posix": return None
 		if self.proc == False: return None
 		try:

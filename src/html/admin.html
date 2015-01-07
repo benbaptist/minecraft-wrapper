@@ -87,7 +87,7 @@
 					
 					if(player.isOp) var isOp = " class='op'"
 					else isOp = ""					
-					_("playerlist").innerHTML += "<td><canvas id='playerskin-"+player.name+"' width=16 height=16></canvas></td><td"+isOp+">"+player.name+"</td><td>"+player.uuid+"</td><td><button onclick='_kick("+i+")' class='btn btn-xs btn-default'>Kick</button> <button onclick='_ban("+i+")' class='btn btn-xs btn-default'>Ban</button> <button onclick='_op("+i+")' class='btn btn-xs btn-default'>OP</button> <button onclick='_deop("+i+")' class='btn btn-xs btn-default'>De-OP</button></td></tr>"
+					_("playerlist").innerHTML += "<td><canvas id='playerskin-"+player.name+"' width=16 height=16></canvas></td><td"+isOp+">"+player.name+"</td><td>"+player.uuid+"</td><td style='white-space:nowrap;'><button onclick='_kick("+i+")' class='btn btn-xs btn-default'>Kick</button> <button onclick='_ban("+i+")' class='btn btn-xs btn-default'>Ban</button> <button onclick='_op("+i+")' class='btn btn-xs btn-default'>OP</button> <button onclick='_deop("+i+")' class='btn btn-xs btn-default'>De-OP</button></td></tr>"
 					if(skins[player.uuid] == null) return
 					// the worst code ever. written in about five minutes.
 					try{
@@ -117,6 +117,8 @@
 						var website = ""
 					_("pluginlist").innerHTML += "<td style='white-space:nowrap'><b>"+plugin.name+"</b> v"+plugin.version+"<div class='small'>by "+plugin.author+"<br/>"+website+"</div></td><td>"+summary+description+"</td><td style='white-space:nowrap;'><button onclick='_toggle_plugin(\""+plugin.id+"\", this)' class='btn btn-default'>Disable</button></td></tr>"
 				}
+				if(stats["plugins"].length < 1) _("nopluginswarning").style.display = "block"
+				else _("nopluginswarning").style.display = "none"
 								
 				// draw console
 				var doScroll = false
@@ -161,12 +163,12 @@
 				requests.admin("server_action", {"action": "start"})
 			}
 			function _stop(){
-				message = prompt("Please enter a stop reason (will be shown to all players currently active on the server:", "Server stopping...")
+				message = prompt("Please enter a stop reason (will be shown to all players currently active on the server):", "Server stopping...")
 				if(!message) return
 				requests.admin("server_action", {"action": "stop", "reason": message})
 			}
 			function _restart(){
-				message = prompt("Please enter a restart reason (will be shown to all players currently active on the server:", "Server restarting...")
+				message = prompt("Please enter a restart reason (will be shown to all players currently active on the server):", "Server restarting...")
 				if(!message) return
 				requests.admin("server_action", {"action": "restart", "reason": message})
 			}
@@ -351,7 +353,23 @@
 				</div>-->
 				<div class="col-lg-6">
 					<div class="panel panel-default">
-						<div class="panel-heading">Stats</div>
+						<div class="panel-heading">
+							Server Information
+							<div class="pull-right">
+								<div class="dropdown" style="margin-top:-7px;">
+									<button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown" aria-expanded="true">
+										Server Action
+										<span class="caret"></span>
+									</button>
+									<ul class="dropdown-menu" role="menu" aria-labelledby="dropdownMenu1">
+										<li role="presentation"><a role="menuitem" tabindex="-1" href="javascript:_start();">Start</a></li>
+										<li role="presentation"><a role="menuitem" tabindex="-1" href="javascript:_restart();">Restart</a></li>
+										<li role="presentation"><a role="menuitem" tabindex="-1" href="javascript:_stop();">Stop</a></li>
+										<li role="presentation"><a role="menuitem" tabindex="-1" href="javascript:_kill();">Force Kill</a></li>
+									</ul>
+								</div>
+							</div>
+						</div>
 						<div class="panel-body">
 							<b>Server Status: </b> <span id="server_status">Unknown</span></br>
 							<b>Server Version: </b> <span id="server_version">Unknown</span></br>
@@ -360,7 +378,6 @@
 							<b>Player Count: </b> <span id="playercount_status">n/a players</span></br>
 							<b>Memory Usage: </b> <span id="memory_status">n/a</span></br>
 							<b>World Size: </b> <span id="world_size">n/a</span>
-							</br></br><button onclick="_start()" class="btn btn-default">Start</button> <button onclick="_restart()" class="btn btn-default">Restart</button> <button onclick="_stop()" class="btn btn-default">Stop</button> <button onclick="_kill()" class="btn btn-default">Force Kill</button>
 						</div>
 					</div>
 				</div>
@@ -380,10 +397,10 @@
 			</div>
 			<div id="screen-server" style="display:none;">
 				<ul class="nav nav-pills nav-stacked col-md-2">
-				  <li role="presentation" id="nav-console" class="active"><a href="#-console">Console</a></li>
-				  <li role="presentation" id="nav-chat"><a href="#-chat">Chat</a></li>
-				  <li role="presentation" id="nav-files"><a href="#-files">Files</a></li>
-				  <li role="presentation" id="nav-settings"><a href="#-settings">Settings</a></li>
+				<li role="presentation" id="nav-console" class="active"><a href="#-console">Console</a></li>
+				<li role="presentation" id="nav-chat"><a href="#-chat">Chat</a></li>
+				<li role="presentation" id="nav-files"><a href="#-files">Files</a></li>
+<!--				  <li role="presentation" id="nav-settings"><a href="#-settings">Settings</a></li>-->
 				</ul>
 				<div class="col-md-10">
 					<div id="tab-console">
@@ -402,6 +419,10 @@
 								if(z == undefined) z = locationPath
 								console.log(locationPath)
 								var payload = requests.admin("listdir", {"path": z})
+								if(payload == false)
+									_("files_failed").style.display = "block"
+								else
+									_("files_failed").style.display = "none"
 								_("files").innerHTML = "<th>Filename</th><th>Actions</th><tr/>"
 								files = payload.files; folders = payload.folders;
 								for(i in folders){
@@ -483,10 +504,11 @@
 								filesLoaded = true
 							}
 						</script>
+						<div class="alert alert-danger" role="alert" id="files_failed"><b>Could not load files!</b> This is probably because 'web-allow-file-management' is set to False in wrapper.properties.</div>
 						<ol class="breadcrumb col-md-10" id="crumbs"></ol>
 						<div class="container">
-						 	<button class="btn btn-default">New Directory</button>
-						 	<button class="btn btn-default" onclick="reloadFiles()">Refresh</button>
+							<button class="btn btn-default">New Directory</button>
+							<button class="btn btn-default" onclick="reloadFiles()">Refresh</button>
 						</div>
 						<div class="table-responsive">
 							<table class="table table-striped">
@@ -533,6 +555,9 @@
 							<th>Name</th><th>Description</th><th>Options</th></tr>
 						</tbody>
 					</table>
+					<div style="text-align:center;color:gray;font-size:16px;margin-top:20px;margin-bottom:20px;display:none;" id="nopluginswarning">
+						No plugins are currently installed.
+					</div>
 				</div>
 			</div>
 			<div id="screen-about" style="display:none;">

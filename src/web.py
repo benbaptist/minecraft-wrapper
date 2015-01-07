@@ -1,5 +1,5 @@
 # Unfinished web UI code. Yeah, I know. The code is awful. Probably not even a HTTP-compliant web server anyways. I just wrote it at like 3AM in like an hour.
-import socket, traceback, zipfile, threading, time, json, random, urlparse, storage, log, urllib, os, cProfile
+import socket, traceback, zipfile, threading, time, json, random, urlparse, storage, log, urllib, os, md5
 from api import API
 try:
 	import pkg_resources, requests
@@ -15,6 +15,11 @@ class Web:
 		self.socket = False
 		self.data = storage.Storage("web", self.log)
 		if "keys" not in self.data: self.data["keys"] = []
+		#if not self.config["Web"]["web-password"] == None:
+#			self.log.info("Changing web-mode password because web-password was changed in wrapper.properties")
+#			self.data["password"] = md5.md5(self.config["Web"]["web-password"]).hexdigest()
+#			self.config["Web"]["web-password"] = None
+#			self.wrapper.configManager.save()
 		
 		self.api.registerEvent("server.consoleMessage", self.onServerConsole)
 		self.api.registerEvent("player.message", self.onPlayerMessage)
@@ -444,7 +449,6 @@ class Client:
 		while True:
 			try:
 				data = self.socket.recv(1024)
-				print "Reading %d amount of data" % len(data)
 				if len(data) < 1:
 					self.close()
 					return
