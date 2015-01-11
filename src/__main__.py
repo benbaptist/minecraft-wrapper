@@ -226,6 +226,22 @@ class Wrapper:
 					self.log.error(traceback.format_exc())
 					player.message({"text": "An error occurred while reloading plugins. Please check the console immediately for a traceback.", "color": "red"})
 				return False
+		# Temporarily commented-out the help command for now
+		#if payload["command"] in ("help", "commands"):
+#			player = payload["player"]
+#			helpGroups = [{"name": "Vanilla", "description": "List vanilla Minecraft Server commands"}]
+#			group = args(0).lower()
+#			page = args(1)
+#			try: page = int(page)
+#			except: page = 0
+#			if len(group) > 0:
+#				if group == "vanilla":
+#					player.execute("help %d" % page)
+#				else:
+#					player.message("&cThe help group '%s' does not exist." % group)
+#			else:
+#				for i in helpGroups:
+#					player.message("&c[%s] - %s" % (i["name"], i["description"]))
 		if payload["command"] in ("permissions", "perm", "perms", "super"):
 			player = payload["player"]
 			if not "groups" in self.permissions: self.permissions["groups"] = {}
@@ -605,7 +621,7 @@ if __name__ == "__main__":
 #		cProfile.run("wrapper.start()", "cProfile-debug")
 	except SystemExit:
 		#log.error("Wrapper.py received SystemExit")
-		#os.system("reset")
+		os.system("reset")
 		wrapper.disablePlugins()
 		wrapper.halt = True
 		try:

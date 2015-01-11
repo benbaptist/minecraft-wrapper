@@ -38,23 +38,31 @@ class Web:
 #		t.start()
 	def onServerConsole(self, payload):
 		while len(self.consoleScrollback) > 1000:
-			del self.consoleScrollback[0]
+			try:
+				del self.consoleScrollback[0]
+			except: break
 		self.consoleScrollback.append((time.time(), payload["message"]))
 	def onPlayerMessage(self, payload):
 		while len(self.chatScrollback) > 200:
-			del self.consoleScrollback[0]
+			try:
+				del self.chatScrollback[0]
+			except: break
 		self.chatScrollback.append((time.time(), {"type": "player", "payload": {"player": payload["player"].username, "message": payload["message"]}}))
 	def onPlayerJoin(self, payload):
 		while len(self.chatScrollback) > 200:
-			del self.consoleScrollback[0]
+			try:
+				del self.chatScrollback[0]
+			except: break
 		self.chatScrollback.append((time.time(), {"type": "playerJoin", "payload": {"player": payload["player"].username}}))
 	def onPlayerLeave(self, payload):
 		while len(self.chatScrollback) > 200:
-			del self.consoleScrollback[0]
+			try: del self.chatScrollback[0]
+			except: break
 		self.chatScrollback.append((time.time(), {"type": "playerLeave", "payload": {"player": payload["player"].username}}))
 	def onChannelMessage(self, payload):
 		while len(self.chatScrollback) > 200:
-			del self.consoleScrollback[0]
+			try: del self.chatScrollback[0]
+			except: break
 		self.chatScrollback.append((time.time(), {"type": "irc", "payload": payload}))
 	def updateGraph(self):
 		while not self.wrapper.halt:

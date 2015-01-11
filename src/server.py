@@ -251,7 +251,7 @@ class Server:
 				self.data = []
 	def getMemoryUsage(self):
 		""" Returns allocated memory in bytes """
-		if IMPORT_RESOURCE_SUCCESS: return None
+		if not IMPORT_RESOURCE_SUCCESS: return None
 		if not os.name == "posix": return None
 		if self.proc == False: return None
 		try:
