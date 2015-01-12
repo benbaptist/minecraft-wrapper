@@ -59,9 +59,9 @@ class Minecraft:
 	def getPlayer(self, username=""):
 		""" Returns the player object of the specified logged-in player. Will raise an exception if the player is not logged in. """
 		try:
-			return self.wrapper.server.players[str(name)]
+			return self.wrapper.server.players[str(username)]
 		except:
-			raise Exception("No such player %s is logged in" % name)
+			raise Exception("No such player %s is logged in" % username)
 	def lookupUUID(self, uuid):
 		""" Returns the username from the specified UUID. If the player has never logged in before and isn't in the user cache, it will poll Mojang's API. The function will raise an exception if the UUID is invalid. """
 		return self.wrapper.proxy.lookupUUID(uuid)

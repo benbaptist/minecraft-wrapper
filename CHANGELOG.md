@@ -25,6 +25,7 @@ Fix issue with [23:10:26] [Wrapper.py/ERROR] Traceback (most recent call last):
 - "AUTHOR" and "WEBSITE" plugin metadata variables added (see template.py for example)
 - player.say(message): Say something through the player. Proxy mode only.
 - player.execute(command): Execute a command as the player. Works best in proxy mode, but will fallback to using the 1.8 'execute' command if proxy mode is not available.
+- Fixed minecraft.getPlayer(username) so that it actually worked
 
 <h4>0.7.4</h4>
 Just a small little update, to fix a few things, and improve upon some existing features.

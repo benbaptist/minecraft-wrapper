@@ -254,7 +254,7 @@ class Client: # handle client/game connection
 			return self.wrapper.server.players[self.username]
 		return False
 	def message(self, string):
-		self.send(0x01, "string", (string,))
+		self.server.send(0x01, "string", (string,))
 	def parse(self, id):
 		if id == 0x00:
 			if self.state == 0:

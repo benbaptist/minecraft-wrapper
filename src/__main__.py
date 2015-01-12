@@ -227,21 +227,67 @@ class Wrapper:
 					player.message({"text": "An error occurred while reloading plugins. Please check the console immediately for a traceback.", "color": "red"})
 				return False
 		# Temporarily commented-out the help command for now
-		#if payload["command"] in ("help", "commands"):
-#			player = payload["player"]
-#			helpGroups = [{"name": "Vanilla", "description": "List vanilla Minecraft Server commands"}]
-#			group = args(0).lower()
-#			page = args(1)
-#			try: page = int(page)
-#			except: page = 0
-#			if len(group) > 0:
-#				if group == "vanilla":
-#					player.execute("help %d" % page)
-#				else:
-#					player.message("&cThe help group '%s' does not exist." % group)
-#			else:
-#				for i in helpGroups:
-#					player.message("&c[%s] - %s" % (i["name"], i["description"]))
+		if payload["command"] in ("help", "?"):
+			player = payload["player"]
+			helpGroups = [
+				{"name": "Minecraft", "description": "List regular server commands"},
+				{"name": "Minecraft", "description": "List regular server commands"},
+				{"name": "Minecraft", "description": "List regular server commands"},
+				{"name": "Minecraft", "description": "List regular server commands"},
+				{"name": "Minecraft", "description": "List regular server commands"},
+				{"name": "Minecraft", "description": "List regular server commands"},
+				{"name": "Minecraft", "description": "List regular server commands"},
+				{"name": "Minecraft", "description": "List regular server commands"},
+				{"name": "Minecraft", "description": "List regular server commands"},
+				{"name": "Minecraft", "description": "List regular server commands"},
+				{"name": "Minecraft", "description": "List regular server commands"},
+				{"name": "Minecraft", "description": "List regular server commands"},
+				{"name": "Minecraft", "description": "List regular server commands"},
+				{"name": "Minecraft", "description": "List regular server commands"},
+				{"name": "Wrapper", "description": "Wrapper.py's internal commands"}]
+			if len(args(1)) > 0:
+				group = args(0).lower()
+				page = args(1)
+			else:
+				group = ""
+				page = args(0)
+			try: page = int(page) - 1
+			except:
+				if len(page) > 0:
+					group = page 
+				page = 0
+			if len(group) > 0:
+				if group == "minecraft":
+					player.execute("help %d" % (page + 1))
+				else:
+					player.message("&cThe help group '%s' does not exist." % group)
+			else:
+				pageCount = len(helpGroups) / 8 
+				if page > pageCount or page < 0:
+					player.message("&cNo such page '%s'!" % str(page + 1))
+					return
+				player.message(" ") # Padding, for the sake of making it look a bit nicer
+				player.message("&2--- Showing help page %d of %d ---" % (page + 1, pageCount + 1))
+				for i,v in enumerate(helpGroups):
+					if not i / 8 == page: continue 
+					player.message("&6&l%s&r - %s" % (v["name"], v["description"]))
+				if pageCount > 0:
+					if page > 0:
+						prevButton = {"text": "Prev", "underline": True, "clickEvent": {"action": "run_command", "value": "/help %d" % page}}
+					else:
+						prevButton = {"text": "Prev", "italic": True, "color": "gray"}
+					if page < pageCount:
+						nextButton = {"text": "Next", "underline": True, "clickEvent": {"action": "run_command", "value": "/help %d" %(page + 2)}}
+					else:
+						nextButton = {"text": "Next", "italic": True, "color": "gray"}
+					player.message({"text": "--- ", "color": "dark_green", "extra":[
+						prevButton,
+						{"text": " | "},
+						nextButton,
+						{"text": " ---"}
+					]})
+					#player.message("&2--- &nPrev&r&2 | &nNext&r&2 ---")
+			return
 		if payload["command"] in ("permissions", "perm", "perms", "super"):
 			player = payload["player"]
 			if not "groups" in self.permissions: self.permissions["groups"] = {}
