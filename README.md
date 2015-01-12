@@ -44,7 +44,7 @@ pip install setuptools
 
 Before installing requests and pycrypto, you will need to install the [Microsoft Visual C++ Compiler for Python 2.7](http://www.microsoft.com/en-us/download/details.aspx?id=44266).
 
-Then from rom the command prompt:
+Then from the command prompt:
 ```
 pip install requests
 pip install pycrypto
