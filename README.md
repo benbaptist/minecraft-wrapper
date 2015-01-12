@@ -1,27 +1,68 @@
 #Overview#
-Wrapper.py is an easy to use Minecraft server wrapper for adding extra functionality into the server without modifying the 
+Wrapper.py is an easy to use Minecraft server wrapper for adding extra functionality into the server without modifying the server jar file.
 
 </br></br>It also comes with a relatively simple and straight-forward - yet powerful - plugin API that can be used to create Bukkit-like plugins on vanilla. 
 
 #Installation#
-Wrapper.py doesn't require any special modules for most of the basic features to work, but web mode and proxy mode require the following: `pkg_resources`, `requests`, and `pycrypto`.  To install them, use pip:
-
-`pip install requests pkg_resources pycrypto`
+Wrapper.py doesn't require any special modules for most of the basic features to work, but web mode and proxy mode require `requests` and `pycrypto`.  On Linux, the Memory usage features (/mem) will require `pkg_resources`.  This function is not available on Windows platforms.
 
 You will also need `tar` installed if you need backups. Most Linux distros have this pre-installed, but you may need to install it manually on Windows: http://gnuwin32.sourceforge.net/packages/gtar.htm
 
-</br></br>
 You only need to download Wrapper.py, the src folder is just the extracted version of Wrapper.py.</br>  
-On Linux, you can run the following command to download the stable Wrapper.py (if you have wget installed):</br></br>  
-```
 
-wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master/Wrapper.py
-```  
+
+**LINUX Installation**
+
+
+you can run the following command to download the stable Wrapper.py (if you have wget installed):
+
+```wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master/Wrapper.py```
+
 or the following to download the unstable, development version of Wrapper.py:
+
+```wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/Wrapper.py```
+
+To install dependencies, use pip:</br></br>  
+`pip install requests pkg_resources pycrypto`
+
+Place the wrapper.py file in your minecraft folder and then run `python Wrapper.py` to start.
+
+
+**Windows Installation**
+
+
+You may need to get [python 2.7.x](https://www.python.org/downloads/) as it does not come with Windows.
+for best results, ensure the add python.exe to path is installed during the setup
+
+
+Python 2.7 should already have pip and setuptools installed, however they will be old versions.  You should manually remove them and install the updated versions from the command prompt (need to be administrator to do this):
+```
+pip remove setuptools
+pip install pip
+pip install setuptools
 ```
 
-wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/Wrapper.py
+Before installing requests and pycrypto, you will need to install the [Microsoft Visual C++ Compiler for Python 2.7](http://www.microsoft.com/en-us/download/details.aspx?id=44266).
+
+Then from rom the command prompt:
 ```
+pip install requests
+pip install pycrypto
+```
+
+Download the wrapper.py file and place it in your minecraft folder, then create a batch file to run the wrapper, or start it from the command prompt:
+`python wrapper.py`
+
+*Developer tools for Windows:*
+- [Visual Studio Community Edition](http://www.visualstudio.com/en-us/downloads/) is a user friendly and powerful FREE developer environment for Python
+- Visual Studio Community is free, but you need to register with a Windows Live account.
+- You should set Visual studio as the default program to edit *.py files.
+ -You will also want to configure Visual studio to not convert tabs to spaces for python.
+
+
+**Start Up**
+
+
 Run `python Wrapper.py` to start. On first start, it'll create a wrapper.properties file for you to configure and exit. Set it to boot the jar file of your choice, and then start Wrapper.py again. 
 
 Wrapper.py is a Python-executable zipped-up folder, rather than a plain text file. If you want to view the source code, open it
