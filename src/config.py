@@ -29,8 +29,8 @@ backups-keep = 10
 enabled = False
 server = benbaptist.com
 port = 6667
-nick = MinecraftServer
-channels = ['#main']
+nick = MinecraftWrap
+channels = ['#wrapper']
 command-character = .
 show-channel-server = True
 autorun-irc-commands = ['COMMAND 1', 'COMMAND 2']
@@ -92,10 +92,10 @@ class Config:
 		},		
 		"IRC":{ 
 			"enabled": True, 
-			"nick": "MinecraftServer", 
+			"nick": "MinecraftWrap", 
 			"server": "benbaptist.com", 
 			"port": 6667, 
-			"channels": ["#main"], 
+			"channels": ["#wrapper"], 
 			"command-character": ".",
 			"obstruct-nicknames": False,
 			"autorun-irc-commands": ['COMMAND 1', 'COMMAND 2'],
