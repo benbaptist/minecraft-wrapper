@@ -4,6 +4,8 @@ Fix issue with [23:10:26] [Wrapper.py/ERROR] Traceback (most recent call last):
 [23:10:26] [Wrapper.py/ERROR]     result = self.events[pluginID][event](payload)
 [23:10:26] [Wrapper.py/ERROR]   File "Wrapper.py/web.py", line 45, in onPlayerMessage
 [23:10:26] [Wrapper.py/ERROR]     del self.consoleScrollback[0]
+
+Stop backups from happening unless server is running. Handle running out of disk space by freezing java process. 
 <h4>0.7.5</h4>
 **Features**
 - Web interface improvements:
