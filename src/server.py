@@ -1,4 +1,4 @@
-import socket, datetime, time, sys, threading, random, subprocess, os, json, signal, traceback, api, StringIO, ConfigParser, backups, sys, codecs
+import socket, datetime, time, sys, threading, random, subprocess, os, json, signal, traceback, api, StringIO, ConfigParser, backups, sys, codecs, ctypes, platform
 try: 
 	import resource
 	IMPORT_RESOURCE_SUCCESS = True
@@ -17,7 +17,7 @@ class Server:
 		if "serverState" not in self.wrapper.storage:
 			self.wrapper.storage["serverState"] = True
 		self.players = {}
-		self.state = 0 # 0 is off, 1 is starting, 2 is started, 3 is shutting down
+		self.state = 0 # 0 is off, 1 is starting, 2 is started, 3 is shutting down, 4 is idle, 5 is frozen
 		self.bootTime = time.time()
 		self.boot = self.wrapper.storage["serverState"]
 		self.proc = False
@@ -80,6 +80,24 @@ class Server:
 		self.log.info("Killing Minecraft server with reason: %s" % reason)
 		self.changeState(0, reason)
 		self.proc.kill()
+	def freeze(self, reason="Server is now frozen. You may disconnect momentarily."):
+		""" Freeze the server with `kill -STOP`. Can be used to stop the server in an emergency without shutting it down, so it doesn't write corrupted data - e.g. if the disk is full, you can freeze the server, free up some disk space, and then unfreeze 
+		
+		'reason' argument is printed in the chat for all currently-connected players, unless you specify None. """
+		if reason:
+			self.log.info("Freezing server with reason: %s" % reason)
+			try: self.broadcast("&c%s" % reason)
+			except: pass
+		else:
+			self.log.info("Freezing server...")
+		self.changeState(5)
+		os.system("kill -STOP %d" % self.proc.pid)
+	def unfreeze(self):
+		""" Unfreeze the server with `kill -CONT`. Counterpart to .freeze(reason) """
+		self.log.info("Unfreezing server...")
+		self.broadcast("&aServer unfrozen.")
+		self.changeState(2)
+		os.system("kill -CONT %d" % self.proc.pid)
 	def broadcast(self, message=""):
 		""" Broadcasts the specified message to all clients connected. message can be a JSON chat object, or a string with formatting codes using the & as a prefix """
 		if isinstance(message, dict):
@@ -259,8 +277,17 @@ class Server:
 				bytes = int(f.read().split(" ")[1]) * resource.getpagesize()
 		except: return None
 		return bytes
+	def getStorageAvailable(folder):
+		""" Returns the disk space for the working directory in bytes """
+		if platform.system() == "Windows":
+			free_bytes = ctypes.c_ulonglong(0)
+			ctypes.windll.kernel32.GetDiskFreeSpaceExW(ctypes.c_wchar_p(folder), None, None, ctypes.pointer(free_bytes))
+			return free_bytes.value
+		else:
+			st = os.statvfs(folder)
+			return st.f_bavail * st.f_frsize
 	def getWorldSize(self):
-		""" Returns the size of the currently used world folder in bytes. Not implemented yet """
+		""" Returns the size of the currently used world folder in bytes """
 		return self.worldSize
 	def stripSpecial(self, text):
 		a = ""; it = iter(xrange(len(text)))

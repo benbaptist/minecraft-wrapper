@@ -25,13 +25,13 @@
 			window.onload = function(){
 				if(isAuthed()){
 					tick()
-					/*try{
-						tick()
-					}catch(err){}*/
 					path = window.location.hash.substr(1)
 					if(path.length > 0){
 						window.onhashchange()
 					}
+					// Lazy hack time
+					setTimeout(function(){_("server_console").scrollTop = _("server_console").scrollHeight}, 300);
+					setTimeout(function(){_("chatbox").scrollTop = _("chatbox").scrollHeight}, 300);
 				}else{
 					window.location = "login.html"
 				}
@@ -63,8 +63,14 @@
 				_("lost_connection_page").style.display = "none"
 				_("admin_page").style.display = "block"
 				lastRefresh = stats["refresh_time"]
-				statusMessages = {0: "<r>Server stopped</r>", 1: "<y>Server starting...</y>", 2: "<g>Running</g>", 3: "<y>Server stopping...</y>"}
+				statusMessages = {0: "Offline", 1: "Server starting...", 2: "Online", 3: "Server stopping...", 5: "Server frozen"}
 				if(stats["server_state"] in statusMessages) _("server_status").innerHTML = statusMessages[stats["server_state"]]
+				if(stats["server_state"] == 0) _("server_status").className = "label label-danger"
+				if(stats["server_state"] == 1) _("server_status").className = "label label-warning"
+				if(stats["server_state"] == 2) _("server_status").className = "label label-success"
+				if(stats["server_state"] == 3) _("server_status").className = "label label-warning"
+				if(stats["server_state"] == 4) _("server_status").className = "label label-warning"
+				if(stats["server_state"] == 5) _("server_status").className = "label label-info"
 				_("playercount_status").innerHTML = stats["playerCount"] + " players"
 				_("levelname_status").innerHTML = stats["level_name"]
 				_("server_version").innerHTML = stats["server_version"]
@@ -76,6 +82,7 @@
 				
 				// draw player list
 				_("playerlist").innerHTML = "<th>Face</th><th>Username</th><th>UUID</th><th>Options</th></tr>"
+				_("tab-chat-players").innerHTML = ""
 				for(i in stats["players"]){
 					if(i == "getLength") continue
 					var player = stats["players"][i]
@@ -88,6 +95,9 @@
 					if(player.isOp) var isOp = " class='op'"
 					else isOp = ""					
 					_("playerlist").innerHTML += "<td><canvas id='playerskin-"+player.name+"' width=16 height=16></canvas></td><td"+isOp+">"+player.name+"</td><td>"+player.uuid+"</td><td style='white-space:nowrap;'><button onclick='_kick("+i+")' class='btn btn-xs btn-default'>Kick</button> <button onclick='_ban("+i+")' class='btn btn-xs btn-default'>Ban</button> <button onclick='_op("+i+")' class='btn btn-xs btn-default'>OP</button> <button onclick='_deop("+i+")' class='btn btn-xs btn-default'>De-OP</button></td></tr>"
+					if(player.isOp) var isOp = '<span class="glyphicon glyphicon-star"></span> '
+					else isOp = ""
+					_("tab-chat-players").innerHTML += '<div class="player">'+isOp+''+player.name+'</div>'
 					if(skins[player.uuid] == null) return
 					// the worst code ever. written in about five minutes.
 					try{
@@ -106,16 +116,20 @@
 				for(i in stats["plugins"]){
 					if(i == "getLength") continue
 					var plugin = stats["plugins"][i]
-					if(plugin.description) var description = "<span style='font-size:14px;'>" + plugin.description.replace(/\n/g, "</br>") + "</span>"
-					else var description = "<i>No description is available for this plugin.</i>"
-					if(plugin.summary) var summary = plugin.summary.replace("\n", "</br></br>") + "<hr/>"
-					else var summary = ""
-					if(!plugin.author) plugin.author = "anonymous developer"
-					if(plugin.website)
-						var website = "<a href='"+plugin.website+"'>Website</a>"
-					else
-						var website = ""
-					_("pluginlist").innerHTML += "<td style='white-space:nowrap'><b>"+plugin.name+"</b> v"+plugin.version+"<div class='small'>by "+plugin.author+"<br/>"+website+"</div></td><td>"+summary+description+"</td><td style='white-space:nowrap;'><button onclick='_toggle_plugin(\""+plugin.id+"\", this)' class='btn btn-default'>Disable</button></td></tr>"
+					if(plugin.good){
+						if(plugin.description) var description = "<span style='font-size:14px;'>" + plugin.description.replace(/\n/g, "</br>") + "</span>"
+						else var description = "<i>No description is available for this plugin.</i>"
+						if(plugin.summary) var summary = plugin.summary.replace("\n", "</br></br>") + "<hr/>"
+						else var summary = ""
+						if(!plugin.author) plugin.author = "anonymous developer"
+						if(plugin.website)
+							var website = "<a href='"+plugin.website+"'>Website</a>"
+						else
+							var website = ""
+						_("pluginlist").innerHTML += "<td style='white-space:nowrap'><b>"+plugin.name+"</b> v"+plugin.version+"<div class='small'>by "+plugin.author+"<br/>"+website+"</div></td><td>"+summary+description+"</td><td style='white-space:nowrap;'><button onclick='_toggle_plugin(\""+plugin.id+"\", this)' class='btn btn-default'>Disable</button></td></tr>"
+					}else{
+						_("pluginlist").innerHTML += "<td style='white-space:nowrap'><b><r>"+plugin.name+"</r></b></td><td><r><i>This plugin failed to load. Please make sure it is a valid plugin.</i></r></td><td style='white-space:nowrap;'><button onclick='_toggle_plugin(\""+plugin.id+"\", this)' class='btn btn-default'>Disable</button></td></tr>"
+					}
 				}
 				if(stats["plugins"].length < 1) _("nopluginswarning").style.display = "block"
 				else _("nopluginswarning").style.display = "none"
@@ -131,6 +145,11 @@
 				if(doScroll) p.scrollTop = p.scrollHeight
 				
 				// draw chat
+				var doScroll = false
+				var p = _("chatbox") 
+				if(p.scrollTop + p.clientHeight == p.scrollHeight){
+					var doScroll = true
+				}
 				for(i in stats["chat"]){
 					var line = stats["chat"][i]; payload = line.payload
 					if(line.type == "irc")
@@ -142,6 +161,7 @@
 					if(line.type == "raw")
 						_("chatbox").innerHTML += payload + "\n"
 				}
+				if(doScroll) p.scrollTop = p.scrollHeight
 				
 				// set wrapper.py build string
 				_("buildstring").innerHTML = "Wrapper.py " + stats["wrapper_build"]
@@ -151,6 +171,7 @@
 				if(!check) return false
 				try{
 					stats = requests.adminThreaded("admin_stats", {"last_refresh": lastRefresh}, statsCallback)
+					if(stats == false) abdef()
 				}catch(err){
 					console.log("Error while refreshing stats. Connection lost?")
 					_("lost_connection_page").style.display = "block"
@@ -295,6 +316,7 @@
 			r{color:red;}
 			y{color:gold;}
 			g{color:green;}
+			aq{color:#226CF5;}
 			.small{
 				font-style: italic;
 				font-size: 12px;
@@ -354,11 +376,11 @@
 				<div class="col-lg-6">
 					<div class="panel panel-default">
 						<div class="panel-heading">
-							Server Information
+							<span id="server_status" class="label label-success" style="height:20px;display:block;float:left;font-size:14px;margin-right: 5px;"></span> Server Information
 							<div class="pull-right">
 								<div class="dropdown" style="margin-top:-7px;">
 									<button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown" aria-expanded="true">
-										Server Action
+										Power
 										<span class="caret"></span>
 									</button>
 									<ul class="dropdown-menu" role="menu" aria-labelledby="dropdownMenu1">
@@ -371,7 +393,7 @@
 							</div>
 						</div>
 						<div class="panel-body">
-							<b>Server Status: </b> <span id="server_status">Unknown</span></br>
+<!--							<b>Server Status: </b> <span id="server_status">Unknown</span></br>-->
 							<b>Server Version: </b> <span id="server_version">Unknown</span></br>
 							<b>Server MOTD: </b> <span id="server_motd">Unknown</span></br>
 							<b>Level Name: </b> <span id="levelname_status">Unknown</span></br>
@@ -395,155 +417,163 @@
 					</div>
 				</div>
 			</div>
-			<div id="screen-server" style="display:none;">
-				<ul class="nav nav-pills nav-stacked col-md-2">
-				<li role="presentation" id="nav-console" class="active"><a href="#-console">Console</a></li>
-				<li role="presentation" id="nav-chat"><a href="#-chat">Chat</a></li>
-				<li role="presentation" id="nav-files"><a href="#-files">Files</a></li>
-<!--				  <li role="presentation" id="nav-settings"><a href="#-settings">Settings</a></li>-->
-				</ul>
-				<div class="col-md-10">
-					<div id="tab-console">
-						<pre id="server_console" style="overflow-y:scroll;height:90%;"></pre>
-						<input type="text" onkeydown="if(event.keyCode == 13){_console(this.value);this.value='';}" placeholder="Run a command in the Minecraft server console..." class="form-control"/>
+			<div id="screen-server" style="display:none;" class="container-fluid">
+				<div class="row">
+					<div class="col-sm-3 col-md-2 sidebar">
+						<ul class="nav nav-sidebar">
+							<li role="presentation" id="nav-console" class="active"><a href="#-console">Console</a></li>
+							<li role="presentation" id="nav-chat"><a href="#-chat">Chat</a></li>
+							<li role="presentation" id="nav-files"><a href="#-files">Files</a></li>
+							<li role="presentation" id="nav-settings"><a href="#-settings">Server Properties</a></li>
+						</ul>
 					</div>
-					<div id="tab-chat" style="display:none;">
-						<pre id="chatbox" style="overflow-y:scroll;height:90%;"></pre>
-						<input type="text" onkeydown="if(event.keyCode == 13){_chat(this.value);this.value='';}" placeholder="Send a message..." class="form-control"/>
-					</div>
-					<div id="tab-files" style="display:none;">
-						<script type="text/javascript">
-							locationPath = ""
-							filesLoaded = false
-							reloadFiles = function(z){
-								if(z == undefined) z = locationPath
-								console.log(locationPath)
-								var payload = requests.admin("listdir", {"path": z})
-								if(payload == false)
-									_("files_failed").style.display = "block"
-								else
-									_("files_failed").style.display = "none"
-								_("files").innerHTML = "<th>Filename</th><th>Actions</th><tr/>"
-								files = payload.files; folders = payload.folders;
-								for(i in folders){
-									if(isNaN(i)) continue
-									var file = folders[i]
-									_("files").innerHTML += "<tr><td><b><a href='javascript:appendPath("+i+")'>"+file.filename+"</a></b><div class='subtext'>"+file.count+" files</div></td><td><a href='javascript:renameFile("+i+", true)'>Rename</a> | <a href='javascript:deleteFile("+i+", true)'>Delete</a></td></tr>"
-								}
-								for(i in files){
-									if(isNaN(i)) continue
-									var file = files[i]
-									_("files").innerHTML += "<tr><td>"+file.filename+"<div class='subtext'>"+getReadableFilesize(file.size)+" bytes</div></td><td><a href='javascript:renameFile("+i+", false)'>Rename</a> | <a href='javascript:deleteFile("+i+", false)'>Delete</a></td></tr>"
-								}
-								var crumbs = z.split("/")
-								_("crumbs").innerHTML = "<li><a href='javascript:gotoPath(\"\")'>Root</a></li>"
-								var thusFar = "" 
-								for(i in crumbs){
-									if(isNaN(i)) continue
-									if(thusFar.length > 0)
-										thusFar += "/" + crumbs[i]
+					<div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
+						<div id="tab-console">
+							<pre id="server_console" style="overflow-y:scroll;height:90%;"></pre>
+							<input type="text" onkeydown="if(event.keyCode == 13){_console(this.value);this.value='';}" placeholder="Run a command in the Minecraft server console..." class="form-control"/>
+						</div>
+						<div id="tab-chat" style="display:none;">
+							<div style="height:90%;width:19%;float:right;" class="panel panel-default">
+								<div class="panel-heading">Players</div>
+								<div id="tab-chat-players"></div>
+							</div>
+							<pre id="chatbox" style="overflow-y:scroll;height:90%;width:80%;"></pre>
+							<input type="text" onkeydown="if(event.keyCode == 13){_chat(this.value);this.value='';}" placeholder="Send a message..." class="form-control"/>
+						</div>
+						<div id="tab-files" style="display:none;">
+							<script type="text/javascript">
+								locationPath = ""
+								filesLoaded = false
+								reloadFiles = function(z){
+									if(z == undefined) z = locationPath
+									console.log(locationPath)
+									var payload = requests.admin("listdir", {"path": z})
+									if(payload == false)
+										_("files_failed").style.display = "block"
 									else
-										thusFar += crumbs[i]
-									_("crumbs").innerHTML += "<li><a href='javascript:gotoPath(\""+thusFar+"\")'>"+crumbs[i]+"</a></li>" 
+										_("files_failed").style.display = "none"
+									_("files").innerHTML = "<th>Filename</th><th>Actions</th><tr/>"
+									files = payload.files; folders = payload.folders;
+									for(i in folders){
+										if(isNaN(i)) continue
+										var file = folders[i]
+										_("files").innerHTML += "<tr><td><b><a href='javascript:appendPath("+i+")'>"+file.filename+"</a></b> <div class='subtext'>"+file.count+" files</div></td><td><a href='javascript:renameFile("+i+", true)'>Rename</a> | <a href='javascript:deleteFile("+i+", true)'>Delete</a></td></tr>"
+									}
+									for(i in files){
+										if(isNaN(i)) continue
+										var file = files[i]
+										_("files").innerHTML += "<tr><td>"+file.filename+" <div class='subtext'>"+getReadableFilesize(file.size)+" bytes</div></td><td><a href='javascript:renameFile("+i+", false)'>Rename</a> | <a href='javascript:deleteFile("+i+", false)'>Delete</a></td></tr>"
+									}
+									var crumbs = z.split("/")
+									_("crumbs").innerHTML = "<li><a href='javascript:gotoPath(\"\")'>Root</a></li>"
+									var thusFar = "" 
+									for(i in crumbs){
+										if(isNaN(i)) continue
+										if(thusFar.length > 0)
+											thusFar += "/" + crumbs[i]
+										else
+											thusFar += crumbs[i]
+										_("crumbs").innerHTML += "<li><a href='javascript:gotoPath(\""+thusFar+"\")'>"+crumbs[i]+"</a></li>" 
+									}
+									locationPath = z
 								}
-								locationPath = z
-							}
-							gotoPath = function(path){
-								locationPath = path
-								reloadFiles()
-							}
-							appendPath = function(i){
-								if(locationPath.length > 0)
-									reloadFiles(locationPath + "/"+folders[i].filename)
-								else
-									reloadFiles(folders[i].filename)
-							}
-							renameFile = function(i, folder){
-								if(folder)
-									var name = folders[i].filename
-								else
-									var name = files[i].filename
-								if (locationPath.length > 0)
-									var path = locationPath + "/" + name
-								else
-									var path = name
-								var rename = prompt("Rename '"+name+"' to the following: ", name)
-								if(!rename) return
-								if (locationPath.length > 0)
-									var newPath = locationPath + "/" + rename
-								else
-									var newPath = rename
-								var status = requests.admin("rename_file", {"path": path, "rename": newPath})
-								if(status)
-									alert("Successfully renamed '"+name+"' to '"+rename+"'!")
-								else
-									alert("An error occurred while renaming. Maybe you don't have permission to modify the file?")
-								reloadFiles()
-							}
-							deleteFile = function(i, folder){
-								if(folder)
-									var name = folders[i].filename
-								else
-									var name = files[i].filename
-								if (locationPath.length > 0)
-									var path = locationPath + "/" + name
-								else
-									var path = name
-								if(!confirm("Are you sure you want to delete '"+name+"'?")) return
-								var status = requests.admin("delete_file", {"path": path})
-								if(status)
-									alert("Successfully deleted '"+name+"'.")
-								else
-									alert("An error occurred while deleting.")
-								reloadFiles()
-							}
-							onFilesLoaded = function(){
-								if(!filesLoaded){
+								gotoPath = function(path){
+									locationPath = path
 									reloadFiles()
 								}
-								filesLoaded = true
-							}
-						</script>
-						<div class="alert alert-danger" role="alert" id="files_failed"><b>Could not load files!</b> This is probably because 'web-allow-file-management' is set to False in wrapper.properties.</div>
-						<ol class="breadcrumb col-md-10" id="crumbs"></ol>
-						<div class="container">
-							<button class="btn btn-default">New Directory</button>
-							<button class="btn btn-default" onclick="reloadFiles()">Refresh</button>
-						</div>
-						<div class="table-responsive">
-							<table class="table table-striped">
-								<tbody id="files"></tbody>
-							</table>
-						</div>
-					</div>
-					<div id="tab-settings" style="display:none;">
-						<script type="text/javascript">
-							var settingsLoaded = false
-							reloadProperties = function(){
-								var props = requests.admin("read_server_props", {})
-								if(!props) return
-								_("server_properties").value = props
-							}
-							saveProperties = function(){
-								var result = requests.admin("save_server_props", {"props": _("server_properties").value})
-								if(result == "ok") 
-									alert("Successfully saved server.properties! It is recommended that you restart the server for the changes to take effect.")
-								else
-									alert("An unknown error occurred while saving.")
-							}
-							onSettingsLoaded = function(){
-								if(!settingsLoaded){ 
-									reloadProperties()
+								appendPath = function(i){
+									if(locationPath.length > 0)
+										reloadFiles(locationPath + "/"+folders[i].filename)
+									else
+										reloadFiles(folders[i].filename)
 								}
-								settingsLoaded = true
-							}
-						</script>
-						<div style="margin-bottom: 5px;">
-							<button onclick="reloadProperties()" class="btn btn-default">Reload server.properties</button>
-							<button style="float:right;" class="btn btn-primary" onclick="saveProperties()">Save</button>
+								renameFile = function(i, folder){
+									if(folder)
+										var name = folders[i].filename
+									else
+										var name = files[i].filename
+									if (locationPath.length > 0)
+										var path = locationPath + "/" + name
+									else
+										var path = name
+									var rename = prompt("Rename '"+name+"' to the following: ", name)
+									if(!rename) return
+									if (locationPath.length > 0)
+										var newPath = locationPath + "/" + rename
+									else
+										var newPath = rename
+									var status = requests.admin("rename_file", {"path": path, "rename": newPath})
+									if(status)
+										alert("Successfully renamed '"+name+"' to '"+rename+"'!")
+									else
+										alert("An error occurred while renaming. Maybe you don't have permission to modify the file?")
+									reloadFiles()
+								}
+								deleteFile = function(i, folder){
+									if(folder)
+										var name = folders[i].filename
+									else
+										var name = files[i].filename
+									if (locationPath.length > 0)
+										var path = locationPath + "/" + name
+									else
+										var path = name
+									if(!confirm("Are you sure you want to delete '"+name+"'?")) return
+									var status = requests.admin("delete_file", {"path": path})
+									if(status)
+										alert("Successfully deleted '"+name+"'.")
+									else
+										alert("An error occurred while deleting.")
+									reloadFiles()
+								}
+								onFilesLoaded = function(){
+									if(!filesLoaded){
+										reloadFiles()
+									}
+									filesLoaded = true
+								}
+							</script>
+							<div class="alert alert-danger" role="alert" id="files_failed"><b>Could not load files!</b> This is probably because 'web-allow-file-management' is set to False in wrapper.properties.</div>
+							<ol class="breadcrumb col-md-10" id="crumbs"></ol>
+							<div class="container">
+								<button class="btn btn-default">New Directory</button>
+								<button class="btn btn-default" onclick="reloadFiles()">Refresh</button>
+							</div>
+							<div class="table-responsive">
+								<table class="table table-striped">
+									<tbody id="files"></tbody>
+								</table>
+							</div>
 						</div>
-						<textarea id="server_properties" style="width:100%;height:90%;" class="form-control"></textarea>
-						Warning: Be careful about changing these settings. Changing them could break the server if you don't know what you're doing. 
+						<div id="tab-settings" style="display:none;">
+							<script type="text/javascript">
+								var settingsLoaded = false
+								reloadProperties = function(){
+									var props = requests.admin("read_server_props", {})
+									if(!props) return
+									_("server_properties").value = props
+								}
+								saveProperties = function(){
+									var result = requests.admin("save_server_props", {"props": _("server_properties").value})
+									if(result == "ok") 
+										alert("Successfully saved server.properties! It is recommended that you restart the server for the changes to take effect.")
+									else
+										alert("An unknown error occurred while saving.")
+								}
+								onSettingsLoaded = function(){
+									if(!settingsLoaded){ 
+										//reloadProperties()
+									}
+									settingsLoaded = true
+								}
+							</script>
+							<div style="margin-bottom: 5px;">
+								<button onclick="reloadProperties()" class="btn btn-default">Reload server.properties</button>
+								<button style="float:right;" class="btn btn-primary" onclick="saveProperties()">Save</button>
+							</div>
+							<textarea id="server_properties" style="width:100%;height:90%;" class="form-control"></textarea>
+							Warning: Be careful about changing these settings. Changing them could break the server if you don't know what you're doing. 
+						</div>
 					</div>
 				</div>
 			</div>

@@ -309,18 +309,25 @@ class Client:
 			plugins = []
 			for id in self.wrapper.plugins:
 				plugin = self.wrapper.plugins[id]
-				if plugin["description"]: description = plugin["description"]
-				else: description = None
-				plugins.append({
-					"name": plugin["name"],
-					"version": plugin["version"],
-					"description": description,
-					"summary": plugin["summary"],
-					"author": plugin["author"],
-					"website": plugin["website"],
-					"version": (".".join([str(_) for _ in plugin["version"]])),
-					"id": id
-				})
+				if plugin["good"]:
+					if plugin["description"]: description = plugin["description"]
+					else: description = None
+					plugins.append({
+						"name": plugin["name"],
+						"version": plugin["version"],
+						"description": description,
+						"summary": plugin["summary"],
+						"author": plugin["author"],
+						"website": plugin["website"],
+						"version": (".".join([str(_) for _ in plugin["version"]])),
+						"id": id,
+						"good": True
+					})
+				else:
+					plugins.append({
+						"name": plugin["name"],
+						"good": False
+					})
 			consoleScrollback = []
 			for line in self.web.consoleScrollback:
 				if line[0] > refreshTime:
@@ -357,7 +364,7 @@ class Client:
 			if not self.web.validateKey(get("key")): return EOFError
 			message = get("message")
 			self.web.chatScrollback.append((time.time(), {"type": "raw", "payload": "[WEB ADMIN] " + message}))
-			self.wrapper.server.broadcast("&c[WEB ADMIN] " + message)
+			self.wrapper.server.broadcast("&c[WEB ADMIN]&r " + message)
 			return True
 		if action == "kick_player":
 			if not self.web.validateKey(get("key")): return EOFError

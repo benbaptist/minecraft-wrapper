@@ -90,6 +90,19 @@ class API:
 			self.wrapper.log.debug("[%s] Registered permission '%s' with default value: %s" % (self.name, permission, value))
 		if self.id not in self.wrapper.permission: self.wrapper.permission[self.id] = {}
 		self.wrapper.permission[self.id][permission] = value 
+	def registerHelp(self, groupName, summary, commands):
+		""" Used to create a help group for the /help command. groupName is the name you'll see in the list when you run /help, and summary is the text that you'll see next to it.
+		
+		The 'commands' argument is passed in the following format: 
+			[
+				("/i <TileName>[:Data] [Count]", "Gives the player the requested item and puts it directly in their inventory.", "essentials.give"),
+				("/")
+			]
+		"""
+		if not self.internal:
+			self.wrapper.log.debug("[%s] Registered help group '%s' with %d commands" % (self.name, groupName, len(commands)))
+		if self.id not in self.wrapper.help: self.wrapper.help[self.id] = {}
+		self.wrapper.help[self.id][groupName] = (summary, commands) 
 	def blockForEvent(self, eventType):
 		""" Blocks until the specified event is called. """
 		sock = []
