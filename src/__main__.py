@@ -258,9 +258,7 @@ class Wrapper:
 		# Temporarily commented-out the help command for now
 		if payload["command"] in ("help", "?"):
 			player = payload["player"]
-			helpGroups = [
-				{"name": "Minecraft", "description": "List regular server commands"},
-				{"name": "Wrapper", "description": "Wrapper.py's internal commands"}]
+			helpGroups = [{"name": "Minecraft", "description": "List regular server commands"}]
 			for id in self.help:
 				plugin = self.help[id]
 				for help in plugin:
@@ -282,17 +280,21 @@ class Wrapper:
 					player.message("&cNo such page '%s'!" % str(page + 1))
 					return
 				player.message(" ") # Padding, for the sake of making it look a bit nicer
-				player.message("&2--- Showing help page %d of %d ---" % (page + 1, pageCount + 1))
+#				player.message("&2--- Showing help page %d of %d ---" % (page + 1, pageCount + 1))
+				player.message({"text": "--- Showing ", "color": "dark_green", "extra":[
+					{"text": "help", "clickEvent": {"action": "run_command", "value": "/help"}},
+					{"text": " page %d of %d ---" % (page + 1, pageCount + 1)}
+				]})
 				for i,v in enumerate(items):
 					if not i / perPage == page: continue 
 					player.message(v)
 				if pageCount > 0:
 					if page > 0:
-						prevButton = {"text": "Prev", "underline": True, "clickEvent": {"action": "run_command", "value": "%s %d" % (command, page)}}
+						prevButton = {"text": "Prev", "underlined": True, "clickEvent": {"action": "run_command", "value": "%s %d" % (command, page)}}
 					else:
 						prevButton = {"text": "Prev", "italic": True, "color": "gray"}
 					if page < pageCount:
-						nextButton = {"text": "Next", "underline": True, "clickEvent": {"action": "run_command", "value": "%s %d" % (command, page + 2)}}
+						nextButton = {"text": "Next", "underlined": True, "clickEvent": {"action": "run_command", "value": "%s %d" % (command, page + 2)}}
 					else:
 						nextButton = {"text": "Next", "italic": True, "color": "gray"}
 					player.message({"text": "--- ", "color": "dark_green", "extra":[
@@ -305,23 +307,25 @@ class Wrapper:
 				if group == "minecraft":
 					player.execute("help %d" % (page + 1))
 				else:
+					for i in range(20):
+						player.message(" ") # Padding, for the sake of making it look a bit nicer
 					for id in self.help:
 						for groupName in self.help[id]:
 							if groupName.lower() == group:
 								group = self.help[id][groupName][1]
-								#items = ["pizza", "eggs", "pickle", "frickle", "rickle", "sauce", "sandwich", "benbot", "toast", "milk"]
 								items = []
 								for i in group:
 									command, args, permission = i[0].split(" ")[0], "", None
 									if i[0].split(" ") > 1:
 										args = " ".join(i[0].split(" ")[1:])
-									if len(i) > 1:
-										permission = {"text": "Requires '%s'." %i[2], "color": "gray", "italic": True}
+									if not player.hasPermission(i[2]):
+										continue
+									if len(i) > 1 and player.isOp():
+										permission = {"text": "Requires permission '%s'." % i[2], "color": "gray", "italic": True}
 									items.append({"text": "", "extra":[
-										{"text": command, "color": "gold", "bold": True, "clickEvent": {"action": "suggest_command", "value": command}},
+										{"text": command, "color": "gold", "clickEvent": {"action": "suggest_command", "value": command}, "hoverEvent": {"action": "show_text", "value": permission}},
 										{"text": " "+args, "color": "red", "italic": True},
-										{"text": " - %s " % i[1]},
-										permission										
+										{"text": " - %s " % i[1]}
 									]})
 								showPage(page, items, "/help %s" % groupName, 4)
 								return
@@ -418,9 +422,10 @@ class Wrapper:
 								self.permissions["users"][uuid]["groups"].append(group)
 								player.message("&aAdded user '%s' to group '%s'!" % (username, group))
 							else:
-								player.message("&aAlready added user '%s' to group '%s'!" % (username, group))
+								self.permissions["users"][uuid]["groups"].remove(group)
+								player.message("&aRemoved user '%s' from group '%s'!" % (username, group))
 						else:
-							usage("users <username> groups <groupName>")
+							usage("users <username> group <groupName>")
 					elif subcommand == "set":
 						node = args(3)
 						value = argsAfter(4)
@@ -445,7 +450,7 @@ class Wrapper:
 							else:
 								player.message("- %s: &7%s" % (node, value))
 					else:
-						usage("users <username> [group/set/info]")
+						usage("users <username> <group/set/info>")
 				else:
 					usage("[groups/users/RESET] (Note: RESET is case-sensitive!)")
 				return False

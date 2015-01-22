@@ -78,6 +78,7 @@
 				_("server_name").innerHTML = stats["server_name"]
 				_("memory_status").innerHTML = getReadableFilesize(stats["server_memory"])
 				_("world_size").innerHTML = getReadableFilesize(stats["world_size"])
+				_("disk_avail").innerHTML = getReadableFilesize(stats["disk_avail"])
 				document.title = stats["server_name"] + " - Wrapper.py"
 				
 				// draw player list
@@ -399,7 +400,8 @@
 							<b>Level Name: </b> <span id="levelname_status">Unknown</span></br>
 							<b>Player Count: </b> <span id="playercount_status">n/a players</span></br>
 							<b>Memory Usage: </b> <span id="memory_status">n/a</span></br>
-							<b>World Size: </b> <span id="world_size">n/a</span>
+							<b>World Size: </b> <span id="world_size">n/a</span><br/>
+							<b>Free Disk Space: </b> <span id="disk_avail">n/a</span>
 						</div>
 					</div>
 				</div>

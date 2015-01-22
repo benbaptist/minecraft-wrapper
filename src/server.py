@@ -277,7 +277,7 @@ class Server:
 				bytes = int(f.read().split(" ")[1]) * resource.getpagesize()
 		except: return None
 		return bytes
-	def getStorageAvailable(folder):
+	def getStorageAvailable(self, folder):
 		""" Returns the disk space for the working directory in bytes """
 		if platform.system() == "Windows":
 			free_bytes = ctypes.c_ulonglong(0)

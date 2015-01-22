@@ -17,6 +17,7 @@ Stop backups from happening unless server is running. Handle running out of disk
     - Settings tab for changing server.properties and other settings
   - Other slight design improvements
 - `/raw` console command
+- Server MOTD can now be formatted with &codes
 
 **Bug Fixes**
 - Fixed error message when backups.json was corrupt with IRC turned on

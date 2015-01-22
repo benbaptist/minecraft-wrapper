@@ -12,9 +12,7 @@ You only need to download Wrapper.py, the src folder is just the extracted versi
 
 
 **LINUX Installation**
-
-
-you can run the following command to download the stable Wrapper.py (if you have wget installed):
+You can run the following command to download the stable Wrapper.py (if you have wget installed):
 
 ```wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master/Wrapper.py```
 
@@ -22,8 +20,9 @@ or the following to download the unstable, development version of Wrapper.py:
 
 ```wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/Wrapper.py```
 
-To install dependencies, use pip:</br></br>  
-`pip install requests pkg_resources pycrypto`
+To install dependencies, use pip:
+  
+```pip install requests pkg_resources pycrypto```
 
 Place the wrapper.py file in your minecraft folder and then run `python Wrapper.py` to start.
 

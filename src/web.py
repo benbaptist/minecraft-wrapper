@@ -354,7 +354,8 @@ class Client:
 				"server_name": self.wrapper.config["General"]["server-name"],
 				"server_memory": self.wrapper.server.getMemoryUsage(),
 				"server_memory_graph": memoryGraph,
-				"world_size": self.wrapper.server.worldSize}
+				"world_size": self.wrapper.server.worldSize,
+				"disk_avail": self.wrapper.server.getStorageAvailable(".")}
 		if action == "console":
 			if not self.web.validateKey(get("key")): return EOFError
 			self.wrapper.server.console(get("execute"))
