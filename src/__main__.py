@@ -183,38 +183,43 @@ class Wrapper:
 					return False
 		if payload["command"] == "wrapper":
 			player = payload["player"]
-			buildString = self.getBuildString()
-			if len(args(0)) > 0:
-				subcommand = args(0)
-				if subcommand == "update":
-					player.message({"text": "Checking for new Wrapper.py updates...","color":"yellow"})
-					update = self.checkForNewUpdate()
-					if update:
-						version, build, type = update
-						player.message("&bNew Wrapper.py Version %s (Build #%d) available!)" % (".".join([str(_) for _ in version]), build))
-						player.message("&bYou are currently on %s." % self.getBuildString())
-						player.message("&aPerforming update...")
-						if self.performUpdate(version, build, type):
-							player.message("&aUpdate completed! Version %s #%d (%s) is now installed. Please reboot Wrapper.py to apply changes." % (version, build, type))
+			if player.isOp():
+				player = payload["player"]
+				buildString = self.getBuildString()
+				if len(args(0)) > 0:
+					subcommand = args(0)
+					if subcommand == "update":
+						player.message({"text": "Checking for new Wrapper.py updates...","color":"yellow"})
+						update = self.checkForNewUpdate()
+						if update:
+							version, build, type = update
+							player.message("&bNew Wrapper.py Version %s (Build #%d) available!)" % (".".join([str(_) for _ in version]), build))
+							player.message("&bYou are currently on %s." % self.getBuildString())
+							player.message("&aPerforming update...")
+							if self.performUpdate(version, build, type):
+								player.message("&aUpdate completed! Version %s #%d (%s) is now installed. Please reboot Wrapper.py to apply changes." % (version, build, type))
+							else:
+								player.message("&cAn error occured while performing update. Please check the Wrapper.py console as soon as possible for an explanation and traceback. If you are unsure of the cause, please file a bug report on http://github.com/benbaptist/minecraft-wrapper with the traceback.")
 						else:
-							player.message("&cAn error occured while performing update. Please check the Wrapper.py console as soon as possible for an explanation and traceback. If you are unsure of the cause, please file a bug report on http://github.com/benbaptist/minecraft-wrapper with the traceback.")
+							player.message("&cNo new Wrapper.py versions available.")
+					elif subcommand == "halt":
+						player.message("&cHalting Wrapper.py... goodbye!")
+						self.shutdown()
+					elif subcommand in ("mem", "memory"):
+						if self.server.getMemoryUsage():
+							player.message("&cServer Memory: %d bytes" % self.server.getMemoryUsage())
+						else:
+							player.message("&cError: Couldn't retrieve memory usage for an unknown reason")
+					elif subcommand == "random":
+						player.message("&cRandom number: &a%d" % random.randrange(0, 99999999))
 					else:
-						player.message("&cNo new Wrapper.py versions available.")
-				elif subcommand == "halt":
-					player.message("&cHalting Wrapper.py... goodbye!")
-					self.shutdown()
-				elif subcommand in ("mem", "memory"):
-					if self.server.getMemoryUsage():
-						player.message("&cServer Memory: %d bytes" % self.server.getMemoryUsage())
-					else:
-						player.message("&cError: Couldn't retrieve memory usage for an unknown reason")
-				elif subcommand == "random":
-					player.message("&cRandom number: &a%d" % random.randrange(0, 99999999))
+						player.message("&cUnknown sub-command /wrapper '%s'." % subcommand)
 				else:
-					player.message("&cUnknown sub-command /wrapper '%s'." % subcommand)
+					player.message({"text": "Wrapper.py Version %s" % (buildString), "color": "gray", "italic": True})
+				return False
 			else:
-				player.message({"text": "Wrapper.py Version %s" % (buildString), "color": "gray", "italic": True})
-			return False
+				player.message({"text": "Unknown command. Try /help for a list of commands", "color": "red"})
+				return False
 		if payload["command"] in ("plugins", "pl"):
 			player = payload["player"]
 			if player.isOp():
