@@ -1,4 +1,4 @@
-import json, os, threading, time, copy
+import json, os, threading, time, copy, traceback
 class Storage:
 	def __init__(self, name, isWorld=None, root="wrapper-data/json"):
 		self.name = name
@@ -36,7 +36,10 @@ class Storage:
 		while not self.abort:
 			if time.time() - self.time > 10:
 				if not self.data == self.dataOld:
-					self.save()
+					try:
+						self.save()
+					except:
+						print traceback.format_exc()
 					self.time = time.time()
 			time.sleep(1)
 	def load(self):

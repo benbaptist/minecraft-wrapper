@@ -1,11 +1,4 @@
 #Changelog#
-Fix issue with [23:10:26] [Wrapper.py/ERROR] Traceback (most recent call last):
-[23:10:26] [Wrapper.py/ERROR]   File "Wrapper.py/__main__.py", line 136, in callEvent
-[23:10:26] [Wrapper.py/ERROR]     result = self.events[pluginID][event](payload)
-[23:10:26] [Wrapper.py/ERROR]   File "Wrapper.py/web.py", line 45, in onPlayerMessage
-[23:10:26] [Wrapper.py/ERROR]     del self.consoleScrollback[0]
-
-Stop backups from happening unless server is running. Handle running out of disk space by freezing java process. Upon every boot, check level.dat and player files. If corrupted, replace from backup.
 <h4>0.7.5</h4>
 **Features**
 - Web interface improvements:
@@ -17,7 +10,9 @@ Stop backups from happening unless server is running. Handle running out of disk
     - Settings tab for changing server.properties and other settings
   - Other slight design improvements
 - `/raw` console command
+
 - Server MOTD can now be formatted with &codes
+- Player login count, and player login and logout times are now recorded. More features to come out of this soon.
 
 **Bug Fixes**
 - Fixed error message when backups.json was corrupt with IRC turned on
@@ -31,6 +26,8 @@ Stop backups from happening unless server is running. Handle running out of disk
 - player.execute(command): Execute a command as the player. Works best in proxy mode, but will fallback to using the 1.8 'execute' command if proxy mode is not available.
 - Fixed minecraft.getPlayer(username) so that it actually worked
 - server.getStorageAvailable(): Returns the amount of bytes free on the disk of the working directory
+- minecraft.getAllPlayers(): Returns a dict with the UUID as the key for each player that has ever joined the server, and inside each UUID is their offline player object containing stats such as first login time, player activity, and more soon. The player list is not world-specific.
+- Removed event 'server.start' (redundant)
 
 <h4>0.7.4</h4>
 Just a small little update, to fix a few things, and improve upon some existing features.
@@ -287,3 +284,4 @@ Small update, but brings one much-needed change: the new configuration file syst
   - Allow auto-updating from dev build to stable, if it's the latest
   - Jumping from stable to dev manually, if the dev build is newer than the stable build
   - Create a difference between "checking for updates" and "auto-updating"
+- Stop backups from happening unless server is running. Handle running out of disk space by freezing java process. Upon every boot, check level.dat and player files. If corrupted, replace from backup.

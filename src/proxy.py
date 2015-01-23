@@ -278,7 +278,7 @@ class Client: # handle client/game connection
 					player = self.wrapper.server.players[i]
 					sample.append({"name": player.username, "id": str(player.uuid)})
 					if len(sample) > 5: break
-				MOTD = {"description": json.loads(self.wrapper.server.processColorCodes(self.wrapper.server.motd)), 
+				MOTD = {"description": json.loads(self.wrapper.server.processColorCodes(self.wrapper.server.motd.replace("\\", ""))), 
 					"players": {"max": self.wrapper.server.maxPlayers, "online": len(self.wrapper.server.players), "sample": sample},
 					"version": {"name": self.wrapper.server.version, "protocol": self.wrapper.server.protocolVersion}
 				}

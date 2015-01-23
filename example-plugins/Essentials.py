@@ -1,8 +1,12 @@
 import json, os, random, traceback
 NAME = "Essentials"
+AUTHOR = "Ben Baptist"
 ID = "com.benbaptist.plugins.essentials"
 SUMMARY = "Essential commands and other features."
-VERSION = (1, 0)
+DESCRIPTION = """Essentials plugin for Wrapper.py, loosely based off of Essentials for Bukkit."""
+WEBSITE = ""
+VERSION = (1, 1)
+BLONKS = False
 class Main:
 	def __init__(self, api, log):
 		self.api = api
@@ -13,11 +17,26 @@ class Main:
 	def onEnable(self):
 		self.data = self.api.getStorage("worldly", True)
 		
+		# HELP
+		self.api.registerHelp("Essentials", "Commands from the Essentials plugin", [
+			("/gm [gamemode]", "Switch your personal gamemode. If no arguments are provided, it'll toggle you between survival and creative quickly. 'gamemode' can be either the name or the number.", "essentials.gm"),
+			("/heal", "Heals the health and hunger of the player.", "essentials.heal"),
+			("/i <TileName>[:Data] [Count]", "Gives the player the requested item and puts it directly in their inventory.", "essentials.give", "essentials.give"),
+			("/warp [warp]", "Teleports the player to the specified warp. If no warp is specified, it'll list the available warps.", "essentials.warp"),
+			("/setwarp <warp>", "Sets the specified warp at the current location of the player.", "essentials.setwarp"),
+			("/powertool", "Toggles powertool mode. In powertool mode, the player can destroy blocks instantly without being in creative.", "essentials.powertool"),
+			("/motd", "Display the MOTD.", "essentials.motd"),
+			("/setmotd <MOTD ...>", "Set the MOTD.", "essentials.setmotd"),
+			("/spawn", "Teleports you to spawn.", "essentials.spawn"),
+			("/whois", "Displays information about you. Mostly for debugging purposes or weird admin stuff. Eventually, this command will show info about other players.", "essentials.whois"),
+			("/sudo <username> <command ...>", "Runs a command as the specified user.", "essentials.sudo")
+		])
+		
 		# DEFAULTS
 		if "warps" not in self.data: self.data["warps"] = {}
 		
 		# api.registerPermission() is used to set these permissions to ON by default, rather than off
-		self.api.registerPermission("essentials.warp", True)
+		self.api.registerPermission("essentials.warp", True) # I need to do essentials.listwarps too 
 		self.api.registerPermission("essentials.motd", True)
 		self.api.registerPermission("essentials.getpos", True)
 		
@@ -38,6 +57,7 @@ class Main:
 		self.api.registerCommand("spawn", self.spawn, "essentials.spawn")
 		self.api.registerCommand("block", self.block, "essentials.block")
 		self.api.registerCommand("whois", self.whois, "essentials.whois")
+		self.api.registerCommand("sudo", self.sudo, "essentials.sudo")
 		self.api.registerEvent("player.login", self.login)
 		self.api.registerEvent("player.dig", self.click)
 	def onDisable(self):
@@ -48,7 +68,7 @@ class Main:
 		return self.data["motd"]["msg"].replace("[[name]]", name)
 	# events
 	def login(self, payload):
-		print payload
+		payload["player"].message(self.getMOTD(payload["player"].username))
 	def click(self, payload):
 		player = payload["player"]
 		if player.username in self.powertool:
@@ -75,7 +95,6 @@ class Main:
 		if "motd" not in self.data:
 			self.data["motd"] = {"msg": "&aWelcome to the server, [[name]]!", "enabled": True}
 		player.message(self.getMOTD(player.username))
-		player.message(str(player.uuid))
 	def setmotd(self, player, args):
 		if player.isOp():
 			if len(args) > 0:
@@ -97,8 +116,12 @@ class Main:
 		if not player.isOp():
 			self.deny(player)
 			return False
-		for i in range(25):
-			self.api.minecraft.console("execute %s ~ ~ ~ summon PrimedTnt ~%d ~ ~%d" % (player.name, random.randrange(-10, 10), random.randrange(-10, 10)))
+		# Totally not a secret op-only command that can only be executed if BLONKS is set to True :P
+		if BLONKS:
+			for i in range(25):
+				self.api.minecraft.console("execute %s ~ ~ ~ summon PrimedTnt ~%d ~ ~%d" % (player.name, random.randrange(-10, 10), random.randrange(-10, 10)))
+		else:
+			player.message("&cThis command never existed. Doesn't exist. I mean... what?")
 	def warp(self, player, args):
 		if len(args) == 1:
 			warp = args[0]
@@ -153,7 +176,7 @@ class Main:
 		if not player.isOp():
 			self.deny(player)
 			return False
-		player.message({"text": "Creamy health!", "color": "yellow"})
+		player.message({"text": "Delicious health!", "color": "yellow"})
 		self.api.minecraft.console("effect %s 6 20 20" % player.name)
 		self.api.minecraft.console("effect %s 23 20 20" % player.name)
 	def i(self, player, args):
@@ -210,3 +233,8 @@ class Main:
 			player.message("&cUsage: /block <x> <y> <z>")
 	def whois(self, player, args):
 		player.message("&7You are %s. You are in dimension %d, in gamemode %d and are currently located at %s." % (player.username, player.getDimension(), player.getGamemode(), player.getPosition()))
+	def sudo(self, player, args):
+		if len(args) > 1:
+			self.minecraft.getPlayer(args[0]).execute(" ".join(args[1:]))
+		else:
+			player.message("&cUsage: /sudo <username> <command ...>")

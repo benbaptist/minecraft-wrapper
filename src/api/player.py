@@ -1,4 +1,4 @@
-import storage, api, time, fnmatch, json
+import storage, api, time, fnmatch, json, threading
 class Player:
 	""" Player objects contains methods and data of a currently logged-in player. This object is destroyed upon logging off. """
 	def __init__(self, username, wrapper):
@@ -8,6 +8,7 @@ class Player:
 		self.name = username
 		self.username = self.name # just an alias - same variable
 		self.loggedIn = time.time()
+		self.abort = False
 		
 		self.uuid = self.wrapper.getUUID(username)
 		self.client = None
@@ -19,9 +20,19 @@ class Player:
 					break
 		
 		self.data = storage.Storage(self.uuid, root="wrapper-data/players")
-		if "firstLoggedIn" not in self.data: self.data["firstLoggedIn"] = (time.time(), time.tzname)
+		if not "firstLoggedIn" in self.data: self.data["firstLoggedIn"] = (time.time(), time.tzname)
+		if not "logins" in self.data:
+			self.data["logins"] = {}
+		t = threading.Thread(target=self.__track__, args=())
+		t.daemon = True
+		t.start()
 	def __str__(self):
 		return self.username
+	def __track__(self):
+		self.data["logins"][int(self.loggedIn)] = time.time()
+		while not self.abort:
+			self.data["logins"][int(self.loggedIn)] = int(time.time())
+			time.sleep(1)
 	def console(self, string):
 		""" Run a command in the Minecraft server's console. """
 		try:

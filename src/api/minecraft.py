@@ -1,4 +1,4 @@
-import json, time, nbt, items, storage
+import json, time, nbt, items, storage, os
 class Minecraft:
 	""" This class contains functions related to in-game features directly. These methods are located at self.api.minecraft. """
 	def __init__(self, wrapper):
@@ -10,6 +10,17 @@ class Minecraft:
 		if self.getServer():
 			if self.getServer().state == 2: return True
 		return False
+	def getAllPlayers(self):
+		""" Returns a dict containing all players ever connected to the server """
+		players = {}
+		for uuidf in os.listdir("wrapper-data/players"):
+			uuid = uuidf.rsplit(".", 1)[0]
+			with open("wrapper-data/players/" + uuidf) as f:
+				try:
+					players[uuid] = json.loads(f.read())
+				except:
+					print traceback.format_exc()
+		return players
 	def console(self, string):
 		""" Run a command in the Minecraft server's console. """
 		try:

@@ -189,6 +189,7 @@ class Server:
 			for client in self.wrapper.proxy.clients:
 				uuid = self.players[username].uuid
 		if username in self.players:
+			self.players[username].abort = True
 			del self.players[username]
 	def getPlayer(self, username):
 		""" Returns a player object with the specified name, or False if the user is not logged in/doesn't exist """
@@ -251,7 +252,6 @@ class Server:
 				continue
 			self.changeState(1)
 			self.log.info("Starting server...")
-			self.wrapper.callEvent("server.start", {})
 			self.reloadProperties()
 			self.proc = subprocess.Popen(self.args, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
 			self.players = {}	

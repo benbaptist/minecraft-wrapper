@@ -91,7 +91,6 @@ class Wrapper:
 			reload(self.plugins[plugin]["module"])
 		except:
 			self.log.error("Error while reloading plugin '%s' -- it was probably deleted or is a bugged version" % plugin)
-			self.log.error("Error while reloading plugin '%s' -- it was probably deleted or is a bugged version" % plugin)
 			self.log.getTraceback()
 	def loadPlugins(self):
 		self.log.info("Loading plugins...")
@@ -145,8 +144,9 @@ class Wrapper:
 						for line in traceback.format_exc().split("\n"):
 							self.log.error(line)
 		except:
-			self.log.error("A serious runtime error occurred - if you notice any strange behaviour, please restart immediately")
-			self.log.getTraceback()
+			pass # For now.
+			#self.log.error("A serious runtime error occurred - if you notice any strange behaviour, please restart immediately")
+			#self.log.getTraceback()
 		return True
 	def playerCommand(self, payload):
 		self.log.info("%s executed: /%s %s" % (str(payload["player"]), payload["command"], " ".join(payload["args"])))
@@ -339,6 +339,19 @@ class Wrapper:
 					]})
 				showPage(page, items, "/help", 8)
 			return
+		if payload["command"] == "playerstats":
+			player = payload["player"]
+			if player.isOp():
+				totalPlaytime = {}
+				players = self.api.minecraft.getAllPlayers()
+				for uuid in players:
+					if not "logins" in players[uuid]: continue
+					totalPlaytime[uuid] = 0
+					for i in players[uuid]["logins"]:
+						totalPlaytime[uuid] += players[uuid]["logins"][i] - int(i)
+				for i in totalPlaytime:
+					player.message("&c%s: %d seconds" % (i, totalPlaytime[i]))
+				return 
 		if payload["command"] in ("permissions", "perm", "perms", "super"):
 			player = payload["player"]
 			if not "groups" in self.permissions: self.permissions["groups"] = {}
@@ -452,7 +465,8 @@ class Wrapper:
 					else:
 						usage("users <username> <group/set/info>")
 				else:
-					usage("[groups/users/RESET] (Note: RESET is case-sensitive!)")
+					usage("<groups/users/RESET> (Note: RESET is case-sensitive!)")
+					player.message("&cAlias commands: /perms, /perm, /super")
 				return False
 		return True
 	def getUUID(self, name):
@@ -470,6 +484,12 @@ class Wrapper:
 		signal.signal(signal.SIGTERM, self.SIGINT)
 		
 		self.api = API(self, "Wrapper.py")
+		self.api.registerHelp("Wrapper", "Internal Wrapper.py commands ", [
+			("/wrapper [update/memory/halt]", "If no subcommand is provided, it'll show the Wrapper version.", None),
+			("/plugins", "Show a list of the installed plugins", None),
+			("/permissions <groups/users/RESET>", "Command used to manage permission groups and users, add permission nodes, etc.", None),
+			("/playerstats", "Show the most active players.", None)
+		])
 		
 		self.server = Server(sys.argv, self.log, self.configManager.config, self)
 		self.server.init()
