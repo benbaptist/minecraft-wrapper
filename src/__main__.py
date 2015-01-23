@@ -149,6 +149,7 @@ class Wrapper:
 			#self.log.getTraceback()
 		return True
 	def playerCommand(self, payload):
+		player = payload["player"]
 		self.log.info("%s executed: /%s %s" % (str(payload["player"]), payload["command"], " ".join(payload["args"])))
 		def args(i):
 			try: return payload["args"][i]
@@ -169,7 +170,6 @@ class Wrapper:
 			if commandName in self.commands[pluginID]:
 				try:
 					command = self.commands[pluginID][commandName]
-					player = payload["player"]
 					if player.hasPermission(command["permission"]):
 						command["callback"](payload["player"], payload["args"])
 					else:
@@ -182,9 +182,7 @@ class Wrapper:
 					payload["player"].message({"text": "An internal error occurred on the server side while trying to execute this command. Apologies.", "color": "red"})
 					return False
 		if payload["command"] == "wrapper":
-			player = payload["player"]
 			if player.isOp():
-				player = payload["player"]
 				buildString = self.getBuildString()
 				if len(args(0)) > 0:
 					subcommand = args(0)
@@ -221,7 +219,6 @@ class Wrapper:
 				player.message({"text": "Unknown command. Try /help for a list of commands", "color": "red"})
 				return False
 		if payload["command"] in ("plugins", "pl"):
-			player = payload["player"]
 			if player.isOp():
 				player.message({"text": "List of plugins installed:", "color": "red", "italic": True})
 				for id in self.plugins:
@@ -250,7 +247,6 @@ class Wrapper:
 						player.message({"text": name, "color": "dark_red", "extra":[{"text": " - ", "color": "white"}, {"text": "Failed to import this plugin!", "color": "red", "italic": "true"}]})
 				return False
 		if payload["command"] == "reload":
-			player = payload["player"]
 			if player.isOp():
 				try:
 					self.reloadPlugins()
@@ -262,7 +258,6 @@ class Wrapper:
 				return False
 		# Temporarily commented-out the help command for now
 		if payload["command"] in ("help", "?"):
-			player = payload["player"]
 			helpGroups = [{"name": "Minecraft", "description": "List regular server commands"}]
 			for id in self.help:
 				plugin = self.help[id]
@@ -345,7 +340,6 @@ class Wrapper:
 				showPage(page, items, "/help", 8)
 			return
 		if payload["command"] == "playerstats":
-			player = payload["player"]
 			if player.isOp():
 				totalPlaytime = {}
 				players = self.api.minecraft.getAllPlayers()
@@ -358,7 +352,6 @@ class Wrapper:
 					player.message("&c%s: %d seconds" % (i, totalPlaytime[i]))
 				return 
 		if payload["command"] in ("permissions", "perm", "perms", "super"):
-			player = payload["player"]
 			if not "groups" in self.permissions: self.permissions["groups"] = {}
 			if not "users" in self.permissions: self.permissions["users"] = {}
 			if not "Default" in self.permissions["groups"]: self.permissions["groups"]["Default"] = {"permissions": {}}
