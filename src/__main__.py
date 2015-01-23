@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # I ought to clean these imports up a bit.
-import socket, datetime, time, sys, threading, random, subprocess, os, json, signal, traceback, ConfigParser, ast, proxy, web, globals, storage, hashlib
+import socket, datetime, time, sys, threading, random, subprocess, os, json, signal, traceback, ConfigParser, ast, proxy, web, globals, storage, hashlib, cProfile
 from log import *
 from config import Config
 from irc import IRC
@@ -35,6 +35,7 @@ class Wrapper:
 		self.commands = {}
 		self.events = {}
 		self.permission = {}
+		self.help = {}
 	def loadPlugin(self, i):
 		if "disabled_plugins" not in self.storage: self.storage["disabled_plugins"] = []
 		self.log.info("Loading plugin %s..." % i)
@@ -56,6 +57,10 @@ class Wrapper:
 		except: description = None
 		try: summary = plugin.SUMMARY
 		except: summary = None
+		try: author = plugin.AUTHOR
+		except: author = None
+		try: website = plugin.WEBSITE
+		except: website = None
 		if id in self.storage["disabled_plugins"]:
 			self.log.warn("Plugin '%s' disabled - not loading" % name)
 			return
@@ -65,20 +70,28 @@ class Wrapper:
 		self.plugins[id]["version"] = version
 		self.plugins[id]["summary"] = summary
 		self.plugins[id]["description"] = description 
+		self.plugins[id]["author"] = author 
+		self.plugins[id]["website"] = website 
 		self.plugins[id]["filename"] = i
 		self.commands[id] = {}
 		self.events[id] = {}
 		self.permission[id] = {}
+		self.help[id] = {}
 		main.onEnable()
 	def unloadPlugin(self, plugin):
 		del self.commands[plugin]
 		del self.events[plugin]
+		del self.help[plugin]
 		try:
 			self.plugins[plugin]["main"].onDisable()
 		except:
 			self.log.error("Error while disabling plugin '%s'" % plugin)
 			self.log.getTraceback()
-		reload(self.plugins[plugin]["module"])
+		try:
+			reload(self.plugins[plugin]["module"])
+		except:
+			self.log.error("Error while reloading plugin '%s' -- it was probably deleted or is a bugged version" % plugin)
+			self.log.getTraceback()
 	def loadPlugins(self):
 		self.log.info("Loading plugins...")
 		if not os.path.exists("wrapper-plugins"):
@@ -131,8 +144,9 @@ class Wrapper:
 						for line in traceback.format_exc().split("\n"):
 							self.log.error(line)
 		except:
-			self.log.error("A serious runtime error occurred - if you notice any strange behaviour, please restart immediately")
-			self.log.getTraceback()
+			pass # For now.
+			#self.log.error("A serious runtime error occurred - if you notice any strange behaviour, please restart immediately")
+			#self.log.getTraceback()
 		return True
 	def playerCommand(self, payload):
 		self.log.info("%s executed: /%s %s" % (str(payload["player"]), payload["command"], " ".join(payload["args"])))
@@ -142,6 +156,31 @@ class Wrapper:
 		def argsAfter(i):
 			try: return " ".join(payload["args"][i:])
 			except: return ""
+		for pluginID in self.commands:
+			if pluginID == "Wrapper.py":
+				try: 
+					self.commands[pluginID][command](payload["player"], payload["args"])
+				except: pass
+				continue
+			if pluginID not in self.plugins: continue
+			plugin = self.plugins[pluginID]
+			if not plugin["good"]: continue
+			commandName = payload["command"]
+			if commandName in self.commands[pluginID]:
+				try:
+					command = self.commands[pluginID][commandName]
+					player = payload["player"]
+					if player.hasPermission(command["permission"]):
+						command["callback"](payload["player"], payload["args"])
+					else:
+						player.message({"translate": "commands.generic.permission", "color": "red"})
+					return False
+				except:
+					self.log.error("Plugin '%s' errored out when executing command: '<%s> /%s':" % (pluginID, payload["player"], command))
+					for line in traceback.format_exc().split("\n"):
+						self.log.error(line)
+					payload["player"].message({"text": "An internal error occurred on the server side while trying to execute this command. Apologies.", "color": "red"})
+					return False
 		if payload["command"] == "wrapper":
 			player = payload["player"]
 			buildString = self.getBuildString()
@@ -216,6 +255,103 @@ class Wrapper:
 					self.log.error(traceback.format_exc())
 					player.message({"text": "An error occurred while reloading plugins. Please check the console immediately for a traceback.", "color": "red"})
 				return False
+		# Temporarily commented-out the help command for now
+		if payload["command"] in ("help", "?"):
+			player = payload["player"]
+			helpGroups = [{"name": "Minecraft", "description": "List regular server commands"}]
+			for id in self.help:
+				plugin = self.help[id]
+				for help in plugin:
+					helpGroups.append({"name": help, "description": plugin[help][0]})
+			if len(args(1)) > 0:
+				group = args(0).lower()
+				page = args(1)
+			else:
+				group = ""
+				page = args(0)
+			try: page = int(page) - 1
+			except:
+				if len(page) > 0:
+					group = page.lower()
+				page = 0
+			def showPage(page, items, command, perPage):
+				pageCount = len(items) / perPage
+				if page > pageCount or page < 0:
+					player.message("&cNo such page '%s'!" % str(page + 1))
+					return
+				player.message(" ") # Padding, for the sake of making it look a bit nicer
+#				player.message("&2--- Showing help page %d of %d ---" % (page + 1, pageCount + 1))
+				player.message({"text": "--- Showing ", "color": "dark_green", "extra":[
+					{"text": "help", "clickEvent": {"action": "run_command", "value": "/help"}},
+					{"text": " page %d of %d ---" % (page + 1, pageCount + 1)}
+				]})
+				for i,v in enumerate(items):
+					if not i / perPage == page: continue 
+					player.message(v)
+				if pageCount > 0:
+					if page > 0:
+						prevButton = {"text": "Prev", "underlined": True, "clickEvent": {"action": "run_command", "value": "%s %d" % (command, page)}}
+					else:
+						prevButton = {"text": "Prev", "italic": True, "color": "gray"}
+					if page < pageCount:
+						nextButton = {"text": "Next", "underlined": True, "clickEvent": {"action": "run_command", "value": "%s %d" % (command, page + 2)}}
+					else:
+						nextButton = {"text": "Next", "italic": True, "color": "gray"}
+					player.message({"text": "--- ", "color": "dark_green", "extra":[
+						prevButton,
+						{"text": " | "},
+						nextButton,
+						{"text": " ---"}
+					]})
+			if len(group) > 0:
+				if group == "minecraft":
+					player.execute("help %d" % (page + 1))
+				else:
+					for i in range(20):
+						player.message(" ") # Padding, for the sake of making it look a bit nicer
+					for id in self.help:
+						for groupName in self.help[id]:
+							if groupName.lower() == group:
+								group = self.help[id][groupName][1]
+								items = []
+								for i in group:
+									command, args, permission = i[0].split(" ")[0], "", None
+									if i[0].split(" ") > 1:
+										args = " ".join(i[0].split(" ")[1:])
+									if not player.hasPermission(i[2]):
+										continue
+									if len(i) > 1 and player.isOp():
+										permission = {"text": "Requires permission '%s'." % i[2], "color": "gray", "italic": True}
+									items.append({"text": "", "extra":[
+										{"text": command, "color": "gold", "clickEvent": {"action": "suggest_command", "value": command}, "hoverEvent": {"action": "show_text", "value": permission}},
+										{"text": " "+args, "color": "red", "italic": True},
+										{"text": " - %s " % i[1]}
+									]})
+								showPage(page, items, "/help %s" % groupName, 4)
+								return
+					player.message("&cThe help group '%s' does not exist." % group)
+			else:
+				items = []
+				for v in helpGroups:
+					items.append({"text": "", "extra":[
+						{"text": v["name"], "color": "gold", "bold": True, "clickEvent": {"action": "run_command", "value": "/help " + v["name"]}},
+						{"text": " - " + v["description"]}
+					]})
+				showPage(page, items, "/help", 8)
+			return
+		if payload["command"] == "playerstats":
+			player = payload["player"]
+			if player.isOp():
+				totalPlaytime = {}
+				players = self.api.minecraft.getAllPlayers()
+				for uuid in players:
+					if not "logins" in players[uuid]: continue
+					totalPlaytime[uuid] = 0
+					for i in players[uuid]["logins"]:
+						totalPlaytime[uuid] += players[uuid]["logins"][i] - int(i)
+				for i in totalPlaytime:
+					player.message("&c%s: %d seconds" % (i, totalPlaytime[i]))
+				return 
 		if payload["command"] in ("permissions", "perm", "perms", "super"):
 			player = payload["player"]
 			if not "groups" in self.permissions: self.permissions["groups"] = {}
@@ -299,9 +435,10 @@ class Wrapper:
 								self.permissions["users"][uuid]["groups"].append(group)
 								player.message("&aAdded user '%s' to group '%s'!" % (username, group))
 							else:
-								player.message("&aAlready added user '%s' to group '%s'!" % (username, group))
+								self.permissions["users"][uuid]["groups"].remove(group)
+								player.message("&aRemoved user '%s' from group '%s'!" % (username, group))
 						else:
-							usage("users <username> groups <groupName>")
+							usage("users <username> group <groupName>")
 					elif subcommand == "set":
 						node = args(3)
 						value = argsAfter(4)
@@ -326,35 +463,11 @@ class Wrapper:
 							else:
 								player.message("- %s: &7%s" % (node, value))
 					else:
-						usage("users <username> [group/set/info]")
+						usage("users <username> <group/set/info>")
 				else:
-					usage("[groups/users/RESET] (Note: RESET is case-sensitive!)")
+					usage("<groups/users/RESET> (Note: RESET is case-sensitive!)")
+					player.message("&cAlias commands: /perms, /perm, /super")
 				return False
-		for pluginID in self.commands:
-			if pluginID == "Wrapper.py":
-				try: 
-					self.commands[pluginID][command](payload["player"], payload["args"])
-				except: pass
-				continue
-			if pluginID not in self.plugins: continue
-			plugin = self.plugins[pluginID]
-			if not plugin["good"]: continue
-			commandName = payload["command"]
-			if commandName in self.commands[pluginID]:
-				try:
-					command = self.commands[pluginID][commandName]
-					player = payload["player"]
-					if player.hasPermission(command["permission"]):
-						command["callback"](payload["player"], payload["args"])
-					else:
-						player.message({"translate": "commands.generic.permission", "color": "red"})
-					return False
-				except:
-					self.log.error("Plugin '%s' errored out when executing command: '<%s> /%s':" % (pluginID, payload["player"], command))
-					for line in traceback.format_exc().split("\n"):
-						self.log.error(line)
-					payload["player"].message({"text": "An internal error occurred on the server side while trying to execute this command. Apologies.", "color": "red"})
-					return False
 		return True
 	def getUUID(self, name):
 		f = open("usercache.json", "r")
@@ -371,6 +484,12 @@ class Wrapper:
 		signal.signal(signal.SIGTERM, self.SIGINT)
 		
 		self.api = API(self, "Wrapper.py")
+		self.api.registerHelp("Wrapper", "Internal Wrapper.py commands ", [
+			("/wrapper [update/memory/halt]", "If no subcommand is provided, it'll show the Wrapper version.", None),
+			("/plugins", "Show a list of the installed plugins", None),
+			("/permissions <groups/users/RESET>", "Command used to manage permission groups and users, add permission nodes, etc.", None),
+			("/playerstats", "Show the most active players.", None)
+		])
 		
 		self.server = Server(sys.argv, self.log, self.configManager.config, self)
 		self.server.init()
@@ -382,7 +501,6 @@ class Wrapper:
 			t = threading.Thread(target=self.irc.init, args=())
 			t.daemon = True
 			t.start()
-		# Old, deactivated web interface code. Will work on this more soon after the release of 0.7.0.
 		if self.config["Web"]["web-enabled"]:
 			if web.IMPORT_SUCCESS:
 				self.web = web.Web(self)
@@ -503,7 +621,7 @@ class Wrapper:
 				self.log.info("Update file successfully verified. Installing...")
 				with open(sys.argv[0], "w") as f:
 					f.write(wrapperFile)
-				self.log.info("Wrapper.py %s (#%d) installed. Please reboot the Wrapper.py." % (".".join([str(_) for _ in version]), build))
+				self.log.info("Wrapper.py %s (#%d) installed. Please reboot Wrapper.py." % (".".join([str(_) for _ in version]), build))
 				self.update = build
 				return True
 			else:
@@ -527,8 +645,11 @@ class Wrapper:
 					break
 				continue
 			def args(i): 
-				try: return input[1:].split(" ")[i];
-				except:pass;
+				try: return input[1:].split(" ")[i]
+				except: pass
+			def argsAfter(i): 
+				try: return " ".join(input[1:].split(" ")[i:]);
+				except: pass;
 			command = args(0)
 			if command == "halt":
 				self.server.stop("Halting server...", save=False)
@@ -563,6 +684,24 @@ class Wrapper:
 					self.log.info("Server Memory Usage: %d bytes" % self.server.getMemoryUsage())
 				else:
 					self.log.error("Server not booted or another error occurred while getting memory usage!")
+			elif command == "raw":
+				if self.server.state in (1, 2, 3):
+					if len(argsAfter(1)) > 0:
+						self.server.console(argsAfter(1))
+					else:
+						self.log.info("Usage: /raw [command]")
+				else:
+					self.log.error("Server is not started. Please run `/start` to boot it up.")
+			elif command == "freeze":
+				if not self.server.state == 0:
+					self.server.freeze()
+				else:
+					self.log.error("Server is not started. Please run `/start` to boot it up.")	
+			elif command == "unfreeze":
+				if not self.server.state == 0:
+					self.server.unfreeze()
+				else:
+					self.log.error("Server is not started. Please run `/start` to boot it up.")	
 			elif command == "help":
 				self.log.info("/reload - Reload plugins")	
 				self.log.info("/plugins - Lists plugins")	
@@ -570,7 +709,9 @@ class Wrapper:
 				self.log.info("/start & /stop - Start and stop the server without auto-restarting respectively without shutting down Wrapper.py")
 				self.log.info("/restart - Restarts the server, obviously")				
 				self.log.info("/halt - Shutdown Wrapper.py completely")
+				self.log.info("/freeze & /unfreeze - Temporarily locks the server up until /unfreeze is executed")
 				self.log.info("/mem - Get memory usage of the server")
+				self.log.info("/raw [command] - Send command to the Minecraft Server. Useful for Forge commands like `/fml confirm`.")
 				self.log.info("Wrapper.py Version %s" % self.getBuildString())
 			else:
 				self.log.error("Invalid command %s" % command)
@@ -580,29 +721,24 @@ if __name__ == "__main__":
 	log.info("Wrapper.py started - Version %s" % wrapper.getBuildString())
 	
 	try:
-		t = threading.Thread(target=wrapper.start(), args=())
-		t.daemon = True
-		t.start()
+		wrapper.start()
 	except SystemExit:
 		#log.error("Wrapper.py received SystemExit")
 		os.system("reset")
 		wrapper.disablePlugins()
 		wrapper.halt = True
 		try:
-			for player in wrapper.server.players:
-				wrapper.server.run("kick %s Wrapper.py received shutdown signal - bye" % player)
-			time.sleep(0.2)
-			wrapper.server.run("save-all")
-			wrapper.server.run("stop")
+			wrapper.server.console("save-all")
+			wrapper.server.stop("Wrapper.py received shutdown signal - bye", save=False)
 		except:
 			pass
 	except:
-		log.error("Wrapper.py crashed - stopping sever to be safe")
+		log.error("Wrapper.py crashed - stopping server to be safe")
 		for line in traceback.format_exc().split("\n"):
 			log.error(line)
 		wrapper.halt = True
 		wrapper.disablePlugins()
 		try:
-			wrapper.server.stop("Wrapper.py crashed - please contact the server host instantly")
+			wrapper.server.stop("Wrapper.py crashed - please contact the server host instantly", save=False)
 		except:
-			print "Failure to shutdown server cleanly! Server could still be running, or it might rollback/corrupt!"
+			print "Failure to shut down server cleanly! Server could still be running, or it might rollback/corrupt!"

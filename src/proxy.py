@@ -253,6 +253,8 @@ class Client: # handle client/game connection
 		if self.username in self.wrapper.server.players:
 			return self.wrapper.server.players[self.username]
 		return False
+	def message(self, string):
+		self.server.send(0x01, "string", (string,))
 	def parse(self, id):
 		if id == 0x00:
 			if self.state == 0:
@@ -276,7 +278,7 @@ class Client: # handle client/game connection
 					player = self.wrapper.server.players[i]
 					sample.append({"name": player.username, "id": str(player.uuid)})
 					if len(sample) > 5: break
-				MOTD = {"description": self.wrapper.server.motd, 
+				MOTD = {"description": json.loads(self.wrapper.server.processColorCodes(self.wrapper.server.motd.replace("\\", ""))), 
 					"players": {"max": self.wrapper.server.maxPlayers, "online": len(self.wrapper.server.players), "sample": sample},
 					"version": {"name": self.wrapper.server.version, "protocol": self.wrapper.server.protocolVersion}
 				}
@@ -714,6 +716,8 @@ class Server: # Handle Server Connection
 			while z < head["length"]:
 				serverUUID = self.read("uuid:uuid")["uuid"]
 				client = self.client.proxy.getClientByServerUUID(serverUUID)
+				try: client.uuid
+				except: continue
 				if not client: 
 					z += 1
 					continue

@@ -1,4 +1,33 @@
 #Changelog#
+<h4>0.7.5</h4>
+**Features**
+- Web interface improvements:
+  - Increased console scrollback from 200 lines to 1000 lines 
+  - Added 'Server' tab with sub-tabs:
+    - Moved the server console into the Server tab
+    - Chat tab for chatting with both the server and IRC simutaniously
+    - File manager for viewing, renaming, and deleting, in the server folder
+    - Settings tab for changing server.properties and other settings
+  - Other slight design improvements
+- `/raw` console command
+
+- Server MOTD can now be formatted with &codes
+- Player login count, and player login and logout times are now recorded. More features to come out of this soon.
+
+**Bug Fixes**
+- Fixed error message when backups.json was corrupt with IRC turned on
+- Potentially fixed CPU leak with web/proxy mode. I'm still not 100% sure what caused it and if it is actually fixed yet, though.
+- Fixed crash if 'resource' module isn't installed (usually on non-POSIX systems)
+
+**Developer Changes**
+- api.registerHelp(groupName, summary, commands): Register new help menus to be displayed in the /help command. See documentation for more info
+- "AUTHOR" and "WEBSITE" plugin metadata variables added (see template.py for example)
+- player.say(message): Say something through the player. Proxy mode only.
+- player.execute(command): Execute a command as the player. Works best in proxy mode, but will fallback to using the 1.8 'execute' command if proxy mode is not available.
+- Fixed minecraft.getPlayer(username) so that it actually worked
+- server.getStorageAvailable(): Returns the amount of bytes free on the disk of the working directory
+- minecraft.getAllPlayers(): Returns a dict with the UUID as the key for each player that has ever joined the server, and inside each UUID is their offline player object containing stats such as first login time, player activity, and more soon. The player list is not world-specific.
+- Removed event 'server.start' (redundant)
 
 <h4>0.7.4</h4>
 Just a small little update, to fix a few things, and improve upon some existing features.
@@ -231,6 +260,7 @@ Small update, but brings one much-needed change: the new configuration file syst
   - Change password from web panel
   - Move password from the config file to a hashed password in web.py's data object
   - Perhaps move to Flask?
+  - Implement a logged notification system - useful for critical errors that happened in the past, etc. 
 - Fix backups happening upon start (potentially an issue, not 100% sure)
 - Fix packet error when teleporting long distances
 - Multi-server mode (This might actually become a separate project for managing multiple servers and accounts, rather than being a Wrapper.py feature)
@@ -254,3 +284,4 @@ Small update, but brings one much-needed change: the new configuration file syst
   - Allow auto-updating from dev build to stable, if it's the latest
   - Jumping from stable to dev manually, if the dev build is newer than the stable build
   - Create a difference between "checking for updates" and "auto-updating"
+- Stop backups from happening unless server is running. Handle running out of disk space by freezing java process. Upon every boot, check level.dat and player files. If corrupted, replace from backup.

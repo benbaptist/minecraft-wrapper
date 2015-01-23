@@ -1,12 +1,15 @@
 NAME = "WorldEdit"
 ID = "com.benbaptist.plugins.fake-worldedit"
 VERSION = (0, 1)
-SUMMARY = "Edit the world using this WorldEdit clone. (Original WorldEdit for Bukkit by sk89q)"
+AUTHOR = "Ben Baptist"
+WEBSITE = "http://wrapper.benbaptist.com/"
+SUMMARY = "Edit the world with this WorldEdit clone. (Original WorldEdit for Bukkit by sk89q)"
 DESCRIPTION = """This is a clone of the WorldEdit plugin by sk89q on Bukkit for Wrapper.py.
  
 It contains most of the same syntax, though not all of the commands have been implemented just yet.
 
-It's currently limited by /fill's 4096-block limit. Will be fixed in the future."""
+It's currently limited by /fill's 32768-block limit, which is no longer really much of a problem."""
+import traceback
 class Main:
 	def __init__(self, api, log):
 		self.api = api
@@ -18,6 +21,7 @@ class Main:
 		self.api.registerCommand("/wand", self.command_wand, "worldedit.wand")
 		self.api.registerCommand("/set", self.command_set, "worldedit.set")
 		self.api.registerCommand("/fill", self.command_fill, "worldedit.fill")
+		self.api.registerCommand("/replace", self.command_replace, "worldedit.replace")
 		self.api.registerCommand("/hfill", self.command_hollow_fill, "worldedit.hfill")
 		self.api.registerCommand("/pos1", self.command_pos1, "worldedit.pos1")
 		self.api.registerCommand("/pos2", self.command_pos2, "worldedit.pos2")
@@ -67,8 +71,11 @@ class Main:
 			try:
 				block = args[0]
 				size = int(args[1]) / 2
-				self.minecraft.console("execute %s ~ ~ ~ fill ~%d ~%d ~%d ~%d ~%d ~%d %s" % (player.username, size, size, size, -size, -size, -size, block))
+				pos = player.getPosition()
+				self.minecraft.getWorld().fill((pos[0] - size, pos[1] - size, pos[2] - size), (pos[0] + size, pos[1] + size, pos[2] + size), block)
+#				self.minecraft.console("execute %s ~ ~ ~ fill ~%d ~%d ~%d ~%d ~%d ~%d %s" % (player.username, size, size, size, -size, -size, -size, block))
 			except:
+				print traceback.format_exc()
 				player.message("&cError: <TileName> must be a string and <SquareRadius> must be an integer.")
 		else:
 			player.message("&cUsage: //fill <TileName> <SquareRadius>")
@@ -78,12 +85,29 @@ class Main:
 			try:
 				block = args[0]
 				size = int(args[1]) / 2
-				self.minecraft.console("execute %s ~ ~ ~ fill ~%d ~%d ~%d ~%d ~%d ~%d %s 0 hollow" % (player.username, size, size, size, -size, -size, -size, block))
+				pos = player.getPosition()
+				self.minecraft.getWorld().fill((pos[0] - size, pos[1] - size, pos[2] - size), (pos[0] + size, pos[1] + size, pos[2] + size), block, 0, "hollow")
 			except:
+				print traceback.format_exc()
 				player.message("&cError: <TileName> must be a string and <SquareRadius> must be an integer.")
 		else:
 			player.message("&cUsage: //hfill <TileName> <SquareRadius>")
-
+	def command_replace(self, player, args):
+		if not self._auth(player): return False
+		if len(args) > 1:
+			try:
+				block1 = args[0]
+				block2 = args[1]
+				p = self.getMemoryPlayer(player.username)
+				if p["sel1"] and p["sel2"]:
+					self.minecraft.getWorld().replace(p["sel1"], p["sel2"], block1, 0, block2, 0)
+				else:
+					player.message("&cPlease select two regions with the wooden axe tool. Use //wand to obtain one.")
+			except:
+				print traceback.format_exc()
+				player.message("&cSorry, something went wrong.")
+		else:
+			player.message("&cUsage: //replace <from-block> <to-block>")
 	def command_set(self, player, args):
 		if not self._auth(player): return False
 		p = self.getMemoryPlayer(player.username)

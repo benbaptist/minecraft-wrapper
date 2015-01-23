@@ -29,8 +29,8 @@ backups-keep = 10
 enabled = False
 server = benbaptist.com
 port = 6667
-nick = MinecraftServer
-channels = ['#main']
+nick = MinecraftWrap
+channels = ['#wrapper']
 command-character = .
 show-channel-server = True
 autorun-irc-commands = ['COMMAND 1', 'COMMAND 2']
@@ -55,11 +55,12 @@ web-enabled = False
 web-bind = 0.0.0.0
 web-port = 8070
 web-password = password
+web-allow-file-management = True
 public-stats = True
 """
 
 class Config:
-	version = "0.7.4"
+	version = "0.7.5"
 	debug = False
 	def __init__(self, log):
 		self.log = log
@@ -91,10 +92,10 @@ class Config:
 		},		
 		"IRC":{ 
 			"enabled": True, 
-			"nick": "MinecraftServer", 
+			"nick": "MinecraftWrap", 
 			"server": "benbaptist.com", 
 			"port": 6667, 
-			"channels": ["#main"], 
+			"channels": ["#wrapper"], 
 			"command-character": ".",
 			"obstruct-nicknames": False,
 			"autorun-irc-commands": ['COMMAND 1', 'COMMAND 2'],
@@ -124,6 +125,7 @@ class Config:
 			"web-bind": "0.0.0.0",
 			"web-port": 8070,
 			"web-password": "password",
+			"web-allow-file-management": False,
 			"public-stats": True
 		}}
 

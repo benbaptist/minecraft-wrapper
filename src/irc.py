@@ -30,6 +30,7 @@ class IRC:
 		self.api.registerEvent("player.death", self.onPlayerDeath)
 		self.api.registerEvent("wrapper.backupBegin", self.onBackupBegin)
 		self.api.registerEvent("wrapper.backupEnd", self.onBackupEnd)
+		self.api.registerEvent("wrapper.backupFailure", self.onBackupFailure)
 		self.api.registerEvent("server.say", self.onPlayerSay)
 	def init(self):
 		while not self.wrapper.halt:
@@ -99,6 +100,11 @@ class IRC:
 	def onBackupEnd(self, payload):
 		time.sleep(1)
 		self.msgQueue.append("Backup complete!")
+	def onBackupFailure(self, payload):
+		if "reasonText" in payload:
+			self.msgQueue.append("ERROR: %s" % payload["reasonText"])
+		else:
+			self.msgQueue.append("An unknown error occurred while trying to backup.")
 	def onServerStarting(self, payload):
 		self.msgQueue.append("Server starting...")
 	def onServerStarted(self, payload):

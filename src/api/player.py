@@ -1,4 +1,4 @@
-import storage, api, time, fnmatch, json
+import storage, api, time, fnmatch, json, threading
 class Player:
 	""" Player objects contains methods and data of a currently logged-in player. This object is destroyed upon logging off. """
 	def __init__(self, username, wrapper):
@@ -8,6 +8,7 @@ class Player:
 		self.name = username
 		self.username = self.name # just an alias - same variable
 		self.loggedIn = time.time()
+		self.abort = False
 		
 		self.uuid = self.wrapper.getUUID(username)
 		self.client = None
@@ -19,15 +20,36 @@ class Player:
 					break
 		
 		self.data = storage.Storage(self.uuid, root="wrapper-data/players")
-		if "firstLoggedIn" not in self.data: self.data["firstLoggedIn"] = (time.time(), time.tzname)
+		if not "firstLoggedIn" in self.data: self.data["firstLoggedIn"] = (time.time(), time.tzname)
+		if not "logins" in self.data:
+			self.data["logins"] = {}
+		t = threading.Thread(target=self.__track__, args=())
+		t.daemon = True
+		t.start()
 	def __str__(self):
 		return self.username
+	def __track__(self):
+		self.data["logins"][int(self.loggedIn)] = time.time()
+		while not self.abort:
+			self.data["logins"][int(self.loggedIn)] = int(time.time())
+			time.sleep(1)
 	def console(self, string):
 		""" Run a command in the Minecraft server's console. """
 		try:
 			self.wrapper.server.console(string)
 		except:
 			pass
+	def execute(self, string):
+		""" Run a vanilla command as this player. Works best in proxy mode. If proxy mode is not enabled, it simply falls back to using the 1.8 'execute' command. 
+		
+		To be clear, this does NOT work with any Wrapper.py commands. The command is sent straight to the vanilla server."""
+		try:
+			self.client.message("/%s" % string)
+		except:
+			self.console("execute %s ~ ~ ~ %s" % string)
+	def say(self, string):
+		""" Send a message as a player. Beware, as this does not filter commands, so it could be used to execute commands as the player. Only works in proxy mode. """
+		self.client.message(string)
 	def getClient(self):
 		if self.client == None:
 			for client in self.wrapper.proxy.clients:
