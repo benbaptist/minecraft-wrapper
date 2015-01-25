@@ -60,7 +60,7 @@ public-stats = True
 """
 
 class Config:
-	version = "0.7.5"
+	version = "0.7.6"
 	debug = False
 	def __init__(self, log):
 		self.log = log
