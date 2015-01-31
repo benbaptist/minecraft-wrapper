@@ -121,6 +121,7 @@ class Server:
 			total = ""
 			if "color" in j: total += getColorCode(j["color"]).decode("ascii")
 			if "text" in j: total += j["text"].decode("ascii")
+			if "string" in j: total += j["string"].decode("ascii")
 			return total
 		total += handleChunk(json)
 		if "extra" in json:

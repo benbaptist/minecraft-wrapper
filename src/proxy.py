@@ -221,11 +221,13 @@ class Client: # handle client/game connection
 			if client.username == self.username:
 				del self.wrapper.proxy.clients[i]
 	def disconnect(self, message):
+		try: 
+			message = json.loads(message["string"])
+		except: pass
 		if self.state == 3:
 			self.send(0x40, "json", ({"text": message, "color": "red"},))
 		else:
 			self.send(0x00, "json", ({"text": message, "color": "red"},))
-		#self.packet.close()
 		time.sleep(1)
 		self.close()
 	def flush(self):
@@ -394,10 +396,7 @@ class Client: # handle client/game connection
 				self.send(0x01, "long", (keepAlive,))
 		if id == 0x04:
 			data = self.read("double:x|double:y|double:z|bool:on_ground")
-			#objection = self.wrapper.callEvent("player.move", {"player": self.username, "xyz": (data["x"], data["y"], data["z"]), "on_ground": data["on_ground"]})
 			self.position = (data["x"], data["y"], data["z"])
-			#else:
-				#self.wrapper.server.run("tp %s %d %d %d" % (self.username, data["x"], data["y"], data["z"]))
 		if id == 0x06:
 			data = self.read("double:x|double:y|double:z|float:yaw|float:pitch|bool:on_ground")
 			#objection = self.wrapper.callEvent("player.move", {"player": self.username, "xyz": (data["x"], data["y"], data["z"]), "on_ground": data["on_ground"]})
@@ -565,7 +564,9 @@ class Server: # Handle Server Connection
 		if id == 0x00:
 			if self.state < 3:
 				message = self.read("string:string")
-				self.log.info("Disconnected from Server: %s" % message["string"])
+				self.log.info("Disconnected from server: %s" % message["string"])
+				self.client.disconnect(message)
+				return False
 			elif self.state == 3:
 				if self.client.version > 7:
 					id = self.read("int:i")["i"]
@@ -716,9 +717,11 @@ class Server: # Handle Server Connection
 			while z < head["length"]:
 				serverUUID = self.read("uuid:uuid")["uuid"]
 				client = self.client.proxy.getClientByServerUUID(serverUUID)
-				try: client.uuid
-				except: continue
-				if not client: 
+				try: uuid = client.uuid
+				except:
+					uuid = client
+					z += 1
+				if not client:
 					z += 1
 					continue
 				z += 1
@@ -739,19 +742,19 @@ class Server: # Handle Server Connection
 					self.client.send(0x38, "varint|varint|uuid|string|varint|raw", (0, 1, client.uuid, client.username, len(properties), raw))
 				elif head["action"] == 1:
 					data = self.read("varint:gamemode")
-					self.client.send(0x38, "varint|varint|uuid|varint", (1, 1, client.uuid, data["gamemode"]))
+					self.client.send(0x38, "varint|varint|uuid|varint", (1, 1, uuid, data["gamemode"]))
 				elif head["action"] == 2:
 					data = self.read("varint:ping")
-					self.client.send(0x38, "varint|varint|uuid|varint", (2, 1, client.uuid, data["ping"]))
+					self.client.send(0x38, "varint|varint|uuid|varint", (2, 1, uuid, data["ping"]))
 				elif head["action"] == 3:
 					data = self.read("bool:has_display")
 					if data["has_display"]:
 						data = self.read("string:displayname")
-						self.client.send(0x38, "varint|varint|uuid|bool|string", (3, 1, client.uuid, True, data["displayname"]))
+						self.client.send(0x38, "varint|varint|uuid|bool|string", (3, 1, uuid, True, data["displayname"]))
 					else:
-						self.client.send(0x38, "varint|varint|uuid|varint", (3, 1, client.uuid, False))
+						self.client.send(0x38, "varint|varint|uuid|varint", (3, 1, uuid, False))
 				elif head["action"] == 4:
-					self.client.send(0x38, "varint|varint|uuid", (4, 1, client))
+					self.client.send(0x38, "varint|varint|uuid", (4, 1, uuid))
 				return False
 		return True
 	def handle(self):
@@ -777,12 +780,8 @@ class Server: # Handle Server Connection
 				if self.client.abort:
 					self.close()
 					break
-				try:
-					if self.parse(id, original) and self.safe:
-						self.client.sendRaw(original)
-				except:
-					self.log.debug("Could not parse packet, connection may crumble:")
-					self.log.debug(traceback.format_exc())
+				if self.parse(id, original) and self.safe:
+					self.client.sendRaw(original)
 		except:
 			if Config.debug:
 				print "Error in the Server->Client method:"

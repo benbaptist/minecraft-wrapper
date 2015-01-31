@@ -4,7 +4,7 @@ Wrapper.py is an easy to use Minecraft server wrapper for adding extra functiona
 </br></br>It also comes with a relatively simple and straight-forward - yet powerful - plugin API that can be used to create Bukkit-like plugins on vanilla. 
 
 #Installation#
-Wrapper.py doesn't require any special modules for most of the basic features to work, but web mode and proxy mode require `requests` and `pycrypto`.  On Linux, the Memory usage features (/mem) will require `pkg_resources`.  This function is not available on Windows platforms.
+Wrapper.py doesn't require any special modules for most of the basic features to work, but web mode and proxy mode require `requests` and `pycrypto`, and `pkg_resources`.
 
 You will also need `tar` installed if you need backups. Most Linux distros have this pre-installed, but you may need to install it manually on Windows: http://gnuwin32.sourceforge.net/packages/gtar.htm
 
