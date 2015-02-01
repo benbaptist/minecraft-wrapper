@@ -5,6 +5,7 @@
 - Fixed all players being kicked when one user logs out
 - Banned players now disconnect with the reason as intended
 - Changed time in backup filename from : to . for Windows compatibility
+- Fixed 'enabled' configuration option for IRC and Backups by renaming IRC's enabled to irc-enabled
 
 <h4>0.7.5</h4>
 **Features**

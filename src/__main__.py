@@ -494,7 +494,7 @@ class Wrapper:
 		
 		self.loadPlugins()
 		
-		if self.config["IRC"]["enabled"]:
+		if self.config["IRC"]["irc-enabled"]:
 			self.irc = IRC(self.server, self.config, self.log, self, self.config["IRC"]["server"], self.config["IRC"]["port"], self.config["IRC"]["nick"], self.config["IRC"]["channels"])
 			t = threading.Thread(target=self.irc.init, args=())
 			t.daemon = True
