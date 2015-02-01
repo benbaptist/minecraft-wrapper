@@ -1,2 +1,2 @@
-build=80
-type='dev'
+build=81
+type='stable'
