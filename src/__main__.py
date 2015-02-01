@@ -149,6 +149,7 @@ class Wrapper:
 			#self.log.getTraceback()
 		return True
 	def playerCommand(self, payload):
+		player = payload["player"]
 		self.log.info("%s executed: /%s %s" % (str(payload["player"]), payload["command"], " ".join(payload["args"])))
 		def args(i):
 			try: return payload["args"][i]
@@ -169,7 +170,6 @@ class Wrapper:
 			if commandName in self.commands[pluginID]:
 				try:
 					command = self.commands[pluginID][commandName]
-					player = payload["player"]
 					if player.hasPermission(command["permission"]):
 						command["callback"](payload["player"], payload["args"])
 					else:
@@ -182,41 +182,43 @@ class Wrapper:
 					payload["player"].message({"text": "An internal error occurred on the server side while trying to execute this command. Apologies.", "color": "red"})
 					return False
 		if payload["command"] == "wrapper":
-			player = payload["player"]
-			buildString = self.getBuildString()
-			if len(args(0)) > 0:
-				subcommand = args(0)
-				if subcommand == "update":
-					player.message({"text": "Checking for new Wrapper.py updates...","color":"yellow"})
-					update = self.checkForNewUpdate()
-					if update:
-						version, build, type = update
-						player.message("&bNew Wrapper.py Version %s (Build #%d) available!)" % (".".join([str(_) for _ in version]), build))
-						player.message("&bYou are currently on %s." % self.getBuildString())
-						player.message("&aPerforming update...")
-						if self.performUpdate(version, build, type):
-							player.message("&aUpdate completed! Version %s #%d (%s) is now installed. Please reboot Wrapper.py to apply changes." % (version, build, type))
+			if player.isOp():
+				buildString = self.getBuildString()
+				if len(args(0)) > 0:
+					subcommand = args(0)
+					if subcommand == "update":
+						player.message({"text": "Checking for new Wrapper.py updates...","color":"yellow"})
+						update = self.checkForNewUpdate()
+						if update:
+							version, build, type = update
+							player.message("&bNew Wrapper.py Version %s (Build #%d) available!)" % (".".join([str(_) for _ in version]), build))
+							player.message("&bYou are currently on %s." % self.getBuildString())
+							player.message("&aPerforming update...")
+							if self.performUpdate(version, build, type):
+								player.message("&aUpdate completed! Version %s #%d (%s) is now installed. Please reboot Wrapper.py to apply changes." % (version, build, type))
+							else:
+								player.message("&cAn error occured while performing update. Please check the Wrapper.py console as soon as possible for an explanation and traceback. If you are unsure of the cause, please file a bug report on http://github.com/benbaptist/minecraft-wrapper with the traceback.")
 						else:
-							player.message("&cAn error occured while performing update. Please check the Wrapper.py console as soon as possible for an explanation and traceback. If you are unsure of the cause, please file a bug report on http://github.com/benbaptist/minecraft-wrapper with the traceback.")
+							player.message("&cNo new Wrapper.py versions available.")
+					elif subcommand == "halt":
+						player.message("&cHalting Wrapper.py... goodbye!")
+						self.shutdown()
+					elif subcommand in ("mem", "memory"):
+						if self.server.getMemoryUsage():
+							player.message("&cServer Memory: %d bytes" % self.server.getMemoryUsage())
+						else:
+							player.message("&cError: Couldn't retrieve memory usage for an unknown reason")
+					elif subcommand == "random":
+						player.message("&cRandom number: &a%d" % random.randrange(0, 99999999))
 					else:
-						player.message("&cNo new Wrapper.py versions available.")
-				elif subcommand == "halt":
-					player.message("&cHalting Wrapper.py... goodbye!")
-					self.shutdown()
-				elif subcommand in ("mem", "memory"):
-					if self.server.getMemoryUsage():
-						player.message("&cServer Memory: %d bytes" % self.server.getMemoryUsage())
-					else:
-						player.message("&cError: Couldn't retrieve memory usage for an unknown reason")
-				elif subcommand == "random":
-					player.message("&cRandom number: &a%d" % random.randrange(0, 99999999))
+						player.message("&cUnknown sub-command /wrapper '%s'." % subcommand)
 				else:
-					player.message("&cUnknown sub-command /wrapper '%s'." % subcommand)
+					player.message({"text": "Wrapper.py Version %s" % (buildString), "color": "gray", "italic": True})
+				return False
 			else:
-				player.message({"text": "Wrapper.py Version %s" % (buildString), "color": "gray", "italic": True})
-			return False
+				player.message({"text": "Unknown command. Try /help for a list of commands", "color": "red"})
+				return False
 		if payload["command"] in ("plugins", "pl"):
-			player = payload["player"]
 			if player.isOp():
 				player.message({"text": "List of plugins installed:", "color": "red", "italic": True})
 				for id in self.plugins:
@@ -245,7 +247,6 @@ class Wrapper:
 						player.message({"text": name, "color": "dark_red", "extra":[{"text": " - ", "color": "white"}, {"text": "Failed to import this plugin!", "color": "red", "italic": "true"}]})
 				return False
 		if payload["command"] == "reload":
-			player = payload["player"]
 			if player.isOp():
 				try:
 					self.reloadPlugins()
@@ -257,7 +258,6 @@ class Wrapper:
 				return False
 		# Temporarily commented-out the help command for now
 		if payload["command"] in ("help", "?"):
-			player = payload["player"]
 			helpGroups = [{"name": "Minecraft", "description": "List regular server commands"}]
 			for id in self.help:
 				plugin = self.help[id]
@@ -340,7 +340,6 @@ class Wrapper:
 				showPage(page, items, "/help", 8)
 			return
 		if payload["command"] == "playerstats":
-			player = payload["player"]
 			if player.isOp():
 				totalPlaytime = {}
 				players = self.api.minecraft.getAllPlayers()
@@ -353,7 +352,6 @@ class Wrapper:
 					player.message("&c%s: %d seconds" % (i, totalPlaytime[i]))
 				return 
 		if payload["command"] in ("permissions", "perm", "perms", "super"):
-			player = payload["player"]
 			if not "groups" in self.permissions: self.permissions["groups"] = {}
 			if not "users" in self.permissions: self.permissions["users"] = {}
 			if not "Default" in self.permissions["groups"]: self.permissions["groups"]["Default"] = {"permissions": {}}
@@ -496,7 +494,7 @@ class Wrapper:
 		
 		self.loadPlugins()
 		
-		if self.config["IRC"]["enabled"]:
+		if self.config["IRC"]["irc-enabled"]:
 			self.irc = IRC(self.server, self.config, self.log, self, self.config["IRC"]["server"], self.config["IRC"]["port"], self.config["IRC"]["nick"], self.config["IRC"]["channels"])
 			t = threading.Thread(target=self.irc.init, args=())
 			t.daemon = True

@@ -51,7 +51,7 @@ class Backups:
 			if not os.path.exists(str(self.config["Backups"]["backup-location"])):
 				os.mkdir(self.config["Backups"]["backup-location"])
 			
-			filename = "backup-%s.tar" % datetime.datetime.fromtimestamp(int(timestamp)).strftime("%Y-%m-%d_%H:%M:%S")
+			filename = "backup-%s.tar" % datetime.datetime.fromtimestamp(int(timestamp)).strftime("%Y-%m-%d_%H.%M.%S")
 			if self.config["Backups"]["backup-compression"]:
 				filename += ".gz"
 				arguments = ["tar", "czf", "%s/%s" % (self.config["Backups"]["backup-location"].replace(" ", "\\ "), filename)]

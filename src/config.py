@@ -26,7 +26,7 @@ backups-keep = 10
 
 [IRC]
 ;; This allows your users to communicate to and from the server via IRC and vise versa. ;;
-enabled = False
+irc-enabled = False
 server = benbaptist.com
 port = 6667
 nick = MinecraftWrap
@@ -60,7 +60,7 @@ public-stats = True
 """
 
 class Config:
-	version = "0.7.5"
+	version = "0.7.6"
 	debug = False
 	def __init__(self, log):
 		self.log = log
@@ -91,7 +91,7 @@ class Config:
 			"shell-scripts": False
 		},		
 		"IRC":{ 
-			"enabled": True, 
+			"irc-enabled": True, 
 			"nick": "MinecraftWrap", 
 			"server": "benbaptist.com", 
 			"port": 6667, 
