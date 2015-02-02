@@ -304,8 +304,7 @@ class Wrapper:
 				if group == "minecraft":
 					player.execute("help %d" % (page + 1))
 				else:
-					for i in range(20):
-						player.message(" ") # Padding, for the sake of making it look a bit nicer
+					player.message(" ") # Padding, for the sake of making it look a bit nicer
 					for id in self.help:
 						for groupName in self.help[id]:
 							if groupName.lower() == group:

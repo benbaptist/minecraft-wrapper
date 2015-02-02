@@ -91,7 +91,7 @@ class Config:
 			"shell-scripts": False
 		},		
 		"IRC":{ 
-			"irc-enabled": True, 
+			"irc-enabled": False, 
 			"nick": "MinecraftWrap", 
 			"server": "benbaptist.com", 
 			"port": 6667, 
