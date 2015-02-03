@@ -1,0 +1,74 @@
+<!-- I'm sorry for how sloppy this code is. I truly am. -->
+<html>
+	<head>
+		<title>Admin Login - Wrapper.py</title>
+		<script type="text/javascript" src="requests.js"></script>
+		<script src="js/ie-emulation-modes-warning.js"></script>
+		<link href="css/bootstrap.min.css" rel="stylesheet">
+		<link href="css/signin.css" rel="stylesheet">
+		<script type="text/javascript" >
+			invalidLogins = 0
+			_ = function(id) {return document.getElementById(id)}
+			function isAuthed(){
+				if(!localStorage.sessionKey) return false
+				if(requests.action("is_admin", {"key": localStorage.sessionKey})["status"] == "good") return true
+				return false
+			}
+			function loginWithPassword(password){
+				r = requests.action("login", {"password": password, "remember-me": _("remember-me").checked})
+				if (r["payload"] == "permission_denied"){
+					_("login_invalid").style.display = "block"
+					invalidLogins += 1
+					if(invalidLogins > 1){
+						_("login_invalid").innerHTML = "The password was invalid. (" + invalidLogins + " attempts)"
+					}
+				}
+				else{
+					localStorage.sessionKey = r["payload"]["session-key"]
+					console.log("Login Success!")
+					window.location = "admin.html"
+				}
+			}
+			window.onload = function() {
+				if(isAuthed()){
+					window.location = "admin.html"
+				}
+			}
+			function _login(){
+				loginWithPassword(_('login_password').value)
+			}
+		</script>
+		<style type="text/css">
+			r{color:red;}
+			y{color:gold;}
+			g{color:green;}
+			.small{
+				font-style: italic;
+				font-size: 12px;
+			}
+			.op{color:darkgoldenrod;}
+		</style>
+	</head>
+	<body>
+		<div id="login_page" class="container">
+			<!--<h1>Wrapper.py Admin Login</h1>
+			<div id="login_invalid" style="display:none;color:red;font-weight:bold;">The password was invalid.</div>
+			Password: <input type="password" id="login_password" onkeydown="if(event.keyCode==13){_login();this.value='';}"/><button onclick="_login()">Login</button>-->
+			<form class="form-signin" role="form" action="javascript:_login();">
+				<h2 class="form-signin-heading">Admin Login</h2>
+				<div id="login_invalid" style="display:none;" class="alert alert-danger">The password was invalid.</div>
+				<label for="inputPassword" class="sr-only">Password</label>
+				<input type="password" id="login_password" class="form-control" placeholder="Password" required>
+				<div class="checkbox">
+					<label>
+						<input type="checkbox" id="remember-me"> Remember me
+					</label>
+				</div>
+				<button class="btn btn-lg btn-primary btn-block" type="submit">Login</button>
+			</form>
+		</div><!-- /container -->
+		<script src="js/jquery.min.js"></script>
+		<script src="js/bootstrap.min.js"></script>
+		<script src="js/ie10-viewport-bug-workaround.js"></script>
+	</body>
+</html>

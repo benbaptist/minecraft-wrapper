@@ -1,4 +1,11 @@
 #Changelog#
+<h4>0.7.7</h4>
+**Features**
+- Added password support to IRC
+
+**Bug Fixes/Developer**
+- Fixed "KeyError: 'users'" error with .hasPermission()
+
 <h4>0.7.6</h4>
 **Bug Fixes**
 - Security fixes

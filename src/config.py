@@ -30,6 +30,7 @@ irc-enabled = False
 server = benbaptist.com
 port = 6667
 nick = MinecraftWrap
+password = None
 channels = ['#wrapper']
 command-character = .
 show-channel-server = True
@@ -60,7 +61,7 @@ public-stats = True
 """
 
 class Config:
-	version = "0.7.6"
+	version = "0.7.7"
 	debug = False
 	def __init__(self, log):
 		self.log = log
@@ -92,7 +93,8 @@ class Config:
 		},		
 		"IRC":{ 
 			"irc-enabled": False, 
-			"nick": "MinecraftWrap", 
+			"nick": "MinecraftWrap",
+			"password": None, 
 			"server": "benbaptist.com", 
 			"port": 6667, 
 			"channels": ["#wrapper"], 

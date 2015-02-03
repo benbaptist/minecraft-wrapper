@@ -128,6 +128,8 @@ class Player:
 	def hasPermission(self, node):
 		""" If the player has the specified permission node (either directly, or inherited from a group that the player is in), it will return the value (usually True) of the node. Otherwise, it returns False. """
 		if node == None: return True
+		if "users" not in self.permissions:
+			self.permissions["users"] = {}
 		uuid = str(self.uuid)
 		if uuid in self.permissions["users"]:
 			for perm in self.permissions["users"][uuid]["permissions"]:	

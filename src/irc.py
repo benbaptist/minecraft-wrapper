@@ -55,6 +55,8 @@ class IRC:
 		
 		self.auth()
 	def auth(self):
+		if self.config["IRC"]["password"]:
+			self.send("PASS %s" % self.config["IRC"]["password"])
 		self.send("NICK %s" % self.nickname)
 		self.send("USER %s 0 * :%s" % (self.nickname, self.nickname))
 	def disconnect(self, message):

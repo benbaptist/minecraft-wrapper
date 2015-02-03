@@ -717,7 +717,8 @@ if __name__ == "__main__":
 		wrapper.start()
 	except SystemExit:
 		#log.error("Wrapper.py received SystemExit")
-		os.system("reset")
+		if not wrapper.configManager.exit:
+			os.system("reset")
 		wrapper.disablePlugins()
 		wrapper.halt = True
 		try:
