@@ -214,7 +214,6 @@ class Wrapper:
 					player.message("&cRandom number: &a%d" % random.randrange(0, 99999999))
 				else:
 					player.message("&cUnknown sub-command /wrapper '%s'." % subcommand)
-			else:
 		if payload["command"] in ("plugins", "pl"):
 			if player.isOp():
 				player.message({"text": "List of plugins installed:", "color": "red", "italic": True})
