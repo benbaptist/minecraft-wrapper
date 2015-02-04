@@ -88,6 +88,7 @@ class Server:
 			self.log.info("Freezing server with reason: %s" % reason)
 			try: self.broadcast("&c%s" % reason)
 			except: pass
+			time.sleep(0.5)
 		else:
 			self.log.info("Freezing server...")
 		self.changeState(5)
@@ -119,15 +120,15 @@ class Server:
 			return ""
 		def handleChunk(j):
 			total = ""
-			if "color" in j: total += getColorCode(j["color"]).decode("ascii")
-			if "text" in j: total += j["text"].decode("ascii")
-			if "string" in j: total += j["string"].decode("ascii")
+			if "color" in j: total += getColorCode(j["color"])
+			if "text" in j: total += j["text"]
+			if "string" in j: total += j["string"]
 			return total
 		total += handleChunk(json)
 		if "extra" in json:
 			for i in json["extra"]:
 				total += handleChunk(i)
-		return total
+		return total.encode("utf8")
 	def processColorCodes(self, message):
 		""" Used internally to process old-style color-codes with the & symbol, and returns a JSON chat object. """
 		message = message.encode('ascii', 'ignore')

@@ -6,7 +6,7 @@ class Log:
 	def timestamp(self):
 		return time.strftime("[%Y-%m-%d %H:%M:%S]")
 	def write(self, payload):
-		self.file.write("%s\n" % payload)
+		self.file.write(("%s\n" % payload).encode("utf8"))
 		self.file.flush()
 	def prefix(self, type="INFO", string=""):
 		for line in string.split("\n"):

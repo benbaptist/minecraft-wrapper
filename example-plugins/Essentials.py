@@ -55,7 +55,7 @@ class Main:
 		self.api.registerCommand("getpos", self.getpos, "essentials.getpos")
 		self.api.registerCommand("heal", self.heal, "essentials.heal")
 		self.api.registerCommand("echoaction", self.echoaction, "essentials.echoaction")
-		self.api.registerCommand("powertool", self._powertool, "essentials.powertool")
+		self.api.registerCommand("powertool", self.powertool, "essentials.powertool")
 		self.api.registerCommand("i", self.i, "essentials.give")
 		self.api.registerCommand("spawn", self.spawn, "essentials.spawn")
 		self.api.registerCommand("block", self.block, "essentials.block")

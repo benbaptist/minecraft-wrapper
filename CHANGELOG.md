@@ -5,6 +5,7 @@
 
 **Bug Fixes/Developer**
 - Fixed "KeyError: 'users'" error with .hasPermission()
+- Fixed IRC bug where unicode crashes.... AGAIN. UGH. HOW MANY TIMES DO I HAVE TO FIX THIS?
 
 <h4>0.7.6</h4>
 **Bug Fixes**
