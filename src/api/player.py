@@ -18,6 +18,14 @@ class Player:
 					self.client = client
 					self.uuid = client.uuid
 					break
+		if self.uuid == None: # Potential hack for UUID==None sometimes
+			if not self.wrapper.proxy == False:
+				self.uuid = self.wrapper.proxy.lookupUsername(self.username)
+				self.log.error("UUID for %s was set to None but it should hopefully be okay for now (%s). Proxy mode is on. Please report this issue (and this line) to http://github.com/benbaptist/minecraft-wrapper/issues" % (self.username, self.uuid))
+			else:
+				self.log.error("UUID for %s is set as None in Player object. Cannot be fixed. Proxy mode is off. Please report this issue (and this line) to http://github.com/benbaptist/minecraft-wrapper/issues " % (self.username))
+		if self.uuid == False:
+			self.log.error("UUID for %s is set to False. Proxy mode is %s. Please report this issue (and this line) to http://github.com/benbaptist/minecraft-wrapper/issues" % (self.username, str(self.wrapper.proxy)))
 		
 		self.data = storage.Storage(self.uuid, root="wrapper-data/players")
 		if not "firstLoggedIn" in self.data: self.data["firstLoggedIn"] = (time.time(), time.tzname)

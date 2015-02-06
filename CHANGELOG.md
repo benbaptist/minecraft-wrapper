@@ -1,11 +1,17 @@
 #Changelog#
 <h4>0.7.7</h4>
+This update contains an important patch regarding username changes. It is important that you update immediately if you use proxy mode, or else any players who've changed their names will be treated as new players upon logging in.
+
 **Features**
 - Added password support to IRC
 
+**Bug Fixes/Regular**
+- CRITICAL BUG FIX: Players who changeed usernames would be treated as a new user (Temporarily fixed by not allowing name changes - it'll continue to use their old usernames even after changing until we implement a workaround)
+- Fixed IRC bug where unicode crashes.... AGAIN. UGH. HOW MANY TIMES DO I HAVE TO FIX THIS?
+
 **Bug Fixes/Developer**
 - Fixed "KeyError: 'users'" error with .hasPermission()
-- Fixed IRC bug where unicode crashes.... AGAIN. UGH. HOW MANY TIMES DO I HAVE TO FIX THIS?
+- Potentially fixed issues with UUIDs being set as "None" or "False" in the Player object. If this bug persists, the console will print a message related to it. Please file a bug report containing this message.
 
 <h4>0.7.6</h4>
 **Bug Fixes**

@@ -212,8 +212,8 @@ class Wrapper:
 						player.message("&cError: Couldn't retrieve memory usage for an unknown reason")
 				elif subcommand == "random":
 					player.message("&cRandom number: &a%d" % random.randrange(0, 99999999))
-				else:
-					player.message({"text": "Wrapper.py Version %s" % (buildString), "color": "gray", "italic": True})
+			else:
+				player.message({"text": "Wrapper.py Version %s" % (buildString), "color": "gray", "italic": True})
 			return
 		if payload["command"] in ("plugins", "pl"):
 			if player.isOp():

@@ -86,6 +86,8 @@ class Proxy:
 		if str(id) in self.uuidTranslate:
 			return uuid.UUID(hex=self.uuidTranslate[str(id)])
 	def lookupUUID(self, uuid):
+		if not type(uuid) == str:
+			uuid = str(uuid) # Converts UUID objects into a simple UUID string
 		#if not self.storage.key("uuid-cache"):
 #			self.storage.key("uuid-cache", {})
 		if "uuid-cache" not in self.storage:
@@ -113,7 +115,7 @@ class Proxy:
 	def setUUID(self, uuid, name):
 		if not self.storage.key("uuid-cache"):
 			self.storage.key("uuid-cache", {})
-		self.storage.key("uuid-cache")[str(uuid)] = {"uuid": str(uuid), "name": name, "expiresOn": time.strftime("%Y-%m-%d %H:%M:%S %z")}
+		self.storage.key("uuid-cache")[str(uuid)] = {"uuid": str(uuid), "name": name}
 	def banUUID(self, uuid, reason="Banned by an operator", source="Server"):
 		if not self.storage.key("banned-uuid"):
 			self.storage.key("banned-uuid", {})
@@ -370,7 +372,10 @@ class Client: # handle client/game connection
 					self.disconnect("Session Server Error")
 					return False
 				if self.proxy.lookupUUID(self.uuid):
-					self.username = self.proxy.lookupUUID(self.uuid)["name"]
+					newUsername = self.proxy.lookupUUID(self.uuid)["name"]
+					if not newUsername == self.username: 
+						self.log.info("%s logged in with older name previously, falling back to %s" % (self.username, newUsername))
+						self.username = newUsername
 					
 				self.serverUUID = self.UUIDFromName("OfflinePlayer:" + self.username)
 				
