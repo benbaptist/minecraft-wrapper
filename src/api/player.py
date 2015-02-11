@@ -171,6 +171,6 @@ class Player:
 		""" Returns a tuple containing the timestamp of when the user first logged in for the first time, and the timezone (same as time.tzname). """
 		return self.data["firstLoggedIn"]
 	# Cross-server commands
-	def connect(self, ip, address):
-		""" Upon calling, the player object will become defunct and the client will be transferred to another server (provided it has offline-mode turned on). """
-		self.client.connect(ip, address)
+	def connect(self, address, port):
+		""" Upon calling, the player object will become defunct and the client will be transferred to another server (provided it has online-mode turned off). """
+		self.client.connect(address, port)

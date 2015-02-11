@@ -33,15 +33,19 @@ class PluginLog:
 		return time.strftime("[%Y-%m-%d %H:%M:%S]")
 	def write(self, payload):
 		self.log.write(payload)
+	def prefix(self, type="INFO", string=""):
+		for line in string.split("\n"):
+			self.write("%s [%s/%s] %s" % (self.PluginName, self.timestamp(), type, line)) 
+			print("%s [%s/%s] %s" % (self.PluginName, time.strftime("[%H:%M:%S]"), type, line))
 	def info(self, string):
-		self.write("%s [%s/INFO] %s" % (self.timestamp(), self.PluginName, string))
+		self.prefix("INFO", string)
 	def warn(self, string):
-		self.write("%s [%s/WARN] %s" % (self.timestamp(), self.PluginName, string))
+		self.prefix("WARN", string)
 	def error(self, string):
-		self.write("%s [%s/ERROR] %s" % (self.timestamp(), self.PluginName, string))
+		self.prefix("ERROR", string)
 	def debug(self, string):
 		if Config.debug:
-			self.write("%s [%s/DEBUG] %s" % (self.timestamp(), self.PluginName, string))
+			self.prefix("DEBUG", string)
 	def getTraceback(self):
 		for line in traceback.format_exc().split("\n"):
 			if len(line.strip()) > 0: # Remove empty lines

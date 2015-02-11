@@ -8,10 +8,14 @@ This update contains an important patch regarding username changes. It is import
 **Bug Fixes/Regular**
 - CRITICAL BUG FIX: Players who changeed usernames would be treated as a new user (Temporarily fixed by not allowing name changes - it'll continue to use their old usernames even after changing until we implement a workaround)
 - Fixed IRC bug where unicode crashes.... AGAIN. UGH. HOW MANY TIMES DO I HAVE TO FIX THIS?
+- Fixed proxy not binding when server-port is misconfigured/unable to connect to the destination server
+- Potentially fixed permission UUIDs being stored inconsistently (some with dashes, some without)
 
 **Bug Fixes/Developer**
 - Fixed "KeyError: 'users'" error with .hasPermission()
 - Potentially fixed issues with UUIDs being set as "None" or "False" in the Player object. If this bug persists, the console will print a message related to it. Please file a bug report containing this message.
+- Fixed self.log not printing anything in console
+- Better cross-server handling (i.e. player.connect() works better now)
 
 <h4>0.7.6</h4>
 **Bug Fixes**

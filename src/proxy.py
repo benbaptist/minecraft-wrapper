@@ -14,6 +14,7 @@ class Proxy:
 	def __init__(self, wrapper):
 		self.wrapper = wrapper
 		self.server = wrapper.server
+		self.log = wrapper.log
 		self.socket = False
 		self.isServer = False
 		self.clients = []
@@ -28,7 +29,10 @@ class Proxy:
 		# get the protocol version from the server
 		while not self.wrapper.server.state == 2:
 			time.sleep(.2)
-		self.pollServer()
+		try: self.pollServer()
+		except:
+			self.log.error("Proxy could not poll the Minecraft server - are you 100% sure that the ports are configured properly? Reason:")
+			self.log.getTraceback()
 		while not self.socket:
 			try:
 				self.socket = socket.socket()
@@ -36,8 +40,8 @@ class Proxy:
 				self.socket.bind((self.wrapper.config["Proxy"]["proxy-bind"], self.wrapper.config["Proxy"]["proxy-port"]))
 				self.socket.listen(5)
 			except:
-				self.wrapper.log.error("Proxy mode could not bind - retrying in five seconds")
-				self.wrapper.log.debug(traceback.format_exc())
+				self.log.error("Proxy mode could not bind - retrying in five seconds")
+				self.log.debug(traceback.format_exc())
 				self.socket = False
 			time.sleep(5)
 	 	while not self.wrapper.halt:
@@ -111,7 +115,7 @@ class Proxy:
 		self.setUUID(uuid, username)
 		return uuid
 	def formatUUID(self, name):
-		return uuid.UUID(bytes=name.decode("hex")).hex
+		return str(uuid.UUID(bytes=name.decode("hex")))
 	def setUUID(self, uuid, name):
 		if not self.storage.key("uuid-cache"):
 			self.storage.key("uuid-cache", {})
@@ -189,7 +193,7 @@ class Client: # handle client/game connection
 			self.server_temp = Server(self, self.wrapper, ip, port)
 			try:
 				self.server_temp.connect()
-				self.server.close(kill_client=False)
+				self.server.close(kill_client=False)	
 				self.server = self.server_temp
 			except:
 				self.server_temp.close(kill_client=False)
@@ -199,7 +203,10 @@ class Client: # handle client/game connection
 				return
 		else:
 			self.server = Server(self, self.wrapper, ip, port)
-			self.server.connect()
+			try:
+				self.server.connect()
+			except:
+				self.disconnect("Proxy not connect to the server.")
 		t = threading.Thread(target=self.server.handle, args=())
 		t.daemon = True
 		t.start()
@@ -266,7 +273,10 @@ class Client: # handle client/game connection
 				self.version = data["version"]
 				self.packet.version = self.version
 				if not self.wrapper.server.protocolVersion == self.version and data["state"] == 2:
-					self.disconnect("You're not running the same Minecraft version as the server!")
+					if self.wrapper.server.protocolVersion == -1:
+						self.disconnect("Proxy was unable to connect to the server.")
+					else:
+						self.disconnect("You're not running the same Minecraft version as the server!")
 					return
 				if not self.wrapper.server.state == 2:
 					self.disconnect("Server has not finished booting. Please try connecting again in a few seconds")
@@ -603,7 +613,7 @@ class Server: # Handle Server Connection
 			elif self.state == 3:
 				try:
 					data = json.loads(self.read("string:json")["json"])
-				except: pass
+				except: return
 				if not self.wrapper.callEvent("player.chatbox", {"player": self.client.getPlayerObject(), "json": data}): return False
 				try: 
 					if data["translate"] == "chat.type.admin": return False
@@ -712,7 +722,7 @@ class Server: # Handle Server Connection
 			message = self.read("json:json")["json"]
 			self.log.info("Disconnected from server: %s" % message)
 			if self.client.isLocal == False:
-				self.server.close(message)
+				self.close()
 			else:
 				self.client.disconnect(message)
 			return False
