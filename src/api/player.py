@@ -9,6 +9,7 @@ class Player:
 		self.username = self.name # just an alias - same variable
 		self.loggedIn = time.time()
 		self.abort = False
+		self.log = wrapper.log
 		
 		self.uuid = self.wrapper.getUUID(username)
 		self.client = None
