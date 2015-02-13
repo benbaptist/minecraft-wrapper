@@ -33,11 +33,12 @@ nick = MinecraftWrap
 password = None
 channels = ['#wrapper']
 command-character = .
-show-channel-server = True
 autorun-irc-commands = ['COMMAND 1', 'COMMAND 2']
 obstruct-nicknames = False
 control-from-irc = False
 control-irc-pass = password
+show-channel-server = True
+show-irc-join-part = True
 
 [Proxy]
 ;; This is a man-in-the-middle proxy mode similar to BungeeCord, but allows for extra plugin functionality. ;;
@@ -49,6 +50,7 @@ proxy-bind = 0.0.0.0
 server-port = 25564
 online-mode = True
 max-players = 1024
+spigot-mode = False
 
 [Web]
 ;; This is a web UI. ;;
@@ -103,7 +105,8 @@ class Config:
 			"autorun-irc-commands": ['COMMAND 1', 'COMMAND 2'],
 			"show-channel-server": True,
 			"control-from-irc": False,
-			"control-irc-pass": "password"
+			"control-irc-pass": "password",
+			"show-irc-join-part": True
 		},
 		"Backups":{ 
 			"enabled": True,
@@ -120,7 +123,8 @@ class Config:
 			"proxy-port": 25565,
 			"proxy-bind": "0.0.0.0",
 			"online-mode": True,
-			"max-players": 1024
+			"max-players": 1024,
+			"spigot-mode": False
 		},
 		"Web":{
 			"web-enabled": False,

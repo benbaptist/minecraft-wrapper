@@ -30,6 +30,6 @@ with open("../docs/Wrapper.py.md5", "w") as f:
 	f.write(hashlib.md5(open("../Wrapper.py", "r").read()).hexdigest())
 if COMMIT: # Mainly just for me (benbaptist), since most people will probably want to build locally without committing to anything
 	os.system("git add --update :/")
-	os.system("git commit -m 'Build %s %d | %s'" % (buildType, version["build"], sys.argv[2]))
+	os.system("git commit -m \"Build %s %d | %s\"" % (buildType, version["build"], sys.argv[2].replace('"', "\\\"")))
 	os.system("git push")
 print "Built version %d (%s build)" % (version["build"], buildType)

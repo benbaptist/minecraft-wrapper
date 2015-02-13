@@ -211,7 +211,11 @@ class Client: # handle client/game connection
 		t.daemon = True
 		t.start()
 		
-		self.server.send(0x00, "varint|string|ushort|varint", (self.version, "localhost", self.config["Proxy"]["server-port"], 2))
+		if self.config["Proxy"]["spigot-mode"]:
+			payload = "localhost\x00%s\x00%s" % (self.addr[0], self.uuid.hex)
+			self.server.send(0x00, "varint|string|ushort|varint", (self.version, payload, self.config["Proxy"]["server-port"], 2))
+		else:
+			self.server.send(0x00, "varint|string|ushort|varint", (self.version, "localhost", self.config["Proxy"]["server-port"], 2))
 		self.server.send(0x00, "string", (self.username,))
 #		self.server.send(0x46, "varint", (-1,))
 #		self.server.packet.compression = True

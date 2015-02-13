@@ -352,6 +352,7 @@ class Server:
 				message = self.stripSpecial(argsAfter(2))
 				self.wrapper.callEvent("player.action", {"player": self.getPlayer(name), "action": message})
 			elif args(0)[0] == "[" and args(0)[-1] == "]": # /say command
+				if self.getServerType != "vanilla": return # Unfortunately, Spigot and Bukkit output things that conflict with this
 				name = self.stripSpecial(args(0)[1:-1])
 				message = self.stripSpecial(argsAfter(1))
 				original = argsAfter(0)
@@ -411,9 +412,11 @@ class Server:
 			self.broadcast(message)
 	def onChannelJoin(self, payload):
 		channel, nick = payload["channel"], payload["nick"]
+		if not self.config["IRC"]["show-irc-join-part"]: return
 		self.messageFromChannel(channel, "&a%s &rjoined the channel" % nick)
 	def onChannelPart(self, payload):
 		channel, nick = payload["channel"], payload["nick"]
+		if not self.config["IRC"]["show-irc-join-part"]: return
 		self.messageFromChannel(channel, "&a%s &rparted the channel" % nick)
 	def onChannelMessage(self, payload):
 		channel, nick, message = payload["channel"], payload["nick"], payload["message"]
@@ -430,6 +433,7 @@ class Server:
 		self.messageFromChannel(channel, "&a* %s &r%s" % (nick, action))
 	def onChannelQuit(self, payload):
 		channel, nick, message = payload["channel"], payload["nick"], payload["message"]
+		if not self.config["IRC"]["show-irc-join-part"]: return
 		self.messageFromChannel(channel, "&a%s &rquit: %s" % (nick, message))
 	def onTick(self, payload):
 		""" Called every second, and used for handling cron-like jobs """

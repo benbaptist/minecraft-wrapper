@@ -245,9 +245,13 @@ class Wrapper:
 				return False
 		if payload["command"] == "reload":
 			if player.isOp():
+				if args(0) == "server":
+					return
 				try:
 					self.reloadPlugins()
 					player.message({"text": "Plugins reloaded.", "color": "green"})
+					if self.server.getServerType() != "vanilla":
+						player.message({"text": "Note: If you meant to reload the server's plugins and not Wrapper.py's plugins, run `/reload server`.", "color": "gold"})
 				except:
 					self.log.error("Failure to reload plugins:")
 					self.log.error(traceback.format_exc())
@@ -657,6 +661,8 @@ class Wrapper:
 				self.server.restart("Server restarting, be right back!")
 			elif command == "reload":
 				self.reloadPlugins()
+				if self.server.getServerType() != "vanilla":
+					self.log.info("Note: If you meant to reload the server's plugins instead of the Wrapper's plugins, try running `reload` without any slash OR `/raw /reload`.")
 			elif command == "update-wrapper":
 				self.checkForUpdate(False)
 			elif command == "plugins":

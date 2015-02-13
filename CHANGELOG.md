@@ -4,14 +4,18 @@ This update contains an important patch regarding username changes. It is import
 
 **Features**
 - Added password support to IRC
+- Added `show-irc-join-part` IRC config option for hiding join/part messages from IRC in-game to wrapper.properties
+- Added Spigot support! Make sure your jar file is named "spigot" if it's a Spigot jar, to ensure Wrapper.py goes into Spigot-compatibility mode
+  - Proxy mode should work with Spigot as well. Only tested on 1.8 Spigot
+  - `/reload` command in-game warns about how it's only reloading the Wrapper's plugins and not the server's plugins
+  - New proxy mode option 'spigot-mode' for handling UUIDs and IP addresses offline
 
 **Bug Fixes/Regular**
 - CRITICAL BUG FIX: Players who changeed usernames would be treated as a new user (Temporarily fixed by not allowing name changes - it'll continue to use their old usernames even after changing until we implement a workaround)
 - Fixed IRC bug where unicode crashes.... AGAIN. UGH. HOW MANY TIMES DO I HAVE TO FIX THIS?
 - Fixed proxy not binding when server-port is misconfigured/unable to connect to the destination server
 - Potentially fixed permission UUIDs being stored inconsistently (some with dashes, some without)
-- Added Spigot support! Make sure your jar file is named "spigot" if it's a Spigot jar, to ensure Wrapper.py goes into Spigot-compatibility mode
-  - Proxy mode should work with Spigot as well. Only tested on 1.8 Spigot
+- Fixed issues that broke Spigot with Wrapper.py
 
 **Bug Fixes/Developer**
 - Fixed "KeyError: 'users'" error with .hasPermission()
