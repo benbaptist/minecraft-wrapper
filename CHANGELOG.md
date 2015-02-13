@@ -10,6 +10,8 @@ This update contains an important patch regarding username changes. It is import
 - Fixed IRC bug where unicode crashes.... AGAIN. UGH. HOW MANY TIMES DO I HAVE TO FIX THIS?
 - Fixed proxy not binding when server-port is misconfigured/unable to connect to the destination server
 - Potentially fixed permission UUIDs being stored inconsistently (some with dashes, some without)
+- Added Spigot support! Make sure your jar file is named "spigot" if it's a Spigot jar, to ensure Wrapper.py goes into Spigot-compatibility mode
+  - Proxy mode should work with Spigot as well. Only tested on 1.8 Spigot
 
 **Bug Fixes/Developer**
 - Fixed "KeyError: 'users'" error with .hasPermission()

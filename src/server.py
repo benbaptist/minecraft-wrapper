@@ -225,6 +225,13 @@ class Server:
 		if self.state == 2: self.wrapper.callEvent("server.started", {"reason": reason})
 		if self.state == 3: self.wrapper.callEvent("server.stopping", {"reason": reason})
 		self.wrapper.callEvent("server.state", {"state": state, "reason": reason})
+	def getServerType(self):
+		if "spigot" in self.config["General"]["command"].lower():
+			return "spigot"
+		elif "bukkit" in self.config["General"]["command"].lower():
+			return "bukkit"
+		else:
+			return "vanilla"
 	def __stdout__(self):
 		while not self.wrapper.halt:
 			try:
@@ -304,7 +311,7 @@ class Server:
 			else: 
 				a += char
 		return a
-	def readConsole(self, line):
+	def readConsole(self, buff):
 		""" Internally-use function that parses a particular console line """
 		def args(i):
 			try: return line.split(" ")[i]
@@ -312,45 +319,49 @@ class Server:
 		def argsAfter(i):
 			try: return " ".join(line.split(" ")[i:])
 			except: return ""
-		if not self.wrapper.callEvent("server.consoleMessage", {"message": line}): return False
-		print line
+		if not self.wrapper.callEvent("server.consoleMessage", {"message": buff}): return False
+		if self.getServerType() == "spigot":
+			line = " ".join(buff.split(" ")[2:])
+		else:
+			line = " ".join(buff.split(" ")[3:])
+		print buff
 		deathPrefixes = ["fell", "was", "drowned", "blew", "walked", "went", "burned", "hit", "tried", 
 			"died", "got", "starved", "suffocated", "withered"]
 		if not self.config["General"]["pre-1.7-mode"]:
-			if len(args(3)) < 1: return
-			if args(3) == "Done": # Confirmation that the server finished booting
+			if len(args(0)) < 1: return
+			if args(0) == "Done": # Confirmation that the server finished booting
 				self.changeState(2)
 				self.log.info("Server started")
 				self.bootTime = time.time()
-			elif args(3) == "Preparing" and args(4) == "level": # Getting world name
-				self.worldName = args(5).replace('"', "")
+			elif args(0) == "Preparing" and args(1) == "level": # Getting world name
+				self.worldName = args(2).replace('"', "")
 				self.world = World(self.worldName, self)
-			elif args(3)[0] == "<": # Player Message
-				name = self.stripSpecial(args(3)[1:-1])
-				message = self.stripSpecial(argsAfter(4))
-				original = argsAfter(3)
+			elif args(0)[0] == "<": # Player Message
+				name = self.stripSpecial(args(0)[1:-1])
+				message = self.stripSpecial(argsAfter(1))
+				original = argsAfter(0)
 				self.wrapper.callEvent("player.message", {"player": self.getPlayer(name), "message": message, "original": original})
-			elif args(4) == "logged": # Player Login
-				name = self.stripSpecial(args(3)[0:args(3).find("[")])
+			elif args(1) == "logged": # Player Login
+				name = self.stripSpecial(args(0)[0:args(0).find("[")])
 				self.login(name)
-			elif args(4) == "lost": # Player Logout
-				name = args(3)
+			elif args(1) == "lost": # Player Logout
+				name = args(0)
 				self.logout(name)
-			elif args(3) == "*":
-				name = self.stripSpecial(args(4))
-				message = self.stripSpecial(argsAfter(5))
+			elif args(0) == "*":
+				name = self.stripSpecial(args(1))
+				message = self.stripSpecial(argsAfter(2))
 				self.wrapper.callEvent("player.action", {"player": self.getPlayer(name), "action": message})
-			elif args(3)[0] == "[" and args(3)[-1] == "]": # /say command
-				name = self.stripSpecial(args(3)[1:-1])
-				message = self.stripSpecial(argsAfter(4))
-				original = argsAfter(3)
+			elif args(0)[0] == "[" and args(0)[-1] == "]": # /say command
+				name = self.stripSpecial(args(0)[1:-1])
+				message = self.stripSpecial(argsAfter(1))
+				original = argsAfter(0)
 				self.wrapper.callEvent("server.say", {"player": name, "message": message, "original": original})
-			elif args(4) == "has" and args(8) == "achievement": # Player Achievement
-				name = self.stripSpecial(args(3))
-				achievement = argsAfter(9)
+			elif args(1) == "has" and args(5) == "achievement": # Player Achievement
+				name = self.stripSpecial(args(0))
+				achievement = argsAfter(6)
 				self.wrapper.callEvent("player.achievement", {"player": name, "achievement": achievement})
-			elif args(4) in deathPrefixes: # Player Death
-				name = self.stripSpecial(args(3))
+			elif args(1) in deathPrefixes: # Player Death
+				name = self.stripSpecial(args(0))
 				self.wrapper.callEvent("player.death", {"player": self.getPlayer(name), "death": argsAfter(4)})
 		else:
 			if len(args(3)) < 1: return

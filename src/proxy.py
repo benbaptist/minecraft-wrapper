@@ -656,10 +656,12 @@ class Server: # Handle Server Connection
 		if id == 0x0e: # Spawn Object
 			data = self.read("varint:eid|byte:type|int:x|int:y|int:z|byte:pitch|byte:yaw")
 			eid, type, x, y, z, pitch, yaw = data["eid"], data["type"], data["x"], data["y"], data["z"], data["pitch"], data["yaw"]
+			if not self.wrapper.server.world: return
 			self.wrapper.server.world.entities[data["eid"]] = Entity(eid, type, (x, y, z), (pitch, yaw), True)
 		if id == 0x0f: # Spawn Mob
 			data = self.read("varint:eid|ubyte:type|int:x|int:y|int:z|byte:pitch|byte:yaw|byte:head_pitch")
 			eid, type, x, y, z, pitch, yaw, head_pitch = data["eid"], data["type"], data["x"], data["y"], data["z"], data["pitch"], data["yaw"], data["head_pitch"]
+			if not self.wrapper.server.world: return
 			self.wrapper.server.world.entities[data["eid"]] = Entity(eid, type, (x, y, z), (pitch, yaw, head_pitch), False)
 	#	if id == 0x21: # Chunk Data
 #			if self.client.packet.compressThreshold == -1:
@@ -667,10 +669,12 @@ class Server: # Handle Server Connection
 #				self.client.packet.setCompression(256)
 		if id == 0x15: # Entity Relative Move
 			data = self.read("varint:eid|byte:dx|byte:dy|byte:dz")
+			if not self.wrapper.server.world: return
 			if not self.wrapper.server.world.getEntityByEID(data["eid"]) == None:
 				self.wrapper.server.world.getEntityByEID(data["eid"]).moveRelative((data["dx"], data["dy"], data["dz"]))
 		if id == 0x18: # Entity Teleport
 			data = self.read("varint:eid|int:x|int:y|int:z|byte:yaw|byte:pitch")
+			if not self.wrapper.server.world: return
 			if not self.wrapper.server.world.getEntityByEID(data["eid"]) == None:
 				self.wrapper.server.world.getEntityByEID(data["eid"]).teleport((data["x"], data["y"], data["z"]))
 		if id == 0x1b: # Attach Entity
@@ -684,6 +688,7 @@ class Server: # Handle Server Connection
 					self.client.riding = None
 				else:
 					self.wrapper.callEvent("player.mount", {"player": player, "vehicle_id": vid, "leash": leash})
+					if not self.wrapper.server.world: return
 					self.client.riding = self.wrapper.server.world.getEntityByEID(vid)
 					self.wrapper.server.world.getEntityByEID(vid).rodeBy = self.client
 		if id == 0x26: # Map Chunk Bulk
