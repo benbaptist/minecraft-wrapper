@@ -9,6 +9,10 @@ This update contains an important patch regarding username changes. It is import
   - Proxy mode should work with Spigot as well. Only tested on 1.8 Spigot
   - `/reload` command in-game warns about how it's only reloading the Wrapper's plugins and not the server's plugins
   - New proxy mode option 'spigot-mode' for handling UUIDs and IP addresses offline
+  
+**Developer Changes**
+- Events which return a payload other than True/False will be passed onto the event caller
+  - e.g. you can read an event such as player.rawMessage, and then `return "Different message!"` to change the message (this includes commands!)
 
 **Bug Fixes/Regular**
 - CRITICAL BUG FIX: Players who changeed usernames would be treated as a new user (Temporarily fixed by not allowing name changes - it'll continue to use their old usernames even after changing until we implement a workaround)

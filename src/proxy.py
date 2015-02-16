@@ -336,15 +336,23 @@ class Client: # handle client/game connection
 				data = self.read("string:message")
 				if data is None: return False
 				try:
-					if not self.wrapper.callEvent("player.rawMessage", {"player": self.getPlayerObject(), "message": data["message"]}): return False
-					if data["message"][0] == "/":
+					message = data["message"]
+					payload = self.wrapper.callEvent("player.rawMessage", {"player": self.getPlayerObject(), "message": data["message"]})
+					if not payload: return False
+					if type(payload) == str:
+						message = payload
+					if message[0] == "/":
 						def args(i):
-							try: return data["message"].split(" ")[i]
+							try: return message.split(" ")[i]
 							except: return ""
 						def argsAfter(i):
-							try: return data["message"].split(" ")[i:]
+							try: return message.split(" ")[i:]
 							except: return ""
-						return self.wrapper.callEvent("player.runCommand", {"player": self.getPlayerObject(), "command": args(0)[1:], "args": argsAfter(1)})
+						if self.wrapper.callEvent("player.runCommand", {"player": self.getPlayerObject(), "command": args(0)[1:], "args": argsAfter(1)}):
+							self.message(message)
+							return False
+					self.message(message)
+					return False
 				except:
 					print traceback.format_exc()
 			elif self.state == 4: # Encryption Response Packet
@@ -376,7 +384,7 @@ class Client: # handle client/game connection
 					
 					if not data["name"] == self.username:
 						self.disconnect("Client's username did not match Mojang's record")
-						return False 
+						return False
 					for property in data["properties"]:
 						if property["name"] == "textures":
 							self.skinBlob = property["value"]

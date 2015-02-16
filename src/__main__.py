@@ -137,8 +137,9 @@ class Wrapper:
 				if event in self.events[pluginID]:
 					try:
 						result = self.events[pluginID][event](payload)
-						if result == False:
-							return False
+						if result == None: continue
+						if result != True:
+							return result
 					except:
 						self.log.error("Plugin '%s' errored out when executing callback event '%s':" % (pluginID, event))
 						for line in traceback.format_exc().split("\n"):
@@ -257,7 +258,6 @@ class Wrapper:
 					self.log.error(traceback.format_exc())
 					player.message({"text": "An error occurred while reloading plugins. Please check the console immediately for a traceback.", "color": "red"})
 				return False
-		# Temporarily commented-out the help command for now
 		if payload["command"] in ("help", "?"):
 			helpGroups = [{"name": "Minecraft", "description": "List regular server commands"}]
 			for id in self.help:
@@ -338,7 +338,7 @@ class Wrapper:
 						{"text": " - " + v["description"]}
 					]})
 				showPage(page, items, "/help", 8)
-			return
+			return False
 		if payload["command"] == "playerstats":
 			if player.isOp():
 				totalPlaytime = {}
