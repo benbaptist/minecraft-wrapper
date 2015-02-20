@@ -305,8 +305,8 @@ class Client: # handle client/game connection
 					"players": {"max": self.wrapper.server.maxPlayers, "online": len(self.wrapper.server.players), "sample": sample},
 					"version": {"name": self.wrapper.server.version, "protocol": self.wrapper.server.protocolVersion}
 				}
-				if self.serverIcon:
-					MOTD["favicon"] = self.serverIcon
+				if self.proxy.serverIcon:
+					MOTD["favicon"] = self.proxy.serverIcon
 				self.send(0x00, "string", (json.dumps(MOTD),))
 				self.state = 5
 				return False
@@ -385,7 +385,7 @@ class Client: # handle client/game connection
 					self.uuid = "%s-%s-%s-%s-%s" % (self.uuid[:8], self.uuid[8:12], self.uuid[12:16], self.uuid[16:20], self.uuid[20:])
 					self.uuid = uuid.UUID(self.uuid)
 					
-					if not data["name"] == self.username:
+					if data["name"] != self.username:
 						self.disconnect("Client's username did not match Mojang's record")
 						return False
 					for property in data["properties"]:
@@ -398,7 +398,7 @@ class Client: # handle client/game connection
 					return False
 				if self.proxy.lookupUUID(self.uuid):
 					newUsername = self.proxy.lookupUUID(self.uuid)["name"]
-					if not newUsername == self.username: 
+					if not newUsername != self.username: 
 						self.log.info("%s logged in with older name previously, falling back to %s" % (self.username, newUsername))
 						self.username = newUsername
 					
@@ -529,6 +529,7 @@ class Server: # Handle Server Connection
 		self.version = self.wrapper.server.protocolVersion
 		self.log = wrapper.log
 		self.safe = False
+		self.eid = None
 	def connect(self):
 		self.socket = socket.socket()
 		if self.ip == None:

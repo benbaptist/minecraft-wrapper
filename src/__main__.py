@@ -183,9 +183,7 @@ class Wrapper:
 					payload["player"].message({"text": "An internal error occurred on the server side while trying to execute this command. Apologies.", "color": "red"})
 					return False
 		if payload["command"] == "wrapper":
-			if not player.isOp():
-				player.message({"text": "Unknown command. Try /help for a list of commands", "color": "red"})
-				return False
+			if not player.isOp(): return 
 			buildString = self.getBuildString()
 			if len(args(0)) > 0:
 				subcommand = args(0)
@@ -289,7 +287,7 @@ class Wrapper:
 				for i,v in enumerate(items):
 					if not i / perPage == page: continue 
 					player.message(v)
-				if pageCount > 0:
+				if pageCount > 1:
 					if page > 0:
 						prevButton = {"text": "Prev", "underlined": True, "clickEvent": {"action": "run_command", "value": "%s %d" % (command, page)}}
 					else:

@@ -20,6 +20,10 @@ This update contains an important patch regarding username changes. It is import
 - Fixed proxy not binding when server-port is misconfigured/unable to connect to the destination server
 - Potentially fixed permission UUIDs being stored inconsistently (some with dashes, some without)
 - Fixed issues that broke Spigot with Wrapper.py
+- Web mode fixes:
+  - Escaped <>'s in the Chat tab
+  - Joins and parts now show up in the Chat tab
+- Fixed proxy instabibility
 
 **Bug Fixes/Developer**
 - Fixed "KeyError: 'users'" error with .hasPermission()

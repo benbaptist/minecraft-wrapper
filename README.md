@@ -20,9 +20,13 @@ or the following to download the unstable, development version of Wrapper.py:
 
 ```wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/Wrapper.py```
 
-To install dependencies, use pip:
+To install dependencies, use pip (note: you may need to use sudo in some cases):
   
-```pip install requests pkg_resources pycrypto```
+```pip install requests pycrypto```
+
+Make sure Python's setuptools is also installed. On Debian-based systems, run the following:
+
+```sudo apt-get install python-setuptools```
 
 Place the wrapper.py file in your minecraft folder and then run `python Wrapper.py` to start.
 

@@ -156,7 +156,9 @@
 					if(line.type == "irc")
 						_("chatbox").innerHTML += "["+payload["channel"]+"] &lt;"+payload["nick"]+"&gt; "+payload["message"]+"\n"
 					if(line.type == "playerJoin")
-						_("chatbox").innerHTML += "&lt;"+payload["player"]+"&gt; joined the game\n"
+						_("chatbox").innerHTML += payload["player"]+" joined the game\n"
+					if(line.type == "playerLeave")
+						_("chatbox").innerHTML += payload["player"]+" left the game\n"
 					if(line.type == "player")
 						_("chatbox").innerHTML += "&lt;"+payload["player"]+"&gt; "+payload["message"]+"\n"
 					if(line.type == "raw")

@@ -23,8 +23,8 @@ class Web:
 		
 		self.api.registerEvent("server.consoleMessage", self.onServerConsole)
 		self.api.registerEvent("player.message", self.onPlayerMessage)
-		self.api.registerEvent("player.join", self.onPlayerJoin)
-		self.api.registerEvent("player.leave", self.onPlayerLeave)
+		self.api.registerEvent("player.login", self.onPlayerJoin)
+		self.api.registerEvent("player.logout", self.onPlayerLeave)
 		self.api.registerEvent("irc.message", self.onChannelMessage)
 		self.consoleScrollback = []
 		self.chatScrollback = []
@@ -49,12 +49,14 @@ class Web:
 			except: break
 		self.chatScrollback.append((time.time(), {"type": "player", "payload": {"player": payload["player"].username, "message": payload["message"]}}))
 	def onPlayerJoin(self, payload):
+		print payload
 		while len(self.chatScrollback) > 200:
 			try:
 				del self.chatScrollback[0]
 			except: break
 		self.chatScrollback.append((time.time(), {"type": "playerJoin", "payload": {"player": payload["player"].username}}))
 	def onPlayerLeave(self, payload):
+		print payload
 		while len(self.chatScrollback) > 200:
 			try: del self.chatScrollback[0]
 			except: break
