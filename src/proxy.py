@@ -398,7 +398,7 @@ class Client: # handle client/game connection
 					return False
 				if self.proxy.lookupUUID(self.uuid):
 					newUsername = self.proxy.lookupUUID(self.uuid)["name"]
-					if not newUsername != self.username: 
+					if newUsername != self.username: 
 						self.log.info("%s logged in with older name previously, falling back to %s" % (self.username, newUsername))
 						self.username = newUsername
 					
