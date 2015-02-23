@@ -364,7 +364,7 @@ class Wrapper:
 						result = "%d hour%s" % (seconds/3600, plural)
 					if seconds > 86400:
 						if (seconds/86400) == 1: plural = ""
-						result = "%s day%s" % str(seconds/86400.0, plural)
+						result = "%s day%s" % (str(seconds/86400.0), plural)
 					return result
 				if subcommand == "all":
 					player.message("&6----- All Players' Playtime -----")

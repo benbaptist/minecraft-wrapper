@@ -55,7 +55,6 @@
 				return Math.max(fileSizeInBytes, 0.1).toFixed(1) + byteUnits[i];
 			}
 			function statsCallback(stats){
-				console.log(stats)
 				if(stats == false){
 					console.log("Error while refreshing stats. Connection lost?")
 					_("lost_connection_page").style.display = "block"
@@ -73,7 +72,6 @@
 				if(stats["server_state"] == 3) _("server_status").className = "label label-warning"
 				if(stats["server_state"] == 4) _("server_status").className = "label label-warning"
 				if(stats["server_state"] == 5) _("server_status").className = "label label-info"
-				_("playercount_status").innerHTML = stats["playerCount"] + " players"
 				_("levelname_status").innerHTML = stats["level_name"]
 				_("server_version").innerHTML = stats["server_version"]
 				_("server_motd").innerHTML = stats["motd"]
@@ -85,6 +83,7 @@
 				
 				// draw player list
 				_("playerlist").innerHTML = "<th>Face</th><th>Username</th><th>UUID</th><th>Options</th></tr>"
+				_("playerheader").innerHTML = "Players (" +stats["playerCount"][0]+ "/" +stats["playerCount"][1]+ ")"
 				_("tab-chat-players").innerHTML = ""
 				for(i in stats["players"]){
 					if(i == "getLength") continue
@@ -94,12 +93,10 @@
 						if(!skin) continue // Might make players not draw in player list
 						skins[player.uuid] = skin
 					}
-					
-					if(player.isOp) var isOp = "<span class=\"glyphicon glyphicon-star\"></span> "
+					console.log(player)
+					if(player.isOp) var isOp = "<span class=\"glyphicon glyphicon-star op\"></span> "
 					else isOp = ""
 					_("playerlist").innerHTML += "<td><canvas id='playerskin-"+player.name+"' width=16 height=16></canvas></td><td style='white-space:nowrap;'>"+isOp+""+player.name+"</td><td>"+player.uuid+"</td><td style='white-space:nowrap;'><button onclick='_kick("+i+")' class='btn btn-xs btn-default'>Kick</button> <button onclick='_ban("+i+")' class='btn btn-xs btn-default'>Ban</button> <button onclick='_op("+i+")' class='btn btn-xs btn-default'>OP</button> <button onclick='_deop("+i+")' class='btn btn-xs btn-default'>De-OP</button></td></tr>"
-					if(player.isOp) var isOp = '<span class="glyphicon glyphicon-star"></span> '
-					else isOp = ""
 					_("tab-chat-players").innerHTML += '<div class="player">'+isOp+''+player.name+'</div>'
 					if(skins[player.uuid] == null) return
 					// the worst code ever. written in about five minutes.
@@ -136,6 +133,14 @@
 				}
 				if(stats["plugins"].length < 1) _("nopluginswarning").style.display = "block"
 				else _("nopluginswarning").style.display = "none"
+				
+				// draw top 10 players
+				_("top-players").innerHTML = "<th>#</th><th>Username</th><th>Playtime</th><th>Logins</th></tr>"
+				for(i in stats["topPlayers"]){
+					if(isNaN(i)) continue
+					var player = stats["topPlayers"][i]
+					_("top-players").innerHTML += "<td>"+(Number(i)+1)+"</td><td>"+player[3]+"</td><td>"+player[1]+"</td><td>"+player[2]+" logins</td></tr>"
+				}
 								
 				// draw console
 				var doScroll = false
@@ -152,7 +157,6 @@
 							var line = line.substr(line.search("]") + 1)
 						if(consoleMode == 2)
 							var line = line.substr(line.search("]:") + 2)
-						console.log(line)
 						p.innerHTML += "\n" + line.replace(/</g,"&lt;").replace(/>/g,"&gt;")
 					}
 				}
@@ -276,7 +280,6 @@
 			}
 			// I wrote this while very tired. Blah!
 			function _switchTab(id){
-				console.log(id)
 				if(id == currentTab) return
 				_("tab-"+currentTab).className = ""
 				_("tab-"+id).className = "active"
@@ -337,9 +340,13 @@
 				font-style: italic;
 				font-size: 12px;
 			}
-			.op{color:darkgoldenrod;}
+			.op{color:#226CF5;}
 			.console{height: 100%;display: table-row;}
 			.command{display: table-row;}
+			#playerlist td{
+				padding: 0px;
+				vertical-align: middle;
+			}
 		</style>
 	</head>
 	<body>
@@ -390,55 +397,58 @@
 						</div>
 					</div>
 				</div>-->
-				<div class="col-lg-6">
-					<div class="panel panel-default">
-						<div class="panel-heading">
-							<span id="server_status" class="label label-success" style="height:20px;display:block;float:left;font-size:14px;margin-right: 5px;"></span> Server Information
-							<div class="pull-right">
-								<div class="dropdown" style="margin-top:-7px;">
-									<button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown" aria-expanded="true">
-										Power
-										<span class="caret"></span>
-									</button>
-									<ul class="dropdown-menu" role="menu" aria-labelledby="dropdownMenu1">
-										<li role="presentation"><a role="menuitem" tabindex="-1" href="javascript:_start();">Start</a></li>
-										<li role="presentation"><a role="menuitem" tabindex="-1" href="javascript:_restart();">Restart</a></li>
-										<li role="presentation"><a role="menuitem" tabindex="-1" href="javascript:_stop();">Stop</a></li>
-										<li role="presentation"><a role="menuitem" tabindex="-1" href="javascript:_kill();">Force Kill</a></li>
-									</ul>
+				<div class="row">
+					<div class="col-lg-6">
+						<div class="panel panel-default">
+							<div class="panel-heading">
+								<span id="server_status" class="label label-success" style="height:20px;display:block;float:left;font-size:14px;margin-right: 5px;"></span> Server Information
+								<div class="pull-right">
+									<div class="dropdown" style="margin-top:-7px;">
+										<button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown" aria-expanded="true">
+											Power
+											<span class="caret"></span>
+										</button>
+										<ul class="dropdown-menu" role="menu" aria-labelledby="dropdownMenu1">
+											<li role="presentation"><a role="menuitem" tabindex="-1" href="javascript:_start();">Start</a></li>
+											<li role="presentation"><a role="menuitem" tabindex="-1" href="javascript:_restart();">Restart</a></li>
+											<li role="presentation"><a role="menuitem" tabindex="-1" href="javascript:_stop();">Stop</a></li>
+											<li role="presentation"><a role="menuitem" tabindex="-1" href="javascript:_kill();">Force Kill</a></li>
+										</ul>
+									</div>
 								</div>
 							</div>
+							<div class="panel-body">
+	<!--							<b>Server Status: </b> <span id="server_status">Unknown</span></br>-->
+								<b>Server Version: </b> <span id="server_version">Unknown</span></br>
+								<b>Server MOTD: </b> <span id="server_motd">Unknown</span></br>
+								<b>Level Name: </b> <span id="levelname_status">Unknown</span></br>
+								<b>Memory Usage: </b> <span id="memory_status">n/a</span></br>
+								<b>World Size: </b> <span id="world_size">n/a</span><br/>
+								<b>Free Disk Space: </b> <span id="disk_avail">n/a</span>
+							</div>
 						</div>
-						<div class="panel-body">
-<!--							<b>Server Status: </b> <span id="server_status">Unknown</span></br>-->
-							<b>Server Version: </b> <span id="server_version">Unknown</span></br>
-							<b>Server MOTD: </b> <span id="server_motd">Unknown</span></br>
-							<b>Level Name: </b> <span id="levelname_status">Unknown</span></br>
-							<b>Player Count: </b> <span id="playercount_status">n/a players</span></br>
-							<b>Memory Usage: </b> <span id="memory_status">n/a</span></br>
-							<b>World Size: </b> <span id="world_size">n/a</span><br/>
-							<b>Free Disk Space: </b> <span id="disk_avail">n/a</span>
+					</div>
+					<div class="col-lg-6">
+						<div class="panel panel-default">
+							<div class="panel-heading" id="playerheader">Players</div>
+							<table class="table table-striped" style="font-size:13px;">
+								<tbody id="playerlist">
+									<th>Face</th><th>Username</th><th>UUID</th><th>Options</th></tr>
+								</tbody>
+							</table>
 						</div>
 					</div>
 				</div>
-				<div class="col-lg-6">
-					<div class="panel panel-default">
-						<div class="panel-heading">Players</div>
-						<table class="table table-striped" style="font-size:13px;">
-							<tbody id="playerlist">
-								<th>Face</th><th>Username</th><th>UUID</th><th>Options</th></tr>
-							</tbody>
-						</table>
-					</div>
-				</div>
-				<div class="col-lg-6">
-					<div class="panel panel-default">
-						<div class="panel-heading">Top Players</div>
-						<table class="table table-striped">
-							<tbody id="top-players">
-								<th>Face</th><th>Username</th><th>Playtime</th><th>Logins</th></tr>
-							</tbody>
-						</table>
+				<div class="row">
+					<div class="col-lg-6">
+						<div class="panel panel-default">
+							<div class="panel-heading">Top 10 Players</div>
+							<table class="table table-striped" style="font-size:13px;">
+								<tbody id="top-players">
+									<th>Face</th><th>Username</th><th>Playtime</th><th>Logins</th></tr>
+								</tbody>
+							</table>
+						</div>
 					</div>
 				</div>
 			</div>

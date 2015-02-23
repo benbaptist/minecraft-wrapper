@@ -13,6 +13,7 @@ This update contains an important patch regarding username changes. It is import
 - Added proxy option 'convert-player-files' for migrating regular servers over to proxy mode
   - Renames player files and whitelists. Will not convert bans, so banned players may remain unbanned until you manually re-ban them 
   - This is turned on by default
+- Top 10 active players can be viewed from the web mode
   
 **Developer Changes**
 - Events which return a payload other than True/False will be passed onto the event caller

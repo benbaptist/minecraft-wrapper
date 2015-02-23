@@ -32,6 +32,7 @@ class Server:
 		# Server Information 
 		self.worldName = None
 		self.worldSize = 0
+		self.maxPlayers = 20
 		self.protocolVersion = -1 # -1 until proxy mode checks the server's MOTD on boot
 		self.version = None
 		self.world = None

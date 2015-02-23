@@ -340,7 +340,35 @@ class Client:
 			for line in self.web.memoryGraph:
 				if line[0] > refreshTime:
 					memoryGraph.append(line[1])
-			return {"playerCount": len(self.wrapper.server.players), 
+			totalPlaytime = {}
+			totalPlayers = self.web.api.minecraft.getAllPlayers()
+			for uu in totalPlayers:
+				if not "logins" in totalPlayers[uu]: 
+					continue
+				playerName = self.web.wrapper.getUsername(uu)
+				totalPlaytime[playerName] = [0, 0]
+				for i in totalPlayers[uu]["logins"]:
+					totalPlaytime[playerName][0] += totalPlayers[uu]["logins"][i] - int(i)
+					totalPlaytime[playerName][1] += 1
+			def secondsToHuman(seconds):
+				result = "None at all!"; plural = "s"
+				if seconds > 0:
+					result = "%d seconds" % seconds
+				if seconds > 59:
+					if (seconds/60) == 1: plural = ""
+					result = "%d minute%s" % (seconds/60, plural)
+				if seconds > 3599:
+					if (seconds/3600) == 1: plural = ""
+					result = "%d hour%s" % (seconds/3600, plural)
+				if seconds > 86400:
+					if (seconds/86400) == 1: plural = ""
+					result = "%s day%s" % (str(seconds/86400.0), plural)
+				return result
+			topPlayers = []
+			for username in totalPlaytime:
+				topPlayers.append((totalPlaytime[username][0], secondsToHuman(totalPlaytime[username][0]), totalPlaytime[username][1], username))
+			topPlayers.sort(); topPlayers.reverse()
+			return {"playerCount": [len(self.wrapper.server.players), self.wrapper.server.maxPlayers], 
 				"players": players,
 				"plugins": plugins,
 				"server_state": self.wrapper.server.state,
@@ -355,7 +383,9 @@ class Client:
 				"server_memory": self.wrapper.server.getMemoryUsage(),
 				"server_memory_graph": memoryGraph,
 				"world_size": self.wrapper.server.worldSize,
-				"disk_avail": self.wrapper.server.getStorageAvailable(".")}
+				"disk_avail": self.wrapper.server.getStorageAvailable("."),
+				"topPlayers": topPlayers
+			}
 		if action == "console":
 			if not self.web.validateKey(get("key")): return EOFError
 			self.wrapper.server.console(get("execute"))
