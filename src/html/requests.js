@@ -12,7 +12,6 @@ requests.action = function(action, arguments){
 	var xml = new XMLHttpRequest()
 	xml.open("GET", "/action/"+action+"?"+args, false)
 	xml.send()
-	console.log(xml.responseText)
 	return JSON.parse(xml.responseText)
 }
 requests.admin = function(action, arguments){
@@ -36,13 +35,19 @@ requests.adminThreaded = function(action, arguments, callBack){
 		if(i == undefined) continue
 		args += "&" + i + "=" + encodeURIComponent(arguments[i])
 	}
-	var xml = new XMLHttpRequest()
-	xml.open("GET", "/action/"+action+"?"+args, true)
+	try{
+		var xml = new XMLHttpRequest()
+		xml.open("GET", "/action/"+action+"?"+args, true)
+	}catch(err){return false}
 	try{xml.send()}catch(err){return false}
 	xml.onreadystatechange = function(){
 		if(xml.readyState == 4){
-			var response = JSON.parse(xml.responseText)
-			console.log(response)
+			try{
+				var response = JSON.parse(xml.responseText)
+			}catch(err){
+				callBack(false)
+				return
+			}
 			callBack(response["payload"])
 		}
 	}

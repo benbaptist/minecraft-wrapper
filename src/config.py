@@ -41,9 +41,10 @@ show-channel-server = True
 show-irc-join-part = True
 
 [Proxy]
-;; This is a man-in-the-middle proxy mode similar to BungeeCord, but allows for extra plugin functionality. ;;
-;; The server must be on offline mode. Make sure that the server is inaccessible directly from the outside world. ;;
+;; This is a man-in-the-middle proxy similar to BungeeCord, which is used for extra plugin functionality. ;;
+;; online-mode must be set to False in server.properties. Make sure that the server is inaccessible directly from the outside world. ;;
 ;; Note: the online-mode option here refers to the proxy only, not to the server's offline mode. ;;
+;; It is recommended that you turn network-compression-threshold to -1 in server.properties for less issues. ;;
 proxy-enabled = False
 proxy-port = 25565
 proxy-bind = 0.0.0.0
@@ -51,6 +52,7 @@ server-port = 25564
 online-mode = True
 max-players = 1024
 spigot-mode = False
+convert-player-files = True
 
 [Web]
 ;; This is a web UI. ;;
@@ -124,7 +126,8 @@ class Config:
 			"proxy-bind": "0.0.0.0",
 			"online-mode": True,
 			"max-players": 1024,
-			"spigot-mode": False
+			"spigot-mode": False,
+			"convert-player-files": True
 		},
 		"Web":{
 			"web-enabled": False,

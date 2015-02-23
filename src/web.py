@@ -1,4 +1,4 @@
-# Unfinished web UI code. Yeah, I know. The code is awful. Probably not even a HTTP-compliant web server anyways. I just wrote it at like 3AM in like an hour.
+# Yeah, I know. The code is awful. Probably not even a HTTP-compliant web server anyways. I just wrote it at like 3AM in like an hour.
 import socket, traceback, zipfile, threading, time, json, random, urlparse, storage, log, urllib, os, md5
 from api import API
 try:
@@ -86,13 +86,15 @@ class Web:
 		for i in range(64):
 			a += z[random.randrange(0, len(z))]
 #			a += chr(random.randrange(97, 122))
+		if rememberMe:
+			print "Will remember!"
 		self.data["keys"].append([a, time.time(), rememberMe])
 		return a
 	def validateKey(self, key):
 		for i in self.data["keys"]:
 			expireTime = 2592000
 			if len(i) > 2:
-				if i[2]: expireTime = 21600
+				if not i[2]: expireTime = 21600
 			if i[0] == key and time.time() - i[1] < expireTime: # Validate key and ensure it's under a week old
 				self.loginAttempts = 0
 				return True
@@ -105,7 +107,6 @@ class Web:
 		while not self.wrapper.halt:
 			try:
 				if self.bind():
-					#cProfile.run("self.listen()", "cProfile-debug")
 					self.listen()
 				else:
 					self.log.error("Could not bind web to %s:%d - retrying in 5 seconds" % (self.config["Web"]["web-bind"], self.config["Web"]["web-port"]))
@@ -130,9 +131,6 @@ class Web:
 			sock, addr = self.socket.accept()
 #			self.log.debug("(WEB) Connection %s started" % str(addr))
 			client = Client(self.wrapper, sock, addr, self)
-			#t = threading.Thread(target=cProfile.runctx, args=("client.wrap()", globals(), locals(), "cProfile-debug"))
-			#t.daemon = True
-			#t.start()
 			t = threading.Thread(target=client.wrap, args=())
 			t.daemon = True
 			t.start()
@@ -449,13 +447,20 @@ class Client:
 			return False
 		else:
 			file = request.replace("..", "").replace("%", "").replace("\\", "")
-		if file == "admin": file = "admin.html" # alias /admin as /admin.html
+		if file == "/admin.html":
+			self.headers(status="301 Go Away", location="/admin")
+			return False
+		if file == "/login.html":
+			self.headers(status="301 Go Away", location="/login")
+			return False
 		if file == ".":
 			self.headers(status="400 Bad Request")
 			self.write("<h1>BAD REQUEST</h1>")
 			self.close()
 			return False
 		try:
+			if file == "/admin": file = "admin.html" 
+			if file == "/login": file = "login.html" 
 			data = self.read(file)
 			self.headers(contentType=self.getContentType(file))
 			self.write(data)

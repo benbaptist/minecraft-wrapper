@@ -34,7 +34,7 @@ class Storage:
 			yield i
 	def periodicSave(self):
 		while not self.abort:
-			if time.time() - self.time > 10:
+			if time.time() - self.time > 60:
 				if not self.data == self.dataOld:
 					try:
 						self.save()
@@ -52,7 +52,11 @@ class Storage:
 		if not os.path.exists("%s/%s.json" % (self.root, self.name)):
 			self.save()
 		with open("%s/%s.json" % (self.root, self.name), "r") as f:
-			self.data = json.loads(f.read())
+			try:
+				self.data = json.loads(f.read())
+			except: 
+				print "Failed to load '%s/%s.json' - fresh" % (self.root, self.name)
+				return
 		self.dataOld = copy.deepcopy(self.data)
 	def save(self):
 		with open("%s/%s.json" % (self.root, self.name) , "w") as f:

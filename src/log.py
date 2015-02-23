@@ -6,8 +6,13 @@ class Log:
 	def timestamp(self):
 		return time.strftime("[%Y-%m-%d %H:%M:%S]")
 	def write(self, payload):
-		self.file.write(("%s\n" % payload).encode("utf8"))
-		self.file.flush()
+		try:
+			self.file.write(("%s\n" % payload).encode("utf8"))
+			self.file.flush()
+		except:
+			print "Failure to write string"
+			print payload
+			print traceback.format_exc()
 	def prefix(self, type="INFO", string=""):
 		for line in string.split("\n"):
 			self.write("%s [Wrapper.py/%s] %s" % (self.timestamp(), type, line)) 

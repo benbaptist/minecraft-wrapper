@@ -1,7 +1,7 @@
 # I'll probably split this file into more parts later on, like such: 
 # proxy folder: __init__.py (Proxy), client.py (Client), server.py (Server), network.py (Packet), bot.py (will contain Bot, for bot code)
 # this could definitely use some code-cleaning.  
-import socket, threading, struct, StringIO, time, traceback, json, random, hashlib, os, zlib, binascii, uuid, md5, storage
+import socket, threading, struct, StringIO, time, traceback, json, random, hashlib, os, zlib, binascii, uuid, md5, storage, shutil
 from config import Config
 from api.entity import Entity
 from api.world import World
@@ -370,37 +370,39 @@ class Client: # handle client/game connection
 				h.update(sharedSecret)
 				h.update(self.publicKey)
 				serverId = self.packet.hexdigest(h)
-				r = requests.get("https://sessionserver.mojang.com/session/minecraft/hasJoined?username=%s&serverId=%s" % (self.username, serverId))
-#				print "SessionServer response: %s" % r.text
-				
+
 				self.packet.sendCipher = encryption.AES128CFB8(sharedSecret)
 				self.packet.recvCipher = encryption.AES128CFB8(sharedSecret)
 				
 				if not verifyToken == self.verifyToken:
 					self.disconnect("Verify tokens are not the same")
 					return False
-				try:
-					data = r.json()
-					self.uuid = data["id"]
-					self.uuid = "%s-%s-%s-%s-%s" % (self.uuid[:8], self.uuid[8:12], self.uuid[12:16], self.uuid[16:20], self.uuid[20:])
-					self.uuid = uuid.UUID(self.uuid)
-					
-					if data["name"] != self.username:
-						self.disconnect("Client's username did not match Mojang's record")
+				if self.config["Proxy"]["online-mode"]:
+					r = requests.get("https://sessionserver.mojang.com/session/minecraft/hasJoined?username=%s&serverId=%s" % (self.username, serverId))
+					try:
+						data = r.json()
+						self.uuid = data["id"]
+						self.uuid = "%s-%s-%s-%s-%s" % (self.uuid[:8], self.uuid[8:12], self.uuid[12:16], self.uuid[16:20], self.uuid[20:])
+						self.uuid = uuid.UUID(self.uuid)
+						
+						if data["name"] != self.username:
+							self.disconnect("Client's username did not match Mojang's record")
+							return False
+						for property in data["properties"]:
+							if property["name"] == "textures":
+								self.skinBlob = property["value"]
+								self.wrapper.proxy.skins[str(self.uuid)] = self.skinBlob
+						self.properties = data["properties"]
+					except:
+						self.disconnect("Session Server Error")
 						return False
-					for property in data["properties"]:
-						if property["name"] == "textures":
-							self.skinBlob = property["value"]
-							self.wrapper.proxy.skins[str(self.uuid)] = self.skinBlob
-					self.properties = data["properties"]
-				except:
-					self.disconnect("Session Server Error")
-					return False
-				if self.proxy.lookupUUID(self.uuid):
-					newUsername = self.proxy.lookupUUID(self.uuid)["name"]
-					if newUsername != self.username: 
-						self.log.info("%s logged in with older name previously, falling back to %s" % (self.username, newUsername))
-						self.username = newUsername
+					if self.proxy.lookupUUID(self.uuid):
+						newUsername = self.proxy.lookupUUID(self.uuid)["name"]
+						if newUsername != self.username: 
+							self.log.info("%s logged in with older name previously, falling back to %s" % (self.username, newUsername))
+							self.username = newUsername
+				else:
+					 self.uuid = uuid.uuid3(uuid.NAMESPACE_OID, "OfflinePlayer: %s" % self.username)
 					
 				self.serverUUID = self.UUIDFromName("OfflinePlayer:" + self.username)
 				
@@ -415,6 +417,37 @@ class Client: # handle client/game connection
 
 				self.send(0x02, "string|string", (str(self.uuid), self.username))
 				self.state = 3
+				
+				# Rename UUIDs accordingly
+				if self.config["Proxy"]["convert-player-files"]:
+					if self.config["Proxy"]["online-mode"]:
+						# Check player files, and rename them accordingly to offline-mode UUID
+						worldName = self.wrapper.server.worldName
+						if not os.path.exists("%s/playerdata/%s.dat" % (worldName, str(self.serverUUID))):
+							if os.path.exists("%s/playerdata/%s.dat" % (worldName, str(self.uuid))):
+								self.log.info("Migrating %s's playerdata file to proxy mode" % self.username)
+								shutil.move("%s/playerdata/%s.dat" % (worldName, str(self.uuid)), "%s/playerdata/%s.dat" % (worldName, str(self.serverUUID)))
+								with open("%s/.wrapper-proxy-playerdata-migrate" % worldName, "a") as f:
+									f.write("%s %s\n" % (str(self.uuid), str(self.serverUUID)))
+						# Change whitelist entries to offline mode versions
+						if os.path.exists("whitelist.json"):
+							with open("whitelist.json", "r") as f:
+								data = json.loads(f.read())
+							a = False; b = False
+							for player in data:
+								if player["uuid"] == str(self.serverUUID):
+									a = True
+								if player["uuid"] == str(self.uuid):
+									b = True
+							if a == False and b == True:
+								self.log.info("Migrating %s's whitelist entry to proxy mode" % self.username)
+								data.append({"uuid": str(self.serverUUID), "name": self.username})
+								with open("whitelist.json", "w") as f:
+									f.write(json.dumps(data))
+								self.wrapper.server.console("whitelist reload")
+								with open("%s/.wrapper-proxy-whitelist-migrate" % worldName, "a") as f:
+									f.write("%s %s\n" % (str(self.uuid), str(self.serverUUID)))
+				
 				self.connect()
 				
 				self.log.info("%s logged in (UUID: %s | IP: %s)" % (self.username, self.uuid, self.addr[0]))
@@ -575,7 +608,9 @@ class Server: # Handle Server Connection
 			self.client.close()
 	def getPlayerByEID(self, eid):
 		for client in self.wrapper.proxy.clients:
-			if client.server.eid == eid: return self.getPlayerContext(client.username)
+			try:
+				if client.server.eid == eid: return self.getPlayerContext(client.username)
+			except: print "client.server.eid failed, but that's alright!"
 		return False
 	def getPlayerContext(self, username):
 		try: return self.wrapper.server.players[username]

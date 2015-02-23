@@ -9,6 +9,10 @@ This update contains an important patch regarding username changes. It is import
   - Proxy mode should work with Spigot as well. Only tested on 1.8 Spigot
   - `/reload` command in-game warns about how it's only reloading the Wrapper's plugins and not the server's plugins
   - New proxy mode option 'spigot-mode' for handling UUIDs and IP addresses offline
+- Improvements to the /playerstats command
+- Added proxy option 'convert-player-files' for migrating regular servers over to proxy mode
+  - Renames player files and whitelists. Will not convert bans, so banned players may remain unbanned until you manually re-ban them 
+  - This is turned on by default
   
 **Developer Changes**
 - Events which return a payload other than True/False will be passed onto the event caller
@@ -23,13 +27,17 @@ This update contains an important patch regarding username changes. It is import
 - Web mode fixes:
   - Escaped <>'s in the Chat tab
   - Joins and parts now show up in the Chat tab
+  - "remember me" when logging in actually makes it remember you
+  - "Lost Connection" page now works again 
 - Fixed proxy instabibility
+- Help command page fixes
 
 **Bug Fixes/Developer**
 - Fixed "KeyError: 'users'" error with .hasPermission()
 - Potentially fixed issues with UUIDs being set as "None" or "False" in the Player object. If this bug persists, the console will print a message related to it. Please file a bug report containing this message.
 - Fixed self.log not printing anything in console
 - Better cross-server handling (i.e. player.connect() works better now)
+- Better error handling for Storage objects
 
 <h4>0.7.6</h4>
 **Bug Fixes**

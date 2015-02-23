@@ -1,4 +1,4 @@
-import json, time, nbt, items, storage, os
+import json, time, nbt, items, storage, os, traceback, uuid
 class Minecraft:
 	""" This class contains functions related to in-game features directly. These methods are located at self.api.minecraft. """
 	def __init__(self, wrapper):
@@ -12,13 +12,21 @@ class Minecraft:
 		return False
 	def getAllPlayers(self):
 		""" Returns a dict containing all players ever connected to the server """
+		if self.wrapper.isOnlineMode(): online = True
+		else: online = False
 		players = {}
 		for uuidf in os.listdir("wrapper-data/players"):
-			uuid = uuidf.rsplit(".", 1)[0]
+			puuid = uuidf.rsplit(".", 1)[0]
+			if puuid in ("None", "False"): continue
+			username = self.wrapper.getUsername(puuid)
+			if username == False: continue
+			if online:
+				if str(uuid.uuid3(uuid.NAMESPACE_OID, "OfflinePlayer: %s" % username.encode("ascii", "ignore"))) == puuid: continue
 			with open("wrapper-data/players/" + uuidf) as f:
 				try:
-					players[uuid] = json.loads(f.read())
+					players[puuid] = json.loads(f.read())
 				except:
+					print "Failed to load player data '%s'" % puuid
 					print traceback.format_exc()
 		return players
 	def console(self, string):

@@ -1,4 +1,4 @@
-import socket, datetime, time, sys, threading, random, subprocess, os, json, signal, traceback, api, StringIO, ConfigParser, backups, sys, codecs, ctypes, platform
+import socket, datetime, time, sys, threading, random, subprocess, os, json, signal, traceback, api, StringIO, ConfigParser, backups, sys, codecs, ctypes, platform, ast
 try: 
 	import resource
 	IMPORT_RESOURCE_SUCCESS = True
@@ -36,6 +36,7 @@ class Server:
 		self.version = None
 		self.world = None
 		self.motd = None
+		self.onlineMode = True
 		
 		self.reloadProperties()
 		
@@ -211,6 +212,9 @@ class Server:
 				self.worldName = self.properties.get("main", "level-name")
 				self.motd = self.properties.get("main", "motd")
 				self.maxPlayers = int(self.properties.get("main", "max-players"))
+				self.onlineMode = self.properties.get("main", "online-mode")
+				if self.onlineMode == "false": self.onlineMode = False
+				else: self.onlineMode = True
 			except:
 				self.log.getTraceback()
 	def console(self, command):

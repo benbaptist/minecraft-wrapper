@@ -8,6 +8,7 @@ from server import Server
 from importlib import import_module
 from scripts import Scripts
 from api import API
+from uuid import UUID
 import importlib
 # I'm not 100% sure if readline works under Windows or not
 try: import readline
@@ -31,6 +32,7 @@ class Wrapper:
 		self.update = False
 		self.storage = storage.Storage("main", self.log)
 		self.permissions = storage.Storage("permissions", self.log)
+		self.usercache = storage.Storage("usercache", self.log)
 		
 		self.commands = {}
 		self.events = {}
@@ -275,14 +277,14 @@ class Wrapper:
 				page = 0
 			def showPage(page, items, command, perPage):
 				pageCount = len(items) / perPage
-				if page > pageCount or page < 0:
+				if (int(len(items) / perPage)) != (float(len(items)) / perPage): pageCount += 1
+				if page >= pageCount or page < 0:
 					player.message("&cNo such page '%s'!" % str(page + 1))
 					return
 				player.message(" ") # Padding, for the sake of making it look a bit nicer
-#				player.message("&2--- Showing help page %d of %d ---" % (page + 1, pageCount + 1))
 				player.message({"text": "--- Showing ", "color": "dark_green", "extra":[
 					{"text": "help", "clickEvent": {"action": "run_command", "value": "/help"}},
-					{"text": " page %d of %d ---" % (page + 1, pageCount + 1)}
+					{"text": " page %d of %d ---" % (page + 1, pageCount)}
 				]})
 				for i,v in enumerate(items):
 					if not i / perPage == page: continue 
@@ -292,7 +294,7 @@ class Wrapper:
 						prevButton = {"text": "Prev", "underlined": True, "clickEvent": {"action": "run_command", "value": "%s %d" % (command, page)}}
 					else:
 						prevButton = {"text": "Prev", "italic": True, "color": "gray"}
-					if page < pageCount:
+					if page <= pageCount:
 						nextButton = {"text": "Next", "underlined": True, "clickEvent": {"action": "run_command", "value": "%s %d" % (command, page + 2)}}
 					else:
 						nextButton = {"text": "Next", "italic": True, "color": "gray"}
@@ -338,16 +340,48 @@ class Wrapper:
 				showPage(page, items, "/help", 8)
 			return False
 		if payload["command"] == "playerstats":
+			subcommand = args(0)
 			if player.isOp():
 				totalPlaytime = {}
 				players = self.api.minecraft.getAllPlayers()
-				for uuid in players:
-					if not "logins" in players[uuid]: continue
-					totalPlaytime[uuid] = 0
-					for i in players[uuid]["logins"]:
-						totalPlaytime[uuid] += players[uuid]["logins"][i] - int(i)
-				for i in totalPlaytime:
-					player.message("&c%s: %d seconds" % (i, totalPlaytime[i]))
+				for uu in players:
+					if not "logins" in players[uu]: 
+						continue
+					playerName = self.getUsername(uu)
+					totalPlaytime[playerName] = [0, 0]
+					for i in players[uu]["logins"]:
+						totalPlaytime[playerName][0] += players[uu]["logins"][i] - int(i)
+						totalPlaytime[playerName][1] += 1
+				def secondsToHuman(seconds):
+					result = "None at all!"; plural = "s"
+					if seconds > 0:
+						result = "%d seconds" % seconds
+					if seconds > 59:
+						if (seconds/60) == 1: plural = ""
+						result = "%d minute%s" % (seconds/60, plural)
+					if seconds > 3599:
+						if (seconds/3600) == 1: plural = ""
+						result = "%d hour%s" % (seconds/3600, plural)
+					if seconds > 86400:
+						if (seconds/86400) == 1: plural = ""
+						result = "%s day%s" % str(seconds/86400.0, plural)
+					return result
+				if subcommand == "all":
+					player.message("&6----- All Players' Playtime -----")
+					for name in totalPlaytime:
+						seconds = totalPlaytime[name][0]
+						result = secondsToHuman(seconds)
+						player.message("&e%s: &6%s (%d logins)" % (name, result, totalPlaytime[name][1])) # 86400.0
+				else:
+					topPlayers = []
+					for username in totalPlaytime:
+						topPlayers.append((totalPlaytime[username][0], username))
+					topPlayers.sort(); topPlayers.reverse()
+					player.message("&6----- Top 10 Players' Playtime -----")
+					for i,p in enumerate(topPlayers):
+						result = secondsToHuman(p[0])
+						player.message("&7%d. &e%s: &6%s" % (i+1, p[1], result))
+						if i == 10: break
 				return 
 		if payload["command"] in ("permissions", "perm", "perms", "super"):
 			if not "groups" in self.permissions: self.permissions["groups"] = {}
@@ -465,13 +499,58 @@ class Wrapper:
 					player.message("&cAlias commands: /perms, /perm, /super")
 				return False
 		return True
-	def getUUID(self, name):
-		f = open("usercache.json", "r")
-		data = json.loads(f.read())
-		f.close()
-		for u in data:
-			if u["name"] == name:
-				return u["uuid"]
+	def isOnlineMode(self):
+		if self.config["Proxy"]["proxy-enabled"]:
+			return self.config["Proxy"]["online-mode"]
+		if self.server:
+			if self.server.onlineMode: return True
+		return False
+	def getUsername(self, uuid):
+		if type(uuid) != str: return False
+		if self.isOnlineMode():
+			if self.proxy:
+				obj = self.proxy.lookupUUID(uuid)
+				if obj: return obj["name"]
+				else: return False
+			if uuid in self.usercache:
+				return self.usercache[uuid]["name"]
+			try:
+				r = requests.get("https://api.mojang.com/user/profiles/%s/names" % uuid.replace("-", "")).json()
+				username = r[0]["name"]
+				if not uuid in self.usercache:
+					self.usercache[uuid] = {"time": time.time()}
+				if u["name"] != self.usercache[uuid]["name"]:
+					self.usercache[uuid]["name"] = username
+					self.usercache[uuid]["online"] = True
+					self.usercache[uuid]["time"] = time.time()
+				return username
+			except: return False
+		else:
+			f = open("usercache.json", "r")
+			data = json.loads(f.read())
+			f.close()
+			for u in data:
+				if u["uuid"] == uuid:
+					if not uuid in self.usercache:
+						self.usercache[uuid] = {"time": time.time(), "name": None}
+					if u["name"] != self.usercache[uuid]["name"]:
+						self.usercache[uuid]["name"] = u["name"]
+						self.usercache[uuid]["online"] = False
+						self.usercache[uuid]["time"] = time.time()
+					return u["name"]
+	def getUUID(self, username):
+		""" Unfinished function. Needs finishing pronto! """
+		if self.isOnlineMode():
+			pass
+		else:
+			return str(uuid.uuid3(uuid.NAMESPACE_OID, "OfflinePlayer: %s" % username.encode("ascii", "ignore")))
+		if not self.proxy:
+			f = open("usercache.json", "r")
+			data = json.loads(f.read())
+			f.close()
+			for u in data:
+				if u["name"] == username:
+					return u["uuid"]
 		return False
 	def start(self):
 		self.configManager.loadConfig()
@@ -484,7 +563,8 @@ class Wrapper:
 			("/wrapper [update/memory/halt]", "If no subcommand is provided, it'll show the Wrapper version.", None),
 			("/plugins", "Show a list of the installed plugins", None),
 			("/permissions <groups/users/RESET>", "Command used to manage permission groups and users, add permission nodes, etc.", None),
-			("/playerstats", "Show the most active players.", None)
+			("/playerstats [all]", "Show the most active players. If no subcommand is provided, it'll show the top 10 players.", None),
+			("/reload", "Reload all plugins.", None)
 		])
 		
 		self.server = Server(sys.argv, self.log, self.configManager.config, self)
