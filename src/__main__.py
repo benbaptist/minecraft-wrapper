@@ -513,12 +513,13 @@ class Wrapper:
 				if obj: return obj["name"]
 				else: return False
 			if uuid in self.usercache:
-				return self.usercache[uuid]["name"]
+				if "name" in self.usercache[uuid]:
+					return self.usercache[uuid]["name"]
 			try:
 				r = requests.get("https://api.mojang.com/user/profiles/%s/names" % uuid.replace("-", "")).json()
 				username = r[0]["name"]
 				if not uuid in self.usercache:
-					self.usercache[uuid] = {"time": time.time()}
+					self.usercache[uuid] = {"time": time.time(), "name": None}
 				if u["name"] != self.usercache[uuid]["name"]:
 					self.usercache[uuid]["name"] = username
 					self.usercache[uuid]["online"] = True
