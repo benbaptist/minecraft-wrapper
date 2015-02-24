@@ -324,7 +324,7 @@ class Client: # handle client/game connection
 						self.send(0x01, "string|bytearray|bytearray", (self.serverID, self.publicKey, self.verifyToken))
 				else:
 					self.connect()
-					self.uuid = uuid.uuid3(uuid.NAMESPACE_OID, "OfflinePlayer: %s" % self.username)
+					self.uuid = self.UUIDFromName(self.username)
 					self.serverUUID = self.UUIDFromName("OfflinePlayer:" + self.username)
 					self.send(0x02, "string|string", (str(self.uuid), self.username))
 					self.state = 3

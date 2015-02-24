@@ -365,8 +365,9 @@ class Client:
 					result = "%s day%s" % (str(seconds/86400.0), plural)
 				return result
 			topPlayers = []
-			for username in totalPlaytime:
+			for i,username in enumerate(totalPlaytime):
 				topPlayers.append((totalPlaytime[username][0], secondsToHuman(totalPlaytime[username][0]), totalPlaytime[username][1], username))
+				if i == 9: break
 			topPlayers.sort(); topPlayers.reverse()
 			return {"playerCount": [len(self.wrapper.server.players), self.wrapper.server.maxPlayers], 
 				"players": players,

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # I ought to clean these imports up a bit.
-import socket, datetime, time, sys, threading, random, subprocess, os, json, signal, traceback, ConfigParser, ast, proxy, web, globals, storage, hashlib, cProfile
+import socket, datetime, time, sys, threading, random, subprocess, os, json, signal, traceback, ConfigParser, ast, proxy, web, globals, storage, hashlib, cProfile, md5, uuid
 from log import *
 from config import Config
 from irc import IRC
@@ -381,7 +381,7 @@ class Wrapper:
 					for i,p in enumerate(topPlayers):
 						result = secondsToHuman(p[0])
 						player.message("&7%d. &e%s: &6%s" % (i+1, p[1], result))
-						if i == 10: break
+						if i == 9: break
 				return 
 		if payload["command"] in ("permissions", "perm", "perms", "super"):
 			if not "groups" in self.permissions: self.permissions["groups"] = {}
@@ -505,26 +505,34 @@ class Wrapper:
 		if self.server:
 			if self.server.onlineMode: return True
 		return False
+	def UUIDFromName(self, name):
+		m = md5.new()
+		m.update("OfflinePlayer:"+name)
+		d = bytearray(m.digest())
+		d[6] &= 0x0f
+		d[6] |= 0x30
+		d[8] &= 0x3f
+		d[8] |= 0x80
+		return uuid.UUID(bytes=str(d))
 	def getUsername(self, uuid):
-		if type(uuid) != str: return False
+		if type(uuid) not in (str, unicode): return False
 		if self.isOnlineMode():
 			if self.proxy:
 				obj = self.proxy.lookupUUID(uuid)
-				if obj: return obj["name"]
-				else: return False
+				if obj: return str(obj["name"])
 			if uuid in self.usercache:
 				if "name" in self.usercache[uuid]:
-					return self.usercache[uuid]["name"]
+					return str(self.usercache[uuid]["name"])
 			try:
 				r = requests.get("https://api.mojang.com/user/profiles/%s/names" % uuid.replace("-", "")).json()
 				username = r[0]["name"]
 				if not uuid in self.usercache:
-					self.usercache[uuid] = {"time": time.time(), "name": None}
-				if u["name"] != self.usercache[uuid]["name"]:
+					self.usercache[uuid] = {"time": time.time(), "name": None, "online": True}
+				if username != self.usercache[uuid]["name"]:
 					self.usercache[uuid]["name"] = username
 					self.usercache[uuid]["online"] = True
 					self.usercache[uuid]["time"] = time.time()
-				return username
+				return str(username)
 			except: return False
 		else:
 			f = open("usercache.json", "r")
@@ -538,13 +546,13 @@ class Wrapper:
 						self.usercache[uuid]["name"] = u["name"]
 						self.usercache[uuid]["online"] = False
 						self.usercache[uuid]["time"] = time.time()
-					return u["name"]
+					return str(u["name"])
 	def getUUID(self, username):
 		""" Unfinished function. Needs finishing pronto! """
 		if self.isOnlineMode():
 			pass
 		else:
-			return str(uuid.uuid3(uuid.NAMESPACE_OID, "OfflinePlayer: %s" % username.encode("ascii", "ignore")))
+			return self.UUIDFromName(username)
 		if not self.proxy:
 			f = open("usercache.json", "r")
 			data = json.loads(f.read())

@@ -3,6 +3,7 @@ class Minecraft:
 	""" This class contains functions related to in-game features directly. These methods are located at self.api.minecraft. """
 	def __init__(self, wrapper):
 		self.wrapper = wrapper
+		self.log = wrapper.log
 		
 		self.blocks = items.Blocks
 	def isServerStarted(self):
@@ -19,15 +20,16 @@ class Minecraft:
 			puuid = uuidf.rsplit(".", 1)[0]
 			if puuid in ("None", "False"): continue
 			username = self.wrapper.getUsername(puuid)
-			if username == False: continue
+			if type(username) != str: continue
 			if online:
-				if str(uuid.uuid3(uuid.NAMESPACE_OID, "OfflinePlayer: %s" % username.encode("ascii", "ignore"))) == puuid: continue
+				if str(self.wrapper.UUIDFromName(username)) == puuid: continue
 			with open("wrapper-data/players/" + uuidf) as f:
 				try:
 					players[puuid] = json.loads(f.read())
 				except:
-					print "Failed to load player data '%s'" % puuid
-					print traceback.format_exc()
+					self.log.error("Failed to load player data '%s'" % puuid)
+					self.log.getTraceback()
+					os.remove("wrapper-data/players/" + uuidf)
 		return players
 	def console(self, string):
 		""" Run a command in the Minecraft server's console. """
