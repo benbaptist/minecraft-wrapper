@@ -159,8 +159,9 @@ class Player:
 	def hasGroup(self, group):
 		""" Returns a boolean of whether or not the player is in the specified permission group. """
 		for uuid in self.permissions["users"]:
-			if uuid == self.uuid:
+			if uuid == str(self.uuid):
 				return group in self.permissions["users"][uuid]["groups"]
+		return False
 	def getGroups(self):
 		""" Returns a list of permission groups that the player is in. """
 		for uuid in self.permissions["users"]:

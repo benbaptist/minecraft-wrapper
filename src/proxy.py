@@ -333,7 +333,7 @@ class Client: # handle client/game connection
 			elif self.state == 3:
 				return False
 		if id == 0x01:
-			if self.state == 3: # chat packet
+			if self.state == 3: # Chat
 				if not self.isLocal == True: return True
 				data = self.read("string:message")
 				if data is None: return False
@@ -350,7 +350,7 @@ class Client: # handle client/game connection
 						def argsAfter(i):
 							try: return message.split(" ")[i:]
 							except: return ""
-						if self.wrapper.callEvent("player.runCommand", {"player": self.getPlayerObject(), "command": args(0)[1:], "args": argsAfter(1)}):
+						if self.wrapper.callEvent("player.runCommand", {"player": self.getPlayerObject(), "command": args(0)[1:].lower(), "args": argsAfter(1)}):
 							self.message(message)
 							return False
 						return
@@ -403,6 +403,40 @@ class Client: # handle client/game connection
 							self.username = newUsername
 				else:
 					 self.uuid = uuid.uuid3(uuid.NAMESPACE_OID, "OfflinePlayer: %s" % self.username)
+				# Rename UUIDs accordingly
+				if self.config["Proxy"]["convert-player-files"]:
+					if self.config["Proxy"]["online-mode"]:
+						# Check player files, and rename them accordingly to offline-mode UUID
+						worldName = self.wrapper.server.worldName
+						if not os.path.exists("%s/playerdata/%s.dat" % (worldName, str(self.serverUUID))):
+							if os.path.exists("%s/playerdata/%s.dat" % (worldName, str(self.uuid))):
+								self.log.info("Migrating %s's playerdata file to proxy mode" % self.username)
+								shutil.move("%s/playerdata/%s.dat" % (worldName, str(self.uuid)), "%s/playerdata/%s.dat" % (worldName, str(self.serverUUID)))
+								with open("%s/.wrapper-proxy-playerdata-migrate" % worldName, "a") as f:
+									f.write("%s %s\n" % (str(self.uuid), str(self.serverUUID)))
+						# Change whitelist entries to offline mode versions
+						if os.path.exists("whitelist.json"):
+							data = None
+							with open("whitelist.json", "r") as f:
+								try: data = json.loads(f.read())
+								except: pass
+							if data:
+								a = False; b = False
+								for player in data:
+									try:
+										if player["uuid"] == str(self.serverUUID):
+											a = True
+										if player["uuid"] == str(self.uuid):
+											b = True
+									except: pass
+								if a == False and b == True:
+									self.log.info("Migrating %s's whitelist entry to proxy mode" % self.username)
+									data.append({"uuid": str(self.serverUUID), "name": self.username})
+									with open("whitelist.json", "w") as f:
+										f.write(json.dumps(data))
+									self.wrapper.server.console("whitelist reload")
+									with open("%s/.wrapper-proxy-whitelist-migrate" % worldName, "a") as f:
+										f.write("%s %s\n" % (str(self.uuid), str(self.serverUUID)))
 					
 				self.serverUUID = self.UUIDFromName("OfflinePlayer:" + self.username)
 				
@@ -417,36 +451,6 @@ class Client: # handle client/game connection
 
 				self.send(0x02, "string|string", (str(self.uuid), self.username))
 				self.state = 3
-				
-				# Rename UUIDs accordingly
-				if self.config["Proxy"]["convert-player-files"]:
-					if self.config["Proxy"]["online-mode"]:
-						# Check player files, and rename them accordingly to offline-mode UUID
-						worldName = self.wrapper.server.worldName
-						if not os.path.exists("%s/playerdata/%s.dat" % (worldName, str(self.serverUUID))):
-							if os.path.exists("%s/playerdata/%s.dat" % (worldName, str(self.uuid))):
-								self.log.info("Migrating %s's playerdata file to proxy mode" % self.username)
-								shutil.move("%s/playerdata/%s.dat" % (worldName, str(self.uuid)), "%s/playerdata/%s.dat" % (worldName, str(self.serverUUID)))
-								with open("%s/.wrapper-proxy-playerdata-migrate" % worldName, "a") as f:
-									f.write("%s %s\n" % (str(self.uuid), str(self.serverUUID)))
-						# Change whitelist entries to offline mode versions
-						if os.path.exists("whitelist.json"):
-							with open("whitelist.json", "r") as f:
-								data = json.loads(f.read())
-							a = False; b = False
-							for player in data:
-								if player["uuid"] == str(self.serverUUID):
-									a = True
-								if player["uuid"] == str(self.uuid):
-									b = True
-							if a == False and b == True:
-								self.log.info("Migrating %s's whitelist entry to proxy mode" % self.username)
-								data.append({"uuid": str(self.serverUUID), "name": self.username})
-								with open("whitelist.json", "w") as f:
-									f.write(json.dumps(data))
-								self.wrapper.server.console("whitelist reload")
-								with open("%s/.wrapper-proxy-whitelist-migrate" % worldName, "a") as f:
-									f.write("%s %s\n" % (str(self.uuid), str(self.serverUUID)))
 				
 				self.connect()
 				
@@ -718,6 +722,8 @@ class Server: # Handle Server Connection
 #			if self.client.packet.compressThreshold == -1:
 #				print "CLIENT COMPRESSION ENABLED"
 #				self.client.packet.setCompression(256)
+		if id == 0x23: # Block Change
+			data = self.read("position:location|varint:id")
 		if id == 0x15: # Entity Relative Move
 			data = self.read("varint:eid|byte:dx|byte:dy|byte:dz")
 			if not self.wrapper.server.world: return

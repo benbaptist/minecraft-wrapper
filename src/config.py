@@ -52,7 +52,7 @@ server-port = 25564
 online-mode = True
 max-players = 1024
 spigot-mode = False
-convert-player-files = True
+convert-player-files = False
 
 [Web]
 ;; This is a web UI. ;;
@@ -127,7 +127,7 @@ class Config:
 			"online-mode": True,
 			"max-players": 1024,
 			"spigot-mode": False,
-			"convert-player-files": True
+			"convert-player-files": False
 		},
 		"Web":{
 			"web-enabled": False,

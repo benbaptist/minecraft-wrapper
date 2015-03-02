@@ -67,14 +67,20 @@ class API:
 			self.id = name
 		else:
 			self.id = id
-	def registerCommand(self, name, callback, permission=None):
+	def registerCommand(self, command, callback, permission=None):
 		""" This registers a command that, when executed in Minecraft, will execute callback(player, args). 
 		permission is an optional attribute if you want your command to only be executable if the player has a specified permission node.
 		"""
-		if not self.internal:
-			self.wrapper.log.debug("[%s] Registered command '%s'" % (self.name, name))
-		if self.id not in self.wrapper.commands: self.wrapper.commands[self.id] = {}
-		self.wrapper.commands[self.id][name] = {"callback": callback, "permission": permission}
+		commands = []
+		if type(command) in (tuple, list):
+			for i in command:
+				commands.append(i)
+		else: commands = [command]
+		for name in commands:
+			if not self.internal:
+				self.wrapper.log.debug("[%s] Registered command '%s'" % (self.name, name))
+			if self.id not in self.wrapper.commands: self.wrapper.commands[self.id] = {}
+			self.wrapper.commands[self.id][name] = {"callback": callback, "permission": permission}
 	def registerEvent(self, eventType, callback):
 		""" Register an event and a callback. See [doc link needed here] for a list of events. callback(payload) when an event occurs, and the contents of payload varies between events."""
 		if not self.internal:
