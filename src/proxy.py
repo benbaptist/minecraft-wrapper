@@ -965,7 +965,7 @@ class Packet: # PACKET PARSING CODE
 	def send_uuid(self, payload):
 		return payload.bytes
 	def send_position(self, payload):
-		x, y, z = position
+		x, y, z = payload
 		return self.send_long(((x & 0x3FFFFFF) << 38) | ((y & 0xFFF) << 26) | (z & 0x3FFFFFF))
 	def send_metadata(self, payload):
 		b = ""
