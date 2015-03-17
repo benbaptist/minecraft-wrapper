@@ -68,7 +68,7 @@ class Main:
 		return self.data["motd"]["msg"].replace("[[name]]", name)
 	# events
 	def login(self, payload):
-		payload["player"].message(self.getMOTD(payload["player"].username))
+		self.motd(payload["player"], None)
 	def click(self, payload):
 		player = payload["player"]
 		if player.username in self.powertool:
