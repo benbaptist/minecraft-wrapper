@@ -335,21 +335,22 @@ class Client:
 			chatScrollback = []
 			for line in self.web.chatScrollback:
 				if line[0] > refreshTime:
+					print line[1]
 					chatScrollback.append(line[1])
 			memoryGraph = []
 			for line in self.web.memoryGraph:
 				if line[0] > refreshTime:
 					memoryGraph.append(line[1])
-			totalPlaytime = {}
-			totalPlayers = self.web.api.minecraft.getAllPlayers()
-			for uu in totalPlayers:
-				if not "logins" in totalPlayers[uu]: 
-					continue
-				playerName = self.web.wrapper.getUsername(uu)
-				totalPlaytime[playerName] = [0, 0]
-				for i in totalPlayers[uu]["logins"]:
-					totalPlaytime[playerName][0] += totalPlayers[uu]["logins"][i] - int(i)
-					totalPlaytime[playerName][1] += 1
+			#totalPlaytime = {}
+#			totalPlayers = self.web.api.minecraft.getAllPlayers()
+#			for uu in totalPlayers:
+#				if not "logins" in totalPlayers[uu]: 
+#					continue
+#				playerName = self.web.wrapper.getUsername(uu)
+#				totalPlaytime[playerName] = [0, 0]
+#				for i in totalPlayers[uu]["logins"]:
+#					totalPlaytime[playerName][0] += totalPlayers[uu]["logins"][i] - int(i)
+#					totalPlaytime[playerName][1] += 1
 			def secondsToHuman(seconds):
 				result = "None at all!"; plural = "s"
 				if seconds > 0:
@@ -365,10 +366,10 @@ class Client:
 					result = "%s day%s" % (str(seconds/86400.0), plural)
 				return result
 			topPlayers = []
-			for i,username in enumerate(totalPlaytime):
-				topPlayers.append((totalPlaytime[username][0], secondsToHuman(totalPlaytime[username][0]), totalPlaytime[username][1], username))
-				if i == 9: break
-			topPlayers.sort(); topPlayers.reverse()
+			#for i,username in enumerate(totalPlaytime):
+#				topPlayers.append((totalPlaytime[username][0], secondsToHuman(totalPlaytime[username][0]), totalPlaytime[username][1], username))
+#				if i == 9: break
+#			topPlayers.sort(); topPlayers.reverse()
 			return {"playerCount": [len(self.wrapper.server.players), self.wrapper.server.maxPlayers], 
 				"players": players,
 				"plugins": plugins,

@@ -32,6 +32,9 @@ This update contains an important patch regarding username changes. It is import
   - "Lost Connection" page now works again 
 - Fixed proxy instabibility
 - Help command page fixes
+- Cross-server improvements:
+  - Fixed skins and duplicating players on tab list when traversing between Wrapper.py servers
+  - Weather is now accurate
 
 **Bug Fixes/Developer**
 - Fixed "KeyError: 'users'" error with .hasPermission()

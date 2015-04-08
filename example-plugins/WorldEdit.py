@@ -35,12 +35,12 @@ class Main:
 		return self.players[name]
 	# events
 	def action_leftclick(self, payload):
-		player = payload["player"]
+		player, action = payload["player"], payload["action"]
 		if player.hasPermission("worldedit.pos1"):
 			p = self.getMemoryPlayer(player.username)
 			item = player.getHeldItem()
 			if item == None: return
-			if item["id"] == 271:
+			if item["id"] == 271 and (action == "begin_break"):
 				p["sel1"] = payload["position"]
 				player.message("&dPoint one selected.")
 				return False

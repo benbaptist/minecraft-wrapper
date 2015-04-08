@@ -148,6 +148,8 @@ class Proxy:
 		if uuid in self.skinTextures:
 			return self.skinTextures[uuid]
 		skinBlob = json.loads(self.skins[uuid].decode("base64"))
+		if not "SKIN" in skinBlob["textures"]: # Player has no skin, so set to Alex [fix from #160] 
+			skinBlob["textures"]["SKIN"] = {"url": "http://hydra-media.cursecdn.com/minecraft.gamepedia.com/f/f2/Alex_skin.png"}
 		r = requests.get(skinBlob["textures"]["SKIN"]["url"])
 		self.skinTextures[uuid] = r.content.encode("base64")
 		return self.skinTextures[uuid]
@@ -222,9 +224,7 @@ class Client: # handle client/game connection
 		else:
 			self.server.send(0x00, "varint|string|ushort|varint", (self.version, "localhost", self.config["Proxy"]["server-port"], 2))
 		self.server.send(0x00, "string", (self.username,))
-#		self.server.send(0x46, "varint", (-1,))
-#		self.server.packet.compression = True
-#		self.packet.compression = True
+		self.send(0x2b, "ubyte|float", (1, 0))
 		self.server.state = 2
 	def close(self):
 		self.abort = True
@@ -324,7 +324,7 @@ class Client: # handle client/game connection
 						self.send(0x01, "string|bytearray|bytearray", (self.serverID, self.publicKey, self.verifyToken))
 				else:
 					self.connect()
-					self.uuid = self.UUIDFromName(self.username)
+					self.uuid = self.UUIDFromName("OfflinePlayer:" + self.username)
 					self.serverUUID = self.UUIDFromName("OfflinePlayer:" + self.username)
 					self.send(0x02, "string|string", (str(self.uuid), self.username))
 					self.state = 3
@@ -599,6 +599,7 @@ class Server: # Handle Server Connection
 		if self.client.isLocal == False and kill_client:
 			self.client.isLocal = True
 			self.client.send(0x02, "string|byte", ("{text:'Disconnected from server: %s', color:red}" % reason.replace("'", "\\'"), 0))
+			self.client.send(0x2b, "ubyte|float", (1, 0))
 			self.client.connect()
 			return
 		
@@ -780,6 +781,12 @@ class Server: # Handle Server Connection
 			data = self.read("byte:wid|short:slot|slot:data")
 			if data["wid"] == 0:
 				self.client.inventory[data["slot"]] = data["data"]
+		if id == 0x30:
+			data = self.read("byte:wid|short:count")
+			if data["wid"] == 0:
+				for slot in range(1, data["count"]):
+					data = self.read("slot:data")
+					self.client.inventory[slot] = data["data"]
 		if id == 0x40:
 			message = self.read("json:json")["json"]
 			self.log.info("Disconnected from server: %s" % message)
@@ -1042,8 +1049,8 @@ class Packet: # PACKET PARSING CODE
 	def send_uuid(self, payload):
 		return payload.bytes
 	def send_position(self, payload):
-		x, y, z = position
-		return self.send_long(((x & 0x3FFFFFF) << 38) | ((y & 0xFFF) << 26) | (z & 0x3FFFFFF))
+		x, y, z = payload
+		return struct.pack(">Q", ((x & 0x3FFFFFF) << 38) | ((y & 0xFFF) << 26) | (z & 0x3FFFFFF))
 	def send_metadata(self, payload):
 		b = ""
 		for index in payload:
@@ -1121,12 +1128,15 @@ class Packet: # PACKET PARSING CODE
 	def read_bytearray_short(self):
 		return self.read_data(self.read_short())
 	def read_position(self):
-		position = self.read_long()
-		if position == -1: return None
-		if position & 0x3FFFFFF > 67100000: z = -(-position & 0x3FFFFFF)
-		else: z = position & 0x3FFFFFF
-		position = (position >> 38, (position >> 26) & 0xFFF, z)
-		return position
+		position = struct.unpack(">Q", self.read_data(8))[0]
+		if position == 0xFFFFFFFFFFFFFFFF: return None
+		x = int(position >> 38)
+		if (x & 0x2000000): x = (x & 0x1FFFFFF) - 0x2000000
+		y = int((position >> 26) & 0xFFF)
+		if (y & 0x800): y = (y & 0x4FF) - 0x800
+		z = int(position & 0x3FFFFFF)
+		if (z & 0x2000000): z = (z & 0x1FFFFFF) - 0x2000000
+		return (x, y, z)
 	def read_slot(self):
 		id = self.read_short()
 		if not id == -1:
