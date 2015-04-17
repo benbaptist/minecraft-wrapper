@@ -200,7 +200,8 @@ class Client: # handle client/game connection
 			self.server_temp = Server(self, self.wrapper, ip, port)
 			try:
 				self.server_temp.connect()
-				self.server.close(kill_client=False)	
+				self.server.close(kill_client=False)
+				self.server.client = None
 				self.server = self.server_temp
 			except:
 				self.server_temp.close(kill_client=False)
@@ -217,6 +218,14 @@ class Client: # handle client/game connection
 		t = threading.Thread(target=self.server.handle, args=())
 		t.daemon = True
 		t.start()
+		
+		for xi in range(32):
+			xi = xi - 8
+			for zi in range(32):
+				zi = zi - 8
+				x, z = (self.position[0] / 16) + xi, (self.position[2] / 16) + zi
+				#print "Sending lel chunk %d, %d" % (x, z)
+				self.send(0x21, "int|int|bool|ushort|varint", (x, z, True, 0, 0))
 		
 		if self.config["Proxy"]["spigot-mode"]:
 			payload = "localhost\x00%s\x00%s" % (self.addr[0], self.uuid.hex)
@@ -334,11 +343,17 @@ class Client: # handle client/game connection
 				return False
 		if id == 0x01:
 			if self.state == 3: # Chat
-				if not self.isLocal == True: return True
 				data = self.read("string:message")
 				if data is None: return False
 				try:
 					message = data["message"]
+					if not self.isLocal and message == "/lobby":
+						self.server.close(reason="Lobbification", kill_client=False)
+						self.address = None
+						self.connect()
+						self.isLocal = True
+						return False 
+					if not self.isLocal == True: return True
 					payload = self.wrapper.callEvent("player.rawMessage", {"player": self.getPlayerObject(), "message": data["message"]})
 					if not payload: return False
 					if type(payload) == str:
@@ -640,7 +655,7 @@ class Server: # Handle Server Connection
 				return False
 			elif self.state == 3:
 				if self.client.version > 7:
-					id = self.read("int:i")["i"]
+					id = self.read("varint:i")["i"]
 					if not id == None:
 						self.send(0x00, "varint", (id,))
 				return False
@@ -651,7 +666,9 @@ class Server: # Handle Server Connection
 				self.client.dimension = data["dimension"]
 				self.eid = data["eid"]  # This is the EID of the player on this particular server - not always the EID that the client is aware of 
 				if self.client.handshake:
+					print "self.client.handshake"
 					self.client.send(0x07, "int|ubyte|ubyte|string", (self.client.dimension, data["difficulty"], data["gamemode"], data["level_type"]))
+					#self.client.send(0x01, "int|ubyte|byte|ubyte|ubyte|string|bool", (self.eid, self.client.gamemode, self.client.dimension, data["difficulty"], data["max_players"], data["level_type"], False))
 					self.eid = data["eid"]
 					self.safe = True
 					return False
@@ -685,8 +702,8 @@ class Server: # Handle Server Connection
 					self.packet.compressThreshold = -1
 				return False
 		if id == 0x05: # Spawn Point
-			data = self.read("int:x|int:y|int:z")
-			self.wrapper.server.spawnPoint = (data["x"], data["y"], data["z"])
+			data = self.read("position:spawn")
+			self.wrapper.server.spawnPoint = data["spawn"]
 		if id == 0x07: # Respawn Packet
 			data = self.read("int:dimension|ubyte:difficulty|ubyte:gamemode|level_type:string")
 			self.client.gamemode = data["gamemode"]
@@ -695,6 +712,16 @@ class Server: # Handle Server Connection
 			data = self.read("double:x|double:y|double:z|float:yaw|float:pitch")
 			x, y, z, yaw, pitch = data["x"], data["y"], data["z"], data["yaw"], data["pitch"]
 			self.client.position = (x, y, z)
+		if id == 0x0a: # Use Bed
+			data = self.read("varint:eid|position:location")
+			if data["eid"] == self.eid:
+				self.client.send(0x0a, "varint|position", (self.client.eid, data["location"]))
+				return False
+		if id == 0x0b: # Animation
+			data = self.read("varint:eid|ubyte:animation")
+			if data["eid"] == self.eid:
+				self.client.send(0x0b, "varint|ubyte", (self.client.eid, data["animation"]))
+				return False
 		if id == 0x0c: # Spawn Player
 			data = self.read("varint:eid|uuid:uuid|int:x|int:y|int:z|byte:yaw|byte:pitch|short:item|rest:metadata")
 			if self.proxy.getClientByServerUUID(data["uuid"]):
@@ -749,6 +776,19 @@ class Server: # Handle Server Connection
 					if not self.wrapper.server.world: return
 					self.client.riding = self.wrapper.server.world.getEntityByEID(vid)
 					self.wrapper.server.world.getEntityByEID(vid).rodeBy = self.client
+				if eid != self.client.eid:
+					self.client.send(0x1b, "int|int|bool", (self.client.eid, vid, leash))
+					return False
+		if id == 0x1c: # Entity Metadata
+			data = self.read("varint:eid|rest:metadata")
+			if data["eid"] == self.eid:
+				self.client.send(0x1c, "varint|raw", (self.client.eid, data["metadata"]))
+				return False
+		if id == 0x1d: # Entity Effect
+			data = self.read("varint:eid|byte:effect_id|byte:amplifier|varint:duration|bool:hide")
+			if data["eid"] == self.eid:
+				self.client.send(0x0a, "varint|byte|byte|varint|bool", (self.client.eid, data["effect_id"], data["amplifier"], data["duration"], data["hide"]))
+				return False
 		if id == 0x26: # Map Chunk Bulk
 			data = self.read("bool:skylight|varint:chunks")
 			chunks = []
@@ -859,8 +899,7 @@ class Server: # Handle Server Connection
 					if Config.debug:
 						print "Failed to grab packet (SERVER)"
 						print traceback.format_exc()
-					#self.disconnect("Internal Wrapper.py Error")
-#					break
+					return
 				if self.client.abort:
 					self.close()
 					break
@@ -870,7 +909,7 @@ class Server: # Handle Server Connection
 			if Config.debug:
 				print "Error in the Server->Client method:"
 				print traceback.format_exc()
-
+			self.close()
 
 class Packet: # PACKET PARSING CODE
 	def __init__(self, socket, obj):
@@ -965,58 +1004,50 @@ class Packet: # PACKET PARSING CODE
 		for exp in expression.split("|"):
 			type = exp.split(":")[0]
 			name = exp.split(":")[1]
-			try:
-				if type == "string": result[name] = self.read_string()
-				if type == "json": result[name] = self.read_json()
-				if type == "ubyte": result[name] = self.read_ubyte()
-				if type == "byte": result[name] = self.read_byte()
-				if type == "int": result[name] = self.read_int()
-				if type == "short": result[name] = self.read_short()
-				if type == "ushort": result[name] = self.read_ushort()
-				if type == "long": result[name] = self.read_long()
-				if type == "double": result[name] = self.read_double()
-				if type == "float": result[name] = self.read_float()
-				if type == "bool": result[name] = self.read_bool()
-				if type == "varint": result[name] = self.read_varInt()
-				if type == "bytearray": result[name] = self.read_bytearray()
-				if type == "bytearray_short": result[name] = self.read_bytearray_short()
-				if type == "position": result[name] = self.read_position()
-				if type == "slot": result[name] = self.read_slot()
-				if type == "uuid": result[name] = self.read_uuid()
-				if type == "metadata": result[name] = self.read_metadata()
-				if type == "rest": result[name] = self.read_rest()
-			except:
-#				print traceback.format_exc()
-				result[name] = None
+			if type == "string": result[name] = self.read_string()
+			if type == "json": result[name] = self.read_json()
+			if type == "ubyte": result[name] = self.read_ubyte()
+			if type == "byte": result[name] = self.read_byte()
+			if type == "int": result[name] = self.read_int()
+			if type == "short": result[name] = self.read_short()
+			if type == "ushort": result[name] = self.read_ushort()
+			if type == "long": result[name] = self.read_long()
+			if type == "double": result[name] = self.read_double()
+			if type == "float": result[name] = self.read_float()
+			if type == "bool": result[name] = self.read_bool()
+			if type == "varint": result[name] = self.read_varInt()
+			if type == "bytearray": result[name] = self.read_bytearray()
+			if type == "bytearray_short": result[name] = self.read_bytearray_short()
+			if type == "position": result[name] = self.read_position()
+			if type == "slot": result[name] = self.read_slot()
+			if type == "uuid": result[name] = self.read_uuid()
+			if type == "metadata": result[name] = self.read_metadata()
+			if type == "rest": result[name] = self.read_rest()
 		return result
 	def send(self, id, expression, payload):
 		result = ""
 		result += self.send_varInt(id)
 		if len(expression) > 0:
 			for i,type in enumerate(expression.split("|")):
-				try:
-					pay = payload[i]
-					if type == "string": result += self.send_string(pay)
-					if type == "json": result += self.send_json(pay)
-					if type == "ubyte": result += self.send_ubyte(pay)
-					if type == "byte": result += self.send_byte(pay)
-					if type == "int": result += self.send_int(pay)
-					if type == "short": result += self.send_short(pay)
-					if type == "ushort": result += self.send_ushort(pay)
-					if type == "varint": result += self.send_varInt(pay)
-					if type == "float": result += self.send_float(pay)
-					if type == "double": result += self.send_double(pay)
-					if type == "long": result += self.send_long(pay)
-					if type == "bytearray": result += self.send_bytearray(pay)
-					if type == "bytearray_short": result += self.send_bytearray_short(pay)
-					if type == "uuid": result += self.send_uuid(pay)
-					if type == "metadata": result += self.send_metadata(pay)
-					if type == "bool": result += self.send_bool(pay)
-					if type == "position": result += self.send_position(pay)
-					if type == "raw": result += pay
-				except:
-					pass
-					#print traceback.format_exc()
+				pay = payload[i]
+				if type == "string": result += self.send_string(pay)
+				if type == "json": result += self.send_json(pay)
+				if type == "ubyte": result += self.send_ubyte(pay)
+				if type == "byte": result += self.send_byte(pay)
+				if type == "int": result += self.send_int(pay)
+				if type == "short": result += self.send_short(pay)
+				if type == "ushort": result += self.send_ushort(pay)
+				if type == "varint": result += self.send_varInt(pay)
+				if type == "float": result += self.send_float(pay)
+				if type == "double": result += self.send_double(pay)
+				if type == "long": result += self.send_long(pay)
+				if type == "bytearray": result += self.send_bytearray(pay)
+				if type == "bytearray_short": result += self.send_bytearray_short(pay)
+				if type == "uuid": result += self.send_uuid(pay)
+				if type == "metadata": result += self.send_metadata(pay)
+				if type == "bool": result += self.send_bool(pay)
+				if type == "position": result += self.send_position(pay)
+				if type == "raw": result += pay
 		self.sendRaw(result)
 		return result
 	# -- SENDING DATA TYPES -- #

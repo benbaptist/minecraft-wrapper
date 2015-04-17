@@ -1,3 +1,11 @@
+Build #99:
+- Added /lobby command for cross-servers
+- [pull request #178] Fix player.setResourcePack
+- Removed trace amounts of try:except statements in proxy code in an effort to reduce random issues that aren't being detected
+  - I've also done some little fixes, and I think the proxy mode is a bit more stable now.
+  - Translating more packets that involve entity IDs when cross-server to fix weird issues
+    - Clothes can be changed, beds work properly, animations might work better, etc.
+
 Build #98:
 - Added new example plugins `teleport` and `home` by Cougar [pull requests #155 and #154 respectively]
 - Removed Top 10 Players until lag can be fixed

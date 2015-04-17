@@ -90,7 +90,10 @@ class Player:
 			self.console("gamemode %d %s" % (gm, self.username))
 	def setResourcePack(self, url):
 		""" Sets the player's resource pack to a different URL. If the user hasn't already allowed resource packs, the user will be prompted to change to the specified resource pack. Probably broken right now. """
-		self.client.send(0x3f, "string|bytearray", ("MC|RPack", url))
+		if self.client.version < 7:
+			self.client.send(0x3f, "string|bytearray", ("MC|RPack", url))
+		else:
+			self.client.send(0x48, "string|string", (url, ""))
 	def isOp(self):
 		""" Returns whether or not the player is currently a server operator.  """
 		operators = json.loads(open("ops.json", "r").read())

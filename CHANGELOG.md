@@ -18,6 +18,7 @@ This update contains an important patch regarding username changes. It is import
 **Developer Changes**
 - Events which return a payload other than True/False will be passed onto the event caller
   - e.g. you can read an event such as player.rawMessage, and then `return "Different message!"` to change the message (this includes commands!)
+- [pull request #178] Fix player.setResourcePack
 
 **Bug Fixes/Regular**
 - CRITICAL BUG FIX: Players who changeed usernames would be treated as a new user (Temporarily fixed by not allowing name changes - it'll continue to use their old usernames even after changing until we implement a workaround)
