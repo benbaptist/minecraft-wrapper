@@ -225,7 +225,7 @@ class Client: # handle client/game connection
 				zi = zi - 8
 				x, z = (self.position[0] / 16) + xi, (self.position[2] / 16) + zi
 				#print "Sending lel chunk %d, %d" % (x, z)
-				self.send(0x21, "int|int|bool|ushort|varint", (x, z, True, 0, 0))
+				#self.send(0x21, "int|int|bool|ushort|varint", (x, z, True, 0, 0))
 		
 		if self.config["Proxy"]["spigot-mode"]:
 			payload = "localhost\x00%s\x00%s" % (self.addr[0], self.uuid.hex)
@@ -285,7 +285,7 @@ class Client: # handle client/game connection
 	def message(self, string):
 		self.server.send(0x01, "string", (string,))
 	def parse(self, id):
-		if id == 0x00:
+		if id == 0x00: # Handshake
 			if self.state == 0:
 				data = self.read("varint:version|string:address|ushort:port|varint:state")
 				self.version = data["version"]
@@ -787,7 +787,7 @@ class Server: # Handle Server Connection
 		if id == 0x1d: # Entity Effect
 			data = self.read("varint:eid|byte:effect_id|byte:amplifier|varint:duration|bool:hide")
 			if data["eid"] == self.eid:
-				self.client.send(0x0a, "varint|byte|byte|varint|bool", (self.client.eid, data["effect_id"], data["amplifier"], data["duration"], data["hide"]))
+				self.client.send(0x1d, "varint|byte|byte|varint|bool", (self.client.eid, data["effect_id"], data["amplifier"], data["duration"], data["hide"]))
 				return False
 		if id == 0x26: # Map Chunk Bulk
 			data = self.read("bool:skylight|varint:chunks")
@@ -1129,9 +1129,9 @@ class Packet: # PACKET PARSING CODE
 		return self.recvCipher.decrypt(d)
 	def read_data(self, length):
 		d = self.buffer.read(length)
-#		if len(d) == 0 and length is not 0:
-#			self.disconnect("Received no data - connection closed")
-#			return ""
+		if len(d) == 0 and length is not 0:
+			self.disconnect("Received no data or less data than expected - connection closed")
+			return ""
 		return d
 	def read_byte(self):
 		return struct.unpack("b", self.read_data(1))[0]
