@@ -81,7 +81,7 @@ class Main:
 	def echo(self, player, args):
 		player.message(" ".join(args))
 	def echoaction(self, player, args):
-			player.actionMessage(" ".join(args))
+		player.actionMessage(" ".join(args))
 	def powertool(self, player, args):
 		if not player.isOp():
 			self.deny(player)

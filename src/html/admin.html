@@ -135,12 +135,12 @@
 				else _("nopluginswarning").style.display = "none"
 				
 				// draw top 10 players
-				_("top-players").innerHTML = "<th>#</th><th>Username</th><th>Playtime</th><th>Logins</th></tr>"
+				/*_("top-players").innerHTML = "<th>#</th><th>Username</th><th>Playtime</th><th>Logins</th></tr>"
 				for(i in stats["topPlayers"]){
 					if(isNaN(i)) continue
 					var player = stats["topPlayers"][i]
 					_("top-players").innerHTML += "<td>"+(Number(i)+1)+"</td><td>"+player[3]+"</td><td>"+player[1]+"</td><td>"+player[2]+" logins</td></tr>"
-				}
+				}*/
 								
 				// draw console
 				var doScroll = false
@@ -439,7 +439,7 @@
 						</div>
 					</div>
 				</div>
-				<div class="row">
+				<!--<div class="row">
 					<div class="col-lg-6">
 						<div class="panel panel-default">
 							<div class="panel-heading">Top 10 Players</div>
@@ -450,7 +450,7 @@
 							</table>
 						</div>
 					</div>
-				</div>
+				</div>-->
 			</div>
 			<div id="screen-server" style="display:none;" class="container-fluid">
 				<div class="row">

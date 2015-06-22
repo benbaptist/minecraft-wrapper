@@ -186,14 +186,17 @@ class Client: # handle client/game connection
 		self.username = None
 		self.gamemode = 0
 		self.dimension = 0
-		self.position = (0, 0, 0)
+		self.position = (0, 0, 0, True) # X, Y, Z, On Ground 
+		self.head = (0, 0) # Yaw, Pitch
 		self.inventory = {}
 		self.slot = 0
 		self.riding = None
 		self.windowCounter = 2
 		self.properties = {}
+		self.clientSettings = None; self.clientSettingsSent = False
 		for i in range(45): self.inventory[i] = None
 	def connect(self, ip=None, port=None):
+		self.clientSettingsSent = False
 		if not self.server == None:
 			self.address = (ip, port)
 		if not ip == None:
@@ -233,7 +236,10 @@ class Client: # handle client/game connection
 		else:
 			self.server.send(0x00, "varint|string|ushort|varint", (self.version, "localhost", self.config["Proxy"]["server-port"], 2))
 		self.server.send(0x00, "string", (self.username,))
-		self.send(0x2b, "ubyte|float", (1, 0))
+		
+		if self.version > 6:
+			self.send(0x2b, "ubyte|float", (1, 0))
+		
 		self.server.state = 2
 	def close(self):
 		self.abort = True
@@ -260,7 +266,7 @@ class Client: # handle client/game connection
 	def flush(self):
 		while not self.abort:
 			self.packet.flush()
-			time.sleep(0.05)
+			time.sleep(0.03)
 	# UUID operations
 	def UUIDIntToHex(self, uuid):
 		uuid = uuid.encode("hex")
@@ -285,6 +291,7 @@ class Client: # handle client/game connection
 	def message(self, string):
 		self.server.send(0x01, "string", (string,))
 	def parse(self, id):
+#		print "Client ID: %s" % chr(id).encode("hex")
 		if id == 0x00: # Handshake
 			if self.state == 0:
 				data = self.read("varint:version|string:address|ushort:port|varint:state")
@@ -478,11 +485,15 @@ class Client: # handle client/game connection
 				self.send(0x01, "long", (keepAlive,))
 		if id == 0x04:
 			data = self.read("double:x|double:y|double:z|bool:on_ground")
-			self.position = (data["x"], data["y"], data["z"])
+			self.position = (data["x"], data["y"], data["z"], data["on_ground"])
+		if id == 0x05: # Player Look
+			data = self.read("float:yaw|float:pitch")
+			yaw, pitch = data["yaw"], data["pitch"]
+			self.head = (yaw, pitch)
 		if id == 0x06:
 			data = self.read("double:x|double:y|double:z|float:yaw|float:pitch|bool:on_ground")
-			#objection = self.wrapper.callEvent("player.move", {"player": self.username, "xyz": (data["x"], data["y"], data["z"]), "on_ground": data["on_ground"]})
 			self.position = (data["x"], data["y"], data["z"])
+			self.head = (data["yaw"], data["pitch"])
 			if self.server.state is not 3: return False
 		if id == 0x07: # Player Block Dig
 			if not self.isLocal == True: return True
@@ -534,6 +545,10 @@ class Client: # handle client/game connection
 				self.slot = slot
 			else:
 				return False
+		if id == 0x15: # Client Settings
+			print "Received Client Settings..."
+			data = self.read("string:locale|byte:view_distance|byte:chat_mode|bool:chat_colors|ubyte:displayed_skin_parts")
+			self.clientSettings = data
 		return True
 	def handle(self):
 		t = threading.Thread(target=self.flush, args=())
@@ -556,6 +571,17 @@ class Client: # handle client/game connection
 				if time.time() - self.tPing > 1 and self.state == 3:
 					if self.version > 32:
 						self.send(0x00, "varint", (random.randrange(0, 99999),))
+						if self.clientSettings and not self.clientSettingsSent:
+							print "Sending self.clientSettings..."
+							print self.clientSettings
+							self.server.send(0x15, "string|byte|byte|bool|ubyte", (
+								self.clientSettings["locale"],
+								self.clientSettings["view_distance"],
+								self.clientSettings["chat_mode"],
+								self.clientSettings["chat_colors"],
+								self.clientSettings["displayed_skin_parts"]
+							))
+							self.clientSettingsSent = True
 					else:
 						self.send(0x00, "int", (random.randrange(0, 99999),))
 					self.tPing = time.time()
@@ -645,7 +671,7 @@ class Server: # Handle Server Connection
 #				print traceback.format_exc()
 #				self.close()
 #				break
-			time.sleep(0.05)
+			time.sleep(0.03)
 	def parse(self, id, original):
 		if id == 0x00:
 			if self.state < 3:
@@ -752,6 +778,15 @@ class Server: # Handle Server Connection
 #				self.client.packet.setCompression(256)
 		if id == 0x23: # Block Change
 			data = self.read("position:location|varint:id")
+		if id == 0x1a: # Entity Status
+			data = self.read("int:eid|byte:status")
+			if data["eid"] == self.eid:
+				if self.client.eid == 0 or data["status"] == 0:
+					print "Both are zero for 0x1a - stopping!" 
+					return # Weird hack
+				print "Filtering 0x1a Packet: %d | %d" % (self.client.eid, data["status"])
+				self.client.send(0x1a, "varint|byte", (self.client.eid, data["status"]))
+				return False
 		if id == 0x15: # Entity Relative Move
 			data = self.read("varint:eid|byte:dx|byte:dy|byte:dz")
 			if not self.wrapper.server.world: return
@@ -789,6 +824,16 @@ class Server: # Handle Server Connection
 			if data["eid"] == self.eid:
 				self.client.send(0x1d, "varint|byte|byte|varint|bool", (self.client.eid, data["effect_id"], data["amplifier"], data["duration"], data["hide"]))
 				return False
+		if id == 0x1e: # Remove Entity Effect
+			data = self.read("varint:eid|byte:effect_id")
+			if data["eid"] == self.eid:
+				self.client.send(0x1e, "varint|bytel", (self.client.eid, data["effect_id"]))
+				return False
+		if id == 0x20: # Entity Properties
+			data = self.read("varint:eid|rest:properties")
+			if data["eid"] == self.eid:
+				self.client.send(0x20, "varint|raw", (self.client.eid, data["properties"]))
+				return False
 		if id == 0x26: # Map Chunk Bulk
 			data = self.read("bool:skylight|varint:chunks")
 			chunks = []
@@ -806,7 +851,8 @@ class Server: # Handle Server Connection
 				for i in primary:
 					if i == True:
 						chunkColumn += bytearray(self.packet.read_data(16*16*16 * 2)) # packetanisc
-						metalight = bytearray(self.packet.read_data(16*16*16))
+						if self.client.dimension == 0:
+							metalight = bytearray(self.packet.read_data(16*16*16))
 						if data["skylight"]:
 							skylight = bytearray(self.packet.read_data(16*16*16))
 					else:

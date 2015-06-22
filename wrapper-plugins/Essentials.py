@@ -71,7 +71,7 @@ class Main:
 		return self.data["motd"]["msg"].replace("[[name]]", name)
 	# events
 	def login(self, payload):
-		payload["player"].message(self.getMOTD(payload["player"].username))
+		self.motd(payload["player"], None)
 	def click(self, payload):
 		player = payload["player"]
 		if player.username in self.powertool:
@@ -81,7 +81,7 @@ class Main:
 	def echo(self, player, args):
 		player.message(" ".join(args))
 	def echoaction(self, player, args):
-			player.actionMessage(" ".join(args))
+		player.actionMessage(" ".join(args))
 	def powertool(self, player, args):
 		if not player.isOp():
 			self.deny(player)
@@ -110,7 +110,8 @@ class Main:
 		if len(args) == 1:
 			warp = args[0]
 			player.message({"text": "Created warp '%s'." % warp, "color": "green"})
-			self.data["warps"][warp] = player.getPosition()
+			x, y, z, o, yaw, pitch = player.getPosition()
+			self.data["warps"][warp] = (x, y, z)
 		else:
 			player.message({"text": "Usage: /setwarp [name]", "color": "red"})
 	def blowblowblow(self, player, args):

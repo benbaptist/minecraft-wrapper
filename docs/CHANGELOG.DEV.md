@@ -1,3 +1,15 @@
+Build #100:
+- Proxy mode improvements: 
+  - Fixed 1.7.10 servers not working due to changes in #98 (packet 0x2b being sent on a non-1.8 server)
+  - Fixed skin settings not persisting when changing servers
+  - Fixed status effects not disappearing when connected to a secondary server
+  - Fixed client disconnecting from 0x1a packet
+  - [issue #200] Fixed crash/chunks not loading in Nether and End
+- Development changes:
+ - [*pull request #193/#194] player.getPosition() now returns following tuple format: (x, y, z, onGround, yaw, pitch) [MAY BREAK EXISTING PLUGINS]
+ 
+*Pull request was modified from original to better fit the API.  
+
 Build #99:
 - Added /lobby command for cross-servers
 - [pull request #178] Fix player.setResourcePack

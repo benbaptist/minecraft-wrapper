@@ -75,8 +75,11 @@ class Player:
 			message = message.replace("&" + i, "\xc2\xa7" + i)
 		return message
 	def getPosition(self):
-		""" Returns a tuple of the player's current position. """
-		return self.getClient().position
+		""" Returns a tuple of the player's current position, if they're on ground, and yaw/pitch of head. """
+		return self.getClient().position + self.getClient().head
+#	def getHead(self): Commenting out for just one build, then I'll remove the code itself in the next push (hopefully, if I remember)
+#		""" Returns a tuple of the player's head position. Same as last two values from player.getPosition() """
+#		return self.getClient().head
 	def getGamemode(self):
 		""" Returns the player's current gamemode. """
 		return self.getClient().gamemode

@@ -42,13 +42,15 @@ class Storage:
 						print traceback.format_exc()
 					self.time = time.time()
 			time.sleep(1)
-	def load(self):
+	def mkdir(self, path):
 		l = ""
-		for i in self.root.split("/"):
+		for i in path.split("/"):
 			l += i + "/"
 			if not os.path.exists(l):
 				try: os.mkdir(l)
 				except: pass 
+	def load(self):
+		self.mkdir(self.root)
 		if not os.path.exists("%s/%s.json" % (self.root, self.name)):
 			self.save()
 		with open("%s/%s.json" % (self.root, self.name), "r") as f:
@@ -59,6 +61,8 @@ class Storage:
 				return
 		self.dataOld = copy.deepcopy(self.data)
 	def save(self):
+		if not os.path.exists(self.root):
+			self.mkdir(self.root)
 		with open("%s/%s.json" % (self.root, self.name) , "w") as f:
 			f.write(json.dumps(self.data))
 		self.flush = False

@@ -19,6 +19,9 @@ This update contains an important patch regarding username changes. It is import
 - Events which return a payload other than True/False will be passed onto the event caller
   - e.g. you can read an event such as player.rawMessage, and then `return "Different message!"` to change the message (this includes commands!)
 - [pull request #178] Fix player.setResourcePack
+ - [*pull request #193/#194] player.getPosition() now returns following tuple format: (x, y, z, onGround, yaw, pitch) [MAY BREAK EXISTING PLUGINS]
+
+*Pull request was modified from original to better fit the API.  
 
 **Bug Fixes/Regular**
 - CRITICAL BUG FIX: Players who changeed usernames would be treated as a new user (Temporarily fixed by not allowing name changes - it'll continue to use their old usernames even after changing until we implement a workaround)
@@ -31,7 +34,7 @@ This update contains an important patch regarding username changes. It is import
   - Joins and parts now show up in the Chat tab
   - "remember me" when logging in actually makes it remember you
   - "Lost Connection" page now works again 
-- Fixed proxy instabibility
+- Fixed some proxy instabibility
 - Help command page fixes
 - Cross-server improvements:
   - Fixed skins and duplicating players on tab list when traversing between Wrapper.py servers
