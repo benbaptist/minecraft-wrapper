@@ -110,7 +110,7 @@ class Main:
 		if len(args) == 1:
 			warp = args[0]
 			player.message({"text": "Created warp '%s'." % warp, "color": "green"})
-			x, y, z, o, yaw, pitch = player.getPosition()
+			x, y, z, yaw, pitch = player.getPosition()
 			self.data["warps"][warp] = (x, y, z)
 		else:
 			player.message({"text": "Usage: /setwarp [name]", "color": "red"})

@@ -110,7 +110,8 @@ class Main:
 		if len(args) == 1:
 			warp = args[0]
 			player.message({"text": "Created warp '%s'." % warp, "color": "green"})
-			self.data["warps"][warp] = player.getPosition()
+			x, y, z, yaw, pitch = player.getPosition()
+			self.data["warps"][warp] = (x, y, z)
 		else:
 			player.message({"text": "Usage: /setwarp [name]", "color": "red"})
 	def blowblowblow(self, player, args):
@@ -233,7 +234,7 @@ class Main:
 		else:
 			player.message("&cUsage: /block <x> <y> <z>")
 	def whois(self, player, args):
-		player.message("&7You are %s. You are in dimension %d, in gamemode %d and are currently located at %s." % (player.username, player.getDimension(), player.getGamemode(), player.getPosition()))
+		player.message("&7You are %s. You are in dimension %d, in gamemode %d and are currently located at %s. Your UUID is %s." % (player.username, player.getDimension(), player.getGamemode(), player.getPosition(), str(player.uuid)))
 	def sudo(self, player, args):
 		if len(args) > 1:
 			self.minecraft.getPlayer(args[0]).execute(" ".join(args[1:]))

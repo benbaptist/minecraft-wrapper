@@ -186,7 +186,7 @@ class Client: # handle client/game connection
 		self.username = None
 		self.gamemode = 0
 		self.dimension = 0
-		self.position = (0, 0, 0, True) # X, Y, Z, On Ground 
+		self.position = (0, 0, 0) # X, Y, Z 
 		self.head = (0, 0) # Yaw, Pitch
 		self.inventory = {}
 		self.slot = 0
@@ -485,9 +485,9 @@ class Client: # handle client/game connection
 				self.send(0x01, "long", (keepAlive,))
 		if id == 0x04:
 			data = self.read("double:x|double:y|double:z|bool:on_ground")
-			self.position = (data["x"], data["y"], data["z"], data["on_ground"])
+			self.position = (data["x"], data["y"], data["z"])
 		if id == 0x05: # Player Look
-			data = self.read("float:yaw|float:pitch")
+			data = self.read("float:yaw|float:pitch|bool:on_ground")
 			yaw, pitch = data["yaw"], data["pitch"]
 			self.head = (yaw, pitch)
 		if id == 0x06:
@@ -673,6 +673,8 @@ class Server: # Handle Server Connection
 #				break
 			time.sleep(0.03)
 	def parse(self, id, original):
+#		print "Server ID: %s" % chr(id).encode("hex")
+#		time.sleep(0.05)
 		if id == 0x00:
 			if self.state < 3:
 				message = self.read("string:string")
@@ -785,7 +787,7 @@ class Server: # Handle Server Connection
 					print "Both are zero for 0x1a - stopping!" 
 					return # Weird hack
 				print "Filtering 0x1a Packet: %d | %d" % (self.client.eid, data["status"])
-				self.client.send(0x1a, "varint|byte", (self.client.eid, data["status"]))
+				self.client.send(0x1a, "int|byte", (self.client.eid, data["status"]))
 				return False
 		if id == 0x15: # Entity Relative Move
 			data = self.read("varint:eid|byte:dx|byte:dy|byte:dz")
@@ -827,7 +829,7 @@ class Server: # Handle Server Connection
 		if id == 0x1e: # Remove Entity Effect
 			data = self.read("varint:eid|byte:effect_id")
 			if data["eid"] == self.eid:
-				self.client.send(0x1e, "varint|bytel", (self.client.eid, data["effect_id"]))
+				self.client.send(0x1e, "varint|byte", (self.client.eid, data["effect_id"]))
 				return False
 		if id == 0x20: # Entity Properties
 			data = self.read("varint:eid|rest:properties")
@@ -990,7 +992,12 @@ class Packet: # PACKET PARSING CODE
 			length = length - len(self.pack_varInt(dataLength))
 		payload = self.recv(length)
 		if dataLength > 0:
-			payload = zlib.decompress(payload)
+			try:
+				payload = zlib.decompress(payload)
+			except:
+				print len(payload), length, dataLength
+				print traceback.format_exc()
+				raise Exception()
 		self.buffer = StringIO.StringIO(payload)
 		id = self.read_varInt()
 		return (id, payload)
@@ -1153,7 +1160,7 @@ class Packet: # PACKET PARSING CODE
 		if payload == True: return self.send_byte(1)
 	# -- READING DATA TYPES -- #
 	def recv(self, length):
-		if length > 5000:
+		if length > 200:
 			d = ""
 			while len(d) < length:
 				m = length - len(d)

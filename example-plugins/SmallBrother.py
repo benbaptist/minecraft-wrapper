@@ -101,7 +101,7 @@ class Main:
 				else:
 					player.message({"text": "End of list.", "color": "red", "bold": True})
 			elif subcommand == "_debug_parse_region_data":
-				x, y, z = player.getPosition()
+				x, y, z, yaw, pitch = player.getPosition()
 				chunk = ChunkReader(int(x/1024), int(z/1024), self.logger.worldName)
 				actions = chunk.load()
 				for i in actions:

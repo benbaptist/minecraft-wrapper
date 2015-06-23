@@ -18,8 +18,8 @@ This update contains an important patch regarding username changes. It is import
 **Developer Changes**
 - Events which return a payload other than True/False will be passed onto the event caller
   - e.g. you can read an event such as player.rawMessage, and then `return "Different message!"` to change the message (this includes commands!)
-- [pull request #178] Fix player.setResourcePack
- - [*pull request #193/#194] player.getPosition() now returns following tuple format: (x, y, z, onGround, yaw, pitch) [MAY BREAK EXISTING PLUGINS]
+- [pull request #178] Fixed player.setResourcePack
+ - [*pull request #193/#194] player.getPosition() now returns the following tuple format: (x, y, z, yaw, pitch) [MAY BREAK EXISTING PLUGINS]
 
 *Pull request was modified from original to better fit the API.  
 
