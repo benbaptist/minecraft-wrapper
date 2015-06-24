@@ -162,6 +162,23 @@ class Player:
 			if node in self.wrapper.permission[id]:
 				return self.wrapper.permission[id][node]
 		return False
+	def setPermission(self, node, value=True):
+		""" Adds the specified permission node and optionally a value to the player. 
+		
+		Value defaults to True, but can be set to False to explicitly revoke a particular permission from the player, or to any arbitrary value. """
+		for uuid in self.permissions["users"]:
+			if uuid == self.uuid:
+				self.permissions["users"][uuid]["permissions"][node] = value
+	def removePermission(self, node):
+		""" Completely removes a permission node from the player. They will inherit this permission from their groups or from plugin defaults. 
+		
+		If the player does not have the specific permission, an IndexError is raised. Note that this method has no effect on nodes inherited from groups or plugin defaults. """
+		for uuid in self.permissions["users"]:
+			if uuid == self.uuid:
+				if node in self.permissions["users"][uuid]["permissions"]:
+					del self.permissions["users"][uuid]["permissions"][node]
+				else:
+					raise IndexError("%s does not have permission node '%s'" % (self.username, node))
 	def hasGroup(self, group):
 		""" Returns a boolean of whether or not the player is in the specified permission group. """
 		for uuid in self.permissions["users"]:
@@ -174,6 +191,21 @@ class Player:
 			if uuid == self.uuid:
 				return self.permissions["users"][uuid]["groups"]
 		return [] # If the user is not in the permission database, return this
+	def setGroup(self, group):
+		""" Adds the player to a specified group. If the group does not exist, an IndexError is raised. """
+		if not group in self.permissions["groups"]:
+			raise IndexError("No group with the name '%s' exists" % group)
+		for uuid in self.permissions["users"]:
+			if uuid == self.uuid:
+				self.permissions["users"][uuid]["groups"].append(group)
+	def removeGroup(self, group):
+		""" Removes the player to a specified group. If they are not part of the specified group, an IndexError is raised. """
+		for uuid in self.permissions["users"]:
+			if uuid == self.uuid:
+				if group in self.permissions["users"][uuid]["groups"]:
+					self.permissions["users"][uuid]["groups"].remove(group)
+				else:
+					raise IndexError("%s is not part of the group '%s'" % (self.username, group))
 	# Player Information 
 	def getFirstLogin(self):
 		""" Returns a tuple containing the timestamp of when the user first logged in for the first time, and the timezone (same as time.tzname). """

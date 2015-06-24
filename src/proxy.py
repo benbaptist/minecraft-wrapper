@@ -674,7 +674,6 @@ class Server: # Handle Server Connection
 			time.sleep(0.03)
 	def parse(self, id, original):
 #		print "Server ID: %s" % chr(id).encode("hex")
-#		time.sleep(0.05)
 		if id == 0x00:
 			if self.state < 3:
 				message = self.read("string:string")
@@ -720,6 +719,7 @@ class Server: # Handle Server Connection
 					if data["translate"] == "chat.type.admin": return False
 				except: pass
 		if id == 0x03:
+			if self.version < 6: return True # Temporary! These packets need to be filtered for cross-server stuff.
 			if self.state == 2: # Set Compression 
 				data = self.read("varint:threshold")
 				if not data["threshold"] == -1:
@@ -729,7 +729,7 @@ class Server: # Handle Server Connection
 					self.packet.compression = False
 					self.packet.compressThreshold = -1
 				return False
-		if id == 0x05: # Spawn Point
+		if id == 0x05: # Spawn Position
 			data = self.read("position:spawn")
 			self.wrapper.server.spawnPoint = data["spawn"]
 		if id == 0x07: # Respawn Packet
@@ -779,8 +779,10 @@ class Server: # Handle Server Connection
 #				print "CLIENT COMPRESSION ENABLED"
 #				self.client.packet.setCompression(256)
 		if id == 0x23: # Block Change
+			if self.version < 6: return True # Temporary! These packets need to be filtered for cross-server stuff.
 			data = self.read("position:location|varint:id")
 		if id == 0x1a: # Entity Status
+			if self.version < 6: return True # Temporary! These packets need to be filtered for cross-server stuff.
 			data = self.read("int:eid|byte:status")
 			if data["eid"] == self.eid:
 				if self.client.eid == 0 or data["status"] == 0:
@@ -790,16 +792,19 @@ class Server: # Handle Server Connection
 				self.client.send(0x1a, "int|byte", (self.client.eid, data["status"]))
 				return False
 		if id == 0x15: # Entity Relative Move
+			if self.version < 6: return True # Temporary! These packets need to be filtered for cross-server stuff.
 			data = self.read("varint:eid|byte:dx|byte:dy|byte:dz")
 			if not self.wrapper.server.world: return
 			if not self.wrapper.server.world.getEntityByEID(data["eid"]) == None:
 				self.wrapper.server.world.getEntityByEID(data["eid"]).moveRelative((data["dx"], data["dy"], data["dz"]))
 		if id == 0x18: # Entity Teleport
+			if self.version < 6: return True # Temporary! These packets need to be filtered for cross-server stuff.
 			data = self.read("varint:eid|int:x|int:y|int:z|byte:yaw|byte:pitch")
 			if not self.wrapper.server.world: return
 			if not self.wrapper.server.world.getEntityByEID(data["eid"]) == None:
 				self.wrapper.server.world.getEntityByEID(data["eid"]).teleport((data["x"], data["y"], data["z"]))
 		if id == 0x1b: # Attach Entity
+			if self.version < 6: return True # Temporary! These packets need to be filtered for cross-server stuff.
 			data = self.read("int:eid|int:vid|bool:leash")
 			eid, vid, leash = data["eid"], data["vid"], data["leash"]
 			player = self.getPlayerByEID(eid)
@@ -817,59 +822,66 @@ class Server: # Handle Server Connection
 					self.client.send(0x1b, "int|int|bool", (self.client.eid, vid, leash))
 					return False
 		if id == 0x1c: # Entity Metadata
+			if self.version < 6: return True # Temporary! These packets need to be filtered for cross-server stuff.
 			data = self.read("varint:eid|rest:metadata")
 			if data["eid"] == self.eid:
 				self.client.send(0x1c, "varint|raw", (self.client.eid, data["metadata"]))
 				return False
 		if id == 0x1d: # Entity Effect
+			if self.version < 6: return True # Temporary! These packets need to be filtered for cross-server stuff.
 			data = self.read("varint:eid|byte:effect_id|byte:amplifier|varint:duration|bool:hide")
 			if data["eid"] == self.eid:
 				self.client.send(0x1d, "varint|byte|byte|varint|bool", (self.client.eid, data["effect_id"], data["amplifier"], data["duration"], data["hide"]))
 				return False
 		if id == 0x1e: # Remove Entity Effect
+			if self.version < 6: return True # Temporary! These packets need to be filtered for cross-server stuff.
 			data = self.read("varint:eid|byte:effect_id")
 			if data["eid"] == self.eid:
 				self.client.send(0x1e, "varint|byte", (self.client.eid, data["effect_id"]))
 				return False
 		if id == 0x20: # Entity Properties
+			if self.version < 6: return True # Temporary! These packets need to be filtered for cross-server stuff.
 			data = self.read("varint:eid|rest:properties")
 			if data["eid"] == self.eid:
 				self.client.send(0x20, "varint|raw", (self.client.eid, data["properties"]))
 				return False
 		if id == 0x26: # Map Chunk Bulk
-			data = self.read("bool:skylight|varint:chunks")
-			chunks = []
-			for i in range(data["chunks"]):
-				meta = self.read("int:x|int:z|ushort:primary")
-				chunks.append(meta)
-			for i in range(data["chunks"]):
-				meta = chunks[i]
-				bitmask = bin(meta["primary"])[2:].zfill(16)
-				primary = []
-				for i in bitmask:
-					if i == "0": primary.append(False)
-					if i == "1": primary.append(True)
-				chunkColumn = bytearray()
-				for i in primary:
-					if i == True:
-						chunkColumn += bytearray(self.packet.read_data(16*16*16 * 2)) # packetanisc
-						if self.client.dimension == 0:
-							metalight = bytearray(self.packet.read_data(16*16*16))
-						if data["skylight"]:
-							skylight = bytearray(self.packet.read_data(16*16*16))
-					else:
-						chunkColumn += bytearray(16*16*16 * 2) # Null Chunk
+			if self.version > 6:
+				print "version is over six"
+				data = self.read("bool:skylight|varint:chunks")
+				chunks = []
+				for i in range(data["chunks"]):
+					meta = self.read("int:x|int:z|ushort:primary")
+					chunks.append(meta)
+				for i in range(data["chunks"]):
+					meta = chunks[i]
+					bitmask = bin(meta["primary"])[2:].zfill(16)
+					primary = []
+					for i in bitmask:
+						if i == "0": primary.append(False)
+						if i == "1": primary.append(True)
+					chunkColumn = bytearray()
+					for i in primary:
+						if i == True:
+							chunkColumn += bytearray(self.packet.read_data(16*16*16 * 2)) # packetanisc
+							if self.client.dimension == 0:
+								metalight = bytearray(self.packet.read_data(16*16*16))
+							if data["skylight"]:
+								skylight = bytearray(self.packet.read_data(16*16*16))
+						else:
+							chunkColumn += bytearray(16*16*16 * 2) # Null Chunk
 				#self.wrapper.server.world.setChunk(meta["x"], meta["z"], world.Chunk(chunkColumn, meta["x"], meta["z"]))
 				#print "Reading chunk %d,%d" % (meta["x"], meta["z"])
 		if id == 0x2b: # Change Game State
 			data = self.read("ubyte:reason|float:value")
 			if data["reason"] == 3:
 				self.client.gamemode = data["value"]
-		if id == 0x2f:
+		if id == 0x2f: # Set Slot
+			if self.version < 6: return True # Temporary! These packets need to be filtered for cross-server stuff.
 			data = self.read("byte:wid|short:slot|slot:data")
 			if data["wid"] == 0:
 				self.client.inventory[data["slot"]] = data["data"]
-		if id == 0x30:
+		if id == 0x30: # Window Items
 			data = self.read("byte:wid|short:count")
 			if data["wid"] == 0:
 				for slot in range(1, data["count"]):
@@ -884,50 +896,51 @@ class Server: # Handle Server Connection
 				self.client.disconnect(message)
 			return False
 		if id == 0x38:
-			head = self.read("varint:action|varint:length")
-			z = 0
-			while z < head["length"]:
-				serverUUID = self.read("uuid:uuid")["uuid"]
-				client = self.client.proxy.getClientByServerUUID(serverUUID)
-				try: uuid = client.uuid
-				except:
-					uuid = client
+			if self.version > 6:
+				head = self.read("varint:action|varint:length")
+				z = 0
+				while z < head["length"]:
+					serverUUID = self.read("uuid:uuid")["uuid"]
+					client = self.client.proxy.getClientByServerUUID(serverUUID)
+					try: uuid = client.uuid
+					except:
+						uuid = client
+						z += 1
+					if not client:
+						z += 1
+						continue
 					z += 1
-				if not client:
-					z += 1
-					continue
-				z += 1
-				if head["action"] == 0:
-					properties = client.properties
-					raw = ""
-					for i in properties:
-						raw += self.client.packet.send_string(i["name"]) # name
-						raw += self.client.packet.send_string(i["value"]) # value
-						if "signature" in i:
-							raw += self.client.packet.send_bool(True)
-							raw += self.client.packet.send_string(i["signature"]) # signature
+					if head["action"] == 0:
+						properties = client.properties
+						raw = ""
+						for i in properties:
+							raw += self.client.packet.send_string(i["name"]) # name
+							raw += self.client.packet.send_string(i["value"]) # value
+							if "signature" in i:
+								raw += self.client.packet.send_bool(True)
+								raw += self.client.packet.send_string(i["signature"]) # signature
+							else:
+								raw += self.client.packet.send_bool(False)
+						raw += self.client.packet.send_varInt(0)
+						raw += self.client.packet.send_varInt(0)
+						raw += self.client.packet.send_bool(False)
+						self.client.send(0x38, "varint|varint|uuid|string|varint|raw", (0, 1, client.uuid, client.username, len(properties), raw))
+					elif head["action"] == 1:
+						data = self.read("varint:gamemode")
+						self.client.send(0x38, "varint|varint|uuid|varint", (1, 1, uuid, data["gamemode"]))
+					elif head["action"] == 2:
+						data = self.read("varint:ping")
+						self.client.send(0x38, "varint|varint|uuid|varint", (2, 1, uuid, data["ping"]))
+					elif head["action"] == 3:
+						data = self.read("bool:has_display")
+						if data["has_display"]:
+							data = self.read("string:displayname")
+							self.client.send(0x38, "varint|varint|uuid|bool|string", (3, 1, uuid, True, data["displayname"]))
 						else:
-							raw += self.client.packet.send_bool(False)
-					raw += self.client.packet.send_varInt(0)
-					raw += self.client.packet.send_varInt(0)
-					raw += self.client.packet.send_bool(False)
-					self.client.send(0x38, "varint|varint|uuid|string|varint|raw", (0, 1, client.uuid, client.username, len(properties), raw))
-				elif head["action"] == 1:
-					data = self.read("varint:gamemode")
-					self.client.send(0x38, "varint|varint|uuid|varint", (1, 1, uuid, data["gamemode"]))
-				elif head["action"] == 2:
-					data = self.read("varint:ping")
-					self.client.send(0x38, "varint|varint|uuid|varint", (2, 1, uuid, data["ping"]))
-				elif head["action"] == 3:
-					data = self.read("bool:has_display")
-					if data["has_display"]:
-						data = self.read("string:displayname")
-						self.client.send(0x38, "varint|varint|uuid|bool|string", (3, 1, uuid, True, data["displayname"]))
-					else:
-						self.client.send(0x38, "varint|varint|uuid|varint", (3, 1, uuid, False))
-				elif head["action"] == 4:
-					self.client.send(0x38, "varint|varint|uuid", (4, 1, uuid))
-				return False
+							self.client.send(0x38, "varint|varint|uuid|varint", (3, 1, uuid, False))
+					elif head["action"] == 4:
+						self.client.send(0x38, "varint|varint|uuid", (4, 1, uuid))
+					return False
 		return True
 	def handle(self):
 		try:
@@ -1183,7 +1196,7 @@ class Packet: # PACKET PARSING CODE
 	def read_data(self, length):
 		d = self.buffer.read(length)
 		if len(d) == 0 and length is not 0:
-			self.disconnect("Received no data or less data than expected - connection closed")
+			self.obj.disconnect("Received no data or less data than expected - connection closed")
 			return ""
 		return d
 	def read_byte(self):

@@ -75,7 +75,7 @@ class Commands:
 						player.message("&cNo new Wrapper.py versions available.")
 				elif subcommand == "halt":
 					player.message("&cHalting Wrapper.py... goodbye!")
-					self.shutdown()
+					self.wrapper.shutdown()
 				elif subcommand in ("mem", "memory"):
 					if self.wrapper.server.getMemoryUsage():
 						player.message("&cServer Memory: %d bytes" % self.wrapper.server.getMemoryUsage())

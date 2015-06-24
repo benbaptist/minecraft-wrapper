@@ -11,15 +11,19 @@ This update contains an important patch regarding username changes. It is import
   - New proxy mode option 'spigot-mode' for handling UUIDs and IP addresses offline
 - Improvements to the /playerstats command
 - Added proxy option 'convert-player-files' for migrating regular servers over to proxy mode
-  - Renames player files and whitelists. Will not convert bans, so banned players may remain unbanned until you manually re-ban them 
-  - This is turned on by default
-- Top 10 active players can be viewed from the web mode
+  - Renames player files and whitelists. Will not convert bans, so banned players may become unbanned when switching to proxy mode until you manually re-ban them 
   
 **Developer Changes**
 - Events which return a payload other than True/False will be passed onto the event caller
   - e.g. you can read an event such as player.rawMessage, and then `return "Different message!"` to change the message (this includes commands!)
 - [pull request #178] Fixed player.setResourcePack
- - [*pull request #193/#194] player.getPosition() now returns the following tuple format: (x, y, z, yaw, pitch) [MAY BREAK EXISTING PLUGINS]
+- [*pull request #193/#194] player.getPosition() now returns the following tuple format: (x, y, z, yaw, pitch) [MAY BREAK EXISTING PLUGINS]
+- [issue #199] Added new methods for modifying player permissions:
+    - player.setGroup(group)
+    - player.setPermission(node, value=True) (value argument is optional, default is True)
+    - player.removePermission(node)
+    - player.removeGroup(group) 
+- [issue #164] Implemented timer.tick event (event is called 20 times per second, like a game tick)
 
 *Pull request was modified from original to better fit the API.  
 
@@ -29,6 +33,8 @@ This update contains an important patch regarding username changes. It is import
 - Fixed proxy not binding when server-port is misconfigured/unable to connect to the destination server
 - Potentially fixed permission UUIDs being stored inconsistently (some with dashes, some without)
 - Fixed issues that broke Spigot with Wrapper.py
+- Fixed issues with Minecraft 1.7.10
+- Fixed `/wrapper halt` command in-game
 - Web mode fixes:
   - Escaped <>'s in the Chat tab
   - Joins and parts now show up in the Chat tab

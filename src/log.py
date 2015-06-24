@@ -1,8 +1,39 @@
-import time, traceback
+import time, traceback, os, gzip, shutil, threading
 from config import Config
 class Log:
 	def __init__(self):
-		self.file = open("wrapper.log", "a")
+		#self.file = open("wrapper.log", "a")
+		self.file = None
+		self.rotateLogs()
+		
+		t = threading.Thread(target=self.loop, args=())
+		t.daemon = True
+		t.start()
+	def rotateLogs(self):
+		if not os.path.exists("logs"): os.mkdir("logs")
+		if not os.path.exists("logs/wrapper"): os.mkdir("logs/wrapper")
+		if os.path.exists("wrapper.log"):
+			with open("wrapper.log", "r") as f:
+				originalLog = f.read()
+			with gzip.open("logs/wrapper/oldWrapper.log.gz", "w") as f:
+				f.write(originalLog)
+			os.remove("wrapper.log")
+		if self.file:
+			self.file.close()
+		if os.path.exists("logs/wrapper/current.log"):
+			with open("logs/wrapper/current.log", "r") as f:
+				logData = f.read()
+			with gzip.open("logs/wrapper/%s.log.gz" % time.strftime("%Y-%m-%d_%H-%M-%S"), "w") as f:
+				f.write(logData)
+			os.remove("logs/wrapper/current.log")
+		self.file = open("logs/wrapper/current.log", "a")
+	def loop(self):
+		day = time.strftime("%d")
+		while True:
+			if day != time.strftime("%d"):
+				print "Day changed, rotating logs..."
+				self.rotateLogs()
+			time.sleep(1)
 	def timestamp(self):
 		return time.strftime("[%Y-%m-%d %H:%M:%S]")
 	def write(self, payload):
@@ -10,7 +41,7 @@ class Log:
 			self.file.write(("%s\n" % payload).encode("utf8"))
 			self.file.flush()
 		except:
-			print "Failure to write string"
+			print "Failure to write string - possibly due to writing while rotating log files"
 			print payload
 			print traceback.format_exc()
 	def prefix(self, type="INFO", string=""):

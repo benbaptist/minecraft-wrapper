@@ -3,7 +3,7 @@ import traceback, ConfigParser, ast, time, os, sys
 # Default Configuration File
 DEFAULT_CONFIG = """[General]
 server-name = Minecraft Server
-command = java -jar minecraft_server.1.8.jar nogui
+command = java -jar minecraft_server.1.8.7.jar nogui
 auto-restart = True
 auto-update-wrapper = False
 auto-update-dev-build = False
@@ -84,7 +84,7 @@ class Config:
 		sections = ["General", "Backups", "IRC", "Proxy", "Web"]
 		defaults = {"General":{
 			"server-name": "Minecraft Server",
-			"command": "java -jar minecraft_server.1.8.jar",
+			"command": "java -jar minecraft_server.1.8.7.jar",
 			"auto-restart": True,
 			"auto-update-wrapper": False,
 			"auto-update-dev-build": False,

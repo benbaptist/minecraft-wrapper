@@ -1,3 +1,16 @@
+Build #102:
+- Added log rotation, and logs are now stored in logs/wrapper directory
+- Default server jar is now set to 1.8.7 for wrapper.properties
+- Fixed support for Minecraft 1.7.10 in proxy mode
+- Fixed `/wrapper halt` command in-game
+- API changes:
+  - [issue #199] Added new methods for modifying player permissions [untested]:
+    - player.setGroup(group)
+    - player.setPermission(node, value=True) (value argument is optional, default is True)
+    - player.removePermission(node)
+    - player.removeGroup(group) 
+  - [issue #164] Implemented timer.tick event (finally!)
+
 Build #101:
 - Fixed crashes relating to packets 0x1a (again!) and 0x1e
 - player.getPosition() now returns the following tuple format: (x, y, z, yaw, pitch) (removed onGround)
@@ -9,7 +22,7 @@ Build #100:
   - Fixed status effects not disappearing when connected to a secondary server
   - Fixed client disconnecting from 0x1a packet
   - [issue #200] Fixed crash/chunks not loading in Nether and End
-- Development changes:
+- API changes:
  - [*pull request #193/#194] player.getPosition() now returns the following tuple format: (x, y, z, onGround, yaw, pitch) [MAY BREAK EXISTING PLUGINS]
  
 *Pull request was modified from original to better fit the API.  

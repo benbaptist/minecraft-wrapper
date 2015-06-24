@@ -1,6 +1,7 @@
 import json, time, nbt, items, storage
 from api.player import Player
 from api.minecraft import Minecraft
+from errors import *
 """ api.py contains the majority of code for the plugin API. """
 class API:
 	""" 
@@ -132,7 +133,7 @@ class API:
 		if id in self.wrapper.plugins:
 			return self.wrapper.plugins[id]["main"]
 		else:
-			raise Exception("Plugin %s does not exist!" % id)
+			raise NonExistentPlugin("Plugin %s does not exist!" % id)
 	def getStorage(self, name, world=False):
 		""" Return a storage object for storing configurations, player data, and any other data your plugin will need to remember across reboots.
 		

@@ -259,9 +259,13 @@ class Wrapper:
 			self.log.getTraceback()
 			return False
 	def timer(self):
+		t = time.time()
 		while not self.halt:
-			self.callEvent("timer.second", None)
-			time.sleep(1)
+			if time.time() - t > 1:
+				self.callEvent("timer.second", None)
+				t = time.time()
+			#self.callEvent("timer.tick", None)
+			time.sleep(0.05)
 	def console(self):
 		while not self.halt:
 			input = raw_input("")
