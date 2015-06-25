@@ -32,6 +32,7 @@ class Log:
 		while True:
 			if day != time.strftime("%d"):
 				print "Day changed, rotating logs..."
+				day = time.strftime("%d")
 				self.rotateLogs()
 			time.sleep(1)
 	def timestamp(self):

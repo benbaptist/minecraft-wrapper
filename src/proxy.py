@@ -689,11 +689,20 @@ class Server: # Handle Server Connection
 		if id == 0x01:
 			if self.state == 3:
 				data = self.read("int:eid|ubyte:gamemode|byte:dimension|ubyte:difficulty|ubyte:max_players|string:level_type")
+				oldDimension = self.client.dimension
 				self.client.gamemode = data["gamemode"]
 				self.client.dimension = data["dimension"]
 				self.eid = data["eid"]  # This is the EID of the player on this particular server - not always the EID that the client is aware of 
 				if self.client.handshake:
 					print "self.client.handshake"
+					dimensions = [-1, 0, 1]
+					if oldDimension == self.client.dimension:
+						for l in dimensions:
+							if l != oldDimension:
+								dim = l
+								break
+						print "Switching to %d temporarily" % l
+						self.client.send(0x07, "int|ubyte|ubyte|string", (l, data["difficulty"], data["gamemode"], data["level_type"]))
 					self.client.send(0x07, "int|ubyte|ubyte|string", (self.client.dimension, data["difficulty"], data["gamemode"], data["level_type"]))
 					#self.client.send(0x01, "int|ubyte|byte|ubyte|ubyte|string|bool", (self.eid, self.client.gamemode, self.client.dimension, data["difficulty"], data["max_players"], data["level_type"], False))
 					self.eid = data["eid"]
@@ -847,7 +856,6 @@ class Server: # Handle Server Connection
 				return False
 		if id == 0x26: # Map Chunk Bulk
 			if self.version > 6:
-				print "version is over six"
 				data = self.read("bool:skylight|varint:chunks")
 				chunks = []
 				for i in range(data["chunks"]):
@@ -1005,12 +1013,7 @@ class Packet: # PACKET PARSING CODE
 			length = length - len(self.pack_varInt(dataLength))
 		payload = self.recv(length)
 		if dataLength > 0:
-			try:
-				payload = zlib.decompress(payload)
-			except:
-				print len(payload), length, dataLength
-				print traceback.format_exc()
-				raise Exception()
+			payload = zlib.decompress(payload)
 		self.buffer = StringIO.StringIO(payload)
 		id = self.read_varInt()
 		return (id, payload)

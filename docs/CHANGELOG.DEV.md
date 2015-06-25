@@ -1,3 +1,7 @@
+Build #103:
+- SERIOUS bug fix: Wrapper.py spams "day changed, rotating logs..." and creates new log file every second
+- Traversing cross-server is now far more efficient (uses respawn to different dimension, then switches to actual dimension)
+
 Build #102:
 - Added log rotation, and logs are now stored in logs/wrapper directory
 - Default server jar is now set to 1.8.7 for wrapper.properties
