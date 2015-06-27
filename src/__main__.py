@@ -268,7 +268,9 @@ class Wrapper:
 			time.sleep(0.05)
 	def console(self):
 		while not self.halt:
-			input = raw_input("")
+			try:
+				input = raw_input("")
+			except: continue
 			if len(input) < 1: continue
 			if input[0] is not "/": 
 				try:

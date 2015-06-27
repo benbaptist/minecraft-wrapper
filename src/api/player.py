@@ -101,7 +101,7 @@ class Player:
 		""" Returns whether or not the player is currently a server operator.  """
 		operators = json.loads(open("ops.json", "r").read())
 		for i in operators:
-			if i["uuid"] == self.uuid or i["name"] == self.username:
+			if i["uuid"] == str(self.uuid) or i["name"] == self.username:
 				return True
 		return False
 	# Visual notifications
@@ -167,14 +167,14 @@ class Player:
 		
 		Value defaults to True, but can be set to False to explicitly revoke a particular permission from the player, or to any arbitrary value. """
 		for uuid in self.permissions["users"]:
-			if uuid == self.uuid:
+			if uuid == str(self.uuid):
 				self.permissions["users"][uuid]["permissions"][node] = value
 	def removePermission(self, node):
 		""" Completely removes a permission node from the player. They will inherit this permission from their groups or from plugin defaults. 
 		
 		If the player does not have the specific permission, an IndexError is raised. Note that this method has no effect on nodes inherited from groups or plugin defaults. """
 		for uuid in self.permissions["users"]:
-			if uuid == self.uuid:
+			if uuid == str(self.uuid):
 				if node in self.permissions["users"][uuid]["permissions"]:
 					del self.permissions["users"][uuid]["permissions"][node]
 				else:
@@ -188,7 +188,7 @@ class Player:
 	def getGroups(self):
 		""" Returns a list of permission groups that the player is in. """
 		for uuid in self.permissions["users"]:
-			if uuid == self.uuid:
+			if uuid == str(self.uuid):
 				return self.permissions["users"][uuid]["groups"]
 		return [] # If the user is not in the permission database, return this
 	def setGroup(self, group):
@@ -196,12 +196,12 @@ class Player:
 		if not group in self.permissions["groups"]:
 			raise IndexError("No group with the name '%s' exists" % group)
 		for uuid in self.permissions["users"]:
-			if uuid == self.uuid:
+			if uuid == str(self.uuid):
 				self.permissions["users"][uuid]["groups"].append(group)
 	def removeGroup(self, group):
 		""" Removes the player to a specified group. If they are not part of the specified group, an IndexError is raised. """
 		for uuid in self.permissions["users"]:
-			if uuid == self.uuid:
+			if uuid == str(self.uuid):
 				if group in self.permissions["users"][uuid]["groups"]:
 					self.permissions["users"][uuid]["groups"].remove(group)
 				else:

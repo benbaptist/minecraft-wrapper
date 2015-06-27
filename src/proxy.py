@@ -60,11 +60,11 @@ class Proxy:
 
 				self.clients.append(client)
 
-		 		# remove stale clients
+		 		# Remove stale clients
 		 		for i, client in enumerate(self.wrapper.proxy.clients):
 					if client.abort:
 						del self.wrapper.proxy.clients[i]
-		 	except:
+		 	except: # Not quite sure what's going on
 		 		print traceback.print_exc()
 		 		try:
 		 			client.disconnect("Some error")
@@ -291,7 +291,6 @@ class Client: # handle client/game connection
 	def message(self, string):
 		self.server.send(0x01, "string", (string,))
 	def parse(self, id):
-#		print "Client ID: %s" % chr(id).encode("hex")
 		if id == 0x00: # Handshake
 			if self.state == 0:
 				data = self.read("varint:version|string:address|ushort:port|varint:state")
@@ -673,7 +672,6 @@ class Server: # Handle Server Connection
 #				break
 			time.sleep(0.03)
 	def parse(self, id, original):
-#		print "Server ID: %s" % chr(id).encode("hex")
 		if id == 0x00:
 			if self.state < 3:
 				message = self.read("string:string")
@@ -694,14 +692,12 @@ class Server: # Handle Server Connection
 				self.client.dimension = data["dimension"]
 				self.eid = data["eid"]  # This is the EID of the player on this particular server - not always the EID that the client is aware of 
 				if self.client.handshake:
-					print "self.client.handshake"
 					dimensions = [-1, 0, 1]
 					if oldDimension == self.client.dimension:
 						for l in dimensions:
 							if l != oldDimension:
 								dim = l
 								break
-						print "Switching to %d temporarily" % l
 						self.client.send(0x07, "int|ubyte|ubyte|string", (l, data["difficulty"], data["gamemode"], data["level_type"]))
 					self.client.send(0x07, "int|ubyte|ubyte|string", (self.client.dimension, data["difficulty"], data["gamemode"], data["level_type"]))
 					#self.client.send(0x01, "int|ubyte|byte|ubyte|ubyte|string|bool", (self.eid, self.client.gamemode, self.client.dimension, data["difficulty"], data["max_players"], data["level_type"], False))
@@ -794,10 +790,6 @@ class Server: # Handle Server Connection
 			if self.version < 6: return True # Temporary! These packets need to be filtered for cross-server stuff.
 			data = self.read("int:eid|byte:status")
 			if data["eid"] == self.eid:
-				if self.client.eid == 0 or data["status"] == 0:
-					print "Both are zero for 0x1a - stopping!" 
-					return # Weird hack
-				print "Filtering 0x1a Packet: %d | %d" % (self.client.eid, data["status"])
 				self.client.send(0x1a, "int|byte", (self.client.eid, data["status"]))
 				return False
 		if id == 0x15: # Entity Relative Move

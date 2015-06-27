@@ -1,0 +1,1 @@
+class NonExistentPlugin(Exception): pass

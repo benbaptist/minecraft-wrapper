@@ -1,14 +1,10 @@
 NAME = "WorldEdit"
 ID = "com.benbaptist.plugins.fake-worldedit"
-VERSION = (0, 1)
+VERSION = (0, 2)
 AUTHOR = "Ben Baptist"
 WEBSITE = "http://wrapper.benbaptist.com/"
 SUMMARY = "Edit the world with this WorldEdit clone. (Original WorldEdit for Bukkit by sk89q)"
-DESCRIPTION = """This is a clone of the WorldEdit plugin by sk89q on Bukkit for Wrapper.py.
- 
-It contains most of the same syntax, though not all of the commands have been implemented just yet.
-
-It's currently limited by /fill's 32768-block limit, which is no longer really much of a problem."""
+DESCRIPTION = """This is a clone of the WorldEdit plugin by sk89q on Bukkit for Wrapper.py. It contains most of the same syntax, though not all of the commands have been implemented just yet."""
 import traceback
 class Main:
 	def __init__(self, api, log):
@@ -18,6 +14,18 @@ class Main:
 		
 		self.players = {}
 	def onEnable(self):
+		self.api.registerHelp("WorldEdit", "Terrain modification commands", [
+			("//wand", "Gives you a wooden axe that can be used with WorldEdit", "worldedit.wand"),
+			("//set <TileName> [dataValue]", "Fills the selected region with the specified material.", "worldedit.set"),
+			("//replace <from> <SquareRadius>", "Replaces the specified region from the specified material to the other specified material.", "worldedit.fill"),
+			("//fill <TileName> <SquareRadius>", "Fills in a square radius around the player with the specified material.", "worldedit.fill"),
+			("//hfill <TileName> <SquareRadius>", "Fills in a hollow square radius around the player with the specified material.", "worldedit.hfill"),
+			("//pos1", "Sets point 1 at player's position. Same as left-clicking with wooden axe.", "worldedit.pos1"),
+			("//pos2", "Sets point 2 at player's position. Same as right-clicking with wooden axe.", "worldedit.pos2"),
+			("//replacenear <from-block> <to-block> <SquareRadius>", "Replaces all blocks within the specified square radius from specified block to specified block.", "worldedit.replacenear"),
+			("//extinguish <SquareRadius>", "Removes all fire from the player in the specified square radius.", "worldedit.extinguish"),
+		])
+		
 		self.api.registerCommand("/wand", self.command_wand, "worldedit.wand")
 		self.api.registerCommand("/set", self.command_set, "worldedit.set")
 		self.api.registerCommand("/fill", self.command_fill, "worldedit.fill")
@@ -25,6 +33,8 @@ class Main:
 		self.api.registerCommand("/hfill", self.command_hollow_fill, "worldedit.hfill")
 		self.api.registerCommand("/pos1", self.command_pos1, "worldedit.pos1")
 		self.api.registerCommand("/pos2", self.command_pos2, "worldedit.pos2")
+		self.api.registerCommand("/replacenear", self.command_replaceNear, "worldedit.replacenear")
+		self.api.registerCommand("/extinguish", self.command_extinguish, "worldedit.extinguish")
 		self.api.registerEvent("player.place", self.action_rightclick)
 		self.api.registerEvent("player.dig", self.action_leftclick)
 	def onDisable(self):
@@ -35,12 +45,12 @@ class Main:
 		return self.players[name]
 	# events
 	def action_leftclick(self, payload):
-		player, action = payload["player"], payload["action"]
+		player = payload["player"]
 		if player.hasPermission("worldedit.pos1"):
 			p = self.getMemoryPlayer(player.username)
 			item = player.getHeldItem()
 			if item == None: return
-			if item["id"] == 271 and (action == "begin_break"):
+			if item["id"] == 271:
 				p["sel1"] = payload["position"]
 				player.message("&dPoint one selected.")
 				return False
@@ -118,7 +128,7 @@ class Main:
 				pos = " ".join(([str(i) for i in p["sel1"]]))
 				pos += " "
 				pos += " ".join(([str(i) for i in p["sel2"]]))
-				self.minecraft.console("fill %s %s %d" % (pos, args[0], dataValue))
+				player.execute("fill %s %s %d" % (pos, args[0], dataValue))
 			else:
 				player.message("&cPlease select two regions with the wooden axe tool. Use //wand to obtain one.")
 		else:
@@ -135,3 +145,18 @@ class Main:
 		if len(args) == 0:
 			p["sel2"] = player.getPosition()
 		player.message({"text": "Set position 2 to %s." % (str(player.getPosition())), "color": "light_purple"})
+	def command_replaceNear(self, player, args):
+		try: 
+			i1, i2, radius = args
+			radius = int(radius)
+		except:
+			player.message("&cUsage: //replacenear <from-block> <to-block> <SquareRadius>")
+			return
+		player.execute("fill ~-%d ~-%d ~-%d ~%d ~%d ~%d %s %d replace %s %d" % (radius/2, radius/2, radius/2, radius/2, radius/2, radius/2, i2, 0, i1, 0))
+	def command_extinguish(self, player, args):
+		try: 
+			radius = int(args[0])
+		except:
+			player.message("&cUsage: //extinguish <SquareRadius>")
+			return
+		player.execute("fill ~-%d ~-%d ~-%d ~%d ~%d ~%d %s %d replace %s" % (radius/2, radius/2, radius/2, radius/2, radius/2, radius/2, "air", 0, "fire"))

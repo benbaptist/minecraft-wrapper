@@ -1,3 +1,14 @@
+Build #104:
+- Fixed Control+D crash
+- Removed most debug printing stuff as it's mostly ready for primetime
+- Fixed issue with new permissions methods not working at all
+
+- Plugin changes:
+  - WorldEdit:
+    - Added //replacenear command
+    - Added //extinguish command
+    - Added /help entry for all WorldEdit commands
+
 Build #103:
 - SERIOUS bug fix: Wrapper.py spams "day changed, rotating logs..." and creates new log file every second
 - Traversing cross-server is now far more efficient (uses respawn to different dimension, then switches to actual dimension)
