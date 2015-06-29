@@ -20,6 +20,7 @@ class Log:
 			os.remove("wrapper.log")
 		if self.file:
 			self.file.close()
+			time.sleep(1) # Possibly fix Windows 'in-use' error. Ugh.
 		if os.path.exists("logs/wrapper/current.log"):
 			with open("logs/wrapper/current.log", "r") as f:
 				logData = f.read()

@@ -45,17 +45,17 @@ class Main:
 		return self.players[name]
 	# events
 	def action_leftclick(self, payload):
-		player = payload["player"]
+		player = payload["player"], payload["action"]
 		if player.hasPermission("worldedit.pos1"):
 			p = self.getMemoryPlayer(player.username)
 			item = player.getHeldItem()
 			if item == None: return
-			if item["id"] == 271:
+			if item["id"] == 271 and (action == "begin_break"):
 				p["sel1"] = payload["position"]
 				player.message("&dPoint one selected.")
 				return False
 	def action_rightclick(self, payload):
-		player = payload["player"]
+		player = payload["player"], payload["action"]
 		if player.hasPermission("worldedit.pos2"):
 			p = self.getMemoryPlayer(player.username)
 			try:
@@ -128,7 +128,7 @@ class Main:
 				pos = " ".join(([str(i) for i in p["sel1"]]))
 				pos += " "
 				pos += " ".join(([str(i) for i in p["sel2"]]))
-				player.execute("fill %s %s %d" % (pos, args[0], dataValue))
+				self.minecraft.console("fill %s %s %d" % (pos, args[0], dataValue))
 			else:
 				player.message("&cPlease select two regions with the wooden axe tool. Use //wand to obtain one.")
 		else:
@@ -152,11 +152,11 @@ class Main:
 		except:
 			player.message("&cUsage: //replacenear <from-block> <to-block> <SquareRadius>")
 			return
-		player.execute("fill ~-%d ~-%d ~-%d ~%d ~%d ~%d %s %d replace %s %d" % (radius/2, radius/2, radius/2, radius/2, radius/2, radius/2, i2, 0, i1, 0))
+		self.minecraft.console("execute %s ~ ~ ~ fill ~-%d ~-%d ~-%d ~%d ~%d ~%d %s %d replace %s %d" % (player.username, radius/2, radius/2, radius/2, radius/2, radius/2, radius/2, i2, 0, i1, 0))
 	def command_extinguish(self, player, args):
 		try: 
 			radius = int(args[0])
 		except:
 			player.message("&cUsage: //extinguish <SquareRadius>")
 			return
-		player.execute("fill ~-%d ~-%d ~-%d ~%d ~%d ~%d %s %d replace %s" % (radius/2, radius/2, radius/2, radius/2, radius/2, radius/2, "air", 0, "fire"))
+		self.minecraft.console("execute %s ~ ~ ~ fill ~-%d ~-%d ~-%d ~%d ~%d ~%d %s %d replace %s" % (player.username, radius/2, radius/2, radius/2, radius/2, radius/2, radius/2, "air", 0, "fire"))

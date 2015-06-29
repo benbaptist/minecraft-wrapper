@@ -38,6 +38,7 @@ class Server:
 		self.world = None
 		self.motd = None
 		self.onlineMode = True
+		self.serverIcon = None
 		
 		self.reloadProperties()
 		
@@ -201,6 +202,11 @@ class Server:
 			return self.players[username]
 		return False
 	def reloadProperties(self):
+		# Load server icon
+		if os.path.exists("server-icon.png"):
+			f = open("server-icon.png", "r")
+			self.serverIcon = "data:image/png;base64," + f.read().encode("base64")
+			f.close()
 		# Read server.properties and extract some information out of it
 		if os.path.exists("server.properties"):
 			s = StringIO.StringIO() # Stupid StringIO doesn't support __exit__()

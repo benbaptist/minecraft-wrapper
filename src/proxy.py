@@ -22,7 +22,6 @@ class Proxy:
 		self.skinTextures = {}
 		self.uuidTranslate = {}
 		self.storage = storage.Storage("proxy-data")
-		self.serverIcon = None
 		
 		self.privateKey = encryption.generate_key_pair()
 		self.publicKey = encryption.encode_public_key(self.privateKey)
@@ -34,10 +33,6 @@ class Proxy:
 		except:
 			self.log.error("Proxy could not poll the Minecraft server - are you 100% sure that the ports are configured properly? Reason:")
 			self.log.getTraceback()
-		if os.path.exists("server-icon.png"):
-			f = open("server-icon.png", "r")
-			self.serverIcon = "data:image/png;base64," + f.read().encode("base64")
-			f.close()
 		while not self.socket:
 			try:
 				self.socket = socket.socket()
@@ -49,27 +44,27 @@ class Proxy:
 				self.log.debug(traceback.format_exc())
 				self.socket = False
 			time.sleep(5)
-	 	while not self.wrapper.halt:
-	 		try:
-		 		sock, addr = self.socket.accept()
-		 		client = Client(sock, addr, self.wrapper, self.publicKey, self.privateKey, self)
+		while not self.wrapper.halt:
+			try:
+				sock, addr = self.socket.accept()
+				client = Client(sock, addr, self.wrapper, self.publicKey, self.privateKey, self)
 		 		
-		 		t = threading.Thread(target=client.handle, args=())
-		 		t.daemon = True
-		 		t.start()
+				t = threading.Thread(target=client.handle, args=())
+				t.daemon = True
+				t.start()
 
 				self.clients.append(client)
 
-		 		# Remove stale clients
-		 		for i, client in enumerate(self.wrapper.proxy.clients):
+				# Remove stale clients
+				for i, client in enumerate(self.wrapper.proxy.clients):
 					if client.abort:
 						del self.wrapper.proxy.clients[i]
-		 	except: # Not quite sure what's going on
-		 		print traceback.print_exc()
-		 		try:
-		 			client.disconnect("Some error")
-		 		except:
-		 			pass
+			except: # Not quite sure what's going on
+				print traceback.print_exc()
+				try:
+					client.disconnect("Some error")
+				except:
+					pass
 	def pollServer(self):
 		sock = socket.socket()
 		sock.connect(("localhost", self.wrapper.config["Proxy"]["server-port"]))
@@ -320,8 +315,8 @@ class Client: # handle client/game connection
 					"players": {"max": self.wrapper.server.maxPlayers, "online": len(self.wrapper.server.players), "sample": sample},
 					"version": {"name": self.wrapper.server.version, "protocol": self.wrapper.server.protocolVersion}
 				}
-				if self.proxy.serverIcon:
-					MOTD["favicon"] = self.proxy.serverIcon
+				if self.wrapper.server.serverIcon:
+					MOTD["favicon"] = self.wrapper.server.serverIcon
 				self.send(0x00, "string", (json.dumps(MOTD),))
 				self.state = 5
 				return False
@@ -423,7 +418,7 @@ class Client: # handle client/game connection
 							self.log.info("%s logged in with older name previously, falling back to %s" % (self.username, newUsername))
 							self.username = newUsername
 				else:
-					 self.uuid = uuid.uuid3(uuid.NAMESPACE_OID, "OfflinePlayer: %s" % self.username)
+					self.uuid = uuid.uuid3(uuid.NAMESPACE_OID, "OfflinePlayer: %s" % self.username)
 				# Rename UUIDs accordingly
 				if self.config["Proxy"]["convert-player-files"]:
 					if self.config["Proxy"]["online-mode"]:
@@ -1115,7 +1110,7 @@ class Packet: # PACKET PARSING CODE
 	def send_byte(self, payload):
 		return struct.pack("b", payload)
 	def send_ubyte(self, payload):
-	 	return struct.pack("B", payload)
+		return struct.pack("B", payload)
 	def send_string(self, payload):
 		return self.send_varInt(len(payload)) + payload.encode("utf8")
 	def send_json(self, payload):

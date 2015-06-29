@@ -11,7 +11,8 @@ This update contains an important patch regarding username changes. It is import
   - New proxy mode option 'spigot-mode' for handling UUIDs and IP addresses offline
 - Improvements to the /playerstats command
 - Added proxy option 'convert-player-files' for migrating regular servers over to proxy mode
-  - Renames player files and whitelists. Will not convert bans, so banned players may become unbanned when switching to proxy mode until you manually re-ban them 
+  - Renames player files and whitelists. Will not convert bans, so banned players may become unbanned when switching to proxy mode until you manually re-ban them
+- Added log rotation, and logs are now stored in logs/wrapper directory 
   
 **Developer Changes**
 - Events which return a payload other than True/False will be passed onto the event caller

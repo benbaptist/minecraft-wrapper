@@ -1,3 +1,16 @@
+Build #105:
+I added a new ROADMAP.md file for keeping a nice, organized file on the future of Wrapper.py updates.
+
+- [issue #80] server-icon.png is now loaded once prior to starting the server, to prevent file conflicts on Windows
+- [issue #210] Experimental fix for log-rotation issue on Windows
+- Disabled editing server.properties until fixed
+- Fixed indentation inconsistencies in proxy.py
+
+- Plugin changes:
+  - WorldEdit:
+    - Re-fixed double-click issue thingy or something [not entirely sure what the issue was]
+    - No longer using player.execute - doesn't require op AND permission node
+
 Build #104:
 - Fixed Control+D crash
 - Removed most debug printing stuff as it's mostly ready for primetime
