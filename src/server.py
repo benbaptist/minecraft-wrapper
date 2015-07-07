@@ -204,7 +204,7 @@ class Server:
 	def reloadProperties(self):
 		# Load server icon
 		if os.path.exists("server-icon.png"):
-			f = open("server-icon.png", "r")
+			f = open("server-icon.png", "rb")
 			self.serverIcon = "data:image/png;base64," + f.read().encode("base64")
 			f.close()
 		# Read server.properties and extract some information out of it

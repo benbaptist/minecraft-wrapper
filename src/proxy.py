@@ -1229,6 +1229,8 @@ class Packet: # PACKET PARSING CODE
 		if not id == -1:
 			count = self.read_ubyte()
 			damage = self.read_short()
+			nbtCount = self.read_byte()
+			nbt = self.read_data(nbtCount)
 			return {"id": id, "count": count, "damage": damage}
 #				nbtLength = self.read_short()
 #				print count ,damage, nbtLength

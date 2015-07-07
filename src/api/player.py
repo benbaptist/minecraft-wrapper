@@ -151,7 +151,18 @@ class Player:
 				if node in fnmatch.filter([node], perm):
 					return self.permissions["users"][uuid]["permissions"][perm]
 		if uuid not in self.permissions["users"]: return False
-		for group in self.permissions["users"][uuid]["groups"]:
+		allgroups = []  # summary of groups included children groups
+		for group in self.permissions["users"][uuid]["groups"]:  # get the parent groups
+			if group not in allgroups:
+				allgroups.append(group)
+		itemsToProcess = allgroups[:]  # process and find child groups
+		while len(itemsToProcess) > 0:
+			parseparent = itemsToProcess.pop(0)
+			for groupPerm in self.permissions["groups"][parseparent]["permissions"]:
+				if (groupPerm in self.permissions["groups"]) and self.permissions["groups"][parseparent]["permissions"][groupPerm] and (groupPerm not in allgroups):
+					allgroups.append(groupPerm)
+					itemsToProcess.append(groupPerm)
+		for group in allgroups:
 			for perm in self.permissions["groups"][group]["permissions"]:
 				if node in fnmatch.filter([node], perm):
 					return self.permissions["groups"][group]["permissions"][perm]

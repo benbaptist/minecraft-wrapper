@@ -1,4 +1,14 @@
-Build #105:
+Build #106 [0.7.7 RC3]:
+- [issue #210] More possible fixes	for log-rotation issue on Windows
+- [issue #214] Fixed slot packet not being parsed properly and causing random disconnectionss
+- [issue #80] server-icon.png is now read with rb, to fix Windows compatibility
+- [pull request #209/issue #131] - Make groups inherit other groups
+
+- Plugin changes:
+  - WorldEdit:
+    - Fixed wand not functioning properly
+
+Build #105 [0.7.7 RC2]:
 I added a new ROADMAP.md file for keeping a nice, organized file on the future of Wrapper.py updates.
 
 - [issue #80] server-icon.png is now loaded once prior to starting the server, to prevent file conflicts on Windows
@@ -11,7 +21,7 @@ I added a new ROADMAP.md file for keeping a nice, organized file on the future o
     - Re-fixed double-click issue thingy or something [not entirely sure what the issue was]
     - No longer using player.execute - doesn't require op AND permission node
 
-Build #104:
+Build #104 [0.7.7 RC1]:
 - Fixed Control+D crash
 - Removed most debug printing stuff as it's mostly ready for primetime
 - Fixed issue with new permissions methods not working at all

@@ -5,6 +5,7 @@ class Log:
 		#self.file = open("wrapper.log", "a")
 		self.file = None
 		self.rotateLogs()
+		self.buffer = ""
 		
 		t = threading.Thread(target=self.loop, args=())
 		t.daemon = True
@@ -20,14 +21,17 @@ class Log:
 			os.remove("wrapper.log")
 		if self.file:
 			self.file.close()
-			time.sleep(1) # Possibly fix Windows 'in-use' error. Ugh.
+		self.file = None
+		time.sleep(1)
 		if os.path.exists("logs/wrapper/current.log"):
 			with open("logs/wrapper/current.log", "r") as f:
 				logData = f.read()
+				f.close()
 			with gzip.open("logs/wrapper/%s.log.gz" % time.strftime("%Y-%m-%d_%H-%M-%S"), "w") as f:
 				f.write(logData)
+			time.sleep(1) # Possibly fix Windows 'in-use' error. Ugh.
 			os.remove("logs/wrapper/current.log")
-		self.file = open("logs/wrapper/current.log", "a")
+		self.file = open("logs/wrapper/current.log", "w")
 	def loop(self):
 		day = time.strftime("%d")
 		while True:
@@ -40,8 +44,14 @@ class Log:
 		return time.strftime("[%Y-%m-%d %H:%M:%S]")
 	def write(self, payload):
 		try:
-			self.file.write(("%s\n" % payload).encode("utf8"))
-			self.file.flush()
+			if self.file:
+				if len(self.buffer) > 0:
+					self.file.write(self.buffer)
+					self.buffer = ""
+				self.file.write(("%s\n" % payload).encode("utf8"))
+				self.file.flush()
+			else:
+				self.buffer += ("%s\n" % payload).encode("utf8")
 		except:
 			print "Failure to write string - possibly due to writing while rotating log files"
 			print payload

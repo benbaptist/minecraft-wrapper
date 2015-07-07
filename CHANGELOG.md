@@ -12,7 +12,7 @@ This update contains an important patch regarding username changes. It is import
 - Improvements to the /playerstats command
 - Added proxy option 'convert-player-files' for migrating regular servers over to proxy mode
   - Renames player files and whitelists. Will not convert bans, so banned players may become unbanned when switching to proxy mode until you manually re-ban them
-- Added log rotation, and logs are now stored in logs/wrapper directory 
+- Added log rotation, and logs are now stored in logs/wrapper directory
   
 **Developer Changes**
 - Events which return a payload other than True/False will be passed onto the event caller
@@ -32,6 +32,7 @@ This update contains an important patch regarding username changes. It is import
 - CRITICAL BUG FIX: Players who changeed usernames would be treated as a new user (Temporarily fixed by not allowing name changes - it'll continue to use their old usernames even after changing until we implement a workaround)
 - Fixed IRC bug where unicode crashes.... AGAIN. UGH. HOW MANY TIMES DO I HAVE TO FIX THIS?
 - Fixed proxy not binding when server-port is misconfigured/unable to connect to the destination server
+- [issue #214] Fixed slot packet not being parsed properly and causing random disconnections
 - Potentially fixed permission UUIDs being stored inconsistently (some with dashes, some without)
 - Fixed issues that broke Spigot with Wrapper.py
 - Fixed issues with Minecraft 1.7.10

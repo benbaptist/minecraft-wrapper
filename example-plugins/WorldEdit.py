@@ -45,7 +45,7 @@ class Main:
 		return self.players[name]
 	# events
 	def action_leftclick(self, payload):
-		player = payload["player"], payload["action"]
+		player, action = payload["player"], payload["action"]
 		if player.hasPermission("worldedit.pos1"):
 			p = self.getMemoryPlayer(player.username)
 			item = player.getHeldItem()
@@ -55,7 +55,7 @@ class Main:
 				player.message("&dPoint one selected.")
 				return False
 	def action_rightclick(self, payload):
-		player = payload["player"], payload["action"]
+		player = payload["player"]
 		if player.hasPermission("worldedit.pos2"):
 			p = self.getMemoryPlayer(player.username)
 			try:
