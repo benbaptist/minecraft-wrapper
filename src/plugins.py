@@ -34,6 +34,8 @@ class Plugins:
 			name = i[:-3]
 		else:
 			return False
+		try: disabled = plugin.DISABLED
+		except: plugin.DISABLED = False
 		try: name = plugin.NAME
 		except: pass
 		try: id = plugin.ID
@@ -48,7 +50,7 @@ class Plugins:
 		except: author = None
 		try: website = plugin.WEBSITE
 		except: website = None
-		if id in self.wrapper.storage["disabled_plugins"]:
+		if id in self.wrapper.storage["disabled_plugins"] or plugin.DISABLED:
 			self.log.warn("Plugin '%s' disabled - not loading" % name)
 			return
 		main = plugin.Main(API(self.wrapper, name, id), PluginLog(self.log, name))

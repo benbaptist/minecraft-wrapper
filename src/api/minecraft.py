@@ -24,12 +24,13 @@ class Minecraft:
 			if online:
 				if str(self.wrapper.UUIDFromName(username)) == puuid: continue
 			with open("wrapper-data/players/" + uuidf) as f:
-				try:
-					players[puuid] = json.loads(f.read())
-				except:
-					self.log.error("Failed to load player data '%s'" % puuid)
-					self.log.getTraceback()
-					os.remove("wrapper-data/players/" + uuidf)
+				data = f.read()
+			try:
+				players[puuid] = json.loads(data)
+			except:
+				self.log.error("Failed to load player data '%s'" % puuid)
+				self.log.getTraceback()
+				os.remove("wrapper-data/players/" + uuidf)
 		return players
 	def console(self, string):
 		""" Run a command in the Minecraft server's console. """

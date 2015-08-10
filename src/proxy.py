@@ -233,7 +233,8 @@ class Client: # handle client/game connection
 		self.server.send(0x00, "string", (self.username,))
 		
 		if self.version > 6:
-			self.send(0x2b, "ubyte|float", (1, 0))
+			if self.config["Proxy"]["online-mode"]:
+				self.send(0x2b, "ubyte|float", (1, 0))
 		
 		self.server.state = 2
 	def close(self):
@@ -251,11 +252,14 @@ class Client: # handle client/game connection
 	def disconnect(self, message):
 		try: 
 			message = json.loads(message["string"])
-		except: pass
+		except: 
+			pass
+		
 		if self.state == 3:
 			self.send(0x40, "json", ({"text": message, "color": "red"},))
 		else:
 			self.send(0x00, "json", ({"text": message, "color": "red"},))
+		
 		time.sleep(1)
 		self.close()
 	def flush(self):
@@ -283,6 +287,8 @@ class Client: # handle client/game connection
 		if self.username in self.wrapper.server.players:
 			return self.wrapper.server.players[self.username]
 		return False
+	def editsign(self, position, line1, line2, line3, line4):
+		self.server.send(0x12, "position|string|string|string|string", (position, line1, line2, line3, line4))
 	def message(self, string):
 		self.server.send(0x01, "string", (string,))
 	def parse(self, id):
@@ -539,10 +545,38 @@ class Client: # handle client/game connection
 				self.slot = slot
 			else:
 				return False
+		if id == 0x12:   #sample
+			if self.isLocal is not True: return True  # ignore signs from child wrapper/server instance
+			if self.version < 6: return True  # player.createsign not implemented for older minecraft versions
+			data = self.read("position:position|string:line1|string:line2|string:line3|string:line4")
+			position = data["position"]
+			l1 = data["line1"]
+			l2 = data["line2"]
+			l3 = data["line3"]
+			l4 = data["line4"]
+			payload = self.wrapper.callEvent("player.createsign", {"player": self.getPlayerObject(), "position": position, "line1": l1, "line2": l2, "line3": l3, "line4": l4})
+			if not payload: return False
+			if type(payload) == dict:
+				if "line1" in payload:
+					l1 = payload["line1"]  # These lines are supposedly Chat objects
+				if "line2" in payload:
+					l2 = payload["line2"]
+				if "line3" in payload:
+					l3 = payload["line3"]
+				if "line4" in payload:
+					l4 = payload["line4"]
+			self.editsign(position, l1, l2, l3, l4)
+			return False
 		if id == 0x15: # Client Settings
-			print "Received Client Settings..."
 			data = self.read("string:locale|byte:view_distance|byte:chat_mode|bool:chat_colors|ubyte:displayed_skin_parts")
 			self.clientSettings = data
+		if id == 0x18: # Spectate
+			data = self.read("uuid:target_player")
+			for client in self.proxy.clients:
+				if data["target_player"].hex == client.uuid.hex:
+					print "Converting Spectate packet..."
+					self.server.send(0x18, "uuid", [client.serverUUID])
+					return False
 		return True
 	def handle(self):
 		t = threading.Thread(target=self.flush, args=())
@@ -680,7 +714,7 @@ class Server: # Handle Server Connection
 						self.send(0x00, "varint", (id,))
 				return False
 		if id == 0x01:
-			if self.state == 3:
+			if self.state == 3: # Join Game
 				data = self.read("int:eid|ubyte:gamemode|byte:dimension|ubyte:difficulty|ubyte:max_players|string:level_type")
 				oldDimension = self.client.dimension
 				self.client.gamemode = data["gamemode"]
@@ -703,6 +737,9 @@ class Server: # Handle Server Connection
 					self.client.eid = data["eid"]
 					self.safe = True
 				self.client.handshake = True
+				
+				print "Sending 0x2B..."
+				self.client.send(0x2B, "ubyte|float", (3, self.client.gamemode))
 			elif self.state == 2:
 				self.client.disconnect("Server is online mode. Please turn it off in server.properties.\n\nWrapper.py will handle authentication on its own, so do not worry about hackers.")
 				return False
@@ -770,7 +807,10 @@ class Server: # Handle Server Connection
 			if not self.wrapper.server.world: return
 			self.wrapper.server.world.entities[data["eid"]] = Entity(eid, type, (x, y, z), (pitch, yaw), True)
 		if id == 0x0f: # Spawn Mob
-			data = self.read("varint:eid|ubyte:type|int:x|int:y|int:z|byte:pitch|byte:yaw|byte:head_pitch")
+			if self.version > 53: 
+				data = self.read("varint:eid|uuid:euuid|ubyte:type|int:x|int:y|int:z|byte:pitch|byte:yaw|byte:head_pitch")
+			else:
+				data = self.read("varint:eid|ubyte:type|int:x|int:y|int:z|byte:pitch|byte:yaw|byte:head_pitch")
 			eid, type, x, y, z, pitch, yaw, head_pitch = data["eid"], data["type"], data["x"], data["y"], data["z"], data["pitch"], data["yaw"], data["head_pitch"]
 			if not self.wrapper.server.world: return
 			self.wrapper.server.world.entities[data["eid"]] = Entity(eid, type, (x, y, z), (pitch, yaw, head_pitch), False)

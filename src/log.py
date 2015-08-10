@@ -22,15 +22,12 @@ class Log:
 		if self.file:
 			self.file.close()
 		self.file = None
-		time.sleep(1)
 		if os.path.exists("logs/wrapper/current.log"):
 			with open("logs/wrapper/current.log", "r") as f:
 				logData = f.read()
 				f.close()
 			with gzip.open("logs/wrapper/%s.log.gz" % time.strftime("%Y-%m-%d_%H-%M-%S"), "w") as f:
 				f.write(logData)
-			time.sleep(1) # Possibly fix Windows 'in-use' error. Ugh.
-			os.remove("logs/wrapper/current.log")
 		self.file = open("logs/wrapper/current.log", "w")
 	def loop(self):
 		day = time.strftime("%d")

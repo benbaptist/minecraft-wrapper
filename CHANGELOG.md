@@ -13,6 +13,7 @@ This update contains an important patch regarding username changes. It is import
 - Added proxy option 'convert-player-files' for migrating regular servers over to proxy mode
   - Renames player files and whitelists. Will not convert bans, so banned players may become unbanned when switching to proxy mode until you manually re-ban them
 - Added log rotation, and logs are now stored in logs/wrapper directory
+- Added support for Minecraft protocol 54/snapshot 15w32c
   
 **Developer Changes**
 - Events which return a payload other than True/False will be passed onto the event caller
@@ -25,6 +26,7 @@ This update contains an important patch regarding username changes. It is import
     - player.removePermission(node)
     - player.removeGroup(group) 
 - [issue #164] Implemented timer.tick event (event is called 20 times per second, like a game tick)
+- [pull request #222] Added player.createsign event when player writes to a sign 
 
 *Pull request was modified from original to better fit the API.  
 
@@ -33,9 +35,12 @@ This update contains an important patch regarding username changes. It is import
 - Fixed IRC bug where unicode crashes.... AGAIN. UGH. HOW MANY TIMES DO I HAVE TO FIX THIS?
 - Fixed proxy not binding when server-port is misconfigured/unable to connect to the destination server
 - [issue #214] Fixed slot packet not being parsed properly and causing random disconnections
+- [issue #221] api.minecraft getAllplayers filelock issue on Wind0ze
 - Potentially fixed permission UUIDs being stored inconsistently (some with dashes, some without)
 - Fixed issues that broke Spigot with Wrapper.py
-- Fixed issues with Minecraft 1.7.10
+- Fixed issues with Minecraft 1.7.10 proxy mode
+- Fixed spectator teleportation while using proxy mode
+
 - Fixed `/wrapper halt` command in-game
 - Web mode fixes:
   - Escaped <>'s in the Chat tab

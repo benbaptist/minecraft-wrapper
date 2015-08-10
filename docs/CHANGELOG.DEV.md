@@ -1,5 +1,15 @@
+Build #107:
+ Screw the release canidates. Just another regular build.
+- [pull request #218/issue #210] Another, hopefully final fix for Wind0ze log issue
+- [pull request #222] Add player.createsign event (signedit 0x12 packet)
+- [pull request #219] Allow disabling plugins via plugin metadata
+- [issue #221] api.minecraft getAllplayers filelock issue on Wind0ze
+- Fixed spectator teleportation while using proxy mode
+- Added support for Minecraft protocol 54/15w32c
+- Fixed offline mode being broken 
+
 Build #106 [0.7.7 RC3]:
-- [issue #210] More possible fixes	for log-rotation issue on Windows
+- [issue #210] More possible fixes for log-rotation issue on Windows
 - [issue #214] Fixed slot packet not being parsed properly and causing random disconnectionss
 - [issue #80] server-icon.png is now read with rb, to fix Windows compatibility
 - [pull request #209/issue #131] - Make groups inherit other groups
