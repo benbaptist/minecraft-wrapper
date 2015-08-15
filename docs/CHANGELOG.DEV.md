@@ -1,3 +1,6 @@
+Build #108:
+- Disabled slot parsing for 0x30 until fixes can be made to NBT things
+
 Build #107:
  Screw the release canidates. Just another regular build.
 - [pull request #218/issue #210] Another, hopefully final fix for Wind0ze log issue
@@ -6,7 +9,7 @@ Build #107:
 - [issue #221] api.minecraft getAllplayers filelock issue on Wind0ze
 - Fixed spectator teleportation while using proxy mode
 - Added support for Minecraft protocol 54/15w32c
-- Fixed offline mode being broken 
+- Fixed offline mode being broken
 
 Build #106 [0.7.7 RC3]:
 - [issue #210] More possible fixes for log-rotation issue on Windows
@@ -56,7 +59,7 @@ Build #102:
     - player.setGroup(group)
     - player.setPermission(node, value=True) (value argument is optional, default is True)
     - player.removePermission(node)
-    - player.removeGroup(group) 
+    - player.removeGroup(group)
   - [issue #164] Implemented timer.tick event (finally!)
 
 Build #101:
@@ -64,7 +67,7 @@ Build #101:
 - player.getPosition() now returns the following tuple format: (x, y, z, yaw, pitch) (removed onGround)
 
 Build #100:
-- Proxy mode improvements: 
+- Proxy mode improvements:
   - Fixed 1.7.10 servers not working due to changes in #98 (packet 0x2b being sent on a non-1.8 server)
   - Fixed skin settings not persisting when changing servers
   - Fixed status effects not disappearing when connected to a secondary server
@@ -72,7 +75,7 @@ Build #100:
   - [issue #200] Fixed crash/chunks not loading in Nether and End
 - API changes:
  - [*pull request #193/#194] player.getPosition() now returns the following tuple format: (x, y, z, onGround, yaw, pitch) [MAY BREAK EXISTING PLUGINS]
- 
+
 *Pull request was modified from original to better fit the API.  
 
 Build #99:
@@ -92,7 +95,7 @@ Build #98:
   - Weather is now accurate
 - [pull request #176] Parse PID 0x30 (Window Items)
 - [pull request #174/#173] Fix issue #172
- 
+
 - Plugin changes:
   - Essentials:
     - [pull request #162] Assign default MOTD during login if it does not exist like /motd does
