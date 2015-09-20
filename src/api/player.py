@@ -55,7 +55,7 @@ class Player:
 		try:
 			self.client.message("/%s" % string)
 		except:
-			self.console("execute %s ~ ~ ~ %s" % string)
+			self.console("execute %s ~ ~ ~ %s" % (self.name, string))
 	def say(self, string):
 		""" Send a message as a player. Beware, as this does not filter commands, so it could be used to execute commands as the player. Only works in proxy mode. """
 		self.client.message(string)
