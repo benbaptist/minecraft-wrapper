@@ -317,11 +317,11 @@ class Commands:
 				elif command == "users":
 					username = args(1)
 					subcommand = args(2)
-					try:
-						if len(username) > 0: uuid = self.wrapper.proxy.lookupUsername(username)
-					except:
-						player.message("&cUsername '%s' does not exist." % username)
-						return False
+					#try:
+					if len(username) > 0: uuid = self.wrapper.proxy.lookupUsername(username)
+					#except:
+					#player.message("&cUsername '%s' does not exist." % username)
+					#return False
 					if len(username) > 0:
 						if uuid not in self.wrapper.permissions["users"]:
 							self.wrapper.permissions["users"][uuid] = {"groups": [], "permissions": {}}
