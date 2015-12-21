@@ -55,7 +55,7 @@ class Storage:
 			self.save()
 		with open("%s/%s.json" % (self.root, self.name), "r") as f:
 			try:
-				self.data = json.loads(f.read())
+				self.data = json.loads(f.read(),"utf-8")
 			except: 
 				print "Failed to load '%s/%s.json' - fresh" % (self.root, self.name)
 				return
@@ -64,7 +64,7 @@ class Storage:
 		if not os.path.exists(self.root):
 			self.mkdir(self.root)
 		with open("%s/%s.json" % (self.root, self.name) , "w") as f:
-			f.write(json.dumps(self.data))
+			f.write(json.dumps(self.data,ensure_ascii=False))
 		self.flush = False
 	def key(self, key, value=None):
 		if value == None:

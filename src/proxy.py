@@ -110,8 +110,11 @@ class Proxy:
 		for uuid in self.storage["uuid-cache"]:
 			if self.storage["uuid-cache"][uuid]["name"] == username:
 				return uuid
-		r = requests.get("https://api.mojang.com/users/profiles/minecraft/%s" % username)
-		uuid = self.formatUUID(r.json()["id"])
+		try:
+			r = requests.get("https://api.mojang.com/users/profiles/minecraft/%s" % username)
+			uuid = self.formatUUID(r.json()["id"])
+		except:
+			uuid=self.wrapper.getUUID(username)
 		self.setUUID(uuid, username)
 		return uuid
 	def formatUUID(self, name):
@@ -268,13 +271,16 @@ class Client: # handle client/game connection
 			time.sleep(0.03)
 	# UUID operations
 	def UUIDIntToHex(self, uuid):
+		print("UUIDTOHEX")
 		uuid = uuid.encode("hex")
 		uuid = "%s-%s-%s-%s-%s" % (uuid[:8], uuid[8:12], uuid[12:16], uuid[16:20], uuid[20:])
 		return uuid
 	def UUIDHexToInt(self, uuid):
+		print("UUIDTOINT")
 		uuid = uuid.replace("-", "").decode("hex")
 		return uuid
 	def UUIDFromName(self, name):
+		print("UUIDFROMNAME")
 		m = md5.new()
 		m.update(name)
 		d = bytearray(m.digest())
@@ -573,6 +579,10 @@ class Client: # handle client/game connection
 		if id == 0x15: # Client Settings
 			data = self.read("string:locale|byte:view_distance|byte:chat_mode|bool:chat_colors|ubyte:displayed_skin_parts")
 			self.clientSettings = data
+		if id == 0x0e:
+			data = self.read("ubyte:wid|short:slot|byte:button|short:action|byte:mode|slot:clicked")
+			data['player']=self.getPlayerObject()
+			if not self.wrapper.callEvent("player.slotClick",data): return False
 		if id == 0x18: # Spectate
 			data = self.read("uuid:target_player")
 			for client in self.proxy.clients:
@@ -582,6 +592,7 @@ class Client: # handle client/game connection
 					return False
 		return True
 	def handle(self):
+		print(str(self.uuid))
 		t = threading.Thread(target=self.flush, args=())
 		t.daemon = True
 		t.start()
@@ -1026,6 +1037,34 @@ class Packet: # PACKET PARSING CODE
 
 		self.buffer = StringIO.StringIO()
 		self.queue = []
+		
+		self._ENCODERS = {
+			1: self.send_byte,
+			2: self.send_short,
+			3: self.send_int,
+			4: self.send_long,
+			5: self.send_float,
+			6: self.send_double,
+			7: self.send_byte_array,
+			8: self.send_short_string,
+			9: self.send_list,
+			10: self.send_comp,
+			11: self.send_int_array
+		}
+		self._DECODERS = {
+			1: self.read_byte,
+			2: self.read_short,
+			3: self.read_int,
+			4: self.read_long,
+			5: self.read_float,
+			6: self.read_double,
+			7: self.read_bytearray,
+			8: self.read_short_string,
+			9: self.read_list,
+			10: self.read_comp,
+			11: self.read_int_array
+		}
+
 	def close(self):
 		self.abort = True
 	def hexdigest(self, sh):
@@ -1147,6 +1186,7 @@ class Packet: # PACKET PARSING CODE
 				if type == "metadata": result += self.send_metadata(pay)
 				if type == "bool": result += self.send_bool(pay)
 				if type == "position": result += self.send_position(pay)
+				if type == "slot": result += self.send_slot(pay)
 				if type == "raw": result += pay
 		self.sendRaw(result)
 		return result
@@ -1205,6 +1245,59 @@ class Packet: # PACKET PARSING CODE
 	def send_bool(self, payload):
 		if payload == False: return self.send_byte(0)
 		if payload == True: return self.send_byte(1)
+	def send_short_string(self,stri): #Similar to send_string, but uses a short as length prefix
+		return self.send_short(len(stri)) + stri.encode("utf8")
+
+	def send_byte_array(self,b):
+		return self.send_int(len(payload)) + payload
+
+	def send_int_array(self,values):
+		r=sel.send_int(len(values))
+		return r + struct.pack(">%di" % len(values), *values)
+	def send_list(self,tag):
+		#Check that all values are the same type
+		r=""
+		typesList=[]
+		for i in tag:
+			#print("list element type: %s" %i['type'])
+			typesList.append(i['type'])
+			if len(set(typesList))!=1:
+				raise Exception("Types in list dosn't match!")
+				return
+		#If ok, then continue
+		r+=self.send_byte(typesList[0]) #items type
+		r+=self.send_int(len(tag)) #lenght
+		for e in tag: #send every tag
+			r+=self._ENCODERS[typesList[0]](e["value"])
+		return r
+	def send_comp(self,tag):
+		r=""
+		for tage in tag: #Send every tag
+			r+=self.send_tag(tage)
+		r+="\x00" #close compbound
+		return r
+		
+	def send_tag(self,tag):
+		r=self.send_byte(tag['type']) #send type indicator
+		r+=self.send_short(len(tag["name"])) #send lenght prefix
+		r+=tag["name"].encode("utf8") #send name
+		r+=self._ENCODERS[tag["type"]](tag["value"]) #send tag
+		return r
+		
+		 
+	def send_slot(self,slot):
+		"""Sending slots, such as {"id":98,"count":64,"damage":0,"nbt":None}"""
+		r=self.send_short(slot["id"])
+		if slot["id"]==-1:
+			return r
+		r+=self.send_byte(slot["count"])
+		r+=self.send_short(slot["damage"])
+		if slot["nbt"]:
+			r+=self.send_tag(slot['nbt'])
+			#print(r)
+		else:
+			r+="\x00"
+		return r
 	# -- READING DATA TYPES -- #
 	def recv(self, length):
 		if length > 200:
@@ -1256,6 +1349,9 @@ class Packet: # PACKET PARSING CODE
 		return struct.unpack(">H", self.read_data(2))[0]
 	def read_bytearray(self):
 		return self.read_data(self.read_varInt())
+	def read_int_array(self):
+		size=self.read_int()
+		return [self.read_int() for _ in xrange(size)]
 	def read_bytearray_short(self):
 		return self.read_data(self.read_short())
 	def read_position(self):
@@ -1273,13 +1369,10 @@ class Packet: # PACKET PARSING CODE
 		if not id == -1:
 			count = self.read_ubyte()
 			damage = self.read_short()
-			nbtCount = self.read_ubyte()
-			nbt = self.read_data(nbtCount)
-			return {"id": id, "count": count, "damage": damage}
-#				nbtLength = self.read_short()
-#				print count ,damage, nbtLength
-#				if nbtLength > 0: nbt = self.read_data(nbtLength)
-#				else: nbt = ""
+			nbt=self.read_tag()
+			#nbtCount = self.read_ubyte()
+			#nbt = self.read_data(nbtCount)
+			return {"id": id, "count": count, "damage": damage,"nbt":nbt}
 	def read_varInt(self):
 		total = 0
 		shift = 0
@@ -1325,3 +1418,37 @@ class Packet: # PACKET PARSING CODE
 			#if type == 7:
 			#	data[index] = ("float", (self.read_int(), self.read_int(), self.read_int()))
 		return data
+	def read_short_string(self):
+		size = self.read_short()
+		string = self.read_data(size)
+		return string.decode("utf8")
+	def read_comp(self):
+		a=[]
+		done=0
+		while done==0:
+			b=self.read_tag()
+			if b['type']==0:
+				done=1; break
+			a.append(b)
+			#print(a)
+		return a
+	def read_tag(self):
+		a={}
+		a["type"]=self.read_byte()
+		if not a["type"]==0:
+			#print("NBT TYPE: %s" %a["type"])
+			a["name"]=self.read_short_string()
+			a["value"]=self._DECODERS[a["type"]]()
+		return a
+	def read_list(self):
+		r=[]
+		type=self.read_byte()
+		lenght=self.read_int()
+		for l in range(lenght):
+			b={}
+			b["type"]=type
+			b["name"]=""
+			b["value"]=self._DECODERS[type]()
+			r.append(b)
+		return r
+		

@@ -335,7 +335,7 @@ class Server:
 			line = " ".join(buff.split(" ")[2:])
 		else:
 			line = " ".join(buff.split(" ")[3:])
-		print buff
+		#print buff
 		deathPrefixes = ["fell", "was", "drowned", "blew", "walked", "went", "burned", "hit", "tried", 
 			"died", "got", "starved", "suffocated", "withered"]
 		if not self.config["General"]["pre-1.7-mode"]:
