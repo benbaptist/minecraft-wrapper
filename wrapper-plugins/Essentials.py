@@ -16,7 +16,7 @@ class Main:
 #		if "warps" not in self.data: self.data["warps"] = {}
 	def onEnable(self):
 		self.data = self.api.getStorage("worldly", True)
-		
+
 		# HELP
 		self.api.registerHelp("Essentials", "Commands from the Essentials plugin", [
 			("/gm [gamemode]", "Switch your personal gamemode. If no arguments are provided, it'll toggle you between survival and creative quickly. 'gamemode' can be either the name or the number.", "essentials.gm"),
@@ -33,16 +33,16 @@ class Main:
 			("/echo <text ...>", "Prints the specified text in your chat only. Used to test &x formatting, e.g. /echo &aThis is green!", "essentials.echo"),
 			("/echoaction <text ...>", "Prints the specified text above your hotbar for a few moments. Accepts &x formatting.", "essentials.echoaction")
 		])
-		
+
 		# DEFAULTS
 		if "warps" not in self.data: self.data["warps"] = {}
 		if "motd" not in self.data: self.data["motd"] = {"msg": "&aWelcome to the server, [[name]]!", "enabled": True}
-		
+
 		# api.registerPermission() is used to set these permissions to ON by default, rather than off
-		self.api.registerPermission("essentials.warp", True) # I need to do essentials.listwarps too 
+		self.api.registerPermission("essentials.warp", True) # I need to do essentials.listwarps too
 		self.api.registerPermission("essentials.motd", True)
 		self.api.registerPermission("essentials.getpos", True)
-		
+
 		self.api.registerCommand("setwarp", self.setwarp, "essentials.setwarp")
 		self.api.registerCommand("warp", self.warp, "essentials.warp")
 		self.api.registerCommand("motd", self.motd, "essentials.motd")
@@ -128,7 +128,7 @@ class Main:
 		if len(args) == 1:
 			warp = args[0]
 			if warp not in self.data["warps"]:
-				player.message({"text": "Warp '%s' doesn't exist." % warp, "color": "red"}) 
+				player.message({"text": "Warp '%s' doesn't exist." % warp, "color": "red"})
 				return False
 			player.message({"text": "Teleporting you to '%s'." % warp, "color": "green"})
 			self.api.minecraft.console("tp %s %d %d %d" % (player.username, self.data["warps"][warp][0], self.data["warps"][warp][1], self.data["warps"][warp][2]))
@@ -190,12 +190,12 @@ class Main:
 			damage = 0
 			count = 64
 			tags = "{}"
-			if len(args) > 1: 
+			if len(args) > 1:
 				try: count = int(args[1])
 				except: count = 64
-			if len(args) > 2: 
+			if len(args) > 2:
 				try: tags = " ".join(args[2:])
-				except: 
+				except:
 					player.message("&cERROR: JSON Error")
 					return
 			if not tilename.find(":") == -1:
@@ -213,7 +213,7 @@ class Main:
 				else:
 					player.message("&cERROR: Invalid ID %d" % tilename)
 					return
-			except: 
+			except:
 				print traceback.format_exc()
 			self.minecraft.console("give %s %s %d %d %s" % (player.name, tilename, count, damage, tags))
 		else:

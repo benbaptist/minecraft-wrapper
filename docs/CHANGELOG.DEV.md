@@ -1,3 +1,7 @@
+Build #109:
+- [pull request #247] Bookmarks plugin by Cougar
+- [pull request #248] Storage.py fixes, NBT slot reading/sending
+
 Build #108:
 - Disabled slot parsing for 0x30 until fixes can be made to NBT things
 
