@@ -1248,11 +1248,11 @@ class Packet: # PACKET PARSING CODE
 	def send_short_string(self,stri): #Similar to send_string, but uses a short as length prefix
 		return self.send_short(len(stri)) + stri.encode("utf8")
 
-	def send_byte_array(self,b):
+	def send_byte_array(self,payload):
 		return self.send_int(len(payload)) + payload
 
 	def send_int_array(self,values):
-		r=sel.send_int(len(values))
+		r=self.send_int(len(values))
 		return r + struct.pack(">%di" % len(values), *values)
 	def send_list(self,tag):
 		#Check that all values are the same type
@@ -1262,8 +1262,8 @@ class Packet: # PACKET PARSING CODE
 			#print("list element type: %s" %i['type'])
 			typesList.append(i['type'])
 			if len(set(typesList))!=1:
-				raise Exception("Types in list dosn't match!")
-				return
+				#raise Exception("Types in list dosn't match!")
+				return b''
 		#If ok, then continue
 		r+=self.send_byte(typesList[0]) #items type
 		r+=self.send_int(len(tag)) #lenght
