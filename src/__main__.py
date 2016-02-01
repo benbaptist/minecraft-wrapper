@@ -49,7 +49,7 @@ class Wrapper:
 			if self.server.onlineMode: return True
 		return False
 	def UUIDFromName(self, name):
-		print("UUIDFROMNAME")
+		#print("UUIDFROMNAME")
 		m = md5.new()
 		m.update("OfflinePlayer:"+name)
 		d = bytearray(m.digest())
