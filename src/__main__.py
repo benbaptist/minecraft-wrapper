@@ -1,14 +1,11 @@
 # -*- coding: utf-8 -*-
-# I ought to clean these imports up a bit.
-import socket, datetime, time, sys, threading, random, subprocess, os, json, signal, traceback, ConfigParser, proxy, web, globals, storage, hashlib, cProfile, md5, uuid
+import sys, json, signal, proxy, web, globals, storage, hashlib, uuid
 from log import *
 from config import Config
 from irc import IRC
 from server import Server
-from importlib import import_module
 from scripts import Scripts
 from api import API
-from uuid import UUID
 from plugins import Plugins
 from commands import Commands
 from events import Events
@@ -50,7 +47,7 @@ class Wrapper:
 		return False
 	def UUIDFromName(self, name):
 		#print("UUIDFROMNAME")
-		m = md5.new()
+		m = hashlib.md5()  # module md5 is deprecated
 		m.update("OfflinePlayer:"+name)
 		d = bytearray(m.digest())
 		d[6] &= 0x0f
