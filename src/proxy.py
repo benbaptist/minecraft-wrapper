@@ -1,15 +1,26 @@
 # I'll probably split this file into more parts later on, like such:
 # proxy folder: __init__.py (Proxy), client.py (Client), server.py (Server), network.py (Packet), bot.py (will contain Bot, for bot code)
 # this could definitely use some code-cleaning.
-import socket, threading, struct, StringIO, time, traceback, json, random, hashlib, os, zlib, binascii, uuid, md5, storage, shutil
+import socket, threading, struct, StringIO, time, traceback, json, random, hashlib, os, zlib, uuid, storage, shutil
 from config import Config
 from api.entity import Entity
-from api.world import World
 try: # Weird system for handling non-standard modules
 	import encryption, requests
 	IMPORT_SUCCESS = True
 except:
 	IMPORT_SUCCESS = False
+
+# version coding
+PROTOCOLv1_9REL1 = 76  # start of stable 1.9 release (or most current snapshop that is documented by protocol)
+PROTOCOL_1_9START = 48  # start of 1.9 snapshots
+PROTOCOLv1_8START = 6
+
+from mcpkt import ServerBound18 as defPacketsSB
+from mcpkt import ClientBound18 as defPacketsCB
+from mcpkt import ServerBound19 as PacketsSB19
+from mcpkt import ClientBound19 as PacketsCB19
+
+
 class Proxy:
 	def __init__(self, wrapper):
 		self.wrapper = wrapper
@@ -33,6 +44,7 @@ class Proxy:
 		except:
 			self.log.error("Proxy could not poll the Minecraft server - are you 100% sure that the ports are configured properly? Reason:")
 			self.log.getTraceback()
+
 		while not self.socket:
 			try:
 				self.socket = socket.socket()
@@ -65,6 +77,7 @@ class Proxy:
 					client.disconnect("Some error")
 				except:
 					pass
+
 	def pollServer(self):
 		sock = socket.socket()
 		sock.connect(("localhost", self.wrapper.config["Proxy"]["server-port"]))
@@ -151,7 +164,8 @@ class Proxy:
 		r = requests.get(skinBlob["textures"]["SKIN"]["url"])
 		self.skinTextures[uuid] = r.content.encode("base64")
 		return self.skinTextures[uuid]
-class Client: # handle client/game connection
+
+class Client: # handle server-bound packets (client/game connection)
 	def __init__(self, socket, addr, wrapper, publicKey, privateKey, proxy):
 		self.socket = socket
 		self.wrapper = wrapper
@@ -161,6 +175,11 @@ class Client: # handle client/game connection
 		self.privateKey = privateKey
 		self.proxy = proxy
 		self.addr = addr
+		try:
+			self.serverversion = self.wrapper.server.protocolVersion
+		except:
+			self.serverversion = 47  # default to 1.8 if no server is running - can be changed to whatever lowest life
+										# form we want to support!
 
 		self.abort = False
 		self.log = wrapper.log
@@ -184,20 +203,31 @@ class Client: # handle client/game connection
 		self.username = None
 		self.gamemode = 0
 		self.dimension = 0
-		self.position = (0, 0, 0) # X, Y, Z
-		self.head = (0, 0) # Yaw, Pitch
+		self.position = (0, 0, 0)  # X, Y, Z
+		self.head = (0, 0)  # Yaw, Pitch
 		self.inventory = {}
 		self.slot = 0
 		self.riding = None
+		self.lastplacecoords = (0, 0, 0)  # last placement (for use in cases of bucket use)
 		self.windowCounter = 2
 		self.properties = {}
-		self.clientSettings = None; self.clientSettingsSent = False
+		self.clientSettings = None
+		self.clientSettingsSent = False
 		for i in range(45): self.inventory[i] = None
+		
+		# Determine packet types - currently 1.8 is the lowest life form supported.
+		self.pktSB = defPacketsSB  # receive/parse these
+		self.pktCB = defPacketsCB  # send these (if needed)
+		
+		if self.serverversion >= PROTOCOLv1_9REL1:
+			self.pktSB = PacketsSB19
+			self.pktCB = PacketsCB19
+
 	def connect(self, ip=None, port=None):
 		self.clientSettingsSent = False
-		if not self.server == None:
+		if self.server is not None:
 			self.address = (ip, port)
-		if not ip == None:
+		if ip is not None:
 			self.server_temp = Server(self, self.wrapper, ip, port)
 			try:
 				self.server_temp.connect()
@@ -207,7 +237,9 @@ class Client: # handle client/game connection
 			except:
 				self.server_temp.close(kill_client=False)
 				self.server_temp = None
-				self.send(0x02, "string|byte", ("{text:'Could not connect to that server!', color:red, bold:true}", 0))
+				# if this was the lobby or main server, this should be `self.pktCB.disconnect`
+				# should "self.pktCB.disconnect" be used instead to send this message?, if so, Json is not supported)
+				self.send(self.pktCB.chatmessage, "string|byte", ("Could not connect to that server!", 0))
 				self.address = None
 				return
 		else:
@@ -220,13 +252,6 @@ class Client: # handle client/game connection
 		t.daemon = True
 		t.start()
 
-		for xi in range(32):
-			xi = xi - 8
-			for zi in range(32):
-				zi = zi - 8
-				x, z = (self.position[0] / 16) + xi, (self.position[2] / 16) + zi
-				#print "Sending lel chunk %d, %d" % (x, z)
-				#self.send(0x21, "int|int|bool|ushort|varint", (x, z, True, 0, 0))
 
 		if self.config["Proxy"]["spigot-mode"]:
 			payload = "localhost\x00%s\x00%s" % (self.addr[0], self.uuid.hex)
@@ -235,10 +260,10 @@ class Client: # handle client/game connection
 			self.server.send(0x00, "varint|string|ushort|varint", (self.version, "localhost", self.config["Proxy"]["server-port"], 2))
 		self.server.send(0x00, "string", (self.username,))
 
-		if self.version > 6:
+		if self.version > PROTOCOLv1_8START:  # Ben's anti-rain hack for cross server, lobby return, connections
 			if self.config["Proxy"]["online-mode"]:
-				self.send(0x2b, "ubyte|float", (1, 0))
-
+				self.send(self.pktCB.changegamestate, "ubyte|float", (1, 0))
+				pass
 		self.server.state = 2
 	def close(self):
 		self.abort = True
@@ -259,7 +284,7 @@ class Client: # handle client/game connection
 			pass
 
 		if self.state == 3:
-			self.send(0x40, "json", ({"text": message, "color": "red"},))
+			self.send(self.pktCB.disconnect, "json", (message,))
 		else:
 			self.send(0x00, "json", ({"text": message, "color": "red"},))
 
@@ -271,17 +296,14 @@ class Client: # handle client/game connection
 			time.sleep(0.03)
 	# UUID operations
 	def UUIDIntToHex(self, uuid):
-		print("UUIDTOHEX")
 		uuid = uuid.encode("hex")
 		uuid = "%s-%s-%s-%s-%s" % (uuid[:8], uuid[8:12], uuid[12:16], uuid[16:20], uuid[20:])
 		return uuid
 	def UUIDHexToInt(self, uuid):
-		print("UUIDTOINT")
 		uuid = uuid.replace("-", "").decode("hex")
 		return uuid
 	def UUIDFromName(self, name):
-		print("UUIDFROMNAME")
-		m = md5.new()
+		m = hashlib.md5()  # module md5 is deprecated
 		m.update(name)
 		d = bytearray(m.digest())
 		d[6] &= 0x0f
@@ -294,12 +316,12 @@ class Client: # handle client/game connection
 			return self.wrapper.server.players[self.username]
 		return False
 	def editsign(self, position, line1, line2, line3, line4):
-		self.server.send(0x12, "position|string|string|string|string", (position, line1, line2, line3, line4))
+		self.server.send(self.pktSB.playerupdatesign, "position|string|string|string|string", (position, line1, line2, line3, line4))
 	def message(self, string):
-		self.server.send(0x01, "string", (string,))
-	def parse(self, id):
-		if id == 0x00: # Handshake
-			if self.state == 0:
+		self.server.send(self.pktSB.chatmessage, "string", (string,))
+	def parse(self, id):  # server - bound parse ("Client" class connection)
+		if id == 0x00 and self.state != 3:  # 0x00 is a 1.9 gameplay packet of "spawn object"
+			if self.state == 0:   # Handshake
 				data = self.read("varint:version|string:address|ushort:port|varint:state")
 				self.version = data["version"]
 				self.packet.version = self.version
@@ -352,41 +374,11 @@ class Client: # handle client/game connection
 					self.state = 3
 					self.log.info("%s logged in (IP: %s)" % (self.username, self.addr[0]))
 				return False
-			elif self.state == 3:
-				return False
+
 		if id == 0x01:
-			if self.state == 3: # Chat
-				data = self.read("string:message")
-				if data is None: return False
-				try:
-					message = data["message"]
-					if not self.isLocal and message == "/lobby":
-						self.server.close(reason="Lobbification", kill_client=False)
-						self.address = None
-						self.connect()
-						self.isLocal = True
-						return False
-					if not self.isLocal == True: return True
-					payload = self.wrapper.callEvent("player.rawMessage", {"player": self.getPlayerObject(), "message": data["message"]})
-					if not payload: return False
-					if type(payload) == str:
-						message = payload
-					if message[0] == "/":
-						def args(i):
-							try: return message.split(" ")[i]
-							except: return ""
-						def argsAfter(i):
-							try: return message.split(" ")[i:]
-							except: return ""
-						if self.wrapper.callEvent("player.runCommand", {"player": self.getPlayerObject(), "command": args(0)[1:].lower(), "args": argsAfter(1)}):
-							self.message(message)
-							return False
-						return
-					self.message(message)
-					return False
-				except:
-					print traceback.format_exc()
-			elif self.state == 4: # Encryption Response Packet
+			# Moved 'if state == 3' out and created the if id == self.pktSB.chatmessage
+			
+			if self.state == 4: # Encryption Response Packet
 				if self.wrapper.server.protocolVersion < 6:
 					data = self.read("bytearray_short:shared_secret|bytearray_short:verify_token")
 				else:
@@ -486,77 +478,198 @@ class Client: # handle client/game connection
 				self.proxy.setUUID(self.uuid, self.username)
 
 				return False
-			elif self.state == 5: # ping packet during status request
+			elif self.state == 5: # ping packet during status request  (What is state 5?)
 				keepAlive = self.read("long:keepAlive")["keepAlive"]
 				self.send(0x01, "long", (keepAlive,))
-		if id == 0x04:
+				pass
+		if id == self.pktSB.chatmessage and self.state == 3:
+			data = self.read("string:message")
+			if data is None: return False
+			try:
+				chatmsg = data["message"]
+				if not self.isLocal and chatmsg == "/lobby":
+					self.server.close(reason="Lobbification", kill_client=False)
+					self.address = None
+					self.connect()
+					self.isLocal = True
+					return False
+				if not self.isLocal == True: return True
+				payload = self.wrapper.callEvent("player.rawMessage", {"player": self.getPlayerObject(), "message": data["message"]})
+				if not payload: return False
+				if type(payload) == str:
+					chatmsg = payload
+				if chatmsg[0] == "/":
+					def args(i):
+						try: return chatmsg.split(" ")[i]
+						except: return ""
+					def argsAfter(i):
+						try: return chatmsg.split(" ")[i:]
+						except: return ""
+					if self.wrapper.callEvent("player.runCommand", {"player": self.getPlayerObject(), "command": args(0)[1:].lower(), "args": argsAfter(1)}):
+						self.message(chatmsg)
+						return False
+					return
+				#print chatmsg
+				self.message(chatmsg)
+				return False
+			except:
+				print traceback.format_exc()
+
+		
+		# player position
+		if id == self.pktSB.playerposition:
 			data = self.read("double:x|double:y|double:z|bool:on_ground")
 			self.position = (data["x"], data["y"], data["z"])
-		if id == 0x05: # Player Look
-			data = self.read("float:yaw|float:pitch|bool:on_ground")
-			yaw, pitch = data["yaw"], data["pitch"]
-			self.head = (yaw, pitch)
-		if id == 0x06:
+		# player position and look
+		if id == self.pktSB.playerposlook:
 			data = self.read("double:x|double:y|double:z|float:yaw|float:pitch|bool:on_ground")
 			self.position = (data["x"], data["y"], data["z"])
 			self.head = (data["yaw"], data["pitch"])
-			if self.server.state is not 3: return False
-		if id == 0x07: # Player Block Dig
+			if self.server.state != 3: return False
+		# Player Look
+		if id == self.pktSB.playerlook:
+			data = self.read("float:yaw|float:pitch|bool:on_ground")
+			yaw, pitch = data["yaw"], data["pitch"]
+			self.head = (yaw, pitch)
+		# Player Block Dig
+		if id == self.pktSB.playerdigging:
 			if not self.isLocal == True: return True
-			if self.version < 6:
+			if self.version < PROTOCOLv1_8START:
 				data = self.read("byte:status|int:x|ubyte:y|int:z|byte:face")
 				position = (data["x"], data["y"], data["z"])
 			else:
 				data = self.read("byte:status|position:position|byte:face")
 				position = data["position"]
 			if data is None: return False
+			# finished digging
 			if data["status"] == 2:
-				if not self.wrapper.callEvent("player.dig", {"player": self.getPlayerObject(), "position": position, "action": "end_break", "face": data["face"]}): return False
+				if not self.wrapper.callEvent("player.dig",
+											  {"player": self.getPlayerObject(),
+											   "position": position,
+											   "action": "end_break",
+											   "face": data["face"]}):
+					return False  # stop packet if  player.dig returns False
+			# started digging
 			if data["status"] == 0:
-				if not self.gamemode == 1:
-					if not self.wrapper.callEvent("player.dig", {"player": self.getPlayerObject(), "position": position, "action": "begin_break", "face": data["face"]}): return False
+				if self.gamemode != 1:
+					if not self.wrapper.callEvent("player.dig",
+												  {"player": self.getPlayerObject(),
+												   "position": position,
+												   "action": "begin_break",
+												   "face": data["face"]}):
+						return False
 				else:
-					if not self.wrapper.callEvent("player.dig", {"player": self.getPlayerObject(), "position": position, "action": "end_break", "face": data["face"]}): return False
-			if self.server.state is not 3: return False
-		if id == 0x08: # Player Block Placement
+					if not self.wrapper.callEvent("player.dig",
+												  {"player": self.getPlayerObject(),
+												   "position": position,
+												   "action": "end_break",
+												   "face": data["face"]}):
+						return False
+			if data["status"] == 5 and data["face"] == 255:
+				if self.position != (0, 0, 0):
+					playerpos = self.position
+					if not self.wrapper.callEvent("player.interact",
+												  {"player": self.getPlayerObject(),
+												   "position": playerpos,
+												   "action": "finish_using"}):
+						return False
+			if self.server.state != 3: return False
+		# Player Block Placement
+		if id == self.pktSB.playerblockplacement:
+			player = self.getPlayerObject()
+			curposx = False  # pre- 1.8
+			curposy = False
+			curposz = False
+			hand = 0  # main hand
+
+			# see which one works best
+			# helditem = self.client.inventory[self.client.slot]
+			# helditem = player.getClient().inventory[self.slot]
+			helditem = player.getHeldItem()
+			# helditem = self.wrapper.getClient()inventory[self.slot]
+			# "helditem: %s" % str(helditem))  # wanna see if this differs from the held item dispensed by 1.8 slot
+
 			if not self.isLocal == True: return True
-			if self.version < 6:
+			if self.version < PROTOCOLv1_8START:
 				data = self.read("int:x|ubyte:y|int:z|byte:face|slot:item")
 				position = (data["x"], data["y"], data["z"])
+				helditem = data["item"]  # just FYI, notchian servers have been ignoring this field
+										# for a long time, using server inventory instead.
 			else:
-				if self.version > 50: # maybe this works? I dunno
-					data = self.read("position:position|varint:face|slot:item")
+				if self.version >= PROTOCOLv1_9REL1:
+					data = self.read("position:Location|varint:face|varint:hand|byte:CurPosX|byte:CurPosY|byte:CurPosZ")
+					hand = data["hand"]
+					# print("interaction : %s" % str(data))
 				else:
-					data = self.read("position:position|byte:face|slot:item")
-				position = data["position"]
-			position = None
-			if self.version > 6: position = data["position"]
-			if not position == None:
-				face = data["face"]
-				if not self.wrapper.callEvent("player.interact", {"player": self.getPlayerObject(), "position": position}): return False
-				if face == 0: # Compensate for block placement coordinates
-					position = (position[0], position[1] - 1, position[2])
-				elif face == 1:
-					position = (position[0], position[1] + 1, position[2])
-				elif face == 2:
-					position = (position[0], position[1], position[2] - 1)
-				elif face == 3:
-					position = (position[0], position[1], position[2] + 1)
-				elif face == 4:
-					position = (position[0] - 1, position[1], position[2])
-				elif face == 5:
-					position = (position[0] + 1, position[1], position[2])
-				if not self.wrapper.callEvent("player.place", {"player": self.getPlayerObject(), "position": position, "item": data["item"]}): return False
-			if self.server.state is not 3: return False
-		if id == 0x09: # Held Item Change
+					data = self.read("position:Location|byte:face|slot:item|byte:CurPosX|byte:CurPosY|byte:CurPosZ")
+					helditem = data["item"]
+				curposx = data["CurPosX"]
+				curposy = data["CurPosY"]
+				curposz = data["CurPosZ"]
+			# Face and Position exist in all version protocols at this point
+			position = data["Location"]
+			clickposition = data["Location"]
+			face = data["face"]
+			# all variables populated for all versions for:
+			# position, face, helditem, hand, and all three cursor positions (x, y, z)
+
+			if face == 0: # Compensate for block placement coordinates
+				position = (position[0], position[1] - 1, position[2])
+			elif face == 1:
+				position = (position[0], position[1] + 1, position[2])
+			elif face == 2:
+				position = (position[0], position[1], position[2] - 1)
+			elif face == 3:
+				position = (position[0], position[1], position[2] + 1)
+			elif face == 4:
+				position = (position[0] - 1, position[1], position[2])
+			elif face == 5:
+				position = (position[0] + 1, position[1], position[2])
+			if helditem == None:
+				# if no item, treat as interaction (according to wrappers inventory :(, return False  )
+				if not self.wrapper.callEvent("player.interact",
+												  {"player": player,
+												   "position": position,
+												   "action": "useitem"}):
+					return False
+			self.lastplacecoords = position
+			if not self.wrapper.callEvent("player.place",
+										  {"player": player,
+											"position": position,
+											"clickposition": clickposition,
+											"hand": hand,
+											"item": helditem}):
+				return False
+			if self.server.state != 3: return False
+
+		if id == self.pktSB.useitem:
+			if self.isLocal is not True: return True
+			data = self.read("rest:pack")
+			# print(data)
+			player = self.getPlayerObject()
+			position = self.lastplacecoords
+			helditem = player.getHeldItem()
+			# if helditem is not None:
+			if "pack" in data:
+				if data["pack"] == '\x00':
+				# if helditem["id"] in (326, 326, 327):  # or just limit certain items use??
+					if not self.wrapper.callEvent("player.interact",
+												  {"player": player,
+												   "position": position,
+												   "action": "useitem"}):
+						return False
+
+		# Held Item Change
+		if id == self.pktSB.helditemchange:
 			slot = self.read("short:short")["short"]
 			if self.slot > -1 and self.slot < 9:
 				self.slot = slot
 			else:
 				return False
-		if id == 0x12:   #sample
+		# player update sign
+		if id == self.pktSB.playerupdatesign:
 			if self.isLocal is not True: return True  # ignore signs from child wrapper/server instance
-			if self.version < 6: return True  # player.createsign not implemented for older minecraft versions
+			if self.version < PROTOCOLv1_8START: return True  # player.createsign not implemented for older minecraft versions
 			data = self.read("position:position|string:line1|string:line2|string:line3|string:line4")
 			position = data["position"]
 			l1 = data["line1"]
@@ -567,7 +680,7 @@ class Client: # handle client/game connection
 			if not payload: return False
 			if type(payload) == dict:
 				if "line1" in payload:
-					l1 = payload["line1"]  # These lines are supposedly Chat objects
+					l1 = payload["line1"] 
 				if "line2" in payload:
 					l2 = payload["line2"]
 				if "line3" in payload:
@@ -576,23 +689,29 @@ class Client: # handle client/game connection
 					l4 = payload["line4"]
 			self.editsign(position, l1, l2, l3, l4)
 			return False
-		if id == 0x15: # Client Settings
-			data = self.read("string:locale|byte:view_distance|byte:chat_mode|bool:chat_colors|ubyte:displayed_skin_parts")
+		# read Client Settings
+		if id == self.pktSB.clientsettings:
+			if self.version < PROTOCOL_1_9START:
+				data = self.read("string:locale|byte:view_distance|byte:chat_mode|bool:chat_colors|ubyte:displayed_skin_parts")
+			else:
+				data = self.read("string:locale|byte:view_distance|varint:chat_mode|bool:chat_colors|ubyte:displayed_skin_parts|varint:main_hand")
 			self.clientSettings = data
-		if id == 0x0e:
+		# click window
+		if id == self.pktSB.clickwindow:
 			data = self.read("ubyte:wid|short:slot|byte:button|short:action|byte:mode|slot:clicked")
 			data['player']=self.getPlayerObject()
 			if not self.wrapper.callEvent("player.slotClick",data): return False
-		if id == 0x18: # Spectate
+		# Spectate - convert packet to local server UUID
+		if id == self.pktSB.spectate:
 			data = self.read("uuid:target_player")
 			for client in self.proxy.clients:
 				if data["target_player"].hex == client.uuid.hex:
-					print "Converting Spectate packet..."
-					self.server.send(0x18, "uuid", [client.serverUUID])
+					# Convert Spectate packet...
+					self.server.send(self.pktSB.spectate, "uuid", [client.serverUUID])
 					return False
 		return True
 	def handle(self):
-		print(str(self.uuid))
+		#print(str(self.uuid))
 		t = threading.Thread(target=self.flush, args=())
 		t.daemon = True
 		t.start()
@@ -610,22 +729,35 @@ class Client: # handle client/game connection
 						print traceback.format_exc()
 					self.close()
 					break
-				if time.time() - self.tPing > 1 and self.state == 3:
+					
+				if False == True:  #time.time() - self.tPing > 1 and self.state == 3:
 					if self.version > 32:
-						self.send(0x00, "varint", (random.randrange(0, 99999),))
+						self.send(self.pktCB.keepalive, "varint", (random.randrange(0, 99999),))
 						if self.clientSettings and not self.clientSettingsSent:
-							print "Sending self.clientSettings..."
-							print self.clientSettings
-							self.server.send(0x15, "string|byte|byte|bool|ubyte", (
-								self.clientSettings["locale"],
-								self.clientSettings["view_distance"],
-								self.clientSettings["chat_mode"],
-								self.clientSettings["chat_colors"],
-								self.clientSettings["displayed_skin_parts"]
-							))
-							self.clientSettingsSent = True
+							#print "Sending self.clientSettings..."
+							#print self.clientSettings
+							if self.version < PROTOCOL_1_9START:
+								self.server.send(self.pktSB.clientsettings, "string|byte|byte|bool|ubyte", (
+									self.clientSettings["locale"],
+									self.clientSettings["view_distance"],
+									self.clientSettings["chat_mode"],
+									self.clientSettings["chat_colors"],
+									self.clientSettings["displayed_skin_parts"]
+								))
+								self.clientSettingsSent = True
+							else:
+								self.server.send(self.pktSB.clientsettings, "string|byte|varint|bool|ubyte|varint", (
+									self.clientSettings["locale"],
+									self.clientSettings["view_distance"],
+									self.clientSettings["chat_mode"],
+									self.clientSettings["chat_colors"],
+									self.clientSettings["displayed_skin_parts"],
+									self.clientSettings["main_hand"]
+								))
+								self.clientSettingsSent = True
+
 					else:
-						self.send(0x00, "int", (random.randrange(0, 99999),))
+						self.send(0x00, "int", (random.randrange(0, 99999),))  # _OLD_ MC version
 					self.tPing = time.time()
 				if self.parse(id) and self.server:
 					if self.server.state == 3:
@@ -633,7 +765,8 @@ class Client: # handle client/game connection
 		except:
 			print "Error in the Client->Server method:"
 			print traceback.format_exc()
-class Server: # Handle Server Connection
+
+class Server: # Handle Server Connection  ("client bound" packets)
 	def __init__(self, client, wrapper, ip=None, port=None):
 		self.client = client
 		self.wrapper = wrapper
@@ -650,6 +783,14 @@ class Server: # Handle Server Connection
 		self.log = wrapper.log
 		self.safe = False
 		self.eid = None
+		
+		# Determine packet set to use
+		self.pktSB = defPacketsSB
+		self.pktCB = defPacketsCB
+		if self.version >= PROTOCOLv1_9REL1:
+			self.pktSB = PacketsSB19
+			self.pktCB = PacketsCB19
+			
 	def connect(self):
 		self.socket = socket.socket()
 		if self.ip == None:
@@ -671,18 +812,24 @@ class Server: # Handle Server Connection
 		t.start()
 	def close(self, reason="Disconnected", kill_client=True):
 		if Config.debug:
-			print "Last packet IDs (Server->Client) before disconnection:"
-			print self.lastPacketIDs
+			usernameofplayer = "unk"
+			try:
+				usernameofplayer = str(self.client.username)
+			except:
+				pass
+			print("Last packet IDs (Server->Client) of player %s before disconnection: \n%s\n" %
+				  (usernameofplayer, str(self.lastPacketIDs)))
+			# print self.lastPacketIDs
 		self.abort = True
 		self.packet = None
 		try:
 			self.socket.close()
 		except:
 			pass
-		if self.client.isLocal == False and kill_client:
+		if self.client.isLocal == False and kill_client:  # Ben's cross-server hack
 			self.client.isLocal = True
-			self.client.send(0x02, "string|byte", ("{text:'Disconnected from server: %s', color:red}" % reason.replace("'", "\\'"), 0))
-			self.client.send(0x2b, "ubyte|float", (1, 0))
+			self.client.send(self.pktCB.changegamestate, "ubyte|float", (1, 0))  # "end raining"
+			self.client.send(self.pktCB.chatmessage, "string|byte", ("{text:'Disconnected from server: %s', color:red}" % reason.replace("'", "\\'"), 0))
 			self.client.connect()
 			return
 
@@ -698,7 +845,8 @@ class Server: # Handle Server Connection
 		for client in self.wrapper.proxy.clients:
 			try:
 				if client.server.eid == eid: return self.getPlayerContext(client.username)
-			except: print "client.server.eid failed, but that's alright!"
+			except: print("client.server.eid failed!\nserverEid: %s\nEid: %s" %
+						  (str(client.server.eid), str(eid)))
 		return False
 	def getPlayerContext(self, username):
 		try: return self.wrapper.server.players[username]
@@ -714,148 +862,207 @@ class Server: # Handle Server Connection
 #				self.close()
 #				break
 			time.sleep(0.03)
-	def parse(self, id, original):
-		if id == 0x00:
-			if self.state < 3:
-				message = self.read("string:string")
-				self.log.info("Disconnected from server: %s" % message["string"])
-				self.client.disconnect(message)
-				return False
-			elif self.state == 3:
+	def parse(self, id, original):  # client - bound parse ("Server" class connection)
+		"""
+		Client-bound "Server Class"
+		"""
+		# disconnect, I suppose...
+		if id == 0x00 and self.state < 3:
+			message = self.read("string:string")
+			self.log.info("Disconnected from server: %s" % message["string"])
+			self.client.disconnect(message)
+			return False
+			
+		# handle keep alive packets 
+		if False == True: #id == self.pktCB.keepalive and self.state == 3:
 				if self.client.version > 7:
 					id = self.read("varint:i")["i"]
 					if not id == None:
-						self.send(0x00, "varint", (id,))
+						self.send(self.pktSB.keepalive, "varint", (id,))
 				return False
-		if id == 0x01:
-			if self.state == 3: # Join Game
-				data = self.read("int:eid|ubyte:gamemode|byte:dimension|ubyte:difficulty|ubyte:max_players|string:level_type")
-				oldDimension = self.client.dimension
-				self.client.gamemode = data["gamemode"]
-				self.client.dimension = data["dimension"]
-				self.eid = data["eid"]  # This is the EID of the player on this particular server - not always the EID that the client is aware of
-				if self.client.handshake:
-					dimensions = [-1, 0, 1]
-					if oldDimension == self.client.dimension:
-						for l in dimensions:
-							if l != oldDimension:
-								dim = l
-								break
-						self.client.send(0x07, "int|ubyte|ubyte|string", (l, data["difficulty"], data["gamemode"], data["level_type"]))
-					self.client.send(0x07, "int|ubyte|ubyte|string", (self.client.dimension, data["difficulty"], data["gamemode"], data["level_type"]))
-					#self.client.send(0x01, "int|ubyte|byte|ubyte|ubyte|string|bool", (self.eid, self.client.gamemode, self.client.dimension, data["difficulty"], data["max_players"], data["level_type"], False))
-					self.eid = data["eid"]
-					self.safe = True
-					return False
-				else:
-					self.client.eid = data["eid"]
-					self.safe = True
-				self.client.handshake = True
+				
+		if id == 0x01 and self.state == 2:
+			self.client.disconnect("Server is online mode. Please turn it off in server.properties.\n\nWrapper.py will handle authentication on its own, so do not worry about hackers.")
+			return False
 
-				print "Sending 0x2B..."
-				self.client.send(0x2B, "ubyte|float", (3, self.client.gamemode))
-			elif self.state == 2:
-				self.client.disconnect("Server is online mode. Please turn it off in server.properties.\n\nWrapper.py will handle authentication on its own, so do not worry about hackers.")
+		# Login Success - UUID & Username are sent in this packet
+		if id == 0x02 and self.state == 2:
+			self.state = 3
+			return False
+
+		if id == self.pktCB.joingame and self.state == 3:
+			data = self.read("int:eid|ubyte:gamemode|byte:dimension|ubyte:difficulty|ubyte:max_players|string:level_type")
+			oldDimension = self.client.dimension
+			self.client.gamemode = data["gamemode"]
+			self.client.dimension = data["dimension"]
+			self.eid = data["eid"]  # This is the EID of the player on this particular server - not always the EID that the client is aware of
+			if self.client.handshake:
+				dimensions = [-1, 0, 1]
+				if oldDimension == self.client.dimension:
+					for l in dimensions:
+						if l != oldDimension:
+							dim = l
+							break
+					self.client.send(self.pktCB.respawn, "int|ubyte|ubyte|string", (l, data["difficulty"], data["gamemode"], data["level_type"]))
+				self.client.send(self.pktCB.respawn, "int|ubyte|ubyte|string", (self.client.dimension, data["difficulty"], data["gamemode"], data["level_type"]))
+				#self.client.send(0x01, "int|ubyte|byte|ubyte|ubyte|string|bool", (self.eid, self.client.gamemode, self.client.dimension, data["difficulty"], data["max_players"], data["level_type"], False))
+				self.eid = data["eid"]
+				self.safe = True
 				return False
-		if id == 0x02:
-			if self.state == 2: # Login Success - UUID & Username are sent in this packet
-				self.state = 3
+			else:
+				self.client.eid = data["eid"]
+				self.safe = True
+			self.client.handshake = True
+
+			#print "Sending change game state packet..."
+			self.client.send(self.pktCB.changegamestate, "ubyte|float", (3, self.client.gamemode))
+
+		if id == self.pktCB.chatmessage and self.state == 3:
+			rawdata = self.read("string:json|byte:position")
+			rawstring = rawdata["json"]
+			position = rawdata["position"]
+			try:
+				data = json.loads(rawstring)
+			except: return
+
+			## added code
+			payload = self.wrapper.callEvent("player.chatbox", {"player": self.client.getPlayerObject(), "json": data})
+			if payload is False:
 				return False
-			elif self.state == 3:
-				try:
-					data = json.loads(self.read("string:json")["json"])
-				except: return
-				if not self.wrapper.callEvent("player.chatbox", {"player": self.client.getPlayerObject(), "json": data}): return False
-				try:
-					if data["translate"] == "chat.type.admin": return False
-				except: pass
-		if id == 0x03:
-			if self.version < 6: return True # Temporary! These packets need to be filtered for cross-server stuff.
-			if self.state == 2: # Set Compression
-				data = self.read("varint:threshold")
-				if not data["threshold"] == -1:
-					self.packet.compression = True
-					self.packet.compressThreshold = data["threshold"]
-				else:
-					self.packet.compression = False
-					self.packet.compressThreshold = -1
+
+			if type(payload) == dict:  # return a "chat" protocol formatted dictionary http://wiki.vg/Chat
+				chatmsg = json.dumps(payload)
+				self.client.send(self.pktCB.chatmessage, "string|byte", (chatmsg, position))
 				return False
-		if id == 0x05: # Spawn Position
+
+			if type(payload) == str:  # return a string-only object
+				print("player.Chatbox return payload sent as string")
+				self.client.send(self.pktCB.chatmessage, "string|byte", (payload, position))
+				return False
+
+			if payload is True:
+				return True
+
+			#print("The payload \n '%s' \n was never typed because it is %s" % (payload, type(payload)))
+			try:
+				if data["translate"] == "chat.type.admin": return False
+			except: pass
+
+		if id == 0x03 and self.state == 2: # Set Compression:
+			data = self.read("varint:threshold")
+			if data["threshold"] != -1:
+				self.packet.compression = True
+				self.packet.compressThreshold = data["threshold"]
+			else:
+				self.packet.compression = False
+				self.packet.compressThreshold = -1
+			return False
+
+		if self.state < 3:return True #  remaining packets are parsed solely per "play" state
+
+		if id == self.pktCB.timeupdate:
+			data = self.read("long:worldage|long:timeofday")
+			self.wrapper.server.timeofday = data["timeofday"]
+			return True
+		if id == self.pktCB.spawnposition: # Spawn Position
 			data = self.read("position:spawn")
 			self.wrapper.server.spawnPoint = data["spawn"]
-		if id == 0x07: # Respawn Packet
+			return True
+		if id == self.pktCB.respawn: # Respawn Packet
 			data = self.read("int:dimension|ubyte:difficulty|ubyte:gamemode|level_type:string")
 			self.client.gamemode = data["gamemode"]
 			self.client.dimension = data["dimension"]
-		if id == 0x08: # Player Position and Look
+			return True
+		if id == self.pktCB.playerposlook: # Player Position and Look
 			data = self.read("double:x|double:y|double:z|float:yaw|float:pitch")
 			x, y, z, yaw, pitch = data["x"], data["y"], data["z"], data["yaw"], data["pitch"]
 			self.client.position = (x, y, z)
-		if id == 0x0a: # Use Bed
+			return True
+		if id == self.pktCB.usebed: # Use Bed
 			data = self.read("varint:eid|position:location")
 			if data["eid"] == self.eid:
-				self.client.send(0x0a, "varint|position", (self.client.eid, data["location"]))
+				self.client.send(self.pktCB.usebed, "varint|position", (self.client.eid, data["location"]))
 				return False
-		if id == 0x0b: # Animation
+			return True
+		if id == self.pktCB.animation: #  #self.pktCB.Animation: # Animation
 			data = self.read("varint:eid|ubyte:animation")
 			if data["eid"] == self.eid:
-				self.client.send(0x0b, "varint|ubyte", (self.client.eid, data["animation"]))
+				self.client.send(self.pktCB.animation, "varint|ubyte", (self.client.eid, data["animation"]))
 				return False
-		if id == 0x0c: # Spawn Player
-			data = self.read("varint:eid|uuid:uuid|int:x|int:y|int:z|byte:yaw|byte:pitch|short:item|rest:metadata")
-			if self.proxy.getClientByServerUUID(data["uuid"]):
-				self.client.send(0x0c, "varint|uuid|int|int|int|byte|byte|short|raw", (
-					data["eid"],
-					self.proxy.getClientByServerUUID(data["uuid"]).uuid,
-					data["x"],
-					data["y"],
-					data["z"],
-					data["yaw"],
-					data["pitch"],
-					data["item"],
-					data["metadata"]))
+			return True
+		if id == self.pktCB.spawnplayer:  # Spawn Player
+			if self.version < PROTOCOL_1_9START:
+				data = self.read("varint:eid|uuid:uuid|int:x|int:y|int:z|byte:yaw|byte:pitch|short:item|rest:metadata")
+				if data["item"] < 0: data["item"] = 0  # A negative Current Item crashes clients (just in ncase)
+				if self.proxy.getClientByServerUUID(data["uuid"]):
+					self.client.send(self.pktCB.spawnplayer, "varint|uuid|int|int|int|byte|byte|short|raw", (
+						data["eid"],
+						self.proxy.getClientByServerUUID(data["uuid"]).uuid,
+						data["x"],
+						data["y"],
+						data["z"],
+						data["yaw"],
+						data["pitch"],
+						data["item"],
+						data["metadata"]))
 				return False
-		if id == 0x0e: # Spawn Object
-			data = self.read("varint:eid|byte:type|int:x|int:y|int:z|byte:pitch|byte:yaw")
-			eid, type, x, y, z, pitch, yaw = data["eid"], data["type"], data["x"], data["y"], data["z"], data["pitch"], data["yaw"]
-			if not self.wrapper.server.world: return
-			self.wrapper.server.world.entities[data["eid"]] = Entity(eid, type, (x, y, z), (pitch, yaw), True)
-		if id == 0x0f: # Spawn Mob
-			if self.version > 50:
-				data = self.read("varint:eid|uuid:euuid|ubyte:type|int:x|int:y|int:z|byte:pitch|byte:yaw|byte:head_pitch")
 			else:
-				data = self.read("varint:eid|ubyte:type|int:x|int:y|int:z|byte:pitch|byte:yaw|byte:head_pitch")
-			eid, type, x, y, z, pitch, yaw, head_pitch = data["eid"], data["type"], data["x"], data["y"], data["z"], data["pitch"], data["yaw"], data["head_pitch"]
+				data = self.read("varint:eid|uuid:uuid|int:x|int:y|int:z|byte:yaw|byte:pitch|rest:metadata")
+				if self.proxy.getClientByServerUUID(data["uuid"]):
+					self.client.send(self.pktCB.spawnplayer, "varint|uuid|int|int|int|byte|byte|raw", (
+						data["eid"],
+						self.proxy.getClientByServerUUID(data["uuid"]).uuid,
+						data["x"],
+						data["y"],
+						data["z"],
+						data["yaw"],
+						data["pitch"],
+						data["metadata"]))
+					return False
+			return True
+		if id == self.pktCB.spawnobject: #  #self.pktCB.spawnobject and self.state >= 3: # Spawn Object
+			if self.version < PROTOCOL_1_9START:
+				data = self.read("varint:eid|byte:type_|int:x|int:y|int:z|byte:pitch|byte:yaw")
+				entityuuid = None
+			else:
+				data = self.read("varint:eid|uuid:objectUUID|byte:type_|int:x|int:y|int:z|byte:pitch|byte:yaw|int:info|"
+								 "short:velocityX|short:velocityY|short:velocityZ")
+				entityuuid = data["objectUUID"]
+			eid, type_, x, y, z, pitch, yaw = data["eid"], data["type_"], data["x"], data["y"], data["z"], data["pitch"], data["yaw"]
 			if not self.wrapper.server.world: return
-			self.wrapper.server.world.entities[data["eid"]] = Entity(eid, type, (x, y, z), (pitch, yaw, head_pitch), False)
-	#	if id == 0x21: # Chunk Data
-#			if self.client.packet.compressThreshold == -1:
-#				print "CLIENT COMPRESSION ENABLED"
-#				self.client.packet.setCompression(256)
-		if id == 0x23: # Block Change
-			if self.version < 6: return True # Temporary! These packets need to be filtered for cross-server stuff.
-			data = self.read("position:location|varint:id")
-		if id == 0x1a: # Entity Status
-			if self.version < 6: return True # Temporary! These packets need to be filtered for cross-server stuff.
-			data = self.read("int:eid|byte:status")
-			if data["eid"] == self.eid:
-				self.client.send(0x1a, "int|byte", (self.client.eid, data["status"]))
-				return False
-		if id == 0x15: # Entity Relative Move
-			if self.version < 6: return True # Temporary! These packets need to be filtered for cross-server stuff.
+			self.wrapper.server.world.entities[data["eid"]] = Entity(eid, entityuuid, type_, (x, y, z), (pitch, yaw), True)
+			return True
+		if id == self.pktCB.spawnmob:  # Spawn Mob
+			if self.version < PROTOCOL_1_9START:
+				data = self.read("varint:eid|ubyte:type_|int:x|int:y|int:z|byte:pitch|byte:yaw|byte:head_pitch|short:velocityX|short:velocityY|short:velocityZ|rest:metadata")
+				entityuuid = None
+			else:
+				data = self.read("varint:eid|uuid:entityUUID|ubyte:type_|int:x|int:y|int:z|byte:pitch|byte:yaw|byte:head_pitch|short:velocityX|short:velocityY|short:velocityZ|rest:metadata")
+				entityuuid = data["entityUUID"]
+			eid, type_, x, y, z, pitch, yaw, head_pitch = data["eid"], data["type_"], data["x"], data["y"], data["z"], data["pitch"], data["yaw"], data["head_pitch"]
+			if not self.wrapper.server.world: return
+			# this will need entity UUID's added at some point
+			self.wrapper.server.world.entities[data["eid"]] = Entity(eid, entityuuid, type_, (x, y, z), (pitch, yaw, head_pitch), False)
+		if id == self.pktCB.entityrelativemove:  # Entity Relative Move
+			if self.version < PROTOCOLv1_8START: return True # Temporary! These packets need to be filtered for cross-server stuff.
 			data = self.read("varint:eid|byte:dx|byte:dy|byte:dz")
 			if not self.wrapper.server.world: return
 			if not self.wrapper.server.world.getEntityByEID(data["eid"]) == None:
 				self.wrapper.server.world.getEntityByEID(data["eid"]).moveRelative((data["dx"], data["dy"], data["dz"]))
-		if id == 0x18: # Entity Teleport
-			if self.version < 6: return True # Temporary! These packets need to be filtered for cross-server stuff.
+		if id == self.pktCB.entityteleport:  # Entity Teleport
+			if self.version < PROTOCOLv1_8START: return True # Temporary! These packets need to be filtered for cross-server stuff.
 			data = self.read("varint:eid|int:x|int:y|int:z|byte:yaw|byte:pitch")
 			if not self.wrapper.server.world: return
 			if not self.wrapper.server.world.getEntityByEID(data["eid"]) == None:
 				self.wrapper.server.world.getEntityByEID(data["eid"]).teleport((data["x"], data["y"], data["z"]))
-		if id == 0x1b: # Attach Entity
-			if self.version < 6: return True # Temporary! These packets need to be filtered for cross-server stuff.
-			data = self.read("int:eid|int:vid|bool:leash")
+		if id == self.pktCB.entityheadlook:
+			data = self.read("varint:eid|byte:angle")
+		if id == self.pktCB.entitystatus:  # Entity Status
+			if self.version < PROTOCOLv1_8START: return True # Temporary! These packets need to be filtered for cross-server stuff.
+			data = self.read("int:eid|byte:status")
+		if id == self.pktCB.attachentity:  # Attach Entity
+			if self.version < PROTOCOLv1_8START: return True # Temporary! These packets need to be filtered for cross-server stuff.
+			data = self.read("varint:eid|varint:vid|bool:leash")
 			eid, vid, leash = data["eid"], data["vid"], data["leash"]
 			player = self.getPlayerByEID(eid)
 			if player == None: return
@@ -869,34 +1076,44 @@ class Server: # Handle Server Connection
 					self.client.riding = self.wrapper.server.world.getEntityByEID(vid)
 					self.wrapper.server.world.getEntityByEID(vid).rodeBy = self.client
 				if eid != self.client.eid:
-					self.client.send(0x1b, "int|int|bool", (self.client.eid, vid, leash))
+					self.client.send(self.pktCB.attachentity, "varint|varint|bool", (self.client.eid, vid, leash))
 					return False
-		if id == 0x1c: # Entity Metadata
-			if self.version < 6: return True # Temporary! These packets need to be filtered for cross-server stuff.
+		if id == self.pktCB.entitymetadata:  # Entity Metadata
+			if self.version < PROTOCOLv1_8START: return True # Temporary! These packets need to be filtered for cross-server stuff.
 			data = self.read("varint:eid|rest:metadata")
 			if data["eid"] == self.eid:
-				self.client.send(0x1c, "varint|raw", (self.client.eid, data["metadata"]))
+				self.client.send(self.pktCB.entitymetadata, "varint|raw", (self.client.eid, data["metadata"]))
 				return False
-		if id == 0x1d: # Entity Effect
-			if self.version < 6: return True # Temporary! These packets need to be filtered for cross-server stuff.
+		if id == self.pktCB.entityeffect:  # Entity Effect
+			if self.version < PROTOCOLv1_8START: return True # Temporary! These packets need to be filtered for cross-server stuff.
 			data = self.read("varint:eid|byte:effect_id|byte:amplifier|varint:duration|bool:hide")
 			if data["eid"] == self.eid:
-				self.client.send(0x1d, "varint|byte|byte|varint|bool", (self.client.eid, data["effect_id"], data["amplifier"], data["duration"], data["hide"]))
+				self.client.send(self.pktCB.entityeffect, "varint|byte|byte|varint|bool", (self.client.eid, data["effect_id"], data["amplifier"], data["duration"], data["hide"]))
 				return False
-		if id == 0x1e: # Remove Entity Effect
-			if self.version < 6: return True # Temporary! These packets need to be filtered for cross-server stuff.
+		if id == self.pktCB.removeentityeffect:  # Remove Entity Effect
+			if self.version < PROTOCOLv1_8START: return True # Temporary! These packets need to be filtered for cross-server stuff.
 			data = self.read("varint:eid|byte:effect_id")
 			if data["eid"] == self.eid:
-				self.client.send(0x1e, "varint|byte", (self.client.eid, data["effect_id"]))
+				self.client.send(self.pktCB.removeentityeffect, "varint|byte", (self.client.eid, data["effect_id"]))
 				return False
-		if id == 0x20: # Entity Properties
-			if self.version < 6: return True # Temporary! These packets need to be filtered for cross-server stuff.
+		if id == self.pktCB.entityproperties:  # Entity Properties
+			if self.version < PROTOCOLv1_8START: return True # Temporary! These packets need to be filtered for cross-server stuff.
 			data = self.read("varint:eid|rest:properties")
 			if data["eid"] == self.eid:
-				self.client.send(0x20, "varint|raw", (self.client.eid, data["properties"]))
+				self.client.send(self.pktCB.entityproperties, "varint|raw", (self.client.eid, data["properties"]))
 				return False
-		if id == 0x26: # Map Chunk Bulk
-			if self.version > 6:
+
+	#	if id == self.pktCB.chunkdata: # Chunk Data
+#			if self.client.packet.compressThreshold == -1:
+#				print "CLIENT COMPRESSION ENABLED"
+#				self.client.packet.setCompression(256)
+
+		if True == False: #  #self.pktCB.blockchange: # Block Change - disabled - not doing anything at this point
+			if self.version < PROTOCOLv1_8START: return True # Temporary! These packets need to be filtered for cross-server stuff.
+			data = self.read("position:location|varint:id")
+
+		if id == self.pktCB.mapchunkbulk: # Map Chunk Bulk (no longer exists in 1.9)
+			if self.version > PROTOCOLv1_8START and self.version < PROTOCOL_1_9START:
 				data = self.read("bool:skylight|varint:chunks")
 				chunks = []
 				for i in range(data["chunks"]):
@@ -921,12 +1138,12 @@ class Server: # Handle Server Connection
 							chunkColumn += bytearray(16*16*16 * 2) # Null Chunk
 				#self.wrapper.server.world.setChunk(meta["x"], meta["z"], world.Chunk(chunkColumn, meta["x"], meta["z"]))
 				#print "Reading chunk %d,%d" % (meta["x"], meta["z"])
-		if id == 0x2b: # Change Game State
+		if id == self.pktCB.changegamestate: # Change Game State
 			data = self.read("ubyte:reason|float:value")
 			if data["reason"] == 3:
 				self.client.gamemode = data["value"]
-		if id == 0x2f: # Set Slot
-			if self.version < 6: return True # Temporary! These packets need to be filtered for cross-server stuff.
+		if id == self.pktCB.setslot: # Set Slot
+			if self.version < PROTOCOLv1_8START: return True # Temporary! These packets need to be filtered for cross-server stuff.
 			data = self.read("byte:wid|short:slot|slot:data")
 			if data["wid"] == 0:
 				self.client.inventory[data["slot"]] = data["data"]
@@ -937,16 +1154,8 @@ class Server: # Handle Server Connection
 		# 		for slot in range(1, data["count"]):
 		# 			data = self.read("slot:data")
 		# 			self.client.inventory[slot] = data["data"]
-		if id == 0x40:
-			message = self.read("json:json")["json"]
-			self.log.info("Disconnected from server: %s" % message)
-			if self.client.isLocal == False:
-				self.close()
-			else:
-				self.client.disconnect(message)
-			return False
-		if id == 0x38:
-			if self.version > 6:
+		if id == self.pktCB.playerlistitem:  # player list item
+			if self.version > PROTOCOLv1_8START:
 				head = self.read("varint:action|varint:length")
 				z = 0
 				while z < head["length"]:
@@ -974,23 +1183,32 @@ class Server: # Handle Server Connection
 						raw += self.client.packet.send_varInt(0)
 						raw += self.client.packet.send_varInt(0)
 						raw += self.client.packet.send_bool(False)
-						self.client.send(0x38, "varint|varint|uuid|string|varint|raw", (0, 1, client.uuid, client.username, len(properties), raw))
+						self.client.send(self.pktCB.playerlistitem, "varint|varint|uuid|string|varint|raw", (0, 1, client.uuid, client.username, len(properties), raw))
 					elif head["action"] == 1:
 						data = self.read("varint:gamemode")
-						self.client.send(0x38, "varint|varint|uuid|varint", (1, 1, uuid, data["gamemode"]))
+						self.client.send(self.pktCB.playerlistitem, "varint|varint|uuid|varint", (1, 1, uuid, data["gamemode"]))
 					elif head["action"] == 2:
 						data = self.read("varint:ping")
-						self.client.send(0x38, "varint|varint|uuid|varint", (2, 1, uuid, data["ping"]))
+						self.client.send(self.pktCB.playerlistitem, "varint|varint|uuid|varint", (2, 1, uuid, data["ping"]))
 					elif head["action"] == 3:
 						data = self.read("bool:has_display")
 						if data["has_display"]:
 							data = self.read("string:displayname")
-							self.client.send(0x38, "varint|varint|uuid|bool|string", (3, 1, uuid, True, data["displayname"]))
+							self.client.send(self.pktCB.playerlistitem, "varint|varint|uuid|bool|string", (3, 1, uuid, True, data["displayname"]))
 						else:
-							self.client.send(0x38, "varint|varint|uuid|varint", (3, 1, uuid, False))
+							self.client.send(self.pktCB.playerlistitem, "varint|varint|uuid|varint", (3, 1, uuid, False))
 					elif head["action"] == 4:
-						self.client.send(0x38, "varint|varint|uuid", (4, 1, uuid))
+						print("sending head list item 4: %s" % str(uuid))
+						self.client.send(self.pktCB.playerlistitem, "varint|varint|uuid", (4, 1, uuid))
 					return False
+		if id == self.pktCB.disconnect: # disconnect
+			message = self.read("json:json")["json"]
+			self.log.info("Disconnected from server: %s" % message)
+			if self.client.isLocal == False:
+				self.close()
+			else:
+				self.client.disconnect(message)
+			return False
 		return True
 	def handle(self):
 		try:
@@ -1037,7 +1255,7 @@ class Packet: # PACKET PARSING CODE
 
 		self.buffer = StringIO.StringIO()
 		self.queue = []
-		
+
 		self._ENCODERS = {
 			1: self.send_byte,
 			2: self.send_short,
@@ -1081,6 +1299,7 @@ class Packet: # PACKET PARSING CODE
 		if not self.compressThreshold == -1:
 			dataLength = self.unpack_varInt()
 			length = length - len(self.pack_varInt(dataLength))
+		###$ part of the bad file descriptor rabbit trail
 		payload = self.recv(length)
 		if dataLength > 0:
 			payload = zlib.decompress(payload)
@@ -1141,53 +1360,53 @@ class Packet: # PACKET PARSING CODE
 	def read(self, expression):
 		result = {}
 		for exp in expression.split("|"):
-			type = exp.split(":")[0]
+			type_ = exp.split(":")[0]
 			name = exp.split(":")[1]
-			if type == "string": result[name] = self.read_string()
-			if type == "json": result[name] = self.read_json()
-			if type == "ubyte": result[name] = self.read_ubyte()
-			if type == "byte": result[name] = self.read_byte()
-			if type == "int": result[name] = self.read_int()
-			if type == "short": result[name] = self.read_short()
-			if type == "ushort": result[name] = self.read_ushort()
-			if type == "long": result[name] = self.read_long()
-			if type == "double": result[name] = self.read_double()
-			if type == "float": result[name] = self.read_float()
-			if type == "bool": result[name] = self.read_bool()
-			if type == "varint": result[name] = self.read_varInt()
-			if type == "bytearray": result[name] = self.read_bytearray()
-			if type == "bytearray_short": result[name] = self.read_bytearray_short()
-			if type == "position": result[name] = self.read_position()
-			if type == "slot": result[name] = self.read_slot()
-			if type == "uuid": result[name] = self.read_uuid()
-			if type == "metadata": result[name] = self.read_metadata()
-			if type == "rest": result[name] = self.read_rest()
+			if type_ == "string": result[name] = self.read_string()
+			if type_ == "json": result[name] = self.read_json()
+			if type_ == "ubyte": result[name] = self.read_ubyte()
+			if type_ == "byte": result[name] = self.read_byte()
+			if type_ == "int": result[name] = self.read_int()
+			if type_ == "short": result[name] = self.read_short()
+			if type_ == "ushort": result[name] = self.read_ushort()
+			if type_ == "long": result[name] = self.read_long()
+			if type_ == "double": result[name] = self.read_double()
+			if type_ == "float": result[name] = self.read_float()
+			if type_ == "bool": result[name] = self.read_bool()
+			if type_ == "varint": result[name] = self.read_varInt()
+			if type_ == "bytearray": result[name] = self.read_bytearray()
+			if type_ == "bytearray_short": result[name] = self.read_bytearray_short()
+			if type_ == "position": result[name] = self.read_position()
+			if type_ == "slot": result[name] = self.read_slot()
+			if type_ == "uuid": result[name] = self.read_uuid()
+			if type_ == "metadata": result[name] = self.read_metadata()
+			if type_ == "rest": result[name] = self.read_rest()
 		return result
 	def send(self, id, expression, payload):
 		result = ""
 		result += self.send_varInt(id)
 		if len(expression) > 0:
-			for i,type in enumerate(expression.split("|")):
+			for i,type_ in enumerate(expression.split("|")):
 				pay = payload[i]
-				if type == "string": result += self.send_string(pay)
-				if type == "json": result += self.send_json(pay)
-				if type == "ubyte": result += self.send_ubyte(pay)
-				if type == "byte": result += self.send_byte(pay)
-				if type == "int": result += self.send_int(pay)
-				if type == "short": result += self.send_short(pay)
-				if type == "ushort": result += self.send_ushort(pay)
-				if type == "varint": result += self.send_varInt(pay)
-				if type == "float": result += self.send_float(pay)
-				if type == "double": result += self.send_double(pay)
-				if type == "long": result += self.send_long(pay)
-				if type == "bytearray": result += self.send_bytearray(pay)
-				if type == "bytearray_short": result += self.send_bytearray_short(pay)
-				if type == "uuid": result += self.send_uuid(pay)
-				if type == "metadata": result += self.send_metadata(pay)
-				if type == "bool": result += self.send_bool(pay)
-				if type == "position": result += self.send_position(pay)
-				if type == "slot": result += self.send_slot(pay)
-				if type == "raw": result += pay
+				if type_ == "string": result += self.send_string(pay)
+				if type_ == "json": result += self.send_json(pay)
+				if type_ == "ubyte": result += self.send_ubyte(pay)
+				if type_ == "byte": result += self.send_byte(pay)
+				if type_ == "int": result += self.send_int(pay)
+				if type_ == "short": result += self.send_short(pay)
+				if type_ == "ushort": result += self.send_ushort(pay)
+				if type_ == "varint": result += self.send_varInt(pay)
+				if type_ == "float": result += self.send_float(pay)
+				if type_ == "double": result += self.send_double(pay)
+				if type_ == "long": result += self.send_long(pay)
+				if type_ == "bytearray": result += self.send_bytearray(pay)
+				if type_ == "bytearray_short": result += self.send_bytearray_short(pay)
+				if type_ == "uuid": result += self.send_uuid(pay)
+				if type_ == "metadata": result += self.send_metadata(pay)
+				if type_ == "bool": result += self.send_bool(pay)
+				if type_ == "position": result += self.send_position(pay)
+				if type_ == "slot": result += self.send_slot(pay)
+				if type_ == "raw": result += pay
 		self.sendRaw(result)
 		return result
 	# -- SENDING DATA TYPES -- #
@@ -1196,7 +1415,11 @@ class Packet: # PACKET PARSING CODE
 	def send_ubyte(self, payload):
 		return struct.pack("B", payload)
 	def send_string(self, payload):
-		return self.send_varInt(len(payload)) + payload.encode("utf8")
+		try:
+			returnitem = payload.encode("utf-8", errors="ignore")
+		except:
+			returnitem = str(payload)
+		return self.send_varInt(len(returnitem)) + returnitem
 	def send_json(self, payload):
 		return self.send_string(json.dumps(payload))
 	def send_int(self, payload):
@@ -1225,30 +1448,31 @@ class Packet: # PACKET PARSING CODE
 	def send_metadata(self, payload):
 		b = ""
 		for index in payload:
-			type = payload[index][0]
+			type_ = payload[index][0]
 			value = payload[index][1]
-			header = (type << 5) | index
+			header = (type_ << 5) | index
 			b += self.send_ubyte(header)
-			if type == 0: b += self.send_byte(value)
-			if type == 1: b += self.send_short(value)
-			if type == 2: b += self.send_int(value)
-			if type == 3: b += self.send_float(value)
-			if type == 4: b += self.send_string(value)
-			if type == 5:
+			if type_ == 0: b += self.send_byte(value)
+			if type_ == 1: b += self.send_short(value)
+			if type_ == 2: b += self.send_int(value)
+			if type_ == 3: b += self.send_float(value)
+			if type_ == 4: b += self.send_string(value)
+			if type_ == 5:
 				print "WIP 5"
-			if type == 6:
+			if type_ == 6:
 				print "WIP 6"
-			if type == 6:
+			if type_ == 6:
 				print "WIP 7"
 		b += self.send_ubyte(0x7f)
 		return b
 	def send_bool(self, payload):
 		if payload == False: return self.send_byte(0)
 		if payload == True: return self.send_byte(1)
+
 	def send_short_string(self,stri): #Similar to send_string, but uses a short as length prefix
 		return self.send_short(len(stri)) + stri.encode("utf8")
 
-	def send_byte_array(self,payload):
+	def send_byte_array(self, payload):
 		return self.send_int(len(payload)) + payload
 
 	def send_int_array(self,values):
@@ -1262,7 +1486,7 @@ class Packet: # PACKET PARSING CODE
 			#print("list element type: %s" %i['type'])
 			typesList.append(i['type'])
 			if len(set(typesList))!=1:
-				#raise Exception("Types in list dosn't match!")
+				# raise Exception("Types in list dosn't match!")
 				return b''
 		#If ok, then continue
 		r+=self.send_byte(typesList[0]) #items type
@@ -1276,15 +1500,15 @@ class Packet: # PACKET PARSING CODE
 			r+=self.send_tag(tage)
 		r+="\x00" #close compbound
 		return r
-		
+
 	def send_tag(self,tag):
 		r=self.send_byte(tag['type']) #send type indicator
 		r+=self.send_short(len(tag["name"])) #send lenght prefix
 		r+=tag["name"].encode("utf8") #send name
 		r+=self._ENCODERS[tag["type"]](tag["value"]) #send tag
 		return r
-		
-		 
+
+
 	def send_slot(self,slot):
 		"""Sending slots, such as {"id":98,"count":64,"damage":0,"nbt":None}"""
 		r=self.send_short(slot["id"])
@@ -1298,6 +1522,7 @@ class Packet: # PACKET PARSING CODE
 		else:
 			r+="\x00"
 		return r
+
 	# -- READING DATA TYPES -- #
 	def recv(self, length):
 		if length > 200:
@@ -1306,7 +1531,7 @@ class Packet: # PACKET PARSING CODE
 				m = length - len(d)
 				if m > 5000: m = 5000
 				d += self.socket.recv(m)
-		else:
+		else:  ###$ find out why next line sometimes errors out bad file descriptor
 			d = self.socket.recv(length)
 			if len(d) == 0:
 				raise EOFError("Packet was zero length, disconnecting")
@@ -1323,6 +1548,7 @@ class Packet: # PACKET PARSING CODE
 	def read_data(self, length):
 		d = self.buffer.read(length)
 		if len(d) == 0 and length is not 0:
+			#print(self.obj)
 			self.obj.disconnect("Received no data or less data than expected - connection closed")
 			return ""
 		return d
@@ -1400,22 +1626,22 @@ class Packet: # PACKET PARSING CODE
 			a = self.read_ubyte()
 			if a == 0x7f: return data
 			index = a & 0x1f
-			type = a >> 5
-			if type == 0:
+			type_ = a >> 5
+			if type_ == 0:
 				data[index] = (0, self.read_byte())
-			if type == 1:
+			if type_ == 1:
 				data[index] = (1, self.read_short())
-			if type == 2:
+			if type_ == 2:
 				data[index] = (2, self.read_int())
-			if type == 3:
+			if type_ == 3:
 				data[index] = (3, self.read_float())
-			if type == 4:
+			if type_ == 4:
 				data[index] = (4, self.read_string())
-			if type == 5:
+			if type_ == 5:
 				data[index] = (5, self.read_slot())
-			if type == 6:
+			if type_ == 6:
 				data[index] = (6, (self.read_int(), self.read_int(), self.read_int()))
-			#if type == 7:
+			#if type_ == 7:
 			#	data[index] = ("float", (self.read_int(), self.read_int(), self.read_int()))
 		return data
 	def read_short_string(self):
@@ -1451,4 +1677,3 @@ class Packet: # PACKET PARSING CODE
 			b["value"]=self._DECODERS[type]()
 			r.append(b)
 		return r
-		

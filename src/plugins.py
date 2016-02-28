@@ -35,7 +35,9 @@ class Plugins:
 		else:
 			return False
 		try: disabled = plugin.DISABLED
-		except: plugin.DISABLED = False
+		except: disabled = False
+		try: dependencies = plugin.DEPENDENCIES  # if used, plugin.DEPENDENCIES must be a 'list' type (even if only one item); e.g. = ["some.py", "another.py", etc]
+		except: dependencies = False
 		try: name = plugin.NAME
 		except: pass
 		try: id = plugin.ID
@@ -50,9 +52,15 @@ class Plugins:
 		except: author = None
 		try: website = plugin.WEBSITE
 		except: website = None
-		if id in self.wrapper.storage["disabled_plugins"] or plugin.DISABLED:
+		if id in self.wrapper.storage["disabled_plugins"] or disabled:
 			self.log.warn("Plugin '%s' disabled - not loading" % name)
 			return
+		if id in self.plugins:  # Once successfully loaded, further attempts to load the plugin are ignored
+			self.log.debug("Plugin '%s' already loaded - not reloading" % name)
+			return
+		if dependencies:  # load dependent plugins before continuing...
+			for dependency in dependencies:  # List data type must be used, even if only a single plugin (i.e. = ["supportplugin.py"]
+				self.loadPlugin(dependency)
 		main = plugin.Main(API(self.wrapper, name, id), PluginLog(self.log, name))
 		self.plugins[id] = {"main": main, "good": True, "module": plugin} #  "events": {}, "commands": {},
 		self.plugins[id]["name"] = name
@@ -116,3 +124,4 @@ class Plugins:
 		self.plugins = {}
 		self.loadPlugins()
 		self.log.info("Plugins reloaded")
+

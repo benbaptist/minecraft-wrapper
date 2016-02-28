@@ -1,6 +1,11 @@
 import traceback, ConfigParser, ast, time, os, sys
 # I'm going to redo the configuration code soon! Don't you worry!
 # Default Configuration File
+class DummyLog(): # Becouse now we havn't got access for the loggign system, but config needs it, er need to create a dummy
+	def info(*args):
+		pass
+	def debug(*args):
+		pass
 DEFAULT_CONFIG = """[General]
 server-name = Minecraft Server
 command = java -jar minecraft_server.1.8.7.jar nogui
@@ -13,6 +18,7 @@ timed-reboot-seconds = 86400
 timed-reboot-warning-minutes = 5 
 debug = False 
 shell-scripts = False
+encoding = UTF-8
 
 [Backups]
 ;; Automatic backups with automatic backup pruning. Interval is in seconds. ;; 
@@ -93,7 +99,8 @@ class Config:
 			"timed-reboot": False,
 			"timed-reboot-seconds": 86400,
 			"timed-reboot-warning-minutes": 5,
-			"shell-scripts": False
+			"shell-scripts": False,
+			"encoding": "UTF-8"
 		},		
 		"IRC":{ 
 			"irc-enabled": False, 

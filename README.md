@@ -58,11 +58,6 @@ pip install pycrypto
 Download the wrapper.py file and place it in your minecraft folder, then create a batch file to run the wrapper, or start it from the command prompt:
 `python wrapper.py`
 
-*Developer tools for Windows:*
-- [Visual Studio Community Edition](http://www.visualstudio.com/en-us/downloads/) is a user friendly and powerful FREE developer environment for Python
-- Visual Studio Community is free, but you need to register with a Windows Live account.
-- You should set Visual studio as the default program to edit *.py files.
- -You will also want to configure Visual studio to not convert tabs to spaces for python.
 
 
 **Start Up**

@@ -1,3 +1,23 @@
+<build #111 for minecraft 1.9>
+- Includes changes from Pull Request from Sasszem, (build #110).
+- based on build 109 with all current pull requests as of 1/30/2016
+- updated md5 to hashlib in a few places (md5 is deprecated)
+- Updated the Player.chatbox event to allow the chat to modified.  Also upgraded it to handle UTF-8 and special
+    characters in chat.
+- added to api.minecraft: getTimeofDay(self, format=0)
+		# 0 = ticks, 1 = Military, else = civilian AM/PM, return -1 if no one on or server not started
+    returns actual world time of day  (changes in server.py and API/minecraft.py)
+- Added Chat.py plugin example...
+- ..that utilizes the new abilty of "player.chatbox" event to accept plugin changes to chat.
+- Added clock.py example for getTimeofDay()
+- Lots of changes to proxy.py... Added mcpkt.py file for packet number references.  Packets are now referenced (in the 
+    play mode sections) by names, not hardcoded packet numbers.
+- Added file mcpkt.py, where packet definitions are stored for reference by proxy.py.
+- Beefed up player.interact event some to allow blocking of "interaction events" like lava and water placement, shooting, etc
+
+Build #110:
+- [pull request #269] Bug fixes by sasszem
+
 Build #109:
 - [pull request #247] Bookmarks plugin by Cougar
 - [pull request #248] Storage.py fixes, NBT slot reading/sending

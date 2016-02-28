@@ -37,6 +37,7 @@ class Server:
 		self.version = None
 		self.world = None
 		self.motd = None
+		self.timeofday = -1  # -1 until a player logs on and server sends a time update
 		self.onlineMode = True
 		self.serverIcon = None
 		

@@ -9,21 +9,31 @@ ENTITIES = { # Unfinished list of entities
 	55: {"Name": "Slime", "size": (0.6, 0.6)},
 	56: {"Name": "Ghast", "size": (4, 4)},
 	57: {"Name": "Zombie Pigman", "size": (0.6, 1.8)},
-	58: {"Name": "Enderman", "size": (0.6, 2.9)}
+	58: {"Name": "Enderman", "size": (0.6, 2.9)},
+	90: {"Name": "Pig"},
+	91: {"Name": "Sheep"},
+	92: {"Name": "Cow"},
+	93: {"Name": "Chicken"},
+	94: {"Name": "Squid"}
 }
+
+
 class Entity:
-	def __init__(self, id, type, position, look, isObject):
-		self.id = id # Entity ID
-		self.type = type # Type of Entity
+	def __init__(self, eid, uuid, entitytype, position, look, isObject):
+		self.eid = eid # Entity ID
+		self.uuid = uuid # Entity UUID
+		self.entitytype = entitytype # Type of Entity
 		self.position = position # (x, y, z)
 		self.look = look # Head Position
 		self.rodeBy = False
 		self.riding = False
-		
-		if type in ENTITIES: self.type = ENTITIES[type]
 		self.isObject = isObject # Boat/Minecart/other non-living Entities are objects
+		if entitytype in ENTITIES and not self.isObject:
+			self.entitytype = ENTITIES[entitytype]
+			# print("entity type is: %s" % str(self.entitytype["Name"]))
+
 	def __str__(self):
-		return str(self.type)
+		return str(self.entitytype)
 	def moveRelative(self, position):
 		""" Move the entity relative to their position, unless it is illegal. """
 		x, y, z = position
