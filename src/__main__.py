@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
-import sys, json, signal, proxy, web, globals, storage, hashlib, uuid
+import sys, json, signal, proxy, globals, storage, hashlib, uuid
+import dashboard
+import web
+
 from log import *
 from config import Config
 from irc import IRC
@@ -30,14 +33,14 @@ class Wrapper:
 		self.storage = storage.Storage("main", self.log)
 		self.permissions = storage.Storage("permissions", self.log)
 		self.usercache = storage.Storage("usercache", self.log)
-		
+
 		self.plugins = Plugins(self)
 		self.commands = Commands(self)
 		self.events = Events(self)
 		self.permission = {}
 		self.help = {}
-		
-		# Aliases for compatibility 
+
+		# Aliases for compatibility
 		self.callEvent = self.events.callEvent
 	def isOnlineMode(self):
 		if self.config["Proxy"]["proxy-enabled"]:
@@ -107,7 +110,7 @@ class Wrapper:
 		self.config = self.configManager.config
 		signal.signal(signal.SIGINT, self.SIGINT)
 		signal.signal(signal.SIGTERM, self.SIGINT)
-		
+
 		self.api = API(self, "Wrapper.py")
 		self.api.registerHelp("Wrapper", "Internal Wrapper.py commands ", [
 			("/wrapper [update/memory/halt]", "If no subcommand is provided, it'll show the Wrapper version.", None),
@@ -116,12 +119,12 @@ class Wrapper:
 			("/playerstats [all]", "Show the most active players. If no subcommand is provided, it'll show the top 10 players.", None),
 			("/reload", "Reload all plugins.", None)
 		])
-		
+
 		self.server = Server(sys.argv, self.log, self.configManager.config, self)
 		self.server.init()
-		
+
 		self.plugins.loadPlugins()
-		
+
 		if self.config["IRC"]["irc-enabled"]:
 			self.irc = IRC(self.server, self.config, self.log, self, self.config["IRC"]["server"], self.config["IRC"]["port"], self.config["IRC"]["nick"], self.config["IRC"]["channels"])
 			t = threading.Thread(target=self.irc.init, args=())
@@ -130,6 +133,7 @@ class Wrapper:
 		if self.config["Web"]["web-enabled"]:
 			if web.IMPORT_SUCCESS:
 				self.web = web.Web(self)
+				#self.web = dashboard.Web(self)
 				t = threading.Thread(target=self.web.wrap, args=())
 				t.daemon = True
 				t.start()
@@ -140,21 +144,21 @@ class Wrapper:
 			wrapper.server.args = wrapper.configManager.config["General"]["command"].split(" ")
 		else:
 			wrapper.server.args = sys.argv[1:]
-		
+
 		consoleDaemon = threading.Thread(target=self.console, args=())
 		consoleDaemon.daemon = True
 		consoleDaemon.start()
-		
+
 		t = threading.Thread(target=self.timer, args=())
 		t.daemon = True
 		t.start()
-		
+
 		if self.config["General"]["shell-scripts"]:
 			if os.name in ("posix", "mac"):
 				self.scripts = Scripts(self)
 			else:
 				self.log.error("Sorry, but shell scripts only work on *NIX-based systems! If you are using a *NIX-based system, please file a bug report.")
-		
+
 		if self.config["Proxy"]["proxy-enabled"]:
 			t = threading.Thread(target=self.startProxy, args=())
 			t.daemon = True
@@ -164,7 +168,7 @@ class Wrapper:
 			t.daemon = True
 			t.start()
 		self.server.__handle_server__()
-		
+
 		self.plugins.disablePlugins()
 	def startProxy(self):
 		if proxy.IMPORT_SUCCESS:
@@ -219,7 +223,7 @@ class Wrapper:
 			try:
 				r = requests.get("https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/docs/version.json")
 				data = r.json()
-				if self.update: 
+				if self.update:
 					if self.update > data["build"]: return False
 				if data["build"] > globals.build and data["type"] == "dev": return (data["version"], data["build"], data["type"])
 				else: return False
@@ -229,7 +233,7 @@ class Wrapper:
 			try:
 				r = requests.get("https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master/docs/version.json")
 				data = r.json()
-				if self.update: 
+				if self.update:
 					if self.update > data["build"]: return False
 				if data["build"] > globals.build and data["type"] == "stable":  return (data["version"], data["build"], data["type"])
 				else: return False
@@ -270,16 +274,16 @@ class Wrapper:
 				input = raw_input("")
 			except: continue
 			if len(input) < 1: continue
-			if input[0] is not "/": 
+			if input[0] is not "/":
 				try:
 					self.server.console(input)
 				except:
 					break
 				continue
-			def args(i): 
+			def args(i):
 				try: return input[1:].split(" ")[i]
 				except: pass
-			def argsAfter(i): 
+			def argsAfter(i):
 				try: return " ".join(input[1:].split(" ")[i:]);
 				except: pass;
 			command = args(0)
@@ -307,9 +311,9 @@ class Wrapper:
 						name = plugin["name"]
 						summary = plugin["summary"]
 						if summary == None: summary = "No description available for this plugin"
-						
+
 						version = plugin["version"]
-							
+
 						self.log.info("%s v%s - %s" % (name, ".".join([str(_) for _ in version]), summary))
 					else:
 						self.log.info("%s failed to load!" % (plug))
@@ -330,18 +334,18 @@ class Wrapper:
 				if not self.server.state == 0:
 					self.server.freeze()
 				else:
-					self.log.error("Server is not started. Please run `/start` to boot it up.")	
+					self.log.error("Server is not started. Please run `/start` to boot it up.")
 			elif command == "unfreeze":
 				if not self.server.state == 0:
 					self.server.unfreeze()
 				else:
-					self.log.error("Server is not started. Please run `/start` to boot it up.")	
+					self.log.error("Server is not started. Please run `/start` to boot it up.")
 			elif command == "help":
-				self.log.info("/reload - Reload plugins")	
-				self.log.info("/plugins - Lists plugins")	
+				self.log.info("/reload - Reload plugins")
+				self.log.info("/plugins - Lists plugins")
 				self.log.info("/update-wrapper - Checks for new updates, and will install them automatically if one is available")
 				self.log.info("/start & /stop - Start and stop the server without auto-restarting respectively without shutting down Wrapper.py")
-				self.log.info("/restart - Restarts the server, obviously")				
+				self.log.info("/restart - Restarts the server, obviously")
 				self.log.info("/halt - Shutdown Wrapper.py completely")
 				self.log.info("/freeze & /unfreeze - Temporarily locks the server up until /unfreeze is executed")
 				self.log.info("/mem - Get memory usage of the server")
@@ -353,7 +357,7 @@ if __name__ == "__main__":
 	wrapper = Wrapper()
 	log = wrapper.log
 	log.info("Wrapper.py started - Version %s" % wrapper.getBuildString())
-	
+
 	try:
 		wrapper.start()
 	except SystemExit:

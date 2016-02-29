@@ -1,3 +1,6 @@
+Build #111:
+- Added dashboard.py - beginning work on Dashboard rewrite using Flask + SocketIO
+
 Build #110:
 - [pull request #269] Bug fixes by sasszem
 - based on build 109 with all current pull requests as of 1/30/2016
