@@ -1196,7 +1196,6 @@ class Server: # Handle Server Connection  ("client bound" packets)
 						else:
 							self.client.send(self.pktCB.playerlistitem, "varint|varint|uuid|varint", (3, 1, uuid, False))
 					elif head["action"] == 4:
-						print("sending head list item 4: %s" % str(uuid))
 						self.client.send(self.pktCB.playerlistitem, "varint|varint|uuid", (4, 1, uuid))
 					return False
 		if id == self.pktCB.disconnect: # disconnect
