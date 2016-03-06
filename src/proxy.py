@@ -237,9 +237,7 @@ class Client: # handle server-bound packets (client/game connection)
 			except:
 				self.server_temp.close(kill_client=False)
 				self.server_temp = None
-				# if this was the lobby or main server, this should be `self.pktCB.disconnect`
-				# should "self.pktCB.disconnect" be used instead to send this message?, if so, Json is not supported)
-				self.send(self.pktCB.chatmessage, "string|byte", ("Could not connect to that server!", 0))
+				self.send(self.pktCB.chatmessage, "string|byte", ("""{"text": "Could not connect to that server!", "color": "red", "bold": "true"}""", 0))
 				self.address = None
 				return
 		else:
