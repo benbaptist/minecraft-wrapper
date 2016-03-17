@@ -11,7 +11,8 @@ except:
 	IMPORT_SUCCESS = False
 
 # version coding
-PROTOCOLv1_9REL1 = 76  # start of stable 1.9 release (or most current snapshop that is documented by protocol)
+PROTOCOL_1_9_1_PRE = 108 # post- 1.9 "pre releases (1.9.1 pre-3 and later
+PROTOCOLv1_9REL1 = 107  # start of stable 1.9 release (or most current snapshop that is documented by protocol)
 PROTOCOL_1_9START = 48  # start of 1.9 snapshots
 PROTOCOLv1_8START = 6
 
@@ -889,7 +890,10 @@ class Server: # Handle Server Connection  ("client bound" packets)
 			return False
 
 		if id == self.pktCB.joingame and self.state == 3:
-			data = self.read("int:eid|ubyte:gamemode|byte:dimension|ubyte:difficulty|ubyte:max_players|string:level_type")
+			if self.version < PROTOCOL_1_9_1_PRE:
+				data = self.read("int:eid|ubyte:gamemode|byte:dimension|ubyte:difficulty|ubyte:max_players|string:level_type")
+			elif self.version == PROTOCOL_1_9_1_PRE:
+				data = self.read("int:eid|ubyte:gamemode|int:dimension|ubyte:difficulty|ubyte:max_players|string:level_type")
 			oldDimension = self.client.dimension
 			self.client.gamemode = data["gamemode"]
 			self.client.dimension = data["dimension"]
