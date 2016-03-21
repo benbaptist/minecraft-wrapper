@@ -316,7 +316,7 @@ class Wrapper:
 
 						self.log.info("%s v%s - %s" % (name, ".".join([str(_) for _ in version]), summary))
 					else:
-						self.log.info("%s failed to load!" % (plug))
+						self.log.info("%s failed to load!" % plugin)
 			elif command in ("mem", "memory"):
 				if self.server.getMemoryUsage():
 					self.log.info("Server Memory Usage: %d bytes" % self.server.getMemoryUsage())
