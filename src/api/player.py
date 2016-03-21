@@ -195,6 +195,7 @@ class Player:
 					raise IndexError("%s does not have permission node '%s'" % (self.username, node))
 	def hasGroup(self, group):
 		""" Returns a boolean of whether or not the player is in the specified permission group. """
+		self.uuid = self.wrapper.lookupUsername(self.username) # this will also setUUID() and init the perms for new player
 		for uuid in self.permissions["users"]:
 			if uuid == str(self.uuid):
 				return group in self.permissions["users"][uuid]["groups"]
@@ -209,6 +210,7 @@ class Player:
 		""" Adds the player to a specified group. If the group does not exist, an IndexError is raised. """
 		if not group in self.permissions["groups"]:
 			raise IndexError("No group with the name '%s' exists" % group)
+		self.uuid = self.wrapper.lookupUsername(self.username) # this will also setUUID() and init the perms for new player
 		for uuid in self.permissions["users"]:
 			if uuid == str(self.uuid):
 				self.permissions["users"][uuid]["groups"].append(group)
