@@ -66,7 +66,7 @@ class Player:
 		if self.client == None:
 			for client in self.wrapper.proxy.clients:
 				try:
-					if client.username == username:
+					if client.username == self.username:
 						self.client = client
 						return self.client
 				except:
