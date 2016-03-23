@@ -48,34 +48,38 @@ class Wrapper:
 		if self.server:
 			if self.server.onlineMode: return True
 		return False
-	def UUIDFromName(self, name):
+	@staticmethod
+	def UUIDFromName(name):
 		#print("UUIDFROMNAME")
 		m = hashlib.md5()  # module md5 is deprecated
-		m.update("OfflinePlayer:"+name)
+		m.update(name)
 		d = bytearray(m.digest())
 		d[6] &= 0x0f
 		d[6] |= 0x30
 		d[8] &= 0x3f
 		d[8] |= 0x80
 		return uuid.UUID(bytes=str(d))
-	def getUsername(self, uuid):
-		if type(uuid) not in (str, unicode): return False
+	def getUsername(self, useruuid):
+		"""
+		:param useruuid - the string representation of the uuid.
+		"""
+		if type(useruuid) not in (str, unicode): return False
 		if self.isOnlineMode():
 			if self.proxy:
-				obj = self.proxy.lookupUUID(uuid)
+				obj = self.proxy.lookupUUID(useruuid)
 				if obj: return str(obj["name"])
-			if uuid in self.usercache:
-				if "name" in self.usercache[uuid]:
-					return str(self.usercache[uuid]["name"])
+			if useruuid in self.usercache:
+				if "name" in self.usercache[useruuid]:
+					return str(self.usercache[useruuid]["name"])
 			try:
-				r = requests.get("https://api.mojang.com/user/profiles/%s/names" % uuid.replace("-", "")).json()
+				r = requests.get("https://api.mojang.com/user/profiles/%s/names" % useruuid.replace("-", "")).json()
 				username = r[0]["name"]
-				if not uuid in self.usercache:
-					self.usercache[uuid] = {"time": time.time(), "name": None, "online": True}
-				if username != self.usercache[uuid]["name"]:
-					self.usercache[uuid]["name"] = username
-					self.usercache[uuid]["online"] = True
-					self.usercache[uuid]["time"] = time.time()
+				if not useruuid in self.usercache:
+					self.usercache[useruuid] = {"time": time.time(), "name": None, "online": True}
+				if username != self.usercache[useruuid]["name"]:
+					self.usercache[useruuid]["name"] = username
+					self.usercache[useruuid]["online"] = True
+					self.usercache[useruuid]["time"] = time.time()
 				return str(username)
 			except: return False
 		else:
@@ -83,28 +87,31 @@ class Wrapper:
 			data = json.loads(f.read())
 			f.close()
 			for u in data:
-				if u["uuid"] == uuid:
-					if not uuid in self.usercache:
-						self.usercache[uuid] = {"time": time.time(), "name": None}
-					if u["name"] != self.usercache[uuid]["name"]:
-						self.usercache[uuid]["name"] = u["name"]
-						self.usercache[uuid]["online"] = False
-						self.usercache[uuid]["time"] = time.time()
+				if u["uuid"] == useruuid:
+					if not useruuid in self.usercache:
+						self.usercache[useruuid] = {"time": time.time(), "name": None}
+					if u["name"] != self.usercache[useruuid]["name"]:
+						self.usercache[useruuid]["name"] = u["name"]
+						self.usercache[useruuid]["online"] = False
+						self.usercache[useruuid]["time"] = time.time()
 					return str(u["name"])
 	def getUUID(self, username):
-		""" Unfinished function. Needs finishing pronto! """
-		if self.isOnlineMode():
-			pass
-		else:
-			return self.UUIDFromName(username)
-		if not self.proxy:
+		"""
+		:param username - string of user's name
+		:returns a uuid object, which means UUIDfromname and lookupUsername must return uuid obejcts
+		"""
+		if self.isOnlineMode() is False:
+			return self.UUIDFromName("OfflinePlayer:%s" % username)
+		if self.proxy is False:
 			f = open("usercache.json", "r")
 			data = json.loads(f.read())
 			f.close()
 			for u in data:
 				if u["name"] == username:
-					return u["uuid"]
-		return False
+					return uuid.UUID(u["uuid"])
+		else:
+			return self.proxy.lookupUsername(username)
+		return self.UUIDFromName(username)
 	def start(self):
 		self.configManager.loadConfig()
 		self.config = self.configManager.config
