@@ -1,4 +1,8 @@
 import storage, api, time, fnmatch, json, threading
+
+from mcpkt import ClientBound18 as defPacketsCB
+from mcpkt import ClientBound19 as PacketsCB19
+
 class Player:
 	""" Player objects contains methods and data of a currently logged-in player. This object is destroyed upon logging off. """
 	def __init__(self, username, wrapper):
@@ -13,12 +17,17 @@ class Player:
 		
 		self.uuid = self.wrapper.getUUID(username)
 		self.client = None
+		self.clientPackets = defPacketsCB
+
 		if not self.wrapper.proxy == False:
 			for client in self.wrapper.proxy.clients:
 				if client.username == username:
 					self.client = client
 					self.uuid = client.uuid
+					if self.getClient().version > 49:
+						self.clientPackets = PacketsCB19
 					break
+		# hopefully this will never happen again
 		if self.uuid == None: # Potential hack for UUID==None sometimes
 			if not self.wrapper.proxy == False:
 				self.uuid = self.wrapper.proxy.lookupUsername(self.username)
@@ -94,12 +103,12 @@ class Player:
 		if gm in (0, 1, 2, 3):
 			self.client.gamemode = gm
 			self.console("gamemode %d %s" % (gm, self.username))
-	def setResourcePack(self, url):
+	def setResourcePack(self, url, hashrp=""):
 		""" Sets the player's resource pack to a different URL. If the user hasn't already allowed resource packs, the user will be prompted to change to the specified resource pack. Probably broken right now. """
-		if self.client.version < 7:
+		if self.getClient().version < 7:
 			self.client.send(0x3f, "string|bytearray", ("MC|RPack", url))
 		else:
-			self.client.send(0x48, "string|string", (url, ""))
+			self.client.send(self.clientPackets.resourcepacksend, "string|string", (url, hashrp))
 	def isOp(self):
 		""" Returns whether or not the player is currently a server operator.  """
 		operators = json.loads(open("ops.json", "r").read())
@@ -115,25 +124,31 @@ class Player:
 			self.wrapper.server.console("tellraw %s %s" % (self.username, self.wrapper.server.processColorCodes(message)))
 	def actionMessage(self, message=""):
 		if self.getClient().version > 10:
-			self.getClient().send(0x02, "string|byte", (json.dumps({"text": self.processColorCodesOld(message)}), 2))
+			self.getClient().send(self.clientPackets.chatmessage, "string|byte", (json.dumps({"text": self.processColorCodesOld(message)}), 2))
 	def setVisualXP(self, progress, level, total):
 		""" Change the XP bar on the client's side only. Does not affect actual XP levels. """
 		if self.getClient().version > 10:
-			self.getClient().send(0x1f, "float|varint|varint", (progress, level, total))
+			self.getClient().send(self.clientPackets.setexperience, "float|varint|varint", (progress, level, total))
 		else:
-			self.getClient().send(0x1f, "float|short|short", (progress, level, total))
+			self.getClient().send(self.clientPackets.setexperience, "float|short|short", (progress, level, total))
 	def openWindow(self, type, title, slots):
 		self.getClient().windowCounter += 1
 		if self.getClient().windowCounter > 200: self.getClient().windowCounter = 2
 		if self.getClient().version > 10:
-			self.getClient().send(0x2d, "ubyte|string|json|ubyte", (self.getClient().windowCounter, "0", {"text": title}, slots))
+			self.getClient().send(self.clientPackets.openwindow, "ubyte|string|json|ubyte", (self.getClient().windowCounter, "0", {"text": title}, slots))
 		return None # return a Window object soon
 	# Abilities & Client-Side Stuff
-	def setPlayerFlying(self, fly): # UNFINISHED FUNCTION
+	def getClientpacketlist(self):
+		"""allow plugins to get the players client plugin list per their
+		client version (list in mcpky.py).. eg:
+			packets = player.getClientpacketlist()
+			player.client.send(packets.playerabilities, "byte|float|float", (0x0F, 1, 1))"""
+		return self.clientPackets
+	def setPlayerFlying(self, fly): # UNFINISHED FUNCTION - setting byte bits 0x2 and 0x4 (set flying, allow flying)
 		if fly:
-			self.getClient().send(0x13, "byte|float|float", (255, 1, 1))
+			self.getClient().send(self.clientPackets.playerabilities , "byte|float|float", (0x06, 1, 1))  # player abilities
 		else:
-			self.getClient().send(0x13, "byte|float|float", (0, 1, 1))
+			self.getClient().send(self.clientPackets.playerabilities , "byte|float|float", (0x06, 1, 1))
 	def setBlock(self, position): # Unfinished function, will be used to make phantom blocks visible ONLY to the client
 		pass
 	# Inventory-related actions. These will probably be split into a specific Inventory class.
@@ -222,7 +237,7 @@ class Player:
 					self.permissions["users"][uuid]["groups"].remove(group)
 				else:
 					raise IndexError("%s is not part of the group '%s'" % (self.username, group))
-	# Player Information 
+	# Player Information
 	def getFirstLogin(self):
 		""" Returns a tuple containing the timestamp of when the user first logged in for the first time, and the timezone (same as time.tzname). """
 		return self.data["firstLoggedIn"]
