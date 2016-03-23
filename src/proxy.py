@@ -11,9 +11,12 @@ except:
 	IMPORT_SUCCESS = False
 
 # version coding
-PROTOCOLv1_9REL1 = 76  # start of stable 1.9 release (or most current snapshop that is documented by protocol)
+PROTOCOL_1_9_1_PRE = 108 # post- 1.9 "pre releases (1.9.1 pre-3 and later
+PROTOCOLv1_9REL1 = 107  # start of stable 1.9 release (or most current snapshop that is documented by protocol)
 PROTOCOL_1_9START = 48  # start of 1.9 snapshots
 PROTOCOLv1_8START = 6
+UNIVERSAL_CONNECT = False  # tells the client "same version as you" or does not disconnect dissimilar clients
+HIDDEN_OPS = ["SurestTexas00", "BenBaptist"]
 
 from mcpkt import ServerBound18 as defPacketsSB
 from mcpkt import ClientBound18 as defPacketsCB
@@ -126,9 +129,11 @@ class Proxy:
 		try:
 			r = requests.get("https://api.mojang.com/users/profiles/minecraft/%s" % username)
 			uuid = self.formatUUID(r.json()["id"])
+			correctcapname = r.json()["name"]
 		except:
 			uuid=self.wrapper.getUUID(username)
-		self.setUUID(uuid, username)
+			correctcapname = username
+		self.setUUID(uuid, correctcapname)
 		return uuid
 	def formatUUID(self, name):
 		return str(uuid.UUID(bytes=name.decode("hex")))
@@ -140,6 +145,24 @@ class Proxy:
 		if not self.storage.key("banned-uuid"):
 			self.storage.key("banned-uuid", {})
 		self.storage.key("banned-uuid")[str(uuid)] = {"reason": reason, "source": source, "created": time.time(), "name": self.lookupUUID(uuid)["name"]}
+	def banIP(self, ipaddress, reason="Banned by an operator", source="Server"):
+		if not self.storage.key("banned-ip"):
+			self.storage.key("banned-ip", {})
+		self.storage.key("banned-ip")[str(ipaddress)] = {"reason": reason, "source": source, "created": time.time()}
+		for i in self.wrapper.server.players:
+					player = self.wrapper.server.players[i]
+					if str(player.client.addr[0]) == str(ipaddress):
+						self.wrapper.server.console("kick %s Your IP is Banned!" % str(player.username))
+	def pardonIP(self, ipaddress):
+		if not self.storage.key("banned-ip"):
+			return False
+		if str(ipaddress) in self.storage.key("banned-ip"):
+			try:
+				del self.storage.key("banned-ip")[str(ipaddress)]
+				return True
+			except:
+				return False
+		return False  # False means the pardon failed to remove the/a IP from the list
 	def isUUIDBanned(self, uuid): # Check if the UUID of the user is banned
 		if not self.storage.key("banned-uuid"):
 			self.storage.key("banned-uuid", {})
@@ -148,9 +171,9 @@ class Proxy:
 		else:
 			return False
 	def isAddressBanned(self, address): # Check if the IP address is banned
-		if not self.storage.key("banned-address"):
-			self.storage.key("banned-address", {})
-		if address in self.storage.key("banned-address"):
+		if not self.storage.key("banned-ip"):
+			self.storage.key("banned-ip", {})
+		if address in self.storage.key("banned-ip"):
 			return True
 		else:
 			return False
@@ -237,9 +260,7 @@ class Client: # handle server-bound packets (client/game connection)
 			except:
 				self.server_temp.close(kill_client=False)
 				self.server_temp = None
-				# if this was the lobby or main server, this should be `self.pktCB.disconnect`
-				# should "self.pktCB.disconnect" be used instead to send this message?, if so, Json is not supported)
-				self.send(self.pktCB.chatmessage, "string|byte", ("Could not connect to that server!", 0))
+				self.send(self.pktCB.chatmessage, "string|byte", ("""{"text": "Could not connect to that server!", "color": "red", "bold": "true"}""", 0))
 				self.address = None
 				return
 		else:
@@ -257,7 +278,10 @@ class Client: # handle server-bound packets (client/game connection)
 			payload = "localhost\x00%s\x00%s" % (self.addr[0], self.uuid.hex)
 			self.server.send(0x00, "varint|string|ushort|varint", (self.version, payload, self.config["Proxy"]["server-port"], 2))
 		else:
-			self.server.send(0x00, "varint|string|ushort|varint", (self.version, "localhost", self.config["Proxy"]["server-port"], 2))
+			if UNIVERSAL_CONNECT is True:
+				self.server.send(0x00, "varint|string|ushort|varint", (self.wrapper.server.protocolVersion, "localhost", self.config["Proxy"]["server-port"], 2))
+			else:
+				self.server.send(0x00, "varint|string|ushort|varint", (self.version, "localhost", self.config["Proxy"]["server-port"], 2))
 		self.server.send(0x00, "string", (self.username,))
 
 		if self.version > PROTOCOLv1_8START:  # Ben's anti-rain hack for cross server, lobby return, connections
@@ -328,9 +352,16 @@ class Client: # handle server-bound packets (client/game connection)
 				if not self.wrapper.server.protocolVersion == self.version and data["state"] == 2:
 					if self.wrapper.server.protocolVersion == -1:
 						self.disconnect("Proxy was unable to connect to the server.")
+						return
 					else:
-						self.disconnect("You're not running the same Minecraft version as the server!")
-					return
+						if UNIVERSAL_CONNECT is not True:
+							self.disconnect("You're not running the same Minecraft version as the server!")
+							return
+						if PROTOCOL_1_9START < self.version < PROTOCOLv1_9REL1:
+							#PROTOCOLv1_9REL1 = 107  # start of stable 1.9 release (or most current snapshop that is documented by protocol)
+							#PROTOCOL_1_9START = 48  # start of 1.9 snapshots
+							self.disconnect("You're running unsupported outdated snapshots!")
+							return
 				if not self.wrapper.server.state == 2:
 					self.disconnect("Server has not finished booting. Please try connecting again in a few seconds")
 					return
@@ -343,11 +374,18 @@ class Client: # handle server-bound packets (client/game connection)
 				sample = []
 				for i in self.wrapper.server.players:
 					player = self.wrapper.server.players[i]
-					sample.append({"name": player.username, "id": str(player.uuid)})
+					if player.username not in HIDDEN_OPS:
+						sample.append({"name": player.username, "id": str(player.uuid)})
 					if len(sample) > 5: break
+				if UNIVERSAL_CONNECT == True:
+					reported_version = self.version
+					reported_name = "%s (Compatibility mode)" % self.wrapper.server.version
+				else:
+					reported_version = self.wrapper.server.protocolVersion
+					reported_name = self.wrapper.server.version
 				MOTD = {"description": json.loads(self.wrapper.server.processColorCodes(self.wrapper.server.motd.replace("\\", ""))),
 					"players": {"max": self.wrapper.server.maxPlayers, "online": len(self.wrapper.server.players), "sample": sample},
-					"version": {"name": self.wrapper.server.version, "protocol": self.wrapper.server.protocolVersion}
+					"version": {"name": reported_name, "protocol": reported_version}
 				}
 				if self.wrapper.server.serverIcon:
 					MOTD["favicon"] = self.wrapper.server.serverIcon
@@ -464,6 +502,10 @@ class Client: # handle server-bound packets (client/game connection)
 					self.packet.setCompression(256)
 
 				# Ban code should go here
+				# IP ban
+				if self.proxy.isAddressBanned(self.addr[0]):
+					self.disconnect("You have been IP-banned from this server!.")
+					return False
 
 				if not self.wrapper.callEvent("player.preLogin", {"player": self.username, "online_uuid": self.uuid, "offline_uuid": self.serverUUID, "ip": self.addr[0]}):
 					self.disconnect("Login denied.")
@@ -891,7 +933,10 @@ class Server: # Handle Server Connection  ("client bound" packets)
 			return False
 
 		if id == self.pktCB.joingame and self.state == 3:
-			data = self.read("int:eid|ubyte:gamemode|byte:dimension|ubyte:difficulty|ubyte:max_players|string:level_type")
+			if self.version < PROTOCOL_1_9_1_PRE:
+				data = self.read("int:eid|ubyte:gamemode|byte:dimension|ubyte:difficulty|ubyte:max_players|string:level_type")
+			elif self.version == PROTOCOL_1_9_1_PRE:
+				data = self.read("int:eid|ubyte:gamemode|int:dimension|ubyte:difficulty|ubyte:max_players|string:level_type")
 			oldDimension = self.client.dimension
 			self.client.gamemode = data["gamemode"]
 			self.client.dimension = data["dimension"]
@@ -916,7 +961,13 @@ class Server: # Handle Server Connection  ("client bound" packets)
 
 			#print "Sending change game state packet..."
 			self.client.send(self.pktCB.changegamestate, "ubyte|float", (3, self.client.gamemode))
-
+			if UNIVERSAL_CONNECT is True:
+				clientversion = self.packet.version
+				serverversion = self.wrapper.server.protocolVersion
+				if clientversion < PROTOCOL_1_9_1_PRE <= serverversion:
+					self.client.send(self.pktCB.joingame, "int|ubyte|byte|ubyte|ubyte|string",
+									 (data["eid"], data["gamemode"], data["dimension"], data["difficulty"], data["max_players"], data["level_type"]))
+					return False
 		if id == self.pktCB.chatmessage and self.state == 3:
 			rawdata = self.read("string:json|byte:position")
 			rawstring = rawdata["json"]
@@ -1198,7 +1249,6 @@ class Server: # Handle Server Connection  ("client bound" packets)
 						else:
 							self.client.send(self.pktCB.playerlistitem, "varint|varint|uuid|varint", (3, 1, uuid, False))
 					elif head["action"] == 4:
-						print("sending head list item 4: %s" % str(uuid))
 						self.client.send(self.pktCB.playerlistitem, "varint|varint|uuid", (4, 1, uuid))
 					return False
 		if id == self.pktCB.disconnect: # disconnect

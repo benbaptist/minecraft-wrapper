@@ -1,4 +1,4 @@
-import traceback, ast
+import traceback, ast, random
 class Commands:
 	def __init__(self, wrapper):
 		self.wrapper = wrapper
@@ -128,6 +128,56 @@ class Commands:
 					self.log.error(traceback.format_exc())
 					player.message({"text": "An error occurred while reloading plugins. Please check the console immediately for a traceback.", "color": "red"})
 				return False
+
+		if payload["command"] in ("ban-ip", "pardon-ip"):
+			if player.isOp():
+				if self.wrapper.config["Proxy"]["proxy-enabled"]:
+					player.message({"text": "Proxy mode!", "color": "dark_purple"})
+					player.message({"text": "Note: This will not work in proxy mode", "color": "red"})
+					player.message({"text": "In proxy mode, use /proxy-ban-ip or /proxy-pardon-ip.", "color": "green"})
+					return False
+		if payload["command"] == "proxy-ban-ip":
+			if player.isOp():
+				if self.wrapper.config["Proxy"]["proxy-enabled"]:
+					if len(args(0)) > 0:
+						ipnumbers = str(args(0)).split(".")
+						if len(ipnumbers) != 4:
+							player.message("&cinvalid ip address format: %s" % args(0))
+							return False
+						for ipnumber in range(0,4):
+							if int(ipnumbers[ipnumber]) > 255 or int(ipnumbers[ipnumber]) < 0:
+								player.message("&cinvalid ip component: %s  &5%s" % (args(0), str(ipnumbers[ipnumber])))
+								return False
+						self.wrapper.proxy.banIP(args(0))
+						player.message({"text": "IP address banned!", "color": "yellow"})
+						return False
+				else:
+					player.message({"text": "This will only work in proxy mode", "color": "red"})
+					player.message({"text": "The server is not in proxy mode (use /ban-ip).", "color": "red"})
+					return False
+		if payload["command"] == "proxy-pardon-ip":
+			if player.isOp():
+				if self.wrapper.config["Proxy"]["proxy-enabled"]:
+					if len(args(0)) > 0:
+						ipnumbers = str(args(0)).split(".")
+						if len(ipnumbers) != 4:
+							player.message("&cinvalid ip address format: %s" % args(0))
+							return False
+						for ipnumber in range(0,4):
+							if int(ipnumbers[ipnumber]) > 255 or int(ipnumbers[ipnumber]) < 0:
+								player.message("&cinvalid ip component: %s  &5%s" % (args(0), str(ipnumbers[ipnumber])))
+								return False
+						ipuse = ""
+						if self.wrapper.proxy.pardonIP(args(0)) is True:
+							player.message({"text": "IP address unbanned!", "color": "gold"} % str((args(0))))
+						else:
+							player.message({"text": "IP unban failed!", "color": "red"})
+						return False
+				else:
+					player.message({"text": "This will only work in proxy mode", "color": "red"})
+					player.message({"text": "The server is not in proxy mode (use /ban-ip).", "color": "red"})
+					return False
+
 		if payload["command"] in ("help", "?"):
 			helpGroups = [{"name": "Minecraft", "description": "List regular server commands"}]
 			for id in self.wrapper.help:
