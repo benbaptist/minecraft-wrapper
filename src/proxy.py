@@ -129,7 +129,7 @@ class Proxy:
 		try:
 			r = requests.get("https://api.mojang.com/users/profiles/minecraft/%s" % username)
 			uuid = self.formatUUID(r.json()["id"])
-			correctcapname = self.formatUUID(r.json()["name"])
+			correctcapname = r.json()["name"]
 		except:
 			uuid=self.wrapper.getUUID(username)
 			correctcapname = username
