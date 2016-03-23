@@ -94,9 +94,13 @@ class ClientBound18:
     disconnect = 0x40
     changegamestate = 0x2b
     namedsoundeffect = 0x29  # 1.8 protocol just calls it "sound effect"
+    playerabilities = 0x13
+    openwindow = 0x2d
+    setexperience = 0x1f
+    resourcepacksend = 0x48
 
 
-class ClientBound19:  # updated to protocol 94 15w51b
+class ClientBound19:  # updated to protocol 107 1.9 minecraft
     """ wrapper's "Server" process, which handles connections from server to wrapper.
 
     These packets are being sent to the client (i.e., wrapper's proxy) from the server.
@@ -132,3 +136,7 @@ class ClientBound19:  # updated to protocol 94 15w51b
     entityproperties = 0x4b
     entityeffect = 0x4c
     mapchunkbulk = 0xEE  # deprecated and not used in 1.9
+    playerabilities = 0x2b
+    openwindow = 0x13
+    setexperience = 0x3d
+    resourcepacksend = 0x32
