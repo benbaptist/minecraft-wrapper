@@ -45,7 +45,7 @@ class Minecraft:
 			username = self.wrapper.getUsername(puuid)
 			if type(username) != str: continue
 			if online:
-				if str(self.wrapper.UUIDFromName(username)) == puuid: continue
+				if str(wrapper.UUIDFromName(username)) == puuid: continue
 			with open("wrapper-data/players/" + uuidf) as f:
 				data = f.read()
 			try:
