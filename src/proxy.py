@@ -105,46 +105,70 @@ class Proxy:
 				return client
 		if str(id) in self.uuidTranslate:
 			return uuid.UUID(hex=self.uuidTranslate[str(id)])
-	def lookupUUID(self, uuid):
-		if not type(uuid) == str:
-			uuid = str(uuid) # Converts UUID objects into a simple UUID string
-		#if not self.storage.key("uuid-cache"):
-#			self.storage.key("uuid-cache", {})
-		if "uuid-cache" not in self.storage:
-			self.storage["uuid-cache"] = {}
-		if uuid in self.storage["uuid-cache"]:
-			return self.storage["uuid-cache"][uuid]
-		#with open("usercache.json", "r") as f:
-		#	usercache = json.loads(f.read())
-		#for i in usercache:
-		#	if i["uuid"] == str(uuid):
-		#		return i
-		return None
-	def lookupUsername(self, username):
-		if "uuid-cache" not in self.storage:
-			self.storage["uuid-cache"] = {}
-		for uuid in self.storage["uuid-cache"]:
-			if self.storage["uuid-cache"][uuid]["name"] == username:
-				return uuid
-		try:
-			r = requests.get("https://api.mojang.com/users/profiles/minecraft/%s" % username)
-			uuid = self.formatUUID(r.json()["id"])
-			correctcapname = r.json()["name"]
-		except:
-			uuid=self.wrapper.getUUID(username)
-			correctcapname = username
-		self.setUUID(uuid, correctcapname)
-		return uuid
-	def formatUUID(self, name):
-		return str(uuid.UUID(bytes=name.decode("hex")))
-	def setUUID(self, uuid, name):
+	def lookupUUID(self, theuuid):
+		"""
+		Lookup dictionary item containing the uuid and username for the specified theuuid
+		:param theuuid: uuid object or string representation of uuid
+		:returns: A dictionary item '{"uuid": uuid, "name": username}' from the UUID Cache
+
+		**THIS SHOULD NEVER BE USED TO "SET" A UUID IN THE CODE!!**
+		"""
 		if not self.storage.key("uuid-cache"):
 			self.storage.key("uuid-cache", {})
-		self.storage.key("uuid-cache")[str(uuid)] = {"uuid": str(uuid), "name": name}
+		if "uuid-cache" not in self.storage:
+			self.storage["uuid-cache"] = {}
+		if str(theuuid) in self.storage["uuid-cache"]:
+			return self.storage["uuid-cache"][str(theuuid)]
+		return False
+
+	def erase_uuid_cache(self):
+		"""Useful when the cache may be full of crap like NONE and FALSE.
+		Will destroy custom local names, of course"""
+		if "uuid-cache" in self.storage:
+			self.storage["uuid-cache"] = {}
+	def lookupUsername(self, username):
+		"""
+		Strange name, as this method actually looks up the user's UUID -
+		returns uuid object from user's name.  Looks in cache first, then polls
+		Mojang and finally will just create online one from the name if all else fails.
+		:param username: a string of the user's name
+		:returns: a UUID object
+		"""
+		if "uuid-cache" not in self.storage:
+			self.storage["uuid-cache"] = {}
+		for useruuid in self.storage["uuid-cache"]:
+			if self.storage["uuid-cache"][useruuid]["name"] == username:
+				return uuid.UUID(useruuid)  # return uuid object
+		try:
+			r = requests.get("https://api.mojang.com/users/profiles/minecraft/%s" % username)
+			useruuid = self.formatUUID(r.json()["id"])
+			correctcapname = r.json()["name"]
+		except:
+			useruuid=self.wrapper.getUUID(username)  # because getUUID returns uuid OBJECT
+			correctcapname = username
+		self.setUUID(useruuid, correctcapname)
+		return uuid.UUID(useruuid)  # ensure an object is what gets returned.
+	def formatUUID(self, playersname):
+		"""
+		takes players name and returns a HEX string representation of the UUID
+		:param playersname: string of playername
+		:return: string hex format "8-4-4-4-12"
+		"""
+		return str(uuid.UUID(bytes=playersname.decode("hex")))
+	def setUUID(self, playeruuid, name):
+		"""
+		:param playeruuid: can be object uuid or string representation
+		:param name: player name
+		"""
+		if not self.storage.key("uuid-cache"):
+			self.storage.key("uuid-cache", {})
+		self.storage.key("uuid-cache")[str(playeruuid)] = {"uuid": str(playeruuid), "name": name}
 	def banUUID(self, uuid, reason="Banned by an operator", source="Server"):
+		"""This is all wrong - needs to ban uuid, not username """
 		if not self.storage.key("banned-uuid"):
 			self.storage.key("banned-uuid", {})
-		self.storage.key("banned-uuid")[str(uuid)] = {"reason": reason, "source": source, "created": time.time(), "name": self.lookupUUID(uuid)["name"]}
+		self.storage.key("banned-uuid")[str(uuid)] = {"reason": reason, "source": source,
+													  "created": time.time(), "name": self.lookupUUID(uuid)["name"]}  #wrong
 	def banIP(self, ipaddress, reason="Banned by an operator", source="Server"):
 		if not self.storage.key("banned-ip"):
 			self.storage.key("banned-ip", {})
@@ -326,15 +350,6 @@ class Client: # handle server-bound packets (client/game connection)
 	def UUIDHexToInt(self, uuid):
 		uuid = uuid.replace("-", "").decode("hex")
 		return uuid
-	def UUIDFromName(self, name):
-		m = hashlib.md5()  # module md5 is deprecated
-		m.update(name)
-		d = bytearray(m.digest())
-		d[6] &= 0x0f
-		d[6] |= 0x30
-		d[8] &= 0x3f
-		d[8] |= 0x80
-		return uuid.UUID(bytes=str(d))
 	def getPlayerObject(self):
 		if self.username in self.wrapper.server.players:
 			return self.wrapper.server.players[self.username]
@@ -406,8 +421,8 @@ class Client: # handle server-bound packets (client/game connection)
 						self.send(0x01, "string|bytearray|bytearray", (self.serverID, self.publicKey, self.verifyToken))
 				else:
 					self.connect()
-					self.uuid = self.UUIDFromName("OfflinePlayer:" + self.username)
-					self.serverUUID = self.UUIDFromName("OfflinePlayer:" + self.username)
+					self.uuid = wrapper.UUIDFromName("OfflinePlayer:%s" % self.username)
+					self.serverUUID = wrapper.UUIDFromName("OfflinePlayer:%s" % self.username)
 					self.send(0x02, "string|string", (str(self.uuid), self.username))
 					self.state = 3
 					self.log.info("%s logged in (IP: %s)" % (self.username, self.addr[0]))
@@ -496,7 +511,7 @@ class Client: # handle server-bound packets (client/game connection)
 									with open("%s/.wrapper-proxy-whitelist-migrate" % worldName, "a") as f:
 										f.write("%s %s\n" % (str(self.uuid), str(self.serverUUID)))
 
-				self.serverUUID = self.UUIDFromName("OfflinePlayer:" + self.username)
+				self.serverUUID = wrapper.UUIDFromName("OfflinePlayer:%s" % self.username)
 
 				if self.version > 26:
 					self.packet.setCompression(256)
@@ -507,7 +522,7 @@ class Client: # handle server-bound packets (client/game connection)
 					self.disconnect("You have been IP-banned from this server!.")
 					return False
 
-				if not self.wrapper.callEvent("player.preLogin", {"player": self.username, "online_uuid": self.uuid, "offline_uuid": self.serverUUID, "ip": self.addr[0]}):
+				if not self.wrapper.callEvent("player.preLogin", {"player": self.username, "online_uuid": str(self.uuid), "offline_uuid": str(self.serverUUID), "ip": self.addr[0]}):
 					self.disconnect("Login denied.")
 					return False
 
@@ -516,7 +531,7 @@ class Client: # handle server-bound packets (client/game connection)
 
 				self.connect()
 
-				self.log.info("%s logged in (UUID: %s | IP: %s)" % (self.username, self.uuid, self.addr[0]))
+				self.log.info("%s logged in (UUID: %s | IP: %s)" % (self.username, str(self.uuid), self.addr[0]))
 				self.proxy.setUUID(self.uuid, self.username)
 
 				return False
@@ -753,7 +768,6 @@ class Client: # handle server-bound packets (client/game connection)
 					return False
 		return True
 	def handle(self):
-		#print(str(self.uuid))
 		t = threading.Thread(target=self.flush, args=())
 		t.daemon = True
 		t.start()
