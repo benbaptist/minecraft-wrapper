@@ -421,8 +421,8 @@ class Client: # handle server-bound packets (client/game connection)
 						self.send(0x01, "string|bytearray|bytearray", (self.serverID, self.publicKey, self.verifyToken))
 				else:
 					self.connect()
-					self.uuid = wrapper.UUIDFromName("OfflinePlayer:%s" % self.username)
-					self.serverUUID = wrapper.UUIDFromName("OfflinePlayer:%s" % self.username)
+					self.uuid = self.wrapper.UUIDFromName("OfflinePlayer:%s" % self.username)
+					self.serverUUID = self.wrapper.UUIDFromName("OfflinePlayer:%s" % self.username)
 					self.send(0x02, "string|string", (str(self.uuid), self.username))
 					self.state = 3
 					self.log.info("%s logged in (IP: %s)" % (self.username, self.addr[0]))
@@ -511,7 +511,7 @@ class Client: # handle server-bound packets (client/game connection)
 									with open("%s/.wrapper-proxy-whitelist-migrate" % worldName, "a") as f:
 										f.write("%s %s\n" % (str(self.uuid), str(self.serverUUID)))
 
-				self.serverUUID = wrapper.UUIDFromName("OfflinePlayer:%s" % self.username)
+				self.serverUUID = self.wrapper.UUIDFromName("OfflinePlayer:%s" % self.username)
 
 				if self.version > 26:
 					self.packet.setCompression(256)
