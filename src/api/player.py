@@ -195,6 +195,8 @@ class Player:
 		""" Adds the specified permission node and optionally a value to the player. 
 		
 		Value defaults to True, but can be set to False to explicitly revoke a particular permission from the player, or to any arbitrary value. """
+		if "users" not in self.permissions:
+			self.permissions["users"] = {}
 		for uuid in self.permissions["users"]:
 			if uuid == str(self.uuid):
 				self.permissions["users"][uuid]["permissions"][node] = value
@@ -202,6 +204,8 @@ class Player:
 		""" Completely removes a permission node from the player. They will inherit this permission from their groups or from plugin defaults. 
 		
 		If the player does not have the specific permission, an IndexError is raised. Note that this method has no effect on nodes inherited from groups or plugin defaults. """
+		if "users" not in self.permissions:
+			self.permissions["users"] = {}
 		for uuid in self.permissions["users"]:
 			if uuid == str(self.uuid):
 				if node in self.permissions["users"][uuid]["permissions"]:
@@ -211,12 +215,16 @@ class Player:
 	def hasGroup(self, group):
 		""" Returns a boolean of whether or not the player is in the specified permission group. """
 		self.uuid = self.wrapper.proxy.lookupUsername(self.username) # this will also setUUID() and init the perms for new player
+		if "users" not in self.permissions:
+			self.permissions["users"] = {}
 		for uuid in self.permissions["users"]:
 			if uuid == str(self.uuid):
 				return group in self.permissions["users"][uuid]["groups"]
 		return False
 	def getGroups(self):
 		""" Returns a list of permission groups that the player is in. """
+		if "users" not in self.permissions:
+			self.permissions["users"] = {}
 		for uuid in self.permissions["users"]:
 			if uuid == str(self.uuid):
 				return self.permissions["users"][uuid]["groups"]
@@ -226,11 +234,15 @@ class Player:
 		if not group in self.permissions["groups"]:
 			raise IndexError("No group with the name '%s' exists" % group)
 		self.uuid = self.wrapper.proxy.lookupUsername(self.username) # this will also setUUID() and init the perms for new player
+		if "users" not in self.permissions:
+			self.permissions["users"] = {}
 		for uuid in self.permissions["users"]:
 			if uuid == str(self.uuid):
 				self.permissions["users"][uuid]["groups"].append(group)
 	def removeGroup(self, group):
 		""" Removes the player to a specified group. If they are not part of the specified group, an IndexError is raised. """
+		if "users" not in self.permissions:
+			self.permissions["users"] = {}
 		for uuid in self.permissions["users"]:
 			if uuid == str(self.uuid):
 				if group in self.permissions["users"][uuid]["groups"]:
