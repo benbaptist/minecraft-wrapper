@@ -148,7 +148,7 @@ class Player:
 		if fly:
 			self.getClient().send(self.clientPackets.playerabilities , "byte|float|float", (0x06, 1, 1))  # player abilities
 		else:
-			self.getClient().send(self.clientPackets.playerabilities , "byte|float|float", (0x06, 1, 1))
+			self.getClient().send(self.clientPackets.playerabilities , "byte|float|float", (0x00, 1, 1))
 	def setBlock(self, position): # Unfinished function, will be used to make phantom blocks visible ONLY to the client
 		pass
 	# Inventory-related actions. These will probably be split into a specific Inventory class.
