@@ -41,7 +41,9 @@ class Minecraft:
 		players = {}
 		for uuidf in os.listdir("wrapper-data/players"):
 			puuid = uuidf.rsplit(".", 1)[0]
-			if puuid in ("None", "False"): continue
+			if puuid in ("None", "False"):
+				os.remove("wrapper-data/players/" + uuidf)  # remove any old bad objects
+				continue
 			username = self.wrapper.getUsername(puuid)
 			if type(username) != str: continue
 			if online:
