@@ -131,22 +131,22 @@ class Wrapper:
 			try:
 				rx = requests.get("https://status.mojang.com/check").json()  # reserve status polls for failed attempts
 			except:
-				log.error("Mojang Status not found - no internet connection, perhaps?")
+				self.log.error("Mojang Status not found - no internet connection, perhaps?")
 				return self.usercache[useruuid]["name"]
 			for i in range(0, len(rx)):
 				if "account.mojang.com" in rx[i]:
 					if rx[i]["account.mojang.com"] == "green":
-						log.error("Mojang accounts is green, but request failed.\n"
+						self.log.error("Mojang accounts is green, but request failed.\n"
 							  "- have you over-polled (large busy server) or supplied an incorrect UUID??")
-						log.error("uuid: %s" % useruuid)
-						log.debug("response: \n%s" % str(rx))
+						self.log.error("uuid: %s" % useruuid)
+						self.log.debug("response: \n%s" % str(rx))
 						#self.usercache[useruuid]["time"] = time.time() - frequency + 3600 # delay another hour
 						return r
 					if rx[i]["account.mojang.com"] in ("yellow", "red"):
-						log.error("Mojang accounts is experiencing issues (%s)." % rx[i]["account.mojang.com"])
+						self.log.error("Mojang accounts is experiencing issues (%s)." % rx[i]["account.mojang.com"])
 						#self.usercache[useruuid]["time"] = time.time() - frequency + 7200 # delay 2 more hours
 						return False
-			log.error("Mojang Status found, but corrupted or in an unexpected format.")
+			self.log.error("Mojang Status found, but corrupted or in an unexpected format.")
 			return False
 		return r
 
