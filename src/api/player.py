@@ -30,8 +30,8 @@ class Player:
 		# hopefully this will never happen again
 		if self.uuid == None: # Potential hack for UUID==None sometimes
 			if not self.wrapper.proxy == False:
-				self.uuid = self.wrapper.proxy.lookupUsername(self.username)
-				self.log.error("UUID for %s was 'None' but has been reset using proxy.lookupUsername (%s). Proxy mode is "
+				self.uuid = self.wrapper.proxy.lookupUser(self.username)
+				self.log.error("UUID for %s was 'None' but has been reset using proxy.lookupUser (%s). Proxy mode is "
 								"on. Please report this issue (and this line) to http://github.com/benbaptist/minecraft-wrapper/issues" % (self.username, self.uuid))
 			else:
 				self.log.error("UUID for %s is set as None in Player object. Cannot be fixed. Proxy mode is off. Please "
@@ -214,7 +214,8 @@ class Player:
 					raise IndexError("%s does not have permission node '%s'" % (self.username, node))
 	def hasGroup(self, group):
 		""" Returns a boolean of whether or not the player is in the specified permission group. """
-		self.uuid = self.wrapper.proxy.lookupUsername(self.username) # this will also setUUID() and init the perms for new player
+		self.uuid = self.wrapper.proxy.lookupUser(self.username) # this will also setUUID() and init the perms for new player
+		print(self.uuid)
 		if "users" not in self.permissions:
 			self.permissions["users"] = {}
 		for uuid in self.permissions["users"]:
@@ -233,7 +234,7 @@ class Player:
 		""" Adds the player to a specified group. If the group does not exist, an IndexError is raised. """
 		if not group in self.permissions["groups"]:
 			raise IndexError("No group with the name '%s' exists" % group)
-		self.uuid = self.wrapper.proxy.lookupUsername(self.username) # this will also setUUID() and init the perms for new player
+		self.uuid = self.wrapper.proxy.lookupUser(self.username) # this will also setUUID() and init the perms for new player
 		if "users" not in self.permissions:
 			self.permissions["users"] = {}
 		for uuid in self.permissions["users"]:
