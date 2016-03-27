@@ -368,7 +368,7 @@ class Commands:
 					username = args(1)
 					subcommand = args(2)
 					#try:
-					if len(username) > 0: uuid = self.wrapper.proxy.lookupUsername(username)
+					if len(username) > 0: uuid = str(self.wrapper.proxy.lookupUser(username))
 					#except:
 					#player.message("&cUsername '%s' does not exist." % username)
 					#return False
