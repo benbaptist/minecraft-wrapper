@@ -215,7 +215,6 @@ class Player:
 	def hasGroup(self, group):
 		""" Returns a boolean of whether or not the player is in the specified permission group. """
 		self.uuid = self.wrapper.proxy.lookupUser(self.username) # this will also setUUID() and init the perms for new player
-		print(self.uuid)
 		if "users" not in self.permissions:
 			self.permissions["users"] = {}
 		for uuid in self.permissions["users"]:
