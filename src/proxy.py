@@ -126,9 +126,9 @@ class Proxy:
 		Will destroy custom local names, of course"""
 		if "uuid-cache" in self.storage:
 			self.storage["uuid-cache"] = {}
-	def lookupUsername(self, username):
+	def lookupUser(self, username):
 		"""
-		Strange name, as this method actually looks up the user's UUID -
+		this method actually looks up the user's UUID -
 		returns uuid object from user's name.  Looks in cache first, then polls
 		Mojang and finally will just create online one from the name if all else fails.
 		:param username: a string of the user's name
@@ -148,13 +148,13 @@ class Proxy:
 			correctcapname = username
 		self.setUUID(useruuid, correctcapname)
 		return uuid.UUID(useruuid)  # ensure an object is what gets returned.
-	def formatUUID(self, playersname):
+	def formatUUID(self, playeruuid):
 		"""
-		takes players name and returns a HEX string representation of the UUID
-		:param playersname: string of playername
+		takes player's uuid with no dashes and returns it with the dashes
+		:param playeruuid: string of player uuid with no dashes (such as you might get back from Mojang)
 		:return: string hex format "8-4-4-4-12"
 		"""
-		return str(uuid.UUID(bytes=playersname.decode("hex")))
+		return str(uuid.UUID(bytes=playeruuid.decode("hex")))
 	def setUUID(self, playeruuid, name):
 		"""
 		:param playeruuid: can be object uuid or string representation
@@ -572,7 +572,8 @@ class Client: # handle server-bound packets (client/game connection)
 			except:
 				print traceback.format_exc()
 
-		
+####################################line		if self.getPlayerObject().hasGroup("test"):
+			#pass
 		# player position
 		if id == self.pktSB.playerposition:
 			data = self.read("double:x|double:y|double:z|bool:on_ground")
