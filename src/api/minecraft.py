@@ -1,4 +1,4 @@
-import json, time, nbt, items, storage, os, traceback, uuid, sys
+import json, nbt, items, os, uuid, sys
 reload(sys)
 class Minecraft:
 	""" This class contains functions related to in-game features directly. These methods are located at self.api.minecraft. """
@@ -73,8 +73,8 @@ class Minecraft:
 			try: 
 				effectConverted = int(effect)
 			except: # a non-number was passed, so we'll figure out what status effect it was in word form
-				if effect in API.statusEffects:
-					effectConverted = str(API.statusEffects[effect])
+				if effect in self.wrapper.api.statusEffects:
+					effectConverted = str(self.wrapper.api.statusEffects[effect])
 				else:
 					raise Exception("Invalid status effect given!")
 		if int(effectConverted) > 24 or int(effectConverted) < 1:
@@ -111,7 +111,7 @@ class Minecraft:
 			raise Exception("No such player %s is logged in" % username)
 	def lookupUUID(self, uuid):
 		""" Returns the username from the specified UUID. If the player has never logged in before and isn't in the user cache, it will poll Mojang's API. The function will raise an exception if the UUID is invalid. """
-		return self.wrapper.proxy.lookupUUID(uuid)
+		return self.wrapper.lookupUsernamebyUUID(uuid)
 	def getPlayers(self): # returns a list of players
 		""" Returns a list of the currently connected players. """
 		return self.getServer().players
