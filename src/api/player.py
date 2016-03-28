@@ -1,20 +1,24 @@
+# coding=utf-8
 import storage, api, time, fnmatch, json, threading
 
 from mcpkt import ClientBound18 as defPacketsCB
 from mcpkt import ClientBound19 as PacketsCB19
 
 class Player:
-	""" Player objects contains methods and data of a currently logged-in player. This object is destroyed upon logging off. """
+	"""
+	Player objects contains methods and data of a currently logged-in player. This object is destroyed
+	upon logging off. """
 	def __init__(self, username, wrapper):
 		self.wrapper = wrapper
 		self.server = wrapper.server
 		self.permissions = wrapper.permissions
-		self.name = username
-		self.username = self.name # just an alias - same variable
+		self.log = wrapper.log
+
+		self.username = username
+		self.name = self.username  # just an alias - same variable
 		self.loggedIn = time.time()
 		self.abort = False
-		self.log = wrapper.log
-		
+
 		self.uuid = self.wrapper.getUUID(username)
 		self.client = None
 		self.clientPackets = defPacketsCB
@@ -27,17 +31,12 @@ class Player:
 					if self.getClient().version > 49:
 						self.clientPackets = PacketsCB19
 					break
-		# hopefully this will never happen again
-		if self.uuid == None: # Potential hack for UUID==None sometimes
-			if not self.wrapper.proxy == False:
-				self.uuid = self.wrapper.proxy.lookupUser(self.username)
-				self.log.error("UUID for %s was 'None' but has been reset using proxy.lookupUser (%s). Proxy mode is "
-								"on. Please report this issue (and this line) to http://github.com/benbaptist/minecraft-wrapper/issues" % (self.username, self.uuid))
-			else:
-				self.log.error("UUID for %s is set as None in Player object. Cannot be fixed. Proxy mode is off. Please "
-								"report this issue (and this line) to http://github.com/benbaptist/minecraft-wrapper/issues " % self.username)
-		if self.uuid == False:
-			self.log.error("UUID for %s is set to False. Proxy mode is %s. Please report this issue (and this line) to"
+		# hopefully these will never happen again:
+		if self.uuid is None:
+			self.log.error("UUID for %s was 'None'. Proxy mode is %s Please report this issue (and this line) to "
+						   "http://github.com/benbaptist/minecraft-wrapper/issues" % (self.username, str(self.wrapper.proxy)))
+		if self.uuid is False:
+			self.log.error("UUID for %s was False. Proxy mode is %s. Please report this issue (and this line) to"
 							" http://github.com/benbaptist/minecraft-wrapper/issues" % (self.username, str(self.wrapper.proxy)))
 		
 		self.data = storage.Storage(self.uuid, root="wrapper-data/players")
@@ -55,23 +54,39 @@ class Player:
 			self.data["logins"][int(self.loggedIn)] = int(time.time())
 			time.sleep(1)
 	def console(self, string):
-		""" Run a command in the Minecraft server's console. """
+		"""
+		:param string: command to execute (no preceding slash) in the console
+		Run a command in the Minecraft server's console.
+		"""
 		try:
 			self.wrapper.server.console(string)
 		except:
 			pass
 	def execute(self, string):
-		""" Run a vanilla command as this player. Works best in proxy mode. If proxy mode is not enabled, it simply falls back to using the 1.8 'execute' command. 
-		
-		To be clear, this does NOT work with any Wrapper.py commands. The command is sent straight to the vanilla server."""
+		"""
+		:param string: command to execute (no preceding slash)
+		 Run a command as this player. If proxy mode is not enabled,
+		it simply falls back to using the 1.8 'execute' command.
+		To be clear, this does NOT work with any Wrapper.py or commands.
+		The command is sent straight to the server without going through the wrapper.
+		"""
 		try:
 			self.client.message("/%s" % string)
 		except:
 			self.console("execute %s ~ ~ ~ %s" % (self.name, string))
 	def say(self, string):
-		""" Send a message as a player. Beware, as this does not filter commands, so it could be used to execute commands as the player. Only works in proxy mode. """
+		""" :param string: message sent to the server as the player.
+		Send a message as a player.
+
+		Beware: the message string is sent directly to the server
+		without wrapper filtering,so it could be used to execute commands as the player if
+		the string is prefixed with a slah, for instance.
+		* Only works in proxy mode. """
 		self.client.message(string)
 	def getClient(self):
+		"""
+		:returns: player client object
+		"""
 		if self.client == None:
 			for client in self.wrapper.proxy.clients:
 				try:
@@ -82,41 +97,58 @@ class Player:
 					pass
 		else:
 			return self.client
-	def processColorCodesOld(self, message): # Not sure if this is used anymore. Might delete.
+	def processColorCodesOld(self, message):
+		"""
+		:param message: message text containing '&' to represent the chat formatting codes
+		:return: mofified text containing the section sign (§) and the formatting code.
+		"""
 		for i in api.API.colorCodes:
 			message = message.replace("&" + i, "\xc2\xa7" + i)
 		return message
 	def getPosition(self):
-		""" Returns a tuple of the player's current position, if they're on ground, and yaw/pitch of head. """
+		""":returns: a tuple of the player's current position, if they're on ground, and yaw/pitch of head. """
 		return self.getClient().position + self.getClient().head
-#	def getHead(self): Commenting out for just one build, then I'll remove the code itself in the next push (hopefully, if I remember)
-#		""" Returns a tuple of the player's head position. Same as last two values from player.getPosition() """
-#		return self.getClient().head
 	def getGamemode(self):
-		""" Returns the player's current gamemode. """
+		""":returns:  the player's current gamemode. """
 		return self.getClient().gamemode
 	def getDimension(self):
-		""" Returns the player's current dimension. -1 for Nether, 0 for Overworld, and 1 for End. """
+		""":returns: the player's current dimension.
+		-1 for Nether,
+		 0 for Overworld
+		 1 for End.
+		 """
 		return self.getClient().dimension
 	def setGamemode(self, gm=0):
-		""" Sets the user's gamemode. """
+		"""
+		:param gm: desired gamemode, as a value 0-3
+		Sets the user's gamemode.
+		"""
 		if gm in (0, 1, 2, 3):
 			self.client.gamemode = gm
 			self.console("gamemode %d %s" % (gm, self.username))
 	def setResourcePack(self, url, hashrp=""):
-		""" Sets the player's resource pack to a different URL. If the user hasn't already allowed resource packs, the user will be prompted to change to the specified resource pack. Probably broken right now. """
+		"""
+		:param url: URL of resource pack
+		:param hashrp: resource pack hash
+		Sets the player's resource pack to a different URL. If the user hasn't already allowed
+		resource packs, the user will be prompted to change to the specified resource pack.
+		Probably broken right now.
+		"""
 		if self.getClient().version < 7:
 			self.client.send(0x3f, "string|bytearray", ("MC|RPack", url))
 		else:
 			self.client.send(self.clientPackets.resourcepacksend, "string|string", (url, hashrp))
 	def isOp(self):
-		""" Returns whether or not the player is currently a server operator.  """
+		"""
+		:returns: whether or not the player is currently a server operator.
+		"""
 		operators = json.loads(open("ops.json", "r").read())
 		for i in operators:
 			if i["uuid"] == str(self.uuid) or i["name"] == self.username:
 				return True
 		return False
-	# Visual notifications
+
+	# region Visual notifications
 	def message(self, message=""):
 		if isinstance(message, dict):
 			self.wrapper.server.console("tellraw %s %s" % (self.username, json.dumps(message)))
@@ -137,7 +169,9 @@ class Player:
 		if self.getClient().version > 10:
 			self.getClient().send(self.clientPackets.openwindow, "ubyte|string|json|ubyte", (self.getClient().windowCounter, "0", {"text": title}, slots))
 		return None # return a Window object soon
-	# Abilities & Client-Side Stuff
+	# endregion Visual notifications
+
+	# region Abilities & Client-Side Stuff
 	def getClientpacketlist(self):
 		"""allow plugins to get the players client plugin list per their
 		client version (list in mcpky.py).. eg:
@@ -151,6 +185,8 @@ class Player:
 			self.getClient().send(self.clientPackets.playerabilities , "byte|float|float", (0x00, 1, 1))
 	def setBlock(self, position): # Unfinished function, will be used to make phantom blocks visible ONLY to the client
 		pass
+	# endregion
+
 	# Inventory-related actions. These will probably be split into a specific Inventory class.
 	def getItemInSlot(self, slot):
 		return self.getClient().inventory[slot]
@@ -214,7 +250,7 @@ class Player:
 					raise IndexError("%s does not have permission node '%s'" % (self.username, node))
 	def hasGroup(self, group):
 		""" Returns a boolean of whether or not the player is in the specified permission group. """
-		self.uuid = self.wrapper.proxy.lookupUser(self.username) # this will also setUUID() and init the perms for new player
+		self.uuid = self.wrapper.lookupUUIDbyUsername(self.username)  #init the perms for new player
 		if "users" not in self.permissions:
 			self.permissions["users"] = {}
 		for uuid in self.permissions["users"]:
@@ -225,6 +261,7 @@ class Player:
 		""" Returns a list of permission groups that the player is in. """
 		if "users" not in self.permissions:
 			self.permissions["users"] = {}
+		self.uuid = self.wrapper.lookupUUIDbyUsername(self.username)  # init the perms for new player
 		for uuid in self.permissions["users"]:
 			if uuid == str(self.uuid):
 				return self.permissions["users"][uuid]["groups"]
@@ -233,7 +270,7 @@ class Player:
 		""" Adds the player to a specified group. If the group does not exist, an IndexError is raised. """
 		if not group in self.permissions["groups"]:
 			raise IndexError("No group with the name '%s' exists" % group)
-		self.uuid = self.wrapper.proxy.lookupUser(self.username) # this will also setUUID() and init the perms for new player
+		self.uuid = self.wrapper.lookupUUIDbyUsername(self.username)  # init the perms for new player
 		if "users" not in self.permissions:
 			self.permissions["users"] = {}
 		for uuid in self.permissions["users"]:
@@ -243,6 +280,7 @@ class Player:
 		""" Removes the player to a specified group. If they are not part of the specified group, an IndexError is raised. """
 		if "users" not in self.permissions:
 			self.permissions["users"] = {}
+		self.uuid = self.wrapper.lookupUUIDbyUsername(self.username)  # init the perms for new player
 		for uuid in self.permissions["users"]:
 			if uuid == str(self.uuid):
 				if group in self.permissions["users"][uuid]["groups"]:
