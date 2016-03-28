@@ -42,14 +42,30 @@ class Wrapper:
 		# Aliases for compatibility
 		self.callEvent = self.events.callEvent
 	def isOnlineMode(self):
+		"""
+		:returns: Whether the server OR (for proxy mode) wrapper is in online mode.
+		This should normally 'always' render True, unless you want hackers coming on :(
+		not sure what circumstances you would want a different confguration...
+		"""
 		if self.config["Proxy"]["proxy-enabled"]:
-			return self.config["Proxy"]["online-mode"]
+			return self.config["Proxy"]["online-mode"]  # if wrapper is using proxy mode (which should be set to online)
 		if self.server:
-			if self.server.onlineMode: return True
+			if self.server.onlineMode: return True  # if local server is online-mode
 		return False
 	@staticmethod
+	def formatUUID(playeruuid):
+		"""
+		takes player's uuid with no dashes and returns it with the dashes
+		:param playeruuid: string of player uuid with no dashes (such as you might get back from Mojang)
+		:return: string hex format "8-4-4-4-12"
+		"""
+		return str(uuid.UUID(bytes=playeruuid.decode("hex")))
+	@staticmethod
 	def UUIDFromName(name):
-		#print("UUIDFROMNAME")
+		"""
+		:param name: should be passed as "Onlineplayer:<playername>" to get the correct (offline) vanilla server uuid
+		:return: a uuid object based on the name
+		"""
 		m = hashlib.md5()  # module md5 is deprecated
 		m.update(name)
 		d = bytearray(m.digest())
@@ -58,27 +74,57 @@ class Wrapper:
 		d[8] &= 0x3f
 		d[8] |= 0x80
 		return uuid.UUID(bytes=str(d))
-	def refreshUUID(self, useruuid=None):
+	def lookupUUIDbyUsername(self, username):
+		"""
+		Lookup users name and update local wrapper usercache. Will check Mojang once per day only.
+		:param username:  username as string
+		:returns: returns the uuid object from the given name. Updates the wrapper usercache.json
+			Yields False if failed.
+		"""
+		frequency = 86400  # check once per day at most for existing players
+		#try wrapper cache first
+		for useruuid in self.usercache:
+			if username in (self.usercache.key(useruuid)["name"], self.usercache.key(useruuid)["localname"]):
+				return uuid.UUID(useruuid)
+		# try mojang  (a new player, likely)
+		try:
+			r = requests.get("https://api.mojang.com/users/profiles/minecraft/%s" % username)
+			useruuid = self.formatUUID(r.json()["id"])
+			correctcapname = r.json()["name"]
+			if username != correctcapname:
+				print("%s's name is not correctly capitalized (offline name warning!)" % correctcapname)
+		except:
+			# try for any old proxy-data record- as a last resort:
+			if "uuid-cache" not in self.proxy.storage:
+				return False  # no old proxy uuid-cache exists.
+			for useruuid in self.proxy.storage["uuid-cache"]:
+				if self.storage["uuid-cache"][useruuid]["name"] == username:
+					return uuid.UUID(useruuid)  # return uuid object
+			return False # if no old proxy record
+		#if mojang good, lets update the UUID cache...
+		nameisnow = self.lookupUsernamebyUUID(useruuid)
+		if nameisnow is not False:
+			return uuid.UUID(useruuid)
+		return False
+
+	def lookupUsernamebyUUID(self, useruuid):
 		"""
 		Lookup users uuid/name and update local wrapper usercache. Will check Mojang once per day only.
-		:param useruuid:  UUID - as string!
+		:param useruuid:  UUID - as string with dashes!
 		:returns: returns the name from a uuid. Updates the wrapper usercache.json
 			Yields False if failed.
 		"""
 		frequency = 86400  # check once per day at most for existing players
-		if useruuid is None:
-			print("mojang polling was called incorrectly with no uuid")
-			return False  # bad call with no argument
 		if useruuid in self.usercache:  # if user is in the cache...
-			if (time.time() - self.usercache[useruuid]["time"]) < frequency:  # and was recently polled...
-				return self.usercache[useruuid]["name"]  # dont re-poll.
+			if (time.time() - self.usercache.key(useruuid)["time"]) < frequency:  # and was recently polled...
+				return self.usercache.key(useruuid)["name"]  # dont re-poll.
 			else:
-				names = self.pollMojang(useruuid)
+				names = self._pollMojangUUID(useruuid)
 				if names is False or names is None: # not a huge deal, we'll re-poll another time
-					self.usercache[useruuid]["time"] = time.time() - frequency + 7200 # delay 2 more hours
-					return self.usercache[useruuid]["name"]
+					self.usercache.key(useruuid)["time"] = time.time() - frequency + 7200 # delay 2 more hours
+					return self.usercache.key(useruuid)["name"]
 		else:  # user is not in cache
-			names = self.pollMojang(useruuid)
+			names = self._pollMojangUUID(useruuid)
 			if names is False:  # mojang service failed
 				return False
 			if names is None:  # UUID not found
@@ -89,14 +135,16 @@ class Wrapper:
 		pastnames = []
 		if not useruuid in self.usercache:
 			self.usercache[useruuid] = {"time": time.time(),"original": None, "name": None,
-										"online": True, "names": []}
+										"online": True, "localname": None, "IP": None, "names": []}
 		for i in range(0, numbofnames):
-			if "changedToAt" not in names[i]:
+			if "changedToAt" not in names[i]:  # find the original name
 				self.usercache[useruuid]["original"] = names[i]["name"]
 				self.usercache[useruuid]["online"] = True
 				self.usercache[useruuid]["time"] = time.time()
-				if numbofnames == 1:
+				if numbofnames == 1:  # name = original name
 					self.usercache[useruuid]["name"] = names[i]["name"]
+					if self.usercache[useruuid]["localname"] is None:
+						self.usercache[useruuid]["localname"] = names[i]["name"]
 					break
 			else:
 				l = len(pastnames)
@@ -112,10 +160,11 @@ class Wrapper:
 		self.usercache[useruuid]["names"] = pastnames
 		if numbofnames > 1:
 			self.usercache[useruuid]["name"] = pastnames[0]["name"]
-		# print(self.usercache)  # usercache updated - and hopefully will periodic.save()
-		return self.usercache[useruuid]["name"]
+			if self.usercache[useruuid]["localname"] is None:
+				self.usercache[useruuid]["localname"] = pastnames[0]["name"]
+		return self.usercache[useruuid]["localname"]
 
-	def pollMojang(self, useruuid=None):
+	def _pollMojangUUID(self, useruuid=None):
 		"""
 		attempts to poll Mojang with the UUID
 		:param useruuid: string uuid with dashes
@@ -140,11 +189,9 @@ class Wrapper:
 							  "- have you over-polled (large busy server) or supplied an incorrect UUID??")
 						self.log.error("uuid: %s" % useruuid)
 						self.log.debug("response: \n%s" % str(rx))
-						#self.usercache[useruuid]["time"] = time.time() - frequency + 3600 # delay another hour
 						return r
 					if rx[i]["account.mojang.com"] in ("yellow", "red"):
 						self.log.error("Mojang accounts is experiencing issues (%s)." % rx[i]["account.mojang.com"])
-						#self.usercache[useruuid]["time"] = time.time() - frequency + 7200 # delay 2 more hours
 						return False
 			self.log.error("Mojang Status found, but corrupted or in an unexpected format.")
 			return False
@@ -152,17 +199,16 @@ class Wrapper:
 
 	def getUsername(self, useruuid):
 		"""
-		:param useruuid - the string representation of the uuid.
+		:param useruuid - the string representation with dashes of the uuid.
+		used by commands.py in commands-playerstats and in api/minecraft.getAllPlayers
+		mostly a wrapper for lookupUsernamebyUUID which also checks the offline server usercache...
 		"""
 		if type(useruuid) not in (str, unicode):
 			return False
 		if self.isOnlineMode():
-			if self.proxy:
-				obj = self.proxy.lookupUUID(useruuid)
-				if obj: return str(obj["name"])
-			name = self.refreshUUID(useruuid)
+			name = self.lookupUsernamebyUUID(useruuid)
 			if name is not False:
-				return str(self.usercache[useruuid]["name"])
+				return str(self.usercache[useruuid]["localname"])
 			return False
 		else:
 			f = open("usercache.json", "r")  # this is the server's usercache.json (not the cache in wrapper-data)
@@ -180,20 +226,28 @@ class Wrapper:
 	def getUUID(self, username):
 		"""
 		:param username - string of user's name
-		:returns a uuid object, which means UUIDfromname and lookupUser must return uuid obejcts
+		:returns a uuid object, which means UUIDfromname and lookupUUIDbyUsername must return uuid obejcts
 		"""
-		if self.isOnlineMode() is False:
+		if self.isOnlineMode() is False:  # both server anxd wrapper in offline...
 			return self.UUIDFromName("OfflinePlayer:%s" % username)
+
+		# proxy mode is off / not working
 		if self.proxy is False:
-			f = open("usercache.json", "r")
+			f = open("usercache.json", "r")  # read offline server cache first
 			data = json.loads(f.read())
 			f.close()
 			for u in data:
 				if u["name"] == username:
 					return uuid.UUID(u["uuid"])
 		else:
-			return self.proxy.lookupUser(username)
-		return self.UUIDFromName(username)
+			search = self.lookupUUIDbyUsername(username)  # proxy mode is on... poll mojang and wrapper cache
+			if search is False:
+				print("Server online but unable to getUUID (even by polling!) for username: %s \n returned an Offline uuid..." % username)
+				return self.UUIDFromName("OfflinePlayer:%s" % username)
+			else:
+				return search
+		#if both if and else fail to deliver a uuid:
+		return self.UUIDFromName("OfflinePlayer:%s" % username)  # create offline uuid
 	def start(self):
 		self.configManager.loadConfig()
 		self.config = self.configManager.config
