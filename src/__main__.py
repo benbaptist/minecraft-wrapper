@@ -102,7 +102,7 @@ class Wrapper:
 					return uuid.UUID(useruuid)  # return uuid object
 			return False # if no old proxy record
 		#if mojang good, lets update the UUID cache...
-		nameisnow = self.lookupUsernamebyUUID(useruuid)
+		nameisnow = self.lookupUsernamebyUUID(str(useruuid))
 		if nameisnow is not False:
 			return uuid.UUID(useruuid)
 		return False
@@ -206,7 +206,7 @@ class Wrapper:
 		if type(useruuid) not in (str, unicode):
 			return False
 		if self.isOnlineMode():
-			name = self.lookupUsernamebyUUID(useruuid)
+			name = self.lookupUsernamebyUUID(str(useruuid))
 			if name is not False:
 				return str(self.usercache[useruuid]["localname"])
 			return False
@@ -364,7 +364,7 @@ class Wrapper:
 		if type == None: type = globals.type
 		if type == "dev":
 			try:
-				r = requests.get("https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/build/version.json")
+				r = requests.get("https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/docs/version.json")
 				data = r.json()
 				if self.update:
 					if self.update > data["build"]: return False
@@ -374,7 +374,7 @@ class Wrapper:
 				self.log.warn("Failed to check for updates - are you connected to the internet?")
 		else:
 			try:
-				r = requests.get("https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master/build/version.json")
+				r = requests.get("https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master/docs/version.json")
 				data = r.json()
 				if self.update:
 					if self.update > data["build"]: return False
@@ -387,7 +387,7 @@ class Wrapper:
 		if type == "dev": repo = "development"
 		else: repo = "master"
 		try:
-			wrapperHash = requests.get("https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/%s/build/Wrapper.py.md5" % repo).text
+			wrapperHash = requests.get("https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/%s/docs/Wrapper.py.md5" % repo).text
 			wrapperFile = requests.get("https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/%s/Wrapper.py" % repo).content
 			self.log.info("Verifying Wrapper.py...")
 			if hashlib.md5(wrapperFile).hexdigest() == wrapperHash:
