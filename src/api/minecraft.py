@@ -111,7 +111,7 @@ class Minecraft:
 			raise Exception("No such player %s is logged in" % username)
 	def lookupUUID(self, uuid):
 		""" Returns the username from the specified UUID. If the player has never logged in before and isn't in the user cache, it will poll Mojang's API. The function will raise an exception if the UUID is invalid. """
-		return self.wrapper.lookupUsernamebyUUID(uuid)
+		return self.wrapper.lookupUsernamebyUUID(str(uuid))
 	def getPlayers(self): # returns a list of players
 		""" Returns a list of the currently connected players. """
 		return self.getServer().players
