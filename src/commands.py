@@ -352,7 +352,7 @@ class Commands:
 						player.message("&aUsers in the group '%s':" % group)
 						for uuid in self.wrapper.permissions["users"]:
 							if group in self.wrapper.permissions["users"][uuid]["groups"]:
-								player.message("%s: &2%s" % (self.wrapper.lookupUsernamebyUUID(str(uuid)), uuid))
+								player.message("%s: &2%s" % (self.wrapper.lookupUsernamebyUUID(str(uuid)), str(uuid)))
 						player.message("&aPermissions for the group '%s':" % group)
 						for node in self.wrapper.permissions["groups"][group]["permissions"]:
 							value = self.wrapper.permissions["groups"][group]["permissions"][node]
