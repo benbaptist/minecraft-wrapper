@@ -891,7 +891,7 @@ class Server: # Handle Server Connection  ("client bound" packets)
 		if id == self.pktCB.joingame and self.state == 3:
 			if self.version < PROTOCOL_1_9_1_PRE:
 				data = self.read("int:eid|ubyte:gamemode|byte:dimension|ubyte:difficulty|ubyte:max_players|string:level_type")
-			elif self.version == PROTOCOL_1_9_1_PRE:
+			elif self.version >= PROTOCOL_1_9_1_PRE:
 				data = self.read("int:eid|ubyte:gamemode|int:dimension|ubyte:difficulty|ubyte:max_players|string:level_type")
 			oldDimension = self.client.dimension
 			self.client.gamemode = data["gamemode"]
