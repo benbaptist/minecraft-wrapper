@@ -63,7 +63,7 @@ class Wrapper:
 	@staticmethod
 	def UUIDFromName(name):
 		"""
-		:param name: should be passed as "Onlineplayer:<playername>" to get the correct (offline) vanilla server uuid
+		:param name: should be passed as "OfflinePlayer:<playername>" to get the correct (offline) vanilla server uuid
 		:return: a uuid object based on the name
 		"""
 		m = hashlib.md5()  # module md5 is deprecated
