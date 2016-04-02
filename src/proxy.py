@@ -103,8 +103,8 @@ class Proxy:
 			if str(client.serverUUID) == str(id):
 				self.uuidTranslate[str(id)] = str(client.uuid)
 				return client
-		if str(id) in self.uuidTranslate:
-			return uuid.UUID(hex=self.uuidTranslate[str(id)])
+		# if str(id) in self.uuidTranslate:
+		# 	return uuid.UUID(hex=self.uuidTranslate[str(id)])
 		return False  # no client
 	def banUUID(self, uuid, reason="Banned by an operator", source="Server"):
 		"""This is all wrong - needs to ban uuid, not username """
