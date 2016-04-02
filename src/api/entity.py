@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 ENTITIES = {  # Unfinished list of entities
     48: {"Name": "Mob"},
     49: {"Name": "Monster"},

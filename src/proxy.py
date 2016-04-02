@@ -1,9 +1,12 @@
+# -*- coding: utf-8 -*-
+
 from config import Config
 from api.entity import Entity
 from mcpkt import ServerBound18 as defPacketsSB
 from mcpkt import ClientBound18 as defPacketsCB
 from mcpkt import ServerBound19 as PacketsSB19
 from mcpkt import ClientBound19 as PacketsCB19
+from helpers import args, argsAfter
 import socket
 import threading
 import struct
@@ -603,18 +606,7 @@ class Client:  # handle server-bound packets (client/game connection)
                 if type(payload) == str:
                     chatmsg = payload
                 if chatmsg[0] == "/":
-                    def args(i):
-                        try:
-                            return chatmsg.split(" ")[i]
-                        except:
-                            return ""
-
-                    def argsAfter(i):
-                        try:
-                            return chatmsg.split(" ")[i:]
-                        except:
-                            return ""
-                    if self.wrapper.callEvent("player.runCommand", {"player": self.getPlayerObject(), "command": args(0)[1:].lower(), "args": argsAfter(1)}):
+                    if self.wrapper.callEvent("player.runCommand", {"player": self.getPlayerObject(), "command": args(chatmsg.split(" "), 0)[1:].lower(), "args": argsAfter(chatmsg.split(" "), 1)}):
                         self.message(chatmsg)
                         return False
                     return

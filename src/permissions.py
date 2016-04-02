@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 # this was a stupid idea, i shold probably remove this file ioksaodksaisaoijd LOLOLOLOLOOL
 # because it goes unused
 # LOLLOOLOLOL

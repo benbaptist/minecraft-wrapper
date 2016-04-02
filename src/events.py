@@ -1,5 +1,6 @@
-import traceback
+# -*- coding: utf-8 -*-
 
+import traceback
 
 class Events:
 

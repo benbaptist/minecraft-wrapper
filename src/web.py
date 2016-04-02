@@ -1,5 +1,5 @@
-# Yeah, I know. The code is awful. Probably not even a HTTP-compliant web
-# server anyways. I just wrote it at like 3AM in like an hour.
+# -*- coding: utf-8 -*-
+
 import socket
 import traceback
 import zipfile
@@ -14,6 +14,7 @@ import urllib
 import os
 import md5
 from api import API
+from helpers import args, argsAfter
 try:
     import pkg_resources
     import requests
@@ -21,6 +22,8 @@ try:
 except:
     IMPORT_SUCCESS = False
 
+# Yeah, I know. The code is awful. Probably not even a HTTP-compliant web
+# server anyways. I just wrote it at like 3AM in like an hour.
 
 class Web:
 
@@ -232,14 +235,8 @@ class Client:
             self.close()
 
     def handleAction(self, request):
-        def args(i):
-            try:
-                return request.split("/")[1:][i]
-            except:
-                return ""
-
         def get(i):
-            for a in args(1).split("?")[1].split("&"):
+            for a in request.split("/")[1:][1].split("?")[1].split("&"):
                 if a[0:a.find("=")]:
                     return urllib.unquote(a[a.find("=") + 1:])
             return ""
@@ -255,18 +252,12 @@ class Client:
         os.getcwd()
 
     def runAction(self, request):
-        def args(i):
-            try:
-                return request.split("/")[1:][i]
-            except:
-                return ""
-
         def get(i):
-            for a in args(1).split("?")[1].split("&"):
+            for a in request.split("/")[1:][1].split("?")[1].split("&"):
                 if a[0:a.find("=")] == i:
                     return urllib.unquote(a[a.find("=") + 1:])
             return ""
-        action = args(1).split("?")[0]
+        action = request.split("/")[1:][1].split("?")[0]
         if action == "stats":
             if not self.wrapper.config["Web"]["public-stats"]:
                 return EOFError
@@ -596,14 +587,9 @@ class Client:
 
     def get(self, request):
         # print "GET request: %s" % request
-        def args(i):
-            try:
-                return request.split("/")[1:][i]
-            except:
-                return ""
         if request == "/":
             file = "index.html"
-        elif args(0) == "action":
+        elif request.split("/")[1:][0] == "action":
             try:
                 self.write(json.dumps(self.handleAction(request)))
             except:
@@ -653,20 +639,9 @@ class Client:
                 print "Web connection closed suddenly"
                 return False
             for line in self.buffer:
-                def args(i):
-                    try:
-                        return line.split(" ")[i]
-                    except:
-                        return ""
-
-                def argsAfter(i):
-                    try:
-                        return " ".join(line.split(" ")[i:])
-                    except:
-                        return ""
-                if args(0) == "GET":
-                    self.get(args(1))
-                if args(0) == "POST":
-                    self.request = args(1)
+                if args(line.split(" "), 0) == "GET":
+                    self.get(args(line.split(" "), 1))
+                if args(line.split(" "), 0) == "POST":
+                    self.request = args(line.split(" "), 1)
                     self.headers(status="400 Bad Request")
                     self.write("<h1>Invalid request. Sorry.</h1>")

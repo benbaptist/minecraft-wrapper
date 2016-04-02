@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+
 import sys
 import json
 import signal
@@ -9,6 +10,9 @@ import hashlib
 import uuid
 import dashboard
 import web
+import traceback
+import threading
+import time
 
 from log import Log, PluginLog
 from config import Config
@@ -19,12 +23,17 @@ from api import API
 from plugins import Plugins
 from commands import Commands
 from events import Events
+from helpers import args, argsAfter
+
 # I'm not 100% sure if readline works under Windows or not
+
 try:
     import readline
 except:
     pass
+
 # Sloppy import catch system
+
 try:
     import requests
     IMPORT_REQUESTS = True
@@ -145,9 +154,7 @@ class Wrapper:
                     return self.usercache.key(useruuid)["name"]
         else:  # user is not in cache
             names = self._pollMojangUUID(useruuid)
-            if names is False:  # mojang service failed
-                return False
-            if names is None:  # UUID not found
+            if not names or names is None:  # mojang service failed or UUID not found
                 return False
         numbofnames = len(names)
         if numbofnames == 0:
@@ -164,8 +171,7 @@ class Wrapper:
                 if numbofnames == 1:  # name = original name
                     self.usercache[useruuid]["name"] = names[i]["name"]
                     if self.usercache[useruuid]["localname"] is None:
-                        self.usercache[useruuid][
-                            "localname"] = names[i]["name"]
+                        self.usercache[useruuid]["localname"] = names[i]["name"]
                     break
             else:
                 l = len(pastnames)
@@ -240,9 +246,8 @@ class Wrapper:
         else:
             # this is the server's usercache.json (not the cache in
             # wrapper-data)
-            f = open("usercache.json", "r")
-            data = json.loads(f.read())
-            f.close()
+            with open("usercache.json", "r") as f:
+                data = json.loads(f.read())
             for u in data:
                 if u["uuid"] == useruuid:
                     if useruuid not in self.usercache:
@@ -298,8 +303,7 @@ class Wrapper:
             ("/reload", "Reload all plugins.", None)
         ])
 
-        self.server = Server(sys.argv, self.log,
-                             self.configManager.config, self)
+        self.server = Server(sys.argv, self.log, self.configManager.config, self)
         self.server.init()
 
         self.plugins.loadPlugins()
@@ -414,9 +418,7 @@ class Wrapper:
         else:
             self.log.info("No new versions available.")
 
-    def checkForNewUpdate(self, type=None):
-        if type is None:
-            type = globals.type
+    def checkForNewUpdate(self, type=globals.type):
         if type == "dev":
             try:
                 r = requests.get(
@@ -499,19 +501,7 @@ class Wrapper:
                 except:
                     break
                 continue
-
-            def args(i):
-                try:
-                    return input[1:].split(" ")[i]
-                except:
-                    pass
-
-            def argsAfter(i):
-                try:
-                    return " ".join(input[1:].split(" ")[i:])
-                except:
-                    pass
-            command = args(0)
+            command = args(input[1:].split(" "), 0)
             if command == "halt":
                 self.server.stop("Halting server...", save=False)
                 self.halt = True
@@ -554,8 +544,8 @@ class Wrapper:
                         "Server not booted or another error occurred while getting memory usage!")
             elif command == "raw":
                 if self.server.state in (1, 2, 3):
-                    if len(argsAfter(1)) > 0:
-                        self.server.console(argsAfter(1))
+                    if len(argsAfter(input[1:].split(" "), 1)) > 0:
+                        self.server.console(argsAfter(input[1:].split(" "), 1))
                     else:
                         self.log.info("Usage: /raw [command]")
                 else:

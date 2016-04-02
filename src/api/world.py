@@ -1,7 +1,8 @@
+# -*- coding: utf-8 -*-
+
 import math
 import struct
 import json
-
 
 class World:
 

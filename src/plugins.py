@@ -1,10 +1,11 @@
+# -*- coding: utf-8 -*-
+
 import os
 import traceback
 import sys
 from importlib import import_module
 from api import API
 from log import *
-
 
 class Plugins:
 
