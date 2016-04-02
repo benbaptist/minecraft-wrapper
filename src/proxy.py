@@ -105,6 +105,7 @@ class Proxy:
 				return client
 		if str(id) in self.uuidTranslate:
 			return uuid.UUID(hex=self.uuidTranslate[str(id)])
+		return False  # no client
 	def banUUID(self, uuid, reason="Banned by an operator", source="Server"):
 		"""This is all wrong - needs to ban uuid, not username """
 		if not self.storage.key("banned-uuid"):
@@ -1001,10 +1002,11 @@ class Server: # Handle Server Connection  ("client bound" packets)
 			if self.version < PROTOCOL_1_9START:
 				data = self.read("varint:eid|uuid:uuid|int:x|int:y|int:z|byte:yaw|byte:pitch|short:item|rest:metadata")
 				if data["item"] < 0: data["item"] = 0  # A negative Current Item crashes clients (just in ncase)
-				if self.proxy.getClientByServerUUID(data["uuid"]):
+				clientserverid = self.proxy.getClientByServerUUID(data["uuid"])
+				if clientserverid:
 					self.client.send(self.pktCB.spawnplayer, "varint|uuid|int|int|int|byte|byte|short|raw", (
 						data["eid"],
-						self.proxy.getClientByServerUUID(data["uuid"]).uuid,
+						clientserverid.uuid,
 						data["x"],
 						data["y"],
 						data["z"],
@@ -1015,10 +1017,11 @@ class Server: # Handle Server Connection  ("client bound" packets)
 				return False
 			else:
 				data = self.read("varint:eid|uuid:uuid|int:x|int:y|int:z|byte:yaw|byte:pitch|rest:metadata")
-				if self.proxy.getClientByServerUUID(data["uuid"]):
+				clientserverid = self.proxy.getClientByServerUUID(data["uuid"])
+				if clientserverid:
 					self.client.send(self.pktCB.spawnplayer, "varint|uuid|int|int|int|byte|byte|raw", (
 						data["eid"],
-						self.proxy.getClientByServerUUID(data["uuid"]).uuid,
+						clientserverid.uuid,
 						data["x"],
 						data["y"],
 						data["z"],
@@ -1167,17 +1170,19 @@ class Server: # Handle Server Connection  ("client bound" packets)
 				z = 0
 				while z < head["length"]:
 					serverUUID = self.read("uuid:uuid")["uuid"]
-					client = self.client.proxy.getClientByServerUUID(serverUUID)
-					try: uuid = client.uuid
-					except:
-						uuid = client
+					playerclient = self.client.proxy.getClientByServerUUID(serverUUID)
+					if not playerclient:
 						z += 1
-					if not client:
+						continue
+					try: uuid = playerclient.uuid
+					except:
+						# uuid = playerclient
+						print("playercleint.uuid failed in playerlist item")
 						z += 1
 						continue
 					z += 1
 					if head["action"] == 0:
-						properties = client.properties
+						properties = playerclient.properties
 						raw = ""
 						for i in properties:
 							raw += self.client.packet.send_string(i["name"]) # name
@@ -1190,7 +1195,7 @@ class Server: # Handle Server Connection  ("client bound" packets)
 						raw += self.client.packet.send_varInt(0)
 						raw += self.client.packet.send_varInt(0)
 						raw += self.client.packet.send_bool(False)
-						self.client.send(self.pktCB.playerlistitem, "varint|varint|uuid|string|varint|raw", (0, 1, client.uuid, client.username, len(properties), raw))
+						self.client.send(self.pktCB.playerlistitem, "varint|varint|uuid|string|varint|raw", (0, 1, playerclient.uuid, playerclient.username, len(properties), raw))
 					elif head["action"] == 1:
 						data = self.read("varint:gamemode")
 						self.client.send(self.pktCB.playerlistitem, "varint|varint|uuid|varint", (1, 1, uuid, data["gamemode"]))
