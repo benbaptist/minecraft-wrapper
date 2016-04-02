@@ -10,7 +10,7 @@ import uuid
 import dashboard
 import web
 
-from log import *
+from log import Log, PluginLog
 from config import Config
 from irc import IRC
 from server import Server
@@ -141,8 +141,7 @@ class Wrapper:
             else:
                 names = self._pollMojangUUID(useruuid)
                 if names is False or names is None:  # not a huge deal, we'll re-poll another time
-                    self.usercache.key(useruuid)["time"] = time.time(
-                    ) - frequency + 7200  # delay 2 more hours
+                    self.usercache.key(useruuid)["time"] = time.time() - frequency + 7200  # delay 2 more hours
                     return self.usercache.key(useruuid)["name"]
         else:  # user is not in cache
             names = self._pollMojangUUID(useruuid)
@@ -265,9 +264,8 @@ class Wrapper:
 
         # proxy mode is off / not working
         if self.proxy is False:
-            f = open("usercache.json", "r")  # read offline server cache first
-            data = json.loads(f.read())
-            f.close()
+            with open("usercache.json", "r") as f: # read offline server cache first
+                data = json.loads(f.read())
             for u in data:
                 if u["name"] == username:
                     return uuid.UUID(u["uuid"])
@@ -307,8 +305,8 @@ class Wrapper:
         self.plugins.loadPlugins()
 
         if self.config["IRC"]["irc-enabled"]:
-            self.irc = IRC(self.server, self.config, self.log, self, self.config["IRC"]["server"], self.config[
-                           "IRC"]["port"], self.config["IRC"]["nick"], self.config["IRC"]["channels"])
+            self.irc = IRC(self.server, self.config, self.log, self, self.config["IRC"]["server"],
+                            self.config["IRC"]["port"], self.config["IRC"]["nick"], self.config["IRC"]["channels"])
             t = threading.Thread(target=self.irc.init, args=())
             t.daemon = True
             t.start()
@@ -325,8 +323,7 @@ class Wrapper:
                 self.log.error(
                     "Hint: http://stackoverflow.com/questions/7446187")
         if len(sys.argv) < 2:
-            wrapper.server.args = wrapper.configManager.config[
-                "General"]["command"].split(" ")
+            wrapper.server.args = wrapper.configManager.config["General"]["command"].split(" ")
         else:
             wrapper.server.args = sys.argv[1:]
 

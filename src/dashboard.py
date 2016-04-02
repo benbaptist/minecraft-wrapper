@@ -23,13 +23,13 @@ class Web:
         self.log = log.PluginLog(self.wrapper.log, "Web")
 
         self.app = Flask(__name__)
-        self.app.config['SECRET_KEY'] = "".join(
-            [chr(random.randrange(48, 90)) for i in range(32)])  # LOL
+        self.app.config['SECRET_KEY'] = "".join([chr(random.randrange(48, 90)) for i in range(32)])  # LOL
         self.socketio = SocketIO(self.app)
 
         # Flask filters
         def strftime(f):
             return datetime.datetime.fromtimestamp(int(f)).strftime('%Y-%m-%d @ %I:%M%p')
+            
         self.app.jinja_env.filters["strftime"] = strftime
 
         # Register handlers

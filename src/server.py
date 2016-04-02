@@ -267,9 +267,8 @@ class Server:
     def reloadProperties(self):
         # Load server icon
         if os.path.exists("server-icon.png"):
-            f = open("server-icon.png", "rb")
-            self.serverIcon = "data:image/png;base64," + f.read().encode("base64")
-            f.close()
+            with open("server-icon.png", "rb") as f:
+                self.serverIcon = "data:image/png;base64," + f.read().encode("base64")
         # Read server.properties and extract some information out of it
         if os.path.exists("server.properties"):
             s = StringIO.StringIO()  # Stupid StringIO doesn't support __exit__()
@@ -277,8 +276,7 @@ class Server:
             s.write("[main]\n" + config)
             s.seek(0)
             try:
-                self.properties = ConfigParser.ConfigParser(
-                    allow_no_value=True)
+                self.properties = ConfigParser.ConfigParser(allow_no_value=True)
                 self.properties.readfp(s)
                 self.worldName = self.properties.get("main", "level-name")
                 self.motd = self.properties.get("main", "motd")

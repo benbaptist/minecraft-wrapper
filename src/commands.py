@@ -47,6 +47,7 @@ class Commands:
                 return " ".join(payload["args"][i:])
             except:
                 return ""
+                
         for pluginID in self.commands:
             if pluginID == "Wrapper.py":
                 try:

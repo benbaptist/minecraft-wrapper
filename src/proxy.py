@@ -546,8 +546,7 @@ class Client:  # handle server-bound packets (client/game connection)
                                     self.wrapper.server.console(
                                         "whitelist reload")
                                     with open("%s/.wrapper-proxy-whitelist-migrate" % worldName, "a") as f:
-                                        f.write("%s %s\n" % (
-                                            str(self.uuid), str(self.serverUUID)))
+                                        f.write("%s %s\n" % (str(self.uuid), str(self.serverUUID)))
 
                 self.serverUUID = self.wrapper.UUIDFromName(
                     "OfflinePlayer:%s" % self.username)
@@ -590,8 +589,7 @@ class Client:  # handle server-bound packets (client/game connection)
             try:
                 chatmsg = data["message"]
                 if not self.isLocal and chatmsg == "/lobby":
-                    self.server.close(reason="Lobbification",
-                                      kill_client=False)
+                    self.server.close(reason="Lobbification", kill_client=False)
                     self.address = None
                     self.connect()
                     self.isLocal = True

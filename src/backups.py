@@ -1,6 +1,3 @@
-# Plans for this: separate backup code into its own method, allow for plugins to control backups more freely.
-# I also should probably not use irc=True when broadcasting, and instead should just rely on events and having server.py and irc.py print messages themselves
-# for the sake of consistency.
 import datetime
 import time
 import sys
@@ -13,6 +10,9 @@ import signal
 import api
 import platform
 
+# Plans for this: separate backup code into its own method, allow for plugins to control backups more freely.
+# I also should probably not use irc=True when broadcasting, and instead should just rely on events and having server.py and irc.py print messages themselves
+# for the sake of consistency.
 
 class Backups:
 
@@ -40,6 +40,7 @@ class Backups:
         if time.time() - self.time > self.config["Backups"]["backup-interval"]:
             self.time = time.time()
             if not os.path.exists(self.config["Backups"]["backup-location"]):
+                self.log.warn("Backup location %s does not exist -- creating target location..." % self.config["Backups"]["backup-location"])
                 os.mkdir(self.config["Backups"]["backup-location"])
             if len(self.backups) == 0 and os.path.exists(self.config["Backups"]["backup-location"] + "/backups.json"):
                 with open(self.config["Backups"]["backup-location"] + "/backups.json", "r") as f:
@@ -63,8 +64,7 @@ class Backups:
                             pass
                     backupTimestamps.sort()
                     for backupI in backupTimestamps:
-                        self.backups.append(
-                            (int(backupI), "backup-%s.tar" % str(backupI)))
+                        self.backups.append((int(backupI), "backup-%s.tar" % str(backupI)))
             timestamp = int(time.time())
             self.console("save-all")
             self.console("save-off")
@@ -73,8 +73,7 @@ class Backups:
             if not os.path.exists(str(self.config["Backups"]["backup-location"])):
                 os.mkdir(self.config["Backups"]["backup-location"])
 
-            filename = "backup-%s.tar" % datetime.datetime.fromtimestamp(
-                int(timestamp)).strftime("%Y-%m-%d_%H.%M.%S")
+            filename = "backup-%s.tar" % datetime.datetime.fromtimestamp(int(timestamp)).strftime("%Y-%m-%d_%H.%M.%S")
             if self.config["Backups"]["backup-compression"]:
                 filename += ".gz"
                 arguments = ["tar", "czf", "%s/%s" %
@@ -127,18 +126,15 @@ class Backups:
                     if not self.wrapper.callEvent("wrapper.backupDelete", {"file": filename}):
                         break
                     try:
-                        os.remove(
-                            '%s/%s' % (self.config["Backups"]["backup-location"], backup[1]))
+                        os.remove('%s/%s' % (self.config["Backups"]["backup-location"], backup[1]))
                     except:
                         print "Failed to delete"
                     self.log.info("Deleting old backup: %s" % datetime.datetime.fromtimestamp(
                         int(backup[0])).strftime('%Y-%m-%d_%H:%M:%S'))
                     hink = self.backups[0][1][:]
                     del self.backups[0]
-            f = open(self.config["Backups"][
-                     "backup-location"] + "/backups.json", "w")
-            f.write(json.dumps(self.backups))
-            f.close()
+            with open(self.config["Backups"]["backup-location"] + "/backups.json", "w") as f:
+                f.write(json.dumps(self.backups))
 
             if not os.path.exists(self.config["Backups"]["backup-location"] + "/" + filename):
                 self.wrapper.callEvent("wrapper.backupFailure", {

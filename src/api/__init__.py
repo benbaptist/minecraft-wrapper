@@ -5,7 +5,7 @@ import items
 import storage
 from api.player import Player
 from api.minecraft import Minecraft
-from errors import *
+from errors import NonExistentPlugin
 """ api.py contains the majority of code for the plugin API. """
 
 

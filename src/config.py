@@ -15,6 +15,7 @@ class DummyLog():  # Becouse now we havn't got access for the loggign system, bu
 
     def debug(*args):
         pass
+        
 DEFAULT_CONFIG = """[General]
 server-name = Minecraft Server
 command = java -jar minecraft_server.1.8.7.jar nogui
@@ -93,13 +94,13 @@ class Config:
         # creates new wrapper.properties. The reason I do this is so the
         # ordering isn't random and is a bit prettier
         if not os.path.exists("wrapper.properties"):
-            f = open("wrapper.properties", "w")
-            f.write(DEFAULT_CONFIG)
-            f.close()
+            with open("wrapper.properties", "w") as f:
+                f.write(DEFAULT_CONFIG)
             self.exit = True
         # open("wrapper.properties", "a").close()
         self.parser = ConfigParser.ConfigParser(allow_no_value=True)
-        self.parser.readfp(open("wrapper.properties"))
+        with open("wrapper.properties", "r") as f:
+            self.parser.readfp(f)
 
         sections = ["General", "Backups", "IRC", "Proxy", "Web"]
         defaults = {"General": {
@@ -199,4 +200,5 @@ class Config:
             sys.exit()
 
     def save(self):
-        self.parser.write(open("wrapper.properties", "wb"))
+        with open("wrapper.properties", "wb") as f:
+            self.parser.write(f)
