@@ -1,2 +1,2 @@
-build=111
-type='dev'
+build = 111
+type = 'dev'
