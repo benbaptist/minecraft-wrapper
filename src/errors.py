@@ -1,1 +1,2 @@
-class NonExistentPlugin(Exception): pass
+class NonExistentPlugin(Exception):
+    pass

@@ -70,6 +70,7 @@ def encryption_for_version(version):
 
 
 class RC4(object):
+
     def __init__(self, key):
         self.key = key
         x = 0
@@ -100,13 +101,13 @@ def AES128CFB8(shared_secret):
 def _pkcs1_unpad(bytes):
     pos = bytes.find('\x00')
     if pos > 0:
-        return bytes[pos+1:]
+        return bytes[pos + 1:]
 
 
 def _pkcs1_pad(bytes):
     assert len(bytes) < 117
     padding = ""
-    while len(padding) < 125-len(bytes):
+    while len(padding) < 125 - len(bytes):
         byte = Random.get_random_bytes(1)
         if byte != '\x00':
             padding += byte
@@ -125,7 +126,7 @@ class PBEWithMD5AndDES(object):
 
     def encrypt(self, plaintext):
         padding = 8 - len(plaintext) % 8
-        plaintext += chr(padding)*padding
+        plaintext += chr(padding) * padding
         return self._cipher().encrypt(plaintext)
 
     def decrypt(self, ciphertext):
@@ -140,4 +141,3 @@ class PBEWithMD5AndDES(object):
         for i in range(count):
             key = md5(key).digest()
         return key[:length]
-

@@ -2,7 +2,8 @@
 # It is up to wrapper to know what the actual connection versions are.
 # Once it knows the version, it can do something like:
 #  `from mcpkt import serverBound18 as ClPkt`
-#  the remainder of the wrapper/plugin code can simply reference `ClPkt.playerlook`
+# the remainder of the wrapper/plugin code can simply reference
+# `ClPkt.playerlook`
 
 
 # set something False using 0xEE
