@@ -46,43 +46,45 @@ class Plugins:
             name = i[:-3]
         else:
             return False
+
+        # Leaving these for now due to EAFP
         try:
             disabled = plugin.DISABLED
-        except:
+        except AttributeError:
             disabled = False
         try:
             # if used, plugin.DEPENDENCIES must be a 'list' type (even if only
             # one item); e.g. = ["some.py", "another.py", etc]
             dependencies = plugin.DEPENDENCIES
-        except:
+        except AttributeError:
             dependencies = False
         try:
             name = plugin.NAME
-        except:
+        except AttributeError:
             pass
         try:
             id = plugin.ID
-        except:
+        except AttributeError:
             id = name
         try:
             version = plugin.VERSION
-        except:
+        except AttributeError:
             version = (0, 1)
         try:
             description = plugin.DESCRIPTION
-        except:
+        except AttributeError:
             description = None
         try:
             summary = plugin.SUMMARY
-        except:
+        except AttributeError:
             summary = None
         try:
             author = plugin.AUTHOR
-        except:
+        except AttributeError:
             author = None
         try:
             website = plugin.WEBSITE
-        except:
+        except AttributeError:
             website = None
         if id in self.wrapper.storage["disabled_plugins"] or disabled:
             self.log.warn("Plugin '%s' disabled - not loading" % name)
@@ -123,7 +125,7 @@ class Plugins:
             self.log.getTraceback()
         try:
             reload(self.plugins[plugin]["module"])
-        except:
+        except Exception, e:
             self.log.error(
                 "Error while reloading plugin '%s' -- it was probably deleted or is a bugged version" % plugin)
             self.log.getTraceback()
@@ -141,7 +143,7 @@ class Plugins:
                     self.loadPlugin(i)
                 elif i[-3:] == ".py":
                     self.loadPlugin(i)
-            except:
+            except Exception, e:
                 for line in traceback.format_exc().split("\n"):
                     self.log.debug(line)
                 self.log.error("Failed to import plugin '%s'" % i)
@@ -157,13 +159,13 @@ class Plugins:
         for i in self.plugins:
             try:
                 self.unloadPlugin(i)
-            except:
+            except Exception, e:
                 for line in traceback.format_exc().split("\n"):
                     self.log.debug(line)
-                self.log.error("Failed to unload plugin '%s'" % i)
+                self.log.error("Failed to unload plugin '%s' (%s)" % (i, e))
                 try:
                     reload(self.plugins[plugin]["module"])
-                except:
+                except Exception, ex:
                     pass
         self.plugins = {}
         self.loadPlugins()

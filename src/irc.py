@@ -55,7 +55,7 @@ class IRC:
                 t.daemon = True
                 t.start()
                 self.handle()
-            except:
+            except Exception, e:
                 for line in traceback.format_exc().split("\n"):
                     self.log.error(line)
                 self.disconnect("Error in Wrapper.py - restarting")
@@ -167,7 +167,7 @@ class IRC:
                     self.send("PING :%s" % self.randomString())
                     self.timeout = True
                 buffer = ""
-            except:
+            except Exception, e:
                 buffer = ""
             for line in buffer.split("\n"):
                 self.line = line
@@ -249,7 +249,7 @@ class IRC:
                 user = args(self.line.split(" "), 4)[:-1]
                 self.console(channel, [{"text": user, "color": "green"}, {
                              "text": " received modes %s from %s" % (modes, nick), "color": "white"}])
-            except:
+            except Exception, e:
                 pass
         if args(self.line.split(" "), 0) == "PING":
             self.send("PONG %s" % args(self.line.split(" "), 1))
@@ -301,7 +301,7 @@ class IRC:
                     return
                 try:
                     self.authorized
-                except:
+                except Exception, e:
                     self.authorized = {}
                 if nick in self.authorized:
                     if int(time.time()) - self.authorized[nick] < 900:

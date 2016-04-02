@@ -9,8 +9,9 @@ import sys
 # I'm going to redo the configuration code soon! Don't you worry!
 # Default Configuration File
 
-
-class DummyLog():  # Becouse now we havn't got access for the loggign system, but config needs it, er need to create a dummy
+# Because we don't got access to the logging system yet we need to create a dummy
+# This should be resolved soon by leveraging the native logging library
+class DummyLog():
 
     def info(*args):
         pass
@@ -171,11 +172,10 @@ class Config:
                         self.config[section][key[0]] = ast.literal_eval(key[1])
                     except:
                         self.config[section][key[0]] = key[1]
-            except:
+            except Exception, e:
                 traceback.print_exc()
                 self.parser.add_section(section)
-                self.log.debug(
-                    "Adding section [%s] to configuration" % section)
+                self.log.debug("Adding section [%s] to configuration" % section)
                 self.config[section] = {}
                 self.exit = True
 
@@ -190,9 +190,8 @@ class Config:
                 else:
                     for key in keys:
                         try:
-                            self.config[section][
-                                key[0]] = ast.literal_eval(key[1])
-                        except:
+                            self.config[section][key[0]] = ast.literal_eval(key[1])
+                        except Exception, e:
                             self.config[section][key[0]] = key[1]
         self.save()
         Config.debug = self.config["General"]["debug"]

@@ -8,6 +8,8 @@ import shutil
 import threading
 from config import Config
 
+# This is where we have an opportunity to either replace or extend
+# this module with the native python logging library
 
 class Log:
 
@@ -65,10 +67,10 @@ class Log:
                 self.file.flush()
             else:
                 self.buffer += ("%s\n" % payload).encode("utf8")
-        except:
+        except Exception, e:
             print "Failure to write string - possibly due to writing while rotating log files"
             print payload
-            print traceback.format_exc()
+            self.getTraceback()
 
     def prefix(self, type="INFO", string=""):
         for line in string.split("\n"):

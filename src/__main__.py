@@ -29,7 +29,7 @@ from helpers import args, argsAfter
 
 try:
     import readline
-except:
+except ImportError:
     pass
 
 # Sloppy import catch system
@@ -37,7 +37,7 @@ except:
 try:
     import requests
     IMPORT_REQUESTS = True
-except:
+except ImportError:
     IMPORT_REQUESTS = False
 
 
@@ -121,7 +121,7 @@ class Wrapper:
             if username != correctcapname:
                 print(
                     "%s's name is not correctly capitalized (offline name warning!)" % correctcapname)
-        except:
+        except Exception, e:
             # try for any old proxy-data record- as a last resort:
             if "uuid-cache" not in self.proxy.storage:
                 return False  # no old proxy uuid-cache exists.
@@ -202,33 +202,30 @@ class Wrapper:
                 - otherwise, a list of names...
         """
         try:
-            r = requests.get("https://api.mojang.com/user/profiles/%s/names" %
-                             useruuid.replace("-", "")).json()
-        except:
-            r = None
-            try:
-                # reserve status polls for failed attempts
+            r = requests.get("https://api.mojang.com/user/profiles/%s/names" % useruuid.replace("-", ""))
+            if r.status_code == 200:
+                return r.json()
+            else:
                 rx = requests.get("https://status.mojang.com/check").json()
-            except:
-                self.log.error(
-                    "Mojang Status not found - no internet connection, perhaps?")
-                return self.usercache[useruuid]["name"]
-            for i in range(0, len(rx)):
-                if "account.mojang.com" in rx[i]:
-                    if rx[i]["account.mojang.com"] == "green":
-                        self.log.error("Mojang accounts is green, but request failed.\n"
-                                       "- have you over-polled (large busy server) or supplied an incorrect UUID??")
-                        self.log.error("uuid: %s" % useruuid)
-                        self.log.debug("response: \n%s" % str(rx))
-                        return r
-                    if rx[i]["account.mojang.com"] in ("yellow", "red"):
-                        self.log.error("Mojang accounts is experiencing issues (%s)." % rx[
-                                       i]["account.mojang.com"])
-                        return False
-            self.log.error(
-                "Mojang Status found, but corrupted or in an unexpected format.")
-            return False
-        return r
+                if rx.status_code == 200:
+                    rx = rx.json()
+                    for i in range(0, len(rx)):
+                        if "account.mojang.com" in rx[i]:
+                            if rx[i]["account.mojang.com"] == "green":
+                                self.log.error("Mojang accounts is green, but request failed. Have you over-polled (large busy server) or supplied an incorrect UUID?")
+                                self.log.error("uuid: %s" % useruuid)
+                                self.log.debug("response: \n%s" % str(rx))
+                                return None
+                        if rx[i]["account.mojang.com"] in ("yellow", "red"):
+                            self.log.error("Mojang accounts is experiencing issues (%s)." % rx[i]["account.mojang.com"])
+                            return False
+                    self.log.error("Mojang Status found, but corrupted or in an unexpected format.")
+                    return False
+                else:
+                    self.log.error("Mojang Status not found - no internet connection, perhaps?")
+                    return self.usercache[useruuid]["name"]
+        except Exception, e:
+            self.log.error("An error has occured while trying to poll mojang (%s)" % e)
 
     def getUsername(self, useruuid):
         """
@@ -419,10 +416,14 @@ class Wrapper:
             self.log.info("No new versions available.")
 
     def checkForNewUpdate(self, type=globals.type):
+        # At some point we should pull these URLs out into the config for forks etc
         if type == "dev":
-            try:
-                r = requests.get(
-                    "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/docs/version.json")
+            repo = "development"
+        else:
+            repo = "master"
+        try:
+            r = requests.get("https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/%s/build/version.json" % repo)
+            if r.status_code == 200:
                 data = r.json()
                 if self.update:
                     if self.update > data["build"]:
@@ -431,25 +432,11 @@ class Wrapper:
                     return (data["version"], data["build"], data["type"])
                 else:
                     return False
-            except:
-                self.log.warn(
-                    "Failed to check for updates - are you connected to the internet?")
-        else:
-            try:
-                r = requests.get(
-                    "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master/docs/version.json")
-                data = r.json()
-                if self.update:
-                    if self.update > data["build"]:
-                        return False
-                if data["build"] > globals.build and data["type"] == "stable":
-                    return (data["version"], data["build"], data["type"])
-                else:
-                    return False
-            except:
-                self.log.warn(
-                    "Failed to check for updates - are you connected to the internet?")
-        return False
+            else:
+                self.log.error("Unable to check for new wrapper updates, could not fetch version.json")
+                return False
+        except Exception, e:
+            self.log.warn("Failed to check for updates - are you connected to the internet?")
 
     def performUpdate(self, version, build, type):
         if type == "dev":
@@ -457,21 +444,21 @@ class Wrapper:
         else:
             repo = "master"
         try:
-            wrapperHash = requests.get(
-                "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/%s/docs/Wrapper.py.md5" % repo).text
-            wrapperFile = requests.get(
-                "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/%s/Wrapper.py" % repo).content
-            self.log.info("Verifying Wrapper.py...")
-            if hashlib.md5(wrapperFile).hexdigest() == wrapperHash:
-                self.log.info(
-                    "Update file successfully verified. Installing...")
-                with open(sys.argv[0], "w") as f:
-                    f.write(wrapperFile)
-                self.log.info("Wrapper.py %s (#%d) installed. Please reboot Wrapper.py." % (
-                    ".".join([str(_) for _ in version]), build))
-                self.update = build
-                return True
+            wrapperHash = requests.get("https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/%s/build/Wrapper.py.md5" % repo).text
+            wrapperFile = requests.get("https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/%s/Wrapper.py" % repo).content
+            if wrapperHash == 200 and wrapperFile == 200:
+                self.log.info("Verifying Wrapper.py...")
+                if hashlib.md5(wrapperFile).hexdigest() == wrapperHash:
+                    self.log.info("Update file successfully verified. Installing...")
+                    with open(sys.argv[0], "w") as f:
+                        f.write(wrapperFile)
+                    self.log.info("Wrapper.py %s (#%d) installed. Please reboot Wrapper.py." % (".".join([str(_) for _ in version]), build))
+                    self.update = build
+                    return True
+                else:
+                    return False
             else:
+                self.log.error("Unable to verify update integrity, update failed!")
                 return False
         except:
             self.log.error("Failed to update due to an internal error:")
@@ -491,14 +478,14 @@ class Wrapper:
         while not self.halt:
             try:
                 input = raw_input("")
-            except:
+            except Exception, e:
                 continue
             if len(input) < 1:
                 continue
             if input[0] is not "/":
                 try:
                     self.server.console(input)
-                except:
+                except Exception, e:
                     break
                 continue
             command = args(input[1:].split(" "), 0)
@@ -597,9 +584,9 @@ if __name__ == "__main__":
             wrapper.server.console("save-all")
             wrapper.server.stop(
                 "Wrapper.py received shutdown signal - bye", save=False)
-        except:
+        except Exception, e:
             pass
-    except:
+    except Exception, e:
         log.error("Wrapper.py crashed - stopping server to be safe")
         for line in traceback.format_exc().split("\n"):
             log.error(line)
@@ -607,6 +594,6 @@ if __name__ == "__main__":
         wrapper.plugins.disablePlugins()
         try:
             wrapper.server.stop(
-                "Wrapper.py crashed - please contact the server host instantly", save=False)
-        except:
-            print "Failure to shut down server cleanly! Server could still be running, or it might rollback/corrupt!"
+                "Wrapper.py crashed - please contact the server host as soon as possible", save=False)
+        except Exception, e:
+            print "Failure to shut down server cleanly! Server could still be running, or it might rollback/corrupt! (%s)" % e

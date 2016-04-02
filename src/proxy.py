@@ -22,11 +22,11 @@ import uuid
 import storage
 import shutil
 
-try:  # Weird system for handling non-standard modules
+try:
     import encryption
     import requests
     IMPORT_SUCCESS = True
-except:
+except ImportError:
     IMPORT_SUCCESS = False
 
 # I'll probably split this file into more parts later on, like such:
@@ -68,7 +68,7 @@ class Proxy:
             time.sleep(.2)
         try:
             self.pollServer()
-        except:
+        except Exception, e:
             self.log.error(
                 "Proxy could not poll the Minecraft server - are you 100% sure that the ports are configured properly? Reason:")
             self.log.getTraceback()
@@ -81,7 +81,7 @@ class Proxy:
                 self.socket.bind((self.wrapper.config["Proxy"][
                                  "proxy-bind"], self.wrapper.config["Proxy"]["proxy-port"]))
                 self.socket.listen(5)
-            except:
+            except Exception, e:
                 self.log.error(
                     "Proxy mode could not bind - retrying in five seconds")
                 self.log.debug(traceback.format_exc())
@@ -103,32 +103,31 @@ class Proxy:
                 for i, client in enumerate(self.wrapper.proxy.clients):
                     if client.abort:
                         del self.wrapper.proxy.clients[i]
-            except:  # Not quite sure what's going on
+            except Exception, e:  # Not quite sure what's going on
                 print traceback.print_exc()
-                try:
-                    client.disconnect("Some error")
-                except:
-                    pass
+                client.disconnect(e)
 
     def pollServer(self):
-        sock = socket.socket()
-        sock.connect(("localhost", self.wrapper.config[
-                     "Proxy"]["server-port"]))
-        packet = Packet(sock, self)
+        try:
+            sock = socket.socket()
+            sock.connect(("localhost", self.wrapper.config["Proxy"]["server-port"]))
+            packet = Packet(sock, self)
 
-        packet.send(0x00, "varint|string|ushort|varint", (5, "localhost", self.wrapper.config["Proxy"]["server-port"], 1))
-        packet.send(0x00, "", ())
-        packet.flush()
+            packet.send(0x00, "varint|string|ushort|varint", (5, "localhost", self.wrapper.config["Proxy"]["server-port"], 1))
+            packet.send(0x00, "", ())
+            packet.flush()
 
-        while True:
-            id, original = packet.grabPacket()
-            if id == 0x00:
-                data = json.loads(packet.read("string:response")["response"])
-                self.wrapper.server.protocolVersion = data[
-                    "version"]["protocol"]
-                self.wrapper.server.version = data["version"]["name"]
-                break
-        sock.close()
+            while True:
+                id, original = packet.grabPacket()
+                if id == 0x00:
+                    data = json.loads(packet.read("string:response")["response"])
+                    self.wrapper.server.protocolVersion = data["version"]["protocol"]
+                    self.wrapper.server.version = data["version"]["name"]
+                    break
+        except Exception, e:
+            self.log.warn("Polling the server failed (%s)" % e)
+        finally:
+            if sock: sock.close()
 
     def getClientByServerUUID(self, id):
         for client in self.clients:
@@ -143,8 +142,12 @@ class Proxy:
         """This is all wrong - needs to ban uuid, not username """
         if not self.storage.key("banned-uuid"):
             self.storage.key("banned-uuid", {})
-        self.storage.key("banned-uuid")[str(uuid)] = {"reason": reason, "source": source,
-                                                      "created": time.time(), "name": self.lookupUUID(uuid)["name"]}  # wrong
+        self.storage.key("banned-uuid")[str(uuid)] = {
+            "reason": reason,
+            "source": source,
+            "created": time.time(), 
+            "name": self.lookupUUID(uuid)["name"]
+        }  # wrong
 
     def banIP(self, ipaddress, reason="Banned by an operator", source="Server"):
         if not self.storage.key("banned-ip"):
@@ -158,15 +161,16 @@ class Proxy:
                     "kick %s Your IP is Banned!" % str(player.username))
 
     def pardonIP(self, ipaddress):
-        if not self.storage.key("banned-ip"):
-            return False
-        if str(ipaddress) in self.storage.key("banned-ip"):
-            try:
-                del self.storage.key("banned-ip")[str(ipaddress)]
-                return True
-            except:
-                return False
-        return False  # False means the pardon failed to remove the/a IP from the list
+        if self.storage.key("banned-ip"):
+            if str(ipaddress) in self.storage.key("banned-ip"):
+                try:
+                    del self.storage.key("banned-ip")[str(ipaddress)]
+                    return True
+                except Exception, e:
+                    self.log.warn("Failed to pardon %s (%s)" % (ipdaddress, e))
+                    return False
+        self.log.warn("Could not find %s to pardon them" % ipaddress)
+        return False
 
     def isUUIDBanned(self, uuid):  # Check if the UUID of the user is banned
         if not self.storage.key("banned-uuid"):
@@ -195,8 +199,12 @@ class Proxy:
             skinBlob["textures"]["SKIN"] = {
                 "url": "http://hydra-media.cursecdn.com/minecraft.gamepedia.com/f/f2/Alex_skin.png"}
         r = requests.get(skinBlob["textures"]["SKIN"]["url"])
-        self.skinTextures[uuid] = r.content.encode("base64")
-        return self.skinTextures[uuid]
+        if r.status_code == 200:
+            self.skinTextures[uuid] = r.content.encode("base64")
+            return self.skinTextures[uuid]
+        else:
+            self.log.warn("Could not fetch skin texture! (status code %d)" % r.status_code)
+            return False
 
 
 class Client:  # handle server-bound packets (client/game connection)
@@ -212,7 +220,7 @@ class Client:  # handle server-bound packets (client/game connection)
         self.addr = addr
         try:
             self.serverversion = self.wrapper.server.protocolVersion
-        except:
+        except AttributeError:
             # default to 1.8 if no server is running - can be changed to
             # whatever lowest life
             self.serverversion = 47
@@ -274,7 +282,7 @@ class Client:  # handle server-bound packets (client/game connection)
                 self.server.close(kill_client=False)
                 self.server.client = None
                 self.server = self.server_temp
-            except:
+            except Exception, e:
                 self.server_temp.close(kill_client=False)
                 self.server_temp = None
                 self.send(self.pktCB.chatmessage, "string|byte", (
@@ -285,8 +293,8 @@ class Client:  # handle server-bound packets (client/game connection)
             self.server = Server(self, self.wrapper, ip, port)
             try:
                 self.server.connect()
-            except:
-                self.disconnect("Proxy not connect to the server.")
+            except Exception, e:
+                self.disconnect("Proxy not connected to the server (%s)" % e)
         t = threading.Thread(target=self.server.handle, args=())
         t.daemon = True
         t.start()
@@ -314,7 +322,7 @@ class Client:  # handle server-bound packets (client/game connection)
         self.abort = True
         try:
             self.socket.close()
-        except:
+        except Exception, e:
             pass
         if self.server:
             self.server.abort = True
@@ -326,16 +334,16 @@ class Client:  # handle server-bound packets (client/game connection)
     def disconnect(self, message):
         try:
             message = json.loads(message["string"])
-        except:
+        except Exception, e:
             pass
-
-        if self.state == 3:
-            self.send(self.pktCB.disconnect, "json", (message,))
         else:
-            self.send(0x00, "json", ({"text": message, "color": "red"},))
-
-        time.sleep(1)
-        self.close()
+            if self.state == 3:
+                self.send(self.pktCB.disconnect, "json", (message,))
+            else:
+                self.send(0x00, "json", ({"text": message, "color": "red"},))
+        finally:
+            time.sleep(1)
+            self.close()
 
     def flush(self):
         while not self.abort:
@@ -492,19 +500,15 @@ class Client:  # handle server-bound packets (client/game connection)
                                 self.wrapper.proxy.skins[
                                     str(self.uuid)] = self.skinBlob
                         self.properties = data["properties"]
-                    except:
-                        self.disconnect("Session Server Error")
+                    except Exception, e:
+                        self.disconnect("Session Server Error (%s)" % e)
                         return False
-                    newUsername = self.wrapper.lookupUsernamebyUUID(
-                        str(self.uuid))
-                    if newUsername:
-                        if newUsername != self.username:
-                            self.log.info("%s logged in with new name, falling back to %s" % (
-                                self.username, newUsername))
-                            self.username = newUsername
+                    newUsername = self.wrapper.lookupUsernamebyUUID(str(self.uuid))
+                    if newUsername and not newUsername == self.username:
+                        self.log.info("%s logged in with new name, falling back to %s" % (self.username, newUsername))
+                        self.username = newUsername
                 else:
-                    self.uuid = uuid.uuid3(
-                        uuid.NAMESPACE_OID, "OfflinePlayer: %s" % self.username)
+                    self.uuid = uuid.uuid3(uuid.NAMESPACE_OID, "OfflinePlayer: %s" % self.username)
                 # Rename UUIDs accordingly
                 if self.config["Proxy"]["convert-player-files"]:
                     if self.config["Proxy"]["online-mode"]:
@@ -526,7 +530,7 @@ class Client:  # handle server-bound packets (client/game connection)
                             with open("whitelist.json", "r") as f:
                                 try:
                                     data = json.loads(f.read())
-                                except:
+                                except Exception, e:
                                     pass
                             if data:
                                 a = False
@@ -537,7 +541,7 @@ class Client:  # handle server-bound packets (client/game connection)
                                             a = True
                                         if player["uuid"] == str(self.uuid):
                                             b = True
-                                    except:
+                                    except Exception, e:
                                         pass
                                 if not a and b:
                                     self.log.info(
@@ -613,7 +617,7 @@ class Client:  # handle server-bound packets (client/game connection)
                 # print chatmsg
                 self.message(chatmsg)
                 return False
-            except:
+            except Exception, e:
                 print traceback.format_exc()
 
 # line		if self.getPlayerObject().hasGroup("test"):
@@ -657,29 +661,31 @@ class Client:  # handle server-bound packets (client/game connection)
                     return False  # stop packet if  player.dig returns False
             # started digging
             if data["status"] == 0:
-                if self.gamemode != 1:
-                    if not self.wrapper.callEvent("player.dig",
-                                                  {"player": self.getPlayerObject(),
-                                                   "position": position,
-                                                   "action": "begin_break",
-                                                   "face": data["face"]}):
+                if not self.gamemode == 1:
+                    if not self.wrapper.callEvent("player.dig", {
+                        "player": self.getPlayerObject(),
+                        "position": position,
+                        "action": "begin_break",
+                        "face": data["face"]
+                    }):
                         return False
                 else:
-                    if not self.wrapper.callEvent("player.dig",
-                                                  {"player": self.getPlayerObject(),
-                                                   "position": position,
-                                                   "action": "end_break",
-                                                   "face": data["face"]}):
+                    if not self.wrapper.callEvent("player.dig", {
+                        "player": self.getPlayerObject(),
+                        "position": position,
+                        "action": "end_break",
+                        "face": data["face"]
+                    }):
                         return False
             if data["status"] == 5 and data["face"] == 255:
-                if self.position != (0, 0, 0):
+                if not self.position == (0, 0, 0):
                     playerpos = self.position
                     if not self.wrapper.callEvent("player.interact",
                                                   {"player": self.getPlayerObject(),
                                                    "position": playerpos,
                                                    "action": "finish_using"}):
                         return False
-            if self.server.state != 3:
+            if not self.server.state == 3:
                 return False
         # Player Block Placement
         if id == self.pktSB.playerblockplacement:
@@ -847,14 +853,14 @@ class Client:  # handle server-bound packets (client/game connection)
                     id, original = self.packet.grabPacket()
                     self.original = original
                 except EOFError:
-                    self.close()
                     break
-                except:
+                except Exception, e:
                     if Config.debug:
                         print "Failed to grab packet (CLIENT):"
                         print traceback.format_exc()
-                    self.close()
                     break
+                finally:
+                    self.close()
 
                 if False == True:  # time.time() - self.tPing > 1 and self.state == 3:
                     if self.version > 32:
@@ -891,7 +897,7 @@ class Client:  # handle server-bound packets (client/game connection)
                 if self.parse(id) and self.server:
                     if self.server.state == 3:
                         self.server.sendRaw(original)
-        except:
+        except Exception, e:
             print "Error in the Client->Server method:"
             print traceback.format_exc()
 
@@ -924,7 +930,7 @@ class Server:  # Handle Server Connection  ("client bound" packets)
 
     def connect(self):
         self.socket = socket.socket()
-        if self.ip == None:
+        if self.ip is None:
             self.socket.connect(
                 ("localhost", self.wrapper.config["Proxy"]["server-port"]))
         else:
@@ -948,7 +954,7 @@ class Server:  # Handle Server Connection  ("client bound" packets)
             usernameofplayer = "unk"
             try:
                 usernameofplayer = str(self.client.username)
-            except:
+            except Exception, e:
                 pass
             print("Last packet IDs (Server->Client) of player %s before disconnection: \n%s\n" %
                   (usernameofplayer, str(self.lastPacketIDs)))
@@ -982,15 +988,14 @@ class Server:  # Handle Server Connection  ("client bound" packets)
             try:
                 if client.server.eid == eid:
                     return self.getPlayerContext(client.username)
-            except:
-                print("client.server.eid failed!\nserverEid: %s\nEid: %s" %
-                      (str(client.server.eid), str(eid)))
+            except Exception, e:
+                self.log.error("client.server.eid failed!\nserverEid: %s\nEid: %s (%s)" % (str(client.server.eid), str(eid), e))
         return False
 
     def getPlayerContext(self, username):
         try:
             return self.wrapper.server.players[username]
-        except:
+        except Exception, e:
             return False
 
     def flush(self):
@@ -1083,7 +1088,7 @@ class Server:  # Handle Server Connection  ("client bound" packets)
             position = rawdata["position"]
             try:
                 data = json.loads(rawstring)
-            except:
+            except Exception, e:
                 return
 
             # added code
@@ -1402,16 +1407,15 @@ class Server:  # Handle Server Connection  ("client bound" packets)
                 z = 0
                 while z < head["length"]:
                     serverUUID = self.read("uuid:uuid")["uuid"]
-                    playerclient = self.client.proxy.getClientByServerUUID(
-                        serverUUID)
+                    playerclient = self.client.proxy.getClientByServerUUID(serverUUID)
                     if not playerclient:
                         z += 1
                         continue
                     try:
                         uuid = playerclient.uuid
-                    except:
+                    except Exception, e:
                         # uuid = playerclient
-                        print("playercleint.uuid failed in playerlist item")
+                        self.log.warn("playercleint.uuid failed in playerlist item (%s)" % e)
                         z += 1
                         continue
                     z += 1
@@ -1426,8 +1430,7 @@ class Server:  # Handle Server Connection  ("client bound" packets)
                             if "signature" in i:
                                 raw += self.client.packet.send_bool(True)
                                 # signature
-                                raw += self.client.packet.send_string(
-                                    i["signature"])
+                                raw += self.client.packet.send_string(i["signature"])
                             else:
                                 raw += self.client.packet.send_bool(False)
                         raw += self.client.packet.send_varInt(0)
@@ -1478,22 +1481,24 @@ class Server:  # Handle Server Connection  ("client bound" packets)
                             break
                 except EOFError:
                     print traceback.format_exc()
-                    self.close()
                     break
-                except:
+                except Exception, e:
                     if Config.debug:
                         print "Failed to grab packet (SERVER)"
                         print traceback.format_exc()
                     return
+                finally:
+                    self.close()
                 if self.client.abort:
                     self.close()
                     break
                 if self.parse(id, original) and self.safe:
                     self.client.sendRaw(original)
-        except:
+        except Exception, e:
             if Config.debug:
                 print "Error in the Server->Client method:"
                 print traceback.format_exc()
+        finally:
             self.close()
 
 
@@ -1612,8 +1617,8 @@ class Packet:  # PACKET PARSING CODE
                     packet = self.pack_varInt(len(packet)) + packet
             else:
                 packet = self.pack_varInt(len(packet)) + packet
-        #	if not self.obj.isServer:
-#				print packet.encode("hex")
+            # if not self.obj.isServer:
+            #   print packet.encode("hex")
             if self.sendCipher is None:
                 self.socket.send(packet)
             else:
@@ -1623,7 +1628,7 @@ class Packet:  # PACKET PARSING CODE
     def sendRaw(self, payload):
         if not self.abort:
             self.queue.append((self.compressThreshold, payload))
-    # -- SENDING AND PARSING PACKETS -- #
+    # -- SENDING AND PARSING PACKETS --
 
     def read(self, expression):
         result = {}

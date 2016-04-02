@@ -73,7 +73,7 @@ class Minecraft:
                 data = f.read()
             try:
                 players[uuid] = json.loads(data, self._encoding)
-            except:
+            except Exception, e:
                 self.log.error("Failed to load player data '%s'" % puuid)
                 self.log.getTraceback()
                 os.remove("wrapper-data/players/" + uuidf)
@@ -127,11 +127,11 @@ class Minecraft:
         if irc:
             try:
                 self.wrapper.irc.msgQueue.append(message)
-            except:
+            except Exception, e:
                 pass
         try:
             self.wrapper.server.broadcast(message)
-        except:
+        except Exception, e:
             pass
 
     def teleportAllEntities(self, entity, x, y, z):
@@ -146,7 +146,7 @@ class Minecraft:
         """ Returns the player object of the specified logged-in player. Will raise an exception if the player is not logged in. """
         try:
             return self.wrapper.server.players[str(username)]
-        except:
+        except Exception, e:
             raise Exception("No such player %s is logged in" % username)
 
     def lookupUUID(self, uuid):

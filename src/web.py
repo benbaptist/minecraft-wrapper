@@ -61,7 +61,7 @@ class Web:
         while len(self.consoleScrollback) > 1000:
             try:
                 del self.consoleScrollback[0]
-            except:
+            except Exception, e:
                 break
         self.consoleScrollback.append((time.time(), payload["message"]))
 
@@ -69,7 +69,7 @@ class Web:
         while len(self.chatScrollback) > 200:
             try:
                 del self.chatScrollback[0]
-            except:
+            except Exception, e:
                 break
         self.chatScrollback.append((time.time(), {"type": "player", "payload": {
                                    "player": payload["player"].username, "message": payload["message"]}}))
@@ -79,7 +79,7 @@ class Web:
         while len(self.chatScrollback) > 200:
             try:
                 del self.chatScrollback[0]
-            except:
+            except Exception, e:
                 break
         self.chatScrollback.append((time.time(), {"type": "playerJoin", "payload": {
                                    "player": payload["player"].username}}))
@@ -89,7 +89,7 @@ class Web:
         while len(self.chatScrollback) > 200:
             try:
                 del self.chatScrollback[0]
-            except:
+            except Exception, e:
                 break
         self.chatScrollback.append((time.time(), {"type": "playerLeave", "payload": {
                                    "player": payload["player"].username}}))
@@ -98,7 +98,7 @@ class Web:
         while len(self.chatScrollback) > 200:
             try:
                 del self.chatScrollback[0]
-            except:
+            except Exception, e:
                 break
         self.chatScrollback.append(
             (time.time(), {"type": "irc", "payload": payload}))
@@ -159,7 +159,7 @@ class Web:
                 else:
                     self.log.error("Could not bind web to %s:%d - retrying in 5 seconds" %
                                    (self.config["Web"]["web-bind"], self.config["Web"]["web-port"]))
-            except:
+            except Exception, e:
                 for line in traceback.format_exc().split("\n"):
                     self.log.error(line)
             time.sleep(5)
@@ -174,7 +174,7 @@ class Web:
                 (self.config["Web"]["web-bind"], self.config["Web"]["web-port"]))
             self.socket.listen(5)
             return True
-        except:
+        except Exception, e:
             return False
 
     def listen(self):
@@ -221,7 +221,7 @@ class Client:
         try:
             self.socket.close()
             #self.log.debug("(WEB) Connection %s closed" % str(self.addr))
-        except:
+        except Exception, e:
             pass
 
     def wrap(self):
@@ -346,7 +346,7 @@ class Client:
             if os.path.exists(file):
                 try:
                     os.rename(file, rename)
-                except:
+                except Exception, e:
                     print traceback.format_exc()
                     return False
                 return True
@@ -363,7 +363,7 @@ class Client:
                         os.removedirs(file)
                     else:
                         os.remove(file)
-                except:
+                except Exception, e:
                     print traceback.format_exc()
                     return False
                 return True
@@ -631,10 +631,11 @@ class Client:
                     self.close()
                     return
                 self.buffer = data.split("\n")
-            except:
-                self.close()
+            except Exception, e:
                 #self.log.debug("(WEB) Connection %s closed" % str(self.addr))
                 break
+            finally:
+                self.close()
             if len(self.buffer) < 1:
                 print "Web connection closed suddenly"
                 return False

@@ -17,7 +17,6 @@ import datetime
 import storage
 import log
 
-
 class Web:
 
     def __init__(self, wrapper):
@@ -126,5 +125,4 @@ class Web:
             pass
 
     def run(self):
-        self.socketio.run(self.app, host=self.wrapper.config["Web"][
-                          "web-bind"], port=self.wrapper.config["Web"]["web-port"])
+        self.socketio.run(self.app, host=self.wrapper.config["Web"]["web-bind"], port=self.wrapper.config["Web"]["web-port"])

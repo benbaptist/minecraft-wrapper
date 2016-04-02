@@ -65,7 +65,7 @@ class Storage:
                 if not self.data == self.dataOld:
                     try:
                         self.save()
-                    except:
+                    except Exception, e:
                         print traceback.format_exc()
                     self.time = time.time()
             time.sleep(1)
@@ -77,7 +77,7 @@ class Storage:
             if not os.path.exists(l):
                 try:
                     os.mkdir(l)
-                except:
+                except Exception, e:
                     pass
 
     def load(self):
