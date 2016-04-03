@@ -69,7 +69,7 @@ class Proxy:
             time.sleep(.2)
         try:
             self.pollServer()
-        except Exception, e:
+        except Exception as e:
             self.log.error(
                 "Proxy could not poll the Minecraft server - are you 100% sure that the ports are configured properly? Reason:")
             self.log.getTraceback()
@@ -82,7 +82,7 @@ class Proxy:
                 self.socket.bind((self.wrapper.config["Proxy"][
                                  "proxy-bind"], self.wrapper.config["Proxy"]["proxy-port"]))
                 self.socket.listen(5)
-            except Exception, e:
+            except Exception as e:
                 self.log.error(
                     "Proxy mode could not bind - retrying in five seconds")
                 self.log.debug(traceback.format_exc())
@@ -104,7 +104,7 @@ class Proxy:
                 for i, client in enumerate(self.wrapper.proxy.clients):
                     if client.abort:
                         del self.wrapper.proxy.clients[i]
-            except Exception, e:  # Not quite sure what's going on
+            except Exception as e:  # Not quite sure what's going on
                 print traceback.print_exc()
                 client.disconnect(e)
 
@@ -164,7 +164,7 @@ class Proxy:
                 try:
                     del self.storage.key("banned-ip")[str(ipaddress)]
                     return True
-                except Exception, e:
+                except Exception as e:
                     self.log.warn("Failed to pardon %s (%s)" % (ipaddress, e))
                     return False
         self.log.warn("Could not find %s to pardon them" % ipaddress)
@@ -280,7 +280,7 @@ class Client:  # handle server-bound packets (client/game connection)
                 self.server.close(kill_client=False)
                 self.server.client = None
                 self.server = self.server_temp
-            except Exception, e:
+            except Exception as e:
                 self.server_temp.close(kill_client=False)
                 self.server_temp = None
                 self.send(self.pktCB.chatmessage, "string|byte", (
@@ -291,7 +291,7 @@ class Client:  # handle server-bound packets (client/game connection)
             self.server = Server(self, self.wrapper, ip, port)
             try:
                 self.server.connect()
-            except Exception, e:
+            except Exception as e:
                 self.disconnect("Proxy not connected to the server (%s)" % e)
         t = threading.Thread(target=self.server.handle, args=())
         t.daemon = True
@@ -320,7 +320,7 @@ class Client:  # handle server-bound packets (client/game connection)
         self.abort = True
         try:
             self.socket.close()
-        except Exception, e:
+        except Exception as e:
             pass
         if self.server:
             self.server.abort = True
@@ -332,16 +332,16 @@ class Client:  # handle server-bound packets (client/game connection)
     def disconnect(self, message):
         try:
             message = json.loads(message["string"])
-        except Exception, e:
+        except Exception as e:
             pass
+
+        if self.state == 3:
+            self.send(self.pktCB.disconnect, "json", (message,))
         else:
-            if self.state == 3:
-                self.send(self.pktCB.disconnect, "json", (message,))
-            else:
-                self.send(0x00, "json", ({"text": message, "color": "red"},))
-        finally:
-            time.sleep(1)
-            self.close()
+            self.send(0x00, "json", ({"text": message, "color": "red"},))
+
+        time.sleep(1)
+        self.close()
 
     def flush(self):
         while not self.abort:
@@ -498,13 +498,17 @@ class Client:  # handle server-bound packets (client/game connection)
                                 self.wrapper.proxy.skins[
                                     str(self.uuid)] = self.skinBlob
                         self.properties = data["properties"]
-                    except Exception, e:
+                    except Exception as e:
                         self.disconnect("Session Server Error (%s)" % e)
                         return False
-                    newUsername = self.wrapper.lookupUsernamebyUUID(str(self.uuid))
-                    if newUsername and not newUsername == self.username:
-                        self.log.info("%s logged in with new name, falling back to %s" % (self.username, newUsername))
-                        self.username = newUsername
+                    newUsername = self.wrapper.lookupUsernamebyUUID(
+                        str(self.uuid))
+                    if newUsername:
+                        if newUsername != self.username:
+                            self.log.info("%s logged in with new name, falling back to %s" % (
+                                self.username, newUsername))
+                            self.username = newUsername
+
                 else:
                     self.uuid = uuid.uuid3(uuid.NAMESPACE_OID, "OfflinePlayer: %s" % self.username)
                 # Rename UUIDs accordingly
@@ -528,7 +532,7 @@ class Client:  # handle server-bound packets (client/game connection)
                             with open("whitelist.json", "r") as f:
                                 try:
                                     data = json.loads(f.read())
-                                except Exception, e:
+                                except Exception as e:
                                     pass
                             if data:
                                 a = False
@@ -539,7 +543,7 @@ class Client:  # handle server-bound packets (client/game connection)
                                             a = True
                                         if player["uuid"] == str(self.uuid):
                                             b = True
-                                    except Exception, e:
+                                    except Exception as e:
                                         pass
                                 if not a and b:
                                     self.log.info(
@@ -615,7 +619,7 @@ class Client:  # handle server-bound packets (client/game connection)
                 # print chatmsg
                 self.message(chatmsg)
                 return False
-            except Exception, e:
+            except Exception as e:
                 print traceback.format_exc()
 
 # line		if self.getPlayerObject().hasGroup("test"):
@@ -852,7 +856,7 @@ class Client:  # handle server-bound packets (client/game connection)
                     self.original = original
                 except EOFError:
                     break
-                except Exception, e:
+                except Exception as e:
                     if Config.debug:
                         print "Failed to grab packet (CLIENT):"
                         print traceback.format_exc()
@@ -895,7 +899,7 @@ class Client:  # handle server-bound packets (client/game connection)
                 if self.parse(id) and self.server:
                     if self.server.state == 3:
                         self.server.sendRaw(original)
-        except Exception, e:
+        except Exception as e:
             print "Error in the Client->Server method:"
             print traceback.format_exc()
 
@@ -952,7 +956,7 @@ class Server:  # Handle Server Connection  ("client bound" packets)
             usernameofplayer = "unk"
             try:
                 usernameofplayer = str(self.client.username)
-            except Exception, e:
+            except Exception as e:
                 pass
             print("Last packet IDs (Server->Client) of player %s before disconnection: \n%s\n" %
                   (usernameofplayer, str(self.lastPacketIDs)))
@@ -986,14 +990,14 @@ class Server:  # Handle Server Connection  ("client bound" packets)
             try:
                 if client.server.eid == eid:
                     return self.getPlayerContext(client.username)
-            except Exception, e:
+            except Exception as e:
                 self.log.error("client.server.eid failed!\nserverEid: %s\nEid: %s (%s)" % (str(client.server.eid), str(eid), e))
         return False
 
     def getPlayerContext(self, username):
         try:
             return self.wrapper.server.players[username]
-        except Exception, e:
+        except Exception as e:
             return False
 
     def flush(self):
@@ -1086,7 +1090,7 @@ class Server:  # Handle Server Connection  ("client bound" packets)
             position = rawdata["position"]
             try:
                 data = json.loads(rawstring)
-            except Exception, e:
+            except Exception as e:
                 return
 
             # added code
@@ -1411,7 +1415,7 @@ class Server:  # Handle Server Connection  ("client bound" packets)
                         continue
                     try:
                         uuid = playerclient.uuid
-                    except Exception, e:
+                    except Exception as e:
                         # uuid = playerclient
                         self.log.warn("playercleint.uuid failed in playerlist item (%s)" % e)
                         z += 1
@@ -1480,7 +1484,7 @@ class Server:  # Handle Server Connection  ("client bound" packets)
                 except EOFError:
                     print traceback.format_exc()
                     break
-                except Exception, e:
+                except Exception as e:
                     if Config.debug:
                         print "Failed to grab packet (SERVER)"
                         print traceback.format_exc()
@@ -1492,7 +1496,7 @@ class Server:  # Handle Server Connection  ("client bound" packets)
                     break
                 if self.parse(id, original) and self.safe:
                     self.client.sendRaw(original)
-        except Exception, e:
+        except Exception as e:
             if Config.debug:
                 print "Error in the Server->Client method:"
                 print traceback.format_exc()
