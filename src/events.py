@@ -50,7 +50,7 @@ class Events:
                             "Plugin '%s' errored out when executing callback event '%s':" % (pluginID, event))
                         for line in traceback.format_exc().split("\n"):
                             self.log.error(line)
-        except Exception, e:
+        except Exception as e:
             pass
             # For now.
             # self.log.error("A serious runtime error occurred - if you notice any strange behaviour, please restart immediately")
