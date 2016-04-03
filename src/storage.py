@@ -62,7 +62,7 @@ class Storage:
                 if not self.data == self.dataOld:
                     try:
                         self.save()
-                    except Exception, e:
+                    except Exception as e:
                         print traceback.format_exc()
                     self.time = time.time()
             time.sleep(1)
@@ -74,7 +74,7 @@ class Storage:
             if not os.path.exists(l):
                 try:
                     os.mkdir(l)
-                except Exception, e:
+                except Exception as e:
                     pass
 
     def load(self):
@@ -84,7 +84,7 @@ class Storage:
         with open("%s/%s.json" % (self.root, self.name), "r") as f:
             try:
                 self.data = json.loads(f.read(), _encoding)
-            except Exception, e:
+            except Exception as e:
                 print "Failed to load '%s/%s.json' (%s)" % (self.root, self.name, e)
                 return
         self.dataOld = copy.deepcopy(self.data)
