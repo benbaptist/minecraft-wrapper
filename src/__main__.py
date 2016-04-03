@@ -375,7 +375,7 @@ class Wrapper:
         os.system(" ".join(sys.argv) + "&")
 
     def getBuildString(self):
-        if globals.type == "dev":
+        if globals.repotype == "dev":
             return "%s (development build #%d)" % (Config.version, globals.build)
         else:
             return "%s (stable)" % Config.version
@@ -393,8 +393,8 @@ class Wrapper:
         self.log.info("Checking for new builds...")
         update = self.checkForNewUpdate()
         if update:
-            version, build, type = update
-            if type == "dev":
+            version, build, repotype = update
+            if repotype == "dev":
                 if auto and not self.config["General"]["auto-update-dev-build"]:
                     self.log.info("New Wrapper.py development build #%d available for download! (currently on #%d)" % (
                         build, globals.build))
@@ -403,17 +403,17 @@ class Wrapper:
                 else:
                     self.log.info("New Wrapper.py development build #%d available! Updating... (currently on #%d)" % (
                         build, globals.build))
-                self.performUpdate(version, build, type)
+                self.performUpdate(version, build, repotype)
             else:
                 self.log.info("New Wrapper.py stable %s available! Updating... (currently on %s)" % (
                     ".".join([str(_) for _ in version]), Config.version))
-                self.performUpdate(version, build, type)
+                self.performUpdate(version, build, repotype)
         else:
             self.log.info("No new versions available.")
 
-    def checkForNewUpdate(self, type=globals.type):
+    def checkForNewUpdate(self, repotype=globals.repotype):
         # At some point we should pull these URLs out into the config for forks etc
-        if type == "dev":
+        if repotype == "dev":
             repo = "development"
         else:
             repo = "master"
@@ -424,8 +424,8 @@ class Wrapper:
                 if self.update:
                     if self.update > data["build"]:
                         return False
-                if data["build"] > globals.build and data["type"] == "dev":
-                    return (data["version"], data["build"], data["type"])
+                if data["build"] > globals.build and data["repotype"] == "dev":
+                    return (data["version"], data["build"], data["repotype"])
                 else:
                     return False
             else:
@@ -434,8 +434,8 @@ class Wrapper:
         except Exception, e:
             self.log.warn("Failed to check for updates - are you connected to the internet?")
 
-    def performUpdate(self, version, build, type):
-        if type == "dev":
+    def performUpdate(self, version, build, repotype):
+        if repotype == "dev":
             repo = "development"
         else:
             repo = "master"
