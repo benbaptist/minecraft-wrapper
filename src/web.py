@@ -12,7 +12,6 @@ import storage
 import log
 import urllib
 import os
-import md5
 
 from api import API
 from helpers import args, argsAfter
@@ -40,6 +39,7 @@ class Web:
             self.data["keys"] = []
         # if not self.config["Web"]["web-password"] == None:
         #   self.log.info("Changing web-mode password because web-password was changed in wrapper.properties")
+        #  ***** change code to hashlib if this gets uncommented
         #   self.data["password"] = md5.md5(self.config["Web"]["web-password"]).hexdigest()
         #   self.config["Web"]["web-password"] = None
         #   self.wrapper.configManager.save()
@@ -418,7 +418,7 @@ class Client:
                         "summary": plugin["summary"],
                         "author": plugin["author"],
                         "website": plugin["website"],
-                        "version": (".".join([str(_) for _ in plugin["version"]])),
+                        # "version": (".".join([str(_) for _ in plugin["version"]])),
                         "id": id,
                         "good": True
                     })
@@ -533,13 +533,13 @@ class Client:
             if state == "enable":
                 if plugin in self.wrapper.storage["disabled_plugins"]:
                     self.wrapper.storage["disabled_plugins"].remove(plugin)
-                    self.log.warn("[%s] Enabled plugin '%'" %
+                    self.log.warn("[%s] Enabled plugin '%s'" %
                                   (self.addr[0], plugin))
                     self.wrapper.reloadPlugins()
             else:
                 if plugin not in self.wrapper.storage["disabled_plugins"]:
                     self.wrapper.storage["disabled_plugins"].append(plugin)
-                    self.log.warn("[%s] Disabled plugin '%'" %
+                    self.log.warn("[%s] Disabled plugin '%s'" %
                                   (self.addr[0], plugin))
                     self.wrapper.reloadPlugins()
         if action == "reload_plugins":
