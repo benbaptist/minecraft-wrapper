@@ -43,7 +43,7 @@ class Commands:
                 try:
                     print(self.commands[pluginID])
                     self.commands[pluginID][command](payload["player"], payload["args"])
-                except Exception, e:
+                except Exception as e:
                     pass
                 continue
             if pluginID not in self.wrapper.plugins:
@@ -61,7 +61,7 @@ class Commands:
                         player.message(
                             {"translate": "commands.generic.permission", "color": "red"})
                     return False
-                except Exception, e:
+                except Exception as e:
                     self.log.error("Plugin '%s' errored out when executing command: '<%s> /%s':" % (pluginID, payload["player"], command))
                     for line in traceback.format_exc().split("\n"):
                         self.log.error(line)
@@ -241,7 +241,7 @@ class Commands:
                 page = args(payload["args"], 0)
             try:
                 page = int(page) - 1
-            except TypeError: # Assuming that this is a type error when page cannot be cast to an integer
+            except: # We cant assume an error type here at this point
                 if len(page) > 0:
                     group = page.lower()
                 page = 0
