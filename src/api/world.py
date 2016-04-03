@@ -1,7 +1,8 @@
+# -*- coding: utf-8 -*-
+
 import math
 import struct
 import json
-
 
 class World:
 
@@ -44,8 +45,7 @@ class World:
         x1, y1, z1 = position1
         x2, y2, z2 = position2
         if self.server.protocolVersion < 6:
-            raise Exception(
-                "Must be running Minecraft 1.8 or above to use the world.fill() method.")
+            raise Exception("Must be running Minecraft 1.8 or above to use the world.fill() method.")
         else:
             self.server.console("fill %d %d %d %d %d %d %s %d %s %s" % (
                 x1, y1, z1, x2, y2, z2, tilename, damage, mode, json.dumps(data)))

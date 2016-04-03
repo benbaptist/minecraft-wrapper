@@ -1,10 +1,4 @@
-try:
-    from flask import Flask, g, redirect, url_for, render_template, request, make_response, Response, Markup
-    from flask_socketio import SocketIO, send, emit, join_room, leave_room
-
-    IMPORT_SUCCESS = True
-except ImportError:
-    IMPORT_SUCCESS = False
+# -*- coding: utf-8 -*-
 
 import os
 import time
@@ -15,6 +9,13 @@ import datetime
 import storage
 import log
 
+try:
+    from flask import Flask, g, redirect, url_for, render_template, request, make_response, Response, Markup
+    from flask_socketio import SocketIO, send, emit, join_room, leave_room
+
+    IMPORT_SUCCESS = True
+except ImportError:
+    IMPORT_SUCCESS = False
 
 class Web:
 
@@ -23,13 +24,13 @@ class Web:
         self.log = log.PluginLog(self.wrapper.log, "Web")
 
         self.app = Flask(__name__)
-        self.app.config['SECRET_KEY'] = "".join(
-            [chr(random.randrange(48, 90)) for i in range(32)])  # LOL
+        self.app.config['SECRET_KEY'] = "".join([chr(random.randrange(48, 90)) for i in range(32)])  # LOL
         self.socketio = SocketIO(self.app)
 
         # Flask filters
         def strftime(f):
             return datetime.datetime.fromtimestamp(int(f)).strftime('%Y-%m-%d @ %I:%M%p')
+            
         self.app.jinja_env.filters["strftime"] = strftime
 
         # Register handlers
@@ -124,5 +125,4 @@ class Web:
             pass
 
     def run(self):
-        self.socketio.run(self.app, host=self.wrapper.config["Web"][
-                          "web-bind"], port=self.wrapper.config["Web"]["web-port"])
+        self.socketio.run(self.app, host=self.wrapper.config["Web"]["web-bind"], port=self.wrapper.config["Web"]["web-port"])

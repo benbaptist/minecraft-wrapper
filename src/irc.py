@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import socket
 import traceback
 import time
@@ -6,8 +8,9 @@ import api
 import globals
 import random
 import math
-from config import Config
 
+from config import Config
+from helpers import args, argsAfter
 
 class IRC:
 
@@ -52,7 +55,7 @@ class IRC:
                 t.daemon = True
                 t.start()
                 self.handle()
-            except:
+            except Exception, e:
                 for line in traceback.format_exc().split("\n"):
                     self.log.error(line)
                 self.disconnect("Error in Wrapper.py - restarting")
@@ -164,7 +167,7 @@ class IRC:
                     self.send("PING :%s" % self.randomString())
                     self.timeout = True
                 buffer = ""
-            except:
+            except Exception, e:
                 buffer = ""
             for line in buffer.split("\n"):
                 self.line = line
@@ -178,7 +181,7 @@ class IRC:
             for i, message in enumerate(self.msgQueue):
                 for channel in self.channels:
                     if len(message) > 400:
-                        for l in range(int(math.ceil(len(message) / 400.0))):
+                        for l in xrange(int(math.ceil(len(message) / 400.0))):
                             chunk = message[l * 400:(l + 1) * 400]
                             self.send("PRIVMSG %s :%s" % (channel, chunk))
                     else:
@@ -204,7 +207,7 @@ class IRC:
             self.rawConsole({"extra": payload})
 
     def parse(self):
-        if self.args(1) == "001":
+        if args(self.line.split(" "), 1) == "001":
             for command in self.config["IRC"]["autorun-irc-commands"]:
                 self.send(command)
             for channel in self.channels:
@@ -213,12 +216,12 @@ class IRC:
             self.log.info("Connected to IRC!")
             self.state = True
             self.nickAttempts = 0
-        if self.args(1) == "433":
+        if args(self.line.split(" "), 1) == "433":
             self.log.info("Nickname '%s' already in use." % self.nickname)
             self.nickAttempts += 1
             if self.nickAttempts > 2:
                 name = bytearray(self.nickname)
-                for i in range(3):
+                for i in xrange(3):
                     name[len(self.nickname) / 3 *
                          i] = chr(random.randrange(97, 122))
                 self.nickname = str(name)
@@ -226,54 +229,40 @@ class IRC:
                 self.nickname = self.nickname + "_"
             self.auth()
             self.log.info("Attemping to use nickname '%s'." % self.nickname)
-        if self.args(1) == "JOIN":
-            nick = self.args(0)[1:self.args(0).find("!")]
-            channel = self.args(2)[1:][:-1]
+        if args(self.line.split(" "), 1) == "JOIN":
+            nick = args(self.line.split(" "), 0)[1:self.args(0).find("!")]
+            channel = args(self.line.split(" "), 2)[1:][:-1]
             self.log.info("%s joined %s" % (nick, channel))
             self.wrapper.callEvent(
                 "irc.join", {"nick": nick, "channel": channel})
-        if self.args(1) == "PART":
-            nick = self.args(0)[1:self.args(0).find("!")]
-            channel = self.args(2)
+        if args(self.line.split(" "), 1) == "PART":
+            nick = args(self.line.split(" "), 0)[1:args(self.line.split(" "), 0).find("!")]
+            channel = args(self.line.split(" "), 2)
             self.log.info("%s parted %s" % (nick, channel))
             self.wrapper.callEvent(
                 "irc.part", {"nick": nick, "channel": channel})
-        if self.args(1) == "MODE":
+        if args(self.line.split(" "), 1) == "MODE":
             try:
-                nick = self.args(0)[1:self.args(0).find('!')]
-                channel = self.args(2)
-                modes = self.args(3)
-                user = self.args(4)[:-1]
+                nick = args(self.line.split(" "), 0)[1:args(self.line.split(" "), 0).find('!')]
+                channel = args(self.line.split(" "), 2)
+                modes = args(self.line.split(" "), 3)
+                user = args(self.line.split(" "), 4)[:-1]
                 self.console(channel, [{"text": user, "color": "green"}, {
                              "text": " received modes %s from %s" % (modes, nick), "color": "white"}])
-            except:
+            except Exception, e:
                 pass
-        if self.args(0) == "PING":
-            self.send("PONG %s" % self.args(1))
-        if self.args(1) == "QUIT":
-            nick = self.args(0)[1:self.args(0).find("!")]
-            message = " ".join(self.line.split(" ")[2:])[
-                1:].strip("\n").strip("\r")
+        if args(self.line.split(" "), 0) == "PING":
+            self.send("PONG %s" % args(self.line.split(" "), 1))
+        if args(self.line.split(" "), 1) == "QUIT":
+            nick = args(self.line.split(" "), 0)[1:args(self.line.split(" "), 0).find("!")]
+            message = argsAfter(self.line.split(" "), 2)[1:].strip("\n").strip("\r")
 
             self.wrapper.callEvent(
                 "irc.quit", {"nick": nick, "message": message, "channel": None})
-        if self.args(1) == "PRIVMSG":
-            channel = self.args(2)
-            nick = self.args(0)[1:self.args(0).find("!")]
-            message = " ".join(self.line.split(" ")[3:])[
-                1:].strip("\n").strip("\r")
-
-            def args(i):
-                try:
-                    return message.split(" ")[i]
-                except:
-                    return ""
-
-            def argsAfter(i):
-                try:
-                    return " ".join(message.split(" ")[i:])
-                except:
-                    return ""
+        if args(self.line.split(" "), 1) == "PRIVMSG":
+            channel = args(self.line.split(" "), 2)
+            nick = args(self.line.split(" "), 0)[1:args(self.line.split(" "), 0).find("!")]
+            message = argsAfter(self.line.split(" "), 3)[1:].strip("\n").strip("\r")
 
             if channel[0] == "#":
                 if message.strip() == ".players":
@@ -287,11 +276,11 @@ class IRC:
                               (channel, self.wrapper.getBuildString()))
                 else:
                     message = message.decode("utf-8", "ignore")
-                    if args(0) == "\x01ACTION":
+                    if args(message.split(" "), 0) == "\x01ACTION":
                         self.wrapper.callEvent(
-                            "irc.action", {"nick": nick, "channel": channel, "action": argsAfter(1)[:-1]})
+                            "irc.action", {"nick": nick, "channel": channel, "action": argsAfter(message.split(" "), 1)[:-1]})
                         self.log.info("[%s] * %s %s" %
-                                      (channel, nick, argsAfter(1)[:-1]))
+                                      (channel, nick, argsAfter(message.split(" "), 1)[:-1]))
                     else:
                         self.wrapper.callEvent(
                             "irc.message", {"nick": nick, "channel": channel, "message": message})
@@ -312,13 +301,13 @@ class IRC:
                     return
                 try:
                     self.authorized
-                except:
+                except Exception, e:
                     self.authorized = {}
                 if nick in self.authorized:
                     if int(time.time()) - self.authorized[nick] < 900:
-                        if args(0) == 'hi':
+                        if args(message.split(" "), 0) == 'hi':
                             msg('Hey there!')
-                        elif args(0) == 'help':
+                        elif args(message.split(" "), 0) == 'help':
                             # eventually I need to make help only one or two
                             # lines, to prevent getting kicked/banned for spam
                             msg("run [command] - run command on server")
@@ -332,7 +321,7 @@ class IRC:
                             msg("Wrapper.py Version %s by benbaptist" %
                                 self.wrapper.getBuildString())
                             # msg('console - toggle console output to this private message')
-                        elif args(0) == 'togglebackups':
+                        elif args(message.split(" "), 0) == 'togglebackups':
                             self.config["Backups"]["enabled"] = not self.config[
                                 "Backups"]["enabled"]
                             if self.config["Backups"]["enabled"]:
@@ -340,31 +329,31 @@ class IRC:
                             else:
                                 msg('Backups are now off.')
                             configure.save()
-                        elif args(0) == 'run':
-                            if args(1) == '':
+                        elif args(message.split(" "), 0) == 'run':
+                            if args(message.split(" "), 1) == '':
                                 msg('Usage: run [command]')
                             else:
                                 command = " ".join(message.split(' ')[1:])
                                 self.server.console(command)
-                        elif args(0) == 'halt':
+                        elif args(message.split(" "), 0) == 'halt':
                             self.wrapper.halt = True
                             self.server.console("stop")
                             self.server.changeState(3)
-                        elif args(0) == 'restart':
+                        elif args(message.split(" "), 0) == 'restart':
                             self.server.restart(
                                 "Restarting server from IRC remote")
                             self.server.changeState(3)
-                        elif args(0) == 'stop':
+                        elif args(message.split(" "), 0) == 'stop':
                             self.server.console('stop')
                             self.server.stop("Stopped from IRC remote")
                             msg("Server stopping")
-                        elif args(0) == 'start':
+                        elif args(message.split(" "), 0) == 'start':
                             self.server.start()
                             msg("Server starting")
-                        elif args(0) == 'kill':
+                        elif args(message.split(" "), 0) == 'kill':
                             self.server.kill("Killing server from IRC remote")
                             msg("Server terminated.")
-                        elif args(0) == 'status':
+                        elif args(message.split(" "), 0) == 'status':
                             if self.server.state == 2:
                                 msg("Server is running.")
                             elif self.server.state == 1:
@@ -379,7 +368,7 @@ class IRC:
                             if self.wrapper.server.getMemoryUsage():
                                 msg("Server Memory Usage: %d bytes" %
                                     self.wrapper.server.getMemoryUsage())
-                        elif args(0) == 'check-update':
+                        elif args(message.split(" "), 0) == 'check-update':
                             msg("Checking for new updates...")
                             update = self.wrapper.checkForNewUpdate()
                             if update:
@@ -399,7 +388,7 @@ class IRC:
                                     msg("No new stable Wrapper.py versions available.")
                                 elif globals.type == "dev":
                                     msg("No new development Wrapper.py versions available.")
-                        elif args(0) == 'update-wrapper':
+                        elif args(message.split(" "), 0) == 'update-wrapper':
                             msg("Checking for new updates...")
                             update = self.wrapper.checkForNewUpdate()
                             if update:
@@ -424,7 +413,7 @@ class IRC:
                                     msg("No new stable Wrapper.py versions available.")
                                 elif globals.type == "dev":
                                     msg("No new development Wrapper.py versions available.")
-                        elif args(0) == "about":
+                        elif args(message.split(" "), 0) == "about":
                             msg("Wrapper.py by benbaptist - Version %s (build #%d)" %
                                 (Config.version, globals.build))
                         else:
@@ -433,17 +422,11 @@ class IRC:
                         msg("Session expired, re-authorize.")
                         del self.authorized[nick]
                 else:
-                    if args(0) == 'auth':
-                        if args(1) == self.config["IRC"]["control-irc-pass"]:
+                    if args(message.split(" "), 0) == 'auth':
+                        if args(message.split(" "), 1) == self.config["IRC"]["control-irc-pass"]:
                             msg("Authorization success! You'll remain logged in for 15 minutes.")
                             self.authorized[nick] = int(time.time())
                         else:
                             msg("Invalid password.")
                     else:
                         msg('Not authorized. Type "auth [password]" to login.')
-
-    def args(self, i):
-        try:
-            return self.line.split(" ")[i]
-        except:
-            pass

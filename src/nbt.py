@@ -1,13 +1,16 @@
+# -*- coding: utf-8 -*-
+
 """
 Handle the NBT (Named Binary Tag) data format
 """
 
-from struct import Struct, error as StructError
-from gzip import GzipFile
 import zlib
-from collections import MutableMapping, MutableSequence, Sequence
 import os
 import io
+
+from collections import MutableMapping, MutableSequence, Sequence
+from struct import Struct, error as StructError
+from gzip import GzipFile
 
 PISS = True
 try:
@@ -339,7 +342,7 @@ class TAG_List(TAG, MutableSequence):
         self.tagID = TAG_Byte(buffer=buffer).value
         self.tags = []
         length = TAG_Int(buffer=buffer)
-        for x in range(length.value):
+        for x in xrange(length.value):
             self.tags.append(TAGLIST[self.tagID](buffer=buffer))
 
     def _render_buffer(self, buffer):

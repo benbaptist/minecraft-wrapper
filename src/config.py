@@ -1,20 +1,25 @@
+# -*- coding: utf-8 -*-
+
 import traceback
 import ConfigParser
 import ast
 import time
 import os
 import sys
-# I'm going to redo the configuration code soon! Don't you worry!
+
 # Default Configuration File
 
+# Because we don't have access to the logging system yet we need to create a dummy
+# This should be resolved soon by leveraging the native logging library
 
-class DummyLog():  # Becouse now we havn't got access for the loggign system, but config needs it, er need to create a dummy
+class DummyLog():
 
     def info(*args):
         pass
 
     def debug(*args):
         pass
+        
 DEFAULT_CONFIG = """[General]
 server-name = Minecraft Server
 command = java -jar minecraft_server.1.8.7.jar nogui
@@ -93,13 +98,13 @@ class Config:
         # creates new wrapper.properties. The reason I do this is so the
         # ordering isn't random and is a bit prettier
         if not os.path.exists("wrapper.properties"):
-            f = open("wrapper.properties", "w")
-            f.write(DEFAULT_CONFIG)
-            f.close()
+            with open("wrapper.properties", "w") as f:
+                f.write(DEFAULT_CONFIG)
             self.exit = True
         # open("wrapper.properties", "a").close()
         self.parser = ConfigParser.ConfigParser(allow_no_value=True)
-        self.parser.readfp(open("wrapper.properties"))
+        with open("wrapper.properties", "r") as f:
+            self.parser.readfp(f)
 
         sections = ["General", "Backups", "IRC", "Proxy", "Web"]
         defaults = {"General": {
@@ -168,11 +173,10 @@ class Config:
                         self.config[section][key[0]] = ast.literal_eval(key[1])
                     except:
                         self.config[section][key[0]] = key[1]
-            except:
+            except Exception, e:
                 traceback.print_exc()
                 self.parser.add_section(section)
-                self.log.debug(
-                    "Adding section [%s] to configuration" % section)
+                self.log.debug("Adding section [%s] to configuration" % section)
                 self.config[section] = {}
                 self.exit = True
 
@@ -187,9 +191,8 @@ class Config:
                 else:
                     for key in keys:
                         try:
-                            self.config[section][
-                                key[0]] = ast.literal_eval(key[1])
-                        except:
+                            self.config[section][key[0]] = ast.literal_eval(key[1])
+                        except Exception, e:
                             self.config[section][key[0]] = key[1]
         self.save()
         Config.debug = self.config["General"]["debug"]
@@ -199,4 +202,5 @@ class Config:
             sys.exit()
 
     def save(self):
-        self.parser.write(open("wrapper.properties", "wb"))
+        with open("wrapper.properties", "wb") as f:
+            self.parser.write(f)

@@ -1,7 +1,10 @@
+# -*- coding: utf-8 -*-
+
 import traceback
 import ast
 import random
 
+from helpers import args, argsAfter
 
 class Commands:
 
@@ -35,25 +38,12 @@ class Commands:
         player = payload["player"]
         self.log.info("%s executed: /%s %s" %
                       (str(payload["player"]), payload["command"], " ".join(payload["args"])))
-
-        def args(i):
-            try:
-                return payload["args"][i]
-            except:
-                return ""
-
-        def argsAfter(i):
-            try:
-                return " ".join(payload["args"][i:])
-            except:
-                return ""
         for pluginID in self.commands:
             if pluginID == "Wrapper.py":
                 try:
                     print(self.commands[pluginID])
-                    self.commands[pluginID][command](
-                        payload["player"], payload["args"])
-                except:
+                    self.commands[pluginID][command](payload["player"], payload["args"])
+                except Exception, e:
                     pass
                 continue
             if pluginID not in self.wrapper.plugins:
@@ -71,9 +61,8 @@ class Commands:
                         player.message(
                             {"translate": "commands.generic.permission", "color": "red"})
                     return False
-                except:
-                    self.log.error("Plugin '%s' errored out when executing command: '<%s> /%s':" %
-                                   (pluginID, payload["player"], command))
+                except Exception, e:
+                    self.log.error("Plugin '%s' errored out when executing command: '<%s> /%s':" % (pluginID, payload["player"], command))
                     for line in traceback.format_exc().split("\n"):
                         self.log.error(line)
                     payload["player"].message(
@@ -83,8 +72,8 @@ class Commands:
             if not player.isOp():
                 return
             buildString = self.wrapper.getBuildString()
-            if len(args(0)) > 0:
-                subcommand = args(0)
+            if len(args(payload["args"], 0)) > 0:
+                subcommand = args(payload["args"], 0)
                 if subcommand == "update":
                     player.message(
                         {"text": "Checking for new Wrapper.py updates...", "color": "yellow"})
@@ -157,7 +146,7 @@ class Commands:
                 return False
         if payload["command"] == "reload":
             if player.isOp():
-                if args(0) == "server":
+                if args(payload["args"], 0) == "server":
                     return
                 try:
                     self.wrapper.plugins.reloadPlugins()
@@ -186,18 +175,18 @@ class Commands:
         if payload["command"] == "proxy-ban-ip":
             if player.isOp():
                 if self.wrapper.config["Proxy"]["proxy-enabled"]:
-                    if len(args(0)) > 0:
-                        ipnumbers = str(args(0)).split(".")
+                    if len(args(payload["args"], 0)) > 0:
+                        ipnumbers = str(args(payload["args"], 0)).split(".")
                         if len(ipnumbers) != 4:
                             player.message(
-                                "&cinvalid ip address format: %s" % args(0))
+                                "&cinvalid ip address format: %s" % args(payload["args"], 0))
                             return False
-                        for ipnumber in range(0, 4):
+                        for ipnumber in xrange(0, 4):
                             if int(ipnumbers[ipnumber]) > 255 or int(ipnumbers[ipnumber]) < 0:
                                 player.message("&cinvalid ip component: %s  &5%s" % (
-                                    args(0), str(ipnumbers[ipnumber])))
+                                    args(payload["args"], 0), str(ipnumbers[ipnumber])))
                                 return False
-                        self.wrapper.proxy.banIP(args(0))
+                        self.wrapper.proxy.banIP(args(payload["args"], 0))
                         player.message(
                             {"text": "IP address banned!", "color": "yellow"})
                         return False
@@ -210,21 +199,21 @@ class Commands:
         if payload["command"] == "proxy-pardon-ip":
             if player.isOp():
                 if self.wrapper.config["Proxy"]["proxy-enabled"]:
-                    if len(args(0)) > 0:
-                        ipnumbers = str(args(0)).split(".")
+                    if len(args(payload["args"], 0)) > 0:
+                        ipnumbers = str(args(payload["args"], 0)).split(".")
                         if len(ipnumbers) != 4:
                             player.message(
-                                "&cinvalid ip address format: %s" % args(0))
+                                "&cinvalid ip address format: %s" % args(payload["args"], 0))
                             return False
-                        for ipnumber in range(0, 4):
+                        for ipnumber in xrange(0, 4):
                             if int(ipnumbers[ipnumber]) > 255 or int(ipnumbers[ipnumber]) < 0:
                                 player.message("&cinvalid ip component: %s  &5%s" % (
-                                    args(0), str(ipnumbers[ipnumber])))
+                                    args(payload["args"], 0), str(ipnumbers[ipnumber])))
                                 return False
                         ipuse = ""
-                        if self.wrapper.proxy.pardonIP(args(0)) is True:
+                        if self.wrapper.proxy.pardonIP(args(payload["args"], 0)) is True:
                             player.message(
-                                {"text": "IP address unbanned!", "color": "gold"} % str((args(0))))
+                                {"text": "IP address unbanned!", "color": "gold"} % str((args(payload["args"], 0))))
                         else:
                             player.message(
                                 {"text": "IP unban failed!", "color": "red"})
@@ -244,15 +233,15 @@ class Commands:
                 for help in plugin:
                     helpGroups.append(
                         {"name": help, "description": plugin[help][0]})
-            if len(args(1)) > 0:
-                group = args(0).lower()
-                page = args(1)
+            if len(args(payload["args"], 1)) > 0:
+                group = args(payload["args"], 0).lower()
+                page = args(payload["args"], 1)
             else:
                 group = ""
-                page = args(0)
+                page = args(payload["args"], 0)
             try:
                 page = int(page) - 1
-            except:
+            except TypeError: # Assuming that this is a type error when page cannot be cast to an integer
                 if len(page) > 0:
                     group = page.lower()
                 page = 0
@@ -309,7 +298,7 @@ class Commands:
                                     command, args, permission = i[
                                         0].split(" ")[0], "", None
                                     if i[0].split(" ") > 1:
-                                        args = " ".join(i[0].split(" ")[1:])
+                                        args = argsAfter(i[0].split(" "), 1)
                                     if not player.hasPermission(i[2]):
                                         continue
                                     if len(i) > 1 and player.isOp():
@@ -338,7 +327,7 @@ class Commands:
                 showPage(page, items, "/help", 8)
             return False
         if payload["command"] == "playerstats":
-            subcommand = args(0)
+            subcommand = args(payload["args"], 0)
             if player.isOp():
                 totalPlaytime = {}
                 players = self.wrapper.api.minecraft.getAllPlayers()
@@ -403,10 +392,10 @@ class Commands:
             if player.isOp():
                 def usage(l):
                     player.message("&cUsage: /%s %s" % (payload["command"], l))
-                command = args(0)
+                command = args(payload["args"], 0)
                 if command == "groups":
-                    group = args(1)
-                    subcommand = args(2)
+                    group = args(payload["args"], 1)
+                    subcommand = args(payload["args"], 2)
                     if subcommand == "new":
                         self.wrapper.permissions["groups"][
                             group] = {"permissions": {}}
@@ -425,8 +414,8 @@ class Commands:
                             player.message(
                                 "&cGroup '%s' does not exist!" % group)
                             return
-                        node = args(3)
-                        value = argsAfter(4)
+                        node = args(payload["args"], 3)
+                        value = argsAfter(payload["args"], 4)
                         if len(value) == 0:
                             value = True
                         if value in ("True", "False"):
@@ -444,7 +433,7 @@ class Commands:
                             player.message(
                                 "&cGroup '%s' does not exist!" % group)
                             return
-                        node = args(3)
+                        node = args(payload["args"], 3)
                         if node in self.wrapper.permissions["groups"][group]["permissions"]:
                             del self.wrapper.permissions["groups"][
                                 group]["permissions"][node]
@@ -477,8 +466,8 @@ class Commands:
                         usage(
                             "groups <groupName> [new/delete/set/remove/info]")
                 elif command == "users":
-                    username = args(1)
-                    subcommand = args(2)
+                    username = args(payload["args"], 1)
+                    subcommand = args(payload["args"], 2)
                     # try:
                     if len(username) > 0:
                         uuid = str(self.wrapper.lookupUUIDbyUsername(username))
@@ -490,7 +479,7 @@ class Commands:
                             self.wrapper.permissions["users"][uuid] = {
                                 "groups": [], "permissions": {}}
                     if subcommand == "group":
-                        group = args(3)
+                        group = args(payload["args"], 3)
                         if len(group) > 0:
                             if group not in self.wrapper.permissions["groups"]:
                                 player.message(
@@ -509,8 +498,8 @@ class Commands:
                         else:
                             usage("users <username> group <groupName>")
                     elif subcommand == "set":
-                        node = args(3)
-                        value = argsAfter(4)
+                        node = args(payload["args"], 3)
+                        value = argsAfter(payload["args"], 4)
                         if len(value) == 0:
                             value = True
                         if value in ("True", "False"):
@@ -524,7 +513,7 @@ class Commands:
                             usage(
                                 "users %s set <permissionNode> [value]" % username)
                     elif subcommand == "remove":
-                        node = args(3)
+                        node = args(payload["args"], 3)
                         if node not in self.wrapper.permissions["users"][uuid]["permissions"]:
                             player.message(
                                 "&cPlayer '%s' never had permission '%s'!" % (username, node))

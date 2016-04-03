@@ -1,5 +1,5 @@
-# Yeah, I know. The code is awful. Probably not even a HTTP-compliant web
-# server anyways. I just wrote it at like 3AM in like an hour.
+# -*- coding: utf-8 -*-
+
 import socket
 import traceback
 import zipfile
@@ -13,7 +13,10 @@ import log
 import urllib
 import os
 import md5
+
 from api import API
+from helpers import args, argsAfter
+
 try:
     import pkg_resources
     import requests
@@ -21,6 +24,8 @@ try:
 except:
     IMPORT_SUCCESS = False
 
+# Yeah, I know. The code is awful. Probably not even a HTTP-compliant web
+# server anyways. I just wrote it at like 3AM in like an hour.
 
 class Web:
 
@@ -58,7 +63,7 @@ class Web:
         while len(self.consoleScrollback) > 1000:
             try:
                 del self.consoleScrollback[0]
-            except:
+            except Exception, e:
                 break
         self.consoleScrollback.append((time.time(), payload["message"]))
 
@@ -66,7 +71,7 @@ class Web:
         while len(self.chatScrollback) > 200:
             try:
                 del self.chatScrollback[0]
-            except:
+            except Exception, e:
                 break
         self.chatScrollback.append((time.time(), {"type": "player", "payload": {
                                    "player": payload["player"].username, "message": payload["message"]}}))
@@ -76,7 +81,7 @@ class Web:
         while len(self.chatScrollback) > 200:
             try:
                 del self.chatScrollback[0]
-            except:
+            except Exception, e:
                 break
         self.chatScrollback.append((time.time(), {"type": "playerJoin", "payload": {
                                    "player": payload["player"].username}}))
@@ -86,7 +91,7 @@ class Web:
         while len(self.chatScrollback) > 200:
             try:
                 del self.chatScrollback[0]
-            except:
+            except Exception, e:
                 break
         self.chatScrollback.append((time.time(), {"type": "playerLeave", "payload": {
                                    "player": payload["player"].username}}))
@@ -95,7 +100,7 @@ class Web:
         while len(self.chatScrollback) > 200:
             try:
                 del self.chatScrollback[0]
-            except:
+            except Exception, e:
                 break
         self.chatScrollback.append(
             (time.time(), {"type": "irc", "payload": payload}))
@@ -123,7 +128,7 @@ class Web:
     def makeKey(self, rememberMe):
         a = ""
         z = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@-_"
-        for i in range(64):
+        for i in xrange(64):
             a += z[random.randrange(0, len(z))]
             # a += chr(random.randrange(97, 122))
         if rememberMe:
@@ -156,7 +161,7 @@ class Web:
                 else:
                     self.log.error("Could not bind web to %s:%d - retrying in 5 seconds" %
                                    (self.config["Web"]["web-bind"], self.config["Web"]["web-port"]))
-            except:
+            except Exception, e:
                 for line in traceback.format_exc().split("\n"):
                     self.log.error(line)
             time.sleep(5)
@@ -171,7 +176,7 @@ class Web:
                 (self.config["Web"]["web-bind"], self.config["Web"]["web-port"]))
             self.socket.listen(5)
             return True
-        except:
+        except Exception, e:
             return False
 
     def listen(self):
@@ -218,7 +223,7 @@ class Client:
         try:
             self.socket.close()
             #self.log.debug("(WEB) Connection %s closed" % str(self.addr))
-        except:
+        except Exception, e:
             pass
 
     def wrap(self):
@@ -232,14 +237,8 @@ class Client:
             self.close()
 
     def handleAction(self, request):
-        def args(i):
-            try:
-                return request.split("/")[1:][i]
-            except:
-                return ""
-
         def get(i):
-            for a in args(1).split("?")[1].split("&"):
+            for a in request.split("/")[1:][1].split("?")[1].split("&"):
                 if a[0:a.find("=")]:
                     return urllib.unquote(a[a.find("=") + 1:])
             return ""
@@ -255,18 +254,12 @@ class Client:
         os.getcwd()
 
     def runAction(self, request):
-        def args(i):
-            try:
-                return request.split("/")[1:][i]
-            except:
-                return ""
-
         def get(i):
-            for a in args(1).split("?")[1].split("&"):
+            for a in request.split("/")[1:][1].split("?")[1].split("&"):
                 if a[0:a.find("=")] == i:
                     return urllib.unquote(a[a.find("=") + 1:])
             return ""
-        action = args(1).split("?")[0]
+        action = request.split("/")[1:][1].split("?")[0]
         if action == "stats":
             if not self.wrapper.config["Web"]["public-stats"]:
                 return EOFError
@@ -355,7 +348,7 @@ class Client:
             if os.path.exists(file):
                 try:
                     os.rename(file, rename)
-                except:
+                except Exception, e:
                     print traceback.format_exc()
                     return False
                 return True
@@ -372,7 +365,7 @@ class Client:
                         os.removedirs(file)
                     else:
                         os.remove(file)
-                except:
+                except Exception, e:
                     print traceback.format_exc()
                     return False
                 return True
@@ -596,14 +589,9 @@ class Client:
 
     def get(self, request):
         # print "GET request: %s" % request
-        def args(i):
-            try:
-                return request.split("/")[1:][i]
-            except:
-                return ""
         if request == "/":
             file = "index.html"
-        elif args(0) == "action":
+        elif request.split("/")[1:][0] == "action":
             try:
                 self.write(json.dumps(self.handleAction(request)))
             except:
@@ -645,28 +633,18 @@ class Client:
                     self.close()
                     return
                 self.buffer = data.split("\n")
-            except:
-                self.close()
+            except Exception, e:
                 #self.log.debug("(WEB) Connection %s closed" % str(self.addr))
                 break
+            finally:
+                self.close()
             if len(self.buffer) < 1:
                 print "Web connection closed suddenly"
                 return False
             for line in self.buffer:
-                def args(i):
-                    try:
-                        return line.split(" ")[i]
-                    except:
-                        return ""
-
-                def argsAfter(i):
-                    try:
-                        return " ".join(line.split(" ")[i:])
-                    except:
-                        return ""
-                if args(0) == "GET":
-                    self.get(args(1))
-                if args(0) == "POST":
-                    self.request = args(1)
+                if args(line.split(" "), 0) == "GET":
+                    self.get(args(line.split(" "), 1))
+                if args(line.split(" "), 0) == "POST":
+                    self.request = args(line.split(" "), 1)
                     self.headers(status="400 Bad Request")
                     self.write("<h1>Invalid request. Sorry.</h1>")

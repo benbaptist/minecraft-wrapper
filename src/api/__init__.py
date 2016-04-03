@@ -1,13 +1,16 @@
+# -*- coding: utf-8 -*-
+
 import json
 import time
 import nbt
 import items
 import storage
+
 from api.player import Player
 from api.minecraft import Minecraft
-from errors import *
-""" api.py contains the majority of code for the plugin API. """
+from errors import NonExistentPlugin
 
+""" api.py contains the majority of code for the plugin API. """
 
 class API:
     """ 

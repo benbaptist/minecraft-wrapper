@@ -1,6 +1,6 @@
-# this was a stupid idea, i shold probably remove this file ioksaodksaisaoijd LOLOLOLOLOOL
-# because it goes unused
-# LOLLOOLOLOL
+# -*- coding: utf-8 -*-
+
+# This module is not used
 
 
 class Permissions:

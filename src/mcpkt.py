@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 # Ways to reference packets by names and not hard-coded numbers
 # It is up to wrapper to know what the actual connection versions are.
 # Once it knows the version, it can do something like:
@@ -5,9 +7,7 @@
 # the remainder of the wrapper/plugin code can simply reference
 # `ClPkt.playerlook`
 
-
 # set something False using 0xEE
-
 
 class ServerBound18:
     """ wrapper's "Client" process, which handles connections from client to wrapper.

@@ -1,10 +1,12 @@
+# -*- coding: utf-8 -*-
+
 import os
 import traceback
 import sys
+
 from importlib import import_module
 from api import API
-from log import *
-
+from log import Log, PluginLog
 
 class Plugins:
 
@@ -45,43 +47,45 @@ class Plugins:
             name = i[:-3]
         else:
             return False
+
+        # Leaving these for now due to EAFP
         try:
             disabled = plugin.DISABLED
-        except:
+        except AttributeError:
             disabled = False
         try:
             # if used, plugin.DEPENDENCIES must be a 'list' type (even if only
             # one item); e.g. = ["some.py", "another.py", etc]
             dependencies = plugin.DEPENDENCIES
-        except:
+        except AttributeError:
             dependencies = False
         try:
             name = plugin.NAME
-        except:
+        except AttributeError:
             pass
         try:
             id = plugin.ID
-        except:
+        except AttributeError:
             id = name
         try:
             version = plugin.VERSION
-        except:
+        except AttributeError:
             version = (0, 1)
         try:
             description = plugin.DESCRIPTION
-        except:
+        except AttributeError:
             description = None
         try:
             summary = plugin.SUMMARY
-        except:
+        except AttributeError:
             summary = None
         try:
             author = plugin.AUTHOR
-        except:
+        except AttributeError:
             author = None
         try:
             website = plugin.WEBSITE
-        except:
+        except AttributeError:
             website = None
         if id in self.wrapper.storage["disabled_plugins"] or disabled:
             self.log.warn("Plugin '%s' disabled - not loading" % name)
@@ -94,10 +98,8 @@ class Plugins:
             # ["supportplugin.py"]
             for dependency in dependencies:
                 self.loadPlugin(dependency)
-        main = plugin.Main(API(self.wrapper, name, id),
-                           PluginLog(self.log, name))
-        self.plugins[id] = {"main": main, "good": True,
-                            "module": plugin}  # "events": {}, "commands": {},
+        main = plugin.Main(API(self.wrapper, name, id), PluginLog(self.log, name))
+        self.plugins[id] = {"main": main, "good": True, "module": plugin}  # "events": {}, "commands": {},
         self.plugins[id]["name"] = name
         self.plugins[id]["version"] = version
         self.plugins[id]["summary"] = summary
@@ -117,12 +119,12 @@ class Plugins:
         del self.wrapper.help[plugin]
         try:
             self.plugins[plugin]["main"].onDisable()
-        except:
+        except Exception, e:
             self.log.error("Error while disabling plugin '%s'" % plugin)
             self.log.getTraceback()
         try:
             reload(self.plugins[plugin]["module"])
-        except:
+        except Exception, e:
             self.log.error(
                 "Error while reloading plugin '%s' -- it was probably deleted or is a bugged version" % plugin)
             self.log.getTraceback()
@@ -140,29 +142,30 @@ class Plugins:
                     self.loadPlugin(i)
                 elif i[-3:] == ".py":
                     self.loadPlugin(i)
-            except:
+            except Exception, e:
                 for line in traceback.format_exc().split("\n"):
                     self.log.debug(line)
-                self.log.error("Failed to import plugin '%s'" % i)
+                self.log.error("Failed to import plugin '%s' (%s)" % (i, e))
                 self.plugins[i] = {"name": i, "good": False}
         self.wrapper.events.callEvent("helloworld.event", {"testValue": True})
 
     def disablePlugins(self):
-        self.log.error("Disabling plugins...")
+        self.log.info("Disabling plugins...")
         for i in self.plugins:
             self.unloadPlugin(i)
+        self.log.info("Plugins disabled")
 
     def reloadPlugins(self):
         for i in self.plugins:
             try:
                 self.unloadPlugin(i)
-            except:
+            except Exception, e:
                 for line in traceback.format_exc().split("\n"):
                     self.log.debug(line)
-                self.log.error("Failed to unload plugin '%s'" % i)
+                self.log.error("Failed to unload plugin '%s' (%s)" % (i, e))
                 try:
                     reload(self.plugins[plugin]["module"])
-                except:
+                except Exception, ex:
                     pass
         self.plugins = {}
         self.loadPlugins()
