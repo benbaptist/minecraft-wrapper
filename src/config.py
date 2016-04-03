@@ -173,7 +173,7 @@ class Config:
                         self.config[section][key[0]] = ast.literal_eval(key[1])
                     except:
                         self.config[section][key[0]] = key[1]
-            except Exception, e:
+            except Exception as e:
                 traceback.print_exc()
                 self.parser.add_section(section)
                 self.log.debug("Adding section [%s] to configuration" % section)
@@ -192,7 +192,7 @@ class Config:
                     for key in keys:
                         try:
                             self.config[section][key[0]] = ast.literal_eval(key[1])
-                        except Exception, e:
+                        except Exception as e:
                             self.config[section][key[0]] = key[1]
         self.save()
         Config.debug = self.config["General"]["debug"]
