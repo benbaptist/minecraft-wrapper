@@ -68,7 +68,7 @@ class Log:
                 self.file.flush()
             else:
                 self.buffer += ("%s\n" % payload).encode("utf8")
-        except Exception, e:
+        except Exception as e:
             print "Failure to write string - possibly due to writing while rotating log files"
             print payload
             self.getTraceback()
