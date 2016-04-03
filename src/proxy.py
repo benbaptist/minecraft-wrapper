@@ -662,7 +662,7 @@ class Client:  # handle server-bound packets (client/game connection)
                     return False  # stop packet if  player.dig returns False
             # started digging
             if data["status"] == 0:
-                if not self.gamemode == 1:
+                if self.gamemode != 1:
                     if not self.wrapper.callEvent("player.dig", {
                         "player": self.getPlayerObject(),
                         "position": position,
@@ -679,7 +679,7 @@ class Client:  # handle server-bound packets (client/game connection)
                     }):
                         return False
             if data["status"] == 5 and data["face"] == 255:
-                if not self.position == (0, 0, 0):
+                if self.position != (0, 0, 0):
                     playerpos = self.position
                     if not self.wrapper.callEvent("player.interact",
                                                   {"player": self.getPlayerObject(),
@@ -1562,7 +1562,7 @@ class Packet:  # PACKET PARSING CODE
 #		if length > 256:
 #			print "Length: %d" % length
         dataLength = 0
-        if not self.compressThreshold == -1:
+        if self.compressThreshold != -1:
             dataLength = self.unpack_varInt()
             length = length - len(self.pack_varInt(dataLength))
         # $ part of the bad file descriptor rabbit trail
@@ -1956,7 +1956,7 @@ class Packet:  # PACKET PARSING CODE
 
     def read_slot(self):
         id = self.read_short()
-        if not id == -1:
+        if id != -1:
             count = self.read_ubyte()
             damage = self.read_short()
             nbt = self.read_tag()
@@ -2037,7 +2037,7 @@ class Packet:  # PACKET PARSING CODE
     def read_tag(self):
         a = {}
         a["type"] = self.read_byte()
-        if not a["type"] == 0:
+        if a["type"] != 0:
             #print("NBT TYPE: %s" %a["type"])
             a["name"] = self.read_short_string()
             a["value"] = self._DECODERS[a["type"]]()
