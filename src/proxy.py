@@ -686,7 +686,7 @@ class Client:  # handle server-bound packets (client/game connection)
                                                    "position": playerpos,
                                                    "action": "finish_using"}):
                         return False
-            if not self.server.state == 3:
+            if self.server.state != 3:
                 return False
         # Player Block Placement
         if id == self.pktSB.playerblockplacement:
