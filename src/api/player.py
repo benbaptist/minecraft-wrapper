@@ -72,7 +72,7 @@ class Player:
         """
         try:
             self.wrapper.server.console(string)
-        except Exception, e:
+        except Exception as e:
             pass
 
     def execute(self, string):
@@ -85,7 +85,7 @@ class Player:
         """
         try:
             self.client.message("/%s" % string)
-        except Exception, e:
+        except Exception as e:
             self.console("execute %s ~ ~ ~ %s" % (self.name, string))
 
     def say(self, string):
@@ -108,7 +108,7 @@ class Player:
                     if client.username == self.username:
                         self.client = client
                         return self.client
-                except Exception, e:
+                except Exception as e:
                     pass
         else:
             return self.client
