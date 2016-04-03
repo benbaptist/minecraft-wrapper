@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 
-def args(input, i):
+def args(arginput, i):
     try:
-        return input[i]
+        return arginput[i]
     except:
         return ""
 
-def argsAfter(input, i):
+def argsAfter(arginput, i):
     try:
-        return " ".join(input[i:])
+        return " ".join(arginput[i:])
     except:
         return ""
