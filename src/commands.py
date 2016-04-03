@@ -3,6 +3,7 @@
 import traceback
 import ast
 import random
+
 from helpers import args, argsAfter
 
 class Commands:
@@ -180,7 +181,7 @@ class Commands:
                             player.message(
                                 "&cinvalid ip address format: %s" % args(payload["args"], 0))
                             return False
-                        for ipnumber in range(0, 4):
+                        for ipnumber in xrange(0, 4):
                             if int(ipnumbers[ipnumber]) > 255 or int(ipnumbers[ipnumber]) < 0:
                                 player.message("&cinvalid ip component: %s  &5%s" % (
                                     args(payload["args"], 0), str(ipnumbers[ipnumber])))
@@ -204,7 +205,7 @@ class Commands:
                             player.message(
                                 "&cinvalid ip address format: %s" % args(payload["args"], 0))
                             return False
-                        for ipnumber in range(0, 4):
+                        for ipnumber in xrange(0, 4):
                             if int(ipnumbers[ipnumber]) > 255 or int(ipnumbers[ipnumber]) < 0:
                                 player.message("&cinvalid ip component: %s  &5%s" % (
                                     args(payload["args"], 0), str(ipnumbers[ipnumber])))

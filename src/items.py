@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
-# This was probably a dumb idea.
 # I might use http://minecraft-ids.grahamedgecombe.com/items.json instead
+
 Blocks = {
     0: {"TileName": "air", "Items": [{"Name": "Air"}]},
     1: {"TileName": "stone", "Items": [

@@ -8,9 +8,9 @@ import api
 import globals
 import random
 import math
+
 from config import Config
 from helpers import args, argsAfter
-
 
 class IRC:
 
@@ -181,7 +181,7 @@ class IRC:
             for i, message in enumerate(self.msgQueue):
                 for channel in self.channels:
                     if len(message) > 400:
-                        for l in range(int(math.ceil(len(message) / 400.0))):
+                        for l in xrange(int(math.ceil(len(message) / 400.0))):
                             chunk = message[l * 400:(l + 1) * 400]
                             self.send("PRIVMSG %s :%s" % (channel, chunk))
                     else:
@@ -221,7 +221,7 @@ class IRC:
             self.nickAttempts += 1
             if self.nickAttempts > 2:
                 name = bytearray(self.nickname)
-                for i in range(3):
+                for i in xrange(3):
                     name[len(self.nickname) / 3 *
                          i] = chr(random.randrange(97, 122))
                 self.nickname = str(name)

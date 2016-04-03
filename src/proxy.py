@@ -1,12 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from config import Config
-from api.entity import Entity
-from mcpkt import ServerBound18 as defPacketsSB
-from mcpkt import ClientBound18 as defPacketsCB
-from mcpkt import ServerBound19 as PacketsSB19
-from mcpkt import ClientBound19 as PacketsCB19
-from helpers import args, argsAfter
 import socket
 import threading
 import struct
@@ -21,6 +14,14 @@ import zlib
 import uuid
 import storage
 import shutil
+
+from config import Config
+from api.entity import Entity
+from mcpkt import ServerBound18 as defPacketsSB
+from mcpkt import ClientBound18 as defPacketsCB
+from mcpkt import ServerBound19 as PacketsSB19
+from mcpkt import ClientBound19 as PacketsCB19
+from helpers import args, argsAfter
 
 try:
     import encryption
@@ -259,7 +260,7 @@ class Client:  # handle server-bound packets (client/game connection)
         self.properties = {}
         self.clientSettings = None
         self.clientSettingsSent = False
-        for i in range(45):
+        for i in xrange(45):
             self.inventory[i] = None
 
         # Determine packet types - currently 1.8 is the lowest life form
@@ -1353,10 +1354,10 @@ class Server:  # Handle Server Connection  ("client bound" packets)
             if self.version > PROTOCOLv1_8START and self.version < PROTOCOL_1_9START:
                 data = self.read("bool:skylight|varint:chunks")
                 chunks = []
-                for i in range(data["chunks"]):
+                for i in xrange(data["chunks"]):
                     meta = self.read("int:x|int:z|ushort:primary")
                     chunks.append(meta)
-                for i in range(data["chunks"]):
+                for i in xrange(data["chunks"]):
                     meta = chunks[i]
                     bitmask = bin(meta["primary"])[2:].zfill(16)
                     primary = []
@@ -2046,7 +2047,7 @@ class Packet:  # PACKET PARSING CODE
         r = []
         type = self.read_byte()
         lenght = self.read_int()
-        for l in range(lenght):
+        for l in xrange(lenght):
             b = {}
             b["type"] = type
             b["name"] = ""

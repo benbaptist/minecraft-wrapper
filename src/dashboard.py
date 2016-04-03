@@ -1,13 +1,5 @@
 # -*- coding: utf-8 -*-
 
-try:
-    from flask import Flask, g, redirect, url_for, render_template, request, make_response, Response, Markup
-    from flask_socketio import SocketIO, send, emit, join_room, leave_room
-
-    IMPORT_SUCCESS = True
-except ImportError:
-    IMPORT_SUCCESS = False
-
 import os
 import time
 import threading
@@ -16,6 +8,14 @@ import traceback
 import datetime
 import storage
 import log
+
+try:
+    from flask import Flask, g, redirect, url_for, render_template, request, make_response, Response, Markup
+    from flask_socketio import SocketIO, send, emit, join_room, leave_room
+
+    IMPORT_SUCCESS = True
+except ImportError:
+    IMPORT_SUCCESS = False
 
 class Web:
 

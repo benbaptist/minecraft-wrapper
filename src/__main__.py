@@ -25,14 +25,11 @@ from commands import Commands
 from events import Events
 from helpers import args, argsAfter
 
-# I'm not 100% sure if readline works under Windows or not
-
 try:
     import readline
 except ImportError:
+    # readline does not exist for windows
     pass
-
-# Sloppy import catch system
 
 try:
     import requests
@@ -79,7 +76,7 @@ class Wrapper:
     @staticmethod
     def formatUUID(playeruuid):
         """
-        takes player's uuid with no dashes and returns it with the dashes
+        Takes player's uuid with no dashes and returns it with the dashes
         :param playeruuid: string of player uuid with no dashes (such as you might get back from Mojang)
         :return: string hex format "8-4-4-4-12"
         """
@@ -122,7 +119,7 @@ class Wrapper:
                 print(
                     "%s's name is not correctly capitalized (offline name warning!)" % correctcapname)
         except Exception, e:
-            # try for any old proxy-data record- as a last resort:
+            # try for any old proxy-data record as a last resort:
             if "uuid-cache" not in self.proxy.storage:
                 return False  # no old proxy uuid-cache exists.
             for useruuid in self.proxy.storage["uuid-cache"]:
@@ -163,22 +160,21 @@ class Wrapper:
         if useruuid not in self.usercache:
             self.usercache[useruuid] = {"time": time.time(), "original": None, "name": None,
                                         "online": True, "localname": None, "IP": None, "names": []}
-        for i in range(0, numbofnames):
+        for i in xrange(0, numbofnames):
             if "changedToAt" not in names[i]:  # find the original name
                 self.usercache[useruuid]["original"] = names[i]["name"]
                 self.usercache[useruuid]["online"] = True
                 self.usercache[useruuid]["time"] = time.time()
-                if numbofnames == 1:  # name = original name
+                if numbofnames == 1:  # The user has never changed their name
                     self.usercache[useruuid]["name"] = names[i]["name"]
                     if self.usercache[useruuid]["localname"] is None:
                         self.usercache[useruuid]["localname"] = names[i]["name"]
                     break
             else:
-                l = len(pastnames)
-                # put the java milleseconds to time.time seconds
+                # Convert java milleseconds to time.time seconds
                 changetime = names[i]["changedToAt"] / 1000
                 oldname = names[i]["name"]
-                if l == 0:
+                if len(pastnames) == 0:
                     pastnames.append({"name": oldname, "date": changetime})
                     continue
                 if changetime > pastnames[0]["date"]:
@@ -209,7 +205,7 @@ class Wrapper:
                 rx = requests.get("https://status.mojang.com/check").json()
                 if rx.status_code == 200:
                     rx = rx.json()
-                    for i in range(0, len(rx)):
+                    for i in xrange(0, len(rx)):
                         if "account.mojang.com" in rx[i]:
                             if rx[i]["account.mojang.com"] == "green":
                                 self.log.error("Mojang accounts is green, but request failed. Have you over-polled (large busy server) or supplied an incorrect UUID?")

@@ -3,9 +3,10 @@
 import os
 import traceback
 import sys
+
 from importlib import import_module
 from api import API
-from log import *
+from log import Log, PluginLog
 
 class Plugins:
 
@@ -97,10 +98,8 @@ class Plugins:
             # ["supportplugin.py"]
             for dependency in dependencies:
                 self.loadPlugin(dependency)
-        main = plugin.Main(API(self.wrapper, name, id),
-                           PluginLog(self.log, name))
-        self.plugins[id] = {"main": main, "good": True,
-                            "module": plugin}  # "events": {}, "commands": {},
+        main = plugin.Main(API(self.wrapper, name, id), PluginLog(self.log, name))
+        self.plugins[id] = {"main": main, "good": True, "module": plugin}  # "events": {}, "commands": {},
         self.plugins[id]["name"] = name
         self.plugins[id]["version"] = version
         self.plugins[id]["summary"] = summary
@@ -120,7 +119,7 @@ class Plugins:
         del self.wrapper.help[plugin]
         try:
             self.plugins[plugin]["main"].onDisable()
-        except:
+        except Exception, e:
             self.log.error("Error while disabling plugin '%s'" % plugin)
             self.log.getTraceback()
         try:
@@ -146,14 +145,15 @@ class Plugins:
             except Exception, e:
                 for line in traceback.format_exc().split("\n"):
                     self.log.debug(line)
-                self.log.error("Failed to import plugin '%s'" % i)
+                self.log.error("Failed to import plugin '%s' (%s)" % (i, e))
                 self.plugins[i] = {"name": i, "good": False}
         self.wrapper.events.callEvent("helloworld.event", {"testValue": True})
 
     def disablePlugins(self):
-        self.log.error("Disabling plugins...")
+        self.log.info("Disabling plugins...")
         for i in self.plugins:
             self.unloadPlugin(i)
+        self.log.info("Plugins disabled")
 
     def reloadPlugins(self):
         for i in self.plugins:

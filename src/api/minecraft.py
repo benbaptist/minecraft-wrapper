@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import unicode_literals
+
 import json
 import nbt
 import items
 import os
 import uuid
 import sys
-reload(sys)
-
 
 class Minecraft:
     """ This class contains functions related to in-game features directly. These methods are located at self.api.minecraft. """
@@ -16,7 +16,6 @@ class Minecraft:
         self.wrapper = wrapper
         self.log = wrapper.log
         self._encoding = wrapper.config["General"]["encoding"]
-        sys.setdefaultencoding(self._encoding)
         self.blocks = items.Blocks
 
     def isServerStarted(self):

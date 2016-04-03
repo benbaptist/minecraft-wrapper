@@ -1,23 +1,20 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import unicode_literals
+
 import json
 import os
 import threading
 import time
 import copy
 import traceback
-from config import Config, DummyLog
 import sys
-reload(sys)
 
+from config import Config, DummyLog
 
 _config = Config(DummyLog())
 _config.loadConfig()
 _encoding = _config.config["General"]["encoding"]
-# we probably should not be doing this, but it is probably ok as long as it is UTF-8 or if using python 2.x
-# http://stackoverflow.com/questions/3828723/why-should-we-not-use-sys-setdefaultencodingutf-8-in-a-py-script
-sys.setdefaultencoding(_encoding)
-
 
 class Storage:
 
@@ -87,8 +84,8 @@ class Storage:
         with open("%s/%s.json" % (self.root, self.name), "r") as f:
             try:
                 self.data = json.loads(f.read(), _encoding)
-            except:
-                print "Failed to load '%s/%s.json' - fresh" % (self.root, self.name)
+            except Exception, e:
+                print "Failed to load '%s/%s.json' (%s)" % (self.root, self.name, e)
                 return
         self.dataOld = copy.deepcopy(self.data)
 

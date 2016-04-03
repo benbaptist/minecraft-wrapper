@@ -13,8 +13,10 @@ import log
 import urllib
 import os
 import md5
+
 from api import API
 from helpers import args, argsAfter
+
 try:
     import pkg_resources
     import requests
@@ -126,7 +128,7 @@ class Web:
     def makeKey(self, rememberMe):
         a = ""
         z = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@-_"
-        for i in range(64):
+        for i in xrange(64):
             a += z[random.randrange(0, len(z))]
             # a += chr(random.randrange(97, 122))
         if rememberMe:

@@ -6,11 +6,12 @@ import ast
 import time
 import os
 import sys
-# I'm going to redo the configuration code soon! Don't you worry!
+
 # Default Configuration File
 
-# Because we don't got access to the logging system yet we need to create a dummy
+# Because we don't have access to the logging system yet we need to create a dummy
 # This should be resolved soon by leveraging the native logging library
+
 class DummyLog():
 
     def info(*args):

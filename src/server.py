@@ -20,15 +20,16 @@ import codecs
 import ctypes
 import platform
 import ast
+
+from api.player import Player
+from api.world import World
+from helpers import args, argsAfter
+
 try:
     import resource
     IMPORT_RESOURCE_SUCCESS = True
 except:
     IMPORT_RESOURCE_SUCCESS = False
-from api.player import Player
-from api.world import World
-from helpers import args, argsAfter
-
 
 class Server:
 

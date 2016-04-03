@@ -7,9 +7,7 @@
 # the remainder of the wrapper/plugin code can simply reference
 # `ClPkt.playerlook`
 
-
 # set something False using 0xEE
-
 
 class ServerBound18:
     """ wrapper's "Client" process, which handles connections from client to wrapper.
