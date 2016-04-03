@@ -79,15 +79,15 @@ class Commands:
                         {"text": "Checking for new Wrapper.py updates...", "color": "yellow"})
                     update = self.checkForNewUpdate()
                     if update:
-                        version, build, type = update
+                        version, build, repotype = update
                         player.message("&bNew Wrapper.py Version %s (Build #%d) available!)" % (
                             ".".join([str(_) for _ in version]), build))
                         player.message("&bYou are currently on %s." %
                                        self.wrapper.getBuildString())
                         player.message("&aPerforming update...")
-                        if self.performUpdate(version, build, type):
+                        if self.performUpdate(version, build, repotype):
                             player.message("&aUpdate completed! Version %s #%d (%s) is now installed. Please reboot Wrapper.py to apply changes." % (
-                                version, build, type))
+                                version, build, repotype))
                         else:
                             player.message("&cAn error occured while performing update. Please check the Wrapper.py console as soon as possible for an explanation and traceback. If you are unsure of the cause, please file a bug report on http://github.com/benbaptist/minecraft-wrapper with the traceback.")
                     else:
