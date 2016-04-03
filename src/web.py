@@ -633,11 +633,10 @@ class Client:
                     self.close()
                     return
                 self.buffer = data.split("\n")
-            except Exception, e:
+            except:
+                self.close()
                 #self.log.debug("(WEB) Connection %s closed" % str(self.addr))
                 break
-            finally:
-                self.close()
             if len(self.buffer) < 1:
                 print "Web connection closed suddenly"
                 return False
