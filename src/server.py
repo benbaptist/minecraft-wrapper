@@ -125,7 +125,7 @@ class Server:
             self.log.info("Freezing server with reason: %s" % reason)
             try:
                 self.broadcast("&c%s" % reason)
-            except Exception, e: # What are we trying to catch?
+            except Exception as e: # What are we trying to catch?
                 pass
             time.sleep(0.5)
         else:
@@ -207,12 +207,12 @@ class Server:
                 current = ""
                 try:
                     code = message[i + 1]
-                except Exception, e:
+                except Exception as e:
                     break
                 if code in "abcdef0123456789":
                     try:
                         color = api.API.colorCodes[code]
-                    except Exception, e:
+                    except Exception as e:
                         color = "white"
                 if code == "k":
                     obfuscated = True
@@ -248,7 +248,7 @@ class Server:
                 self.players[username] = api.Player(username, self.wrapper)
             self.wrapper.callEvent(
                 "player.login", {"player": self.getPlayer(username)})
-        except Exception, e:
+        except Exception as e:
             self.log.getTraceback()
 
     def logout(self, username):
@@ -291,7 +291,7 @@ class Server:
                     self.onlineMode = False
                 else:
                     self.onlineMode = True
-            except Exception, e:
+            except Exception as e:
                 self.log.getTraceback()
 
     def console(self, command):
@@ -331,7 +331,7 @@ class Server:
                     if len(line) < 1:
                         continue
                     self.data.append(line)
-            except Exception, e:
+            except Exception as e:
                 time.sleep(0.1)
                 continue
 
@@ -342,7 +342,7 @@ class Server:
                 if len(data) > 0:
                     for line in data.split("\n"):
                         self.data.append(line.replace("\r", ""))
-            except Exception, e:
+            except Exception as e:
                 time.sleep(0.1)
                 continue
 
@@ -370,7 +370,7 @@ class Server:
                 for line in self.data:
                     try:
                         self.readConsole(line.replace("\r", ""))
-                    except Exception, e:
+                    except Exception as e:
                         self.log.getTraceback()
                 self.data = []
 
@@ -385,7 +385,7 @@ class Server:
         try:
             with open("/proc/%d/statm" % self.proc.pid, "r") as f:
                 bytes = int(f.read().split(" ")[1]) * resource.getpagesize()
-        except Exception, e:
+        except Exception as e:
             return None
         return bytes
 
@@ -413,7 +413,7 @@ class Server:
                 try:
                     it.next()
                     it.next()
-                except Exception, e:
+                except Exception as e:
                     pass
             else:
                 a += char
@@ -554,7 +554,7 @@ class Server:
                     final += "&b&n&@%s&@&r" % chunk
                 else:
                     final += chunk
-            except Exception, e:
+            except Exception as e:
                 final += chunk
         self.messageFromChannel(channel, "&a<%s> &r%s" % (nick, final))
 
