@@ -109,26 +109,24 @@ class Proxy:
                 client.disconnect(e)
 
     def pollServer(self):
-        try:
-            sock = socket.socket()
-            sock.connect(("localhost", self.wrapper.config["Proxy"]["server-port"]))
-            packet = Packet(sock, self)
+        sock = socket.socket()
+        sock.connect(("localhost", self.wrapper.config[
+                     "Proxy"]["server-port"]))
+        packet = Packet(sock, self)
 
-            packet.send(0x00, "varint|string|ushort|varint", (5, "localhost", self.wrapper.config["Proxy"]["server-port"], 1))
-            packet.send(0x00, "", ())
-            packet.flush()
+        packet.send(0x00, "varint|string|ushort|varint", (5, "localhost", self.wrapper.config["Proxy"]["server-port"], 1))
+        packet.send(0x00, "", ())
+        packet.flush()
 
-            while True:
-                id, original = packet.grabPacket()
-                if id == 0x00:
-                    data = json.loads(packet.read("string:response")["response"])
-                    self.wrapper.server.protocolVersion = data["version"]["protocol"]
-                    self.wrapper.server.version = data["version"]["name"]
-                    break
-        except Exception, e:
-            self.log.warn("Polling the server failed (%s)" % e)
-        finally:
-            if sock: sock.close()
+        while True:
+            id, original = packet.grabPacket()
+            if id == 0x00:
+                data = json.loads(packet.read("string:response")["response"])
+                self.wrapper.server.protocolVersion = data[
+                    "version"]["protocol"]
+                self.wrapper.server.version = data["version"]["name"]
+                break
+        sock.close()
 
     def getClientByServerUUID(self, id):
         for client in self.clients:
