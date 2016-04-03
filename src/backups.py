@@ -48,7 +48,7 @@ class Backups:
                 with open(self.config["Backups"]["backup-location"] + "/backups.json", "r") as f:
                     try:
                         self.backups = json.loads(f.read())
-                    except Exception, e:
+                    except Exception as e:
                         self.log.error(
                             "NOTE - backups.json was unreadable. It might be corrupted. Backups will no longer be automatically pruned.")
                         self.wrapper.callEvent("wrapper.backupFailure", {
@@ -61,7 +61,7 @@ class Backups:
                     for backupNames in os.listdir(self.config["Backups"]["backup-location"]):
                         try:
                             backupTimestamps.append(int(backupNames[backupNames.find('-') + 1:backupNames.find('.')]))
-                        except Exception, e:
+                        except Exception as e:
                             pass
                     backupTimestamps.sort()
                     for backupI in backupTimestamps:
@@ -128,7 +128,7 @@ class Backups:
                         break
                     try:
                         os.remove('%s/%s' % (self.config["Backups"]["backup-location"], backup[1]))
-                    except Exception, e:
+                    except Exception as e:
                         print "Failed to delete (%s)" % e
                     self.log.info("Deleting old backup: %s" % datetime.datetime.fromtimestamp(int(backup[0])).strftime('%Y-%m-%d_%H:%M:%S'))
                     hink = self.backups[0][1][:]
