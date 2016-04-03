@@ -168,7 +168,7 @@ class Proxy:
                     del self.storage.key("banned-ip")[str(ipaddress)]
                     return True
                 except Exception, e:
-                    self.log.warn("Failed to pardon %s (%s)" % (ipdaddress, e))
+                    self.log.warn("Failed to pardon %s (%s)" % (ipaddress, e))
                     return False
         self.log.warn("Could not find %s to pardon them" % ipaddress)
         return False
