@@ -119,12 +119,12 @@ class Plugins:
         del self.wrapper.help[plugin]
         try:
             self.plugins[plugin]["main"].onDisable()
-        except Exception, e:
+        except Exception as  e:
             self.log.error("Error while disabling plugin '%s'" % plugin)
             self.log.getTraceback()
         try:
             reload(self.plugins[plugin]["module"])
-        except Exception, e:
+        except Exception as  e:
             self.log.error(
                 "Error while reloading plugin '%s' -- it was probably deleted or is a bugged version" % plugin)
             self.log.getTraceback()
@@ -142,7 +142,7 @@ class Plugins:
                     self.loadPlugin(i)
                 elif i[-3:] == ".py":
                     self.loadPlugin(i)
-            except Exception, e:
+            except Exception as  e:
                 for line in traceback.format_exc().split("\n"):
                     self.log.debug(line)
                 self.log.error("Failed to import plugin '%s' (%s)" % (i, e))
@@ -159,13 +159,13 @@ class Plugins:
         for i in self.plugins:
             try:
                 self.unloadPlugin(i)
-            except Exception, e:
+            except Exception as  e:
                 for line in traceback.format_exc().split("\n"):
                     self.log.debug(line)
                 self.log.error("Failed to unload plugin '%s' (%s)" % (i, e))
                 try:
                     reload(self.plugins[plugin]["module"])
-                except Exception, ex:
+                except Exception as  ex:
                     pass
         self.plugins = {}
         self.loadPlugins()
