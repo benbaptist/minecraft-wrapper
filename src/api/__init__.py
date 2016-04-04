@@ -4,10 +4,10 @@ import json
 import time
 import nbt
 import items
-import storage
 
-from api.player import Player
-from api.minecraft import Minecraft
+from storage import Storage
+from player import Player
+from minecraft import Minecraft
 from errors import NonExistentPlugin
 
 """ api.py contains the majority of code for the plugin API. """
@@ -168,6 +168,6 @@ class API:
         Setting world=True will store the data inside the current world folder, for world-specific data.  
         """
         if not world:
-            return storage.Storage(name, False, root=".wrapper-data/plugins/%s" % self.id)
+            return Storage(name, False, root=".wrapper-data/plugins/%s" % self.id)
         else:
-            return storage.Storage(name, True, root="%s/plugins/%s" % (self.minecraft.getWorldName(), self.id))
+            return Storage(name, True, root="%s/plugins/%s" % (self.minecraft.getWorldName(), self.id))

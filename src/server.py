@@ -11,7 +11,6 @@ import os
 import json
 import signal
 import traceback
-import api
 import StringIO
 import ConfigParser
 import backups
@@ -21,6 +20,7 @@ import ctypes
 import platform
 import ast
 
+from api import API
 from api.player import Player
 from api.world import World
 from helpers import args, argsAfter
@@ -38,7 +38,7 @@ class Server:
         self.config = config
         self.wrapper = wrapper
         self.args = args
-        self.api = api.API(wrapper, "Server", internal=True)
+        self.api = API(wrapper, "Server", internal=True)
         self.backups = backups.Backups(wrapper)
 
         if "serverState" not in self.wrapper.storage:
@@ -158,8 +158,8 @@ class Server:
         total = ""
 
         def getColorCode(i):
-            for l in api.API.colorCodes:
-                if api.API.colorCodes[l] == i:
+            for l in API.colorCodes:
+                if API.colorCodes[l] == i:
                     return "\xa7\xc2" + l
             return ""
 
@@ -211,7 +211,7 @@ class Server:
                     break
                 if code in "abcdef0123456789":
                     try:
-                        color = api.API.colorCodes[code]
+                        color = API.colorCodes[code]
                     except Exception as e:
                         color = "white"
                 if code == "k":
@@ -245,7 +245,7 @@ class Server:
         """ Called when a player logs in """
         try:
             if username not in self.players:
-                self.players[username] = api.Player(username, self.wrapper)
+                self.players[username] = Player(username, self.wrapper)
             self.wrapper.callEvent(
                 "player.login", {"player": self.getPlayer(username)})
         except Exception as e:

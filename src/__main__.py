@@ -3,7 +3,6 @@
 import sys
 import json
 import signal
-import proxy
 import globals
 import storage
 import hashlib
@@ -14,6 +13,8 @@ import traceback
 import threading
 import time
 import os
+
+import proxy.proxy as proxy
 
 from log import Log, PluginLog
 from config import Config
@@ -96,7 +97,7 @@ class Wrapper:
         d[6] |= 0x30
         d[8] &= 0x3f
         d[8] |= 0x80
-        return uuid.UUID(bytes=str(d))
+        return str(uuid.UUID(bytes=str(d)))
 
     def lookupUUIDbyUsername(self, username):
         """
@@ -109,29 +110,26 @@ class Wrapper:
         # try wrapper cache first
         for useruuid in self.usercache:
             if username in (self.usercache.key(useruuid)["name"], self.usercache.key(useruuid)["localname"]):
-                return uuid.UUID(useruuid)
+                return str(uuid.UUID(useruuid))
         # try mojang  (a new player, likely)
-        try:
-            r = requests.get(
-                "https://api.mojang.com/users/profiles/minecraft/%s" % username)
+        r = requests.get("https://api.mojang.com/users/profiles/minecraft/%s" % username)
+        if r.status_code == 200:
             useruuid = self.formatUUID(r.json()["id"])
             correctcapname = r.json()["name"]
             if username != correctcapname:
-                print(
-                    "%s's name is not correctly capitalized (offline name warning!)" % correctcapname)
-        except Exception as e:
+                self.log.warn("%s's name is not correctly capitalized (offline name warning!)" % correctcapname)
+            nameisnow = self.lookupUsernamebyUUID(useruuid)
+            if nameisnow:
+                return str(uuid.UUID(useruuid))
+            return False
+        else:
             # try for any old proxy-data record as a last resort:
             if "uuid-cache" not in self.proxy.storage:
                 return False  # no old proxy uuid-cache exists.
             for useruuid in self.proxy.storage["uuid-cache"]:
                 if self.storage["uuid-cache"][useruuid]["name"] == username:
-                    return uuid.UUID(useruuid)  # return uuid object
+                    return str(uuid.UUID(useruuid))  # return uuid object
             return False  # if no old proxy record
-        # if mojang good, lets update the UUID cache...
-        nameisnow = self.lookupUsernamebyUUID(str(useruuid))
-        if nameisnow is not False:
-            return uuid.UUID(useruuid)
-        return False
 
     def lookupUsernamebyUUID(self, useruuid):
         """
@@ -159,8 +157,15 @@ class Wrapper:
             return False  # error also (should already be None or False)
         pastnames = []
         if useruuid not in self.usercache:
-            self.usercache[useruuid] = {"time": time.time(), "original": None, "name": None,
-                                        "online": True, "localname": None, "IP": None, "names": []}
+            self.usercache[useruuid] = {
+                "time": time.time(),
+                "original": None,
+                "name": None,
+                "online": True,
+                "localname": None,
+                "IP": None,
+                "names": []
+            }
         for i in xrange(0, numbofnames):
             if "changedToAt" not in names[i]:  # find the original name
                 self.usercache[useruuid]["original"] = names[i]["name"]
@@ -189,7 +194,7 @@ class Wrapper:
                 self.usercache[useruuid]["localname"] = pastnames[0]["name"]
         return self.usercache[useruuid]["localname"]
 
-    def _pollMojangUUID(self, useruuid=None):
+    def _pollMojangUUID(self, useruuid):
         """
         attempts to poll Mojang with the UUID
         :param useruuid: string uuid with dashes
@@ -198,34 +203,29 @@ class Wrapper:
                 False - Mojang down or operating in limited fashion
                 - otherwise, a list of names...
         """
-        try:
-            r = requests.get("https://api.mojang.com/user/profiles/%s/names" %
-                             useruuid.replace("-", "")).json()
-        except:
-            r = None
-            try:
-                # reserve status polls for failed attempts
-                rx = requests.get("https://status.mojang.com/check").json()
-            except:
-                self.log.error(
-                    "Mojang Status not found - no internet connection, perhaps?")
-                return self.usercache[useruuid]["name"]
-            for i in range(0, len(rx)):
-                if "account.mojang.com" in rx[i]:
-                    if rx[i]["account.mojang.com"] == "green":
-                        self.log.error("Mojang accounts is green, but request failed.\n"
-                                       "- have you over-polled (large busy server) or supplied an incorrect UUID??")
-                        self.log.error("uuid: %s" % useruuid)
-                        self.log.debug("response: \n%s" % str(rx))
-                        return r
-                    if rx[i]["account.mojang.com"] in ("yellow", "red"):
-                        self.log.error("Mojang accounts is experiencing issues (%s)." % rx[
-                                       i]["account.mojang.com"])
+        r = requests.get("https://api.mojang.com/user/profiles/%s/names" % useruuid.replace("-", ""))
+        if r.status_code == 200:
+            return r.json()
+        else:
+            rx = requests.get("https://status.mojang.com/check")
+            if rx.status_code == 200:
+                rx = rx.json()
+                for i in xrange(0, len(rx)):
+                    if "account.mojang.com" in rx[i]:
+                        if rx[i]["account.mojang.com"] == "green":
+                            self.log.error("Mojang accounts is green, but request failed - have you over-polled (large busy server) or supplied an incorrect UUID??")
+                            self.log.error("uuid: %s" % useruuid)
+                            self.log.debug("response: \n%s" % str(rx))
+                            return None
+                        if rx[i]["account.mojang.com"] in ("yellow", "red"):
+                            self.log.error("Mojang accounts is experiencing issues (%s)." % rx[i]["account.mojang.com"])
+                            return False
+                        self.log.error("Mojang Status found, but corrupted or in an unexpected format (status code %s)" % r.status_code)
                         return False
-            self.log.error(
-                "Mojang Status found, but corrupted or in an unexpected format.")
-            return False
-        return r
+                    else:
+                        self.log.error("Mojang Status not found - no internet connection, perhaps? (status code %s)" % rx.status_code)
+                        return self.usercache[useruuid]["name"]
+            
 
     def getUsername(self, useruuid):
         """
@@ -236,51 +236,51 @@ class Wrapper:
         if type(useruuid) not in (str, unicode):
             return False
         if self.isOnlineMode():
-            name = self.lookupUsernamebyUUID(str(useruuid))
-            if name is not False:
-                return str(self.usercache[useruuid]["localname"])
+            name = self.lookupUsernamebyUUID(useruuid)
+            if name:
+                return self.usercache[useruuid]["localname"]
             return False
         else:
-            # this is the server's usercache.json (not the cache in
-            # wrapper-data)
+            # this is the server's usercache.json (not the cache in wrapper-data)
             with open("usercache.json", "r") as f:
-                data = json.loads(f.read())
-            for u in data:
-                if u["uuid"] == useruuid:
+                cache = json.loads(f.read())
+            for user in cache:
+                if user["uuid"] == useruuid:
                     if useruuid not in self.usercache:
                         self.usercache[useruuid] = {
-                            "time": time.time(), "name": None}
-                    if u["name"] != self.usercache[useruuid]["name"]:
-                        self.usercache[useruuid]["name"] = u["name"]
+                            "time": time.time(), 
+                            "name": None
+                        }
+                    if user["name"] != self.usercache[useruuid]["name"]:
+                        self.usercache[useruuid]["name"] = user["name"]
                         self.usercache[useruuid]["online"] = False
                         self.usercache[useruuid]["time"] = time.time()
-                    return str(u["name"])
+                    return user["name"]
 
     def getUUID(self, username):
         """
         :param username - string of user's name
         :returns a uuid object, which means UUIDfromname and lookupUUIDbyUsername must return uuid obejcts
         """
-        if self.isOnlineMode() is False:  # both server anxd wrapper in offline...
+        if self.isOnlineMode() is False:  # both server and wrapper in offline...
             return self.UUIDFromName("OfflinePlayer:%s" % username)
 
         # proxy mode is off / not working
         if self.proxy is False:
             with open("usercache.json", "r") as f: # read offline server cache first
-                data = json.loads(f.read())
-            for u in data:
-                if u["name"] == username:
-                    return uuid.UUID(u["uuid"])
+                cache = json.loads(f.read())
+            for user in cache:
+                if user["name"] == username:
+                    return str(uuid.UUID(user["uuid"]))
         else:
             # proxy mode is on... poll mojang and wrapper cache
             search = self.lookupUUIDbyUsername(username)
-            if search is False:
-                print("Server online but unable to getUUID (even by polling!) for username: %s \n returned an Offline uuid..." % username)
+            if not search:
+                self.log.warn("Server online but unable to getUUID (even by polling!) for username: %s - returned an Offline uuid..." % username)
                 return self.UUIDFromName("OfflinePlayer:%s" % username)
             else:
                 return search
-        # if both if and else fail to deliver a uuid:
-        # create offline uuid
+        # if both if and else fail to deliver a uuid create offline uuid:
         return self.UUIDFromName("OfflinePlayer:%s" % username)
 
     def start(self):
@@ -521,8 +521,8 @@ class Wrapper:
                 self.checkForUpdate(False)
             elif command == "plugins":
                 self.log.info("List of Wrapper.py plugins installed:")
-                for id in self.plugins:
-                    plugin = self.plugins[id]
+                for plid in self.plugins:
+                    plugin = self.plugins[plid]
                     if plugin["good"]:
                         name = plugin["name"]
                         summary = plugin["summary"]
@@ -531,8 +531,7 @@ class Wrapper:
 
                         version = plugin["version"]
 
-                        self.log.info(
-                            "%s v%s - %s" % (name, ".".join([str(_) for _ in version]), summary))
+                        self.log.info("%s v%s - %s" % (name, ".".join([str(_) for _ in version]), summary))
                     else:
                         self.log.info("%s failed to load!" % plugin)
             elif command in ("mem", "memory"):

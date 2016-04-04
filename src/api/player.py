@@ -40,12 +40,12 @@ class Player:
                         self.clientPackets = PacketsCB19
                     break
         # hopefully these will never happen again:
-        if self.uuid is None:
-            self.log.error("UUID for %s was 'None'. Proxy mode is %s Please report this issue (and this line) to "
-                           "http://github.com/benbaptist/minecraft-wrapper/issues" % (self.username, str(self.wrapper.proxy)))
-        if not self.uuid:
-            self.log.error("UUID for %s was False. Proxy mode is %s. Please report this issue (and this line) to"
-                           " http://github.com/benbaptist/minecraft-wrapper/issues" % (self.username, str(self.wrapper.proxy)))
+        # if self.uuid is None:
+        #     self.log.error("UUID for %s was 'None'. Proxy mode is %s Please report this issue (and this line) to "
+        #                    "http://github.com/benbaptist/minecraft-wrapper/issues" % (self.username, str(self.wrapper.proxy)))
+        # if not self.uuid:
+        #     self.log.error("UUID for %s was False. Proxy mode is %s. Please report this issue (and this line) to"
+        #                    " http://github.com/benbaptist/minecraft-wrapper/issues" % (self.username, str(self.wrapper.proxy)))
 
         self.data = storage.Storage(self.uuid, root="wrapper-data/players")
         if "firstLoggedIn" not in self.data:
@@ -70,10 +70,7 @@ class Player:
         :param string: command to execute (no preceding slash) in the console
         Run a command in the Minecraft server's console.
         """
-        try:
-            self.wrapper.server.console(string)
-        except Exception as e:
-            pass
+        self.wrapper.server.console(string)
 
     def execute(self, string):
         """
@@ -118,7 +115,7 @@ class Player:
         :param message: message text containing '&' to represent the chat formatting codes
         :return: mofified text containing the section sign (§) and the formatting code.
         """
-        for i in api.API.colorCodes:
+        for i in API.colorCodes:
             message = message.replace("&" + i, "\xc2\xa7" + i)
         return message
 
@@ -165,42 +162,39 @@ class Player:
         """
         :returns: whether or not the player is currently a server operator.
         """
-        operators = json.loads(open("ops.json", "r").read())
-        for i in operators:
-            if i["uuid"] == str(self.uuid) or i["name"] == self.username:
+        with open("ops.json", "r") as f:
+            operators = json.loads(f.read())
+        for ops in operators:
+            if ops["uuid"] == self.uuid or ops["name"] == self.username:
                 return True
         return False
 
     # region Visual notifications
     def message(self, message=""):
         if isinstance(message, dict):
-            self.wrapper.server.console("tellraw %s %s" % (
-                self.username, json.dumps(message)))
+            self.wrapper.server.console("tellraw %s %s" % (self.username, json.dumps(message)))
         else:
-            self.wrapper.server.console("tellraw %s %s" % (
-                self.username, self.wrapper.server.processColorCodes(message)))
+            self.wrapper.server.console("tellraw %s %s" % (self.username, self.wrapper.server.processColorCodes(message)))
 
     def actionMessage(self, message=""):
         if self.getClient().version > 10:
-            self.getClient().send(self.clientPackets.chatmessage, "string|byte",
-                                  (json.dumps({"text": self.processColorCodesOld(message)}), 2))
+            self.getClient().send(self.clientPackets.chatmessage, "string|byte", (json.dumps({"text": self.processColorCodesOld(message)}), 2))
 
     def setVisualXP(self, progress, level, total):
         """ Change the XP bar on the client's side only. Does not affect actual XP levels. """
         if self.getClient().version > 10:
-            self.getClient().send(self.clientPackets.setexperience,
-                                  "float|varint|varint", (progress, level, total))
+            self.getClient().send(self.clientPackets.setexperience, "float|varint|varint", (progress, level, total))
         else:
-            self.getClient().send(self.clientPackets.setexperience,
-                                  "float|short|short", (progress, level, total))
+            self.getClient().send(self.clientPackets.setexperience, "float|short|short", (progress, level, total))
 
     def openWindow(self, type, title, slots):
         self.getClient().windowCounter += 1
         if self.getClient().windowCounter > 200:
             self.getClient().windowCounter = 2
         if self.getClient().version > 10:
-            self.getClient().send(self.clientPackets.openwindow, "ubyte|string|json|ubyte",
-                                  (self.getClient().windowCounter, "0", {"text": title}, slots))
+            self.getClient().send(
+                self.clientPackets.openwindow, "ubyte|string|json|ubyte", (
+                    self.getClient().windowCounter, "0", {"text": title}, slots))
         return None  # return a Window object soon
     # endregion Visual notifications
 
@@ -216,11 +210,9 @@ class Player:
     # flying)
     def setPlayerFlying(self, fly):
         if fly:
-            self.getClient().send(self.clientPackets.playerabilities,
-                                  "byte|float|float", (0x06, 1, 1))  # player abilities
+            self.getClient().send(self.clientPackets.playerabilities, "byte|float|float", (0x06, 1, 1))  # player abilities
         else:
-            self.getClient().send(self.clientPackets.playerabilities,
-                                  "byte|float|float", (0x00, 1, 1))
+            self.getClient().send(self.clientPackets.playerabilities, "byte|float|float", (0x00, 1, 1))
 
     # Unfinished function, will be used to make phantom blocks visible ONLY to
     # the client
@@ -244,16 +236,15 @@ class Player:
             return True
         if "users" not in self.permissions:
             self.permissions["users"] = {}
-        uuid = str(self.uuid)
-        if uuid in self.permissions["users"]:
-            for perm in self.permissions["users"][uuid]["permissions"]:
+        if self.uuid in self.permissions["users"]:
+            for perm in self.permissions["users"][self.uuid]["permissions"]:
                 if node in fnmatch.filter([node], perm):
-                    return self.permissions["users"][uuid]["permissions"][perm]
-        if uuid not in self.permissions["users"]:
+                    return self.permissions["users"][self.uuid]["permissions"][perm]
+        if self.uuid not in self.permissions["users"]:
             return False
         allgroups = []  # summary of groups included children groups
         # get the parent groups
-        for group in self.permissions["users"][uuid]["groups"]:
+        for group in self.permissions["users"][self.uuid]["groups"]:
             if group not in allgroups:
                 allgroups.append(group)
         itemsToProcess = allgroups[:]  # process and find child groups
@@ -282,7 +273,7 @@ class Player:
         if "users" not in self.permissions:
             self.permissions["users"] = {}
         for uuid in self.permissions["users"]:
-            if uuid == str(self.uuid):
+            if uuid == self.uuid:
                 self.permissions["users"][uuid]["permissions"][node] = value
 
     def removePermission(self, node):
@@ -292,7 +283,7 @@ class Player:
         if "users" not in self.permissions:
             self.permissions["users"] = {}
         for uuid in self.permissions["users"]:
-            if uuid == str(self.uuid):
+            if uuid == self.uuid:
                 if node in self.permissions["users"][uuid]["permissions"]:
                     del self.permissions["users"][uuid]["permissions"][node]
                 else:
@@ -301,12 +292,11 @@ class Player:
 
     def hasGroup(self, group):
         """ Returns a boolean of whether or not the player is in the specified permission group. """
-        self.uuid = self.wrapper.lookupUUIDbyUsername(
-            self.username)  # init the perms for new player
+        self.uuid = self.wrapper.lookupUUIDbyUsername(self.username)  # init the perms for new player
         if "users" not in self.permissions:
             self.permissions["users"] = {}
         for uuid in self.permissions["users"]:
-            if uuid == str(self.uuid):
+            if uuid == self.uuid:
                 return group in self.permissions["users"][uuid]["groups"]
         return False
 
@@ -314,10 +304,9 @@ class Player:
         """ Returns a list of permission groups that the player is in. """
         if "users" not in self.permissions:
             self.permissions["users"] = {}
-        self.uuid = self.wrapper.lookupUUIDbyUsername(
-            self.username)  # init the perms for new player
+        self.uuid = self.wrapper.lookupUUIDbyUsername(self.username)  # init the perms for new player
         for uuid in self.permissions["users"]:
-            if uuid == str(self.uuid):
+            if uuid == self.uuid:
                 return self.permissions["users"][uuid]["groups"]
         return []  # If the user is not in the permission database, return this
 
@@ -325,27 +314,24 @@ class Player:
         """ Adds the player to a specified group. If the group does not exist, an IndexError is raised. """
         if group not in self.permissions["groups"]:
             raise IndexError("No group with the name '%s' exists" % group)
-        self.uuid = self.wrapper.lookupUUIDbyUsername(
-            self.username)  # init the perms for new player
+        self.uuid = self.wrapper.lookupUUIDbyUsername(self.username)  # init the perms for new player
         if "users" not in self.permissions:
             self.permissions["users"] = {}
         for uuid in self.permissions["users"]:
-            if uuid == str(self.uuid):
+            if uuid == self.uuid:
                 self.permissions["users"][uuid]["groups"].append(group)
 
     def removeGroup(self, group):
         """ Removes the player to a specified group. If they are not part of the specified group, an IndexError is raised. """
         if "users" not in self.permissions:
             self.permissions["users"] = {}
-        self.uuid = self.wrapper.lookupUUIDbyUsername(
-            self.username)  # init the perms for new player
+        self.uuid = self.wrapper.lookupUUIDbyUsername(self.username)  # init the perms for new player
         for uuid in self.permissions["users"]:
-            if uuid == str(self.uuid):
+            if uuid == self.uuid:
                 if group in self.permissions["users"][uuid]["groups"]:
                     self.permissions["users"][uuid]["groups"].remove(group)
                 else:
-                    raise IndexError(
-                        "%s is not part of the group '%s'" % (self.username, group))
+                    raise IndexError("%s is not part of the group '%s'" % (self.username, group))
     # Player Information
 
     def getFirstLogin(self):
