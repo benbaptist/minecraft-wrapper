@@ -38,18 +38,18 @@ class Storage:
 
     def __getitem__(self, index):
         if not type(index) == str:
-            raise Exception("A string must be passed to the stuff")
+            raise Exception("A string must be passed - got %s" % type(index))
         return self.data[index]
 
     def __setitem__(self, index, value):
         if not type(index) == str:
-            raise Exception("A string must be passed to the stuff")
+            raise Exception("A string must be passed - got %s" % type(index))
         self.data[index] = value
         return self.data[index]
 
     def __delattr__(self, index):
         if not type(index) == str:
-            raise Exception("A string must be passed to the stuff")
+            raise Exception("A string must be passed - got %s" % type(index))
         del self.data[index]
 
     def __iter__(self):

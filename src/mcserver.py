@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+#-*- coding: utf-8 -*-
 
 import socket
 import datetime
@@ -11,7 +11,6 @@ import os
 import json
 import signal
 import traceback
-import api
 import StringIO
 import ConfigParser
 import backups
@@ -21,6 +20,7 @@ import ctypes
 import platform
 import ast
 
+from api.base import API
 from api.player import Player
 from api.world import World
 from helpers import args, argsAfter
@@ -31,14 +31,14 @@ try:
 except:
     IMPORT_RESOURCE_SUCCESS = False
 
-class Server:
+class MCServer:
 
     def __init__(self, args, log, config, wrapper):
         self.log = log
         self.config = config
         self.wrapper = wrapper
         self.args = args
-        self.api = api.API(wrapper, "Server", internal=True)
+        self.api = API(wrapper, "Server", internal=True)
         self.backups = backups.Backups(wrapper)
 
         if "serverState" not in self.wrapper.storage:
@@ -53,8 +53,7 @@ class Server:
         self.data = []
 
         if not self.wrapper.storage["serverState"]:
-            self.log.warn(
-                "NOTE: Server was in 'STOP' state last time Wrapper.py was running. To start the server, run /start.")
+            self.log.warn("NOTE: Server was in 'STOP' state last time Wrapper.py was running. To start the server, run /start.")
             time.sleep(5)
 
         # Server Information
@@ -123,10 +122,7 @@ class Server:
         'reason' argument is printed in the chat for all currently-connected players, unless you specify None. """
         if reason:
             self.log.info("Freezing server with reason: %s" % reason)
-            try:
-                self.broadcast("&c%s" % reason)
-            except Exception as e: # What are we trying to catch?
-                pass
+            self.broadcast("&c%s" % reason)
             time.sleep(0.5)
         else:
             self.log.info("Freezing server...")
@@ -158,8 +154,8 @@ class Server:
         total = ""
 
         def getColorCode(i):
-            for l in api.API.colorCodes:
-                if api.API.colorCodes[l] == i:
+            for l in API.colorCodes:
+                if API.colorCodes[l] == i:
                     return "\xa7\xc2" + l
             return ""
 
@@ -190,9 +186,12 @@ class Server:
         url = False
         color = "white"
         current = ""
-        it = iter(xrange(len(message)))
+
+        it = iter(range(len(message)))
+
         for i in it:
             char = message[i]
+
             if char is not "&":
                 if char == " ":
                     url = False
@@ -202,29 +201,37 @@ class Server:
                     clickEvent = {"action": "open_url", "value": current}
                 else:
                     clickEvent = {}
-                extras.append({"text": current, "color": color, "obfuscated": obfuscated,
-                               "underlined": underline, "bold": bold, "italic": italic, "strikethrough": strikethrough, "clickEvent": clickEvent})
+
+                extras.append({
+                    "text": current, 
+                    "color": color, 
+                    "obfuscated": obfuscated,
+                    "underlined": underline, 
+                    "bold": bold, 
+                    "italic": italic, 
+                    "strikethrough": strikethrough, 
+                    "clickEvent": clickEvent
+                })
+
                 current = ""
+                
                 try:
                     code = message[i + 1]
-                except Exception as e:
+                except:
                     break
                 if code in "abcdef0123456789":
                     try:
                         color = api.API.colorCodes[code]
-                    except Exception as e:
+                    except:
                         color = "white"
-                if code == "k":
-                    obfuscated = True
-                elif code == "l":
-                    bold = True
-                elif code == "m":
-                    strikethrough = True
-                elif code == "n":
-                    underline = True
-                elif code == "o":
-                    italic = True
-                elif code == "&":
+
+                obfuscated = (code == "k")
+                bold = (code == "l")
+                strikethrough = (code == "m")
+                underline = (code == "n")
+                italic = (code == "o")
+
+                if code == "&":
                     current += "&"
                 elif code == "@":
                     url = not url
@@ -236,25 +243,33 @@ class Server:
                     strikethrough = False
                     url = False
                     color = "white"
+
                 it.next()
-        extras.append({"text": current, "color": color, "obfuscated": obfuscated,
-                       "underlined": underline, "bold": bold, "italic": italic, "strikethrough": strikethrough})
+
+        extras.append({
+            "text": current, 
+            "color": color, 
+            "obfuscated": obfuscated,
+            "underlined": underline, 
+            "bold": bold, 
+            "italic": italic, 
+            "strikethrough": strikethrough
+        })
+
         return json.dumps({"text": "", "extra": extras})
 
     def login(self, username):
         """ Called when a player logs in """
         try:
             if username not in self.players:
-                self.players[username] = api.Player(username, self.wrapper)
-            self.wrapper.callEvent(
-                "player.login", {"player": self.getPlayer(username)})
+                self.players[username] = Player(username, self.wrapper)
+            self.wrapper.callEvent("player.login", {"player": self.getPlayer(username)})
         except Exception as e:
             self.log.getTraceback()
 
     def logout(self, username):
         """ Called when a player logs out """
-        self.wrapper.callEvent(
-            "player.logout", {"player": self.getPlayer(username)})
+        self.wrapper.callEvent("player.logout", {"player": self.getPlayer(username)})
         if self.wrapper.proxy:
             for client in self.wrapper.proxy.clients:
                 uuid = self.players[username].uuid
@@ -276,7 +291,8 @@ class Server:
         # Read server.properties and extract some information out of it
         if os.path.exists("server.properties"):
             s = StringIO.StringIO()  # Stupid StringIO doesn't support __exit__()
-            config = open("server.properties", "r").read()
+            with open("server.properties", "r") as f:
+                config = f.read()
             s.write("[main]\n" + config)
             s.seek(0)
             try:
@@ -284,8 +300,7 @@ class Server:
                 self.properties.readfp(s)
                 self.worldName = self.properties.get("main", "level-name")
                 self.motd = self.properties.get("main", "motd")
-                self.maxPlayers = int(
-                    self.properties.get("main", "max-players"))
+                self.maxPlayers = int(self.properties.get("main", "max-players"))
                 self.onlineMode = self.properties.get("main", "online-mode")
                 if self.onlineMode == "false":
                     self.onlineMode = False
@@ -296,10 +311,7 @@ class Server:
 
     def console(self, command):
         """ Execute a console command on the server """
-        try:
-            self.proc.stdin.write("%s\n" % command)
-        except:
-            pass  # self.log.getTraceback()
+        self.proc.stdin.write("%s\n" % command)
 
     def changeState(self, state, reason=None):
         """ Change the boot state of the server, with a reason message """
@@ -312,8 +324,7 @@ class Server:
             self.wrapper.callEvent("server.started", {"reason": reason})
         if self.state == 3:
             self.wrapper.callEvent("server.stopping", {"reason": reason})
-        self.wrapper.callEvent(
-            "server.state", {"state": state, "reason": reason})
+        self.wrapper.callEvent("server.state", {"state": state, "reason": reason})
 
     def getServerType(self):
         if "spigot" in self.config["General"]["command"].lower():
@@ -356,8 +367,7 @@ class Server:
             self.changeState(1)
             self.log.info("Starting server...")
             self.reloadProperties()
-            self.proc = subprocess.Popen(
-                self.args, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+            self.proc = subprocess.Popen(self.args, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
             self.players = {}
             while True:
                 time.sleep(0.1)
@@ -376,11 +386,7 @@ class Server:
 
     def getMemoryUsage(self):
         """ Returns allocated memory in bytes """
-        if not IMPORT_RESOURCE_SUCCESS:
-            return None
-        if not os.name == "posix":
-            return None
-        if not self.proc:
+        if not IMPORT_RESOURCE_SUCCESS or not os.name == "posix" or not self.proc:
             return None
         try:
             with open("/proc/%d/statm" % self.proc.pid, "r") as f:
@@ -393,8 +399,7 @@ class Server:
         """ Returns the disk space for the working directory in bytes """
         if platform.system() == "Windows":
             free_bytes = ctypes.c_ulonglong(0)
-            ctypes.windll.kernel32.GetDiskFreeSpaceExW(
-                ctypes.c_wchar_p(folder), None, None, ctypes.pointer(free_bytes))
+            ctypes.windll.kernel32.GetDiskFreeSpaceExW(ctypes.c_wchar_p(folder), None, None, ctypes.pointer(free_bytes))
             return free_bytes.value
         else:
             st = os.statvfs(folder)
@@ -406,7 +411,7 @@ class Server:
 
     def stripSpecial(self, text):
         a = ""
-        it = iter(xrange(len(text)))
+        it = iter(range(len(text)))
         for i in it:
             char = text[i]
             if char == "\xc2":
@@ -444,8 +449,11 @@ class Server:
                 name = self.stripSpecial(args(line.split(" "), 0)[1:-1])
                 message = self.stripSpecial(argsAfter(line.split(" "), 1))
                 original = argsAfter(line.split(" "), 0)
-                self.wrapper.callEvent("player.message", {"player": self.getPlayer(
-                    name), "message": message, "original": original})
+                self.wrapper.callEvent("player.message", {
+                    "player": self.getPlayer(name), 
+                    "message": message, 
+                    "original": original
+                })
             elif args(line.split(" "), 1) == "logged":  # Player Login
                 name = self.stripSpecial(args(line.split(" "), 0)[0:args(line.split(" "), 0).find("[")])
                 self.login(name)
@@ -455,25 +463,34 @@ class Server:
             elif args(line.split(" "), 0) == "*":
                 name = self.stripSpecial(args(line.split(" "), 1))
                 message = self.stripSpecial(argsAfter(line.split(" "), 2))
-                self.wrapper.callEvent(
-                    "player.action", {"player": self.getPlayer(name), "action": message})
+                self.wrapper.callEvent("player.action", {
+                    "player": self.getPlayer(name),
+                    "action": message
+                })
             elif args(line.split(" "), 0)[0] == "[" and args(line.split(" "), 0)[-1] == "]":  # /say command
                 if self.getServerType != "vanilla":
                     return  # Unfortunately, Spigot and Bukkit output things that conflict with this
                 name = self.stripSpecial(args(line.split(" "), 0)[1:-1])
                 message = self.stripSpecial(argsAfter(line.split(" "), 1))
                 original = argsAfter(line.split(" "), 0)
-                self.wrapper.callEvent(
-                    "server.say", {"player": name, "message": message, "original": original})
+                self.wrapper.callEvent("server.say", {
+                    "player": name, 
+                    "message": message, 
+                    "original": original
+                })
             elif args(line.split(" "), 1) == "has" and args(line.split(" "), 5) == "achievement":  # Player Achievement
                 name = self.stripSpecial(args(line.split(" "), 0))
                 achievement = argsAfter(line.split(" "), 6)
                 self.wrapper.callEvent("player.achievement", {
-                                       "player": name, "achievement": achievement})
+                    "player": name, 
+                    "achievement": achievement
+                })
             elif args(line.split(" "), 1) in deathPrefixes:  # Player Death
                 name = self.stripSpecial(args(line.split(" "), 0))
-                self.wrapper.callEvent(
-                    "player.death", {"player": self.getPlayer(name), "death": argsAfter(line.split(" "), 4)})
+                self.wrapper.callEvent("player.death", {
+                    "player": self.getPlayer(name), 
+                    "death": argsAfter(line.split(" "), 4)
+                })
         else:
             if len(args(line.split(" "), 3)) < 1:
                 return
@@ -488,8 +505,11 @@ class Server:
                 name = self.stripSpecial(args(line.split(" "), 3)[1:-1])
                 message = self.stripSpecial(argsAfter(line.split(" "), 4))
                 original = argsAfter(line.split(" "), 3)
-                self.wrapper.callEvent("player.message", {"player": self.getPlayer(
-                    name), "message": message, "original": original})
+                self.wrapper.callEvent("player.message", {
+                    "player": self.getPlayer(name), 
+                    "message": message, 
+                    "original": original
+                })
             elif args(line.split(" "), 4) == "logged":  # Player Login
                 name = self.stripSpecial(args(line.split(" "), 3)[0:args(line.split(" "), 3).find("[")])
                 self.login(name)
@@ -499,29 +519,38 @@ class Server:
             elif args(line.split(" "), 3) == "*":
                 name = self.stripSpecial(args(line.split(" "), 4))
                 message = self.stripSpecial(argsAfter(line.split(" "), 5))
-                self.wrapper.callEvent(
-                    "player.action", {"player": self.getPlayer(name), "action": message})
+                self.wrapper.callEvent("player.action", {
+                    "player": self.getPlayer(name), 
+                    "action": message
+                })
             elif args(line.split(" "), 3)[0] == "[" and args(line.split(" "), 3)[-1] == "]":  # /say command
                 name = self.stripSpecial(args(line.split(" "), 3)[1:-1])
                 message = self.stripSpecial(argsAfter(line.split(" "), 4))
                 original = argsAfter(line.split(" "), 3)
                 if name == "Server":
                     return
-                self.wrapper.callEvent(
-                    "server.say", {"player": name, "message": message, "original": original})
+                self.wrapper.callEvent("server.say", {
+                    "player": name, 
+                    "message": message, 
+                    "original": original
+                })
             elif args(line.split(" "), 4) == "has" and args(line.split(" "), 8) == "achievement":  # Player Achievement
                 name = self.stripSpecial(args(line.split(" "), 3))
                 achievement = argsAfter(line.split(" "), 9)
                 self.wrapper.callEvent("player.achievement", {
-                                       "player": name, "achievement": achievement})
+                    "player": name, 
+                    "achievement": achievement
+                })
             elif args(line.split(" "), 4) in deathPrefixes:  # Player Death
                 name = self.stripSpecial(args(line.split(" "), 3))
-                deathMessage = self.config["Death"]["death-kick-messages"][
-                    random.randrange(0, len(self.config["Death"]["death-kick-messages"]))]
+                deathMessage = self.config["Death"]["death-kick-messages"][random.randrange(0, len(self.config["Death"]["death-kick-messages"]))]
                 if self.config["Death"]["kick-on-death"] and name in self.config["Death"]["users-to-kick"]:
                     self.console("kick %s %s" % (name, deathMessage))
-                self.wrapper.callEvent(
-                    "player.death", {"player": self.getPlayer(name), "death": argsAfter(line.split(" "), 4)})
+                self.wrapper.callEvent("player.death", {
+                    "player": self.getPlayer(name), 
+                    "death": argsAfter(line.split(" "), 4)
+                })
+
     # Event Handlers
 
     def messageFromChannel(self, channel, message):
@@ -543,8 +572,7 @@ class Server:
         self.messageFromChannel(channel, "&a%s &rparted the channel" % nick)
 
     def onChannelMessage(self, payload):
-        channel, nick, message = payload[
-            "channel"], payload["nick"], payload["message"]
+        channel, nick, message = payload["channel"], payload["nick"], payload["message"]
         final = ""
         for i, chunk in enumerate(message.split(" ")):
             if not i == 0:
@@ -559,13 +587,11 @@ class Server:
         self.messageFromChannel(channel, "&a<%s> &r%s" % (nick, final))
 
     def onChannelAction(self, payload):
-        channel, nick, action = payload[
-            "channel"], payload["nick"], payload["action"]
+        channel, nick, action = payload["channel"], payload["nick"], payload["action"]
         self.messageFromChannel(channel, "&a* %s &r%s" % (nick, action))
 
     def onChannelQuit(self, payload):
-        channel, nick, message = payload[
-            "channel"], payload["nick"], payload["message"]
+        channel, nick, message = payload["channel"], payload["nick"], payload["message"]
         if not self.config["IRC"]["show-irc-join-part"]:
             return
         self.messageFromChannel(channel, "&a%s &rquit: %s" % (nick, message))
@@ -576,16 +602,13 @@ class Server:
             if time.time() - self.bootTime > self.config["General"]["timed-reboot-seconds"]:
                 if self.config["General"]["timed-reboot-warning-minutes"] > 0:
                     if self.rebootWarnings - 1 < self.config["General"]["timed-reboot-warning-minutes"]:
-                        l = (time.time() - self.bootTime -
-                             self.config["General"]["timed-reboot-seconds"]) / 60
+                        l = (time.time() - self.bootTime - self.config["General"]["timed-reboot-seconds"]) / 60
                         if l > self.rebootWarnings:
                             self.rebootWarnings += 1
                             if int(self.config["General"]["timed-reboot-warning-minutes"] - l + 1) > 0:
-                                self.broadcast("&cServer will be rebooting in %d minute(s)!" % int(
-                                    self.config["General"]["timed-reboot-warning-minutes"] - l + 1))
+                                self.broadcast("&cServer will be rebooting in %d minute(s)!" % int(self.config["General"]["timed-reboot-warning-minutes"] - l + 1))
                         return
-                self.restart(
-                    "Server is conducting a scheduled reboot. The server will be back momentarily!")
+                self.restart("Server is conducting a scheduled reboot. The server will be back momentarily!")
                 self.bootTime = time.time()
                 self.rebootWarnings = 0
         if time.time() - self.pollSize > 120:

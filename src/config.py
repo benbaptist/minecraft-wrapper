@@ -30,7 +30,8 @@ pre-1.7-mode = False
 timed-reboot = False
 timed-reboot-seconds = 86400
 timed-reboot-warning-minutes = 5 
-debug = False 
+debug = False
+trace = False
 shell-scripts = False
 encoding = UTF-8
 
@@ -88,6 +89,7 @@ public-stats = True
 class Config:
     version = "0.7.7"
     debug = False
+    trace = False
 
     def __init__(self, log):
         self.log = log
@@ -114,6 +116,7 @@ class Config:
             "auto-update-wrapper": False,
             "auto-update-dev-build": False,
             "debug": False,
+            "trace": False,
             "pre-1.7-mode": False,
             "timed-reboot": False,
             "timed-reboot-seconds": 86400,
@@ -171,7 +174,7 @@ class Config:
                 for key in keys:
                     try:
                         self.config[section][key[0]] = ast.literal_eval(key[1])
-                    except:
+                    except Exception as e:
                         self.config[section][key[0]] = key[1]
             except Exception as e:
                 traceback.print_exc()
@@ -185,8 +188,7 @@ class Config:
                 if item not in self.config[section]:
                     self.config[section][item] = defaults[section][item]
                     self.parser.set(section, item, defaults[section][item])
-                    self.log.debug(
-                        "Key %s in section %s not in wrapper.properties - adding" % (item, section))
+                    self.log.debug("Key %s in section %s not in wrapper.properties - adding" % (item, section))
                     self.exit = True
                 else:
                     for key in keys:
@@ -196,9 +198,9 @@ class Config:
                             self.config[section][key[0]] = key[1]
         self.save()
         Config.debug = self.config["General"]["debug"]
+        Config.trace = self.config["General"]["trace"]
         if self.exit:
-            self.log.info(
-                "Updated wrapper.properties file - check and edit configuration if needed and start again.")
+            self.log.info("Updated wrapper.properties file - check and edit configuration if needed and start again.")
             sys.exit()
 
     def save(self):
