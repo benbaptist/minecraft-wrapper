@@ -65,17 +65,15 @@ class Server:
     def close(self, reason="Disconnected", kill_client=True):
         if Config.debug:
             usernameofplayer = self.client.username
-            print("Last packet IDs (Server->Client) of player %s before disconnection: \n%s\n" %
-                  (usernameofplayer, str(self.lastPacketIDs)))
+            self.log.debug("Last packet IDs (Server->Client) of player %s before disconnection: \n%s" % (usernameofplayer, str(self.lastPacketIDs)))
         self.abort = True
         self.packet = None
         self.socket.close()
 
         if not self.client.isLocal and kill_client:  # Ben's cross-server hack
             self.client.isLocal = True
-            self.client.send(self.pktCB.changegamestate, "ubyte|float", (1, 0))  # "end raining"
-            self.client.send(self.pktCB.chatmessage, "string|byte", (
-                "{text:'Disconnected from server: %s', color:red}" % reason.replace("'", "\\'"), 0))
+            self.client.send(self.pktCB.CHANGE_GAME_STATE, "ubyte|float", (1, 0))  # "end raining"
+            self.client.send(self.pktCB.CHAT_MESSAGE, "string|byte", ("{text:'Disconnected from server: %s', color:red}" % reason.replace("'", "\\'"), 0))
             self.client.connect()
             return
 
@@ -90,14 +88,17 @@ class Server:
 
     def getPlayerByEID(self, eid):
         for client in self.wrapper.proxy.clients:
-            if client.server.eid == eid:
-                return self.getPlayerContext(client.username)
+            try:
+                if client.server.eid == eid:
+                    return self.getPlayerContext(client.username)
+            except Exception as e:
+                self.log.error("Failed to set client.server.eid! serverEid: %s, Eid: %s" % (client.server.eid, eid))
         return False
 
     def getPlayerContext(self, username):
-        if self.wrapper.server.players[username]:
+        try:
             return self.wrapper.server.players[username]
-        else:
+        except Exception as e:
             return False
 
     def flush(self):
@@ -116,26 +117,27 @@ class Server:
         """
         Client-bound "Server Class"
         """
-        # disconnect, I suppose...
-        if pkid == 0x00 and self.state < 3:
+        if pkid == 0x00 and self.state < 3: # disconnect, I suppose...
             message = self.read("string:string")
             self.log.info("Disconnected from server: %s" % message["string"])
             self.client.disconnect(message)
             return False
         # handle keep alive packets - DISABLED until github #5 is resolved
-        # elif pkid == self.pktCB.keepalive and self.state == 3:
+        # elif pkid == self.pktCB.KEEP_ALIVE and self.state == 3:
         #     if self.client.version > 7:
         #         pkid = self.read("varint:i")["i"]
         #         if pkid is not None:
-        #             self.send(self.pktSB.keepalive, "varint", (pkid,))
+        #             self.send(self.pktSB.KEEP_ALIVE, "varint", (pkid,))
         #     return False
         if pkid == 0x01 and self.state == 2:
-            self.client.disconnect("Server is online mode. Please turn it off in server.properties.\n\nWrapper.py will handle authentication on its own, so do not worry about hackers.")
+            self.client.disconnect("Server is online mode. Please turn it off in server.properties. Wrapper.py will handle authentication on its own, so do not worry about hackers.")
             return False
+
         if pkid == 0x02 and self.state == 2: # Login Success - UUID & Username are sent in this packet
             self.state = 3
             return False
-        if pkid == self.pktCB.joingame and self.state == 3:
+
+        if pkid == self.pktCB.JOIN_GAME and self.state == 3:
             if self.version < mcpacket.PROTOCOL_1_9_1_PRE:
                 data = self.read("int:eid|ubyte:gamemode|byte:dimension|ubyte:difficulty|ubyte:max_players|string:level_type")
             else:
@@ -143,10 +145,8 @@ class Server:
             oldDimension = self.client.dimension
             self.client.gamemode = data["gamemode"]
             self.client.dimension = data["dimension"]
-            # This is the EID of the player on this particular server - not
-            # always the EID that the client is aware of
+            # This is the EID of the player on this particular server - not always the EID that the client is aware of
             self.client.eid = data["eid"]
-            self.safe = True
             
             if self.client.handshake:
                 dimensions = [-1, 0, 1]
@@ -155,10 +155,11 @@ class Server:
                         if i != oldDimension:
                             dim = i
                             break
-                    self.client.send(self.pktCB.RESPAWN, "int|ubyte|ubyte|string", (l, data["difficulty"], data["gamemode"], data["level_type"]))
+                    self.client.send(self.pktCB.RESPAWN, "int|ubyte|ubyte|string", (i, data["difficulty"], data["gamemode"], data["level_type"]))
                 self.client.send(self.pktCB.RESPAWN, "int|ubyte|ubyte|string", (self.client.dimension, data["difficulty"], data["gamemode"], data["level_type"]))
                 # self.client.send(0x01, "int|ubyte|byte|ubyte|ubyte|string|bool", (self.eid, self.client.gamemode, self.client.dimension, data["difficulty"], data["max_players"], data["level_type"], False))
                 self.eid = data["eid"]
+                self.safe = True
                 return False
 
             self.client.handshake = True
@@ -171,6 +172,7 @@ class Server:
                 if clientversion < mcpacket.PROTOCOL_1_9_1_PRE <= serverversion:
                     self.client.send(self.pktCB.JOIN_GAME, "int|ubyte|byte|ubyte|ubyte|string", (data["eid"], data["gamemode"], data["dimension"], data["difficulty"], data["max_players"], data["level_type"]))
                     return False
+
         if pkid == self.pktCB.CHAT_MESSAGE and self.state == 3:
             rawdata = self.read("string:json|byte:position")
             rawstring = rawdata["json"]
@@ -216,37 +218,42 @@ class Server:
             data = self.read("long:worldage|long:timeofday")
             self.wrapper.server.timeofday = data["timeofday"]
             return True
+
         if pkid == self.pktCB.SPAWN_POSITION:  # Spawn Position
             data = self.read("position:spawn")
             self.wrapper.server.spawnPoint = data["spawn"]
             return True
+
         if pkid == self.pktCB.RESPAWN:  # Respawn Packet
             data = self.read("int:dimension|ubyte:difficulty|ubyte:gamemode|level_type:string")
             self.client.gamemode = data["gamemode"]
             self.client.dimension = data["dimension"]
             return True
+
         if pkid == self.pktCB.PLAYER_POSLOOK:  # Player Position and Look
             data = self.read("double:x|double:y|double:z|float:yaw|float:pitch")
             x, y, z, yaw, pitch = data["x"], data["y"], data["z"], data["yaw"], data["pitch"]
             self.client.position = (x, y, z)
             return True
+
         if pkid == self.pktCB.USE_BED:  # Use Bed
             data = self.read("varint:eid|position:location")
             if data["eid"] == self.eid:
                 self.client.send(self.pktCB.USE_BED, "varint|position", (self.client.eid, data["location"]))
                 return False
             return True
-        if pkid == self.pktCB.ANIMATION:  # self.pktCB.Animation: # Animation
+
+        if pkid == self.pktCB.ANIMATION:  # self.pktCB.ANIMATION: # Animation
             data = self.read("varint:eid|ubyte:animation")
             if data["eid"] == self.eid:
                 self.client.send(self.pktCB.ANIMATION, "varint|ubyte", (self.client.eid, data["animation"]))
                 return False
             return True
+
         if pkid == self.pktCB.SPAWN_PLAYER:  # Spawn Player
             if self.version < mcpacket.PROTOCOL_1_9START:
                 data = self.read("varint:eid|uuid:uuid|int:x|int:y|int:z|byte:yaw|byte:pitch|short:item|rest:metadata")
-                if data["item"] < 0:
-                    # A negative Current Item crashes clients (just in case)
+                if data["item"] < 0: # A negative Current Item crashes clients (just in case)
                     data["item"] = 0
                 clientserverid = self.proxy.getClientByServerUUID(data["uuid"])
                 if clientserverid:
@@ -329,8 +336,7 @@ class Server:
         
         if pkid == self.pktCB.ENTITY_STATUS:  # Entity Status
             if self.version < mcpacket.PROTOCOLv1_8START:
-                # Temporary! These packets need to be filtered for cross-server
-                # stuff.
+                # Temporary! These packets need to be filtered for cross-server stuff.
                 return True
             data = self.read("int:eid|byte:status")
         
@@ -467,10 +473,10 @@ class Server:
                     if head["action"] == 0:
                         properties = playerclient.properties
                         raw = ""
-                        for i in properties:
-                            raw += self.client.packet.send_string(i["name"]) # name
-                            raw += self.client.packet.send_string(i["value"]) # value
-                            if "signature" in i:
+                        for prop in properties:
+                            raw += self.client.packet.send_string(prop["name"]) # name
+                            raw += self.client.packet.send_string(prop["value"]) # value
+                            if "signature" in prop:
                                 raw += self.client.packet.send_bool(True)
                                 raw += self.client.packet.send_string(i["signature"]) # signature
                             else:
@@ -478,8 +484,7 @@ class Server:
                         raw += self.client.packet.send_varInt(0)
                         raw += self.client.packet.send_varInt(0)
                         raw += self.client.packet.send_bool(False)
-                        self.client.send(self.pktCB.PLAYER_LIST_ITEM, "varint|varint|uuid|string|varint|raw", (
-                            0, 1, playerclient.uuid, playerclient.username, len(properties), raw))
+                        self.client.send(self.pktCB.PLAYER_LIST_ITEM, "varint|varint|uuid|string|varint|raw", (0, 1, playerclient.uuid, playerclient.username, len(properties), raw))
                     elif head["action"] == 1:
                         data = self.read("varint:gamemode")
                         self.client.send(self.pktCB.PLAYER_LIST_ITEM, "varint|varint|uuid|varint", (1, 1, uuid, data["gamemode"]))
@@ -497,7 +502,7 @@ class Server:
                         self.client.send(self.pktCB.PLAYER_LIST_ITEM, "varint|varint|uuid", (4, 1, uuid))
                     return False
 
-        if pkid == self.pktCB.DISCONNECT:  # disconnect
+        if pkid == self.pktCB.DISCONNECT:  # Disconnect
             message = self.read("json:json")["json"]
             self.log.info("Disconnected from server: %s" % message)
             if not self.client.isLocal:
@@ -519,6 +524,7 @@ class Server:
                             del self.lastPacketIDs[i]
                             break
                 except EOFError as eof:
+                    self.log.error("Packet EOF (%s)" % eof)
                     self.log.error(traceback.format_exc())
                     self.close()
                     break

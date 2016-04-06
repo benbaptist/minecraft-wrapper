@@ -7,7 +7,7 @@ import traceback
 import json
 import random
 import hashlib
-import uuid
+import mcuuid
 import shutil
 import os
 
@@ -15,6 +15,7 @@ import mcpacket
 
 from server import Server
 from packet import Packet
+from config import Config
 from helpers import args, argsAfter
 
 try:
@@ -51,10 +52,10 @@ class Client:
         self.server = None
         self.isServer = False
         self.isLocal = True
-        self.uuid = ""
-        self.serverUUID = ""
+        self.uuid = None
+        self.serverUUID = None
         self.server = None
-        self.address = ""
+        self.address = None
         self.handshake = False
 
         self.state = 0  # 0 = init, 1 = motd, 2 = login, 3 = active, 4 = authorizing
@@ -64,7 +65,7 @@ class Client:
         self.read = self.packet.read
         self.sendRaw = self.packet.sendRaw
 
-        self.username = None
+        self.username = ""
         self.gamemode = 0
         self.dimension = 0
         self.position = (0, 0, 0)  # X, Y, Z
@@ -133,18 +134,23 @@ class Client:
         self.server.state = 2
 
     def close(self):
-        self.abort = True
-        self.socket.close()
-        if self.server:
-            self.server.abort = True
-            self.server.close()
-        for i, client in enumerate(self.wrapper.proxy.clients):
-            if client.username == self.username:
-                del self.wrapper.proxy.clients[i]
+        try:
+            self.abort = True
+            self.socket.close()
+            if self.server:
+                self.server.abort = True
+                self.server.close()
+            for i, client in enumerate(self.wrapper.proxy.clients):
+                if client.username == self.username:
+                    del self.wrapper.proxy.clients[i]
+        except Exception as e:
+            self.log.error("Could not close client socket! (%s)" % e)
 
     def disconnect(self, message):
-        if "string" in message:
+        try:
             message = json.loads(message["string"])
+        except Exception as e:
+            pass
 
         if self.state == 3:
             self.send(self.pktCB.DISCONNECT, "json", (message,))
@@ -167,6 +173,7 @@ class Client:
         return uuid
 
     def UUIDHexToInt(self, uuid):
+        uuid = str(uuid) # Typecast in case of UUID object
         uuid = uuid.replace("-", "").decode("hex")
         return uuid
 
@@ -213,7 +220,7 @@ class Client:
                 for i in self.wrapper.server.players:
                     player = self.wrapper.server.players[i]
                     if player.username not in HIDDEN_OPS:
-                        sample.append({"name": player.username, "id": player.uuid})
+                        sample.append({"name": player.username, "id": str(player.uuid)})
                     if len(sample) > 5:
                         break
                 if UNIVERSAL_CONNECT:
@@ -255,18 +262,19 @@ class Client:
                     self.connect()
                     self.uuid = self.wrapper.UUIDFromName("OfflinePlayer:%s" % self.username)
                     self.serverUUID = self.wrapper.UUIDFromName("OfflinePlayer:%s" % self.username)
-                    self.send(0x02, "string|string", (self.uuid, self.username))
+                    self.send(0x02, "string|string", (str(self.uuid), self.username))
                     self.state = 3
                     self.log.info("%s logged in (IP: %s)" % (self.username, self.addr[0]))
                 return False
 
         if pkid == 0x01:
-            # Moved 'if state == 3' out and created the if pkid == self.pktSB.chatmessage
+            # Moved 'if state == 3' out and created the if pkid == self.pktSB.CHAT_MESSAGE
             if self.state == 4:  # Encryption Response Packet
                 if self.wrapper.server.protocolVersion < 6:
                     data = self.read("bytearray_short:shared_secret|bytearray_short:verify_token")
                 else:
                     data = self.read("bytearray:shared_secret|bytearray:verify_token")
+
                 sharedSecret = encryption.decrypt_shared_secret(data["shared_secret"], self.privateKey)
                 verifyToken = encryption.decrypt_shared_secret(data["verify_token"], self.privateKey)
                 h = hashlib.sha1()
@@ -286,31 +294,29 @@ class Client:
                     if r.status_code == 200:
                         data = r.json()
                         self.uuid = self.wrapper.formatUUID(data["id"])
-                        self.uuid = str(uuid.UUID(self.uuid))
+                        self.uuid = uuid.UUID(self.uuid)
                         if data["name"] != self.username:
                             self.disconnect("Client's username did not match Mojang's record")
                             return False
                         for prop in data["properties"]:
                             if prop["name"] == "textures":
                                 self.skinBlob = prop["value"]
-                                self.wrapper.proxy.skins[self.uuid] = self.skinBlob
+                                self.wrapper.proxy.skins[str(self.uuid)] = self.skinBlob
                         self.properties = data["properties"]
                     else:
                         self.disconnect("Session Server Error (HTTP Status Code %d)" % r.status_code)
                         return False
-                    newUsername = self.wrapper.lookupUsernamebyUUID(self.uuid)
+                    newUsername = self.wrapper.lookupUsernamebyUUID(str(self.uuid))
                     if newUsername:
                         if newUsername != self.username:
                             self.log.info("%s logged in with new name, falling back to %s" % (self.username, newUsername))
                             self.username = newUsername
-
                 else:
-                    self.uuid = str(uuid.uuid3(uuid.NAMESPACE_OID, "OfflinePlayer: %s" % self.username))
-                # Rename UUIDs accordingly
-                if self.config["Proxy"]["convert-player-files"]:
+                    self.uuid = uuid.uuid3(uuid.NAMESPACE_OID, "OfflinePlayer: %s" % self.username)
+                
+                if self.config["Proxy"]["convert-player-files"]: # Rename UUIDs accordingly
                     if self.config["Proxy"]["online-mode"]:
-                        # Check player files, and rename them accordingly to
-                        # offline-mode UUID
+                        # Check player files, and rename them accordingly to offline-mode UUID
                         worldName = self.wrapper.server.worldName
                         if not os.path.exists("%s/playerdata/%s.dat" % (worldName, self.serverUUID)):
                             if os.path.exists("%s/playerdata/%s.dat" % (worldName, self.uuid)):
@@ -323,7 +329,7 @@ class Client:
                             with open("whitelist.json", "r") as f:
                                 data = json.loads(f.read())
                             if data:
-                                if not player["uuid"] == self.serverUUID and player["uuid"] == self.uuid:
+                                if not player["uuid"] == str(self.serverUUID) and player["uuid"] == str(self.uuid):
                                     self.log.info("Migrating %s's whitelist entry to proxy mode" % self.username)
                                     data.append({"uuid": self.serverUUID, "name": self.username})
                                     with open("whitelist.json", "w") as f:
@@ -338,16 +344,15 @@ class Client:
                     self.packet.setCompression(256)
 
                 # Ban code should go here
-                # IP ban
-                if self.proxy.isAddressBanned(self.addr[0]):
+                if self.proxy.isAddressBanned(self.addr[0]): # IP ban
                     self.disconnect("You have been IP-banned from this server!.")
                     return False
 
-                if not self.wrapper.callEvent("player.preLogin", {"player": self.username, "online_uuid": self.uuid, "offline_uuid": self.serverUUID, "ip": self.addr[0]}):
+                if not self.wrapper.callEvent("player.preLogin", {"player": self.username, "online_uuid": str(self.uuid), "offline_uuid": str(self.serverUUID), "ip": self.addr[0]}):
                     self.disconnect("Login denied.")
                     return False
 
-                self.send(0x02, "string|string", (self.uuid, self.username))
+                self.send(0x02, "string|string", (str(self.uuid), self.username))
                 self.state = 3
 
                 self.connect()
@@ -356,8 +361,7 @@ class Client:
                 # lookup in cache and update IP
                 # self.wrapper.setUUID(self.uuid, self.username)
                 return False
-            # ping packet during status request  (What is state 5?)
-            elif self.state == 5:
+            elif self.state == 5: # ping packet during status request  (What is state 5?)
                 keepAlive = self.read("long:keepAlive")["keepAlive"]
                 self.send(0x01, "long", (keepAlive,))
                 pass
@@ -382,7 +386,11 @@ class Client:
                 if type(payload) == str:
                     chatmsg = payload
                 if chatmsg[0] == "/":
-                    if self.wrapper.callEvent("player.runCommand", {"player": self.getPlayerObject(), "command": args(chatmsg.split(" "), 0)[1:].lower(), "args": argsAfter(chatmsg.split(" "), 1)}):
+                    if self.wrapper.callEvent("player.runCommand", {
+                        "player": self.getPlayerObject(), 
+                        "command": args(chatmsg.split(" "), 0)[1:].lower(), 
+                        "args": argsAfter(chatmsg.split(" "), 1)
+                    }):
                         self.message(chatmsg)
                         return False
                     return
@@ -564,7 +572,7 @@ class Client:
                 return False
 
         if pkid == self.pktSB.PLAYER_UPDATE_SIGN: # player update sign
-            if self.isLocal is not True:
+            if not self.isLocal:
                 return True  # ignore signs from child wrapper/server instance
             if self.version < mcpacket.PROTOCOLv1_8START:
                 return True  # player.createsign not implemented for older minecraft versions
@@ -621,7 +629,9 @@ class Client:
                 try:
                     pkid, original = self.packet.grabPacket()
                     self.original = original
-                except EOFError:
+                except EOFError as eof:
+                    self.log.error("Packet EOF (%s)" % eof)
+                    self.log.error(traceback.format_exc())
                     self.close()
                     break
                 except Exception as e:
@@ -633,13 +643,13 @@ class Client:
                 # DISABLED until github #5 is resolved
                 # if time.time() - self.tPing > 1 and self.state == 3:
                 #     if self.version > 32:
-                #         self.send(self.pktCB.keepalive, "varint",
+                #         self.send(self.pktCB.KEEP_ALIVE, "varint",
                 #                   (random.randrange(0, 99999),))
                 #         if self.clientSettings and not self.clientSettingsSent:
                 #             # print "Sending self.clientSettings..."
                 #             # print self.clientSettings
                 #             if self.version < mcpacket.PROTOCOL_1_9START:
-                #                 self.server.send(self.pktSB.clientsettings, "string|byte|byte|bool|ubyte", (
+                #                 self.server.send(self.pktSB.CLIENT_SETTINGS, "string|byte|byte|bool|ubyte", (
                 #                     self.clientSettings["locale"],
                 #                     self.clientSettings["view_distance"],
                 #                     self.clientSettings["chat_mode"],
@@ -648,7 +658,7 @@ class Client:
                 #                 ))
                 #                 self.clientSettingsSent = True
                 #             else:
-                #                 self.server.send(self.pktSB.clientsettings, "string|byte|varint|bool|ubyte|varint", (
+                #                 self.server.send(self.pktSB.CLIENT_SETTINGS, "string|byte|varint|bool|ubyte|varint", (
                 #                     self.clientSettings["locale"],
                 #                     self.clientSettings["view_distance"],
                 #                     self.clientSettings["chat_mode"],

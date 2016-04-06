@@ -3,8 +3,9 @@
 import socket
 import StringIO
 import json
-import uuid
+import mcuuid
 import struct
+import zlib
 
 class Packet:
     def __init__(self, socket, obj):
@@ -69,8 +70,8 @@ class Packet:
         if dataLength > 0:
             payload = zlib.decompress(payload)
         self.buffer = StringIO.StringIO(payload)
-        id = self.read_varInt()
-        return (id, payload)
+        pkid = self.read_varInt()
+        return (pkid, payload)
 
     def pack_varInt(self, val):
         total = b''
@@ -105,13 +106,11 @@ class Packet:
     def flush(self):
         for p in self.queue:
             packet = p[1]
-            id = struct.unpack("B", packet[0])[0]
+            pkid = struct.unpack("B", packet[0])[0]
             if p[0] > -1:
                 if len(packet) > self.compressThreshold:
-                    packetCompressed = self.pack_varInt(
-                        len(packet)) + zlib.compress(packet)
-                    packet = self.pack_varInt(
-                        len(packetCompressed)) + packetCompressed
+                    packetCompressed = self.pack_varInt(len(packet)) + zlib.compress(packet)
+                    packet = self.pack_varInt(len(packetCompressed)) + packetCompressed
                 else:
                     packet = self.pack_varInt(0) + packet
                     packet = self.pack_varInt(len(packet)) + packet
@@ -174,8 +173,8 @@ class Packet:
                 result[name] = self.read_rest()
         return result
 
-    def send(self, id, expression, payload):
-        result = str(self.send_varInt(id))
+    def send(self, pkid, expression, payload):
+        result = str(self.send_varInt(pkid))
         if len(expression) > 0:
             for i, type_ in enumerate(expression.split("|")):
                 pay = payload[i]
@@ -306,8 +305,8 @@ class Packet:
         
 
     # Similar to send_string, but uses a short as length prefix
-    def send_short_string(self, str):
-        return self.send_short(len(str)) + str.encode("utf8")
+    def send_short_string(self, string):
+        return self.send_short(len(string)) + str.encode("utf8")
 
     def send_byte_array(self, payload):
         return self.send_int(len(payload)) + payload
@@ -390,8 +389,7 @@ class Packet:
         d = self.buffer.read(length)
         if len(d) == 0 and length is not 0:
             # print(self.obj)
-            self.obj.disconnect(
-                "Received no data or less data than expected - connection closed")
+            self.obj.disconnect("Received no data or less data than expected - connection closed")
             return ""
         return d
 
@@ -473,7 +471,7 @@ class Packet:
         return total
 
     def read_uuid(self):
-        return uuid.UUID(bytes=self.read_data(16))
+        return uuid.UUID(bytes=self.read_data(16)) # does this need to be a string?
 
     def read_string(self):
         return self.read_data(self.read_varInt())
@@ -517,9 +515,11 @@ class Packet:
 
     def read_comp(self):
         a = []
-        while True:
+        done = 0
+        while done == 0:
             b = self.read_tag()
-            if b['type'] == 0: 
+            if b['type'] == 0:
+                done = 1
                 break
             a.append(b)
         return a

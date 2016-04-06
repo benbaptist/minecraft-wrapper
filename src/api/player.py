@@ -47,7 +47,7 @@ class Player:
         #     self.log.error("UUID for %s was False. Proxy mode is %s. Please report this issue (and this line) to"
         #                    " http://github.com/benbaptist/minecraft-wrapper/issues" % (self.username, str(self.wrapper.proxy)))
 
-        self.data = storage.Storage(self.uuid, root="wrapper-data/players")
+        self.data = storage.Storage(str(self.uuid), root="wrapper-data/players")
         if "firstLoggedIn" not in self.data:
             self.data["firstLoggedIn"] = (time.time(), time.tzname)
         if "logins" not in self.data:
@@ -165,7 +165,7 @@ class Player:
         with open("ops.json", "r") as f:
             operators = json.loads(f.read())
         for ops in operators:
-            if ops["uuid"] == self.uuid or ops["name"] == self.username:
+            if ops["uuid"] == str(self.uuid) or ops["name"] == self.username:
                 return True
         return False
 
@@ -273,7 +273,7 @@ class Player:
         if "users" not in self.permissions:
             self.permissions["users"] = {}
         for uuid in self.permissions["users"]:
-            if uuid == self.uuid:
+            if uuid == str(self.uuid):
                 self.permissions["users"][uuid]["permissions"][node] = value
 
     def removePermission(self, node):
@@ -283,7 +283,7 @@ class Player:
         if "users" not in self.permissions:
             self.permissions["users"] = {}
         for uuid in self.permissions["users"]:
-            if uuid == self.uuid:
+            if uuid == str(self.uuid):
                 if node in self.permissions["users"][uuid]["permissions"]:
                     del self.permissions["users"][uuid]["permissions"][node]
                 else:
@@ -296,7 +296,7 @@ class Player:
         if "users" not in self.permissions:
             self.permissions["users"] = {}
         for uuid in self.permissions["users"]:
-            if uuid == self.uuid:
+            if uuid == str(self.uuid):
                 return group in self.permissions["users"][uuid]["groups"]
         return False
 
@@ -306,7 +306,7 @@ class Player:
             self.permissions["users"] = {}
         self.uuid = self.wrapper.lookupUUIDbyUsername(self.username)  # init the perms for new player
         for uuid in self.permissions["users"]:
-            if uuid == self.uuid:
+            if uuid == str(self.uuid):
                 return self.permissions["users"][uuid]["groups"]
         return []  # If the user is not in the permission database, return this
 
@@ -318,7 +318,7 @@ class Player:
         if "users" not in self.permissions:
             self.permissions["users"] = {}
         for uuid in self.permissions["users"]:
-            if uuid == self.uuid:
+            if uuid == str(self.uuid):
                 self.permissions["users"][uuid]["groups"].append(group)
 
     def removeGroup(self, group):
@@ -327,7 +327,7 @@ class Player:
             self.permissions["users"] = {}
         self.uuid = self.wrapper.lookupUUIDbyUsername(self.username)  # init the perms for new player
         for uuid in self.permissions["users"]:
-            if uuid == self.uuid:
+            if uuid == str(self.uuid):
                 if group in self.permissions["users"][uuid]["groups"]:
                     self.permissions["users"][uuid]["groups"].remove(group)
                 else:

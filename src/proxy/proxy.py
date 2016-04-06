@@ -5,7 +5,7 @@ import threading
 import time
 import traceback
 import json
-import uuid
+import mcuuid
 
 import storage
 
@@ -70,14 +70,21 @@ class Proxy:
 
                 self.clients.append(client)
 
-                # Remove stale clients
-                for i, client in enumerate(self.wrapper.proxy.clients):
-                    if client.abort:
-                        del self.wrapper.proxy.clients[i]
+                self.removeStaleClients()
+                
             except Exception as e:  # Not quite sure what's going on
                 self.log.error("An error has occured in the proxy (%s)" % e)
                 self.log.error(traceback.format_exc())
                 if client: client.disconnect(e)
+
+    def removeStaleClients(self):
+        try:
+            for i, client in enumerate(self.wrapper.proxy.clients):
+                if client.abort:
+                    del self.wrapper.proxy.clients[i]
+        except Exception as e:
+            raise e # rethrow exception
+
 
     def pollServer(self):
         sock = socket.socket()
@@ -98,6 +105,7 @@ class Proxy:
         sock.close()
 
     def getClientByServerUUID(self, uuid):
+        uuid = str(uuid) # Typecast in case of UUID object
         for client in self.clients:
             if client.serverUUID == uuid:
                 self.uuidTranslate[uuid] = client.uuid
@@ -107,9 +115,10 @@ class Proxy:
 
     def banUUID(self, uuid, reason="Banned by an operator", source="Server"):
         """This is all wrong - needs to ban uuid, not username """
+        uuid = str(uuid) # Typecast in case of UUID object
         if not self.storage.key("banned-uuid"):
             self.storage.key("banned-uuid", {})
-        self.storage.key("banned-uuid")[str(uuid)] = {
+        self.storage.key("banned-uuid")[uuid] = {
             "reason": reason,
             "source": source,
             "created": time.time(), 
@@ -119,7 +128,7 @@ class Proxy:
     def banIP(self, ipaddress, reason="Banned by an operator", source="Server"):
         if not self.storage.key("banned-ip"):
             self.storage.key("banned-ip", {})
-        self.storage.key("banned-ip")[str(ipaddress)] = {
+        self.storage.key("banned-ip")[ipaddress] = {
             "reason": reason, 
             "source": source, 
             "created": time.time()
@@ -142,6 +151,7 @@ class Proxy:
         return False
 
     def isUUIDBanned(self, uuid):  # Check if the UUID of the user is banned
+        uuid = str(uuid) # Typecast in case of UUID object
         if not self.storage.key("banned-uuid"):
             self.storage.key("banned-uuid", {})
         return (uuid in self.storage.key("banned-uuid"))
@@ -152,6 +162,7 @@ class Proxy:
         return (address in self.storage.key("banned-ip"))
 
     def getSkinTexture(self, uuid):
+        uuid = str(uuid) # Typecast in case of UUID object
         if uuid not in self.skins:
             return False
         if uuid in self.skinTextures:

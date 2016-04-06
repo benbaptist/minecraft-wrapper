@@ -6,7 +6,7 @@ import signal
 import globals
 import storage
 import hashlib
-import mcuuid
+import uuid
 import dashboard
 import web
 import traceback
@@ -82,6 +82,8 @@ class Wrapper:
         :param playeruuid: string of player uuid with no dashes (such as you might get back from Mojang)
         :return: string hex format "8-4-4-4-12"
         """
+        print "formatUUID: %s" % str(uuid.UUID(bytes=playeruuid.decode("hex")))
+        print "formatUUID2: ", uuid.UUID(bytes=playeruuid.decode("hex"))
         return uuid.UUID(bytes=playeruuid.decode("hex"))
 
     @staticmethod
@@ -97,6 +99,8 @@ class Wrapper:
         d[6] |= 0x30
         d[8] &= 0x3f
         d[8] |= 0x80
+        print "UUIDFromName: %s" % str(uuid.UUID(bytes=str(d)))
+        print "UUIDFromName2: ", uuid.UUID(bytes=str(d))
         return uuid.UUID(bytes=str(d))
 
     def lookupUUIDbyUsername(self, username):
