@@ -14,14 +14,14 @@ import threading
 import time
 import os
 
-import proxy.proxy as proxy
+import proxy.base as proxy
 
 from log import Log, PluginLog
 from config import Config
 from irc import IRC
 from mcserver import MCServer
 from scripts import Scripts
-from api import API
+from api.base import API
 from plugins import Plugins
 from commands import Commands
 from events import Events
@@ -572,4 +572,4 @@ if __name__ == "__main__":
         try:
             wrapper.server.stop("Wrapper.py crashed - please contact the server host as soon as possible", save=False)
         except Exception as ex:
-            self.log.error("Failure to shut down server cleanly! Server could still be running, or it might rollback/corrupt! (%s)" % ex)
+            log.error("Failure to shut down server cleanly! Server could still be running, or it might rollback/corrupt! (%s)" % ex)

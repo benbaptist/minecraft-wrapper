@@ -13,7 +13,7 @@ import log
 import urllib
 import os
 
-from api import API
+from api.base import API
 from helpers import args, argsAfter
 
 try:

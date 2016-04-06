@@ -20,7 +20,7 @@ import ctypes
 import platform
 import ast
 
-from api import API
+from api.base import API
 from api.player import Player
 from api.world import World
 from helpers import args, argsAfter
@@ -324,8 +324,7 @@ class MCServer:
             self.wrapper.callEvent("server.started", {"reason": reason})
         if self.state == 3:
             self.wrapper.callEvent("server.stopping", {"reason": reason})
-        self.wrapper.callEvent(
-            "server.state", {"state": state, "reason": reason})
+        self.wrapper.callEvent("server.state", {"state": state, "reason": reason})
 
     def getServerType(self):
         if "spigot" in self.config["General"]["command"].lower():

@@ -5,7 +5,7 @@ import traceback
 import sys
 
 from importlib import import_module
-from api import API
+from api.base import API
 from log import Log, PluginLog
 
 class Plugins:

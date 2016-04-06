@@ -46,7 +46,7 @@ class Proxy:
             self.pollServer()
         except Exception as e:
             self.log.error("Proxy could not poll the Minecraft server - are you sure that the ports are configured properly? (%s)" % e)
-            self.log.error(traceback.format_exc())
+            self.log.getTraceback()
 
         while not self.socket:
             try:
@@ -56,7 +56,7 @@ class Proxy:
                 self.socket.listen(5)
             except Exception as e:
                 self.log.error("Proxy mode could not bind - retrying in five seconds (%s)" % e)
-                self.log.error(traceback.format_exc())
+                self.log.getTraceback()
                 self.socket = False
             time.sleep(5)
         while not self.wrapper.halt:

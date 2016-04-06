@@ -7,8 +7,7 @@ import fnmatch
 import json
 import threading
 
-from mcpkt import ClientBound18 as defPacketsCB
-from mcpkt import ClientBound19 as PacketsCB19
+import proxy.mcpacket as mcpacket
 
 
 class Player:
@@ -29,7 +28,7 @@ class Player:
 
         self.uuid = self.wrapper.getUUID(username)
         self.client = None
-        self.clientPackets = defPacketsCB
+        self.clientPackets = mcpacket.ClientBound18
 
         if self.wrapper.proxy:
             for client in self.wrapper.proxy.clients:
@@ -37,7 +36,7 @@ class Player:
                     self.client = client
                     self.uuid = client.uuid
                     if self.getClient().version > 49:
-                        self.clientPackets = PacketsCB19
+                        self.clientPackets = mcpacket.ClientBound19
                     break
         # hopefully these will never happen again:
         # if self.uuid is None:
