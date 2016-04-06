@@ -9,8 +9,9 @@ import subprocess
 import os
 import json
 import signal
-import api
 import platform
+
+from api.base import API
 
 # Plans for this: separate backup code into its own method, allow for plugins to control backups more freely.
 # I also should probably not use irc=True when broadcasting, and instead should just rely on events and having server.py and irc.py print messages themselves
@@ -22,7 +23,7 @@ class Backups:
         self.wrapper = wrapper
         self.config = wrapper.config
         self.log = wrapper.log
-        self.api = api.API(wrapper, "Backups", internal=True)
+        self.api = API(wrapper, "Backups", internal=True)
 
         self.interval = 0
         self.time = time.time()

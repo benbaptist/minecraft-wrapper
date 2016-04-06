@@ -75,10 +75,8 @@ class Log:
 
     def prefix(self, type="INFO", string=""):
         for line in string.split("\n"):
-            self.write("%s [Wrapper.py/%s] %s" %
-                       (self.timestamp(), type, line))
-            print("%s [Wrapper.py/%s] %s" %
-                  (time.strftime("[%H:%M:%S]"), type, line))
+            self.write("%s [Wrapper.py/%s] %s" % (self.timestamp(), type, line))
+            print "%s [Wrapper.py/%s] %s" % (time.strftime("[%H:%M:%S]"), type, line)
 
     def info(self, string):
         self.prefix("INFO", string)
@@ -92,6 +90,10 @@ class Log:
     def debug(self, string):
         if Config.debug:
             self.prefix("DEBUG", string)
+
+    def trace(self, string):
+        if Config.trace:
+            self.prefix("TRACE", string)
 
     def getTraceback(self):
         for line in traceback.format_exc().split("\n"):
@@ -113,10 +115,8 @@ class PluginLog:
 
     def prefix(self, type="INFO", string=""):
         for line in string.split("\n"):
-            self.write("%s [%s/%s] %s" %
-                       (self.PluginName, self.timestamp(), type, line))
-            print("%s [%s/%s] %s" % (self.PluginName,
-                                     time.strftime("[%H:%M:%S]"), type, line))
+            self.write("%s [%s/%s] %s" % (self.PluginName, self.timestamp(), type, line))
+            print("%s [%s/%s] %s" % (self.PluginName, time.strftime("[%H:%M:%S]"), type, line))
 
     def info(self, string):
         self.prefix("INFO", string)
