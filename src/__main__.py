@@ -6,7 +6,7 @@ import signal
 import globals
 import storage
 import hashlib
-import mcuuid
+import uuid
 import dashboard
 import web
 import traceback
@@ -19,7 +19,7 @@ import proxy.proxy as proxy
 from log import Log, PluginLog
 from config import Config
 from irc import IRC
-from server import Server
+from mcserver import MCServer
 from scripts import Scripts
 from api import API
 from plugins import Plugins
@@ -136,62 +136,58 @@ class Wrapper:
         :returns: returns the name from a uuid. Updates the wrapper usercache.json
                 Yields False if failed.
         """
-        useruuid = str(useruuid) # Typecast in case of UUID object
         frequency = 86400  # check once per day at most for existing players
-        if useruuid in self.usercache:  # if user is in the cache...
+        names = self._pollMojangUUID(useruuid)
+        numofnames = len(names)
+        if self.usercache.key(useruuid):  # if user is in the cache...
             # and was recently polled...
             if (time.time() - self.usercache.key(useruuid)["time"]) < frequency:
                 return self.usercache.key(useruuid)["name"]  # dont re-poll.
             else:
-                names = self._pollMojangUUID(useruuid)
-                if names is False or names is None:  # not a huge deal, we'll re-poll another time
+                if not names or names is None:  # not a huge deal, we'll re-poll another time
                     self.usercache.key(useruuid)["time"] = time.time() - frequency + 7200  # delay 2 more hours
                     return self.usercache.key(useruuid)["name"]
         else:  # user is not in cache
-            names = self._pollMojangUUID(useruuid)
-            if not names or names is None:  # mojang service failed or UUID not found
+            if not names or names is None or numbofnames == 0:  # mojang service failed or UUID not found
                 return False
-        numbofnames = len(names)
-        if numbofnames == 0:
-            return False  # error also (should already be None or False)
-        pastnames = []
-        if useruuid not in self.usercache:
-            self.usercache[useruuid] = {
-                "time": time.time(),
-                "original": None,
-                "name": None,
-                "online": True,
-                "localname": None,
-                "IP": None,
-                "names": []
-            }
-        for i in xrange(0, numbofnames):
-            if "changedToAt" not in names[i]:  # find the original name
-                self.usercache[useruuid]["original"] = names[i]["name"]
-                self.usercache[useruuid]["online"] = True
-                self.usercache[useruuid]["time"] = time.time()
-                if numbofnames == 1:  # The user has never changed their name
-                    self.usercache[useruuid]["name"] = names[i]["name"]
-                    if self.usercache[useruuid]["localname"] is None:
-                        self.usercache[useruuid]["localname"] = names[i]["name"]
-                    break
-            else:
-                # Convert java milleseconds to time.time seconds
-                changetime = names[i]["changedToAt"] / 1000
-                oldname = names[i]["name"]
-                if len(pastnames) == 0:
-                    pastnames.append({"name": oldname, "date": changetime})
-                    continue
-                if changetime > pastnames[0]["date"]:
-                    pastnames.insert(0, {"name": oldname, "date": changetime})
+            pastnames = []
+            if useruuid not in self.usercache:
+                self.usercache[useruuid] = {
+                    "time": time.time(),
+                    "original": None,
+                    "name": None,
+                    "online": True,
+                    "localname": None,
+                    "IP": None,
+                    "names": []
+                }
+            for i in xrange(0, numbofnames):
+                if "changedToAt" not in names[i]:  # find the original name
+                    self.usercache[useruuid]["original"] = names[i]["name"]
+                    self.usercache[useruuid]["online"] = True
+                    self.usercache[useruuid]["time"] = time.time()
+                    if numbofnames == 1:  # The user has never changed their name
+                        self.usercache[useruuid]["name"] = names[i]["name"]
+                        if self.usercache[useruuid]["localname"] is None:
+                            self.usercache[useruuid]["localname"] = names[i]["name"]
+                        break
                 else:
-                    pastnames.append({"name": oldname, "date": changetime})
-        self.usercache[useruuid]["names"] = pastnames
-        if numbofnames > 1:
-            self.usercache[useruuid]["name"] = pastnames[0]["name"]
-            if self.usercache[useruuid]["localname"] is None:
-                self.usercache[useruuid]["localname"] = pastnames[0]["name"]
-        return self.usercache[useruuid]["localname"]
+                    # Convert java milleseconds to time.time seconds
+                    changetime = names[i]["changedToAt"] / 1000
+                    oldname = names[i]["name"]
+                    if len(pastnames) == 0:
+                        pastnames.append({"name": oldname, "date": changetime})
+                        continue
+                    if changetime > pastnames[0]["date"]:
+                        pastnames.insert(0, {"name": oldname, "date": changetime})
+                    else:
+                        pastnames.append({"name": oldname, "date": changetime})
+            self.usercache[useruuid]["names"] = pastnames
+            if numbofnames > 1:
+                self.usercache[useruuid]["name"] = pastnames[0]["name"]
+                if self.usercache[useruuid]["localname"] is None:
+                    self.usercache[useruuid]["localname"] = pastnames[0]["name"]
+            return self.usercache[useruuid]["localname"]
 
     def _pollMojangUUID(self, useruuid):
         """
@@ -202,8 +198,7 @@ class Wrapper:
                 False - Mojang down or operating in limited fashion
                 - otherwise, a list of names...
         """
-        useruuid = str(useruuid) # type cast for UUID object
-        r = requests.get("https://api.mojang.com/user/profiles/%s/names" % useruuid.replace("-", ""))
+        r = requests.get("https://api.mojang.com/user/profiles/%s/names" % str(useruuid).replace("-", ""))
         if r.status_code == 200:
             return r.json()
         else:
@@ -214,7 +209,7 @@ class Wrapper:
                     if "account.mojang.com" in rx[i]:
                         if rx[i]["account.mojang.com"] == "green":
                             self.log.error("Mojang accounts is green, but request failed - have you over-polled (large busy server) or supplied an incorrect UUID??")
-                            self.log.error("uuid: %s" % useruuid)
+                            self.log.error("uuid: %s" % str(useruuid))
                             self.log.debug("response: \n%s" % str(rx))
                             return None
                         if rx[i]["account.mojang.com"] in ("yellow", "red"):
@@ -245,7 +240,7 @@ class Wrapper:
             with open("usercache.json", "r") as f:
                 cache = json.loads(f.read())
             for user in cache:
-                if user["uuid"] == useruuid:
+                if user["uuid"] == str(useruuid):
                     if useruuid not in self.usercache:
                         self.usercache[useruuid] = {
                             "time": time.time(), 
@@ -298,7 +293,7 @@ class Wrapper:
             ("/reload", "Reload all plugins.", None)
         ])
 
-        self.server = Server(sys.argv, self.log, self.configManager.config, self)
+        self.server = MCServer(sys.argv, self.log, self.configManager.config, self)
         self.server.init()
 
         self.plugins.loadPlugins()

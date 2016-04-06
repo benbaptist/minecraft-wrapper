@@ -5,7 +5,7 @@ import threading
 import time
 import traceback
 import json
-import mcuuid
+import uuid
 
 import storage
 
@@ -75,7 +75,10 @@ class Proxy:
             except Exception as e:  # Not quite sure what's going on
                 self.log.error("An error has occured in the proxy (%s)" % e)
                 self.log.error(traceback.format_exc())
-                if client: client.disconnect(e)
+                try:
+                    client.disconnect(e)
+                except Exception as ex:
+                    self.log.error("Failed to disconnect client (%s)" % ex)
 
     def removeStaleClients(self):
         try:
@@ -105,20 +108,19 @@ class Proxy:
         sock.close()
 
     def getClientByServerUUID(self, uuid):
-        uuid = str(uuid) # Typecast in case of UUID object
         for client in self.clients:
-            if client.serverUUID == uuid:
-                self.uuidTranslate[uuid] = client.uuid
+            if str(client.serverUUID) == str(uuid):
+                self.uuidTranslate[str(uuid)] = str(client.uuid)
                 return client
-        if uuid in self.uuidTranslate:
-            return uuid.UUID(hex=self.uuidTranslate[uuid])
+        # if uuid in self.uuidTranslate:
+        #     return uuid.UUID(hex=self.uuidTranslate[uuid])
+        return False # no client
 
     def banUUID(self, uuid, reason="Banned by an operator", source="Server"):
         """This is all wrong - needs to ban uuid, not username """
-        uuid = str(uuid) # Typecast in case of UUID object
         if not self.storage.key("banned-uuid"):
             self.storage.key("banned-uuid", {})
-        self.storage.key("banned-uuid")[uuid] = {
+        self.storage.key("banned-uuid")[str(uuid)] = {
             "reason": reason,
             "source": source,
             "created": time.time(), 
@@ -135,23 +137,22 @@ class Proxy:
         }
         for i in self.wrapper.server.players:
             player = self.wrapper.server.players[i]
-            if player.client.addr[0] == ipaddress:
-                self.wrapper.server.console("kick %s Your IP is Banned!" % player.username)
+            if str(player.client.addr[0]) == str(ipaddress):
+                self.wrapper.server.console("kick %s Your IP is Banned!" % str(player.username))
 
     def pardonIP(self, ipaddress):
         if self.storage.key("banned-ip"):
-            if ipaddress in self.storage.key("banned-ip"):
+            if str(ipaddress) in self.storage.key("banned-ip"):
                 try:
-                    del self.storage.key("banned-ip")[ipaddress]
+                    del self.storage.key("banned-ip")[str(ipaddress)]
                     return True
                 except Exception as e:
-                    self.log.warn("Failed to pardon %s (%s)" % (ipaddress, e))
+                    self.log.warn("Failed to pardon %s (%s)" % (str(ipaddress), e))
                     return False
-        self.log.warn("Could not find %s to pardon them" % ipaddress)
+        self.log.warn("Could not find %s to pardon them" % str(ipaddress))
         return False
 
     def isUUIDBanned(self, uuid):  # Check if the UUID of the user is banned
-        uuid = str(uuid) # Typecast in case of UUID object
         if not self.storage.key("banned-uuid"):
             self.storage.key("banned-uuid", {})
         return (uuid in self.storage.key("banned-uuid"))
@@ -162,7 +163,6 @@ class Proxy:
         return (address in self.storage.key("banned-ip"))
 
     def getSkinTexture(self, uuid):
-        uuid = str(uuid) # Typecast in case of UUID object
         if uuid not in self.skins:
             return False
         if uuid in self.skinTextures:
@@ -174,7 +174,7 @@ class Proxy:
             }
         r = requests.get(skinBlob["textures"]["SKIN"]["url"])
         if r.status_code == 200:
-            self.skinTextures[uuid] = r.content.encode("base64")
+            self.skinTextures[str(uuid)] = r.content.encode("base64")
             return self.skinTextures[uuid]
         else:
             self.log.warn("Could not fetch skin texture! (status code %d)" % r.status_code)

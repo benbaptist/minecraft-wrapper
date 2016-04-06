@@ -31,7 +31,7 @@ try:
 except:
     IMPORT_RESOURCE_SUCCESS = False
 
-class Server:
+class MCServer:
 
     def __init__(self, args, log, config, wrapper):
         self.log = log

@@ -3,7 +3,7 @@
 import socket
 import StringIO
 import json
-import mcuuid
+import uuid
 import struct
 import zlib
 
@@ -15,6 +15,7 @@ class Packet:
         self.sendCipher = None
         self.compressThreshold = -1
         self.version = 5
+        self.bonk = False
         self.abort = False
         self.buffer = StringIO.StringIO()
         self.queue = []
@@ -174,7 +175,8 @@ class Packet:
         return result
 
     def send(self, pkid, expression, payload):
-        result = str(self.send_varInt(pkid))
+        result = ""
+        result += self.send_varInt(pkid)
         if len(expression) > 0:
             for i, type_ in enumerate(expression.split("|")):
                 pay = payload[i]

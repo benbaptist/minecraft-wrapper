@@ -10,3 +10,11 @@ class MCUUID (uuid.UUID):
     @property
     def string(self):
         return str(self)
+
+h = MCUUID('12345678123456781234567812345678')
+
+print h.string
+print h.hex
+print h.int
+
+print uuid.UUID(bytes="12345678123456781234567812345678".decode("hex"))
