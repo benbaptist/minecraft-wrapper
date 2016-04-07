@@ -11,15 +11,15 @@ import uuid
 import shutil
 import os
 
+import encryption
 import mcpacket
 
+from utils.helpers import args, argsAfter
 from server import Server
 from packet import Packet
 from config import Config
-from helpers import args, argsAfter
 
 try:
-    import encryption
     import requests
     IMPORT_SUCCESS = True
 except ImportError:
@@ -121,7 +121,7 @@ class Client:
             payload = "localhost\x00%s\x00%s" % (self.addr[0], self.uuid.hex)
             self.server.send(0x00, "varint|string|ushort|varint", (self.version, payload, self.config["Proxy"]["server-port"], 2))
         else:
-            if UNIVERSAL_CONNECT is True:
+            if UNIVERSAL_CONNECT:
                 self.server.send(0x00, "varint|string|ushort|varint", (self.wrapper.server.protocolVersion, "localhost", self.config["Proxy"]["server-port"], 2))
             else:
                 self.server.send(0x00, "varint|string|ushort|varint", (self.version, "localhost", self.config["Proxy"]["server-port"], 2))

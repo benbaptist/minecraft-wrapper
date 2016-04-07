@@ -5,3 +5,7 @@
 
 class NonExistentPlugin(Exception):
     pass
+
+class MalformedFileError(Exception):
+    """Exception raised on parse error."""
+    pass

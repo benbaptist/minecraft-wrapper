@@ -3,29 +3,32 @@
 import sys
 import json
 import signal
-import globals
-import storage
 import hashlib
 import uuid
-import dashboard
-import web
 import traceback
 import threading
 import time
 import os
 
+import globals
+
 import proxy.base as proxy
+
+from management.web import Web as web
+from management.dashboard import Web as dashboard
+from utils.helpers import args, argsAfter
+
+from api.base import API
 
 from log import Log, PluginLog
 from config import Config
 from irc import IRC
 from mcserver import MCServer
 from scripts import Scripts
-from api.base import API
 from plugins import Plugins
 from commands import Commands
 from events import Events
-from helpers import args, argsAfter
+from storage import Storage
 
 try:
     import readline
@@ -49,9 +52,9 @@ class Wrapper:
         self.proxy = False
         self.halt = False
         self.update = False
-        self.storage = storage.Storage("main", self.log)
-        self.permissions = storage.Storage("permissions", self.log)
-        self.usercache = storage.Storage("usercache", self.log)
+        self.storage = Storage("main", self.log)
+        self.permissions = Storage("permissions", self.log)
+        self.usercache = Storage("usercache", self.log)
 
         self.plugins = Plugins(self)
         self.commands = Commands(self)
@@ -299,15 +302,14 @@ class Wrapper:
         self.plugins.loadPlugins()
 
         if self.config["IRC"]["irc-enabled"]:
-            self.irc = IRC(self.server, self.config, self.log, self, self.config["IRC"]["server"],
-                            self.config["IRC"]["port"], self.config["IRC"]["nick"], self.config["IRC"]["channels"])
+            self.irc = IRC(self.server, self.config, self.log, self, self.config["IRC"]["server"], 
+                self.config["IRC"]["port"], self.config["IRC"]["nick"], self.config["IRC"]["channels"])
             t = threading.Thread(target=self.irc.init, args=())
             t.daemon = True
             t.start()
         if self.config["Web"]["web-enabled"]:
             if web.IMPORT_SUCCESS:
                 self.web = web.Web(self)
-                # self.web = dashboard.Web(self)
                 t = threading.Thread(target=self.web.wrap, args=())
                 t.daemon = True
                 t.start()
@@ -368,10 +370,10 @@ class Wrapper:
         os.system(" ".join(sys.argv) + "&")
 
     def getBuildString(self):
-        if globals.repotype == "dev":
-            return "%s (development build #%d)" % (Config.version, globals.build)
+        if globals.__branch__ == "dev":
+            return "%s (development build #%d)" % (globals.__version__, globals.__build__)
         else:
-            return "%s (stable)" % Config.version
+            return "%s (stable)" % globals.__version__
 
     def checkForUpdates(self):
         if not IMPORT_REQUESTS:
@@ -388,14 +390,14 @@ class Wrapper:
             version, build, repotype = update
             if repotype == "dev":
                 if auto and not self.config["General"]["auto-update-dev-build"]:
-                    self.log.info("New Wrapper.py development build #%d available for download! (currently on #%d)" % (build, globals.build))
+                    self.log.info("New Wrapper.py development build #%d available for download! (currently on #%d)" % (build, globals.__build__))
                     self.log.info("Because you are running a development build, you must manually update Wrapper.py. To update Wrapper.py manually, please type /update-wrapper.")
                 else:
-                    self.log.info("New Wrapper.py development build #%d available! Updating... (currently on #%d)" % (build, globals.build))
+                    self.log.info("New Wrapper.py development build #%d available! Updating... (currently on #%d)" % (build, globals.__build__))
                 self.performUpdate(version, build, repotype)
             else:
-                self.log.info("New Wrapper.py stable %s available! Updating... (currently on %s)" % (
-                    ".".join([str(_) for _ in version]), Config.version))
+                self.log.info("New Wrapper.py stable %s available! Updating... (currently on %s)" % \
+                    (".".join([str(_) for _ in version]), globals.__version__))
                 self.performUpdate(version, build, repotype)
         else:
             self.log.info("No new versions available.")
@@ -403,7 +405,7 @@ class Wrapper:
 
     def checkForNewUpdate(self, repotype=None):
         if repotype is None:
-            repotype = globals.repotype
+            repotype = globals.__branch__
         if repotype == "dev":
             r = requests.get("https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/build/version.json")
             if r.status_code == 200:
@@ -411,7 +413,7 @@ class Wrapper:
                 if self.update:
                     if self.update > data["build"]:
                         return False
-                if data["build"] > globals.build and data["repotype"] == "dev":
+                if data["build"] > globals.__build__ and data["repotype"] == "dev":
                     return (data["version"], data["build"], data["repotype"])
                 else:
                     return False
@@ -425,7 +427,7 @@ class Wrapper:
                 if self.update:
                     if self.update > data["build"]:
                         return False
-                if data["build"] > globals.build and data["repotype"] == "stable":
+                if data["build"] > globals.__build__ and data["repotype"] == "stable":
                     return (data["version"], data["build"], data["repotype"])
                 else:
                     return False

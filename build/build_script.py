@@ -19,12 +19,12 @@ def build_wrapper(args):
 
   with open("build/version.json", "r") as f:
     version = json.loads(f.read())
-    version["build"] += 1
-    version["repotype"] = args.branch
+    version["__build__"] += 1
+    version["__branch__"] = args.branch
     version["release_time"] = time.time()
 
   with open("globals.py", "w") as f:
-    f.write("build=%d\nrepotype='%s'" % (version["build"], args.branch))
+    f.write("__build__=%d\n__branch__='%s'" % (version["build"], args.branch))
 
   with open("build/version.json", "w") as f:
     f.write(json.dumps(version))
@@ -36,7 +36,7 @@ def build_wrapper(args):
   zf = zipfile.ZipFile('Wrapper.py', mode='w')
   try:
     if args.verbose: print 'Adding Files...'
-    for root, dirs, files in os.walk("src"):
+    for root, dirs, files in os.walk("wrapper"):
       for f in files:
         path = os.path.join(root, f)
         if args.verbose: print 'Archiving %s...' % path

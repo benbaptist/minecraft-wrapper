@@ -50,10 +50,11 @@ class Backups:
                     try:
                         self.backups = json.loads(f.read())
                     except Exception as e:
-                        self.log.error(
-                            "NOTE - backups.json was unreadable. It might be corrupted. Backups will no longer be automatically pruned.")
+                        self.log.error("NOTE - backups.json was unreadable. It might be corrupted. Backups will no longer be automatically pruned.")
                         self.wrapper.callEvent("wrapper.backupFailure", {
-                                               "reasonCode": 4, "reasonText": "backups.json is corrupted. Please contact an administer instantly, as this may be critical."})
+                            "reasonCode": 4, 
+                            "reasonText": "backups.json is corrupted. Please contact an administer instantly, as this may be critical."
+                        })
                         self.backups = []
             else:
                 if len(os.listdir(self.config["Backups"]["backup-location"])) > 0:
@@ -78,28 +79,21 @@ class Backups:
             filename = "backup-%s.tar" % datetime.datetime.fromtimestamp(int(timestamp)).strftime("%Y-%m-%d_%H.%M.%S")
             if self.config["Backups"]["backup-compression"]:
                 filename += ".gz"
-                arguments = ["tar", "czf", "%s/%s" %
-                             (self.config["Backups"]["backup-location"].replace(" ", "\\ "), filename)]
+                arguments = ["tar", "czf", "%s/%s" % (self.config["Backups"]["backup-location"].replace(" ", "\\ "), filename)]
             else:
-                arguments = ["tar", "cfpv", "%s/%s" %
-                             (self.config["Backups"]["backup-location"], filename)]
+                arguments = ["tar", "cfpv", "%s/%s" % (self.config["Backups"]["backup-location"], filename)]
 
             # Check if tar is installed
             which = "where" if platform.system() == "Windows" else "which"
             if not subprocess.call([which, "tar"]) == 0:
-                self.wrapper.callEvent("wrapper.backupFailure", {
-                                       "reasonCode": 1, "reasonText": "Tar is not installed. Please install tar before trying to make backups."})
-                self.log.error(
-                    "The backup could not begin, because tar does not appear to be installed!")
-                self.log.error(
-                    "If you are on a Linux-based system, please install it through your preferred package manager.")
-                self.log.error(
-                    "If you are on Windows, you can find GNU/Tar from this link: http://goo.gl/SpJSVM")
+                self.wrapper.callEvent("wrapper.backupFailure", {"reasonCode": 1, "reasonText": "Tar is not installed. Please install tar before trying to make backups."})
+                self.log.error("The backup could not begin, because tar does not appear to be installed!")
+                self.log.error("If you are on a Linux-based system, please install it through your preferred package manager.")
+                self.log.error("If you are on Windows, you can find GNU/Tar from this link: http://goo.gl/SpJSVM")
                 return
 
             if not self.wrapper.callEvent("wrapper.backupBegin", {"file": filename}):
-                self.log.warn(
-                    "A backup was scheduled, but was cancelled by a plugin!")
+                self.log.warn("A backup was scheduled, but was cancelled by a plugin!")
                 return
             if self.config["Backups"]["backup-notification"]:
                 self.broadcast("&cBacking up... lag may occur!")
@@ -108,17 +102,14 @@ class Backups:
                 if os.path.exists(file):
                     arguments.append(file)
                 else:
-                    self.log.warn(
-                        "Backup file '%s' does not exist - cancelling backup" % file)
-                    self.wrapper.callEvent("wrapper.backupFailure", {
-                                           "reasonCode": 3, "reasonText": "Backup file '%s' does not exist." % file})
+                    self.log.warn("Backup file '%s' does not exist - canceling backup" % file)
+                    self.wrapper.callEvent("wrapper.backupFailure", {"reasonCode": 3, "reasonText": "Backup file '%s' does not exist." % file})
                     return
             statusCode = os.system(" ".join(arguments))
             self.console("save-on")
             if self.config["Backups"]["backup-notification"]:
                 self.broadcast("&aBackup complete!")
-            self.wrapper.callEvent("wrapper.backupEnd", {
-                                   "file": filename, "status": statusCode})
+            self.wrapper.callEvent("wrapper.backupEnd", {"file": filename, "status": statusCode})
             self.backups.append((timestamp, filename))
 
             if len(self.backups) > self.config["Backups"]["backups-keep"]:
@@ -130,7 +121,7 @@ class Backups:
                     try:
                         os.remove('%s/%s' % (self.config["Backups"]["backup-location"], backup[1]))
                     except Exception as e:
-                        print "Failed to delete (%s)" % e
+                        print "Failed to delete backup (%s)" % e
                     self.log.info("Deleting old backup: %s" % datetime.datetime.fromtimestamp(int(backup[0])).strftime('%Y-%m-%d_%H:%M:%S'))
                     hink = self.backups[0][1][:]
                     del self.backups[0]
@@ -138,5 +129,4 @@ class Backups:
                 f.write(json.dumps(self.backups))
 
             if not os.path.exists(self.config["Backups"]["backup-location"] + "/" + filename):
-                self.wrapper.callEvent("wrapper.backupFailure", {
-                                       "reasonCode": 2, "reasonText": "Backup file didn't exist after the tar command executed - assuming failure."})
+                self.wrapper.callEvent("wrapper.backupFailure", {"reasonCode": 2, "reasonText": "Backup file didn't exist after the tar command executed - assuming failure."})

@@ -13,17 +13,18 @@ import signal
 import traceback
 import StringIO
 import ConfigParser
-import backups
 import sys
 import codecs
 import ctypes
 import platform
 import ast
 
+from utils.helpers import args, argsAfter
 from api.base import API
 from api.player import Player
 from api.world import World
-from helpers import args, argsAfter
+
+from backups import Backups
 
 try:
     import resource
@@ -39,7 +40,7 @@ class MCServer:
         self.wrapper = wrapper
         self.args = args
         self.api = API(wrapper, "Server", internal=True)
-        self.backups = backups.Backups(wrapper)
+        self.backups = Backups(wrapper)
 
         if "serverState" not in self.wrapper.storage:
             self.wrapper.storage["serverState"] = True

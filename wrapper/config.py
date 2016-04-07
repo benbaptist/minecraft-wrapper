@@ -87,7 +87,6 @@ public-stats = True
 
 
 class Config:
-    version = "0.7.7"
     debug = False
     trace = False
 

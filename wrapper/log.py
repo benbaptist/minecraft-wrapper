@@ -73,10 +73,10 @@ class Log:
             print payload
             self.getTraceback()
 
-    def prefix(self, type="INFO", string=""):
+    def prefix(self, level="INFO", string=""):
         for line in string.split("\n"):
-            self.write("%s [Wrapper.py/%s] %s" % (self.timestamp(), type, line))
-            print "%s [Wrapper.py/%s] %s" % (time.strftime("[%H:%M:%S]"), type, line)
+            self.write("%s [Wrapper.py/%s] %s" % (self.timestamp(), level, line))
+            print "%s [Wrapper.py/%s] %s" % (time.strftime("[%H:%M:%S]"), level, line)
 
     def info(self, string):
         self.prefix("INFO", string)
@@ -101,7 +101,7 @@ class Log:
                 self.error(line)
 
 
-class PluginLog:
+class PluginLog: # This could be a subclass of Log and would not require initialization with a Log
 
     def __init__(self, log, PluginName="Hello"):
         self.log = log
@@ -113,10 +113,10 @@ class PluginLog:
     def write(self, payload):
         self.log.write(payload)
 
-    def prefix(self, type="INFO", string=""):
+    def prefix(self, level="INFO", string=""):
         for line in string.split("\n"):
-            self.write("%s [%s/%s] %s" % (self.PluginName, self.timestamp(), type, line))
-            print("%s [%s/%s] %s" % (self.PluginName, time.strftime("[%H:%M:%S]"), type, line))
+            self.write("%s [%s/%s] %s" % (self.PluginName, self.timestamp(), level, line))
+            print("%s [%s/%s] %s" % (self.PluginName, time.strftime("[%H:%M:%S]"), level, line))
 
     def info(self, string):
         self.prefix("INFO", string)
@@ -130,6 +130,10 @@ class PluginLog:
     def debug(self, string):
         if Config.debug:
             self.prefix("DEBUG", string)
+
+    def trace(self, string):
+        if Config.trace:
+            self.prefix("TRACE", string)
 
     def getTraceback(self):
         for line in traceback.format_exc().split("\n"):

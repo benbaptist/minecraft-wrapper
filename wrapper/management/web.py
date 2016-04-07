@@ -8,13 +8,13 @@ import time
 import json
 import random
 import urlparse
-import storage
-import log
 import urllib
 import os
 
+from utils.helpers import args, argsAfter
 from api.base import API
-from helpers import args, argsAfter
+from log import PluginLog
+from storage import Storage
 
 try:
     import pkg_resources
@@ -31,10 +31,10 @@ class Web:
     def __init__(self, wrapper):
         self.wrapper = wrapper
         self.api = API(wrapper, "Web", internal=True)
-        self.log = log.PluginLog(self.wrapper.log, "Web")
+        self.log = PluginLog(self.wrapper.log, "Web")
         self.config = wrapper.config
         self.socket = False
-        self.data = storage.Storage("web", self.log)
+        self.data = Storage("web", self.log)
         if "keys" not in self.data:
             self.data["keys"] = []
         # if not self.config["Web"]["web-password"] == None:
@@ -63,7 +63,7 @@ class Web:
         while len(self.consoleScrollback) > 1000:
             try:
                 del self.consoleScrollback[0]
-            except Exception, e:
+            except Exception as e:
                 break
         self.consoleScrollback.append((time.time(), payload["message"]))
 
@@ -71,47 +71,58 @@ class Web:
         while len(self.chatScrollback) > 200:
             try:
                 del self.chatScrollback[0]
-            except Exception, e:
+            except Exception as e:
                 break
-        self.chatScrollback.append((time.time(), {"type": "player", "payload": {
-                                   "player": payload["player"].username, "message": payload["message"]}}))
+        self.chatScrollback.append((time.time(), {
+            "type": "player", 
+            "payload": {
+                "player": payload["player"].username, 
+                "message": payload["message"]
+            }
+        }))
 
     def onPlayerJoin(self, payload):
         print payload
         while len(self.chatScrollback) > 200:
             try:
                 del self.chatScrollback[0]
-            except Exception, e:
+            except Exception as e:
                 break
-        self.chatScrollback.append((time.time(), {"type": "playerJoin", "payload": {
-                                   "player": payload["player"].username}}))
+        self.chatScrollback.append((time.time(), {
+            "type": "playerJoin", 
+            "payload": {
+                "player": payload["player"].username
+            }
+        }))
 
     def onPlayerLeave(self, payload):
         print payload
         while len(self.chatScrollback) > 200:
             try:
                 del self.chatScrollback[0]
-            except Exception, e:
+            except Exception as e:
                 break
-        self.chatScrollback.append((time.time(), {"type": "playerLeave", "payload": {
-                                   "player": payload["player"].username}}))
+        self.chatScrollback.append((time.time(), {
+            "type": "playerLeave", 
+            "payload": {
+                "player": payload["player"].username
+            }
+        }))
 
     def onChannelMessage(self, payload):
         while len(self.chatScrollback) > 200:
             try:
                 del self.chatScrollback[0]
-            except Exception, e:
+            except Exception as e:
                 break
-        self.chatScrollback.append(
-            (time.time(), {"type": "irc", "payload": payload}))
+        self.chatScrollback.append((time.time(), {"type": "irc", "payload": payload}))
 
     def updateGraph(self):
         while not self.wrapper.halt:
             while len(self.memoryGraph) > 200:
                 del self.memoryGraph[0]
             if self.wrapper.server.getMemoryUsage():
-                self.memoryGraph.append(
-                    [time.time(), self.wrapper.server.getMemoryUsage()])
+                self.memoryGraph.append([time.time(), self.wrapper.server.getMemoryUsage()])
             time.sleep(1)
 
     def checkLogin(self, password):
@@ -159,9 +170,9 @@ class Web:
                 if self.bind():
                     self.listen()
                 else:
-                    self.log.error("Could not bind web to %s:%d - retrying in 5 seconds" %
-                                   (self.config["Web"]["web-bind"], self.config["Web"]["web-port"]))
-            except Exception, e:
+                    self.log.error("Could not bind web to %s:%d - retrying in 5 seconds" % \
+                        (self.config["Web"]["web-bind"], self.config["Web"]["web-port"]))
+            except Exception as e:
                 for line in traceback.format_exc().split("\n"):
                     self.log.error(line)
             time.sleep(5)
@@ -172,11 +183,10 @@ class Web:
         try:
             self.socket = socket.socket()
             self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            self.socket.bind(
-                (self.config["Web"]["web-bind"], self.config["Web"]["web-port"]))
+            self.socket.bind((self.config["Web"]["web-bind"], self.config["Web"]["web-port"]))
             self.socket.listen(5)
             return True
-        except Exception, e:
+        except Exception as e:
             return False
 
     def listen(self):
@@ -185,13 +195,13 @@ class Web:
         while not self.wrapper.halt:
             sock, addr = self.socket.accept()
             # self.log.debug("(WEB) Connection %s started" % str(addr))
-            client = Client(self.wrapper, sock, addr, self)
+            client = WebClient(self.wrapper, sock, addr, self)
             t = threading.Thread(target=client.wrap, args=())
             t.daemon = True
             t.start()
 
 
-class Client:
+class WebClient:
 
     def __init__(self, wrapper, socket, addr, web):
         self.wrapper = wrapper
@@ -223,7 +233,7 @@ class Client:
         try:
             self.socket.close()
             #self.log.debug("(WEB) Connection %s closed" % str(self.addr))
-        except Exception, e:
+        except Exception as e:
             pass
 
     def wrap(self):
@@ -262,11 +272,10 @@ class Client:
         action = request.split("/")[1:][1].split("?")[0]
         if action == "stats":
             if not self.wrapper.config["Web"]["public-stats"]:
-                return EOFError
+                return EOFError # Why are we returning error objects and not just raising them?
             players = []
             for i in self.wrapper.server.players:
-                players.append({"name": i, "loggedIn": self.wrapper.server.players[
-                               i].loggedIn, "uuid": str(self.wrapper.server.players[i].uuid)})
+                players.append({"name": i, "loggedIn": self.wrapper.server.players[i].loggedIn, "uuid": str(self.wrapper.server.players[i].uuid)})
             return {"playerCount": len(self.wrapper.server.players), "players": players}
         if action == "login":
             password = get("password")
@@ -277,8 +286,7 @@ class Client:
                 rememberMe = False
             if self.web.checkLogin(password):
                 key = self.web.makeKey(rememberMe)
-                self.log.warn("%s logged in to web mode (remember me: %s)" % (
-                    self.addr[0], rememberMe))
+                self.log.warn("%s logged in to web mode (remember me: %s)" % (self.addr[0], rememberMe))
                 return {"session-key": key}
             else:
                 self.log.warn("%s failed to login" % self.addr[0])
@@ -332,11 +340,9 @@ class Client:
                 if p[0] == ".":
                     continue
                 if os.path.isdir(fullpath):
-                    folders.append(
-                        {"filename": p, "count": len(os.listdir(fullpath))})
+                    folders.append({"filename": p, "count": len(os.listdir(fullpath))})
                 else:
-                    files.append(
-                        {"filename": p, "size": os.path.getsize(fullpath)})
+                    files.append({"filename": p, "size": os.path.getsize(fullpath)})
             return {"files": files, "folders": folders}
         if action == "rename_file":
             if not self.web.validateKey(get("key")):
@@ -404,8 +410,8 @@ class Client:
                     "isOp": player.isOp()
                 })
             plugins = []
-            for id in self.wrapper.plugins:
-                plugin = self.wrapper.plugins[id]
+            for pid in self.wrapper.plugins:
+                plugin = self.wrapper.plugins[pid]
                 if plugin["good"]:
                     if plugin["description"]:
                         description = plugin["description"]
@@ -419,7 +425,7 @@ class Client:
                         "author": plugin["author"],
                         "website": plugin["website"],
                         # "version": (".".join([str(_) for _ in plugin["version"]])),
-                        "id": id,
+                        "id": pid,
                         "good": True
                     })
                 else:
@@ -503,8 +509,7 @@ class Client:
             if not self.web.validateKey(get("key")):
                 return EOFError
             message = get("message")
-            self.web.chatScrollback.append(
-                (time.time(), {"type": "raw", "payload": "[WEB ADMIN] " + message}))
+            self.web.chatScrollback.append((time.time(), {"type": "raw", "payload": "[WEB ADMIN] " + message}))
             self.wrapper.server.broadcast("&c[WEB ADMIN]&r " + message)
             return True
         if action == "kick_player":
@@ -512,8 +517,7 @@ class Client:
                 return EOFError
             player = get("player")
             reason = get("reason")
-            self.log.warn("[%s] %s was kicked with reason: %s" %
-                          (self.addr[0], player, reason))
+            self.log.warn("[%s] %s was kicked with reason: %s" % (self.addr[0], player, reason))
             self.wrapper.server.console("kick %s %s" % (player, reason))
             return True
         if action == "ban_player":
@@ -521,8 +525,7 @@ class Client:
                 return EOFError
             player = get("player")
             reason = get("reason")
-            self.log.warn("[%s] %s was banned with reason: %s" %
-                          (self.addr[0], player, reason))
+            self.log.warn("[%s] %s was banned with reason: %s" % (self.addr[0], player, reason))
             self.wrapper.server.console("ban %s %s" % (player, reason))
             return True
         if action == "change_plugin":
@@ -533,14 +536,12 @@ class Client:
             if state == "enable":
                 if plugin in self.wrapper.storage["disabled_plugins"]:
                     self.wrapper.storage["disabled_plugins"].remove(plugin)
-                    self.log.warn("[%s] Enabled plugin '%s'" %
-                                  (self.addr[0], plugin))
+                    self.log.warn("[%s] Enabled plugin '%s'" % (self.addr[0], plugin))
                     self.wrapper.reloadPlugins()
             else:
                 if plugin not in self.wrapper.storage["disabled_plugins"]:
                     self.wrapper.storage["disabled_plugins"].append(plugin)
-                    self.log.warn("[%s] Disabled plugin '%s'" %
-                                  (self.addr[0], plugin))
+                    self.log.warn("[%s] Disabled plugin '%s'" % (self.addr[0], plugin))
                     self.wrapper.reloadPlugins()
         if action == "reload_plugins":
             if not self.web.validateKey(get("key")):
@@ -550,25 +551,23 @@ class Client:
         if action == "server_action":
             if not self.web.validateKey(get("key")):
                 return EOFError
-            type = get("action")
-            if type == "stop":
+            atype = get("action")
+            if atype == "stop":
                 reason = get("reason")
                 self.wrapper.server.stop(reason)
-                self.log.warn("[%s] Server stop with reason: %s" %
-                              (self.addr[0], reason))
+                self.log.warn("[%s] Server stop with reason: %s" % (self.addr[0], reason))
                 return "success"
-            elif type == "restart":
+            elif atype == "restart":
                 reason = get("reason")
                 self.wrapper.server.restart(reason)
-                self.log.warn("[%s] Server restart with reason: %s" %
-                              (self.addr[0], reason))
+                self.log.warn("[%s] Server restart with reason: %s" % (self.addr[0], reason))
                 return "success"
-            elif type == "start":
+            elif atype == "start":
                 reason = get("reason")
                 self.wrapper.server.start()
                 self.log.warn("[%s] Server started" % (self.addr[0]))
                 return "success"
-            elif type == "kill":
+            elif atype == "kill":
                 self.wrapper.server.kill()
                 self.log.warn("[%s] Server killed." % self.addr[0])
                 return "success"
@@ -594,7 +593,7 @@ class Client:
         elif request.split("/")[1:][0] == "action":
             try:
                 self.write(json.dumps(self.handleAction(request)))
-            except:
+            except Exception as e:
                 self.headers(status="300 Internal Server Error")
                 print traceback.format_exc()
             self.close()
@@ -620,7 +619,7 @@ class Client:
             data = self.read(file)
             self.headers(contentType=self.getContentType(file))
             self.write(data)
-        except:
+        except Exception as e:
             self.headers(status="404 Not Found")
             self.write("<h1>404 Not Found</h4>")
         self.close()
@@ -633,7 +632,7 @@ class Client:
                     self.close()
                     return
                 self.buffer = data.split("\n")
-            except:
+            except Exception as e:
                 self.close()
                 #self.log.debug("(WEB) Connection %s closed" % str(self.addr))
                 break

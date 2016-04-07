@@ -194,7 +194,7 @@ $RECYCLE.BIN/
 *.egg
 *.egg-info
 dist/
-build/
+#build/
 eggs/
 parts/
 var/
@@ -214,3 +214,7 @@ pip-log.txt
 
 #Mr Developer
 .mr.developer.cfg
+
+#Wrapper
+*.md5
+build/version.json

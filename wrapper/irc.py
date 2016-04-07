@@ -4,13 +4,15 @@ import socket
 import traceback
 import time
 import threading
-import api
-import globals
 import random
 import math
 
+import globals
+
+from utils.helpers import args, argsAfter
+from api.base import API
+
 from config import Config
-from helpers import args, argsAfter
 
 class IRC:
 
@@ -30,7 +32,7 @@ class IRC:
         self.ready = False
         self.msgQueue = []
 
-        self.api = api.API(self.wrapper, "IRC", internal=True)
+        self.api = API(self.wrapper, "IRC", internal=True)
         self.api.registerEvent("server.starting", self.onServerStarting)
         self.api.registerEvent("server.started", self.onServerStarted)
         self.api.registerEvent("server.stopping", self.onServerStopping)
@@ -116,8 +118,7 @@ class IRC:
     def onPlayerAchievement(self, payload):
         player = self.filterName(payload["player"])
         achievement = payload["achievement"]
-        self.msgQueue.append(
-            "%s has just earned the achievement %s" % (player, achievement))
+        self.msgQueue.append("%s has just earned the achievement %s" % (player, achievement))
 
     def onPlayerDeath(self, payload):
         player = self.filterName(payload["player"])
@@ -135,8 +136,7 @@ class IRC:
         if "reasonText" in payload:
             self.msgQueue.append("ERROR: %s" % payload["reasonText"])
         else:
-            self.msgQueue.append(
-                "An unknown error occurred while trying to backup.")
+            self.msgQueue.append("An unknown error occurred while trying to backup.")
 
     def onServerStarting(self, payload):
         self.msgQueue.append("Server starting...")
@@ -201,8 +201,7 @@ class IRC:
 
     def console(self, channel, payload):
         if self.config["IRC"]["show-channel-server"]:
-            self.rawConsole(
-                {"text": "[%s] " % channel, "color": "gold", "extra": payload})
+            self.rawConsole({"text": "[%s] " % channel, "color": "gold", "extra": payload})
         else:
             self.rawConsole({"extra": payload})
 
@@ -222,8 +221,7 @@ class IRC:
             if self.nickAttempts > 2:
                 name = bytearray(self.nickname)
                 for i in xrange(3):
-                    name[len(self.nickname) / 3 *
-                         i] = chr(random.randrange(97, 122))
+                    name[len(self.nickname) / 3 * i] = chr(random.randrange(97, 122))
                 self.nickname = str(name)
             else:
                 self.nickname = self.nickname + "_"
@@ -233,22 +231,25 @@ class IRC:
             nick = args(self.line.split(" "), 0)[1:self.args(0).find("!")]
             channel = args(self.line.split(" "), 2)[1:][:-1]
             self.log.info("%s joined %s" % (nick, channel))
-            self.wrapper.callEvent(
-                "irc.join", {"nick": nick, "channel": channel})
+            self.wrapper.callEvent("irc.join", {"nick": nick, "channel": channel})
         if args(self.line.split(" "), 1) == "PART":
             nick = args(self.line.split(" "), 0)[1:args(self.line.split(" "), 0).find("!")]
             channel = args(self.line.split(" "), 2)
             self.log.info("%s parted %s" % (nick, channel))
-            self.wrapper.callEvent(
-                "irc.part", {"nick": nick, "channel": channel})
+            self.wrapper.callEvent("irc.part", {"nick": nick, "channel": channel})
         if args(self.line.split(" "), 1) == "MODE":
             try:
                 nick = args(self.line.split(" "), 0)[1:args(self.line.split(" "), 0).find('!')]
                 channel = args(self.line.split(" "), 2)
                 modes = args(self.line.split(" "), 3)
                 user = args(self.line.split(" "), 4)[:-1]
-                self.console(channel, [{"text": user, "color": "green"}, {
-                             "text": " received modes %s from %s" % (modes, nick), "color": "white"}])
+                self.console(channel, [{
+                    "text": user, 
+                    "color": "green"
+                }, {
+                    "text": " received modes %s from %s" % (modes, nick), 
+                    "color": "white"
+                }])
             except Exception as e:
                 pass
         if args(self.line.split(" "), 0) == "PING":
@@ -257,8 +258,7 @@ class IRC:
             nick = args(self.line.split(" "), 0)[1:args(self.line.split(" "), 0).find("!")]
             message = argsAfter(self.line.split(" "), 2)[1:].strip("\n").strip("\r")
 
-            self.wrapper.callEvent(
-                "irc.quit", {"nick": nick, "message": message, "channel": None})
+            self.wrapper.callEvent("irc.quit", {"nick": nick, "message": message, "channel": None})
         if args(self.line.split(" "), 1) == "PRIVMSG":
             channel = args(self.line.split(" "), 2)
             nick = args(self.line.split(" "), 0)[1:args(self.line.split(" "), 0).find("!")]
@@ -269,29 +269,22 @@ class IRC:
                     users = ""
                     for user in self.server.players:
                         users += "%s " % user
-                    self.send("PRIVMSG %s :There are currently %s users on the server: %s" % (
-                        channel, len(self.server.players), users))
+                    self.send("PRIVMSG %s :There are currently %s users on the server: %s" % (channel, len(self.server.players), users))
                 elif message.strip() == ".about":
-                    self.send("PRIVMSG %s :Wrapper.py Version %s" %
-                              (channel, self.wrapper.getBuildString()))
+                    self.send("PRIVMSG %s :Wrapper.py Version %s" % (channel, self.wrapper.getBuildString()))
                 else:
                     message = message.decode("utf-8", "ignore")
                     if args(message.split(" "), 0) == "\x01ACTION":
-                        self.wrapper.callEvent(
-                            "irc.action", {"nick": nick, "channel": channel, "action": argsAfter(message.split(" "), 1)[:-1]})
-                        self.log.info("[%s] * %s %s" %
-                                      (channel, nick, argsAfter(message.split(" "), 1)[:-1]))
+                        self.wrapper.callEvent("irc.action", {"nick": nick, "channel": channel, "action": argsAfter(message.split(" "), 1)[:-1]})
+                        self.log.info("[%s] * %s %s" % (channel, nick, argsAfter(message.split(" "), 1)[:-1]))
                     else:
-                        self.wrapper.callEvent(
-                            "irc.message", {"nick": nick, "channel": channel, "message": message})
-                        self.log.info("[%s] <%s> %s" %
-                                      (channel, nick, message))
+                        self.wrapper.callEvent("irc.message", {"nick": nick, "channel": channel, "message": message})
+                        self.log.info("[%s] <%s> %s" % (channel, nick, message))
             elif self.config["IRC"]["control-from-irc"]:
                 self.log.info("[PRIVATE] (%s) %s" % (nick, message))
 
                 def msg(string):
-                    self.log.info("[PRIVATE] (%s) %s" %
-                                  (self.config["IRC"]["nick"], string))
+                    self.log.info("[PRIVATE] (%s) %s" % (self.config["IRC"]["nick"], string))
                     self.send("PRIVMSG %s :%s" % (nick, string))
                 if self.config["IRC"]["control-irc-pass"] == "password":
                     msg("Please change your password from 'password' in wrapper.properties. I will not allow you to use that password. It's an awful password. Please change it.")
@@ -322,8 +315,7 @@ class IRC:
                                 self.wrapper.getBuildString())
                             # msg('console - toggle console output to this private message')
                         elif args(message.split(" "), 0) == 'togglebackups':
-                            self.config["Backups"]["enabled"] = not self.config[
-                                "Backups"]["enabled"]
+                            self.config["Backups"]["enabled"] = not self.config["Backups"]["enabled"]
                             if self.config["Backups"]["enabled"]:
                                 msg('Backups are now on.')
                             else:
@@ -340,8 +332,7 @@ class IRC:
                             self.server.console("stop")
                             self.server.changeState(3)
                         elif args(message.split(" "), 0) == 'restart':
-                            self.server.restart(
-                                "Restarting server from IRC remote")
+                            self.server.restart("Restarting server from IRC remote")
                             self.server.changeState(3)
                         elif args(message.split(" "), 0) == 'stop':
                             self.server.console('stop')
@@ -363,59 +354,55 @@ class IRC:
                             elif self.server.state == 3:
                                 msg("Server is in the process of shutting down/restarting.")
                             else:
-                                msg("Server is in unknown state. This is probably a Wrapper.py bug - report it! (state #%d)" %
-                                    self.server.state)
+                                msg("Server is in unknown state. This is probably a Wrapper.py bug - report it! (state #%d)" % self.server.state)
                             if self.wrapper.server.getMemoryUsage():
-                                msg("Server Memory Usage: %d bytes" %
-                                    self.wrapper.server.getMemoryUsage())
+                                msg("Server Memory Usage: %d bytes" % self.wrapper.server.getMemoryUsage())
                         elif args(message.split(" "), 0) == 'check-update':
                             msg("Checking for new updates...")
                             update = self.wrapper.checkForNewUpdate()
                             if update:
-                                version, build, type = update
-                                if type == "stable":
-                                    msg("New Wrapper.py Version %s available! (you have %s)" % (
-                                        ".".join([str(_) for _ in version]), self.wrapper.getBuildString()))
-                                elif type == "dev":
-                                    msg("New Wrapper.py development build %s #%d available! (you have %s #%d)" % (
-                                        ".".join([str(_) for _ in version]), build, Config.version, globals.build))
+                                version, build, repotype = update
+                                if repotype == "stable":
+                                    msg("New Wrapper.py Version %s available! (you have %s)" % 
+                                        ( ".".join([str(_) for _ in version]), self.wrapper.getBuildString()))
+                                elif repotype == "dev":
+                                    msg("New Wrapper.py development build %s #%d available! (you have %s #%d)" % 
+                                        (".".join([str(_) for _ in version]), build, globals.__version__, globals.build))
                                 else:
-                                    msg("Unknown new version: %s | %d | %s" %
-                                        (version, build, type))
+                                    msg("Unknown new version: %s | %d | %s" % (version, build, repotype))
                                 msg("To perform the update, type update-wrapper.")
                             else:
-                                if globals.type == "stable":
+                                if globals.__branch__ == "stable":
                                     msg("No new stable Wrapper.py versions available.")
-                                elif globals.type == "dev":
+                                elif globals.__branch__ == "dev":
                                     msg("No new development Wrapper.py versions available.")
                         elif args(message.split(" "), 0) == 'update-wrapper':
                             msg("Checking for new updates...")
                             update = self.wrapper.checkForNewUpdate()
                             if update:
-                                version, build, type = update
-                                if type == "stable":
-                                    msg("New Wrapper.py Version %s available! (you have %s)" % (
-                                        ".".join([str(_) for _ in version]), self.wrapper.getBuildString()))
-                                elif type == "dev":
-                                    msg("New Wrapper.py development build %s #%d available! (you have %s #%d)" % (
-                                        ".".join(version), build, Config.version, globals.build))
+                                version, build, repotype = update
+                                if repotype == "stable":
+                                    msg("New Wrapper.py Version %s available! (you have %s)" % \
+                                        (".".join([str(_) for _ in version]), self.wrapper.getBuildString()))
+                                elif repotype == "dev":
+                                    msg("New Wrapper.py development build %s #%d available! (you have %s #%d)" % \
+                                        (".".join(version), build, globals.__version__, globals.__build__))
                                 else:
-                                    msg("Unknown new version: %s | %d | %s" %
-                                        (version, build, type))
+                                    msg("Unknown new version: %s | %d | %s" % (version, build, repotype))
                                 msg("Performing update..")
-                                if self.wrapper.performUpdate(version, build, type):
-                                    msg("Update completed! Version %s #%d (%s) is now installed. Please reboot Wrapper.py to apply changes." % (
-                                        version, build, type))
+                                if self.wrapper.performUpdate(version, build, repotype):
+                                    msg("Update completed! Version %s #%d (%s) is now installed. Please reboot Wrapper.py to apply changes." % (version, build, repotype))
                                 else:
-                                    msg("An error occured while performing update. Please check the Wrapper.py console as soon as possible for an explanation and traceback. If you are unsure of the cause, please file a bug report on http://github.com/benbaptist/minecraft-wrapper.")
+                                    msg("An error occured while performing update.")
+                                    msg("Please check the Wrapper.py console as soon as possible for an explanation and traceback.")
+                                    msg("If you are unsure of the cause, please file a bug report on http://github.com/benbaptist/minecraft-wrapper.")
                             else:
-                                if globals.type == "stable":
+                                if globals.__branch__ == "stable":
                                     msg("No new stable Wrapper.py versions available.")
-                                elif globals.type == "dev":
+                                elif globals.__branch__ == "dev":
                                     msg("No new development Wrapper.py versions available.")
                         elif args(message.split(" "), 0) == "about":
-                            msg("Wrapper.py by benbaptist - Version %s (build #%d)" %
-                                (Config.version, globals.build))
+                            msg("Wrapper.py by benbaptist - Version %s (build #%d)" % (globals.__version__, globals.__branch__))
                         else:
                             msg('Unknown command. Type help for more commands')
                     else:

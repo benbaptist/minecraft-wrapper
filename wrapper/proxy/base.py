@@ -7,14 +7,14 @@ import traceback
 import json
 import uuid
 
-import storage
+import encryption
 
+from storage import Storage
 from client import Client
 from packet import Packet
 
 try:
     import requests
-    import encryption
     IMPORT_SUCCESS = True
 except ImportError:
     IMPORT_SUCCESS = False
@@ -33,7 +33,7 @@ class Proxy:
         self.skins = {}
         self.skinTextures = {}
         self.uuidTranslate = {}
-        self.storage = storage.Storage("proxy-data")
+        self.storage = Storage("proxy-data")
 
         self.privateKey = encryption.generate_key_pair()
         self.publicKey = encryption.encode_public_key(self.privateKey)
