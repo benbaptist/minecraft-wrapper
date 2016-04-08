@@ -170,11 +170,10 @@ class Web:
                 if self.bind():
                     self.listen()
                 else:
-                    self.log.error("Could not bind web to %s:%d - retrying in 5 seconds" % \
+                    self.log.error("Could not bind web to %s:%d - retrying in 5 seconds", \
                         (self.config["Web"]["web-bind"], self.config["Web"]["web-port"]))
             except Exception as e:
-                for line in traceback.format_exc().split("\n"):
-                    self.log.error(line)
+                self.log.exception(e)
             time.sleep(5)
 
     def bind(self):
@@ -190,11 +189,11 @@ class Web:
             return False
 
     def listen(self):
-        self.log.info("Web Interface bound to %s:%d" % (
-            self.config["Web"]["web-bind"], self.config["Web"]["web-port"]))
+        self.log.info("Web Interface bound to %s:%d", \
+            (self.config["Web"]["web-bind"], self.config["Web"]["web-port"]))
         while not self.wrapper.halt:
             sock, addr = self.socket.accept()
-            # self.log.debug("(WEB) Connection %s started" % str(addr))
+            # self.log.debug("(WEB) Connection %s started", str(addr))
             client = WebClient(self.wrapper, sock, addr, self)
             t = threading.Thread(target=client.wrap, args=())
             t.daemon = True
@@ -232,16 +231,15 @@ class WebClient:
     def close(self):
         try:
             self.socket.close()
-            #self.log.debug("(WEB) Connection %s closed" % str(self.addr))
+            #self.log.debug("(WEB) Connection %s closed", str(self.addr))
         except Exception as e:
             pass
 
     def wrap(self):
         try:
             self.handle()
-        except:
-            self.log.error("Internal error while handling web mode request:")
-            self.log.getTraceback()
+        except Exception as e:
+            self.log.exception("Internal error while handling web mode request")
             self.headers(status="300 Internal Server Error")
             self.write("<h1>300 Internal Server Error</h1>")
             self.close()
@@ -286,10 +284,10 @@ class WebClient:
                 rememberMe = False
             if self.web.checkLogin(password):
                 key = self.web.makeKey(rememberMe)
-                self.log.warn("%s logged in to web mode (remember me: %s)" % (self.addr[0], rememberMe))
+                self.log.warn("%s logged in to web mode (remember me: %s)", (self.addr[0], rememberMe))
                 return {"session-key": key}
             else:
-                self.log.warn("%s failed to login" % self.addr[0])
+                self.log.warn("%s failed to login", self.addr[0])
             return EOFError
         if action == "is_admin":
             if self.web.validateKey(get("key")):
@@ -298,7 +296,7 @@ class WebClient:
         if action == "logout":
             if self.web.validateKey(get("key")):
                 self.web.removeKey(get("key"))
-                self.log.warn("[%s] Logged out." % self.addr[0])
+                self.log.warn("[%s] Logged out.", self.addr[0])
                 return "goodbye"
             return EOFError
         if action == "read_server_props":
@@ -503,7 +501,7 @@ class WebClient:
             if not self.web.validateKey(get("key")):
                 return EOFError
             self.wrapper.server.console(get("execute"))
-            self.log.warn("[%s] Executed: %s" % (self.addr[0], get("execute")))
+            self.log.warn("[%s] Executed: %s", (self.addr[0], get("execute")))
             return True
         if action == "chat":
             if not self.web.validateKey(get("key")):
@@ -517,7 +515,7 @@ class WebClient:
                 return EOFError
             player = get("player")
             reason = get("reason")
-            self.log.warn("[%s] %s was kicked with reason: %s" % (self.addr[0], player, reason))
+            self.log.warn("[%s] %s was kicked with reason: %s", (self.addr[0], player, reason))
             self.wrapper.server.console("kick %s %s" % (player, reason))
             return True
         if action == "ban_player":
@@ -525,7 +523,7 @@ class WebClient:
                 return EOFError
             player = get("player")
             reason = get("reason")
-            self.log.warn("[%s] %s was banned with reason: %s" % (self.addr[0], player, reason))
+            self.log.warn("[%s] %s was banned with reason: %s", (self.addr[0], player, reason))
             self.wrapper.server.console("ban %s %s" % (player, reason))
             return True
         if action == "change_plugin":
@@ -536,12 +534,12 @@ class WebClient:
             if state == "enable":
                 if plugin in self.wrapper.storage["disabled_plugins"]:
                     self.wrapper.storage["disabled_plugins"].remove(plugin)
-                    self.log.warn("[%s] Enabled plugin '%s'" % (self.addr[0], plugin))
+                    self.log.warn("[%s] Enabled plugin '%s'", (self.addr[0], plugin))
                     self.wrapper.reloadPlugins()
             else:
                 if plugin not in self.wrapper.storage["disabled_plugins"]:
                     self.wrapper.storage["disabled_plugins"].append(plugin)
-                    self.log.warn("[%s] Disabled plugin '%s'" % (self.addr[0], plugin))
+                    self.log.warn("[%s] Disabled plugin '%s'", (self.addr[0], plugin))
                     self.wrapper.reloadPlugins()
         if action == "reload_plugins":
             if not self.web.validateKey(get("key")):
@@ -555,21 +553,21 @@ class WebClient:
             if atype == "stop":
                 reason = get("reason")
                 self.wrapper.server.stop(reason)
-                self.log.warn("[%s] Server stop with reason: %s" % (self.addr[0], reason))
+                self.log.warn("[%s] Server stop with reason: %s", (self.addr[0], reason))
                 return "success"
             elif atype == "restart":
                 reason = get("reason")
                 self.wrapper.server.restart(reason)
-                self.log.warn("[%s] Server restart with reason: %s" % (self.addr[0], reason))
+                self.log.warn("[%s] Server restart with reason: %s", (self.addr[0], reason))
                 return "success"
             elif atype == "start":
                 reason = get("reason")
                 self.wrapper.server.start()
-                self.log.warn("[%s] Server started" % (self.addr[0]))
+                self.log.warn("[%s] Server started", (self.addr[0]))
                 return "success"
             elif atype == "kill":
                 self.wrapper.server.kill()
-                self.log.warn("[%s] Server killed." % self.addr[0])
+                self.log.warn("[%s] Server killed.", self.addr[0])
                 return "success"
             return {"error": "invalid_server_action"}
         return False
@@ -634,7 +632,7 @@ class WebClient:
                 self.buffer = data.split("\n")
             except Exception as e:
                 self.close()
-                #self.log.debug("(WEB) Connection %s closed" % str(self.addr))
+                #self.log.debug("(WEB) Connection %s closed", str(self.addr))
                 break
             if len(self.buffer) < 1:
                 print "Web connection closed suddenly"

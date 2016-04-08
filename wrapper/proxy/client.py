@@ -138,7 +138,7 @@ class Client:
         try:
             self.socket.close() # Is this necessary?
         except Exception as e:
-            self.log.error("Could not close client socket! (%s)" % e)
+            self.log.exception("Could not close client socket! (%s)", e)
         if self.server:
             self.server.abort = True
             self.server.close()
@@ -203,7 +203,7 @@ class Client:
                     self.state = data["state"]
                 else:
                     self.disconnect("Invalid state '%d'" % data["state"])
-                self.log.trace("(PROXY CLIENT) -> Parsed 0x00 packet with client state 0 (HANDSHAKE):\n%s" % data)
+                self.log.trace("(PROXY CLIENT) -> Parsed 0x00 packet with client state 0 (HANDSHAKE):\n%s", data)
                 return False
             elif self.state == 1:
                 sample = []
@@ -254,8 +254,8 @@ class Client:
                     self.serverUUID = self.wrapper.UUIDFromName("OfflinePlayer:%s" % self.username)
                     self.send(0x02, "string|string", (str(self.uuid), self.username))
                     self.state = 3
-                    self.log.info("%s logged in (IP: %s)" % (self.username, self.addr[0]))
-                self.log.trace("(PROXY CLIENT) -> Parsed 0x00 packet with client state 2:\n%s" % data)
+                    self.log.info("%s logged in (IP: %s)", (self.username, self.addr[0]))
+                self.log.trace("(PROXY CLIENT) -> Parsed 0x00 packet with client state 2:\n%s", data)
                 return False
 
         if pkid == 0x01:
@@ -265,7 +265,7 @@ class Client:
                     data = self.read("bytearray_short:shared_secret|bytearray_short:verify_token")
                 else:
                     data = self.read("bytearray:shared_secret|bytearray:verify_token")
-                self.log.trace("(PROXY CLIENT) -> Parsed 0x01 packet with client state 4 (ENCRYPTION RESPONSE):\n%s" % data)
+                self.log.trace("(PROXY CLIENT) -> Parsed 0x01 packet with client state 4 (ENCRYPTION RESPONSE):\n%s", data)
 
                 sharedSecret = encryption.decrypt_shared_secret(data["shared_secret"], self.privateKey)
                 verifyToken = encryption.decrypt_shared_secret(data["verify_token"], self.privateKey)
@@ -301,7 +301,7 @@ class Client:
                     newUsername = self.wrapper.lookupUsernamebyUUID(str(self.uuid))
                     if newUsername:
                         if newUsername != self.username:
-                            self.log.info("%s logged in with new name, falling back to %s" % (self.username, newUsername))
+                            self.log.info("%s logged in with new name, falling back to %s", (self.username, newUsername))
                             self.username = newUsername
                 else:
                     self.uuid = uuid.uuid3(uuid.NAMESPACE_OID, "OfflinePlayer: %s" % self.username)
@@ -312,7 +312,7 @@ class Client:
                         worldName = self.wrapper.server.worldName
                         if not os.path.exists("%s/playerdata/%s.dat" % (worldName, str(self.serverUUID))):
                             if os.path.exists("%s/playerdata/%s.dat" % (worldName, str(self.uuid))):
-                                self.log.info("Migrating %s's playerdata file to proxy mode" % self.username)
+                                self.log.info("Migrating %s's playerdata file to proxy mode", self.username)
                                 shutil.move("%s/playerdata/%s.dat" % (worldName, str(self.uuid)), "%s/playerdata/%s.dat" % (worldName, self.serverUUID))
                                 with open("%s/.wrapper-proxy-playerdata-migrate" % worldName, "a") as f:
                                     f.write("%s %s\n" % (str(self.uuid), str(self.serverUUID)))
@@ -322,7 +322,7 @@ class Client:
                                 data = json.loads(f.read())
                             if data:
                                 if not player["uuid"] == str(self.serverUUID) and player["uuid"] == str(self.uuid):
-                                    self.log.info("Migrating %s's whitelist entry to proxy mode" % self.username)
+                                    self.log.info("Migrating %s's whitelist entry to proxy mode", self.username)
                                     data.append({"uuid": str(self.serverUUID), "name": self.username})
                                     with open("whitelist.json", "w") as f:
                                         f.write(json.dumps(data))
@@ -349,7 +349,7 @@ class Client:
 
                 self.connect()
 
-                self.log.info("%s logged in (UUID: %s | IP: %s)" % (self.username, str(self.uuid), self.addr[0]))
+                self.log.info("%s logged in (UUID: %s | IP: %s)", (self.username, str(self.uuid), self.addr[0]))
                 # lookup in cache and update IP
                 # self.wrapper.setUUID(self.uuid, self.username)
                 return False
@@ -361,7 +361,7 @@ class Client:
 
         if pkid == self.pktSB.CHAT_MESSAGE and self.state == 3:
             data = self.read("string:message")
-            self.log.trace("(PROXY CLIENT) -> Parsed CHAT_MESSAGE packet with client state 3:\n%s" % data)
+            self.log.trace("(PROXY CLIENT) -> Parsed CHAT_MESSAGE packet with client state 3:\n%s", data)
             if data is None:
                 return False
             try:
@@ -392,8 +392,7 @@ class Client:
                 self.message(chatmsg)
                 return False
             except Exception as e:
-                self.log.error("Formulating CHAT_MESSAGE failed (%s)" % e)
-                self.log.getTraceback()
+                self.log.exception("Formulating CHAT_MESSAGE failed (%s)", e)
 
             # if self.getPlayerObject().hasGroup("test"):
             #     pass
@@ -401,13 +400,13 @@ class Client:
         if pkid == self.pktSB.PLAYER_POSITION: # player position
             data = self.read("double:x|double:y|double:z|bool:on_ground")
             self.position = (data["x"], data["y"], data["z"])
-            self.log.trace("(PROXY CLIENT) -> Parsed PLAYER_POSITION packet:\n%s" % data)
+            self.log.trace("(PROXY CLIENT) -> Parsed PLAYER_POSITION packet:\n%s", data)
         
         if pkid == self.pktSB.PLAYER_POSLOOK: # player position and look
             data = self.read("double:x|double:y|double:z|float:yaw|float:pitch|bool:on_ground")
             self.position = (data["x"], data["y"], data["z"])
             self.head = (data["yaw"], data["pitch"])
-            self.log.trace("(PROXY CLIENT) -> Parsed PLAYER_POSLOOK packet:\n%s" % data)
+            self.log.trace("(PROXY CLIENT) -> Parsed PLAYER_POSLOOK packet:\n%s", data)
             if self.server.state != 3:
                 return False
 
@@ -415,7 +414,7 @@ class Client:
             data = self.read("float:yaw|float:pitch|bool:on_ground")
             yaw, pitch = data["yaw"], data["pitch"]
             self.head = (yaw, pitch)
-            self.log.trace("(PROXY CLIENT) -> Parsed PLAYER_LOOK packet:\n%s" % data)
+            self.log.trace("(PROXY CLIENT) -> Parsed PLAYER_LOOK packet:\n%s", data)
 
         if pkid == self.pktSB.PLAYER_DIGGING: # Player Block Dig
             if not self.isLocal:
@@ -423,11 +422,11 @@ class Client:
             if self.version < mcpacket.PROTOCOLv1_8START:
                 data = self.read("byte:status|int:x|ubyte:y|int:z|byte:face")
                 position = (data["x"], data["y"], data["z"])
-                self.log.trace("(PROXY CLIENT) -> Parsed PLAYER_DIGGING packet:\n%s" % data)
+                self.log.trace("(PROXY CLIENT) -> Parsed PLAYER_DIGGING packet:\n%s", data)
             else:
                 data = self.read("byte:status|position:position|byte:face")
                 position = data["position"]
-                self.log.trace("(PROXY CLIENT) -> Parsed PLAYER_DIGGING packet:\n%s" % data)
+                self.log.trace("(PROXY CLIENT) -> Parsed PLAYER_DIGGING packet:\n%s", data)
             if data is None:
                 return False
             # finished digging
@@ -509,7 +508,7 @@ class Client:
             # position, face, helditem, hand, and all three cursor positions
             # (x, y, z)
 
-            self.log.trace("(PROXY CLIENT) -> Parsed PLAYER_BLOCK_PLACEMENT packet:\n%s" % data)
+            self.log.trace("(PROXY CLIENT) -> Parsed PLAYER_BLOCK_PLACEMENT packet:\n%s", data)
 
             if face == 0:  # Compensate for block placement coordinates
                 position = (position[0], position[1] - 1, position[2])
@@ -548,7 +547,7 @@ class Client:
             if self.isLocal is not True:
                 return True
             data = self.read("rest:pack")
-            self.log.trace("(PROXY CLIENT) -> Parsed USE_ITEM packet:\n%s" % data)
+            self.log.trace("(PROXY CLIENT) -> Parsed USE_ITEM packet:\n%s", data)
             player = self.getPlayerObject()
             position = self.lastplacecoords
             helditem = player.getHeldItem()
@@ -566,7 +565,7 @@ class Client:
 
         if pkid == self.pktSB.HELD_ITEM_CHANGE: # Held Item Change
             slot = self.read("short:short")["short"]
-            self.log.trace("(PROXY CLIENT) -> Parsed HELD_ITEM_CHANGE packet:\n%s" % slot)
+            self.log.trace("(PROXY CLIENT) -> Parsed HELD_ITEM_CHANGE packet:\n%s", slot)
             if self.slot > -1 and self.slot < 9:
                 self.slot = slot
             else:
@@ -584,7 +583,7 @@ class Client:
             l3 = data["line3"]
             l4 = data["line4"]
             payload = self.wrapper.callEvent("player.createsign", {"player": self.getPlayerObject(), "position": position, "line1": l1, "line2": l2, "line3": l3, "line4": l4})
-            self.log.trace("(PROXY CLIENT) -> Parsed PLAYER_UPDATE_SIGN packet:\n%s" % data)
+            self.log.trace("(PROXY CLIENT) -> Parsed PLAYER_UPDATE_SIGN packet:\n%s", data)
             if not payload:
                 return False
             if type(payload) == dict:
@@ -605,18 +604,18 @@ class Client:
             else:
                 data = self.read("string:locale|byte:view_distance|varint:chat_mode|bool:chat_colors|ubyte:displayed_skin_parts|varint:main_hand")
             self.clientSettings = data
-            self.log.trace("(PROXY CLIENT) -> Parsed CLIENT_SETTINGS packet:\n%s" % data)
+            self.log.trace("(PROXY CLIENT) -> Parsed CLIENT_SETTINGS packet:\n%s", data)
         
         if pkid == self.pktSB.CLICK_WINDOW: # click window
             data = self.read("ubyte:wid|short:slot|byte:button|short:action|byte:mode|slot:clicked")
             data['player'] = self.getPlayerObject()
-            self.log.trace("(PROXY CLIENT) -> Parsed CLICK_WINDOW packet:\n%s" % data)
+            self.log.trace("(PROXY CLIENT) -> Parsed CLICK_WINDOW packet:\n%s", data)
             if not self.wrapper.callEvent("player.slotClick", data):
                 return False
         
         if pkid == self.pktSB.SPECTATE: # Spectate - convert packet to local server UUID
             data = self.read("uuid:target_player")
-            self.log.trace("(PROXY CLIENT) -> Parsed SPECTATE packet:\n%s" % data)
+            self.log.trace("(PROXY CLIENT) -> Parsed SPECTATE packet:\n%s", data)
             for client in self.proxy.clients:
                 if data["target_player"].hex == client.uuid.hex:
                     self.server.send(self.pktSB.SPECTATE, "uuid", [client.serverUUID]) # Convert SPECTATE packet...
@@ -635,15 +634,13 @@ class Client:
                     self.original = original
                 except EOFError as eof:
                     # This error is often erroneous since socket data recv length is 0 when transmit ends
-                    self.log.warn("Client Packet EOF (%s)" % eof)
-                    self.log.getTraceback()
+                    self.log.exception("Client Packet EOF (%s)", eof)
                     self.close()
                     break
                 except Exception as e:
                     if Config.debug:
                         # Bad file descriptor often occurs, cause is currently unknown, but seemingly harmless
-                        self.log.error("Failed to grab packet [CLIENT] (%s):" % e)
-                        self.log.getTraceback()
+                        self.log.exception("Failed to grab packet [CLIENT] (%s):", e)
                     self.close()
                     break
                 # DISABLED until github #5 is resolved
@@ -682,5 +679,4 @@ class Client:
                     if self.server.state == 3:
                         self.server.sendRaw(original)
         except Exception as ex:
-            self.log.error("Error in the [Client] -> [Server] handle (%s):" % ex)
-            self.log.getTraceback()
+            self.log.exception("Error in the [Client] -> [Server] handle (%s):", ex)

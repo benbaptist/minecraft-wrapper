@@ -111,7 +111,7 @@ class Web:
                 if self.checkLogin(password):
                     key = self.makeKey(rememberMe)
                     return redirect("/")
-                    # self.log.warn("%s logged in to web mode (remember me: %s)" % (request.addr, rememberMe))
+                    # self.log.warn("%s logged in to web mode (remember me: %s)", (request.addr, rememberMe))
                 else:
                     badPass = True
 

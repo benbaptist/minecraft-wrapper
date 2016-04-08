@@ -39,7 +39,7 @@ class Plugins:
     def loadPlugin(self, i):
         if "disabled_plugins" not in self.wrapper.storage:
             self.wrapper.storage["disabled_plugins"] = []
-        self.log.info("Loading plugin %s..." % i)
+        self.log.info("Loading plugin %s...", i)
         if os.path.isdir("wrapper-plugins/%s" % i):
             plugin = import_module(i)
             name = i
@@ -89,10 +89,10 @@ class Plugins:
         except AttributeError:
             website = None
         if pid in self.wrapper.storage["disabled_plugins"] or disabled:
-            self.log.warn("Plugin '%s' disabled - not loading" % name)
+            self.log.warn("Plugin '%s' disabled - not loading", name)
             return
         if pid in self.plugins:  # Once successfully loaded, further attempts to load the plugin are ignored
-            self.log.debug("Plugin '%s' already loaded - not reloading" % name)
+            self.log.debug("Plugin '%s' already loaded - not reloading", name)
             return
         if dependencies:  # load dependent plugins before continuing...
             # List data type must be used, even if only a single plugin (i.e. =
@@ -122,13 +122,11 @@ class Plugins:
         try:
             self.plugins[plugin]["main"].onDisable()
         except Exception as  e:
-            self.log.error("Error while disabling plugin '%s'" % plugin)
-            self.log.getTraceback()
+            self.log.exception("Error while disabling plugin '%s'", plugin)
         try:
             reload(self.plugins[plugin]["module"])
         except Exception as  e:
-            self.log.error("Error while reloading plugin '%s' -- it was probably deleted or is a bugged version" % plugin)
-            self.log.getTraceback()
+            self.log.exception("Error while reloading plugin '%s' -- it was probably deleted or is a bugged version", plugin)
 
     def loadPlugins(self):
         self.log.info("Loading plugins...")
@@ -144,9 +142,7 @@ class Plugins:
                 elif i[-3:] == ".py":
                     self.loadPlugin(i)
             except Exception as  e:
-                for line in traceback.format_exc().split("\n"):
-                    self.log.debug(line)
-                self.log.error("Failed to import plugin '%s' (%s)" % (i, e))
+                self.log.exception("Failed to import plugin '%s' (%s)", (i, e))
                 self.plugins[i] = {"name": i, "good": False}
         self.wrapper.events.callEvent("helloworld.event", {"testValue": True})
 
@@ -161,9 +157,7 @@ class Plugins:
             try:
                 self.unloadPlugin(i)
             except Exception as  e:
-                for line in traceback.format_exc().split("\n"):
-                    self.log.debug(line)
-                self.log.error("Failed to unload plugin '%s' (%s)" % (i, e))
+                self.log.exception("Failed to unload plugin '%s' (%s)", (i, e))
                 try:
                     reload(self.plugins[plugin]["module"])
                 except Exception as  ex:

@@ -95,7 +95,7 @@ class MCServer:
 
     def restart(self, reason="Restarting Server"):
         """ Restart the Minecraft server, and kick people with the specified reason """
-        self.log.info("Restarting Minecraft server with reason: %s" % reason)
+        self.log.info("Restarting Minecraft server with reason: %s", reason)
         self.changeState(3, reason)
         for player in self.players:
             self.console("kick %s %s" % (player, reason))
@@ -103,7 +103,7 @@ class MCServer:
 
     def stop(self, reason="Stopping Server", save=True):
         """ Stop the Minecraft server, prevent it from auto-restarting and kick people with the specified reason """
-        self.log.info("Stopping Minecraft server with reason: %s" % reason)
+        self.log.info("Stopping Minecraft server with reason: %s", reason)
         self.changeState(3, reason)
         self.boot = False
         if save:
@@ -114,7 +114,7 @@ class MCServer:
 
     def kill(self, reason="Killing Server"):
         """ Forcefully kill the server. It will auto-restart if set in the configuration file """
-        self.log.info("Killing Minecraft server with reason: %s" % reason)
+        self.log.info("Killing Minecraft server with reason: %s", reason)
         self.changeState(0, reason)
         self.proc.kill()
 
@@ -122,7 +122,7 @@ class MCServer:
         """ Freeze the server with `kill -STOP`. Can be used to stop the server in an emergency without shutting it down, so it doesn't write corrupted data - e.g. if the disk is full, you can freeze the server, free up some disk space, and then unfreeze
         'reason' argument is printed in the chat for all currently-connected players, unless you specify None. """
         if reason:
-            self.log.info("Freezing server with reason: %s" % reason)
+            self.log.info("Freezing server with reason: %s", reason)
             self.broadcast("&c%s" % reason)
             time.sleep(0.5)
         else:
@@ -266,7 +266,7 @@ class MCServer:
                 self.players[username] = Player(username, self.wrapper)
             self.wrapper.callEvent("player.login", {"player": self.getPlayer(username)})
         except Exception as e:
-            self.log.getTraceback()
+            self.log.exception(e)
 
     def logout(self, username):
         """ Called when a player logs out """
@@ -308,7 +308,7 @@ class MCServer:
                 else:
                     self.onlineMode = True
             except Exception as e:
-                self.log.getTraceback()
+                self.log.exception(e)
 
     def console(self, command):
         """ Execute a console command on the server """
@@ -382,7 +382,7 @@ class MCServer:
                     try:
                         self.readConsole(line.replace("\r", ""))
                     except Exception as e:
-                        self.log.getTraceback()
+                        self.log.exception(e)
                 self.data = []
 
     def getMemoryUsage(self):

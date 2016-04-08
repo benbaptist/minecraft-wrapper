@@ -74,7 +74,7 @@ class Minecraft:
             try:
                 players[uuid] = json.loads(data, self._encoding)
             except Exception as e:
-                self.log.error("Failed to load player data '%s'" % puuid)
+                self.log.error("Failed to load player data '%s'", puuid)
                 self.log.getTraceback()
                 os.remove("wrapper-data/players/" + uuidf)
         return players
@@ -105,8 +105,7 @@ class Minecraft:
                     raise Exception("Invalid status effect given!")
         if int(effectConverted) > 24 or int(effectConverted) < 1:
             raise Exception("Invalid status effect given!")
-        self.console("effect %s %s %d %d" %
-                     (player, effectConverted, duration, amplifier))
+        self.console("effect %s %s %d %d" % (player, effectConverted, duration, amplifier))
 
     def summonEntity(self, entity, x=0, y=0, z=0, dataTag={}):
         """ Summons an entity at the specified coordinates with the specified data tag. """

@@ -43,7 +43,7 @@ class Backups:
         if time.time() - self.time > self.config["Backups"]["backup-interval"]:
             self.time = time.time()
             if not os.path.exists(self.config["Backups"]["backup-location"]):
-                self.log.warn("Backup location %s does not exist -- creating target location..." % self.config["Backups"]["backup-location"])
+                self.log.warn("Backup location %s does not exist -- creating target location...", self.config["Backups"]["backup-location"])
                 os.mkdir(self.config["Backups"]["backup-location"])
             if len(self.backups) == 0 and os.path.exists(self.config["Backups"]["backup-location"] + "/backups.json"):
                 with open(self.config["Backups"]["backup-location"] + "/backups.json", "r") as f:
@@ -102,7 +102,7 @@ class Backups:
                 if os.path.exists(file):
                     arguments.append(file)
                 else:
-                    self.log.warn("Backup file '%s' does not exist - canceling backup" % file)
+                    self.log.warn("Backup file '%s' does not exist - canceling backup", file)
                     self.wrapper.callEvent("wrapper.backupFailure", {"reasonCode": 3, "reasonText": "Backup file '%s' does not exist." % file})
                     return
             statusCode = os.system(" ".join(arguments))
@@ -122,7 +122,7 @@ class Backups:
                         os.remove('%s/%s' % (self.config["Backups"]["backup-location"], backup[1]))
                     except Exception as e:
                         print "Failed to delete backup (%s)" % e
-                    self.log.info("Deleting old backup: %s" % datetime.datetime.fromtimestamp(int(backup[0])).strftime('%Y-%m-%d_%H:%M:%S'))
+                    self.log.info("Deleting old backup: %s", datetime.datetime.fromtimestamp(int(backup[0])).strftime('%Y-%m-%d_%H:%M:%S'))
                     hink = self.backups[0][1][:]
                     del self.backups[0]
             with open(self.config["Backups"]["backup-location"] + "/backups.json", "w") as f:

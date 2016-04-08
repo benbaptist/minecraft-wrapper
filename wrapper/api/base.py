@@ -89,7 +89,7 @@ class API:
             commands = [command]
         for name in commands:
             if not self.internal:
-                self.wrapper.log.debug("[%s] Registered command '%s'" % (self.name, name))
+                self.wrapper.log.debug("[%s] Registered command '%s'", (self.name, name))
             if self.id not in self.wrapper.commands:
                 self.wrapper.commands[self.id] = {}
             self.wrapper.commands[self.id][name] = {"callback": callback, "permission": permission}
@@ -97,7 +97,7 @@ class API:
     def registerEvent(self, eventType, callback):
         """ Register an event and a callback. See [doc link needed here] for a list of events. callback(payload) when an event occurs, and the contents of payload varies between events."""
         if not self.internal:
-            self.wrapper.log.debug("[%s] Registered event '%s'" % (self.name, eventType))
+            self.wrapper.log.debug("[%s] Registered event '%s'", (self.name, eventType))
         if self.id not in self.wrapper.events:
             self.wrapper.events[self.id] = {}
         self.wrapper.events[self.id][eventType] = callback
@@ -107,7 +107,7 @@ class API:
         Note: You do not need to run this function unless you want certain permission nodes to be granted by default. 
         i.e. `essentials.list` should be on by default, so players can run /list without having any permissions."""
         if not self.internal:
-            self.wrapper.log.debug("[%s] Registered permission '%s' with default value: %s" % (self.name, permission, value))
+            self.wrapper.log.debug("[%s] Registered permission '%s' with default value: %s", (self.name, permission, value))
         if self.id not in self.wrapper.permission:
             self.wrapper.permission[self.id] = {}
         self.wrapper.permission[self.id][permission] = value
@@ -118,7 +118,7 @@ class API:
         [("/i <TileName>[:Data] [Count]", "Gives the player the requested item and puts it directly in their inventory.", "essentials.give"), ("/")]
         """
         if not self.internal:
-            self.wrapper.log.debug("[%s] Registered help group '%s' with %d commands" % (self.name, groupName, len(commands)))
+            self.wrapper.log.debug("[%s] Registered help group '%s' with %d commands", (self.name, groupName, len(commands)))
         if self.id not in self.wrapper.help:
             self.wrapper.help[self.id] = {}
         self.wrapper.help[self.id][groupName] = (summary, commands)

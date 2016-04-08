@@ -178,7 +178,7 @@ class Config:
             except Exception as e:
                 traceback.print_exc()
                 self.parser.add_section(section)
-                self.log.debug("Adding section [%s] to configuration" % section)
+                self.log.debug("Adding section [%s] to configuration", section)
                 self.config[section] = {}
                 self.exit = True
 
@@ -187,7 +187,7 @@ class Config:
                 if item not in self.config[section]:
                     self.config[section][item] = defaults[section][item]
                     self.parser.set(section, item, defaults[section][item])
-                    self.log.debug("Key %s in section %s not in wrapper.properties - adding" % (item, section))
+                    self.log.debug("Key %s in section %s not in wrapper.properties - adding", (item, section))
                     self.exit = True
                 else:
                     for key in keys:

@@ -119,7 +119,7 @@ class Wrapper:
             useruuid = self.formatUUID(r.json()["id"])
             correctcapname = r.json()["name"]
             if username != correctcapname:
-                self.log.warn("%s's name is not correctly capitalized (offline name warning!)" % correctcapname)
+                self.log.warn("%s's name is not correctly capitalized (offline name warning!)", correctcapname)
             nameisnow = self.lookupUsernamebyUUID(useruuid)
             if nameisnow:
                 return uuid.UUID(useruuid)
@@ -212,16 +212,16 @@ class Wrapper:
                     if "account.mojang.com" in rx[i]:
                         if rx[i]["account.mojang.com"] == "green":
                             self.log.error("Mojang accounts is green, but request failed - have you over-polled (large busy server) or supplied an incorrect UUID??")
-                            self.log.error("uuid: %s" % str(useruuid))
-                            self.log.debug("response: \n%s" % str(rx))
+                            self.log.error("uuid: %s", str(useruuid))
+                            self.log.debug("response: \n%s", str(rx))
                             return None
                         if rx[i]["account.mojang.com"] in ("yellow", "red"):
-                            self.log.error("Mojang accounts is experiencing issues (%s)." % rx[i]["account.mojang.com"])
+                            self.log.error("Mojang accounts is experiencing issues (%s).", rx[i]["account.mojang.com"])
                             return False
-                        self.log.error("Mojang Status found, but corrupted or in an unexpected format (status code %s)" % r.status_code)
+                        self.log.error("Mojang Status found, but corrupted or in an unexpected format (status code %s)", r.status_code)
                         return False
                     else:
-                        self.log.error("Mojang Status not found - no internet connection, perhaps? (status code %s)" % rx.status_code)
+                        self.log.error("Mojang Status not found - no internet connection, perhaps? (status code %s)", rx.status_code)
                         return self.usercache[useruuid]["name"]
             
 
@@ -274,7 +274,7 @@ class Wrapper:
             # proxy mode is on... poll mojang and wrapper cache
             search = self.lookupUUIDbyUsername(username)
             if not search:
-                self.log.warn("Server online but unable to getUUID (even by polling!) for username: %s - returned an Offline uuid..." % username)
+                self.log.warn("Server online but unable to getUUID (even by polling!) for username: %s - returned an Offline uuid...", username)
                 return self.UUIDFromName("OfflinePlayer:%s" % username)
             else:
                 return search
@@ -390,13 +390,13 @@ class Wrapper:
             version, build, repotype = update
             if repotype == "dev":
                 if auto and not self.config["General"]["auto-update-dev-build"]:
-                    self.log.info("New Wrapper.py development build #%d available for download! (currently on #%d)" % (build, globals.__build__))
+                    self.log.info("New Wrapper.py development build #%d available for download! (currently on #%d)", (build, globals.__build__))
                     self.log.info("Because you are running a development build, you must manually update Wrapper.py. To update Wrapper.py manually, please type /update-wrapper.")
                 else:
-                    self.log.info("New Wrapper.py development build #%d available! Updating... (currently on #%d)" % (build, globals.__build__))
+                    self.log.info("New Wrapper.py development build #%d available! Updating... (currently on #%d)", (build, globals.__build__))
                 self.performUpdate(version, build, repotype)
             else:
-                self.log.info("New Wrapper.py stable %s available! Updating... (currently on %s)" % \
+                self.log.info("New Wrapper.py stable %s available! Updating... (currently on %s)", \
                     (".".join([str(_) for _ in version]), globals.__version__))
                 self.performUpdate(version, build, repotype)
         else:
@@ -418,7 +418,7 @@ class Wrapper:
                 else:
                     return False
             else:
-                self.log.warn("Failed to check for updates - are you connected to the internet? (Status Code %d)" % r.status_code)
+                self.log.warn("Failed to check for updates - are you connected to the internet? (Status Code %d)", r.status_code)
                 
         else:
             r = requests.get("https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master/build/version.json")
@@ -432,7 +432,7 @@ class Wrapper:
                 else:
                     return False
             else:
-                self.log.warn("Failed to check for updates - are you connected to the internet? (Status Code %d)" % r.status_code)
+                self.log.warn("Failed to check for updates - are you connected to the internet? (Status Code %d)", r.status_code)
         return False
 
     def performUpdate(self, version, build, repotype):
@@ -448,14 +448,13 @@ class Wrapper:
                 self.log.info("Update file successfully verified. Installing...")
                 with open(sys.argv[0], "w") as f:
                     f.write(wrapperFile)
-                self.log.info("Wrapper.py %s (#%d) installed. Please reboot Wrapper.py." % (".".join([str(_) for _ in version]), build))
+                self.log.info("Wrapper.py %s (#%d) installed. Please reboot Wrapper.py.", (".".join([str(_) for _ in version]), build))
                 self.update = build
                 return True
             else:
                 return False
         else:
-            self.log.error("Failed to update due to an internal error (%d, %d)" % (wrapperHash.status_code, wrapperFile.status_code))
-            self.log.getTraceback()
+            self.log.error("Failed to update due to an internal error (%d, %d)", (wrapperHash.status_code, wrapperFile.status_code), exc_info=True)
             return False
 
     def timer(self):
@@ -510,12 +509,12 @@ class Wrapper:
 
                         version = plugin["version"]
 
-                        self.log.info("%s v%s - %s" % (name, ".".join([str(_) for _ in version]), summary))
+                        self.log.info("%s v%s - %s", (name, ".".join([str(_) for _ in version]), summary))
                     else:
-                        self.log.info("%s failed to load!" % plugin)
+                        self.log.info("%s failed to load!", plugin)
             elif command in ("mem", "memory"):
                 if self.server.getMemoryUsage():
-                    self.log.info("Server Memory Usage: %d bytes" % self.server.getMemoryUsage())
+                    self.log.info("Server Memory Usage: %d bytes", self.server.getMemoryUsage())
                 else:
                     self.log.error("Server not booted or another error occurred while getting memory usage!")
             elif command == "raw":
@@ -546,14 +545,14 @@ class Wrapper:
                 self.log.info("/freeze & /unfreeze - Temporarily locks the server up until /unfreeze is executed")
                 self.log.info("/mem - Get memory usage of the server")
                 self.log.info("/raw [command] - Send command to the Minecraft Server. Useful for Forge commands like `/fml confirm`.")
-                self.log.info("Wrapper.py Version %s" % self.getBuildString())
+                self.log.info("Wrapper.py Version %s", self.getBuildString())
             else:
-                self.log.error("Invalid command %s" % command)
+                self.log.error("Invalid command %s", command)
 
 if __name__ == "__main__":
     wrapper = Wrapper()
     log = wrapper.log
-    log.info("Wrapper.py started - Version %s" % wrapper.getBuildString())
+    log.info("Wrapper.py started - Version %s", wrapper.getBuildString())
 
     try:
         wrapper.start()
@@ -566,12 +565,10 @@ if __name__ == "__main__":
         wrapper.server.console("save-all")
         wrapper.server.stop("Wrapper.py received shutdown signal - bye", save=False)
     except Exception as e:
-        log.error("Wrapper.py crashed - stopping server to be safe (%s)" % e)
-        for line in traceback.format_exc().split("\n"):
-            log.error(line)
+        log.critical("Wrapper.py crashed - stopping server to be safe (%s)", e, exc_info=True)
         wrapper.halt = True
         wrapper.plugins.disablePlugins()
         try:
             wrapper.server.stop("Wrapper.py crashed - please contact the server host as soon as possible", save=False)
         except Exception as ex:
-            log.error("Failure to shut down server cleanly! Server could still be running, or it might rollback/corrupt! (%s)" % ex)
+            log.critical("Failure to shut down server cleanly! Server could still be running, or it might rollback/corrupt! (%s)", ex, exc_info=True)

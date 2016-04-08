@@ -45,8 +45,7 @@ class Proxy:
         try:
             self.pollServer()
         except Exception as e:
-            self.log.error("Proxy could not poll the Minecraft server - are you sure that the ports are configured properly? (%s)" % e)
-            self.log.getTraceback()
+            self.log.exception("Proxy could not poll the Minecraft server - are you sure that the ports are configured properly? (%s)", e)
 
         while not self.socket:
             try:
@@ -55,8 +54,7 @@ class Proxy:
                 self.socket.bind((self.wrapper.config["Proxy"]["proxy-bind"], self.wrapper.config["Proxy"]["proxy-port"]))
                 self.socket.listen(5)
             except Exception as e:
-                self.log.error("Proxy mode could not bind - retrying in five seconds (%s)" % e)
-                self.log.getTraceback()
+                self.log.exception("Proxy mode could not bind - retrying in five seconds (%s)", e)
                 self.socket = False
             time.sleep(5)
         while not self.wrapper.halt:
@@ -73,12 +71,11 @@ class Proxy:
                 self.removeStaleClients()
                 
             except Exception as e:  # Not quite sure what's going on
-                self.log.error("An error has occured in the proxy (%s)" % e)
-                self.log.error(traceback.format_exc())
+                self.log.exception("An error has occured in the proxy (%s)", e)
                 try:
                     client.disconnect(e)
                 except Exception as ex:
-                    self.log.error("Failed to disconnect client (%s)" % ex)
+                    self.log.exception("Failed to disconnect client (%s)", ex)
 
     def removeStaleClients(self):
         try:
@@ -147,9 +144,9 @@ class Proxy:
                     del self.storage.key("banned-ip")[str(ipaddress)]
                     return True
                 except Exception as e:
-                    self.log.warn("Failed to pardon %s (%s)" % (str(ipaddress), e))
+                    self.log.exception("Failed to pardon %s (%s)", (str(ipaddress), e))
                     return False
-        self.log.warn("Could not find %s to pardon them" % str(ipaddress))
+        self.log.warn("Could not find %s to pardon them", str(ipaddress))
         return False
 
     def isUUIDBanned(self, uuid):  # Check if the UUID of the user is banned
@@ -177,5 +174,5 @@ class Proxy:
             self.skinTextures[str(uuid)] = r.content.encode("base64")
             return self.skinTextures[uuid]
         else:
-            self.log.warn("Could not fetch skin texture! (status code %d)" % r.status_code)
+            self.log.warn("Could not fetch skin texture! (status code %d)", r.status_code)
             return False
