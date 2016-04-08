@@ -1,2 +1,4 @@
-build=111
-type='dev'
+# -*- coding: utf-8 -*-
+
+build = 111
+repotype = 'dev'

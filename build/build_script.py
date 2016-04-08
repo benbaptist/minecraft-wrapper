@@ -20,11 +20,11 @@ def build_wrapper(args):
   with open("build/version.json", "r") as f:
     version = json.loads(f.read())
     version["build"] += 1
-    version["type"] = args.branch
+    version["repotype"] = args.branch
     version["release_time"] = time.time()
 
   with open("globals.py", "w") as f:
-    f.write("build=%d\ntype='%s'" % (version["build"], args.branch))
+    f.write("build=%d\nrepotype='%s'" % (version["build"], args.branch))
 
   with open("build/version.json", "w") as f:
     f.write(json.dumps(version))
