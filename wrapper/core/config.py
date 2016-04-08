@@ -198,6 +198,13 @@ class Config:
         self.save()
         Config.debug = self.config["General"]["debug"]
         Config.trace = self.config["General"]["trace"]
+
+        if Config.debug:
+            self.log.info("**** Debugging is Enabled! ****")
+
+        if Config.trace:
+            self.log.info("**** Tracing is Enabled! ****")
+
         if self.exit:
             self.log.info("Updated wrapper.properties file - check and edit configuration if needed and start again.")
             sys.exit()

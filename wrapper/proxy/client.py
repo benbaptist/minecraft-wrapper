@@ -11,13 +11,13 @@ import uuid
 import shutil
 import os
 
-import encryption
+import utils.encryption as encryption
 import mcpacket
 
 from utils.helpers import args, argsAfter
 from server import Server
 from packet import Packet
-from config import Config
+from core.config import Config
 
 try:
     import requests

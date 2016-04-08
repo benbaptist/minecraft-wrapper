@@ -10,25 +10,25 @@ import threading
 import time
 import os
 
-import globals
+import core.globals as globals
 
 import proxy.base as proxy
 
 from management.web import Web as web
 from management.dashboard import Web as dashboard
 from utils.helpers import args, argsAfter
+from utils.log import Log
 
 from api.base import API
 
-from log import Log, PluginLog
-from config import Config
-from irc import IRC
-from mcserver import MCServer
-from scripts import Scripts
-from plugins import Plugins
-from commands import Commands
-from events import Events
-from storage import Storage
+from core.config import Config
+from core.irc import IRC
+from core.mcserver import MCServer
+from core.scripts import Scripts
+from core.plugins import Plugins
+from core.commands import Commands
+from core.events import Events
+from core.storage import Storage
 
 try:
     import readline

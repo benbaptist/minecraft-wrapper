@@ -12,7 +12,7 @@ import mcpacket
 from api.entity import Entity
 
 from packet import Packet
-from config import Config
+from core.config import Config
 
 UNIVERSAL_CONNECT = False # tells the client "same version as you" or does not disconnect dissimilar clients
 HIDDEN_OPS = ["SurestTexas00", "BenBaptist"]

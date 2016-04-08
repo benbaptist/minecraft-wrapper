@@ -3,11 +3,11 @@
 import json
 import time
 
-import exceptions
+import core.exceptions as exceptions
 
 from player import Player
 from minecraft import Minecraft
-from storage import Storage
+from core.storage import Storage
 
 """ api.py contains the majority of code for the plugin API. """
 

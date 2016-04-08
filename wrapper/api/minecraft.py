@@ -7,8 +7,8 @@ import os
 import uuid
 import sys
 
-from nbt import NBTFile
-from items import Blocks
+from core.nbt import NBTFile
+from core.items import Blocks
 
 class Minecraft:
     """ This class contains functions related to in-game features directly. These methods are located at self.api.minecraft. """

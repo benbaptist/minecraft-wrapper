@@ -1,6 +1,14 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
-import os, sys, time, json, hashlib, argparse, zipfile, subprocess
+import os
+import sys
+import time
+import json
+import hashlib
+import argparse
+import zipfile
+import subprocess
 
 parser = argparse.ArgumentParser(
   description='Build script for Wrapper.py!', 
@@ -23,7 +31,7 @@ def build_wrapper(args):
     version["__branch__"] = args.branch
     version["release_time"] = time.time()
 
-  with open("globals.py", "w") as f:
+  with open("core/globals.py", "w") as f:
     f.write("__build__=%d\n__branch__='%s'" % (version["build"], args.branch))
 
   with open("build/version.json", "w") as f:
@@ -53,9 +61,9 @@ def build_wrapper(args):
 
   if args.commit: # Mainly just for me (benbaptist), since most people will probably want to build locally without committing to anything
     subprocess.Popen("git add --update :/", shell=True).wait()
-    subprocess.Popen("git commit -m 'Build %s %d | %s'" % (args.branch, version["build"], args.message), shell=True).wait()
+    subprocess.Popen("git commit -m 'Build %s %d | %s'" % (args.branch, version["__build__"], args.message), shell=True).wait()
     subprocess.Popen("git push", shell=True).wait()
-  print "Built version %d (%s build)" % (version["build"], args.branch)
+  print "Built version %d (%s build)" % (version["__build__"], args.branch)
 
 try:    build_wrapper(args)
 except: print "\n{}: {}\n".format("Unexpected error", sys.exc_info()[1])

@@ -9,7 +9,7 @@ import api
 
 import proxy.mcpacket as mcpacket
 
-from storage import Storage
+from core.storage import Storage
 
 class Player:
     """

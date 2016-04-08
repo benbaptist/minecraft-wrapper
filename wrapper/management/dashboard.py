@@ -7,8 +7,8 @@ import random
 import traceback
 import datetime
 
-from storage import Storage
-from log import PluginLog
+from core.storage import Storage
+from utils.log import Log
 
 try:
     from flask import Flask, g, redirect, url_for, render_template, request, make_response, Response, Markup
@@ -22,7 +22,7 @@ class Web:
 
     def __init__(self, wrapper):
         self.wrapper = wrapper
-        self.log = PluginLog(self.wrapper.log, "Web")
+        self.log = Log("Web")
 
         self.app = Flask(__name__)
         self.app.config['SECRET_KEY'] = "".join([chr(random.randrange(48, 90)) for i in range(32)])  # LOL

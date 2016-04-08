@@ -13,8 +13,8 @@ import os
 
 from utils.helpers import args, argsAfter
 from api.base import API
-from log import PluginLog
-from storage import Storage
+from utils.log import Log
+from core.storage import Storage
 
 try:
     import pkg_resources
@@ -31,7 +31,7 @@ class Web:
     def __init__(self, wrapper):
         self.wrapper = wrapper
         self.api = API(wrapper, "Web", internal=True)
-        self.log = PluginLog(self.wrapper.log, "Web")
+        self.log = Log("Web")
         self.config = wrapper.config
         self.socket = False
         self.data = Storage("web", self.log)
@@ -214,7 +214,7 @@ class WebClient:
         self.socket.setblocking(30)
 
     def read(self, filename):
-        return pkg_resources.resource_stream(__name__, "html/%s" % filename).read()
+        return pkg_resources.resource_stream(__name__, "management/html/%s" % filename).read()
 
     def write(self, message):
         self.socket.send(message)

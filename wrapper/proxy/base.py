@@ -7,9 +7,9 @@ import traceback
 import json
 import uuid
 
-import encryption
+import utils.encryption as encryption
 
-from storage import Storage
+from core.storage import Storage
 from client import Client
 from packet import Packet
 

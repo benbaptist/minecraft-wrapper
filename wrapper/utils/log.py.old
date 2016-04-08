@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import unicode_literals
+
 import time
 import traceback
 import os
@@ -7,7 +9,9 @@ import gzip
 import shutil
 import threading
 
-from config import Config
+import termcolors
+
+from core.config import Config
 
 # This is where we have an opportunity to either replace or extend
 # this module with the native python logging library
@@ -82,24 +86,22 @@ class Log:
         self.prefix("INFO", string)
 
     def warn(self, string):
-        self.prefix("WARN", string)
+        warn_style = termcolors.make_style(fg='yellow', opts=('bold',))
+        self.prefix("WARN", warn_style(string))
 
     def error(self, string):
-        self.prefix("ERROR", string)
+        error_style = termcolors.make_style(fg='red', opts=('bold',))
+        self.prefix("ERROR", error_style(string))
 
     def debug(self, string):
         if Config.debug:
-            self.prefix("DEBUG", string)
+            debug_style = termcolors.make_style(fg='cyan')
+            self.prefix("DEBUG", debug_style(string))
 
     def trace(self, string):
         if Config.trace:
-            self.prefix("TRACE", string)
-
-    def getTraceback(self):
-        for line in traceback.format_exc().split("\n"):
-            if len(line.strip()) > 0:  # Remove empty lines
-                self.error(line)
-
+            trace_style  = termcolors.make_style(fg='magenta')
+            self.prefix("TRACE", trace_style(string))
 
 class PluginLog: # This could be a subclass of Log and would not require initialization with a Log
 
@@ -122,18 +124,22 @@ class PluginLog: # This could be a subclass of Log and would not require initial
         self.prefix("INFO", string)
 
     def warn(self, string):
-        self.prefix("WARN", string)
+        warn_style = termcolors.make_style(fg='yellow', opts=('bold',))
+        self.prefix("WARN", warn_style(string))
 
     def error(self, string):
-        self.prefix("ERROR", string)
+        error_style = termcolors.make_style(fg='red', opts=('bold',))
+        self.prefix("ERROR", error_style(string))
 
     def debug(self, string):
         if Config.debug:
-            self.prefix("DEBUG", string)
+            debug_style = termcolors.make_style(fg='cyan')
+            self.prefix("DEBUG", debug_style(string))
 
     def trace(self, string):
         if Config.trace:
-            self.prefix("TRACE", string)
+            trace_style  = termcolors.make_style(fg='magenta')
+            self.prefix("TRACE", trace_style(string))
 
     def getTraceback(self):
         for line in traceback.format_exc().split("\n"):
