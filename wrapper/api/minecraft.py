@@ -74,8 +74,7 @@ class Minecraft:
             try:
                 players[uuid] = json.loads(data, self._encoding)
             except Exception as e:
-                self.log.error("Failed to load player data '%s'", puuid)
-                self.log.getTraceback()
+                self.log.exception("Failed to load player data '%s'", puuid)
                 os.remove("wrapper-data/players/" + uuidf)
         return players
 

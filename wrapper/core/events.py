@@ -46,11 +46,11 @@ class Events:
                         if not result:
                             return result
                     except Exception as e:
-                        self.log.error("Plugin '%s' errored out when executing callback event '%s':", (pluginID, event))
+                        self.log.error("Plugin '%s' errored out when executing callback event '%s':", pluginID, event)
                         for line in traceback.format_exc().split("\n"):
                             self.log.error(line)
         except Exception as ex:
             pass
             # For now.
-            # self.log.error("A serious runtime error occurred - if you notice any strange behaviour, please restart immediately", exc_info=True)
+            # self.log.exception("A serious runtime error occurred - if you notice any strange behaviour, please restart immediately")
         return True

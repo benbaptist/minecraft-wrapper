@@ -29,6 +29,7 @@ from core.plugins import Plugins
 from core.commands import Commands
 from core.events import Events
 from core.storage import Storage
+from core.exceptions import UnsupportedOSException
 
 try:
     import readline
@@ -390,14 +391,14 @@ class Wrapper:
             version, build, repotype = update
             if repotype == "dev":
                 if auto and not self.config["General"]["auto-update-dev-build"]:
-                    self.log.info("New Wrapper.py development build #%d available for download! (currently on #%d)", (build, globals.__build__))
+                    self.log.info("New Wrapper.py development build #%d available for download! (currently on #%d)", build, globals.__build__)
                     self.log.info("Because you are running a development build, you must manually update Wrapper.py. To update Wrapper.py manually, please type /update-wrapper.")
                 else:
-                    self.log.info("New Wrapper.py development build #%d available! Updating... (currently on #%d)", (build, globals.__build__))
+                    self.log.info("New Wrapper.py development build #%d available! Updating... (currently on #%d)", build, globals.__build__)
                 self.performUpdate(version, build, repotype)
             else:
                 self.log.info("New Wrapper.py stable %s available! Updating... (currently on %s)", \
-                    (".".join([str(_) for _ in version]), globals.__version__))
+                    ".".join([str(_) for _ in version]), globals.__version__)
                 self.performUpdate(version, build, repotype)
         else:
             self.log.info("No new versions available.")
@@ -411,10 +412,10 @@ class Wrapper:
             if r.status_code == 200:
                 data = r.json()
                 if self.update:
-                    if self.update > data["build"]:
+                    if self.update > data["__build__"]:
                         return False
-                if data["build"] > globals.__build__ and data["repotype"] == "dev":
-                    return (data["version"], data["build"], data["repotype"])
+                if data["__build__"] > globals.__build__ and data["__branch__"] == "dev":
+                    return (data["__version__"], data["__build__"], data["__branch__"])
                 else:
                     return False
             else:
@@ -427,8 +428,8 @@ class Wrapper:
                 if self.update:
                     if self.update > data["build"]:
                         return False
-                if data["build"] > globals.__build__ and data["repotype"] == "stable":
-                    return (data["version"], data["build"], data["repotype"])
+                if data["__build__"] > globals.__build__ and data["__branch__"] == "stable":
+                    return (data["__version__"], data["__build__"], data["__branch__"])
                 else:
                     return False
             else:
@@ -448,13 +449,13 @@ class Wrapper:
                 self.log.info("Update file successfully verified. Installing...")
                 with open(sys.argv[0], "w") as f:
                     f.write(wrapperFile)
-                self.log.info("Wrapper.py %s (#%d) installed. Please reboot Wrapper.py.", (".".join([str(_) for _ in version]), build))
+                self.log.info("Wrapper.py %s (#%d) installed. Please reboot Wrapper.py.", ".".join([str(_) for _ in version]), build)
                 self.update = build
                 return True
             else:
                 return False
         else:
-            self.log.error("Failed to update due to an internal error (%d, %d)", (wrapperHash.status_code, wrapperFile.status_code), exc_info=True)
+            self.log.error("Failed to update due to an internal error (%d, %d)", wrapperHash.status_code, wrapperFile.status_code, exc_info=True)
             return False
 
     def timer(self):
@@ -509,14 +510,16 @@ class Wrapper:
 
                         version = plugin["version"]
 
-                        self.log.info("%s v%s - %s", (name, ".".join([str(_) for _ in version]), summary))
+                        self.log.info("%s v%s - %s", name, ".".join([str(_) for _ in version]), summary)
                     else:
                         self.log.info("%s failed to load!", plugin)
             elif command in ("mem", "memory"):
-                if self.server.getMemoryUsage():
+                try:
                     self.log.info("Server Memory Usage: %d bytes", self.server.getMemoryUsage())
-                else:
-                    self.log.error("Server not booted or another error occurred while getting memory usage!")
+                except UnsupportedOSException as e:
+                    self.log.error(e)
+                except Exception as ex:
+                    self.log.exception("Something went wrong when trying to fetch memory usage! (%s)", ex)
             elif command == "raw":
                 if self.server.state in (1, 2, 3):
                     if len(argsAfter(cinput[1:].split(" "), 1)) > 0:
@@ -527,12 +530,22 @@ class Wrapper:
                     self.log.error("Server is not started. Please run `/start` to boot it up.")
             elif command == "freeze":
                 if not self.server.state == 0:
-                    self.server.freeze()
+                    try:
+                        self.server.freeze()
+                    except UnsupportedOSException as e:
+                        self.log.error(e)
+                    except Exception as ex:
+                        self.log.exception("Something went wrong when trying to freeze the server! (%s)", ex)
                 else:
                     self.log.error("Server is not started. Please run `/start` to boot it up.")
             elif command == "unfreeze":
                 if not self.server.state == 0:
-                    self.server.unfreeze()
+                    try:
+                        self.server.unfreeze()
+                    except UnsupportedOSException as e:
+                        self.log.error(e)
+                    except Exception as ex:
+                        self.log.exception("Something went wrong when trying to unfreeze the server! (%s)", ex)
                 else:
                     self.log.error("Server is not started. Please run `/start` to boot it up.")
             elif command == "help":
@@ -542,8 +555,8 @@ class Wrapper:
                 self.log.info("/start & /stop - Start and stop the server without auto-restarting respectively without shutting down Wrapper.py")
                 self.log.info("/restart - Restarts the server, obviously")
                 self.log.info("/halt - Shutdown Wrapper.py completely")
-                self.log.info("/freeze & /unfreeze - Temporarily locks the server up until /unfreeze is executed")
-                self.log.info("/mem - Get memory usage of the server")
+                self.log.info("/freeze & /unfreeze - Temporarily locks the server up until /unfreeze is executed (Only works on *NIX servers)")
+                self.log.info("/mem - Get memory usage of the server (Only works on *NIX servers)")
                 self.log.info("/raw [command] - Send command to the Minecraft Server. Useful for Forge commands like `/fml confirm`.")
                 self.log.info("Wrapper.py Version %s", self.getBuildString())
             else:

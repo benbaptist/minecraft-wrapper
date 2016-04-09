@@ -254,7 +254,7 @@ class Client:
                     self.serverUUID = self.wrapper.UUIDFromName("OfflinePlayer:%s" % self.username)
                     self.send(0x02, "string|string", (str(self.uuid), self.username))
                     self.state = 3
-                    self.log.info("%s logged in (IP: %s)", (self.username, self.addr[0]))
+                    self.log.info("%s logged in (IP: %s)", self.username, self.addr[0])
                 self.log.trace("(PROXY CLIENT) -> Parsed 0x00 packet with client state 2:\n%s", data)
                 return False
 
@@ -301,7 +301,7 @@ class Client:
                     newUsername = self.wrapper.lookupUsernamebyUUID(str(self.uuid))
                     if newUsername:
                         if newUsername != self.username:
-                            self.log.info("%s logged in with new name, falling back to %s", (self.username, newUsername))
+                            self.log.info("%s logged in with new name, falling back to %s", self.username, newUsername)
                             self.username = newUsername
                 else:
                     self.uuid = uuid.uuid3(uuid.NAMESPACE_OID, "OfflinePlayer: %s" % self.username)
@@ -349,7 +349,7 @@ class Client:
 
                 self.connect()
 
-                self.log.info("%s logged in (UUID: %s | IP: %s)", (self.username, str(self.uuid), self.addr[0]))
+                self.log.info("%s logged in (UUID: %s | IP: %s)", self.username, str(self.uuid), self.addr[0])
                 # lookup in cache and update IP
                 # self.wrapper.setUUID(self.uuid, self.username)
                 return False

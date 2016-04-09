@@ -1,11 +1,23 @@
 # -*- coding: utf-8 -*-
 
-# We may want to extend the use of custom exceptions at a later date so we can better handle and understand
-# exceptions thrown within wrapper
+import sys
 
-class NonExistentPlugin(Exception):
-    pass
+""" 
+Custom Wrapper Exception Classes
+"""
 
-class MalformedFileError(Exception):
-    """Exception raised on parse error."""
-    pass
+class WrapperException(Exception):
+  """ Base Wrapper Exception Class """
+  pass
+
+class UnsupportedOSException(WrapperException):
+  """ Exception raised when a command is not supported by the OS """
+  pass
+
+class NonExistentPlugin(WrapperException):
+  """ Exception raised when a plugin does not exist """
+  pass
+
+class MalformedFileError(WrapperException):
+  """ Exception raised on parse error """
+  pass

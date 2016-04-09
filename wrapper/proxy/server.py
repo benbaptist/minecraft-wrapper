@@ -69,8 +69,8 @@ class Server:
             try:
                 usernameofplayer = str(self.client.username) # Why is this being error handled?
             except Exception as e:
-                self.log.exception("Something weird happened (%s, %s)", (e, usernameofplayer))
-            self.log.debug("Last packet IDs (Server -> Client) of player %s before disconnection: \n%s", (usernameofplayer, str(self.lastPacketIDs)))
+                self.log.exception("Something weird happened (%s, %s)", e, usernameofplayer)
+            self.log.debug("Last packet IDs (Server -> Client) of player %s before disconnection: \n%s", usernameofplayer, str(self.lastPacketIDs))
         self.abort = True
         self.packet = None
         try:
@@ -100,7 +100,7 @@ class Server:
                 if client.server.eid == eid:
                     return self.getPlayerContext(client.username)
             except Exception as e:
-                self.log.exception("Failed to set client.server.eid! serverEid: %s, Eid: %s", (str(client.server.eid), str(eid)))
+                self.log.exception("Failed to set client.server.eid! serverEid: %s, Eid: %s", str(client.server.eid), str(eid))
         return False
 
     def getPlayerContext(self, username):
@@ -114,9 +114,8 @@ class Server:
             self.packet.flush()
         # try:
         #   self.packet.flush()
-        # except:
-        #   print "Error while flushing, stopping"
-        #   print traceback.format_exc()
+        # except Exception as e:
+        #   self.exception("Error while flushing, stopping")
         #   self.close()
         #   break
             time.sleep(0.03)

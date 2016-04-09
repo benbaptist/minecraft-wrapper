@@ -36,7 +36,7 @@ class Commands:
 
     def playerCommand(self, payload):
         player = payload["player"]
-        self.log.info("%s executed: /%s %s", (str(payload["player"]), payload["command"], " ".join(payload["args"])))
+        self.log.info("%s executed: /%s %s", str(payload["player"]), payload["command"], " ".join(payload["args"]))
         for pluginID in self.commands:
             if pluginID == "Wrapper.py":
                 try:
@@ -60,7 +60,7 @@ class Commands:
                         player.message({"translate": "commands.generic.permission", "color": "red"})
                     return False
                 except Exception as e:
-                    self.log.error("Plugin '%s' errored out when executing command: '<%s> /%s':", (pluginID, payload["player"], command))
+                    self.log.error("Plugin '%s' errored out when executing command: '<%s> /%s':", pluginID, payload["player"], command)
                     for line in traceback.format_exc().split("\n"):
                         self.log.error(line)
                     payload["player"].message({"text": "An internal error occurred on the server side while trying to execute this command. Apologies.", "color": "red"})
@@ -166,8 +166,8 @@ class Commands:
                     player.message({"text": "Plugins reloaded.", "color": "green"})
                     if self.wrapper.server.getServerType() != "vanilla":
                         player.message({"text": "Note: If you meant to reload the server's plugins and not Wrapper.py's plugins, run `/reload server`.", "color": "gold"})
-                except:
-                    self.log.error("Failure to reload plugins:", exc_info=True)
+                except Exception as e:
+                    self.log.exception("Failure to reload plugins:")
                     player.message({"text": "An error occurred while reloading plugins. Please check the console immediately for a traceback.", "color": "red"})
                 return False
 

@@ -142,7 +142,7 @@ class Plugins:
                 elif i[-3:] == ".py":
                     self.loadPlugin(i)
             except Exception as  e:
-                self.log.exception("Failed to import plugin '%s' (%s)", (i, e))
+                self.log.exception("Failed to import plugin '%s' (%s)", i, e)
                 self.plugins[i] = {"name": i, "good": False}
         self.wrapper.events.callEvent("helloworld.event", {"testValue": True})
 
@@ -157,7 +157,7 @@ class Plugins:
             try:
                 self.unloadPlugin(i)
             except Exception as  e:
-                self.log.exception("Failed to unload plugin '%s' (%s)", (i, e))
+                self.log.exception("Failed to unload plugin '%s' (%s)", i, e)
                 try:
                     reload(self.plugins[plugin]["module"])
                 except Exception as  ex:

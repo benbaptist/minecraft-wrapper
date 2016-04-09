@@ -58,8 +58,7 @@ class IRC:
                 t.start()
                 self.handle()
             except Exception as e:
-                for line in traceback.format_exc().split("\n"):
-                    self.log.error(line)
+                self.log.exception(e)
                 self.disconnect("Error in Wrapper.py - restarting")
             self.log.info("Disconnected from IRC")
             time.sleep(5)
@@ -230,12 +229,12 @@ class IRC:
         if args(self.line.split(" "), 1) == "JOIN":
             nick = args(self.line.split(" "), 0)[1:self.args(0).find("!")]
             channel = args(self.line.split(" "), 2)[1:][:-1]
-            self.log.info("%s joined %s", (nick, channel))
+            self.log.info("%s joined %s", nick, channel)
             self.wrapper.callEvent("irc.join", {"nick": nick, "channel": channel})
         if args(self.line.split(" "), 1) == "PART":
             nick = args(self.line.split(" "), 0)[1:args(self.line.split(" "), 0).find("!")]
             channel = args(self.line.split(" "), 2)
-            self.log.info("%s parted %s", (nick, channel))
+            self.log.info("%s parted %s", nick, channel)
             self.wrapper.callEvent("irc.part", {"nick": nick, "channel": channel})
         if args(self.line.split(" "), 1) == "MODE":
             try:
@@ -276,15 +275,15 @@ class IRC:
                     message = message.decode("utf-8", "ignore")
                     if args(message.split(" "), 0) == "\x01ACTION":
                         self.wrapper.callEvent("irc.action", {"nick": nick, "channel": channel, "action": argsAfter(message.split(" "), 1)[:-1]})
-                        self.log.info("[%s] * %s %s", (channel, nick, argsAfter(message.split(" "), 1)[:-1]))
+                        self.log.info("[%s] * %s %s", channel, nick, argsAfter(message.split(" "), 1)[:-1])
                     else:
                         self.wrapper.callEvent("irc.message", {"nick": nick, "channel": channel, "message": message})
-                        self.log.info("[%s] <%s> %s", (channel, nick, message))
+                        self.log.info("[%s] <%s> %s", channel, nick, message)
             elif self.config["IRC"]["control-from-irc"]:
-                self.log.info("[PRIVATE] (%s) %s", (nick, message))
+                self.log.info("[PRIVATE] (%s) %s", nick, message)
 
                 def msg(string):
-                    self.log.info("[PRIVATE] (%s) %s", (self.config["IRC"]["nick"], string))
+                    self.log.info("[PRIVATE] (%s) %s", self.config["IRC"]["nick"], string)
                     self.send("PRIVMSG %s :%s" % (nick, string))
                 if self.config["IRC"]["control-irc-pass"] == "password":
                     msg("Please change your password from 'password' in wrapper.properties. I will not allow you to use that password. It's an awful password. Please change it.")
