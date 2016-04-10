@@ -3,29 +3,33 @@
 import sys
 import json
 import signal
-import globals
-import storage
 import hashlib
 import uuid
-import dashboard
-import web
 import traceback
 import threading
 import time
 import os
 
+import core.globals as globals
+
 import proxy.base as proxy
 
-from log import Log, PluginLog
-from config import Config
-from irc import IRC
-from mcserver import MCServer
-from scripts import Scripts
+from management.web import Web as web
+from management.dashboard import Web as dashboard
+from utils.helpers import args, argsAfter
+from utils.log import Log
+
 from api.base import API
-from plugins import Plugins
-from commands import Commands
-from events import Events
-from helpers import args, argsAfter
+
+from core.config import Config
+from core.irc import IRC
+from core.mcserver import MCServer
+from core.scripts import Scripts
+from core.plugins import Plugins
+from core.commands import Commands
+from core.events import Events
+from core.storage import Storage
+from core.exceptions import UnsupportedOSException
 
 try:
     import readline
@@ -49,9 +53,9 @@ class Wrapper:
         self.proxy = False
         self.halt = False
         self.update = False
-        self.storage = storage.Storage("main", self.log)
-        self.permissions = storage.Storage("permissions", self.log)
-        self.usercache = storage.Storage("usercache", self.log)
+        self.storage = Storage("main", self.log)
+        self.permissions = Storage("permissions", self.log)
+        self.usercache = Storage("usercache", self.log)
 
         self.plugins = Plugins(self)
         self.commands = Commands(self)
@@ -116,7 +120,7 @@ class Wrapper:
             useruuid = self.formatUUID(r.json()["id"])
             correctcapname = r.json()["name"]
             if username != correctcapname:
-                self.log.warn("%s's name is not correctly capitalized (offline name warning!)" % correctcapname)
+                self.log.warn("%s's name is not correctly capitalized (offline name warning!)", correctcapname)
             nameisnow = self.lookupUsernamebyUUID(useruuid)
             if nameisnow:
                 return uuid.UUID(useruuid)
@@ -209,16 +213,16 @@ class Wrapper:
                     if "account.mojang.com" in rx[i]:
                         if rx[i]["account.mojang.com"] == "green":
                             self.log.error("Mojang accounts is green, but request failed - have you over-polled (large busy server) or supplied an incorrect UUID??")
-                            self.log.error("uuid: %s" % str(useruuid))
-                            self.log.debug("response: \n%s" % str(rx))
+                            self.log.error("uuid: %s", str(useruuid))
+                            self.log.debug("response: \n%s", str(rx))
                             return None
                         if rx[i]["account.mojang.com"] in ("yellow", "red"):
-                            self.log.error("Mojang accounts is experiencing issues (%s)." % rx[i]["account.mojang.com"])
+                            self.log.error("Mojang accounts is experiencing issues (%s).", rx[i]["account.mojang.com"])
                             return False
-                        self.log.error("Mojang Status found, but corrupted or in an unexpected format (status code %s)" % r.status_code)
+                        self.log.error("Mojang Status found, but corrupted or in an unexpected format (status code %s)", r.status_code)
                         return False
                     else:
-                        self.log.error("Mojang Status not found - no internet connection, perhaps? (status code %s)" % rx.status_code)
+                        self.log.error("Mojang Status not found - no internet connection, perhaps? (status code %s)", rx.status_code)
                         return self.usercache[useruuid]["name"]
             
 
@@ -271,7 +275,7 @@ class Wrapper:
             # proxy mode is on... poll mojang and wrapper cache
             search = self.lookupUUIDbyUsername(username)
             if not search:
-                self.log.warn("Server online but unable to getUUID (even by polling!) for username: %s - returned an Offline uuid..." % username)
+                self.log.warn("Server online but unable to getUUID (even by polling!) for username: %s - returned an Offline uuid...", username)
                 return self.UUIDFromName("OfflinePlayer:%s" % username)
             else:
                 return search
@@ -299,15 +303,14 @@ class Wrapper:
         self.plugins.loadPlugins()
 
         if self.config["IRC"]["irc-enabled"]:
-            self.irc = IRC(self.server, self.config, self.log, self, self.config["IRC"]["server"],
-                            self.config["IRC"]["port"], self.config["IRC"]["nick"], self.config["IRC"]["channels"])
+            self.irc = IRC(self.server, self.config, self.log, self, self.config["IRC"]["server"], 
+                self.config["IRC"]["port"], self.config["IRC"]["nick"], self.config["IRC"]["channels"])
             t = threading.Thread(target=self.irc.init, args=())
             t.daemon = True
             t.start()
         if self.config["Web"]["web-enabled"]:
             if web.IMPORT_SUCCESS:
                 self.web = web.Web(self)
-                # self.web = dashboard.Web(self)
                 t = threading.Thread(target=self.web.wrap, args=())
                 t.daemon = True
                 t.start()
@@ -368,10 +371,10 @@ class Wrapper:
         os.system(" ".join(sys.argv) + "&")
 
     def getBuildString(self):
-        if globals.repotype == "dev":
-            return "%s (development build #%d)" % (Config.version, globals.build)
+        if globals.__branch__ == "dev":
+            return "%s (development build #%d)" % (globals.__version__, globals.__build__)
         else:
-            return "%s (stable)" % Config.version
+            return "%s (stable)" % globals.__version__
 
     def checkForUpdates(self):
         if not IMPORT_REQUESTS:
@@ -388,14 +391,14 @@ class Wrapper:
             version, build, repotype = update
             if repotype == "dev":
                 if auto and not self.config["General"]["auto-update-dev-build"]:
-                    self.log.info("New Wrapper.py development build #%d available for download! (currently on #%d)" % (build, globals.build))
+                    self.log.info("New Wrapper.py development build #%d available for download! (currently on #%d)", build, globals.__build__)
                     self.log.info("Because you are running a development build, you must manually update Wrapper.py. To update Wrapper.py manually, please type /update-wrapper.")
                 else:
-                    self.log.info("New Wrapper.py development build #%d available! Updating... (currently on #%d)" % (build, globals.build))
+                    self.log.info("New Wrapper.py development build #%d available! Updating... (currently on #%d)", build, globals.__build__)
                 self.performUpdate(version, build, repotype)
             else:
-                self.log.info("New Wrapper.py stable %s available! Updating... (currently on %s)" % (
-                    ".".join([str(_) for _ in version]), Config.version))
+                self.log.info("New Wrapper.py stable %s available! Updating... (currently on %s)", \
+                    ".".join([str(_) for _ in version]), globals.__version__)
                 self.performUpdate(version, build, repotype)
         else:
             self.log.info("No new versions available.")
@@ -403,20 +406,20 @@ class Wrapper:
 
     def checkForNewUpdate(self, repotype=None):
         if repotype is None:
-            repotype = globals.repotype
+            repotype = globals.__branch__
         if repotype == "dev":
             r = requests.get("https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/build/version.json")
             if r.status_code == 200:
                 data = r.json()
                 if self.update:
-                    if self.update > data["build"]:
+                    if self.update > data["__build__"]:
                         return False
-                if data["build"] > globals.build and data["repotype"] == "dev":
-                    return (data["version"], data["build"], data["repotype"])
+                if data["__build__"] > globals.__build__ and data["__branch__"] == "dev":
+                    return (data["__version__"], data["__build__"], data["__branch__"])
                 else:
                     return False
             else:
-                self.log.warn("Failed to check for updates - are you connected to the internet? (Status Code %d)" % r.status_code)
+                self.log.warn("Failed to check for updates - are you connected to the internet? (Status Code %d)", r.status_code)
                 
         else:
             r = requests.get("https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master/build/version.json")
@@ -425,12 +428,12 @@ class Wrapper:
                 if self.update:
                     if self.update > data["build"]:
                         return False
-                if data["build"] > globals.build and data["repotype"] == "stable":
-                    return (data["version"], data["build"], data["repotype"])
+                if data["__build__"] > globals.__build__ and data["__branch__"] == "stable":
+                    return (data["__version__"], data["__build__"], data["__branch__"])
                 else:
                     return False
             else:
-                self.log.warn("Failed to check for updates - are you connected to the internet? (Status Code %d)" % r.status_code)
+                self.log.warn("Failed to check for updates - are you connected to the internet? (Status Code %d)", r.status_code)
         return False
 
     def performUpdate(self, version, build, repotype):
@@ -446,14 +449,13 @@ class Wrapper:
                 self.log.info("Update file successfully verified. Installing...")
                 with open(sys.argv[0], "w") as f:
                     f.write(wrapperFile)
-                self.log.info("Wrapper.py %s (#%d) installed. Please reboot Wrapper.py." % (".".join([str(_) for _ in version]), build))
+                self.log.info("Wrapper.py %s (#%d) installed. Please reboot Wrapper.py.", ".".join([str(_) for _ in version]), build)
                 self.update = build
                 return True
             else:
                 return False
         else:
-            self.log.error("Failed to update due to an internal error (%d, %d)" % (wrapperHash.status_code, wrapperFile.status_code))
-            self.log.getTraceback()
+            self.log.error("Failed to update due to an internal error (%d, %d)", wrapperHash.status_code, wrapperFile.status_code, exc_info=True)
             return False
 
     def timer(self):
@@ -508,14 +510,16 @@ class Wrapper:
 
                         version = plugin["version"]
 
-                        self.log.info("%s v%s - %s" % (name, ".".join([str(_) for _ in version]), summary))
+                        self.log.info("%s v%s - %s", name, ".".join([str(_) for _ in version]), summary)
                     else:
-                        self.log.info("%s failed to load!" % plugin)
+                        self.log.info("%s failed to load!", plugin)
             elif command in ("mem", "memory"):
-                if self.server.getMemoryUsage():
-                    self.log.info("Server Memory Usage: %d bytes" % self.server.getMemoryUsage())
-                else:
-                    self.log.error("Server not booted or another error occurred while getting memory usage!")
+                try:
+                    self.log.info("Server Memory Usage: %d bytes", self.server.getMemoryUsage())
+                except UnsupportedOSException as e:
+                    self.log.error(e)
+                except Exception as ex:
+                    self.log.exception("Something went wrong when trying to fetch memory usage! (%s)", ex)
             elif command == "raw":
                 if self.server.state in (1, 2, 3):
                     if len(argsAfter(cinput[1:].split(" "), 1)) > 0:
@@ -526,12 +530,22 @@ class Wrapper:
                     self.log.error("Server is not started. Please run `/start` to boot it up.")
             elif command == "freeze":
                 if not self.server.state == 0:
-                    self.server.freeze()
+                    try:
+                        self.server.freeze()
+                    except UnsupportedOSException as e:
+                        self.log.error(e)
+                    except Exception as ex:
+                        self.log.exception("Something went wrong when trying to freeze the server! (%s)", ex)
                 else:
                     self.log.error("Server is not started. Please run `/start` to boot it up.")
             elif command == "unfreeze":
                 if not self.server.state == 0:
-                    self.server.unfreeze()
+                    try:
+                        self.server.unfreeze()
+                    except UnsupportedOSException as e:
+                        self.log.error(e)
+                    except Exception as ex:
+                        self.log.exception("Something went wrong when trying to unfreeze the server! (%s)", ex)
                 else:
                     self.log.error("Server is not started. Please run `/start` to boot it up.")
             elif command == "help":
@@ -541,17 +555,17 @@ class Wrapper:
                 self.log.info("/start & /stop - Start and stop the server without auto-restarting respectively without shutting down Wrapper.py")
                 self.log.info("/restart - Restarts the server, obviously")
                 self.log.info("/halt - Shutdown Wrapper.py completely")
-                self.log.info("/freeze & /unfreeze - Temporarily locks the server up until /unfreeze is executed")
-                self.log.info("/mem - Get memory usage of the server")
+                self.log.info("/freeze & /unfreeze - Temporarily locks the server up until /unfreeze is executed (Only works on *NIX servers)")
+                self.log.info("/mem - Get memory usage of the server (Only works on *NIX servers)")
                 self.log.info("/raw [command] - Send command to the Minecraft Server. Useful for Forge commands like `/fml confirm`.")
-                self.log.info("Wrapper.py Version %s" % self.getBuildString())
+                self.log.info("Wrapper.py Version %s", self.getBuildString())
             else:
-                self.log.error("Invalid command %s" % command)
+                self.log.error("Invalid command %s", command)
 
 if __name__ == "__main__":
     wrapper = Wrapper()
     log = wrapper.log
-    log.info("Wrapper.py started - Version %s" % wrapper.getBuildString())
+    log.info("Wrapper.py started - Version %s", wrapper.getBuildString())
 
     try:
         wrapper.start()
@@ -564,12 +578,10 @@ if __name__ == "__main__":
         wrapper.server.console("save-all")
         wrapper.server.stop("Wrapper.py received shutdown signal - bye", save=False)
     except Exception as e:
-        log.error("Wrapper.py crashed - stopping server to be safe (%s)" % e)
-        for line in traceback.format_exc().split("\n"):
-            log.error(line)
+        log.critical("Wrapper.py crashed - stopping server to be safe (%s)", e, exc_info=True)
         wrapper.halt = True
         wrapper.plugins.disablePlugins()
         try:
             wrapper.server.stop("Wrapper.py crashed - please contact the server host as soon as possible", save=False)
         except Exception as ex:
-            log.error("Failure to shut down server cleanly! Server could still be running, or it might rollback/corrupt! (%s)" % ex)
+            log.critical("Failure to shut down server cleanly! Server could still be running, or it might rollback/corrupt! (%s)", ex, exc_info=True)

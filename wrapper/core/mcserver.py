@@ -13,17 +13,19 @@ import signal
 import traceback
 import StringIO
 import ConfigParser
-import backups
 import sys
 import codecs
 import ctypes
 import platform
 import ast
 
+from utils.helpers import args, argsAfter
 from api.base import API
 from api.player import Player
 from api.world import World
-from helpers import args, argsAfter
+
+from backups import Backups
+from exceptions import UnsupportedOSException
 
 try:
     import resource
@@ -39,7 +41,7 @@ class MCServer:
         self.wrapper = wrapper
         self.args = args
         self.api = API(wrapper, "Server", internal=True)
-        self.backups = backups.Backups(wrapper)
+        self.backups = Backups(wrapper)
 
         if "serverState" not in self.wrapper.storage:
             self.wrapper.storage["serverState"] = True
@@ -78,7 +80,9 @@ class MCServer:
         self.api.registerEvent("timer.second", self.onTick)
 
     def init(self):
-        """ Start up the listen threads for reading server console output """
+        """
+        Start up the listen threads for reading server console output
+        """
         captureThread = threading.Thread(target=self.__stdout__, args=())
         captureThread.daemon = True
         captureThread.start()
@@ -87,22 +91,28 @@ class MCServer:
         captureThread.start()
 
     def start(self, save=True):
-        """ Start the Minecraft server """
+        """
+        Start the Minecraft server
+        """
         self.boot = True
         if save:
             self.wrapper.storage["serverState"] = True
 
     def restart(self, reason="Restarting Server"):
-        """ Restart the Minecraft server, and kick people with the specified reason """
-        self.log.info("Restarting Minecraft server with reason: %s" % reason)
+        """
+        Restart the Minecraft server, and kick people with the specified reason
+        """
+        self.log.info("Restarting Minecraft server with reason: %s", reason)
         self.changeState(3, reason)
         for player in self.players:
             self.console("kick %s %s" % (player, reason))
         self.console("stop")
 
     def stop(self, reason="Stopping Server", save=True):
-        """ Stop the Minecraft server, prevent it from auto-restarting and kick people with the specified reason """
-        self.log.info("Stopping Minecraft server with reason: %s" % reason)
+        """
+        Stop the Minecraft server, prevent it from auto-restarting and kick people with the specified reason
+        """
+        self.log.info("Stopping Minecraft server with reason: %s", reason)
         self.changeState(3, reason)
         self.boot = False
         if save:
@@ -112,32 +122,47 @@ class MCServer:
         self.console("stop")
 
     def kill(self, reason="Killing Server"):
-        """ Forcefully kill the server. It will auto-restart if set in the configuration file """
-        self.log.info("Killing Minecraft server with reason: %s" % reason)
+        """ 
+        Forcefully kill the server. It will auto-restart if set in the configuration file
+        """
+        self.log.info("Killing Minecraft server with reason: %s", reason)
         self.changeState(0, reason)
         self.proc.kill()
 
     def freeze(self, reason="Server is now frozen. You may disconnect momentarily."):
-        """ Freeze the server with `kill -STOP`. Can be used to stop the server in an emergency without shutting it down, so it doesn't write corrupted data - e.g. if the disk is full, you can freeze the server, free up some disk space, and then unfreeze
-        'reason' argument is printed in the chat for all currently-connected players, unless you specify None. """
-        if reason:
-            self.log.info("Freezing server with reason: %s" % reason)
+        """ 
+        Freeze the server with `kill -STOP`. Can be used to stop the server in an emergency without shutting it down, 
+        so it doesn't write corrupted data - e.g. if the disk is full, you can freeze the server, free up some disk space, and then unfreeze
+        'reason' argument is printed in the chat for all currently-connected players, unless you specify None.
+        This command currently only works for *NIX based systems
+        """
+        if os.name == "posix":
+            self.log.info("Freezing server with reason: %s", reason)
             self.broadcast("&c%s" % reason)
             time.sleep(0.5)
+            self.changeState(5)
+            os.system("kill -STOP %d" % self.proc.pid)
         else:
-            self.log.info("Freezing server...")
-        self.changeState(5)
-        os.system("kill -STOP %d" % self.proc.pid)
+            raise UnsupportedOSException("Your current OS (%s) does not support this command at this time." % os.name)
 
     def unfreeze(self):
-        """ Unfreeze the server with `kill -CONT`. Counterpart to .freeze(reason) """
-        self.log.info("Unfreezing server...")
-        self.broadcast("&aServer unfrozen.")
-        self.changeState(2)
-        os.system("kill -CONT %d" % self.proc.pid)
+        """
+        Unfreeze the server with `kill -CONT`. Counterpart to .freeze(reason)
+        This command currently only works for *NIX based systems
+        """
+        if os.name == "posix":
+            self.log.info("Unfreezing server...")
+            self.broadcast("&aServer unfrozen.")
+            self.changeState(2)
+            os.system("kill -CONT %d" % self.proc.pid)
+        else:
+            raise UnsupportedOSException("Your current OS (%s) does not support this command at this time." % os.name)
 
     def broadcast(self, message=""):
-        """ Broadcasts the specified message to all clients connected. message can be a JSON chat object, or a string with formatting codes using the & as a prefix """
+        """
+        Broadcasts the specified message to all clients connected. message can be a JSON chat object, 
+        or a string with formatting codes using the & as a prefix 
+        """
         if isinstance(message, dict):
             if self.config["General"]["pre-1.7-mode"]:
                 self.console("say %s" % self.chatToColorCodes(message))
@@ -145,8 +170,7 @@ class MCServer:
                 self.console("tellraw @a %s" % json.dumps(message))
         else:
             if self.config["General"]["pre-1.7-mode"]:
-                self.console("say %s" % self.chatToColorCodes(
-                    json.loads(self.processColorCodes(message))))
+                self.console("say %s" % self.chatToColorCodes(json.loads(self.processColorCodes(message))))
             else:
                 self.console("tellraw @a %s" % self.processColorCodes(message))
 
@@ -175,7 +199,9 @@ class MCServer:
         return total.encode("utf8")
 
     def processColorCodes(self, message):
-        """ Used internally to process old-style color-codes with the & symbol, and returns a JSON chat object. """
+        """
+        Used internally to process old-style color-codes with the & symbol, and returns a JSON chat object.
+        """
         message = message.encode('ascii', 'ignore')
         extras = []
         bold = False
@@ -259,16 +285,20 @@ class MCServer:
         return json.dumps({"text": "", "extra": extras})
 
     def login(self, username):
-        """ Called when a player logs in """
+        """
+        Called when a player logs in
+        """
         try:
             if username not in self.players:
                 self.players[username] = Player(username, self.wrapper)
             self.wrapper.callEvent("player.login", {"player": self.getPlayer(username)})
         except Exception as e:
-            self.log.getTraceback()
+            self.log.exception(e)
 
     def logout(self, username):
-        """ Called when a player logs out """
+        """
+        Called when a player logs out
+        """
         self.wrapper.callEvent("player.logout", {"player": self.getPlayer(username)})
         if self.wrapper.proxy:
             for client in self.wrapper.proxy.clients:
@@ -278,7 +308,9 @@ class MCServer:
             del self.players[username]
 
     def getPlayer(self, username):
-        """ Returns a player object with the specified name, or False if the user is not logged in/doesn't exist """
+        """
+        Returns a player object with the specified name, or False if the user is not logged in/doesn't exist
+        """
         if username in self.players:
             return self.players[username]
         return False
@@ -307,14 +339,18 @@ class MCServer:
                 else:
                     self.onlineMode = True
             except Exception as e:
-                self.log.getTraceback()
+                self.log.exception(e)
 
     def console(self, command):
-        """ Execute a console command on the server """
+        """
+        Execute a console command on the server
+        """
         self.proc.stdin.write("%s\n" % command)
 
     def changeState(self, state, reason=None):
-        """ Change the boot state of the server, with a reason message """
+        """
+        Change the boot state of the server, with a reason message
+        """
         self.state = state
         if self.state == 0:
             self.wrapper.callEvent("server.stopped", {"reason": reason})
@@ -358,7 +394,9 @@ class MCServer:
                 continue
 
     def __handle_server__(self):
-        """ Internally-used function that handles booting the server, parsing console output, and etc. """
+        """
+        Internally-used function that handles booting the server, parsing console output, and etc.
+        """
         while not self.wrapper.halt:
             self.proc = False
             if not self.boot:
@@ -381,22 +419,27 @@ class MCServer:
                     try:
                         self.readConsole(line.replace("\r", ""))
                     except Exception as e:
-                        self.log.getTraceback()
+                        self.log.exception(e)
                 self.data = []
 
     def getMemoryUsage(self):
-        """ Returns allocated memory in bytes """
+        """
+        Returns allocated memory in bytes
+        This command currently only works for *NIX based systems
+        """
         if not IMPORT_RESOURCE_SUCCESS or not os.name == "posix" or not self.proc:
-            return None
+            raise UnsupportedOSException("Your current OS (%s) does not support this command at this time." % os.name)
         try:
             with open("/proc/%d/statm" % self.proc.pid, "r") as f:
                 bytes = int(f.read().split(" ")[1]) * resource.getpagesize()
+            return bytes
         except Exception as e:
-            return None
-        return bytes
+            raise e
 
     def getStorageAvailable(self, folder):
-        """ Returns the disk space for the working directory in bytes """
+        """
+        Returns the disk space for the working directory in bytes
+        """
         if platform.system() == "Windows":
             free_bytes = ctypes.c_ulonglong(0)
             ctypes.windll.kernel32.GetDiskFreeSpaceExW(ctypes.c_wchar_p(folder), None, None, ctypes.pointer(free_bytes))
@@ -406,7 +449,9 @@ class MCServer:
             return st.f_bavail * st.f_frsize
 
     def getWorldSize(self):
-        """ Returns the size of the currently used world folder in bytes """
+        """
+        Returns the size of the currently used world folder in bytes
+        """
         return self.worldSize
 
     def stripSpecial(self, text):
@@ -425,7 +470,9 @@ class MCServer:
         return a
 
     def readConsole(self, buff):
-        """ Internally-use function that parses a particular console line """
+        """
+        Internally-use function that parses a particular console line
+        """
         if not self.wrapper.callEvent("server.consoleMessage", {"message": buff}):
             return False
         if self.getServerType() == "spigot":
@@ -597,7 +644,9 @@ class MCServer:
         self.messageFromChannel(channel, "&a%s &rquit: %s" % (nick, message))
 
     def onTick(self, payload):
-        """ Called every second, and used for handling cron-like jobs """
+        """
+        Called every second, and used for handling cron-like jobs
+        """
         if self.config["General"]["timed-reboot"]:
             if time.time() - self.bootTime > self.config["General"]["timed-reboot-seconds"]:
                 if self.config["General"]["timed-reboot-warning-minutes"] > 0:

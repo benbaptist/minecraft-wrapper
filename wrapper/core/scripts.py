@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 
-import api
 import os
 import stat
+
+from api.base import API
 
 scripts = {
     "server-start.sh":  """ # This script is called just before the server starts. 
@@ -22,7 +23,7 @@ scripts = {
 class Scripts:
 
     def __init__(self, wrapper):
-        self.api = api.API(wrapper, "Scripts", internal=True)
+        self.api = API(wrapper, "Scripts", internal=True)
         self.wrapper = wrapper
 
         # Register the events

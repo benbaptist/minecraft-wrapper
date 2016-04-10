@@ -8,6 +8,8 @@ import zlib
 import os
 import io
 
+import exceptions
+
 from collections import MutableMapping, MutableSequence, Sequence
 from struct import Struct, error as StructError
 from gzip import GzipFile
@@ -34,15 +36,9 @@ TAG_LIST = 9
 TAG_COMPOUND = 10
 TAG_INT_ARRAY = 11
 
-
-class MalformedFileError(Exception):
-    """Exception raised on parse error."""
-    pass
-
-
 class TAG(object):
     """TAG, a variable with an intrinsic name."""
-    id = None
+    tid = None
 
     def __init__(self, value=None, name=None):
         self.name = name
@@ -58,9 +54,7 @@ class TAG(object):
     # Printing and Formatting of tree
     def tag_info(self):
         """Return Unicode string with class, name and unnested value."""
-        return self.__class__.__name__ + \
-            ('(%r)' % self.name if self.name else "") + \
-            ": " + self.valuestr()
+        return self.__class__.__name__ + ('(%r)' % self.name if self.name else "") + ": " + self.valuestr()
 
     def valuestr(self):
         """Return Unicode string of unnested value. For iterators, this returns a summary."""
@@ -107,7 +101,7 @@ class _TAG_Numeric(TAG):
 
 
 class _TAG_End(TAG):
-    id = TAG_END
+    tid = TAG_END
     fmt = Struct(">b")
 
     def _parse_buffer(self, buffer):
@@ -126,38 +120,38 @@ class _TAG_End(TAG):
 
 class TAG_Byte(_TAG_Numeric):
     """Represent a single tag storing 1 byte."""
-    id = TAG_BYTE
+    tid = TAG_BYTE
     fmt = Struct(">b")
 
 
 class TAG_Short(_TAG_Numeric):
     """Represent a single tag storing 1 short."""
-    id = TAG_SHORT
+    tid = TAG_SHORT
     fmt = Struct(">h")
 
 
 class TAG_Int(_TAG_Numeric):
     """Represent a single tag storing 1 int."""
-    id = TAG_INT
+    tid = TAG_INT
     fmt = Struct(">i")
     """Struct(">i"), 32-bits integer, big-endian"""
 
 
 class TAG_Long(_TAG_Numeric):
     """Represent a single tag storing 1 long."""
-    id = TAG_LONG
+    tid = TAG_LONG
     fmt = Struct(">q")
 
 
 class TAG_Float(_TAG_Numeric):
     """Represent a single tag storing 1 IEEE-754 floating point number."""
-    id = TAG_FLOAT
+    tid = TAG_FLOAT
     fmt = Struct(">f")
 
 
 class TAG_Double(_TAG_Numeric):
     """Represent a single tag storing 1 IEEE-754 double precision floating point number."""
-    id = TAG_DOUBLE
+    tid = TAG_DOUBLE
     fmt = Struct(">d")
 
 
@@ -166,7 +160,7 @@ class TAG_Byte_Array(TAG, MutableSequence):
     TAG_Byte_Array, comparable to a collections.UserList with
     an intrinsic name whose values must be bytes
     """
-    id = TAG_BYTE_ARRAY
+    tid = TAG_BYTE_ARRAY
 
     def __init__(self, name=None, buffer=None):
         super(TAG_Byte_Array, self).__init__(name=name)
@@ -223,7 +217,7 @@ class TAG_Int_Array(TAG, MutableSequence):
     TAG_Int_Array, comparable to a collections.UserList with
     an intrinsic name whose values must be integers
     """
-    id = TAG_INT_ARRAY
+    tid = TAG_INT_ARRAY
 
     def __init__(self, name=None, buffer=None):
         super(TAG_Int_Array, self).__init__(name=name)
@@ -278,7 +272,7 @@ class TAG_String(TAG, Sequence):
     TAG_String, comparable to a collections.UserString with an
     intrinsic name
     """
-    id = TAG_STRING
+    tid = TAG_STRING
 
     def __init__(self, value=None, name=None, buffer=None):
         super(TAG_String, self).__init__(value, name)
@@ -323,12 +317,12 @@ class TAG_List(TAG, MutableSequence):
     """
     TAG_List, comparable to a collections.UserList with an intrinsic name
     """
-    id = TAG_LIST
+    tid = TAG_LIST
 
-    def __init__(self, type=None, value=None, name=None, buffer=None):
+    def __init__(self, ttype=None, value=None, name=None, buffer=None):
         super(TAG_List, self).__init__(value, name)
-        if type:
-            self.tagID = type.id
+        if ttype:
+            self.tagID = ttype.id
         else:
             self.tagID = None
         self.tags = []
@@ -405,7 +399,7 @@ class TAG_Compound(TAG, MutableMapping):
     TAG_Compound, comparable to a collections.OrderedDict with an
     intrinsic name
     """
-    id = TAG_COMPOUND
+    tid = TAG_COMPOUND
 
     def __init__(self, buffer=None):
         super(TAG_Compound, self).__init__()
@@ -417,14 +411,14 @@ class TAG_Compound(TAG, MutableMapping):
     # Parsers and Generators
     def _parse_buffer(self, buffer):
         while True:
-            type = TAG_Byte(buffer=buffer)
-            if type.value == TAG_END:
+            ttype = TAG_Byte(buffer=buffer)
+            if ttype.value == TAG_END:
                 #print("found tag_end")
                 break
             else:
                 name = TAG_String(buffer=buffer).value
                 try:
-                    tag = TAGLIST[type.value](buffer=buffer)
+                    tag = TAGLIST[ttype.value](buffer=buffer)
                     tag.name = name
                     self.tags.append(tag)
                 except KeyError:
@@ -627,8 +621,8 @@ class NBTFile(TAG_Compound):
         debugging purposes.
         """
         if self.filename:
-            return "<%s(%r) with %s(%r) at 0x%x>" % (self.__class__.__name__, self.filename,
-                                                     TAG_Compound.__name__, self.name, id(self))
+            return "<%s(%r) with %s(%r) at 0x%x>" % \
+                (self.__class__.__name__, self.filename, TAG_Compound.__name__, self.name, id(self))
         else:
-            return "<%s with %s(%r) at 0x%x>" % (self.__class__.__name__,
-                                                 TAG_Compound.__name__, self.name, id(self))
+            return "<%s with %s(%r) at 0x%x>" % \
+                (self.__class__.__name__, TAG_Compound.__name__, self.name, id(self))

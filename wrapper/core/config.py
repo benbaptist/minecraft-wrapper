@@ -87,7 +87,6 @@ public-stats = True
 
 
 class Config:
-    version = "0.7.7"
     debug = False
     trace = False
 
@@ -179,7 +178,7 @@ class Config:
             except Exception as e:
                 traceback.print_exc()
                 self.parser.add_section(section)
-                self.log.debug("Adding section [%s] to configuration" % section)
+                self.log.debug("Adding section [%s] to configuration", section)
                 self.config[section] = {}
                 self.exit = True
 
@@ -188,7 +187,7 @@ class Config:
                 if item not in self.config[section]:
                     self.config[section][item] = defaults[section][item]
                     self.parser.set(section, item, defaults[section][item])
-                    self.log.debug("Key %s in section %s not in wrapper.properties - adding" % (item, section))
+                    self.log.debug("Key %s in section %s not in wrapper.properties - adding", item, section)
                     self.exit = True
                 else:
                     for key in keys:
@@ -199,6 +198,13 @@ class Config:
         self.save()
         Config.debug = self.config["General"]["debug"]
         Config.trace = self.config["General"]["trace"]
+
+        if Config.debug:
+            self.log.info("**** Debugging is Enabled! ****")
+
+        if Config.trace:
+            self.log.info("**** Tracing is Enabled! ****")
+
         if self.exit:
             self.log.info("Updated wrapper.properties file - check and edit configuration if needed and start again.")
             sys.exit()

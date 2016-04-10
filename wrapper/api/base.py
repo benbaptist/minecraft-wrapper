@@ -2,20 +2,18 @@
 
 import json
 import time
-import nbt
-import items
 
-from storage import Storage
+import core.exceptions as exceptions
+
 from player import Player
 from minecraft import Minecraft
-from errors import NonExistentPlugin
+from core.storage import Storage
 
 """ api.py contains the majority of code for the plugin API. """
 
 class API:
     """ 
     The API class contains methods for basic plugin functionality, such as handling events, registering commands, and more. 
-
     Most methods aren't related to gameplay, aside from commands and events, but for core stuff. See the Minecraft class (accessible at self.api.minecraft) for more gameplay-related methods. 
     """
     statusEffects = {
@@ -68,16 +66,16 @@ class API:
         "o": "\xc2\xa7o",  # italic,
     }
 
-    def __init__(self, wrapper, name="", id=None, internal=False):
+    def __init__(self, wrapper, name="", aid=None, internal=False):
         self.wrapper = wrapper
         self.name = name
         self.minecraft = Minecraft(wrapper)
         self.server = wrapper.server
         self.internal = internal
-        if id is None:
+        if aid is None:
             self.id = name
         else:
-            self.id = id
+            self.id = aid
 
     def registerCommand(self, command, callback, permission=None):
         """ This registers a command that, when executed in Minecraft, will execute callback(player, args). 
@@ -91,46 +89,36 @@ class API:
             commands = [command]
         for name in commands:
             if not self.internal:
-                self.wrapper.log.debug(
-                    "[%s] Registered command '%s'" % (self.name, name))
+                self.wrapper.log.debug("[%s] Registered command '%s'", self.name, name)
             if self.id not in self.wrapper.commands:
                 self.wrapper.commands[self.id] = {}
-            self.wrapper.commands[self.id][name] = {
-                "callback": callback, "permission": permission}
+            self.wrapper.commands[self.id][name] = {"callback": callback, "permission": permission}
 
     def registerEvent(self, eventType, callback):
         """ Register an event and a callback. See [doc link needed here] for a list of events. callback(payload) when an event occurs, and the contents of payload varies between events."""
         if not self.internal:
-            self.wrapper.log.debug(
-                "[%s] Registered event '%s'" % (self.name, eventType))
+            self.wrapper.log.debug("[%s] Registered event '%s'", self.name, eventType)
         if self.id not in self.wrapper.events:
             self.wrapper.events[self.id] = {}
         self.wrapper.events[self.id][eventType] = callback
 
     def registerPermission(self, permission=None, value=False):
         """ Used to set a default for a specific permission node. 
-
         Note: You do not need to run this function unless you want certain permission nodes to be granted by default. 
         i.e. `essentials.list` should be on by default, so players can run /list without having any permissions."""
         if not self.internal:
-            self.wrapper.log.debug("[%s] Registered permission '%s' with default value: %s" % (
-                self.name, permission, value))
+            self.wrapper.log.debug("[%s] Registered permission '%s' with default value: %s", self.name, permission, value)
         if self.id not in self.wrapper.permission:
             self.wrapper.permission[self.id] = {}
         self.wrapper.permission[self.id][permission] = value
 
     def registerHelp(self, groupName, summary, commands):
         """ Used to create a help group for the /help command. groupName is the name you'll see in the list when you run /help, and summary is the text that you'll see next to it.
-
         The 'commands' argument is passed in the following format: 
-                [
-                        ("/i <TileName>[:Data] [Count]", "Gives the player the requested item and puts it directly in their inventory.", "essentials.give"),
-                        ("/")
-                ]
+        [("/i <TileName>[:Data] [Count]", "Gives the player the requested item and puts it directly in their inventory.", "essentials.give"), ("/")]
         """
         if not self.internal:
-            self.wrapper.log.debug("[%s] Registered help group '%s' with %d commands" % (
-                self.name, groupName, len(commands)))
+            self.wrapper.log.debug("[%s] Registered help group '%s' with %d commands", self.name, groupName, len(commands))
         if self.id not in self.wrapper.help:
             self.wrapper.help[self.id] = {}
         self.wrapper.help[self.id][groupName] = (summary, commands)
@@ -153,18 +141,16 @@ class API:
         """ Invokes the specific event. Payload is extra information relating to the event. Errors may occur if you don't specify the right payload information. """
         self.wrapper.callEvent(event, payload)
 
-    def getPluginContext(self, id):
+    def getPluginContext(self, pid):
         """ Returns the content of another plugin with the specified ID. 
-
         i.e. api.getPluginContext(\"com.benbaptist.plugins.essentials\")"""
-        if id in self.wrapper.plugins:
-            return self.wrapper.plugins[id]["main"]
+        if pid in self.wrapper.plugins:
+            return self.wrapper.plugins[pid]["main"]
         else:
-            raise NonExistentPlugin("Plugin %s does not exist!" % id)
+            raise NonExistentPlugin("Plugin %s does not exist!" % pid)
 
     def getStorage(self, name, world=False):
         """ Return a storage object for storing configurations, player data, and any other data your plugin will need to remember across reboots.
-
         Setting world=True will store the data inside the current world folder, for world-specific data.  
         """
         if not world:

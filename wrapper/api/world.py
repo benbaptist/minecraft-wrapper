@@ -79,5 +79,5 @@ class Chunk:
     def getBlock(self, x, y, z):
         # print x, y, z
         i = int((y * 256) + (z * 16) + x)
-        id = self.ids[i]
-        return id
+        bid = self.ids[i]
+        return bid

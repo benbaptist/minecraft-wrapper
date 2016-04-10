@@ -6,8 +6,9 @@ import threading
 import random
 import traceback
 import datetime
-import storage
-import log
+
+from core.storage import Storage
+from utils.log import Log
 
 try:
     from flask import Flask, g, redirect, url_for, render_template, request, make_response, Response, Markup
@@ -21,7 +22,7 @@ class Web:
 
     def __init__(self, wrapper):
         self.wrapper = wrapper
-        self.log = log.PluginLog(self.wrapper.log, "Web")
+        self.log = Log("Web")
 
         self.app = Flask(__name__)
         self.app.config['SECRET_KEY'] = "".join([chr(random.randrange(48, 90)) for i in range(32)])  # LOL
@@ -37,7 +38,7 @@ class Web:
         self.add_decorators()
 
         # Storage
-        self.data = storage.Storage("web", self.log)
+        self.data = Storage("web", self.log)
         if "keys" not in self.data:
             self.data["keys"] = []
 
@@ -110,7 +111,7 @@ class Web:
                 if self.checkLogin(password):
                     key = self.makeKey(rememberMe)
                     return redirect("/")
-                    # self.log.warn("%s logged in to web mode (remember me: %s)" % (request.addr, rememberMe))
+                    # self.log.warn("%s logged in to web mode (remember me: %s)", request.addr, rememberMe)
                 else:
                     badPass = True
 

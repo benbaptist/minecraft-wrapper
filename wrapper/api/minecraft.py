@@ -3,11 +3,12 @@
 from __future__ import unicode_literals
 
 import json
-import nbt
-import items
 import os
 import uuid
 import sys
+
+from core.nbt import NBTFile
+from core.items import Blocks
 
 class Minecraft:
     """ This class contains functions related to in-game features directly. These methods are located at self.api.minecraft. """
@@ -16,7 +17,7 @@ class Minecraft:
         self.wrapper = wrapper
         self.log = wrapper.log
         self._encoding = wrapper.config["General"]["encoding"]
-        self.blocks = items.Blocks
+        self.blocks = Blocks
 
     def isServerStarted(self):
         """ Returns a boolean if the server is fully booted or not. """
@@ -73,8 +74,7 @@ class Minecraft:
             try:
                 players[uuid] = json.loads(data, self._encoding)
             except Exception as e:
-                self.log.error("Failed to load player data '%s'" % puuid)
-                self.log.getTraceback()
+                self.log.exception("Failed to load player data '%s'", puuid)
                 os.remove("wrapper-data/players/" + uuidf)
         return players
 
@@ -87,8 +87,8 @@ class Minecraft:
 
     def setBlock(self, x, y, z, tileName, dataValue=0, oldBlockHandling="replace", dataTag={}):
         """ Sets a block at the specified coordinates with the specific details. Will fail if the chunk is not loaded. """
-        self.console("setblock %d %d %d %s %d %s %s" % (x, y, z, tileName, dataValue,
-                                                        oldBlockHandling, json.dumps(dataTag, self._encoding).replace('"', "")))
+        self.console("setblock %d %d %d %s %d %s %s" % \
+            (x, y, z, tileName, dataValue,  oldBlockHandling, json.dumps(dataTag, self._encoding).replace('"', "")))
 
     def giveStatusEffect(self, player, effect, duration=30, amplifier=30):
         """ Gives the specified status effect to the specified target. """
@@ -99,28 +99,23 @@ class Minecraft:
                 effectConverted = int(effect)
             except:  # a non-number was passed, so we'll figure out what status effect it was in word form
                 if effect in self.wrapper.api.statusEffects:
-                    effectConverted = str(
-                        self.wrapper.api.statusEffects[effect])
+                    effectConverted = str(self.wrapper.api.statusEffects[effect])
                 else:
                     raise Exception("Invalid status effect given!")
         if int(effectConverted) > 24 or int(effectConverted) < 1:
             raise Exception("Invalid status effect given!")
-        self.console("effect %s %s %d %d" %
-                     (player, effectConverted, duration, amplifier))
+        self.console("effect %s %s %d %d" % (player, effectConverted, duration, amplifier))
 
     def summonEntity(self, entity, x=0, y=0, z=0, dataTag={}):
         """ Summons an entity at the specified coordinates with the specified data tag. """
-        self.console("summon %s %d %d %d %s" %
-                     (entity, x, y, z, json.dumps(dataTag, self._encoding)))
+        self.console("summon %s %d %d %d %s" % (entity, x, y, z, json.dumps(dataTag, self._encoding)))
 
     def message(self, destination="", json_message={}):
         """ **THIS METHOD WILL BE CHANGED.** Used to message some specific target. """
-        self.console("tellraw %s %s" %
-                     (destination, json.dumps(json_message, self._encoding)))
+        self.console("tellraw %s %s" % (destination, json.dumps(json_message, self._encoding)))
 
     def broadcast(self, message="", irc=False):
         """ Broadcasts the specified message to all clients connected. message can be a JSON chat object, or a string with formatting codes using the & as a prefix.
-
         Setting irc=True will also broadcast the specified message on IRC channels that Wrapper.py is connected to. Formatting might not work properly.
         """
         if irc:

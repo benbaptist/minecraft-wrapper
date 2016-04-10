@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
 
-import storage
-import api
 import time
 import fnmatch
 import json
 import threading
 
+import api
+
 import proxy.mcpacket as mcpacket
 
+from core.storage import Storage
 
 class Player:
     """
@@ -38,15 +39,8 @@ class Player:
                     if self.getClient().version > 49:
                         self.clientPackets = mcpacket.ClientBound19
                     break
-        # hopefully these will never happen again:
-        # if self.uuid is None:
-        #     self.log.error("UUID for %s was 'None'. Proxy mode is %s Please report this issue (and this line) to "
-        #                    "http://github.com/benbaptist/minecraft-wrapper/issues" % (self.username, str(self.wrapper.proxy)))
-        # if not self.uuid:
-        #     self.log.error("UUID for %s was False. Proxy mode is %s. Please report this issue (and this line) to"
-        #                    " http://github.com/benbaptist/minecraft-wrapper/issues" % (self.username, str(self.wrapper.proxy)))
 
-        self.data = storage.Storage(str(self.uuid), root="wrapper-data/players")
+        self.data = Storage(str(self.uuid), root="wrapper-data/players")
         if "firstLoggedIn" not in self.data:
             self.data["firstLoggedIn"] = (time.time(), time.tzname)
         if "logins" not in self.data:
@@ -260,9 +254,9 @@ class Player:
         for perm in self.permissions["groups"]["Default"]["permissions"]:
             if node in fnmatch.filter([node], perm):
                 return self.permissions["groups"]["Default"]["permissions"][perm]
-        for id in self.wrapper.permission:
-            if node in self.wrapper.permission[id]:
-                return self.wrapper.permission[id][node]
+        for pid in self.wrapper.permission:
+            if node in self.wrapper.permission[pid]:
+                return self.wrapper.permission[pid][node]
         return False
 
     def setPermission(self, node, value=True):
@@ -286,8 +280,7 @@ class Player:
                 if node in self.permissions["users"][uuid]["permissions"]:
                     del self.permissions["users"][uuid]["permissions"][node]
                 else:
-                    raise IndexError(
-                        "%s does not have permission node '%s'" % (self.username, node))
+                    raise IndexError("%s does not have permission node '%s'" % (self.username, node))
 
     def hasGroup(self, group):
         """ Returns a boolean of whether or not the player is in the specified permission group. """
