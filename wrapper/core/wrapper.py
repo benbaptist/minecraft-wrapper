@@ -4,7 +4,6 @@ import sys
 import json
 import signal
 import hashlib
-import uuid
 import traceback
 import threading
 import time
@@ -21,6 +20,7 @@ from utils.log import Log
 
 from api.base import API
 
+from mcuuid import MCUUID
 from config import Config
 from irc import IRC
 from mcserver import MCServer
@@ -29,7 +29,7 @@ from plugins import Plugins
 from commands import Commands
 from events import Events
 from storage import Storage
-from exceptions import UnsupportedOSException
+from exceptions import UnsupportedOSException, InvalidServerState
 
 try:
     import readline
@@ -86,34 +86,34 @@ class Wrapper:
         :param playeruuid: string of player uuid with no dashes (such as you might get back from Mojang)
         :return: string hex format "8-4-4-4-12"
         """
-        return uuid.UUID(bytes=playeruuid.decode("hex"))
+        return MCUUID(bytes=playeruuid.decode("hex")).string
 
     @staticmethod
     def UUIDFromName(name):
         """
         :param name: should be passed as "OfflinePlayer:<playername>" to get the correct (offline) vanilla server uuid
-        :return: a uuid object based on the name
+        :return: a MCUUID object based on the name
         """
-        m = hashlib.md5()  # module md5 is deprecated
+        m = hashlib.md5()
         m.update(name)
         d = bytearray(m.digest())
         d[6] &= 0x0f
         d[6] |= 0x30
         d[8] &= 0x3f
         d[8] |= 0x80
-        return uuid.UUID(bytes=str(d))
+        return MCUUID(bytes=str(d))
 
     def lookupUUIDbyUsername(self, username):
         """
         Lookup users name and update local wrapper usercache. Will check Mojang once per day only.
         :param username:  username as string
-        :returns: returns the uuid object from the given name. Updates the wrapper usercache.json
+        :returns: returns the MCUUID object from the given name. Updates the wrapper usercache.json
                 Yields False if failed.
         """
-        frequency = 86400  # check once per day at most for existing players
+        # frequency = 86400  # check once per day at most for existing players
         for useruuid in self.usercache: # try wrapper cache first
             if username in (self.usercache.key(useruuid)["name"], self.usercache.key(useruuid)["localname"]):
-                return uuid.UUID(useruuid)
+                return MCUUID(useruuid)
         # try mojang  (a new player, likely)
         r = requests.get("https://api.mojang.com/users/profiles/minecraft/%s" % username)
         if r.status_code == 200:
@@ -123,14 +123,14 @@ class Wrapper:
                 self.log.warn("%s's name is not correctly capitalized (offline name warning!)", correctcapname)
             nameisnow = self.lookupUsernamebyUUID(useruuid)
             if nameisnow:
-                return uuid.UUID(useruuid)
+                return MCUUID(useruuid)
             return False
         else:
             if "uuid-cache" not in self.proxy.storage: # try for any old proxy-data record as a last resort
                 return False  # no old proxy uuid-cache exists.
             for useruuid in self.proxy.storage["uuid-cache"]:
                 if self.storage["uuid-cache"][useruuid]["name"] == username:
-                    return uuid.UUID(useruuid)  # return uuid object
+                    return MCUUID(useruuid)
             return False  # if no old proxy record
 
     def lookupUsernamebyUUID(self, useruuid):
@@ -202,7 +202,7 @@ class Wrapper:
                 False - Mojang down or operating in limited fashion
                 - otherwise, a list of names...
         """
-        r = requests.get("https://api.mojang.com/user/profiles/%s/names" % str(useruuid).replace("-", ""))
+        r = requests.get("https://api.mojang.com/user/profiles/%s/names" % useruuid.replace("-", ""))
         if r.status_code == 200:
             return r.json()
         else:
@@ -213,7 +213,7 @@ class Wrapper:
                     if "account.mojang.com" in rx[i]:
                         if rx[i]["account.mojang.com"] == "green":
                             self.log.error("Mojang accounts is green, but request failed - have you over-polled (large busy server) or supplied an incorrect UUID??")
-                            self.log.error("uuid: %s", str(useruuid))
+                            self.log.error("uuid: %s", useruuid)
                             self.log.debug("response: \n%s", str(rx))
                             return None
                         if rx[i]["account.mojang.com"] in ("yellow", "red"):
@@ -244,7 +244,7 @@ class Wrapper:
             with open("usercache.json", "r") as f:
                 cache = json.loads(f.read())
             for user in cache:
-                if user["uuid"] == str(useruuid):
+                if user["uuid"] == useruuid:
                     if useruuid not in self.usercache:
                         self.usercache[useruuid] = {
                             "time": time.time(), 
@@ -259,7 +259,7 @@ class Wrapper:
     def getUUID(self, username):
         """
         :param username - string of user's name
-        :returns a uuid object, which means UUIDfromname and lookupUUIDbyUsername must return uuid obejcts
+        :returns a MCUUID object, which means UUIDfromname and lookupUUIDbyUsername must return MCUUID obejcts
         """
         if not self.isOnlineMode():  # both server and wrapper in offline...
             return self.UUIDFromName("OfflinePlayer:%s" % username)
@@ -270,7 +270,7 @@ class Wrapper:
                 cache = json.loads(f.read())
             for user in cache:
                 if user["name"] == username:
-                    return uuid.UUID(user["uuid"])
+                    return MCUUID(user["uuid"])
         else:
             # proxy mode is on... poll mojang and wrapper cache
             search = self.lookupUUIDbyUsername(username)
@@ -281,6 +281,22 @@ class Wrapper:
                 return search
         # if both if and else fail to deliver a uuid create offline uuid:
         return self.UUIDFromName("OfflinePlayer:%s" % username)
+
+    def listWrapperPlugins():
+        self.log.info("List of Wrapper.py plugins installed:")
+        for plid in self.plugins:
+            plugin = self.plugins[plid]
+            if plugin["good"]:
+                name = plugin["name"]
+                summary = plugin["summary"]
+                if summary is None:
+                    summary = "No description available for this plugin"
+
+                version = plugin["version"]
+
+                self.log.info("%s v%s - %s", name, ".".join([str(_) for _ in version]), summary)
+            else:
+                self.log.info("%s failed to load!", plugin)
 
     def start(self):
         self.configManager.loadConfig()
@@ -303,11 +319,11 @@ class Wrapper:
         self.plugins.loadPlugins()
 
         if self.config["IRC"]["irc-enabled"]:
-            self.irc = IRC(self.server, self.config, self.log, self, self.config["IRC"]["server"], 
-                self.config["IRC"]["port"], self.config["IRC"]["nick"], self.config["IRC"]["channels"])
+            self.irc = IRC(self.server, self.config, self.log, self)
             t = threading.Thread(target=self.irc.init, args=())
             t.daemon = True
             t.start()
+
         if self.config["Web"]["web-enabled"]:
             if web.IMPORT_SUCCESS:
                 self.web = web.Web(self)
@@ -317,6 +333,7 @@ class Wrapper:
             else:
                 self.log.error("Web remote could not be started because you do not have the required modules installed: pkg_resources")
                 self.log.error("Hint: http://stackoverflow.com/questions/7446187")
+
         if len(sys.argv) < 2:
             self.server.args = self.configManager.config["General"]["command"].split(" ")
         else:
@@ -340,10 +357,12 @@ class Wrapper:
             t = threading.Thread(target=self.startProxy, args=())
             t.daemon = True
             t.start()
+
         if self.config["General"]["auto-update-wrapper"]:
             t = threading.Thread(target=self.checkForUpdates, args=())
             t.daemon = True
             t.start()
+
         self.server.__handle_server__()
 
         self.plugins.disablePlugins()
@@ -473,15 +492,19 @@ class Wrapper:
                 cinput = raw_input("")
             except Exception as e:
                 continue
+
             if len(cinput) < 1:
                 continue
+
             if cinput[0] is not "/":
                 try:
                     self.server.console(cinput)
                 except Exception as e:
                     break
                 continue
+
             command = args(cinput[1:].split(" "), 0)
+
             if command == "halt":
                 self.server.stop("Halting server...", save=False)
                 self.halt = True
@@ -495,24 +518,11 @@ class Wrapper:
             elif command == "reload":
                 self.plugins.reloadPlugins()
                 if self.server.getServerType() != "vanilla":
-                    self.log.info("Note: If you meant to reload the server's plugins instead of the Wrapper's plugins, try running `reload` without any slash OR `/raw /reload`.")
+                    self.log.info("Note: If you meant to reload the server's plugins instead of the Wrapper's plugins, try running 'reload' without any slash OR '/raw /reload'.")
             elif command == "update-wrapper":
                 self.checkForUpdate(False)
             elif command == "plugins":
-                self.log.info("List of Wrapper.py plugins installed:")
-                for plid in self.plugins:
-                    plugin = self.plugins[plid]
-                    if plugin["good"]:
-                        name = plugin["name"]
-                        summary = plugin["summary"]
-                        if summary is None:
-                            summary = "No description available for this plugin"
-
-                        version = plugin["version"]
-
-                        self.log.info("%s v%s - %s", name, ".".join([str(_) for _ in version]), summary)
-                    else:
-                        self.log.info("%s failed to load!", plugin)
+                self.listWrapperPlugins()
             elif command in ("mem", "memory"):
                 try:
                     self.log.info("Server Memory Usage: %d bytes", self.server.getMemoryUsage())
@@ -521,43 +531,43 @@ class Wrapper:
                 except Exception as ex:
                     self.log.exception("Something went wrong when trying to fetch memory usage! (%s)", ex)
             elif command == "raw":
-                if self.server.state in (1, 2, 3):
+                try:
                     if len(argsAfter(cinput[1:].split(" "), 1)) > 0:
                         self.server.console(argsAfter(cinput[1:].split(" "), 1))
                     else:
                         self.log.info("Usage: /raw [command]")
-                else:
-                    self.log.error("Server is not started. Please run `/start` to boot it up.")
+                except InvalidServerState as e:
+                    self.log.warn(e)
             elif command == "freeze":
-                if not self.server.state == 0:
-                    try:
-                        self.server.freeze()
-                    except UnsupportedOSException as e:
-                        self.log.error(e)
-                    except Exception as ex:
-                        self.log.exception("Something went wrong when trying to freeze the server! (%s)", ex)
-                else:
-                    self.log.error("Server is not started. Please run `/start` to boot it up.")
+                try:
+                    self.server.freeze()
+                except InvalidServerState as e:
+                    self.log.warn(e)
+                except UnsupportedOSException as ex:
+                    self.log.error(ex)
+                except Exception as exc:
+                    self.log.exception("Something went wrong when trying to freeze the server! (%s)", exc)
             elif command == "unfreeze":
-                if not self.server.state == 0:
-                    try:
-                        self.server.unfreeze()
-                    except UnsupportedOSException as e:
-                        self.log.error(e)
-                    except Exception as ex:
-                        self.log.exception("Something went wrong when trying to unfreeze the server! (%s)", ex)
-                else:
-                    self.log.error("Server is not started. Please run `/start` to boot it up.")
+                try:
+                    self.server.unfreeze()
+                except InvalidServerState as e:
+                    self.log.warn(e)
+                except UnsupportedOSException as ex:
+                    self.log.error(ex)
+                except Exception as exc:
+                    self.log.exception("Something went wrong when trying to unfreeze the server! (%s)", exc)
             elif command == "help":
-                self.log.info("/reload - Reload plugins")
-                self.log.info("/plugins - Lists plugins")
-                self.log.info("/update-wrapper - Checks for new updates, and will install them automatically if one is available")
-                self.log.info("/start & /stop - Start and stop the server without auto-restarting respectively without shutting down Wrapper.py")
-                self.log.info("/restart - Restarts the server, obviously")
-                self.log.info("/halt - Shutdown Wrapper.py completely")
-                self.log.info("/freeze & /unfreeze - Temporarily locks the server up until /unfreeze is executed (Only works on *NIX servers)")
-                self.log.info("/mem - Get memory usage of the server (Only works on *NIX servers)")
-                self.log.info("/raw [command] - Send command to the Minecraft Server. Useful for Forge commands like `/fml confirm`.")
+                self.log.info("/reload - Reload Wrapper.py plugins.")
+                self.log.info("/plugins - Lists Wrapper.py plugins.")
+                self.log.info("/update-wrapper - Checks for new Wrapper.py updates, and will install them automatically if one is available.")
+                self.log.info("/start - Start the minecraft server.")
+                self.log.info("/stop - Stop the minecraft server without auto-restarting and without shutting down Wrapper.py.")
+                self.log.info("/restart - Restarts the minecraft server.")
+                self.log.info("/halt - Shutdown Wrapper.py completely.")
+                self.log.info("/freeze - Temporarily locks the server up until /unfreeze is executed (Only works on *NIX servers).")
+                self.log.info("/unfreeze - Unlocks the server from a frozen state (Only works on *NIX servers).")
+                self.log.info("/mem - Get memory usage of the server (Only works on *NIX servers).")
+                self.log.info("/raw [command] - Send command to the Minecraft Server. Useful for Forge commands like '/fml confirm'.")
                 self.log.info("Wrapper.py Version %s", self.getBuildString())
             else:
-                self.log.error("Invalid command %s", command)
+                self.log.error("Invalid command -- %s", command)

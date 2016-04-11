@@ -16,17 +16,17 @@ from config import Config
 
 class IRC:
 
-    def __init__(self, server, config, log, wrapper, address, port, nickname, channels):
+    def __init__(self, server, config, log, wrapper):
         self.socket = False
         self.server = server
         self.config = config
         self.wrapper = wrapper
-        self.address = address
-        self.port = port
-        self.nickname = nickname
+        self.address = self.config["IRC"]["server"]
+        self.port = self.config["IRC"]["port"]
+        self.nickname = self.config["IRC"]["nick"]
         self.originalNickname = nickname[0:]
         self.nickAttempts = 0
-        self.channels = channels
+        self.channels = self.config["IRC"]["channels"]
         self.log = log
         self.timeout = False
         self.ready = False
@@ -283,7 +283,7 @@ class IRC:
                 self.log.info("[PRIVATE] (%s) %s", nick, message)
 
                 def msg(string):
-                    self.log.info("[PRIVATE] (%s) %s", self.config["IRC"]["nick"], string)
+                    self.log.info("[PRIVATE] (%s) %s", self.nickname, string)
                     self.send("PRIVMSG %s :%s" % (nick, string))
                 if self.config["IRC"]["control-irc-pass"] == "password":
                     msg("Please change your password from 'password' in wrapper.properties. I will not allow you to use that password. It's an awful password. Please change it.")

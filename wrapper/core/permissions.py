@@ -2,7 +2,6 @@
 
 # This module is not used
 
-
 class Permissions:
 
     def __init__(self, wrapper):
@@ -20,4 +19,4 @@ class Permissions:
 
     # Check for permissions
     def doesPlayerHavePermission(self, player, node):
-        uuid = player.uuid
+        uuid = player.uuid # This would be an MCUUID object

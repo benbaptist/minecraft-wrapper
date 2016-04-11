@@ -18,6 +18,7 @@ from utils.helpers import args, argsAfter
 from server import Server
 from packet import Packet
 from core.config import Config
+from core.mcuuid import MCUUID
 
 try:
     import requests
@@ -52,8 +53,8 @@ class Client:
         self.server = None
         self.isServer = False
         self.isLocal = True
-        self.uuid = None
-        self.serverUUID = None
+        self.uuid = None # Expect this to be an MCUUID
+        self.serverUUID = None # Expect this to be an MCUUID
         self.server = None
         self.address = None
         self.handshake = False
@@ -250,9 +251,9 @@ class Client:
                         self.send(0x01, "string|bytearray|bytearray", (self.serverID, self.publicKey, self.verifyToken))
                 else:
                     self.connect()
-                    self.uuid = self.wrapper.UUIDFromName("OfflinePlayer:%s" % self.username)
-                    self.serverUUID = self.wrapper.UUIDFromName("OfflinePlayer:%s" % self.username)
-                    self.send(0x02, "string|string", (str(self.uuid), self.username))
+                    self.uuid = self.wrapper.UUIDFromName("OfflinePlayer:%s" % self.username) # MCUUID object
+                    self.serverUUID = self.wrapper.UUIDFromName("OfflinePlayer:%s" % self.username) # MCUUID object
+                    self.send(0x02, "string|string", (self.uuid.string, self.username))
                     self.state = 3
                     self.log.info("%s logged in (IP: %s)", self.username, self.addr[0])
                 self.log.trace("(PROXY CLIENT) -> Parsed 0x00 packet with client state 2:\n%s", data)
@@ -285,50 +286,50 @@ class Client:
                     r = requests.get("https://sessionserver.mojang.com/session/minecraft/hasJoined?username=%s&serverId=%s" % (self.username, serverId))
                     if r.status_code == 200:
                         data = r.json()
-                        # self.uuid = self.wrapper.formatUUID(data["id"])
-                        self.uuid = uuid.UUID(data["id"])
+                        self.uuid = MCUUID(data["id"])
                         if data["name"] != self.username:
                             self.disconnect("Client's username did not match Mojang's record")
                             return False
                         for prop in data["properties"]:
                             if prop["name"] == "textures":
                                 self.skinBlob = prop["value"]
-                                self.wrapper.proxy.skins[str(self.uuid)] = self.skinBlob
+                                self.wrapper.proxy.skins[self.uuid.string] = self.skinBlob
                         self.properties = data["properties"]
                     else:
                         self.disconnect("Server Session Error (HTTP Status Code %d)" % r.status_code)
                         return False
-                    newUsername = self.wrapper.lookupUsernamebyUUID(str(self.uuid))
+                    newUsername = self.wrapper.lookupUsernamebyUUID(self.uuid.string)
                     if newUsername:
                         if newUsername != self.username:
                             self.log.info("%s logged in with new name, falling back to %s", self.username, newUsername)
                             self.username = newUsername
                 else:
+                    # TODO: See if this can be accomplished via MCUUID
                     self.uuid = uuid.uuid3(uuid.NAMESPACE_OID, "OfflinePlayer: %s" % self.username)
                 
                 if self.config["Proxy"]["convert-player-files"]: # Rename UUIDs accordingly
                     if self.config["Proxy"]["online-mode"]:
                         # Check player files, and rename them accordingly to offline-mode UUID
                         worldName = self.wrapper.server.worldName
-                        if not os.path.exists("%s/playerdata/%s.dat" % (worldName, str(self.serverUUID))):
-                            if os.path.exists("%s/playerdata/%s.dat" % (worldName, str(self.uuid))):
+                        if not os.path.exists("%s/playerdata/%s.dat" % (worldName, self.serverUUID.string)):
+                            if os.path.exists("%s/playerdata/%s.dat" % (worldName, self.uuid.string)):
                                 self.log.info("Migrating %s's playerdata file to proxy mode", self.username)
-                                shutil.move("%s/playerdata/%s.dat" % (worldName, str(self.uuid)), "%s/playerdata/%s.dat" % (worldName, self.serverUUID))
+                                shutil.move("%s/playerdata/%s.dat" % (worldName, self.uuid.string), "%s/playerdata/%s.dat" % (worldName, self.serverUUID.string))
                                 with open("%s/.wrapper-proxy-playerdata-migrate" % worldName, "a") as f:
-                                    f.write("%s %s\n" % (str(self.uuid), str(self.serverUUID)))
+                                    f.write("%s %s\n" % (self.uuid.string, self.serverUUID.string))
                         # Change whitelist entries to offline mode versions
                         if os.path.exists("whitelist.json"):
                             with open("whitelist.json", "r") as f:
                                 data = json.loads(f.read())
                             if data:
-                                if not player["uuid"] == str(self.serverUUID) and player["uuid"] == str(self.uuid):
+                                if not player["uuid"] == self.serverUUID.string and player["uuid"] == self.uuid.string:
                                     self.log.info("Migrating %s's whitelist entry to proxy mode", self.username)
-                                    data.append({"uuid": str(self.serverUUID), "name": self.username})
+                                    data.append({"uuid": self.serverUUID.string, "name": self.username})
                                     with open("whitelist.json", "w") as f:
                                         f.write(json.dumps(data))
                                     self.wrapper.server.console("whitelist reload")
                                     with open("%s/.wrapper-proxy-whitelist-migrate" % worldName, "a") as f:
-                                        f.write("%s %s\n" % (str(self.uuid), str(self.serverUUID)))
+                                        f.write("%s %s\n" % (self.uuid.string, self.serverUUID.string))
 
                 self.serverUUID = self.wrapper.UUIDFromName("OfflinePlayer:%s" % self.username)
 
@@ -340,18 +341,21 @@ class Client:
                     self.disconnect("You have been IP-banned from this server!.")
                     return False
 
-                if not self.wrapper.callEvent("player.preLogin", {"player": self.username, "online_uuid": str(self.uuid), "offline_uuid": str(self.serverUUID), "ip": self.addr[0]}):
+                if not self.wrapper.callEvent("player.preLogin", {
+                    "player": self.username, 
+                    "online_uuid": self.uuid.string, 
+                    "offline_uuid": self.serverUUID.string, 
+                    "ip": self.addr[0]
+                }):
                     self.disconnect("Login denied.")
                     return False
 
-                self.send(0x02, "string|string", (str(self.uuid), self.username))
+                self.send(0x02, "string|string", (self.uuid.string, self.username))
                 self.state = 3
 
                 self.connect()
 
-                self.log.info("%s logged in (UUID: %s | IP: %s)", self.username, str(self.uuid), self.addr[0])
-                # lookup in cache and update IP
-                # self.wrapper.setUUID(self.uuid, self.username)
+                self.log.info("%s logged in (UUID: %s | IP: %s)", self.username, self.uuid.string, self.addr[0])
                 return False
             elif self.state == 5: # ping packet during status request  (What is state 5?)
                 keepAlive = self.read("long:keepAlive")["keepAlive"]

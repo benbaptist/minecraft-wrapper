@@ -5,7 +5,6 @@ import threading
 import time
 import traceback
 import json
-import uuid
 
 import mcpacket
 
@@ -283,7 +282,7 @@ class Server:
                 if clientserverid:
                     self.client.send(self.pktCB.SPAWN_PLAYER, "varint|uuid|int|int|int|byte|byte|short|raw", (
                         data["eid"],
-                        clientserverid.uuid,
+                        clientserverid.uuid, # This is an MCUUID object
                         data["x"],
                         data["y"],
                         data["z"],
@@ -300,7 +299,7 @@ class Server:
                 if clientserverid:
                     self.client.send(self.pktCB.SPAWN_PLAYER, "varint|uuid|int|int|int|byte|byte|raw", (
                         data["eid"],
-                        clientserverid.uuid,
+                        clientserverid.uuid, # This is an MCUUID object
                         data["x"],
                         data["y"],
                         data["z"],
@@ -505,10 +504,10 @@ class Server:
                         z += 1
                         continue
                     try:
-                        uuid = playerclient.uuid
+                        uuid = playerclient.uuid # This is an MCUUID object
                     except Exception as e:
                         # uuid = playerclient
-                        self.log.exception("playercleint.uuid failed in playerlist item (%s)", e)
+                        self.log.exception("playercleint.uuid failed in playerlist item (%s)", e) # How could this fail? All clients have a uuid attribute
                         z += 1
                         continue
                     z += 1
