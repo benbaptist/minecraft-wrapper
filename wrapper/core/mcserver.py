@@ -49,7 +49,7 @@ class MCServer:
         self.state = 0  # 0 is off, 1 is starting, 2 is started, 3 is shutting down, 4 is idle, 5 is frozen
         self.bootTime = time.time()
         self.boot = self.wrapper.storage["serverState"]
-        self.proc = False
+        self.proc = None
         self.rebootWarnings = 0
         self.pollSize = 0
         self.data = []
@@ -398,7 +398,7 @@ class MCServer:
         Internally-used function that handles booting the server, parsing console output, and etc.
         """
         while not self.wrapper.halt:
-            self.proc = False
+            self.proc = None
             if not self.boot:
                 time.sleep(0.1)
                 continue
@@ -427,7 +427,7 @@ class MCServer:
         Returns allocated memory in bytes
         This command currently only works for *NIX based systems
         """
-        if not IMPORT_RESOURCE_SUCCESS or not os.name == "posix" or not self.proc:
+        if not IMPORT_RESOURCE_SUCCESS or not os.name == "posix" or self.proc is None:
             raise UnsupportedOSException("Your current OS (%s) does not support this command at this time." % os.name)
         try:
             with open("/proc/%d/statm" % self.proc.pid, "r") as f:
