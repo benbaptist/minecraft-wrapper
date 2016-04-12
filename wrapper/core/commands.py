@@ -74,13 +74,13 @@ class Commands:
                 subcommand = get_args(payload["args"], 0)
                 if subcommand == "update":
                     player.message({"text": "Checking for new Wrapper.py updates...", "color": "yellow"})
-                    update = self.checkForNewUpdate()
+                    update = self.wrapper.checkForNewUpdate()
                     if update:
                         version, build, repotype = update
                         player.message("&bNew Wrapper.py Version %s (Build #%d) available!)" % (".".join([str(_) for _ in version]), build))
                         player.message("&bYou are currently on %s." %  self.wrapper.getBuildString())
                         player.message("&aPerforming update...")
-                        if self.performUpdate(version, build, repotype):
+                        if self.wrapper.performUpdate(version, build, repotype):
                             player.message("&aUpdate completed! Version %s #%d (%s) is now installed. Please reboot Wrapper.py to apply changes." % (version, build, repotype))
                         else:
                             player.message("&cAn error occured while performing update.")
@@ -210,7 +210,6 @@ class Commands:
                             if int(ipnumbers[ipnumber]) > 255 or int(ipnumbers[ipnumber]) < 0:
                                 player.message("&cinvalid ip component: %s  &5%s" % (get_args(payload["args"], 0), str(ipnumbers[ipnumber])))
                                 return False
-                        ipuse = ""
                         if self.wrapper.proxy.pardonIP(get_args(payload["args"], 0)) is True:
                             player.message({"text": "IP address unbanned!", "color": "gold"} % str((get_args(payload["args"], 0))))
                         else:
