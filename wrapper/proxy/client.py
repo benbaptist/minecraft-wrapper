@@ -320,14 +320,15 @@ class Client:
                             with open("whitelist.json", "r") as f:
                                 data = json.loads(f.read())
                             if data:
-                                if not player["uuid"] == self.serverUUID.string and player["uuid"] == self.uuid.string:
-                                    self.log.info("Migrating %s's whitelist entry to proxy mode", self.username)
-                                    data.append({"uuid": self.serverUUID.string, "name": self.username})
-                                    with open("whitelist.json", "w") as f:
-                                        f.write(json.dumps(data))
-                                    self.wrapper.server.console("whitelist reload")
-                                    with open("%s/.wrapper-proxy-whitelist-migrate" % worldName, "a") as f:
-                                        f.write("%s %s\n" % (self.uuid.string, self.serverUUID.string))
+                                for player in data:
+                                    if not player["uuid"] == self.serverUUID.string and player["uuid"] == self.uuid.string:
+                                        self.log.info("Migrating %s's whitelist entry to proxy mode", self.username)
+                                        data.append({"uuid": self.serverUUID.string, "name": self.username})
+                                        with open("whitelist.json", "w") as f:
+                                            f.write(json.dumps(data))
+                                        self.wrapper.server.console("whitelist reload")
+                                        with open("%s/.wrapper-proxy-whitelist-migrate" % worldName, "a") as f:
+                                            f.write("%s %s\n" % (self.uuid.string, self.serverUUID.string))
 
                 self.serverUUID = self.wrapper.UUIDFromName("OfflinePlayer:%s" % self.username)
 
