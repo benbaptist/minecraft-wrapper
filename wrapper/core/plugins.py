@@ -25,7 +25,7 @@ class Plugins:
     def __setitem__(self, index, value):
         if not type(index) == str:
             raise Exception("A string must be passed - got %s" % type(index))
-        self.data[index] = value
+        self.plugins[index] = value
         return self.plugins[index]
 
     def __delitem__(self, index):
@@ -160,7 +160,7 @@ class Plugins:
             except Exception as  e:
                 self.log.exception("Failed to unload plugin '%s' (%s)", i, e)
                 try:
-                    reload(self.plugins[plugin]["module"])
+                    reload(self.plugins[i]["module"])
                 except Exception as  ex:
                     pass
         self.plugins = {}

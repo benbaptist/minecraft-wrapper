@@ -157,7 +157,10 @@ class ColorFormatter(logging.Formatter):
         args = record.args
         msg = record.msg
 
-        if record.levelno == logging.DEBUG:
+        if record.levelno == logging.INFO:
+            debug_style = termcolors.make_style(fg="green")
+            msg = debug_style(msg)
+        elif record.levelno == logging.DEBUG:
             debug_style = termcolors.make_style(fg="cyan")
             msg = debug_style(msg)
         elif record.levelno == logging.WARNING:
@@ -170,7 +173,7 @@ class ColorFormatter(logging.Formatter):
             crit_style = termcolors.make_style(fg="black", bg="red", opts=("bold",))
             msg = crit_style(msg)
         elif record.levelno == logging.TRACE:
-            trace_style  = termcolors.make_style(fg="green")
+            trace_style  = termcolors.make_style(fg="blue")
             msg = trace_style(msg)
 
         record.msg = msg

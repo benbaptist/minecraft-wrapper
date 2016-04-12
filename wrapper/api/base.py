@@ -147,7 +147,7 @@ class API:
         if pid in self.wrapper.plugins:
             return self.wrapper.plugins[pid]["main"]
         else:
-            raise NonExistentPlugin("Plugin %s does not exist!" % pid)
+            raise exceptions.NonExistentPlugin("Plugin %s does not exist!" % pid)
 
     def getStorage(self, name, world=False):
         """ Return a storage object for storing configurations, player data, and any other data your plugin will need to remember across reboots.

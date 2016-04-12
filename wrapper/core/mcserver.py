@@ -254,7 +254,7 @@ class MCServer:
                     break
                 if code in "abcdef0123456789":
                     try:
-                        color = api.API.colorCodes[code]
+                        color = API.colorCodes[code]
                     except:
                         color = "white"
 

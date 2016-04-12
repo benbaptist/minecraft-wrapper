@@ -71,7 +71,7 @@ class Minecraft:
             with open("wrapper-data/players/" + uuidf) as f:
                 data = f.read()
             try:
-                players[uuid] = json.loads(data, self._encoding)
+                players[puuid] = json.loads(data, self._encoding)
             except Exception as e:
                 self.log.exception("Failed to load player data '%s'", puuid)
                 os.remove("wrapper-data/players/" + uuidf)
@@ -157,7 +157,7 @@ class Minecraft:
             worldName = self.wrapper.server.worldName
         if not worldName:
             raise Exception("Server Uninitiated")
-        f = nbt.NBTFile("%s/level.dat" % worldName, "rb")
+        f = NBTFile("%s/level.dat" % worldName, "rb")
         return f["Data"]
 
     def getSpawnPoint(self):
