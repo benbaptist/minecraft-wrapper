@@ -93,8 +93,8 @@ Wrapper.py supports the following features:
 - Minecraft 1.7 and later support (uses tellraw!)
 
 #API#
-The doucmentation for Wrapper.py is not complete, but you can find a quick reference on the plugin API here:
-</br><a href="http://wrapper.benbaptist.com/docs/api.html">http://wrapper.benbaptist.com/docs/api.html</a>
+The doucmentation for Wrapper.py is not complete, but you can find a reference on the plugin API here:
+</br><a href="https://github.com/benbaptist/minecraft-wrapper/wiki/Plugin-API">wrapper wiki</a>
 
 It isn't finished, nor is it pretty, but it should help give you an idea of the methods that can be used. More documentation will be released
 for working with the plugin API, but for now, here's a few things.</br></br>
