@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 
 from core.wrapper import Wrapper
+from utils.log import configure_logger
 
 if __name__ == "__main__":
+    configure_logger()
     wrapper = Wrapper()
     log = wrapper.log
     log.info("Wrapper.py started - Version %s", wrapper.getBuildString())

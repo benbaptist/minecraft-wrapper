@@ -10,10 +10,10 @@ import random
 import urlparse
 import urllib
 import os
+import logging
 
 from utils.helpers import args, argsAfter
 from api.base import API
-from utils.log import Log
 from core.storage import Storage
 
 try:
@@ -31,7 +31,7 @@ class Web:
     def __init__(self, wrapper):
         self.wrapper = wrapper
         self.api = API(wrapper, "Web", internal=True)
-        self.log = Log("Web")
+        self.log = logging.getLogger(__name__)
         self.config = wrapper.config
         self.socket = False
         self.data = Storage("web", self.log)

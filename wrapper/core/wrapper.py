@@ -8,6 +8,7 @@ import traceback
 import threading
 import time
 import os
+import logging
 
 import core.globals as globals
 
@@ -16,7 +17,6 @@ import proxy.base as proxy
 from management.web import Web as web
 from management.dashboard import Web as dashboard
 from utils.helpers import args, argsAfter
-from utils.log import Log
 
 from api.base import API
 
@@ -46,7 +46,7 @@ except ImportError:
 class Wrapper:
 
     def __init__(self):
-        self.log = Log()
+        self.log = logging.getLogger(__name__)
         self.configManager = Config(self.log)
         self.configManager.loadConfig() # Load initially for storage object
         self.encoding = self.configManager.config["General"]["encoding"] # Was this for unicode strings?
