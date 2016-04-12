@@ -91,14 +91,13 @@ Wrapper.py supports the following features:
 - Web remote for controlling the server and the wrapper through your web browser
 - Shell scripts that are called upon certain events (similar to plugin events, but quicker and easier)
 - Minecraft 1.7 and later support (uses tellraw!)
+- Colorized console output.
 
 #API#
 The doucmentation for Wrapper.py is not complete, but you can find a reference on the plugin API here:
 </br><a href="https://github.com/benbaptist/minecraft-wrapper/wiki/Plugin-API">wrapper wiki</a>
 
-It isn't finished, nor is it pretty, but it should help give you an idea of the methods that can be used. More documentation will be released
-for working with the plugin API, but for now, here's a few things.</br></br>
-
+Wrapper continues to be a work in progress and changes often happen faster than they get documented, but this should help give you an idea of the methods that can be used. below is a list of plugin events that can be registered in your plugins:</br></br>
 <b>List of events</b>: https://docs.google.com/spreadsheet/ccc?key=0AoWx24EFSt80dDRiSGVxcW1xQkVLb2dWTUN4WE5aNmc&usp=sharing</br>
 
 </br></br>Check the 'example-plugins' folder to see some example plugins.
