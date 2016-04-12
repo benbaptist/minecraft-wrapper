@@ -335,8 +335,24 @@ class Client:
                 if self.version > 26:
                     self.packet.setCompression(256)
 
-                # Ban code should go here
-                if self.proxy.isAddressBanned(self.addr[0]): # IP ban
+                # player ban code needs to go here - we should use the vanilla 'banned-players.json' since
+                #    that will allow the vanilla client to handle the indentical bans should the server be switched
+                #    to online mode.
+
+                # banned-players.json format (2 space indents):                
+                """
+                    [
+                      {
+                        "uuid": "23881df5-76ab-32ee-83c4-85086ceea301",
+                        "name": "SapperLeader2",
+                        "created": "2016-04-12 18:54:51 -0400",
+                        "source": "Server",
+                        "expires": "forever",
+                        "reason": "Banned by an operator."
+                      }
+                    ]
+                """
+                if self.proxy.isAddressBanned(self.addr[0]): #  IP ban- This should also be migrated to the vanilla file
                     self.disconnect("You have been IP-banned from this server!.")
                     return False
 
