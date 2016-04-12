@@ -149,7 +149,7 @@ class Wrapper:
         """
         frequency = 86400  # check once per day at most for existing players
         names = self._pollMojangUUID(useruuid)
-        numofnames = len(names)
+        numbofnames = len(names)
         if self.usercache.key(useruuid):  # if user is in the cache...
             # and was recently polled...
             if (time.time() - self.usercache.key(useruuid)["time"]) < frequency:
