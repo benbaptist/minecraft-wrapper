@@ -5,7 +5,7 @@ import fnmatch
 import json
 import threading
 
-import api
+from api.base import API
 
 import proxy.mcpacket as mcpacket
 
@@ -148,7 +148,7 @@ class Player:
         if self.getClient().version < 7:
             self.client.send(0x3f, "string|bytearray", ("MC|RPack", url))
         else:
-            self.client.send(self.clientPackets.resourcepacksend,
+            self.client.send(self.clientPackets.RESOURCE_PACK_SEND,
                              "string|string", (url, hashrp))
 
     def isOp(self):
@@ -171,14 +171,14 @@ class Player:
 
     def actionMessage(self, message=""):
         if self.getClient().version > 10:
-            self.getClient().send(self.clientPackets.chatmessage, "string|byte", (json.dumps({"text": self.processColorCodesOld(message)}), 2))
+            self.getClient().send(self.clientPackets.CHAT_MESSAGE, "string|byte", (json.dumps({"text": self.processColorCodesOld(message)}), 2))
 
     def setVisualXP(self, progress, level, total):
         """ Change the XP bar on the client's side only. Does not affect actual XP levels. """
         if self.getClient().version > 10:
-            self.getClient().send(self.clientPackets.setexperience, "float|varint|varint", (progress, level, total))
+            self.getClient().send(self.clientPackets.SET_EXPERIENCE, "float|varint|varint", (progress, level, total))
         else:
-            self.getClient().send(self.clientPackets.setexperience, "float|short|short", (progress, level, total))
+            self.getClient().send(self.clientPackets.SET_EXPERIENCE, "float|short|short", (progress, level, total))
 
     def openWindow(self, type, title, slots):
         self.getClient().windowCounter += 1
@@ -186,7 +186,7 @@ class Player:
             self.getClient().windowCounter = 2
         if self.getClient().version > 10:
             self.getClient().send(
-                self.clientPackets.openwindow, "ubyte|string|json|ubyte", (
+                self.clientPackets.OPEN_WINDOW, "ubyte|string|json|ubyte", (
                     self.getClient().windowCounter, "0", {"text": title}, slots))
         return None  # return a Window object soon
     # endregion Visual notifications
@@ -203,9 +203,9 @@ class Player:
     # flying)
     def setPlayerFlying(self, fly):
         if fly:
-            self.getClient().send(self.clientPackets.playerabilities, "byte|float|float", (0x06, 1, 1))  # player abilities
+            self.getClient().send(self.clientPackets.PLAYER_ABILITIES, "byte|float|float", (0x06, 1, 1))  # player abilities
         else:
-            self.getClient().send(self.clientPackets.playerabilities, "byte|float|float", (0x00, 1, 1))
+            self.getClient().send(self.clientPackets.PLAYER_ABILITIES, "byte|float|float", (0x00, 1, 1))
 
     # Unfinished function, will be used to make phantom blocks visible ONLY to
     # the client
