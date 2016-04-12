@@ -160,7 +160,7 @@ class Plugins:
             except Exception as  e:
                 self.log.exception("Failed to unload plugin '%s' (%s)", i, e)
                 try:
-                    reload(self.plugins[plugin]["module"])
+                    reload(self.plugins[i]["module"])
                 except Exception as  ex:
                     pass
         self.plugins = {}
