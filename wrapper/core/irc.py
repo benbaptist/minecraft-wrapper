@@ -18,19 +18,22 @@ class IRC:
 
     def __init__(self, server, config, log, wrapper):
         self.socket = False
+        self.state = False
         self.server = server
         self.config = config
         self.wrapper = wrapper
         self.address = self.config["IRC"]["server"]
         self.port = self.config["IRC"]["port"]
         self.nickname = self.config["IRC"]["nick"]
-        self.originalNickname = nickname[0:]
+        self.originalNickname = self.nickname[0:]
         self.nickAttempts = 0
         self.channels = self.config["IRC"]["channels"]
         self.log = log
         self.timeout = False
         self.ready = False
         self.msgQueue = []
+        self.authorized = {}
+        self.line = ""
 
         self.api = API(self.wrapper, "IRC", internal=True)
         self.api.registerEvent("server.starting", self.onServerStarting)
@@ -152,8 +155,8 @@ class IRC:
     def handle(self):
         while self.socket:
             try:
-                buffer = self.socket.recv(1024)
-                if buffer == "":
+                irc_buffer = self.socket.recv(1024)  # changed name because 'buffer' is a builtin name
+                if irc_buffer == "":
                     self.log.error("Disconnected from IRC")
                     self.socket = False
                     self.ready = False
@@ -163,12 +166,12 @@ class IRC:
                     self.socket = False
                     break
                 else:
-                    self.send("PING :%s" % self.randomString())
+                    self.send("PING :%s" % str(random.randint()))
                     self.timeout = True
-                buffer = ""
+                irc_buffer = ""
             except Exception as e:
-                buffer = ""
-            for line in buffer.split("\n"):
+                irc_buffer = ""
+            for line in irc_buffer.split("\n"):
                 self.line = line
                 self.parse()
 
@@ -223,11 +226,11 @@ class IRC:
                     name[len(self.nickname) / 3 * i] = chr(random.randrange(97, 122))
                 self.nickname = str(name)
             else:
-                self.nickname = self.nickname + "_"
+                self.nickname += "_"
             self.auth()
             self.log.info("Attemping to use nickname '%s'.", self.nickname)
         if args(self.line.split(" "), 1) == "JOIN":
-            nick = args(self.line.split(" "), 0)[1:self.args(0).find("!")]
+            nick = args(self.line.split(" "), 0)[1:args(self.line.split(" "), 0).find("!")]
             channel = args(self.line.split(" "), 2)[1:][:-1]
             self.log.info("%s joined %s", nick, channel)
             self.wrapper.callEvent("irc.join", {"nick": nick, "channel": channel})
@@ -291,10 +294,6 @@ class IRC:
                 if "password" in self.config["IRC"]["control-irc-pass"]:
                     msg("Please choose a password that doesn't contain the term 'password'.")
                     return
-                try:
-                    self.authorized
-                except Exception as e:
-                    self.authorized = {}
                 if nick in self.authorized:
                     if int(time.time()) - self.authorized[nick] < 900:
                         if args(message.split(" "), 0) == 'hi':
@@ -319,7 +318,7 @@ class IRC:
                                 msg('Backups are now on.')
                             else:
                                 msg('Backups are now off.')
-                            configure.save()
+                            self.config.save()
                         elif args(message.split(" "), 0) == 'run':
                             if args(message.split(" "), 1) == '':
                                 msg('Usage: run [command]')
@@ -366,7 +365,7 @@ class IRC:
                                         ( ".".join([str(_) for _ in version]), self.wrapper.getBuildString()))
                                 elif repotype == "dev":
                                     msg("New Wrapper.py development build %s #%d available! (you have %s #%d)" % 
-                                        (".".join([str(_) for _ in version]), build, globals.__version__, globals.build))
+                                        (".".join([str(_) for _ in version]), build, globals.__version__, globals.__build__))
                                 else:
                                     msg("Unknown new version: %s | %d | %s" % (version, build, repotype))
                                 msg("To perform the update, type update-wrapper.")
