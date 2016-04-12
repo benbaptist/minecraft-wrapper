@@ -8,6 +8,7 @@ import logging
 from api.base import API
 
 from importlib import import_module
+from config import Config
 
 class Plugins:
 
@@ -100,7 +101,7 @@ class Plugins:
             for dependency in dependencies:
                 self.loadPlugin(dependency)
 
-        main = plugin.Main(API(self.wrapper, name, pid), logging.getLogger(name))
+        main = plugin.Main(API(self.wrapper, name, pid), logging.getLogger('wrapper'))
         self.plugins[pid] = {"main": main, "good": True, "module": plugin}  # "events": {}, "commands": {},
         self.plugins[pid]["name"] = name
         self.plugins[pid]["version"] = version

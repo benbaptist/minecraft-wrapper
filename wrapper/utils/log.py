@@ -15,6 +15,12 @@ DEFAULT_CONFIG = dict({
     "filters": {
         "plugin": {
             "()": "utils.log.PluginFilter"
+        },
+        "debug": {
+            "()": "utils.log.DebugFilter"
+        },
+        "trace": {
+            "()": "utils.log.TraceFilter"
         }
     },
     "formatters": {
@@ -35,14 +41,14 @@ DEFAULT_CONFIG = dict({
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
-            "level": "DEBUG",
+            "level": "INFO",
             "formatter": "standard",
             "filters": ["plugin"],
             "stream": "ext://sys.stdout"
         },
         "wrapper_file_handler": {
             "class": "logging.handlers.RotatingFileHandler",
-            "level": "NOTSET",
+            "level": "DEBUG",
             "formatter": "file",
             "filters": ["plugin"],
             "filename": "logs/wrapper/wrapper.log",
@@ -87,6 +93,8 @@ def configure_logger():
     setCustomLevels()
     loadConfig()
 
+    logger = logging.getLogger()
+
 def setupLog(filename):
     if not os.path.exists(os.path.dirname(filename)):
         try:
@@ -99,7 +107,7 @@ def setCustomLevels():
     # Create a TRACE level
     # We should probably not do this, but for wrappers use case this is non-impacting.
     # See: https://docs.python.org/2/howto/logging.html#custom-levels
-    logging.TRACE = 51
+    logging.TRACE = 5 # lower than DEBUG
     logging.addLevelName(logging.TRACE, "TRACE")
     logging.Logger.trace = lambda inst, msg, *args, **kwargs: inst.log(logging.TRACE, msg, *args, **kwargs)
 
@@ -119,11 +127,29 @@ def loadConfig(file="logging.json"):
         logging.exception("Unable to load or create %s! (%s)", file, e)
 
 class PluginFilter(logging.Filter):
+    """
+    This custom filter will inject the calling plugin's name
+    """
     def filter(self, record):
-        record.plugin = 'Wrapper.py' # We need to get this dynamically
+        record.plugin = 'Wrapper.py' # TODO: We need to get this dynamically
         return True
 
+class DebugFilter(logging.Filter):
+    """
+    """
+    def filter(self, record):
+        return Config.debug
+
+class TraceFilter(logging.Filter):
+    """
+    """
+    def filter(self, record):
+        return Config.trace
+
 class ColorFormatter(logging.Formatter):
+    """
+    This custom formatter will colorize console output based on logging level
+    """
     def __init__(self, *args, **kwargs):
         super(ColorFormatter, self).__init__(*args, **kwargs)
 

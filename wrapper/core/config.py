@@ -6,6 +6,7 @@ import ast
 import time
 import os
 import sys
+import logging
 
 # Default Configuration File
 
@@ -79,8 +80,8 @@ class Config:
     debug = False
     trace = False
 
-    def __init__(self, log):
-        self.log = log
+    def __init__(self):
+        self.log = logging.getLogger('wrapper')
         self.config = {}
         self.exit = False
 

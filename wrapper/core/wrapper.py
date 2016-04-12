@@ -46,8 +46,8 @@ except ImportError:
 class Wrapper:
 
     def __init__(self):
-        self.log = logging.getLogger(__name__)
-        self.configManager = Config(self.log)
+        self.log = logging.getLogger('wrapper')
+        self.configManager = Config()
         self.configManager.loadConfig() # Load initially for storage object
         self.encoding = self.configManager.config["General"]["encoding"] # Was this for unicode strings?
         self.server = None
@@ -289,7 +289,7 @@ class Wrapper:
         # if both if and else fail to deliver a uuid create offline uuid:
         return self.UUIDFromName("OfflinePlayer:%s" % username)
 
-    def listWrapperPlugins():
+    def listWrapperPlugins(self):
         self.log.info("List of Wrapper.py plugins installed:")
         for plid in self.plugins:
             plugin = self.plugins[plid]
