@@ -25,7 +25,7 @@ class Plugins:
     def __setitem__(self, index, value):
         if not type(index) == str:
             raise Exception("A string must be passed - got %s" % type(index))
-        self.data[index] = value
+        self.plugins[index] = value
         return self.plugins[index]
 
     def __delitem__(self, index):
