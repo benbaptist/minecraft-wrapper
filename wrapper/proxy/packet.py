@@ -3,9 +3,10 @@
 import socket
 import StringIO
 import json
-import uuid
 import struct
 import zlib
+
+from core.mcuuid import MCUUID
 
 class Packet:
     def __init__(self, socket, obj):
@@ -473,7 +474,7 @@ class Packet:
         return total
 
     def read_uuid(self):
-        return uuid.UUID(bytes=self.read_data(16)) # does this need to be a string?
+        return MCUUID(bytes=self.read_data(16))
 
     def read_string(self):
         return self.read_data(self.read_varInt())

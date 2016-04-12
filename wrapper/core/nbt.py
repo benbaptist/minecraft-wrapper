@@ -515,7 +515,6 @@ class TAG_Compound(TAG, MutableMapping):
 TAGLIST = {TAG_END: _TAG_End, TAG_BYTE: TAG_Byte, TAG_SHORT: TAG_Short, TAG_INT: TAG_Int, TAG_LONG: TAG_Long, TAG_FLOAT: TAG_Float, TAG_DOUBLE: TAG_Double,
            TAG_BYTE_ARRAY: TAG_Byte_Array, TAG_STRING: TAG_String, TAG_LIST: TAG_List, TAG_COMPOUND: TAG_Compound, TAG_INT_ARRAY: TAG_Int_Array}
 
-
 class NBTFile(TAG_Compound):
     """Represent an NBT file object."""
 
@@ -597,8 +596,7 @@ class NBTFile(TAG_Compound):
         elif self.filename:
             self.file = GzipFile(self.filename, "wb")
         elif not self.file:
-            raise ValueError(
-                "NBTFile.write_file(): Need to specify either a filename or a file object")
+            raise ValueError("NBTFile.write_file(): Need to specify either a filename or a file object")
         # Render tree to file
         TAG_Byte(self.id)._render_buffer(self.file)
         TAG_String(self.name)._render_buffer(self.file)

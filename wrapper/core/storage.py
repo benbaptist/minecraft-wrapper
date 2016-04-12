@@ -9,19 +9,16 @@ import time
 import copy
 import traceback
 import sys
+import logging
 
-from config import Config, DummyLog
-
-_config = Config(DummyLog())
-_config.loadConfig()
-_encoding = _config.config["General"]["encoding"]
+from config import Config
 
 class Storage:
 
-    def __init__(self, name, isWorld=None, root="wrapper-data/json"):
+    def __init__(self, name, isWorld=False, root="wrapper-data/json", encoding="UTF-8"):
         self.name = name
         self.root = root
-
+        self.encoding = encoding
         self.data = {}
         self.dataOld = {}
         self.load()
@@ -68,14 +65,14 @@ class Storage:
             time.sleep(1)
 
     def mkdir(self, path):
-        l = ""
-        for i in path.split("/"):
-            l += i + "/"
-            if not os.path.exists(l):
-                try:
-                    os.mkdir(l)
-                except Exception as e:
-                    pass
+        directory = ""
+        for part in path.split("/"):
+            directory += part + "/"
+        try:
+            if not os.path.exists(directory):
+                os.mkdir(directory)
+        except Exception as e:
+            pass
 
     def load(self):
         self.mkdir(self.root)
@@ -83,18 +80,21 @@ class Storage:
             self.save()
         with open("%s/%s.json" % (self.root, self.name), "r") as f:
             try:
-                self.data = json.loads(f.read(), _encoding)
+                self.data = json.loads(f.read(), self.encoding)
             except Exception as e:
                 print "Failed to load '%s/%s.json' (%s)" % (self.root, self.name, e)
                 return
         self.dataOld = copy.deepcopy(self.data)
 
     def save(self):
-        if not os.path.exists(self.root):
-            self.mkdir(self.root)
-        with open("%s/%s.json" % (self.root, self.name), "w") as f:
-            f.write(json.dumps(self.data, ensure_ascii=False))
-        self.flush = False
+        try:
+            if not os.path.exists(self.root):
+                self.mkdir(self.root)
+            with open("%s/%s.json" % (self.root, self.name), "w") as f:
+                f.write(json.dumps(self.data, ensure_ascii=False))
+            self.flush = False
+        except Exception as e:
+            self.log.exception(e)
 
     def key(self, key, value=None):
         if value is None:

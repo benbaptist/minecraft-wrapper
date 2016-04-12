@@ -25,7 +25,7 @@ from api.player import Player
 from api.world import World
 
 from backups import Backups
-from exceptions import UnsupportedOSException
+from exceptions import UnsupportedOSException, InvalidServerState
 
 try:
     import resource
@@ -45,11 +45,12 @@ class MCServer:
 
         if "serverState" not in self.wrapper.storage:
             self.wrapper.storage["serverState"] = True
+
         self.players = {}
         self.state = 0  # 0 is off, 1 is starting, 2 is started, 3 is shutting down, 4 is idle, 5 is frozen
         self.bootTime = time.time()
         self.boot = self.wrapper.storage["serverState"]
-        self.proc = False
+        self.proc = None
         self.rebootWarnings = 0
         self.pollSize = 0
         self.data = []
@@ -136,27 +137,33 @@ class MCServer:
         'reason' argument is printed in the chat for all currently-connected players, unless you specify None.
         This command currently only works for *NIX based systems
         """
-        if os.name == "posix":
-            self.log.info("Freezing server with reason: %s", reason)
-            self.broadcast("&c%s" % reason)
-            time.sleep(0.5)
-            self.changeState(5)
-            os.system("kill -STOP %d" % self.proc.pid)
+        if self.state != 0:
+            if os.name == "posix":
+                self.log.info("Freezing server with reason: %s", reason)
+                self.broadcast("&c%s" % reason)
+                time.sleep(0.5)
+                self.changeState(5)
+                os.system("kill -STOP %d" % self.proc.pid)
+            else:
+                raise UnsupportedOSException("Your current OS (%s) does not support this command at this time." % os.name)
         else:
-            raise UnsupportedOSException("Your current OS (%s) does not support this command at this time." % os.name)
+            raise InvalidServerState("Server is not started. Please run '/start' to boot it up.")
 
     def unfreeze(self):
         """
         Unfreeze the server with `kill -CONT`. Counterpart to .freeze(reason)
         This command currently only works for *NIX based systems
         """
-        if os.name == "posix":
-            self.log.info("Unfreezing server...")
-            self.broadcast("&aServer unfrozen.")
-            self.changeState(2)
-            os.system("kill -CONT %d" % self.proc.pid)
+        if self.state != 0:
+            if os.name == "posix":
+                self.log.info("Unfreezing server...")
+                self.broadcast("&aServer unfrozen.")
+                self.changeState(2)
+                os.system("kill -CONT %d" % self.proc.pid)
+            else:
+                raise UnsupportedOSException("Your current OS (%s) does not support this command at this time." % os.name)
         else:
-            raise UnsupportedOSException("Your current OS (%s) does not support this command at this time." % os.name)
+            raise InvalidServerState("Server is not started. Please run '/start' to boot it up.")
 
     def broadcast(self, message=""):
         """
@@ -175,27 +182,27 @@ class MCServer:
                 self.console("tellraw @a %s" % self.processColorCodes(message))
 
     def chatToColorCodes(self, json):
-        total = ""
-
-        def getColorCode(i):
-            for l in API.colorCodes:
-                if API.colorCodes[l] == i:
-                    return "\xa7\xc2" + l
+        def getColorCode(color):
+            for code in API.colorCodes:
+                if API.colorCodes[code] == color:
+                    return "\xa7\xc2" + code
             return ""
 
-        def handleChunk(j):
+        def handleChunk(chunk):
             total = ""
-            if "color" in j:
-                total += getColorCode(j["color"])
-            if "text" in j:
-                total += j["text"]
-            if "string" in j:
-                total += j["string"]
+            if "color" in chunk:
+                total += getColorCode(chunk["color"])
+            if "text" in chunk:
+                total += chunk["text"]
+            if "string" in chunk:
+                total += chunk["string"]
             return total
-        total += handleChunk(json)
+
+        total = handleChunk(json)
+
         if "extra" in json:
-            for i in json["extra"]:
-                total += handleChunk(i)
+            for extra in json["extra"]:
+                total += handleChunk(extra)
         return total.encode("utf8")
 
     def processColorCodes(self, message):
@@ -300,9 +307,9 @@ class MCServer:
         Called when a player logs out
         """
         self.wrapper.callEvent("player.logout", {"player": self.getPlayer(username)})
-        if self.wrapper.proxy:
-            for client in self.wrapper.proxy.clients:
-                uuid = self.players[username].uuid
+        # if self.wrapper.proxy:
+        #     for client in self.wrapper.proxy.clients:
+        #         uuid = self.players[username].uuid # This is not used
         if username in self.players:
             self.players[username].abort = True
             del self.players[username]
@@ -345,7 +352,10 @@ class MCServer:
         """
         Execute a console command on the server
         """
-        self.proc.stdin.write("%s\n" % command)
+        if self.state in (1, 2, 3):
+            self.proc.stdin.write("%s\n" % command)
+        else:
+            raise InvalidServerState("Server is not started. Please run '/start' to boot it up.")
 
     def changeState(self, state, reason=None):
         """
@@ -354,11 +364,11 @@ class MCServer:
         self.state = state
         if self.state == 0:
             self.wrapper.callEvent("server.stopped", {"reason": reason})
-        if self.state == 1:
+        elif self.state == 1:
             self.wrapper.callEvent("server.starting", {"reason": reason})
-        if self.state == 2:
+        elif self.state == 2:
             self.wrapper.callEvent("server.started", {"reason": reason})
-        if self.state == 3:
+        elif self.state == 3:
             self.wrapper.callEvent("server.stopping", {"reason": reason})
         self.wrapper.callEvent("server.state", {"state": state, "reason": reason})
 
@@ -398,7 +408,7 @@ class MCServer:
         Internally-used function that handles booting the server, parsing console output, and etc.
         """
         while not self.wrapper.halt:
-            self.proc = False
+            self.proc = None
             if not self.boot:
                 time.sleep(0.1)
                 continue
@@ -427,7 +437,7 @@ class MCServer:
         Returns allocated memory in bytes
         This command currently only works for *NIX based systems
         """
-        if not IMPORT_RESOURCE_SUCCESS or not os.name == "posix" or not self.proc:
+        if not IMPORT_RESOURCE_SUCCESS or not os.name == "posix" or self.proc is None:
             raise UnsupportedOSException("Your current OS (%s) does not support this command at this time." % os.name)
         try:
             with open("/proc/%d/statm" % self.proc.pid, "r") as f:

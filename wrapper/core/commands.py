@@ -441,7 +441,7 @@ class Commands:
                         player.message("&aUsers in the group '%s':" % group)
                         for uuid in self.wrapper.permissions["users"]:
                             if group in self.wrapper.permissions["users"][uuid]["groups"]:
-                                player.message("%s: &2%s" % (self.wrapper.lookupUsernamebyUUID(str(uuid)), str(uuid)))
+                                player.message("%s: &2%s" % (self.wrapper.lookupUsernamebyUUID(uuid), uuid))
                         player.message("&aPermissions for the group '%s':" % group)
                         for node in self.wrapper.permissions["groups"][group]["permissions"]:
                             value = self.wrapper.permissions["groups"][group]["permissions"][node]
@@ -459,7 +459,7 @@ class Commands:
                     subcommand = args(payload["args"], 2)
                     # try:
                     if len(username) > 0:
-                        uuid = str(self.wrapper.lookupUUIDbyUsername(username))
+                        uuid = self.wrapper.lookupUUIDbyUsername(username).string
                     # except:
                     # player.message("&cUsername '%s' does not exist." % username)
                     # return False

@@ -10,10 +10,10 @@ import random
 import urlparse
 import urllib
 import os
+import logging
 
 from utils.helpers import args, argsAfter
 from api.base import API
-from utils.log import Log
 from core.storage import Storage
 
 try:
@@ -31,7 +31,7 @@ class Web:
     def __init__(self, wrapper):
         self.wrapper = wrapper
         self.api = API(wrapper, "Web", internal=True)
-        self.log = Log("Web")
+        self.log = logging.getLogger('wrapper')
         self.config = wrapper.config
         self.socket = False
         self.data = Storage("web", self.log)
@@ -273,7 +273,7 @@ class WebClient:
                 return EOFError # Why are we returning error objects and not just raising them?
             players = []
             for i in self.wrapper.server.players:
-                players.append({"name": i, "loggedIn": self.wrapper.server.players[i].loggedIn, "uuid": str(self.wrapper.server.players[i].uuid)})
+                players.append({"name": i, "loggedIn": self.wrapper.server.players[i].loggedIn, "uuid": self.wrapper.server.players[i].uuid.string})
             return {"playerCount": len(self.wrapper.server.players), "players": players}
         if action == "login":
             password = get("password")
@@ -404,7 +404,7 @@ class WebClient:
                 players.append({
                     "name": i,
                     "loggedIn": player.loggedIn,
-                    "uuid": str(player.uuid),
+                    "uuid": player.uuid.string,
                     "isOp": player.isOp()
                 })
             plugins = []

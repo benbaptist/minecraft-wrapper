@@ -4,7 +4,6 @@ from __future__ import unicode_literals
 
 import json
 import os
-import uuid
 import sys
 
 from core.nbt import NBTFile
@@ -145,7 +144,7 @@ class Minecraft:
 
     def lookupUUID(self, uuid):
         """ Returns the username from the specified UUID. If the player has never logged in before and isn't in the user cache, it will poll Mojang's API. The function will raise an exception if the UUID is invalid. """
-        return self.wrapper.lookupUsernamebyUUID(str(uuid))
+        return self.wrapper.lookupUsernamebyUUID(uuid)
 
     def getPlayers(self):  # returns a list of players
         """ Returns a list of the currently connected players. """

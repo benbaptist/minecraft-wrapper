@@ -5,11 +5,11 @@ import threading
 import time
 import traceback
 import json
-import uuid
 
 import utils.encryption as encryption
 
 from core.storage import Storage
+from core.mcuuid import MCUUID
 from client import Client
 from packet import Packet
 
@@ -105,23 +105,29 @@ class Proxy:
         sock.close()
 
     def getClientByServerUUID(self, uuid):
+        """ 
+        This function expects uuid as a string
+        """
         for client in self.clients:
-            if str(client.serverUUID) == str(uuid):
-                self.uuidTranslate[str(uuid)] = str(client.uuid)
+            if client.serverUUID.string == uuid:
+                self.uuidTranslate[uuid] = client.uuid.string
                 return client
         # if uuid in self.uuidTranslate:
-        #     return uuid.UUID(hex=self.uuidTranslate[uuid])
+        #     return MCUUID(hex=self.uuidTranslate[uuid])
         return False # no client
 
     def banUUID(self, uuid, reason="Banned by an operator", source="Server"):
-        """This is all wrong - needs to ban uuid, not username """
+        """
+        This is all wrong - needs to ban uuid, not username
+        Will assume that uuid is imput as a string for now
+        """
         if not self.storage.key("banned-uuid"):
             self.storage.key("banned-uuid", {})
-        self.storage.key("banned-uuid")[str(uuid)] = {
+        self.storage.key("banned-uuid")[uuid] = {
             "reason": reason,
             "source": source,
             "created": time.time(), 
-            "name": self.lookupUUID(uuid)["name"] # wrong
+            "name": self.wrapper.lookupUsernamebyUUID(uuid)
         }
 
     def banIP(self, ipaddress, reason="Banned by an operator", source="Server"):
@@ -135,7 +141,7 @@ class Proxy:
         for i in self.wrapper.server.players:
             player = self.wrapper.server.players[i]
             if str(player.client.addr[0]) == str(ipaddress):
-                self.wrapper.server.console("kick %s Your IP is Banned!" % str(player.username))
+                self.wrapper.server.console("kick %s Your IP is Banned!" % player.username)
 
     def pardonIP(self, ipaddress):
         if self.storage.key("banned-ip"):
@@ -144,12 +150,15 @@ class Proxy:
                     del self.storage.key("banned-ip")[str(ipaddress)]
                     return True
                 except Exception as e:
-                    self.log.exception("Failed to pardon %s (%s)", str(ipaddress), e)
+                    self.log.exception("Failed to pardon %s (%s)", ipaddress, e)
                     return False
-        self.log.warn("Could not find %s to pardon them", str(ipaddress))
+        self.log.warn("Could not find %s to pardon them", ipaddress)
         return False
 
     def isUUIDBanned(self, uuid):  # Check if the UUID of the user is banned
+        """
+        Will assume that uuid is input as a string for now
+        """
         if not self.storage.key("banned-uuid"):
             self.storage.key("banned-uuid", {})
         return (uuid in self.storage.key("banned-uuid"))
@@ -160,6 +169,9 @@ class Proxy:
         return (address in self.storage.key("banned-ip"))
 
     def getSkinTexture(self, uuid):
+        """
+        Will assume that uuid is input as a string for now
+        """
         if uuid not in self.skins:
             return False
         if uuid in self.skinTextures:
@@ -171,7 +183,7 @@ class Proxy:
             }
         r = requests.get(skinBlob["textures"]["SKIN"]["url"])
         if r.status_code == 200:
-            self.skinTextures[str(uuid)] = r.content.encode("base64")
+            self.skinTextures[uuid] = r.content.encode("base64")
             return self.skinTextures[uuid]
         else:
             self.log.warn("Could not fetch skin texture! (status code %d)", r.status_code)

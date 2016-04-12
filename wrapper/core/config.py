@@ -6,23 +6,13 @@ import ast
 import time
 import os
 import sys
+import logging
 
 # Default Configuration File
 
-# Because we don't have access to the logging system yet we need to create a dummy
-# This should be resolved soon by leveraging the native logging library
-
-class DummyLog():
-
-    def info(*args):
-        pass
-
-    def debug(*args):
-        pass
-        
 DEFAULT_CONFIG = """[General]
 server-name = Minecraft Server
-command = java -jar minecraft_server.1.8.7.jar nogui
+command = java -jar minecraft_server.1.9.2.jar nogui
 auto-restart = True
 auto-update-wrapper = False
 auto-update-dev-build = False
@@ -90,8 +80,8 @@ class Config:
     debug = False
     trace = False
 
-    def __init__(self, log):
-        self.log = log
+    def __init__(self):
+        self.log = logging.getLogger('wrapper')
         self.config = {}
         self.exit = False
 
@@ -198,12 +188,6 @@ class Config:
         self.save()
         Config.debug = self.config["General"]["debug"]
         Config.trace = self.config["General"]["trace"]
-
-        if Config.debug:
-            self.log.info("**** Debugging is Enabled! ****")
-
-        if Config.trace:
-            self.log.info("**** Tracing is Enabled! ****")
 
         if self.exit:
             self.log.info("Updated wrapper.properties file - check and edit configuration if needed and start again.")

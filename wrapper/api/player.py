@@ -27,7 +27,7 @@ class Player:
         self.loggedIn = time.time()
         self.abort = False
 
-        self.uuid = self.wrapper.getUUID(username)
+        self.uuid = self.wrapper.getUUID(username) # This is an MCUUID object
         self.client = None
         self.clientPackets = mcpacket.ClientBound18
 
@@ -35,12 +35,12 @@ class Player:
             for client in self.wrapper.proxy.clients:
                 if client.username == username:
                     self.client = client
-                    self.uuid = client.uuid
+                    self.uuid = client.uuid # Both MCUUID objects
                     if self.getClient().version > 49:
                         self.clientPackets = mcpacket.ClientBound19
                     break
 
-        self.data = Storage(str(self.uuid), root="wrapper-data/players")
+        self.data = Storage(self.uuid.string, root="wrapper-data/players")
         if "firstLoggedIn" not in self.data:
             self.data["firstLoggedIn"] = (time.time(), time.tzname)
         if "logins" not in self.data:
@@ -158,7 +158,7 @@ class Player:
         with open("ops.json", "r") as f:
             operators = json.loads(f.read())
         for ops in operators:
-            if ops["uuid"] == str(self.uuid) or ops["name"] == self.username:
+            if ops["uuid"] == self.uuid.string or ops["name"] == self.username:
                 return True
         return False
 
@@ -229,15 +229,15 @@ class Player:
             return True
         if "users" not in self.permissions:
             self.permissions["users"] = {}
-        if self.uuid in self.permissions["users"]:
-            for perm in self.permissions["users"][self.uuid]["permissions"]:
+        if self.uuid.string in self.permissions["users"]:
+            for perm in self.permissions["users"][self.uuid.string]["permissions"]:
                 if node in fnmatch.filter([node], perm):
-                    return self.permissions["users"][self.uuid]["permissions"][perm]
-        if self.uuid not in self.permissions["users"]:
+                    return self.permissions["users"][self.uuid.string]["permissions"][perm]
+        if self.uuid.string not in self.permissions["users"]:
             return False
         allgroups = []  # summary of groups included children groups
         # get the parent groups
-        for group in self.permissions["users"][self.uuid]["groups"]:
+        for group in self.permissions["users"][self.uuid.string]["groups"]:
             if group not in allgroups:
                 allgroups.append(group)
         itemsToProcess = allgroups[:]  # process and find child groups
@@ -266,7 +266,7 @@ class Player:
         if "users" not in self.permissions:
             self.permissions["users"] = {}
         for uuid in self.permissions["users"]:
-            if uuid == str(self.uuid):
+            if uuid == self.uuid.string:
                 self.permissions["users"][uuid]["permissions"][node] = value
 
     def removePermission(self, node):
@@ -276,7 +276,7 @@ class Player:
         if "users" not in self.permissions:
             self.permissions["users"] = {}
         for uuid in self.permissions["users"]:
-            if uuid == str(self.uuid):
+            if uuid == self.uuid.string:
                 if node in self.permissions["users"][uuid]["permissions"]:
                     del self.permissions["users"][uuid]["permissions"][node]
                 else:
@@ -284,11 +284,11 @@ class Player:
 
     def hasGroup(self, group):
         """ Returns a boolean of whether or not the player is in the specified permission group. """
-        self.uuid = self.wrapper.lookupUUIDbyUsername(self.username)  # init the perms for new player
+        self.uuid = self.wrapper.lookupUUIDbyUsername(self.username)  # init the perms for new player, this is an MCUUID
         if "users" not in self.permissions:
             self.permissions["users"] = {}
         for uuid in self.permissions["users"]:
-            if uuid == str(self.uuid):
+            if uuid == self.uuid.string:
                 return group in self.permissions["users"][uuid]["groups"]
         return False
 
@@ -296,9 +296,9 @@ class Player:
         """ Returns a list of permission groups that the player is in. """
         if "users" not in self.permissions:
             self.permissions["users"] = {}
-        self.uuid = self.wrapper.lookupUUIDbyUsername(self.username)  # init the perms for new player
+        self.uuid = self.wrapper.lookupUUIDbyUsername(self.username)  # init the perms for new player, this is an MCUUID
         for uuid in self.permissions["users"]:
-            if uuid == str(self.uuid):
+            if uuid == self.uuid.string:
                 return self.permissions["users"][uuid]["groups"]
         return []  # If the user is not in the permission database, return this
 
@@ -306,20 +306,20 @@ class Player:
         """ Adds the player to a specified group. If the group does not exist, an IndexError is raised. """
         if group not in self.permissions["groups"]:
             raise IndexError("No group with the name '%s' exists" % group)
-        self.uuid = self.wrapper.lookupUUIDbyUsername(self.username)  # init the perms for new player
+        self.uuid = self.wrapper.lookupUUIDbyUsername(self.username)  # init the perms for new player, this is an MCUUID
         if "users" not in self.permissions:
             self.permissions["users"] = {}
         for uuid in self.permissions["users"]:
-            if uuid == str(self.uuid):
+            if uuid == self.uuid.string:
                 self.permissions["users"][uuid]["groups"].append(group)
 
     def removeGroup(self, group):
         """ Removes the player to a specified group. If they are not part of the specified group, an IndexError is raised. """
         if "users" not in self.permissions:
             self.permissions["users"] = {}
-        self.uuid = self.wrapper.lookupUUIDbyUsername(self.username)  # init the perms for new player
+        self.uuid = self.wrapper.lookupUUIDbyUsername(self.username)  # init the perms for new player, this is an MCUUID
         for uuid in self.permissions["users"]:
-            if uuid == str(self.uuid):
+            if uuid == self.uuid.string:
                 if group in self.permissions["users"][uuid]["groups"]:
                     self.permissions["users"][uuid]["groups"].remove(group)
                 else:

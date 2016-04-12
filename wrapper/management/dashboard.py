@@ -6,9 +6,9 @@ import threading
 import random
 import traceback
 import datetime
+import logging
 
 from core.storage import Storage
-from utils.log import Log
 
 try:
     from flask import Flask, g, redirect, url_for, render_template, request, make_response, Response, Markup
@@ -22,8 +22,7 @@ class Web:
 
     def __init__(self, wrapper):
         self.wrapper = wrapper
-        self.log = Log("Web")
-
+        self.log = logging.getLogger('wrapper')
         self.app = Flask(__name__)
         self.app.config['SECRET_KEY'] = "".join([chr(random.randrange(48, 90)) for i in range(32)])  # LOL
         self.socketio = SocketIO(self.app)

@@ -1,13 +1,10 @@
 # -*- coding: utf-8 -*-
 
 def args(arginput, i):
-    try:
+    if not i >= len(arginput):
         return arginput[i]
-    except:
+    else:
         return ""
 
 def argsAfter(arginput, i):
-    try:
-        return " ".join(arginput[i:])
-    except:
-        return ""
+    return " ".join(arginput[i:])
