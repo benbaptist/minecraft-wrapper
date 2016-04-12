@@ -43,19 +43,20 @@ try:
 except ImportError:
     IMPORT_REQUESTS = False
 
-
 class Wrapper:
 
     def __init__(self):
         self.log = Log()
         self.configManager = Config(self.log)
+        self.configManager.loadConfig() # Load initially for storage object
+        self.encoding = self.configManager.config["General"]["encoding"] # Was this for unicode strings?
         self.server = None
         self.proxy = False
         self.halt = False
         self.update = False
-        self.storage = Storage("main", self.log)
-        self.permissions = Storage("permissions", self.log)
-        self.usercache = Storage("usercache", self.log)
+        self.storage = Storage("main", encoding=self.encoding)
+        self.permissions = Storage("permissions", encoding=self.encoding)
+        self.usercache = Storage("usercache", encoding=self.encoding)
 
         self.plugins = Plugins(self)
         self.commands = Commands(self)
@@ -64,6 +65,12 @@ class Wrapper:
         self.help = {}
         # Aliases for compatibility
         self.callEvent = self.events.callEvent
+
+        if self.configManager.debug:
+            self.log.info("**** Debugging is Enabled! ****")
+
+        if self.configManager.trace:
+            self.log.info("**** Tracing is Enabled! ****")
 
     def isOnlineMode(self):
         """
@@ -299,8 +306,10 @@ class Wrapper:
                 self.log.info("%s failed to load!", plugin)
 
     def start(self):
+        # Reload configuration each time server starts in order to detect changes
         self.configManager.loadConfig()
         self.config = self.configManager.config
+
         signal.signal(signal.SIGINT, self.SIGINT)
         signal.signal(signal.SIGTERM, self.SIGINT)
 

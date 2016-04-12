@@ -67,6 +67,12 @@ DEFAULT_CONFIG = dict({
 })
 
 class Log:
+    """
+    This class is an instance of a wrapped logging.Logger.
+    Theoretically this could be changed in the future to subclass logging.Logger,
+    but that work effort is non-trivial. As a result, an individual logger is spun up for every
+    plugin and module that initializes it.
+    """
 
     def __init__(self, plugin="Wrapper.py"):
         self.plugin = plugin
@@ -91,7 +97,7 @@ class Log:
         Low level information like proxy packets
         """
         if Config.trace:
-            trace_style  = termcolors.make_style(fg="magenta")
+            trace_style  = termcolors.make_style(fg="green")
             self.logger.trace(trace_style(message), *args, **dict(extra={"plugin": self.plugin}, **kwargs))
 
     def warn(self, message, *args, **kwargs):
@@ -149,7 +155,7 @@ class Log:
             self.exception("Unable to load or create %s! (%s)", file, e)
 
     def setupLogger(self):
-        # TODO: logger.setLevel based on core.config
         self.setCustomLevels()
-        self.logger = logging.getLogger()
+        self.logger = logging.getLogger(__name__)
+        self.logger.addHandler(logging.NullHandler())
         self.loadConfig()

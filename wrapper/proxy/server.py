@@ -27,7 +27,7 @@ class Server:
         self.proxy = wrapper.proxy
         self.lastPacketIDs = []
 
-        self.state = 0  # 0 = init, 1 = motd, 2 = login, 3 = active, 4 = authorizing
+        self.state = State.INIT
         self.packet = None
         self.version = self.wrapper.server.protocolVersion
         self.log = wrapper.log
@@ -63,13 +63,7 @@ class Server:
         t.start()
 
     def close(self, reason="Disconnected", kill_client=True):
-        if Config.debug:
-            usernameofplayer = "unk"
-            try:
-                usernameofplayer = str(self.client.username) # Why is this being error handled?
-            except Exception as e:
-                self.log.exception("Something weird happened (%s, %s)", e, usernameofplayer)
-            self.log.debug("Last packet IDs (Server -> Client) of player %s before disconnection: \n%s", usernameofplayer, str(self.lastPacketIDs))
+        self.log.debug("Last packet IDs (Server -> Client) of player %s before disconnection: \n%s", self.username, self.lastPacketIDs)
         self.abort = True
         self.packet = None
         try:
@@ -99,7 +93,7 @@ class Server:
                 if client.server.eid == eid:
                     return self.getPlayerContext(client.username)
             except Exception as e:
-                self.log.exception("Failed to set client.server.eid! serverEid: %s, Eid: %s", str(client.server.eid), str(eid))
+                self.log.exception("Failed to set client.server.eid! serverEid: %s, Eid: %s", client.server.eid, eid)
         return False
 
     def getPlayerContext(self, username):
@@ -123,7 +117,7 @@ class Server:
         """
         Client-bound "Server Class"
         """
-        if pkid == 0x00 and self.state < 3: # disconnect, I suppose...
+        if pkid == 0x00 and self.state < State.ACTIVE: # disconnect, I suppose...
             message = self.read("string:string")
             self.log.info("Disconnected from server: %s", message["string"])
             self.client.disconnect(message)
@@ -131,7 +125,7 @@ class Server:
             return False
 
         # handle keep alive packets - DISABLED until github #5 is resolved
-        # if pkid == self.pktCB.KEEP_ALIVE and self.state == 3:
+        # if pkid == self.pktCB.KEEP_ALIVE and self.state == State.ACTIVE:
         #     if self.client.version > 7:
         #         pkid = self.read("varint:i")["i"]
         #         if pkid is not None:
@@ -139,18 +133,18 @@ class Server:
         #     self.log.trace("(PROXY SERVER) -> Parsed KEEP_ALIVE packet with server state 3 (ACTIVE)")
         #     return False
 
-        if pkid == 0x01 and self.state == 2:
+        if pkid == 0x01 and self.state == State.LOGIN:
             # This is throwing a malformed json exception when online mode is set to true, this should be a json string
             self.client.disconnect("Server is online mode. Please turn it off in server.properties. Wrapper.py will handle authentication on its own, so do not worry about hackers.")
             self.log.trace("(PROXY SERVER) -> Parsed 0x01 packet with server state 2 (LOGIN)")
             return False
 
-        if pkid == 0x02 and self.state == 2: # Login Success - UUID & Username are sent in this packet
-            self.state = 3
+        if pkid == 0x02 and self.state == State.LOGIN: # Login Success - UUID & Username are sent in this packet
+            self.state = State.ACTIVE
             self.log.trace("(PROXY SERVER) -> Parsed 0x02 packet with server state 2 (LOGIN)")
             return False
 
-        if pkid == self.pktCB.JOIN_GAME and self.state == 3:
+        if pkid == self.pktCB.JOIN_GAME and self.state == State.ACTIVE:
             if self.version < mcpacket.PROTOCOL_1_9_1_PRE:
                 data = self.read("int:eid|ubyte:gamemode|byte:dimension|ubyte:difficulty|ubyte:max_players|string:level_type")
             else:
@@ -177,7 +171,6 @@ class Server:
                 self.client.eid = data["eid"]
                 self.safe = True
             self.client.handshake = True
-            # print "Sending change game state packet..."
             self.client.send(self.pktCB.CHANGE_GAME_STATE, "ubyte|float", (3, self.client.gamemode))
             
             if UNIVERSAL_CONNECT is True:
@@ -187,7 +180,7 @@ class Server:
                     self.client.send(self.pktCB.JOIN_GAME, "int|ubyte|byte|ubyte|ubyte|string", (data["eid"], data["gamemode"], data["dimension"], data["difficulty"], data["max_players"], data["level_type"]))
                     return False
 
-        if pkid == self.pktCB.CHAT_MESSAGE and self.state == 3:
+        if pkid == self.pktCB.CHAT_MESSAGE and self.state == State.ACTIVE:
             rawdata = self.read("string:json|byte:position")
             rawstring = rawdata["json"]
             position = rawdata["position"]
@@ -211,13 +204,11 @@ class Server:
             else:
                 return False
 
-            try:
-                if data["translate"] == "chat.type.admin": # Why is this being error handled?
+            if "translate" in data:
+                if data["translate"] == "chat.type.admin":
                     return False
-            except Exception as e:
-                self.log.exception("Something odd happened (%s)", e)
 
-        if pkid == 0x03 and self.state == 2:  # Set Compression
+        if pkid == 0x03 and self.state == State.LOGIN:  # Set Compression
             data = self.read("varint:threshold")
             if data["threshold"] != -1:
                 self.packet.compression = True
@@ -228,7 +219,7 @@ class Server:
             self.log.trace("(PROXY SERVER) -> Parsed 0x03 packet with server state 2 (LOGIN):\n%s", data)
             return False
 
-        if self.state < 3:
+        if self.state < State.ACTIVE:
             return True  # remaining packets are parsed solely per "play" state
 
         if pkid == self.pktCB.TIME_UPDATE:
@@ -311,7 +302,7 @@ class Server:
                     return False
             return True
 
-        if pkid == self.pktCB.SPAWN_OBJECT:  # self.pktCB.SPAWN_OBJECT and self.state >= 3: # Spawn Object
+        if pkid == self.pktCB.SPAWN_OBJECT:  # self.pktCB.SPAWN_OBJECT and self.state >= State.ACTIVE: # Spawn Object
             if self.version < mcpacket.PROTOCOL_1_9START:
                 data = self.read("varint:eid|byte:type_|int:x|int:y|int:z|byte:pitch|byte:yaw")
                 entityuuid = None
@@ -341,7 +332,7 @@ class Server:
         
         if pkid == self.pktCB.ENTITY_RELATIVE_MOVE:  # Entity Relative Move
             if self.version < mcpacket.PROTOCOLv1_8START:
-                # Temporary! These packets need to be filtered for cross-server stuff.
+                # TODO: These packets need to be filtered for cross-server stuff.
                 return True
             data = self.read("varint:eid|byte:dx|byte:dy|byte:dz")
             self.log.trace("(PROXY SERVER) -> Parsed ENTITY_RELATIVE_MOVE packet:\n%s", data)
@@ -352,7 +343,7 @@ class Server:
 
         if pkid == self.pktCB.ENTITY_TELEPORT:  # Entity Teleport
             if self.version < mcpacket.PROTOCOLv1_8START:
-                # Temporary! These packets need to be filtered for cross-server stuff.
+                # TODO: These packets need to be filtered for cross-server stuff.
                 return True
             data = self.read("varint:eid|int:x|int:y|int:z|byte:yaw|byte:pitch")
             self.log.trace("(PROXY SERVER) -> Parsed ENTITY_TELEPORT packet:\n%s", data)
@@ -367,14 +358,14 @@ class Server:
         
         if pkid == self.pktCB.ENTITY_STATUS:  # Entity Status
             if self.version < mcpacket.PROTOCOLv1_8START:
-                # Temporary! These packets need to be filtered for cross-server stuff.
+                # TODO: These packets need to be filtered for cross-server stuff.
                 return True
             data = self.read("int:eid|byte:status")
             self.log.trace("(PROXY SERVER) -> Parsed ENTITY_STATUS packet:\n%s", data)
         
         if pkid == self.pktCB.ATTACH_ENTITY:  # Attach Entity
             if self.version < mcpacket.PROTOCOLv1_8START:
-                # Temporary! These packets need to be filtered for cross-server stuff.
+                # TODO: These packets need to be filtered for cross-server stuff.
                 return True
             data = self.read("varint:eid|varint:vid|bool:leash")
             eid, vid, leash = data["eid"], data["vid"], data["leash"]
@@ -398,7 +389,7 @@ class Server:
         
         if pkid == self.pktCB.ENTITY_METADATA:  # Entity Metadata
             if self.version < mcpacket.PROTOCOLv1_8START:
-                # Temporary! These packets need to be filtered for cross-server stuff.
+                # TODO: These packets need to be filtered for cross-server stuff.
                 return True
             data = self.read("varint:eid|rest:metadata")
             self.log.trace("(PROXY SERVER) -> Parsed ENTITY_METADATA packet:\n%s", data)
@@ -408,7 +399,7 @@ class Server:
         
         if pkid == self.pktCB.ENTITY_EFFECT: # Entity Effect
             if self.version < mcpacket.PROTOCOLv1_8START:
-                # Temporary! These packets need to be filtered for cross-server stuff.
+                # TODO: These packets need to be filtered for cross-server stuff.
                 return True
             data = self.read("varint:eid|byte:effect_id|byte:amplifier|varint:duration|bool:hide")
             self.log.trace("(PROXY SERVER) -> Parsed ENTITY_EFFECT packet:\n%s", data)
@@ -418,7 +409,7 @@ class Server:
         
         if pkid == self.pktCB.REMOVE_ENTITY_EFFECT: # Remove Entity Effect
             if self.version < mcpacket.PROTOCOLv1_8START:
-                # Temporary! These packets need to be filtered for cross-server stuff.
+                # TODO: These packets need to be filtered for cross-server stuff.
                 return True
             data = self.read("varint:eid|byte:effect_id")
             self.log.trace("(PROXY SERVER) -> Parsed REMOVE_ENTITY_EFFECT packet:\n%s", data)
@@ -428,7 +419,7 @@ class Server:
         
         if pkid == self.pktCB.ENTITY_PROPERTIES:  # Entity Properties
             if self.version < mcpacket.PROTOCOLv1_8START:
-                # Temporary! These packets need to be filtered for cross-server stuff.
+                # TODO: These packets need to be filtered for cross-server stuff.
                 return True
             data = self.read("varint:eid|rest:properties")
             self.log.trace("(PROXY SERVER) -> Parsed ENTITY_PROPERTIES packet:\n%s", data)
@@ -445,7 +436,7 @@ class Server:
 
         # if self.pktCB.BLOCK_CHANGE: # Block Change - disabled - not doing anything at this point
         #     if self.version < mcpacket.PROTOCOLv1_8START:
-        #         # Temporary! These packets need to be filtered for cross-server stuff.
+        #         # TODO: These packets need to be filtered for cross-server stuff.
         #         return True
         #     data = self.read("position:location|varint:pkid")
         #     self.log.trace("(PROXY SERVER) -> Parsed BLOCK_CHANGE packet:\n%s", data)
@@ -454,12 +445,12 @@ class Server:
             if self.version > mcpacket.PROTOCOLv1_8START and self.version < mcpacket.PROTOCOL_1_9START:
                 data = self.read("bool:skylight|varint:chunks")
                 self.log.trace("(PROXY SERVER) -> Parsed MAP_CHUNK_BULK packet:\n%s", data)
-                for i in xrange(data["chunks"]):
+                for chunk in xrange(data["chunks"]):
                     meta = self.read("int:x|int:z|ushort:primary")
                     bitmask = bin(meta["primary"])[2:].zfill(16)
                     chunkColumn = bytearray()
-                    for i in bitmask:
-                        if i == "1":
+                    for bit in bitmask:
+                        if bit == "1":
                             # packetanisc
                             chunkColumn += bytearray(self.packet.read_data(16 * 16 * 16 * 2))
                             if self.client.dimension == 0:
@@ -478,7 +469,7 @@ class Server:
         
         if pkid == self.pktCB.SET_SLOT:  # Set Slot
             if self.version < mcpacket.PROTOCOLv1_8START:
-                # Temporary! These packets need to be filtered for cross-server stuff.
+                # TODO: These packets need to be filtered for cross-server stuff.
                 return True
             data = self.read("byte:wid|short:slot|slot:data")
             if data["wid"] == 0:
@@ -504,10 +495,10 @@ class Server:
                         z += 1
                         continue
                     try:
-                        uuid = playerclient.uuid # This is an MCUUID object
+                        uuid = playerclient.uuid # This is an MCUUID object, how could this fail? All clients have a uuid attribute
                     except Exception as e:
                         # uuid = playerclient
-                        self.log.exception("playercleint.uuid failed in playerlist item (%s)", e) # How could this fail? All clients have a uuid attribute
+                        self.log.exception("playercleint.uuid failed in playerlist item (%s)", e)
                         z += 1
                         continue
                     z += 1
@@ -569,12 +560,12 @@ class Server:
                             del self.lastPacketIDs[i]
                             break
                 except EOFError as eof:
-                    # This error is often erroneous since socket data recv length is 0 when transmit ends
+                    # This error is often erroneous, see https://github.com/suresttexas00/minecraft-wrapper/issues/30
                     self.log.exception("Packet EOF (%s)", eof)
                     self.close()
                     break
                 except Exception as e1:
-                    # Bad file descriptor often occurs, cause is currently unknown, but seemingly harmless
+                    # Bad file descriptor often occurs, see https://github.com/suresttexas00/minecraft-wrapper/issues/30
                     self.log.exception("Failed to grab packet [SERVER] (%s):", e1)
                     return
                 if self.client.abort:
@@ -585,3 +576,14 @@ class Server:
         except Exception as e2:
             self.log.exception("Error in the [SERVER] -> [CLIENT] handle (%s):", e2)
             self.close()
+
+class State:
+    """
+    This class represents proxy Server states
+    """
+    # TODO: Provide details on each state
+    INIT = 0
+    MOTD = 1
+    LOGIN = 2
+    ACTIVE = 3
+    AUTHORIZING = 4

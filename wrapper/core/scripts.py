@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+# This looks interesting, but not quite sure the intention
+
 import os
 import stat
 

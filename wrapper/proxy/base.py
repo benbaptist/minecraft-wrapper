@@ -127,7 +127,7 @@ class Proxy:
             "reason": reason,
             "source": source,
             "created": time.time(), 
-            "name": self.lookupUUID(uuid)["name"] # wrong, this function also doesn't even exist
+            "name": self.wrapper.lookupUsernamebyUUID(uuid)
         }
 
     def banIP(self, ipaddress, reason="Banned by an operator", source="Server"):
@@ -141,7 +141,7 @@ class Proxy:
         for i in self.wrapper.server.players:
             player = self.wrapper.server.players[i]
             if str(player.client.addr[0]) == str(ipaddress):
-                self.wrapper.server.console("kick %s Your IP is Banned!" % str(player.username))
+                self.wrapper.server.console("kick %s Your IP is Banned!" % player.username)
 
     def pardonIP(self, ipaddress):
         if self.storage.key("banned-ip"):
@@ -150,9 +150,9 @@ class Proxy:
                     del self.storage.key("banned-ip")[str(ipaddress)]
                     return True
                 except Exception as e:
-                    self.log.exception("Failed to pardon %s (%s)", str(ipaddress), e)
+                    self.log.exception("Failed to pardon %s (%s)", ipaddress, e)
                     return False
-        self.log.warn("Could not find %s to pardon them", str(ipaddress))
+        self.log.warn("Could not find %s to pardon them", ipaddress)
         return False
 
     def isUUIDBanned(self, uuid):  # Check if the UUID of the user is banned
