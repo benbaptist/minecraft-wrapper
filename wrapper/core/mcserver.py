@@ -19,7 +19,7 @@ import ctypes
 import platform
 import ast
 
-from utils.helpers import args, argsAfter
+from utils.helpers import get_args, get_argsAfter
 from api.base import API
 from api.player import Player
 from api.world import World
@@ -493,97 +493,97 @@ class MCServer:
         deathPrefixes = ["fell", "was", "drowned", "blew", "walked", "went", "burned", "hit", "tried",
                          "died", "got", "starved", "suffocated", "withered"]
         if not self.config["General"]["pre-1.7-mode"]:
-            if len(args(line.split(" "), 0)) < 1:
+            if len(get_args(line.split(" "), 0)) < 1:
                 return
-            if args(line.split(" "), 0) == "Done":  # Confirmation that the server finished booting
+            if get_args(line.split(" "), 0) == "Done":  # Confirmation that the server finished booting
                 self.changeState(2)
                 self.log.info("Server started")
                 self.bootTime = time.time()
-            elif args(line.split(" "), 0) == "Preparing" and args(line.split(" "), 1) == "level":  # Getting world name
-                self.worldName = args(line.split(" "), 2).replace('"', "")
+            elif get_args(line.split(" "), 0) == "Preparing" and get_args(line.split(" "), 1) == "level":  # Getting world name
+                self.worldName = get_args(line.split(" "), 2).replace('"', "")
                 self.world = World(self.worldName, self)
-            elif args(line.split(" "), 0)[0] == "<":  # Player Message
-                name = self.stripSpecial(args(line.split(" "), 0)[1:-1])
-                message = self.stripSpecial(argsAfter(line.split(" "), 1))
-                original = argsAfter(line.split(" "), 0)
+            elif get_args(line.split(" "), 0)[0] == "<":  # Player Message
+                name = self.stripSpecial(get_args(line.split(" "), 0)[1:-1])
+                message = self.stripSpecial(get_argsAfter(line.split(" "), 1))
+                original = get_argsAfter(line.split(" "), 0)
                 self.wrapper.callEvent("player.message", {
                     "player": self.getPlayer(name), 
                     "message": message, 
                     "original": original
                 })
-            elif args(line.split(" "), 1) == "logged":  # Player Login
-                name = self.stripSpecial(args(line.split(" "), 0)[0:args(line.split(" "), 0).find("[")])
+            elif get_args(line.split(" "), 1) == "logged":  # Player Login
+                name = self.stripSpecial(get_args(line.split(" "), 0)[0:get_args(line.split(" "), 0).find("[")])
                 self.login(name)
-            elif args(line.split(" "), 1) == "lost":  # Player Logout
-                name = args(line.split(" "), 0)
+            elif get_args(line.split(" "), 1) == "lost":  # Player Logout
+                name = get_args(line.split(" "), 0)
                 self.logout(name)
-            elif args(line.split(" "), 0) == "*":
-                name = self.stripSpecial(args(line.split(" "), 1))
-                message = self.stripSpecial(argsAfter(line.split(" "), 2))
+            elif get_args(line.split(" "), 0) == "*":
+                name = self.stripSpecial(get_args(line.split(" "), 1))
+                message = self.stripSpecial(get_argsAfter(line.split(" "), 2))
                 self.wrapper.callEvent("player.action", {
                     "player": self.getPlayer(name),
                     "action": message
                 })
-            elif args(line.split(" "), 0)[0] == "[" and args(line.split(" "), 0)[-1] == "]":  # /say command
+            elif get_args(line.split(" "), 0)[0] == "[" and get_args(line.split(" "), 0)[-1] == "]":  # /say command
                 if self.getServerType != "vanilla":
                     return  # Unfortunately, Spigot and Bukkit output things that conflict with this
-                name = self.stripSpecial(args(line.split(" "), 0)[1:-1])
-                message = self.stripSpecial(argsAfter(line.split(" "), 1))
-                original = argsAfter(line.split(" "), 0)
+                name = self.stripSpecial(get_args(line.split(" "), 0)[1:-1])
+                message = self.stripSpecial(get_argsAfter(line.split(" "), 1))
+                original = get_argsAfter(line.split(" "), 0)
                 self.wrapper.callEvent("server.say", {
                     "player": name, 
                     "message": message, 
                     "original": original
                 })
-            elif args(line.split(" "), 1) == "has" and args(line.split(" "), 5) == "achievement":  # Player Achievement
-                name = self.stripSpecial(args(line.split(" "), 0))
-                achievement = argsAfter(line.split(" "), 6)
+            elif get_args(line.split(" "), 1) == "has" and get_args(line.split(" "), 5) == "achievement":  # Player Achievement
+                name = self.stripSpecial(get_args(line.split(" "), 0))
+                achievement = get_argsAfter(line.split(" "), 6)
                 self.wrapper.callEvent("player.achievement", {
                     "player": name, 
                     "achievement": achievement
                 })
-            elif args(line.split(" "), 1) in deathPrefixes:  # Player Death
-                name = self.stripSpecial(args(line.split(" "), 0))
+            elif get_args(line.split(" "), 1) in deathPrefixes:  # Player Death
+                name = self.stripSpecial(get_args(line.split(" "), 0))
                 self.wrapper.callEvent("player.death", {
                     "player": self.getPlayer(name), 
-                    "death": argsAfter(line.split(" "), 4)
+                    "death": get_argsAfter(line.split(" "), 4)
                 })
         else:
-            if len(args(line.split(" "), 3)) < 1:
+            if len(get_args(line.split(" "), 3)) < 1:
                 return
-            if args(line.split(" "), 3) == "Done":  # Confirmation that the server finished booting
+            if get_args(line.split(" "), 3) == "Done":  # Confirmation that the server finished booting
                 self.changeState(2)
                 self.log.info("Server started")
                 self.bootTime = time.time()
-            elif args(line.split(" "), 3) == "Preparing" and args(line.split(" "), 4) == "level":  # Getting world name
-                self.worldName = args(line.split(" "), 5).replace('"', "")
+            elif get_args(line.split(" "), 3) == "Preparing" and get_args(line.split(" "), 4) == "level":  # Getting world name
+                self.worldName = get_args(line.split(" "), 5).replace('"', "")
                 self.world = World(self.worldName, self)
-            elif args(line.split(" "), 3)[0] == "<":  # Player Message
-                name = self.stripSpecial(args(line.split(" "), 3)[1:-1])
-                message = self.stripSpecial(argsAfter(line.split(" "), 4))
-                original = argsAfter(line.split(" "), 3)
+            elif get_args(line.split(" "), 3)[0] == "<":  # Player Message
+                name = self.stripSpecial(get_args(line.split(" "), 3)[1:-1])
+                message = self.stripSpecial(get_argsAfter(line.split(" "), 4))
+                original = get_argsAfter(line.split(" "), 3)
                 self.wrapper.callEvent("player.message", {
                     "player": self.getPlayer(name), 
                     "message": message, 
                     "original": original
                 })
-            elif args(line.split(" "), 4) == "logged":  # Player Login
-                name = self.stripSpecial(args(line.split(" "), 3)[0:args(line.split(" "), 3).find("[")])
+            elif get_args(line.split(" "), 4) == "logged":  # Player Login
+                name = self.stripSpecial(get_args(line.split(" "), 3)[0:get_args(line.split(" "), 3).find("[")])
                 self.login(name)
-            elif args(line.split(" "), 4) == "lost":  # Player Logout
-                name = args(line.split(" "), 3)
+            elif get_args(line.split(" "), 4) == "lost":  # Player Logout
+                name = get_args(line.split(" "), 3)
                 self.logout(name)
-            elif args(line.split(" "), 3) == "*":
-                name = self.stripSpecial(args(line.split(" "), 4))
-                message = self.stripSpecial(argsAfter(line.split(" "), 5))
+            elif get_args(line.split(" "), 3) == "*":
+                name = self.stripSpecial(get_args(line.split(" "), 4))
+                message = self.stripSpecial(get_argsAfter(line.split(" "), 5))
                 self.wrapper.callEvent("player.action", {
                     "player": self.getPlayer(name), 
                     "action": message
                 })
-            elif args(line.split(" "), 3)[0] == "[" and args(line.split(" "), 3)[-1] == "]":  # /say command
-                name = self.stripSpecial(args(line.split(" "), 3)[1:-1])
-                message = self.stripSpecial(argsAfter(line.split(" "), 4))
-                original = argsAfter(line.split(" "), 3)
+            elif get_args(line.split(" "), 3)[0] == "[" and get_args(line.split(" "), 3)[-1] == "]":  # /say command
+                name = self.stripSpecial(get_args(line.split(" "), 3)[1:-1])
+                message = self.stripSpecial(get_argsAfter(line.split(" "), 4))
+                original = get_argsAfter(line.split(" "), 3)
                 if name == "Server":
                     return
                 self.wrapper.callEvent("server.say", {
@@ -591,21 +591,21 @@ class MCServer:
                     "message": message, 
                     "original": original
                 })
-            elif args(line.split(" "), 4) == "has" and args(line.split(" "), 8) == "achievement":  # Player Achievement
-                name = self.stripSpecial(args(line.split(" "), 3))
-                achievement = argsAfter(line.split(" "), 9)
+            elif get_args(line.split(" "), 4) == "has" and get_args(line.split(" "), 8) == "achievement":  # Player Achievement
+                name = self.stripSpecial(get_args(line.split(" "), 3))
+                achievement = get_argsAfter(line.split(" "), 9)
                 self.wrapper.callEvent("player.achievement", {
                     "player": name, 
                     "achievement": achievement
                 })
-            elif args(line.split(" "), 4) in deathPrefixes:  # Player Death
-                name = self.stripSpecial(args(line.split(" "), 3))
+            elif get_args(line.split(" "), 4) in deathPrefixes:  # Player Death
+                name = self.stripSpecial(get_args(line.split(" "), 3))
                 deathMessage = self.config["Death"]["death-kick-messages"][random.randrange(0, len(self.config["Death"]["death-kick-messages"]))]
                 if self.config["Death"]["kick-on-death"] and name in self.config["Death"]["users-to-kick"]:
                     self.console("kick %s %s" % (name, deathMessage))
                 self.wrapper.callEvent("player.death", {
                     "player": self.getPlayer(name), 
-                    "death": argsAfter(line.split(" "), 4)
+                    "death": get_argsAfter(line.split(" "), 4)
                 })
 
     # Event Handlers

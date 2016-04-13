@@ -14,7 +14,7 @@ import os
 import utils.encryption as encryption
 import mcpacket
 
-from utils.helpers import args, argsAfter
+from utils.helpers import get_args, get_argsAfter
 from server import Server
 from packet import Packet
 from core.config import Config
@@ -439,7 +439,7 @@ class Client:
             self.position = (data["x"], data["y"], data["z"])
             self.head = (data["yaw"], data["pitch"])
             self.log.trace("(PROXY CLIENT) -> Parsed PLAYER_POSLOOK packet:\n%s", data)
-            if self.server.state != 3:
+            if self.server.state != State.ACTIVE:
                 return False
 
         if pkid == self.pktSB.PLAYER_LOOK: # Player Look
@@ -497,7 +497,7 @@ class Client:
                         "action": "finish_using"
                     }):
                         return False
-            if self.server.state != 3:
+            if self.server.state != State.ACTIVE:
                 return False
 
         if pkid == self.pktSB.PLAYER_BLOCK_PLACEMENT: # Player Block Placement
@@ -615,7 +615,14 @@ class Client:
             l2 = data["line2"]
             l3 = data["line3"]
             l4 = data["line4"]
-            payload = self.wrapper.callEvent("player.createsign", {"player": self.getPlayerObject(), "position": position, "line1": l1, "line2": l2, "line3": l3, "line4": l4})
+            payload = self.wrapper.callEvent("player.createsign", {
+                "player": self.getPlayerObject(), 
+                "position": position, 
+                "line1": l1, 
+                "line2": l2, 
+                "line3": l3, 
+                "line4": l4
+            })
             self.log.trace("(PROXY CLIENT) -> Parsed PLAYER_UPDATE_SIGN packet:\n%s", data)
             if not payload:
                 return False

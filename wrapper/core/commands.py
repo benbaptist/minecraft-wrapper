@@ -4,8 +4,7 @@ import traceback
 import ast
 import random
 
-from utils.helpers import args as get_args
-from utils.helpers import argsAfter as get_argsAfter
+from utils.helpers import get_args, get_argsAfter
 
 class Commands:
 
