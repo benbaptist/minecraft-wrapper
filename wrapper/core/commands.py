@@ -36,8 +36,6 @@ class Commands:
             yield i
 
     def playerCommand(self, payload):
-        print "Command.py - payload['args']: %s" % payload["args"]
-        print "Command.py - ' '.join(payload['args']): %s" % " ".join(payload["args"])
         player = payload["player"]
         self.log.info("%s executed: /%s %s", payload["player"], payload["command"], " ".join(payload["args"]))
         for pluginID in self.commands:
@@ -72,7 +70,6 @@ class Commands:
             buildString = self.wrapper.getBuildString()
             if len(get_args(payload["args"], 0)) > 0:
                 subcommand = get_args(payload["args"], 0)
-                print subcommand
                 if subcommand == "update":
                     player.message({"text": "Checking for new Wrapper.py updates...", "color": "yellow"})
                     update = self.wrapper.checkForNewUpdate()

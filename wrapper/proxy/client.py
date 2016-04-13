@@ -396,7 +396,6 @@ class Client:
                 return False
             try:
                 chatmsg = data["message"]
-                print "Client.py - chatmsg: %s" % chatmsg
                 if not self.isLocal and chatmsg == "/lobby":
                     self.server.close(reason="Lobbification", kill_client=False)
                     self.address = None
@@ -405,13 +404,15 @@ class Client:
                     return False
                 if not self.isLocal:
                     return True
-                payload = self.wrapper.callEvent("player.rawMessage", {"player": self.getPlayerObject(), "message": data["message"]})
+                payload = self.wrapper.callEvent("player.rawMessage", {
+                    "player": self.getPlayerObject(), 
+                    "message": data["message"]
+                })
                 if not payload:
                     return False
                 if type(payload) == str:
                     chatmsg = payload
                 if chatmsg[0] == "/":
-                    print "Command.py - args: %s" % argsAfter(chatmsg.split(" "), 1)
                     if self.wrapper.callEvent("player.runCommand", {
                         "player": self.getPlayerObject(), 
                         "command": chatmsg.split(" ")[0][1:].lower(), 
@@ -680,8 +681,6 @@ class Client:
                 #         self.send(self.pktCB.KEEP_ALIVE, "varint",
                 #                   (random.randrange(0, 99999),))
                 #         if self.clientSettings and not self.clientSettingsSent:
-                #             # print "Sending self.clientSettings..."
-                #             # print self.clientSettings
                 #             if self.version < mcpacket.PROTOCOL_1_9START:
                 #                 self.server.send(self.pktSB.CLIENT_SETTINGS, "string|byte|byte|bool|ubyte", (
                 #                     self.clientSettings["locale"],

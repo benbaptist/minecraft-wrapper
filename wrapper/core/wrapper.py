@@ -227,7 +227,7 @@ class Wrapper:
                             self.log.error("uuid: %s", useruuid)
                             self.log.debug("response: \n%s", str(rx))
                             return None
-                        if rx[i]["account.mojang.com"] in ("yellow", "red"):
+                        elif rx[i]["account.mojang.com"] in ("yellow", "red"):
                             self.log.error("Mojang accounts is experiencing issues (%s).", rx[i]["account.mojang.com"])
                             return False
                         self.log.error("Mojang Status found, but corrupted or in an unexpected format (status code %s)", r.status_code)
