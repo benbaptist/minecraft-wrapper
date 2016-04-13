@@ -2,6 +2,7 @@
 
 import json
 import os
+import errno
 import logging
 from logging.config import dictConfig
 
