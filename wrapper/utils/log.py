@@ -158,21 +158,25 @@ class ColorFormatter(logging.Formatter):
         args = record.args
         msg = record.msg
 
-        if record.levelno == logging.DEBUG:
-            debug_style = termcolors.make_style(fg="cyan")
-            msg = debug_style(msg)
-        elif record.levelno == logging.WARNING:
-            warn_style = termcolors.make_style(fg="yellow", opts=("bold",))
-            msg = warn_style(msg)
-        elif record.levelno == logging.ERROR:
-            error_style = termcolors.make_style(fg="red", opts=("bold",))
-            msg = error_style(msg)
-        elif record.levelno == logging.CRITICAL:
-            crit_style = termcolors.make_style(fg="black", bg="red", opts=("bold",))
-            msg = crit_style(msg)
-        elif record.levelno == logging.TRACE:
-            trace_style  = termcolors.make_style(fg="green")
-            msg = trace_style(msg)
+        if os.name =="posix": # Only style on linux since windows doesn't support ANSI
+            if record.levelno == logging.INFO:
+                info_style = termcolors.make_style(fg="green")
+                msg = info_style(msg)
+            elif record.levelno == logging.DEBUG:
+                debug_style = termcolors.make_style(fg="cyan")
+                msg = debug_style(msg)
+            elif record.levelno == logging.WARNING:
+                warn_style = termcolors.make_style(fg="yellow", opts=("bold",))
+                msg = warn_style(msg)
+            elif record.levelno == logging.ERROR:
+                error_style = termcolors.make_style(fg="red", opts=("bold",))
+                msg = error_style(msg)
+            elif record.levelno == logging.CRITICAL:
+                crit_style = termcolors.make_style(fg="black", bg="red", opts=("bold",))
+                msg = crit_style(msg)
+            elif record.levelno == logging.TRACE:
+                trace_style  = termcolors.make_style(fg="black", bg="white")
+                msg = trace_style(msg)
 
         record.msg = msg
 

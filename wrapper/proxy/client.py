@@ -14,7 +14,7 @@ import os
 import utils.encryption as encryption
 import mcpacket
 
-from utils.helpers import args, argsAfter
+from utils.helpers import get_args, get_argsAfter
 from server import Server
 from packet import Packet
 from core.config import Config
@@ -396,7 +396,6 @@ class Client:
                 return False
             try:
                 chatmsg = data["message"]
-                print "Client.py - chatmsg: %s" % chatmsg
                 if not self.isLocal and chatmsg == "/lobby":
                     self.server.close(reason="Lobbification", kill_client=False)
                     self.address = None
@@ -405,13 +404,15 @@ class Client:
                     return False
                 if not self.isLocal:
                     return True
-                payload = self.wrapper.callEvent("player.rawMessage", {"player": self.getPlayerObject(), "message": data["message"]})
+                payload = self.wrapper.callEvent("player.rawMessage", {
+                    "player": self.getPlayerObject(), 
+                    "message": data["message"]
+                })
                 if not payload:
                     return False
                 if type(payload) == str:
                     chatmsg = payload
                 if chatmsg[0] == "/":
-                    print "Command.py - args: %s" % argsAfter(chatmsg.split(" "), 1)
                     if self.wrapper.callEvent("player.runCommand", {
                         "player": self.getPlayerObject(), 
                         "command": chatmsg.split(" ")[0][1:].lower(), 
@@ -438,7 +439,7 @@ class Client:
             self.position = (data["x"], data["y"], data["z"])
             self.head = (data["yaw"], data["pitch"])
             self.log.trace("(PROXY CLIENT) -> Parsed PLAYER_POSLOOK packet:\n%s", data)
-            if self.server.state != 3:
+            if self.server.state != State.ACTIVE:
                 return False
 
         if pkid == self.pktSB.PLAYER_LOOK: # Player Look
@@ -496,7 +497,7 @@ class Client:
                         "action": "finish_using"
                     }):
                         return False
-            if self.server.state != 3:
+            if self.server.state != State.ACTIVE:
                 return False
 
         if pkid == self.pktSB.PLAYER_BLOCK_PLACEMENT: # Player Block Placement
@@ -614,7 +615,14 @@ class Client:
             l2 = data["line2"]
             l3 = data["line3"]
             l4 = data["line4"]
-            payload = self.wrapper.callEvent("player.createsign", {"player": self.getPlayerObject(), "position": position, "line1": l1, "line2": l2, "line3": l3, "line4": l4})
+            payload = self.wrapper.callEvent("player.createsign", {
+                "player": self.getPlayerObject(), 
+                "position": position, 
+                "line1": l1, 
+                "line2": l2, 
+                "line3": l3, 
+                "line4": l4
+            })
             self.log.trace("(PROXY CLIENT) -> Parsed PLAYER_UPDATE_SIGN packet:\n%s", data)
             if not payload:
                 return False
@@ -680,8 +688,6 @@ class Client:
                 #         self.send(self.pktCB.KEEP_ALIVE, "varint",
                 #                   (random.randrange(0, 99999),))
                 #         if self.clientSettings and not self.clientSettingsSent:
-                #             # print "Sending self.clientSettings..."
-                #             # print self.clientSettings
                 #             if self.version < mcpacket.PROTOCOL_1_9START:
                 #                 self.server.send(self.pktSB.CLIENT_SETTINGS, "string|byte|byte|bool|ubyte", (
                 #                     self.clientSettings["locale"],
