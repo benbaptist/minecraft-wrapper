@@ -182,8 +182,8 @@ class Config:
                         except Exception as e:
                             self.config[section][key[0]] = key[1]
         self.save()
-        Config.debug = self.config["General"]["debug"]
-        Config.trace = self.config["General"]["trace"]
+        #Config.debug = self.config["General"]["debug"]
+        #Config.trace = self.config["General"]["trace"]
 
         if self.exit:
             self.log.info("Updated wrapper.properties file - check and edit configuration if needed and start again.")
