@@ -121,6 +121,7 @@ look for the logging.json file and make changes to the "console" section:
                 "plugin"
             ],
             "level": "INFO" <-- Set to DEBUG or TRACE
+
 ...
 ```
   Debug is a normal debugging setting.  TRACE allows detailed information, such as parsing of packets, etc.
