@@ -108,4 +108,18 @@ Wrapper continues to be a work in progress and changes often happen faster than 
 <li>speedboost.py gives everyone a speedboost when someone dies - similar to survival games.</li>
 <li>poll.py allows players to vote for certain things on the server. It isn't very up-to-date at the moment, however. </li>
 </ul>
-</br>Tip: Set debug=True in wrapper.properties if you want to see more error messages and other useful messages while developing plugins.
+</br>Tip:  
+If you want to see more error messages and other useful messages while developing plugins or debuggin wrapper,
+look for the logging.json file and make changes to the "console" section:  
+```
+        "console": {
+            "stream": "ext://sys.stdout",
+            "formatter": "standard",
+            "class": "logging.StreamHandler",
+            "filters": [
+                "plugin"
+            ],
+            "level": "INFO" <-- Set to DEBUG or TRACE
+        },
+  ```
+  Debug is a normal debugging setting.  TRACE allows detailed information, such as parsing of packets, etc.
