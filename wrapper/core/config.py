@@ -19,9 +19,7 @@ auto-update-dev-build = False
 pre-1.7-mode = False
 timed-reboot = False
 timed-reboot-seconds = 86400
-timed-reboot-warning-minutes = 5 
-debug = False
-trace = False
+timed-reboot-warning-minutes = 5
 shell-scripts = False
 encoding = UTF-8
 
@@ -104,8 +102,6 @@ class Config:
             "auto-restart": True,
             "auto-update-wrapper": False,
             "auto-update-dev-build": False,
-            "debug": False,
-            "trace": False,
             "pre-1.7-mode": False,
             "timed-reboot": False,
             "timed-reboot-seconds": 86400,
@@ -186,8 +182,8 @@ class Config:
                         except Exception as e:
                             self.config[section][key[0]] = key[1]
         self.save()
-        Config.debug = self.config["General"]["debug"]
-        Config.trace = self.config["General"]["trace"]
+        #Config.debug = self.config["General"]["debug"]
+        #Config.trace = self.config["General"]["trace"]
 
         if self.exit:
             self.log.info("Updated wrapper.properties file - check and edit configuration if needed and start again.")

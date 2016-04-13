@@ -28,6 +28,10 @@ class Player:
         self.abort = False
 
         self.uuid = self.wrapper.getUUID(username) # This is an MCUUID object
+        # TODO: See if this can be accomplished via MCUUID
+        self.offlineuuid = self.wrapper.UUIDFromName("OfflinePlayer:%s" % username)
+        self.ipaddress =  "127.0.0.0"
+
         self.client = None
         self.clientPackets = mcpacket.ClientBound18
 
@@ -36,6 +40,8 @@ class Player:
                 if client.username == username:
                     self.client = client
                     self.uuid = client.uuid # Both MCUUID objects
+                    self.offlineuuid = client.serverUUID
+                    self.ipaddress = client.ip
                     if self.getClient().version > 49:
                         self.clientPackets = mcpacket.ClientBound19
                     break
@@ -56,7 +62,7 @@ class Player:
         self.data["logins"][int(self.loggedIn)] = time.time()
         while not self.abort:
             self.data["logins"][int(self.loggedIn)] = int(time.time())
-            time.sleep(1)
+            time.sleep(60)
 
     def console(self, string):
         """

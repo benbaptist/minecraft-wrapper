@@ -19,12 +19,7 @@ from server import Server
 from packet import Packet
 from core.config import Config
 from core.mcuuid import MCUUID
-
-try:
-    import requests
-    IMPORT_SUCCESS = True
-except ImportError:
-    IMPORT_SUCCESS = False
+import requests  # wrapper.py will check for requests to run proxy mode
 
 UNIVERSAL_CONNECT = False # tells the client "same version as you" or does not disconnect dissimilar clients
 HIDDEN_OPS = ["SurestTexas00", "BenBaptist"]
@@ -57,6 +52,7 @@ class Client:
         self.serverUUID = None # Expect this to be an MCUUID
         self.server = None
         self.address = None
+        self.ip = None
         self.handshake = False
 
         self.state = State.INIT
@@ -281,7 +277,8 @@ class Client:
                     self.disconnect("Verify tokens are not the same")
                     return False
                 if self.config["Proxy"]["online-mode"]:
-                    r = requests.get("https://sessionserver.mojang.com/session/minecraft/hasJoined?username=%s&serverId=%s" % (self.username, serverId))
+                    r = requests.get("https://sessionserver.mojang.com/session/minecraft/hasJoined?username=%s"
+                                     "&serverId=%s" % (self.username, serverId))
                     if r.status_code == 200:
                         data = r.json()
                         self.uuid = MCUUID(data["id"])
@@ -303,7 +300,7 @@ class Client:
                             self.username = newUsername
                 else:
                     # TODO: See if this can be accomplished via MCUUID
-                    self.uuid = uuid.uuid3(uuid.NAMESPACE_OID, "OfflinePlayer: %s" % self.username)
+                    self.uuid = uuid.uuid3(uuid.NAMESPACE_OID, "OfflinePlayer:%s" % self.username)  # no space in name
                 
                 if self.config["Proxy"]["convert-player-files"]: # Rename UUIDs accordingly
                     if self.config["Proxy"]["online-mode"]:
@@ -312,7 +309,8 @@ class Client:
                         if not os.path.exists("%s/playerdata/%s.dat" % (worldName, self.serverUUID.string)):
                             if os.path.exists("%s/playerdata/%s.dat" % (worldName, self.uuid.string)):
                                 self.log.info("Migrating %s's playerdata file to proxy mode", self.username)
-                                shutil.move("%s/playerdata/%s.dat" % (worldName, self.uuid.string), "%s/playerdata/%s.dat" % (worldName, self.serverUUID.string))
+                                shutil.move("%s/playerdata/%s.dat" % (worldName, self.uuid.string),
+                                            "%s/playerdata/%s.dat" % (worldName, self.serverUUID.string))
                                 with open("%s/.wrapper-proxy-playerdata-migrate" % worldName, "a") as f:
                                     f.write("%s %s\n" % (self.uuid.string, self.serverUUID.string))
                         # Change whitelist entries to offline mode versions
@@ -331,12 +329,41 @@ class Client:
                                             f.write("%s %s\n" % (self.uuid.string, self.serverUUID.string))
 
                 self.serverUUID = self.wrapper.UUIDFromName("OfflinePlayer:%s" % self.username)
+                self.ip = self.addr[0]
 
                 if self.version > 26:
                     self.packet.setCompression(256)
 
-                # Ban code should go here
-                if self.proxy.isAddressBanned(self.addr[0]): # IP ban
+                # player ban code needs to go here - we should use the vanilla 'banned-players.json' since
+                #    that will allow the vanilla client to handle the indentical bans should the server be switched
+                #    to online mode.
+
+                # banned-players.json format (2 space indents):
+                """
+                    [
+                      {
+                        "uuid": "23881df5-76ab-32ee-83c4-85086ceea301",
+                        "name": "SapperLeader2",
+                        "created": "2016-04-12 18:54:51 -0400",
+                        "source": "Server",
+                        "expires": "forever",
+                        "reason": "Banned by an operator."
+                      }
+                    ]
+                """
+                 # banned-ips.json format (2 space indents):
+                """
+                    [
+                      {
+                        "ip": "199.199.199.199",
+                        "created": "2016-04-12 19:10:38 -0400",
+                        "source": "Server",
+                        "expires": "forever",
+                        "reason": "Banned by an operator."
+                      }
+                    ]
+                """
+                if self.proxy.isAddressBanned(self.addr[0]): #  IP ban- This should also be migrated to the vanilla file
                     self.disconnect("You have been IP-banned from this server!.")
                     return False
 

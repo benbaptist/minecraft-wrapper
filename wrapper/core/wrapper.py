@@ -49,7 +49,7 @@ class Wrapper:
         self.log = logging.getLogger('wrapper')
         self.configManager = Config()
         self.configManager.loadConfig() # Load initially for storage object
-        self.encoding = self.configManager.config["General"]["encoding"] # Was this for unicode strings?
+        self.encoding = self.configManager.config["General"]["encoding"] # This was to allow alternate encodings
         self.server = None
         self.proxy = False
         self.halt = False
@@ -71,6 +71,10 @@ class Wrapper:
 
         if self.configManager.trace:
             self.log.info("**** Tracing is Enabled! ****")
+
+        if not IMPORT_REQUESTS and self.configManager.config["Proxy"]["proxy-enabled"]is True:
+            self.log.error("You must have the requests module installed to run in proxy mode!")
+            return
 
     def isOnlineMode(self):
         """
@@ -282,7 +286,8 @@ class Wrapper:
             # proxy mode is on... poll mojang and wrapper cache
             search = self.lookupUUIDbyUsername(username)
             if not search:
-                self.log.warn("Server online but unable to getUUID (even by polling!) for username: %s - returned an Offline uuid...", username)
+                self.log.warn("Server online but unable to getUUID (even by polling!) for username: %s - "
+                              "returned an Offline uuid...", username)
                 return self.UUIDFromName("OfflinePlayer:%s" % username)
             else:
                 return search
