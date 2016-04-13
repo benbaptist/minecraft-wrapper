@@ -111,7 +111,8 @@ Wrapper continues to be a work in progress and changes often happen faster than 
 </br>Tip:  
 If you want to see more error messages and other useful messages while developing plugins or debuggin wrapper,
 look for the logging.json file and make changes to the "console" section:  
-```
+```json
+...
         "console": {
             "stream": "ext://sys.stdout",
             "formatter": "standard",
@@ -120,6 +121,6 @@ look for the logging.json file and make changes to the "console" section:
                 "plugin"
             ],
             "level": "INFO" <-- Set to DEBUG or TRACE
-        },
-  ```
+...
+```
   Debug is a normal debugging setting.  TRACE allows detailed information, such as parsing of packets, etc.
