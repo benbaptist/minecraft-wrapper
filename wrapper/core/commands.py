@@ -36,12 +36,14 @@ class Commands:
             yield i
 
     def playerCommand(self, payload):
+        print "Command.py - payload['args']: %s" % payload["args"]
+        print "Command.py - ' '.join(payload['args']): %s" % " ".join(payload["args"])
         player = payload["player"]
-        self.log.info("%s executed: /%s %s", str(payload["player"]), payload["command"], " ".join(payload["args"]))
+        self.log.info("%s executed: /%s %s", payload["player"], payload["command"], " ".join(payload["args"]))
         for pluginID in self.commands:
+            command = payload["command"] # Maybe?
             if pluginID == "Wrapper.py":
                 try:
-                    print self.commands[pluginID]
                     self.commands[pluginID][command](payload["player"], payload["args"])
                 except Exception as e:
                     pass
@@ -61,9 +63,7 @@ class Commands:
                         player.message({"translate": "commands.generic.permission", "color": "red"})
                     return False
                 except Exception as e:
-                    self.log.error("Plugin '%s' errored out when executing command: '<%s> /%s':", pluginID, payload["player"], command)
-                    for line in traceback.format_exc().split("\n"):
-                        self.log.error(line)
+                    self.log.exception("Plugin '%s' errored out when executing command: '<%s> /%s':", pluginID, payload["player"], command)
                     payload["player"].message({"text": "An internal error occurred on the server side while trying to execute this command. Apologies.", "color": "red"})
                     return False
         if payload["command"] == "wrapper":
@@ -72,6 +72,7 @@ class Commands:
             buildString = self.wrapper.getBuildString()
             if len(get_args(payload["args"], 0)) > 0:
                 subcommand = get_args(payload["args"], 0)
+                print subcommand
                 if subcommand == "update":
                     player.message({"text": "Checking for new Wrapper.py updates...", "color": "yellow"})
                     update = self.wrapper.checkForNewUpdate()
@@ -103,8 +104,11 @@ class Commands:
             return
         if payload["command"] in ("plugins", "pl"):
             if player.isOp():
-                player.message(
-                    {"text": "List of plugins installed:", "color": "red", "italic": True})
+                player.message({
+                    "text": "List of plugins installed:", 
+                    "color": "red", 
+                    "italic": True
+                })
                 for pid in self.wrapper.plugins:
                     plugin = self.wrapper.plugins[pid]
                     if plugin["good"]:
@@ -118,11 +122,24 @@ class Commands:
                         summary = None
                         description = ""
                     if summary is None:
-                        summary = {"text": "No description is available for this plugin", "color": "gray", "italic": True,
-                                   "hoverEvent": {"action": "show_text", "value": description}}
+                        summary = {
+                            "text": "No description is available for this plugin", 
+                            "color": "gray", 
+                            "italic": True,
+                            "hoverEvent": {
+                                "action": "show_text", 
+                                "value": description
+                            }
+                        }
                     else:
-                        summary = {"text": summary, "color": "white", "hoverEvent": {
-                            "action": "show_text", "value": description}}
+                        summary = {
+                        "text": summary, 
+                        "color": "white", 
+                        "hoverEvent": {
+                            "action": "show_text", 
+                            "value": description
+                            }
+                        }
 
                     if version is None:
                         version = "v?.?"
@@ -287,8 +304,7 @@ class Commands:
                                 group = self.wrapper.help[hid][groupName][1]
                                 items = []
                                 for i in group:
-                                    command, args, permission = i[
-                                        0].split(" ")[0], "", None
+                                    command, args, permission = i[0].split(" ")[0], "", None
                                     if i[0].split(" ") > 1:
                                         args = get_argsAfter(i[0].split(" "), 1)
                                     if not player.hasPermission(i[2]):

@@ -396,6 +396,7 @@ class Client:
                 return False
             try:
                 chatmsg = data["message"]
+                print "Client.py - chatmsg: %s" % chatmsg
                 if not self.isLocal and chatmsg == "/lobby":
                     self.server.close(reason="Lobbification", kill_client=False)
                     self.address = None
@@ -410,15 +411,15 @@ class Client:
                 if type(payload) == str:
                     chatmsg = payload
                 if chatmsg[0] == "/":
+                    print "Command.py - args: %s" % argsAfter(chatmsg.split(" "), 1)
                     if self.wrapper.callEvent("player.runCommand", {
                         "player": self.getPlayerObject(), 
-                        "command": args(chatmsg.split(" "), 0)[1:].lower(), 
-                        "args": argsAfter(chatmsg.split(" "), 1)
+                        "command": chatmsg.split(" ")[0][1:].lower(), 
+                        "args": chatmsg.split(" ")[1:]
                     }):
                         self.message(chatmsg)
                         return False
                     return
-                # print chatmsg
                 self.message(chatmsg)
                 return False
             except Exception as e:
