@@ -190,18 +190,18 @@ class Server:
             except Exception as e:
                 return
 
-            # added code
             payload = self.wrapper.callEvent("player.chatbox", {"player": self.client.getPlayerObject(), "json": data})
+
             if payload:
-                if type(payload) == dict:  # return a "chat" protocol formatted dictionary http://wiki.vg/Chat
-                    chatmsg = json.dumps(payload)
-                    self.client.send(self.pktCB.CHAT_MESSAGE, "string|byte", (chatmsg, position))
-                    return False
-                elif type(payload) == str:  # return a string-only object
-                    self.client.send(self.pktCB.CHAT_MESSAGE, "string|byte", (payload, position))
-                    return False
                 return True
-            else:
+            elif not payload:
+                return False
+            elif type(payload) == dict:  # return a "chat" protocol formatted dictionary http://wiki.vg/Chat
+                chatmsg = json.dumps(payload)
+                self.client.send(self.pktCB.CHAT_MESSAGE, "string|byte", (chatmsg, position))
+                return False
+            elif type(payload) == str:  # return a string-only object
+                self.client.send(self.pktCB.CHAT_MESSAGE, "string|byte", (payload, position))
                 return False
 
             if "translate" in data:
