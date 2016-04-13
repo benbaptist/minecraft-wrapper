@@ -32,6 +32,7 @@ class Events:
 
     def callEvent(self, event, payload):
         if event == "player.runCommand":
+            print payload["args"]
             if not self.wrapper.commands.playerCommand(payload):
                 return False
         for sock in self.listeners:
