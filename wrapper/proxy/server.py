@@ -190,21 +190,23 @@ class Server:
 
             payload = self.wrapper.callEvent("player.chatbox", {"player": self.client.getPlayerObject(), "json": data})
 
-            if payload:
-                return True
-            elif not payload:
+            if payload is False:  # reject the packet .. no chat gets sent to the client
                 return False
-            elif type(payload) == dict:  # return a "chat" protocol formatted dictionary http://wiki.vg/Chat
+            # 
+            # - this packet is headed to a client.  The plugin's modification could be just a simple "Hello There"
+            #   or the more complex minecraft json dictionary - or just a dictionary written as text: """{"text":"hello there"}"""
+            #   the minecraft protocol is just json-formatted string, but python users find dealing with a dictionary easier
+            #   when creating complex items like the minecraft chat object.
+            elif type(payload) == dict:  # if payload returns a "chat" protocol formatted dictionary http://wiki.vg/Chat
                 chatmsg = json.dumps(payload)
-                self.client.send(self.pktCB.CHAT_MESSAGE, "string|byte", (chatmsg, position))
-                return False
-            elif type(payload) == str:  # return a string-only object
+                self.client.send(self.pktCB.CHAT_MESSAGE, "string|byte", (chatmsg, position)) # send fake packet with modded payload
+                return False  # reject the orginal packet (it will not reach the client)
+            elif type(payload) == str:  # if payload (plugin dev) returns a string-only object...
+                self.log.warning("player.Chatbox return payload sent as string")
                 self.client.send(self.pktCB.CHAT_MESSAGE, "string|byte", (payload, position))
                 return False
-
-            if "translate" in data:
-                if data["translate"] == "chat.type.admin":
-                    return False
+            else:  # no payload was spefified, nor was the packet rejected.. original packet passes to the client (and his chat)
+                return True
 
         if pkid == 0x03 and self.state == State.LOGIN:  # Set Compression
             data = self.read("varint:threshold")

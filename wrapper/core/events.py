@@ -43,7 +43,7 @@ class Events:
                         result = self.events[pluginID][event](payload)
                         if result is None:
                             continue
-                        if not result:
+                        if result is not True:
                             return result
                     except Exception as e:
                         self.log.exception("Plugin '%s' errored out when executing callback event '%s':", pluginID, event)
