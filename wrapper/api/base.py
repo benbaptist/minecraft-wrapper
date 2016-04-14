@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
 
-import json
 import time
 
 import core.exceptions as exceptions
 
-from player import Player
 from minecraft import Minecraft
 from core.storage import Storage
 
