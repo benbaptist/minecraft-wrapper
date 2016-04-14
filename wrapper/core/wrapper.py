@@ -16,7 +16,7 @@ import proxy.base as proxy
 
 from management.web import Web as web
 from management.dashboard import Web as dashboard
-from utils.helpers import args, argsAfter
+from utils.helpers import get_args, get_argsAfter
 
 from api.base import API
 
@@ -46,10 +46,10 @@ except ImportError:
 class Wrapper:
 
     def __init__(self):
-        self.log = logging.getLogger('wrapper')
+        self.log = logging.getLogger('Wrapper.py')
         self.configManager = Config()
         self.configManager.loadConfig() # Load initially for storage object
-        self.encoding = self.configManager.config["General"]["encoding"] # Was this for unicode strings?
+        self.encoding = self.configManager.config["General"]["encoding"] # This was to allow alternate encodings
         self.server = None
         self.proxy = False
         self.halt = False
@@ -66,11 +66,9 @@ class Wrapper:
         # Aliases for compatibility
         self.callEvent = self.events.callEvent
 
-        if self.configManager.debug:
-            self.log.info("**** Debugging is Enabled! ****")
-
-        if self.configManager.trace:
-            self.log.info("**** Tracing is Enabled! ****")
+        if not IMPORT_REQUESTS and self.configManager.config["Proxy"]["proxy-enabled"]:
+            self.log.error("You must have the requests module installed to run in proxy mode!")
+            return
 
     def isOnlineMode(self):
         """
@@ -223,7 +221,7 @@ class Wrapper:
                             self.log.error("uuid: %s", useruuid)
                             self.log.debug("response: \n%s", str(rx))
                             return None
-                        if rx[i]["account.mojang.com"] in ("yellow", "red"):
+                        elif rx[i]["account.mojang.com"] in ("yellow", "red"):
                             self.log.error("Mojang accounts is experiencing issues (%s).", rx[i]["account.mojang.com"])
                             return False
                         self.log.error("Mojang Status found, but corrupted or in an unexpected format (status code %s)", r.status_code)
@@ -282,7 +280,8 @@ class Wrapper:
             # proxy mode is on... poll mojang and wrapper cache
             search = self.lookupUUIDbyUsername(username)
             if not search:
-                self.log.warn("Server online but unable to getUUID (even by polling!) for username: %s - returned an Offline uuid...", username)
+                self.log.warn("Server online but unable to getUUID (even by polling!) for username: %s - "
+                              "returned an Offline uuid...", username)
                 return self.UUIDFromName("OfflinePlayer:%s" % username)
             else:
                 return search
@@ -512,7 +511,7 @@ class Wrapper:
                     break
                 continue
 
-            command = args(cinput[1:].split(" "), 0)
+            command = get_args(cinput[1:].split(" "), 0)
 
             if command == "halt":
                 self.server.stop("Halting server...", save=False)
@@ -541,8 +540,8 @@ class Wrapper:
                     self.log.exception("Something went wrong when trying to fetch memory usage! (%s)", ex)
             elif command == "raw":
                 try:
-                    if len(argsAfter(cinput[1:].split(" "), 1)) > 0:
-                        self.server.console(argsAfter(cinput[1:].split(" "), 1))
+                    if len(get_argsAfter(cinput[1:].split(" "), 1)) > 0:
+                        self.server.console(get_argsAfter(cinput[1:].split(" "), 1))
                     else:
                         self.log.info("Usage: /raw [command]")
                 except InvalidServerState as e:

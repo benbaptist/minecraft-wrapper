@@ -2,17 +2,15 @@
 
 import socket
 import traceback
-import zipfile
 import threading
 import time
 import json
 import random
-import urlparse
 import urllib
 import os
 import logging
 
-from utils.helpers import args, argsAfter
+from utils.helpers import get_args, get_argsAfter
 from api.base import API
 from core.storage import Storage
 
@@ -31,7 +29,7 @@ class Web:
     def __init__(self, wrapper):
         self.wrapper = wrapper
         self.api = API(wrapper, "Web", internal=True)
-        self.log = logging.getLogger('wrapper')
+        self.log = logging.getLogger('Web')
         self.config = wrapper.config
         self.socket = False
         self.data = Storage("web", self.log)
@@ -202,9 +200,9 @@ class Web:
 
 class WebClient:
 
-    def __init__(self, wrapper, socket, addr, web):
+    def __init__(self, wrapper, sock, addr, web):
         self.wrapper = wrapper
-        self.socket = socket
+        self.socket = sock
         self.addr = addr
         self.web = web
         self.request = ""
@@ -638,9 +636,9 @@ class WebClient:
                 print "Web connection closed suddenly"
                 return False
             for line in self.buffer:
-                if args(line.split(" "), 0) == "GET":
-                    self.get(args(line.split(" "), 1))
-                if args(line.split(" "), 0) == "POST":
-                    self.request = args(line.split(" "), 1)
+                if get_args(line.split(" "), 0) == "GET":
+                    self.get(get_args(line.split(" "), 1))
+                if get_args(line.split(" "), 0) == "POST":
+                    self.request = get_args(line.split(" "), 1)
                     self.headers(status="400 Bad Request")
                     self.write("<h1>Invalid request. Sorry.</h1>")

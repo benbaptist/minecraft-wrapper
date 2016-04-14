@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
 
-import os
 import time
 import threading
 import random
-import traceback
 import datetime
 import logging
 
@@ -22,7 +20,7 @@ class Web:
 
     def __init__(self, wrapper):
         self.wrapper = wrapper
-        self.log = logging.getLogger('wrapper')
+        self.log = logging.getLogger('Web')
         self.app = Flask(__name__)
         self.app.config['SECRET_KEY'] = "".join([chr(random.randrange(48, 90)) for i in range(32)])  # LOL
         self.socketio = SocketIO(self.app)

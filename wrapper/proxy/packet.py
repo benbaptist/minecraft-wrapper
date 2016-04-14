@@ -9,8 +9,8 @@ import zlib
 from core.mcuuid import MCUUID
 
 class Packet:
-    def __init__(self, socket, obj):
-        self.socket = socket
+    def __init__(self, sock, obj):
+        self.socket = sock
         self.obj = obj
         self.recvCipher = None
         self.sendCipher = None
