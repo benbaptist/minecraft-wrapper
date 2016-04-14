@@ -79,7 +79,7 @@ class Config:
     trace = False
 
     def __init__(self):
-        self.log = logging.getLogger('wrapper')
+        self.log = logging.getLogger('Config')
         self.config = {}
         self.exit = False
 

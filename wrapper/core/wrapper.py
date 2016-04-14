@@ -46,7 +46,7 @@ except ImportError:
 class Wrapper:
 
     def __init__(self):
-        self.log = logging.getLogger('wrapper')
+        self.log = logging.getLogger('Wrapper.py')
         self.configManager = Config()
         self.configManager.loadConfig() # Load initially for storage object
         self.encoding = self.configManager.config["General"]["encoding"] # This was to allow alternate encodings

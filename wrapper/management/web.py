@@ -29,7 +29,7 @@ class Web:
     def __init__(self, wrapper):
         self.wrapper = wrapper
         self.api = API(wrapper, "Web", internal=True)
-        self.log = logging.getLogger('wrapper')
+        self.log = logging.getLogger('Web')
         self.config = wrapper.config
         self.socket = False
         self.data = Storage("web", self.log)
