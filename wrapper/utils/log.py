@@ -158,7 +158,7 @@ class ColorFormatter(logging.Formatter):
         args = record.args
         msg = record.msg
 
-        if os.name =="posix": # Only style on linux since windows doesn't support ANSI
+        if os.name in ("posix", "mac"): # Only style on *nix since windows doesn't support ANSI
             if record.levelno == logging.INFO:
                 info_style = termcolors.make_style(fg="green")
                 msg = info_style(msg)
