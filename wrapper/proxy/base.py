@@ -8,7 +8,6 @@ import json
 import utils.encryption as encryption
 
 from core.storage import Storage
-from core.mcuuid import MCUUID
 from client import Client
 from packet import Packet
 
