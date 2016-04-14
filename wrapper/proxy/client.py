@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 
-import socket
+import socket  # holy cow this is also the name of a __init__ arg!
 import threading
 import time
-import traceback
 import json
-import random
+import random  # keep for now -- used by commented out keepalive code
 import hashlib
 import uuid
 import shutil
@@ -14,10 +13,8 @@ import os
 import utils.encryption as encryption
 import mcpacket
 
-from utils.helpers import get_args, get_argsAfter
 from server import Server
 from packet import Packet
-from core.config import Config
 from core.mcuuid import MCUUID
 import requests  # wrapper.py will check for requests to run proxy mode
 
