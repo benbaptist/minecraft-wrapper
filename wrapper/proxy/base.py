@@ -3,7 +3,6 @@
 import socket
 import threading
 import time
-import traceback
 import json
 
 import utils.encryption as encryption
@@ -104,16 +103,14 @@ class Proxy:
                 break
         sock.close()
 
-    def getClientByServerUUID(self, uuid):
+    def getClientByOffilineServerUUID(self, uuid):
         """ 
         This function expects uuid as a string
         """
         for client in self.clients:
-            if client.serverUUID.string == uuid:
+            if client.serverUUID.string == uuid.string:
                 self.uuidTranslate[uuid] = client.uuid.string
                 return client
-        # if uuid in self.uuidTranslate:
-        #     return MCUUID(hex=self.uuidTranslate[uuid])
         return False # no client
 
     def banUUID(self, uuid, reason="Banned by an operator", source="Server"):
