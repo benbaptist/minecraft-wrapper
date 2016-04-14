@@ -199,11 +199,11 @@ class Server:
             #   when creating complex items like the minecraft chat object.
             elif type(payload) == dict:  # if payload returns a "chat" protocol formatted dictionary http://wiki.vg/Chat
                 chatmsg = json.dumps(payload)
-                self.client.send(self.pktCB.chatmessage, "string|byte", (chatmsg, position)) # send fake packet with modded payload
+                self.client.send(self.pktCB.CHAT_MESSAGE, "string|byte", (chatmsg, position)) # send fake packet with modded payload
                 return False  # reject the orginal packet (it will not reach the client)
             elif type(payload) == str:  # if payload (plugin dev) returns a string-only object...
                 self.log.warning("player.Chatbox return payload sent as string")
-                self.client.send(self.pktCB.chatmessage, "string|byte", (payload, position))
+                self.client.send(self.pktCB.CHAT_MESSAGE, "string|byte", (payload, position))
                 return False
             else:  # no payload was spefified, nor was the packet rejected.. original packet passes to the client (and his chat)
                 return True
