@@ -22,11 +22,10 @@ UNIVERSAL_CONNECT = False # tells the client "same version as you" or does not d
 HIDDEN_OPS = ["SurestTexas00", "BenBaptist"]
 
 class Client:
-    def __init__(self, socket, addr, wrapper, publicKey, privateKey, proxy):
-        self.socket = socket
+    def __init__(self, sock, addr, wrapper, publicKey, privateKey, proxy):
+        self.socket = sock
         self.wrapper = wrapper
         self.config = wrapper.config
-        self.socket = socket
         self.publicKey = publicKey
         self.privateKey = privateKey
         self.proxy = proxy

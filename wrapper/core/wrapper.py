@@ -46,7 +46,7 @@ except ImportError:
 class Wrapper:
 
     def __init__(self):
-        self.log = logging.getLogger('wrapper')
+        self.log = logging.getLogger('Wrapper.py')
         self.configManager = Config()
         self.configManager.loadConfig() # Load initially for storage object
         self.encoding = self.configManager.config["General"]["encoding"] # This was to allow alternate encodings
@@ -66,13 +66,7 @@ class Wrapper:
         # Aliases for compatibility
         self.callEvent = self.events.callEvent
 
-        if self.configManager.debug:
-            self.log.info("**** Debugging is Enabled! ****")
-
-        if self.configManager.trace:
-            self.log.info("**** Tracing is Enabled! ****")
-
-        if not IMPORT_REQUESTS and self.configManager.config["Proxy"]["proxy-enabled"]is True:
+        if not IMPORT_REQUESTS and self.configManager.config["Proxy"]["proxy-enabled"]:
             self.log.error("You must have the requests module installed to run in proxy mode!")
             return
 

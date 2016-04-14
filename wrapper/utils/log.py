@@ -8,34 +8,21 @@ from logging.config import dictConfig
 
 import termcolors
 
-from core.config import Config
-
 DEFAULT_CONFIG = dict({
     "version": 1,              
     "disable_existing_loggers": False,
-    "filters": {
-        "plugin": {
-            "()": "utils.log.PluginFilter"
-        },
-        "debug": {
-            "()": "utils.log.DebugFilter"
-        },
-        "trace": {
-            "()": "utils.log.TraceFilter"
-        }
-    },
     "formatters": {
         "standard": {
             "()": "utils.log.ColorFormatter",
-            "format": "[%(asctime)s] [%(plugin)s/%(levelname)s]: %(message)s",
+            "format": "[%(asctime)s] [%(name)s/%(levelname)s]: %(message)s",
             "datefmt": "%H:%M:%S"
         },
         "file": {
-            "format": "[%(asctime)s] [%(plugin)s/%(levelname)s]: %(message)s",
+            "format": "[%(asctime)s] [%(name)s/%(levelname)s]: %(message)s",
             "datefmt": "%Y-%m-%d %H:%M:%S"
         },
         "trace": {
-            "format": "[%(asctime)s] [%(plugin)s/%(levelname)s] [THREAD:%(threadName)s]: %(message)s",
+            "format": "[%(asctime)s] [%(name)s/%(levelname)s] [THREAD:%(threadName)s]: %(message)s",
             "datefmt": "%Y-%m-%d %H:%M:%S"
         }
     },
@@ -44,14 +31,14 @@ DEFAULT_CONFIG = dict({
             "class": "logging.StreamHandler",
             "level": "INFO",
             "formatter": "standard",
-            "filters": ["plugin"],
+            "filters": [],
             "stream": "ext://sys.stdout"
         },
         "wrapper_file_handler": {
             "class": "logging.handlers.RotatingFileHandler",
             "level": "DEBUG",
             "formatter": "file",
-            "filters": ["plugin"],
+            "filters": [],
             "filename": "logs/wrapper/wrapper.log",
             "maxBytes": 10485760,
             "backupCount": 20,
@@ -61,7 +48,7 @@ DEFAULT_CONFIG = dict({
             "class": "logging.handlers.RotatingFileHandler",
             "level": "ERROR",
             "formatter": "file",
-            "filters": ["plugin"],
+            "filters": [],
             "filename": "logs/wrapper/wrapper.errors.log",
             "maxBytes": 10485760,
             "backupCount": 20,
@@ -71,7 +58,7 @@ DEFAULT_CONFIG = dict({
             "class": "logging.handlers.RotatingFileHandler",
             "level": "TRACE",
             "formatter": "trace",
-            "filters": ["plugin"],
+            "filters": [],
             "filename": "logs/wrapper/wrapper.trace.log",
             "maxBytes": 10485760,
             "backupCount": 20,
@@ -127,26 +114,6 @@ def loadConfig(file="logging.json"):
     except Exception as e:
         logging.exception("Unable to load or create %s! (%s)", file, e)
 
-class PluginFilter(logging.Filter):
-    """
-    This custom filter will inject the calling plugin's name
-    """
-    def filter(self, record):
-        record.plugin = 'Wrapper.py' # TODO: We need to get this dynamically
-        return True
-
-class DebugFilter(logging.Filter):
-    """
-    """
-    def filter(self, record):
-        return Config.debug
-
-class TraceFilter(logging.Filter):
-    """
-    """
-    def filter(self, record):
-        return Config.trace
-
 class ColorFormatter(logging.Formatter):
     """
     This custom formatter will colorize console output based on logging level
@@ -158,7 +125,7 @@ class ColorFormatter(logging.Formatter):
         args = record.args
         msg = record.msg
 
-        if os.name =="posix": # Only style on linux since windows doesn't support ANSI
+        if os.name in ("posix", "mac"): # Only style on *nix since windows doesn't support ANSI
             if record.levelno == logging.INFO:
                 info_style = termcolors.make_style(fg="green")
                 msg = info_style(msg)
