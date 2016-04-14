@@ -103,7 +103,7 @@ class Proxy:
                 break
         sock.close()
 
-    def getClientByOffilineServerUUID(self, uuid):
+    def getClientByOfflineServerUUID(self, uuid):
         """ 
         This function expects uuid as a string
         """
