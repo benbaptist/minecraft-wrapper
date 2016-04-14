@@ -66,13 +66,7 @@ class Wrapper:
         # Aliases for compatibility
         self.callEvent = self.events.callEvent
 
-        if self.configManager.debug:
-            self.log.info("**** Debugging is Enabled! ****")
-
-        if self.configManager.trace:
-            self.log.info("**** Tracing is Enabled! ****")
-
-        if not IMPORT_REQUESTS and self.configManager.config["Proxy"]["proxy-enabled"]is True:
+        if not IMPORT_REQUESTS and self.configManager.config["Proxy"]["proxy-enabled"]:
             self.log.error("You must have the requests module installed to run in proxy mode!")
             return
 

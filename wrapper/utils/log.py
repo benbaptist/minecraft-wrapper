@@ -8,19 +8,9 @@ from logging.config import dictConfig
 
 import termcolors
 
-from core.config import Config
-
 DEFAULT_CONFIG = dict({
     "version": 1,              
     "disable_existing_loggers": False,
-    "filters": {
-        "debug": {
-            "()": "utils.log.DebugFilter"
-        },
-        "trace": {
-            "()": "utils.log.TraceFilter"
-        }
-    },
     "formatters": {
         "standard": {
             "()": "utils.log.ColorFormatter",
@@ -123,20 +113,6 @@ def loadConfig(file="logging.json"):
             logging.warn("Unable to locate %s -- Using default logging configuration", file)
     except Exception as e:
         logging.exception("Unable to load or create %s! (%s)", file, e)
-
-class DebugFilter(logging.Filter):
-    """
-    This custom filter acts against DEBUG logging
-    """
-    def filter(self, record):
-        return Config.debug
-
-class TraceFilter(logging.Filter):
-    """
-    This custom filter acts against TRACE logging
-    """
-    def filter(self, record):
-        return Config.trace
 
 class ColorFormatter(logging.Formatter):
     """
