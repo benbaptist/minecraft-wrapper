@@ -200,9 +200,9 @@ class Web:
 
 class WebClient:
 
-    def __init__(self, wrapper, socket, addr, web):
+    def __init__(self, wrapper, sock, addr, web):
         self.wrapper = wrapper
-        self.socket = socket
+        self.socket = sock
         self.addr = addr
         self.web = web
         self.request = ""
