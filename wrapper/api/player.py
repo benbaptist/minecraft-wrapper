@@ -5,7 +5,7 @@ import fnmatch
 import json
 import threading
 
-import api as API
+from base import API
 
 import proxy.mcpacket as mcpacket
 
