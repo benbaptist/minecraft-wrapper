@@ -3,7 +3,6 @@
 import socket
 import threading
 import time
-import traceback
 import json
 
 import mcpacket
@@ -11,7 +10,6 @@ import mcpacket
 from api.entity import Entity
 
 from packet import Packet
-from core.config import Config
 
 UNIVERSAL_CONNECT = False # tells the client "same version as you" or does not disconnect dissimilar clients
 HIDDEN_OPS = ["SurestTexas00", "BenBaptist"]
@@ -269,7 +267,7 @@ class Server:
                 data = self.read("varint:eid|uuid:uuid|int:x|int:y|int:z|byte:yaw|byte:pitch|short:item|rest:metadata")
                 if data["item"] < 0: # A negative Current Item crashes clients (just in case)
                     data["item"] = 0
-                clientserverid = self.proxy.getClientByServerUUID(data["uuid"])
+                clientserverid = self.proxy.getClientByOfflineServerUUID(data["uuid"])
                 if clientserverid:
                     self.client.send(self.pktCB.SPAWN_PLAYER, "varint|uuid|int|int|int|byte|byte|short|raw", (
                         data["eid"],
@@ -286,7 +284,7 @@ class Server:
                 return False
             else:
                 data = self.read("varint:eid|uuid:uuid|int:x|int:y|int:z|byte:yaw|byte:pitch|rest:metadata")
-                clientserverid = self.proxy.getClientByServerUUID(data["uuid"])
+                clientserverid = self.proxy.getClientByOfflineServerUUID(data["uuid"])
                 if clientserverid:
                     self.client.send(self.pktCB.SPAWN_PLAYER, "varint|uuid|int|int|int|byte|byte|raw", (
                         data["eid"],
@@ -490,7 +488,7 @@ class Server:
                 z = 0
                 while z < head["length"]:
                     serverUUID = self.read("uuid:uuid")["uuid"]
-                    playerclient = self.client.proxy.getClientByServerUUID(serverUUID)
+                    playerclient = self.client.proxy.getClientByOfflineServerUUID(serverUUID)
                     if not playerclient:
                         z += 1
                         continue

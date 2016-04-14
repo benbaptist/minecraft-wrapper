@@ -2,12 +2,10 @@
 
 import socket
 import traceback
-import zipfile
 import threading
 import time
 import json
 import random
-import urlparse
 import urllib
 import os
 import logging

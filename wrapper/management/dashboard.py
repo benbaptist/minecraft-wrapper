@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
 
-import os
 import time
 import threading
 import random
-import traceback
 import datetime
 import logging
 

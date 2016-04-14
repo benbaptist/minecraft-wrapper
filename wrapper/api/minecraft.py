@@ -4,7 +4,6 @@ from __future__ import unicode_literals
 
 import json
 import os
-import sys
 
 from core.nbt import NBTFile
 from core.items import Blocks
