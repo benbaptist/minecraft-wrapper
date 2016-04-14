@@ -32,7 +32,6 @@ class Events:
 
     def callEvent(self, event, payload):
         if event == "player.runCommand":
-            print payload["args"]
             if not self.wrapper.commands.playerCommand(payload):
                 return False
         for sock in self.listeners:
@@ -47,9 +46,7 @@ class Events:
                         if not result:
                             return result
                     except Exception as e:
-                        self.log.error("Plugin '%s' errored out when executing callback event '%s':", pluginID, event)
-                        for line in traceback.format_exc().split("\n"):
-                            self.log.error(line)
+                        self.log.exception("Plugin '%s' errored out when executing callback event '%s':", pluginID, event)
         except Exception as ex:
             pass
             # For now.
