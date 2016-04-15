@@ -439,10 +439,10 @@ class Wrapper:
             if r.status_code == 200:
                 data = r.json()
                 if self.update:
-                    if self.update > data["__build__"]:
+                    if self.update > data["build"]:
                         return False
-                if data["__build__"] > globals.__build__ and data["__branch__"] == "dev":
-                    return (data["__version__"], data["__build__"], data["__branch__"])
+                if data["build"] > globals.__build__ and data["repotype"] == "dev":
+                    return (data["version"], data["build"], data["repotype"])
                 else:
                     return False
             else:
@@ -455,8 +455,8 @@ class Wrapper:
                 if self.update:
                     if self.update > data["build"]:
                         return False
-                if data["__build__"] > globals.__build__ and data["__branch__"] == "stable":
-                    return (data["__version__"], data["__build__"], data["__branch__"])
+                if data["build"] > globals.__build__ and data["repotype"] == "stable":
+                    return (data["version"], data["build"], data["repotype"])
                 else:
                     return False
             else:
