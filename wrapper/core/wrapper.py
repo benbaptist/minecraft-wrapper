@@ -4,11 +4,11 @@ import sys
 import json
 import signal
 import hashlib
-import traceback
 import threading
 import time
 import os
 import logging
+import socket as sock_module
 
 import core.globals as globals
 
@@ -83,6 +83,14 @@ class Wrapper:
             if self.server.onlineMode:
                 return True  # if local server is online-mode
         return False
+
+    @staticmethod
+    def isgoodipv4(addr):
+        try:
+            sock_module.inet_aton(addr) # Attempts to convert to an IPv4 address
+        except sock_module.error as e: # If it fails, the ip is not in a valid format
+            return False
+        return True
 
     @staticmethod
     def formatUUID(playeruuid):
@@ -207,6 +215,7 @@ class Wrapper:
                 False - Mojang down or operating in limited fashion
                 - otherwise, a list of names...
         """
+
         r = requests.get("https://api.mojang.com/user/profiles/%s/names" % useruuid.replace("-", ""))
         if r.status_code == 200:
             return r.json()
@@ -439,10 +448,10 @@ class Wrapper:
             if r.status_code == 200:
                 data = r.json()
                 if self.update:
-                    if self.update > data["__build__"]:
+                    if self.update > data["build"]:
                         return False
-                if data["__build__"] > globals.__build__ and data["__branch__"] == "dev":
-                    return (data["__version__"], data["__build__"], data["__branch__"])
+                if data["build"] > globals.__build__ and data["repotype"] == "dev":
+                    return (data["version"], data["build"], data["repotype"])
                 else:
                     return False
             else:
@@ -455,8 +464,8 @@ class Wrapper:
                 if self.update:
                     if self.update > data["build"]:
                         return False
-                if data["__build__"] > globals.__build__ and data["__branch__"] == "stable":
-                    return (data["__version__"], data["__build__"], data["__branch__"])
+                if data["build"] > globals.__build__ and data["repotype"] == "stable":
+                    return (data["version"], data["build"], data["repotype"])
                 else:
                     return False
             else:

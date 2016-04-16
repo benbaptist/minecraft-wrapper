@@ -6,6 +6,7 @@ import time
 import json
 
 import utils.encryption as encryption
+from utils.helpers import get_jsonFile, put_jsonFile, find_iteminJsonlist, epochtotimestr, readtimestring
 
 from core.storage import Storage
 from client import Client
@@ -103,8 +104,9 @@ class Proxy:
         sock.close()
 
     def getClientByOfflineServerUUID(self, uuid):
-        """ 
-        This function expects uuid as a string
+        """
+        :param uuid: - MCUUID .. I believe.
+        :return: the matching client
         """
         for client in self.clients:
             if client.serverUUID.string == uuid.string:
@@ -112,57 +114,186 @@ class Proxy:
                 return client
         return False # no client
 
-    def banUUID(self, uuid, reason="Banned by an operator", source="Server"):
+    def banPlayer(self, playername, reason="Banned by an operator", source="Wrapper", expires="forever"):
         """
-        This is all wrong - needs to ban uuid, not username
-        Will assume that uuid is imput as a string for now
+        * placeholder code for future feature*
+        This is not used by code yet... for banning by username only for pre-uuid servers
+        :param playername:
+        :param reason:
+        :param source:
+        :param expires:
+        :return:
         """
-        if not self.storage.key("banned-uuid"):
-            self.storage.key("banned-uuid", {})
-        self.storage.key("banned-uuid")[uuid] = {
-            "reason": reason,
-            "source": source,
-            "created": time.time(), 
-            "name": self.wrapper.lookupUsernamebyUUID(uuid)
-        }
+        # TODO - legacy server support (pre-1.7.10)
+        pass
 
-    def banIP(self, ipaddress, reason="Banned by an operator", source="Server"):
-        if not self.storage.key("banned-ip"):
-            self.storage.key("banned-ip", {})
-        self.storage.key("banned-ip")[ipaddress] = {
-            "reason": reason, 
-            "source": source, 
-            "created": time.time()
-        }
-        for i in self.wrapper.server.players:
-            player = self.wrapper.server.players[i]
-            if str(player.client.addr[0]) == str(ipaddress):
-                self.wrapper.server.console("kick %s Your IP is Banned!" % player.username)
+    @staticmethod
+    def getUUIDbanreason(uuid):
+        banlist = get_jsonFile("banned-players")
+        if banlist:  # in this case we just care if banlist exits in any fashion
+            banrecord = find_iteminJsonlist(banlist, "uuid", str(uuid))
+            return "%s by %s" % (banrecord["reason"], banrecord["source"])
+        return "Banned by server"
+
+    def banUUID(self, uuid, reason="The Ban Hammer has spoken!", source="Wrapper", expires=False):
+        """
+        Ban someone by UUID
+        :param uuid - uuid to ban (MCUUID)
+        :param reason - text reason for ban
+        :param source - source (author/op) of ban.
+        :param expires - expiration in seconds from epoch time.  Field exits but not used by the vanilla server
+        - implement it for tempbans in future?  Gets converted to string representation in the ban file.
+
+        This probably only works on 1.7.10 servers or later
+        """
+        banlist = get_jsonFile("banned-players")
+        if banlist is not False:  # file and directory exist.
+            if banlist is None:  # file was empty or not valid
+                banlist= dict()  # ensure valid dict before operating on it
+            if find_iteminJsonlist(banlist, "uuid", str(uuid)):
+                return "player already banned"  # error text
+            else:
+                if expires:
+                    try:
+                        expiration = epochtotimestr(expires)
+                    except Exception as e:
+                        print(e)
+                        return "expiration date invalid"  # error text
+                else:
+                    expiration = "forever"
+                name = self.wrapper.lookupUsernamebyUUID(uuid.string)
+                banlist.append({"uuid": uuid.string,
+                                "name": name,
+                                "created": epochtotimestr(time.time()),
+                                "source": source,
+                                "expires": expiration,
+                                "reason": reason})
+                if put_jsonFile(banlist, "banned-players"):
+                    self.wrapper.server.console("kick %s Banned: %s" % (name, reason))
+                    return "Banned %s: %s" % (name, reason)
+                return "Could not write banlist to disk"
+        else:
+            return "Banlist not found on disk"
+
+    def banIP(self, ipaddress, reason="The Ban Hammer has spoken!", source="Wrapper", expires=False):
+        """
+        Ban an IP address (IPV-4)
+        :param ipaddress - ip address to ban
+        :param reason - text reason for ban
+        :param source - source (author/op) of ban.
+        :param expires - expiration in seconds from epoch time.  Field exits but not used by the vanilla server
+        - implement it for tempbans in future?  Gets converted to string representation in the ban file.
+
+        This probably only works on 1.7.10 servers or later
+        """
+        if not self.wrapper.isgoodipv4(ipaddress):
+            return "Invalid IPV4 address: %s" % ipaddress
+        banlist = get_jsonFile("banned-ips")
+        if banlist is not False:  # file and directory exist.
+            if banlist is None:  # file was empty or not valid
+                banlist= dict()  # ensure valid dict before operating on it
+            if find_iteminJsonlist(banlist, "ip", ipaddress):
+                return "address already banned"  # error text
+            else:
+                if expires:
+                    try:
+                        expiration = epochtotimestr(expires)
+                    except Exception as e:
+                        print(e)
+                        return "expiration date invalid"  # error text
+                else:
+                    expiration = "forever"
+                banlist.append({"ip": ipaddress,
+                                "created": epochtotimestr(time.time()),
+                                "source": source,
+                                "expires": expiration,
+                                "reason": reason})
+                if put_jsonFile(banlist, "banned-ips"):
+                    banned = ""
+                    for i in self.wrapper.server.players:
+                        player = self.wrapper.server.players[i]
+                        if str(player.client.addr[0]) == str(ipaddress):
+                            self.wrapper.server.console("kick %s Your IP is Banned!" % player.username)
+                            banned += "\n%s" % player.username
+                    return "Banned ip address: %s\nPlayers kicked as a result:%s" % (ipaddress, banned)
+                return "Could not write banlist to disk"
+        else:
+            return "Banlist not found on disk"
 
     def pardonIP(self, ipaddress):
-        if self.storage.key("banned-ip"):
-            if str(ipaddress) in self.storage.key("banned-ip"):
-                try:
-                    del self.storage.key("banned-ip")[str(ipaddress)]
-                    return True
-                except Exception as e:
-                    self.log.exception("Failed to pardon %s (%s)", ipaddress, e)
-                    return False
-        self.log.warn("Could not find %s to pardon them", ipaddress)
-        return False
+        if not self.wrapper.isgoodipv4(ipaddress):
+            return "Invalid IPV4 address: %s" % ipaddress
+        banlist = get_jsonFile("banned-ips")
+        if banlist is not False:  # file and directory exist.
+            if banlist is None:  # file was empty or not valid
+                return "No IP bans have ever been recorded."
+            banrecord = find_iteminJsonlist(banlist, "ip", ipaddress)
+            if banrecord:
+                for x in banlist:
+                    if x == banrecord:
+                        banlist.remove(x)
+                if put_jsonFile(banlist, "banned-ips"):
+                    return "pardoned %s" % ipaddress
+                return "Could not write banlist to disk"
+            else:
+                return "That address was never banned"  # error text
+
+        else:
+            return "Banlist not found on disk"  # error text
+
+    def pardonUUID(self, uuid):
+        banlist = get_jsonFile("banned-players")
+        if banlist is not False:  # file and directory exist.
+            if banlist is None:  # file was empty or not valid
+                return "No bans have ever been recorded..?"
+            #print "hello".__str__()
+            # should I be using this for uuid? what if a string gets passed instead? should I use .__str__ instead?
+            # __str__ should work for MCUUID and str objects, correct?
+            banrecord = find_iteminJsonlist(banlist, "uuid", str(uuid))
+            if banrecord:
+                for x in banlist:
+                    if x == banrecord:
+                        banlist.remove(x)
+                if put_jsonFile(banlist, "banned-players"):
+                    name = self.wrapper.lookupUsernamebyUUID(str(uuid))
+                    return "pardoned %s" % name
+                return "Could not write banlist to disk"
+            else:
+                return "That person was never banned"  # error text
+        else:
+            return "Banlist not found on disk"  # error text
 
     def isUUIDBanned(self, uuid):  # Check if the UUID of the user is banned
-        """
-        Will assume that uuid is input as a string for now
-        """
-        if not self.storage.key("banned-uuid"):
-            self.storage.key("banned-uuid", {})
-        return (uuid in self.storage.key("banned-uuid"))
+        banlist = get_jsonFile("banned-players")
+        if banlist:  # in this case we just care if banlist exits in any fashion
+            banrecord = find_iteminJsonlist(banlist, "uuid", str(uuid))
+            if banrecord:
+                if readtimestring(banrecord["expires"]) < int(time.time()):  # if ban has expired
+                    pardoning = self.pardonUUID(str(uuid))
+                    if pardoning[:8] == "pardoned":
+                        self.log.info("UUID: %s was pardoned (expired ban)" % str(uuid))
+                        return False  # player is "NOT" banned (anymore)
+                    else:
+                        self.log.warn("isUUIDBanned attempted a pardon of uuid: %s (expired ban), but it failed:\n %s"
+                                      % (str(uuid), pardoning))
+                return True  # player is still banned
+        return False # banlist empty or record not found
 
-    def isAddressBanned(self, address):  # Check if the IP address is banned
-        if not self.storage.key("banned-ip"):
-            self.storage.key("banned-ip", {})
-        return (address in self.storage.key("banned-ip"))
+    def isIPbanned(self, ipaddress):  # Check if the IP address is banned
+        banlist = get_jsonFile("banned-ips")
+        if banlist:  # in this case we just care if banlist exits in any fashion
+            banrecord = find_iteminJsonlist(banlist, "ip", ipaddress)
+            if banrecord:
+                if readtimestring(banrecord["expires"]) < int(time.time()):  # if ban has expired
+                    pardoning = self.pardonIP(ipaddress)
+                    if pardoning[:8] == "pardoned":
+                        self.log.info("IP: %s was pardoned (expired ban)" % ipaddress)
+                        return False  # IP is "NOT" banned (anymore)
+                    else:
+                        self.log.warn("isIPbanned attempted a pardon of IP: %s (expired ban), but it failed:\n %s"
+                                      % (ipaddress, pardoning))
+                return True  # IP is still banned
+        return False # banlist empty or record not found
 
     def getSkinTexture(self, uuid):
         """

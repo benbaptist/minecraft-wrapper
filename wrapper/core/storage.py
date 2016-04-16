@@ -24,6 +24,7 @@ class Storage:
         self.load()
         self.abort = False
         self.time = time.time()
+        self.log = logging.getLogger('Wrapper.py')
 
         t = threading.Thread(target=self.periodicSave, args=())
         t.daemon = True
@@ -82,7 +83,7 @@ class Storage:
             try:
                 self.data = json.loads(f.read(), self.encoding)
             except Exception as e:
-                print "Failed to load '%s/%s.json' (%s)" % (self.root, self.name, e)
+                self.log.exception("Failed to load '%s/%s.json' (%s)", self.root, self.name, e)
                 return
         self.dataOld = copy.deepcopy(self.data)
 
