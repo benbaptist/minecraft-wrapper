@@ -278,6 +278,10 @@ class Client:
                     if r.status_code == 200:
                         data = r.json()
                         self.uuid = MCUUID(data["id"])
+                        #print data["id"]
+                        #print self.uuid
+                        #print self.uuid.__str__()
+
                         if data["name"] != self.username:
                             self.disconnect("Client's username did not match Mojang's record")
                             return False
@@ -318,6 +322,10 @@ class Client:
                                     if not player["uuid"] == self.serverUUID.string and player["uuid"] == self.uuid.string:
                                         self.log.info("Migrating %s's whitelist entry to proxy mode", self.username)
                                         data.append({"uuid": self.serverUUID.string, "name": self.username})
+                                        # TODO I think the indent on this is wrong... looks like it will overwrite with each record
+                                        # either that, or it is making an insane number of re-writes (each time a record is processed)
+                                        # since you can't append a json file like this, I assume the whole file should be written at once,
+                                        # after all the records are appended
                                         with open("whitelist.json", "w") as f:
                                             f.write(json.dumps(data))
                                         self.wrapper.server.console("whitelist reload")
@@ -326,46 +334,30 @@ class Client:
 
                 self.serverUUID = self.wrapper.UUIDFromName("OfflinePlayer:%s" % self.username)
                 self.ip = self.addr[0]
-
+                playerwas = str(self.username)
+                uuidwas = self.uuid.__str__()  # TODO somewhere between HERE and ...
+                print playerwas
+                print uuidwas
                 if self.version > 26:
                     self.packet.setCompression(256)
 
-                # player ban code needs to go here - we should use the vanilla 'banned-players.json' since
-                #    that will allow the vanilla client to handle the indentical bans should the server be switched
-                #    to online mode.
+                # player ban code!  Uses vanilla json files - In wrapper proxy mode, supports
+                #       temp-bans (the "expires" field of the ban record is used!)
 
-                # banned-players.json format (2 space indents):
-                """
-                    [
-                      {
-                        "uuid": "23881df5-76ab-32ee-83c4-85086ceea301",
-                        "name": "SapperLeader2",
-                        "created": "2016-04-12 18:54:51 -0400",
-                        "source": "Server",
-                        "expires": "forever",
-                        "reason": "Banned by an operator."
-                      }
-                    ]
-                """
-                 # banned-ips.json format (2 space indents):
-                """
-                    [
-                      {
-                        "ip": "199.199.199.199",
-                        "created": "2016-04-12 19:10:38 -0400",
-                        "source": "Server",
-                        "expires": "forever",
-                        "reason": "Banned by an operator."
-                      }
-                    ]
-                """
-                if self.proxy.isAddressBanned(self.addr[0]): #  IP ban- This should also be migrated to the vanilla file
-                    self.disconnect("You have been IP-banned from this server!.")
+                if self.proxy.isIPbanned(self.addr[0]):
+                    self.disconnect("Your address is IP-banned from this server!.")
+                    return False
+                testforban = self.proxy.isUUIDBanned(uuidwas)
+                print testforban
+                if self.proxy.isUUIDBanned(uuidwas):  # TODO ...HERE, the player stuff becomes "None" (was self.uuid)
+                    banreason = self.wrapper.proxy.getUUIDbanreason(uuidwas)  # TODO- which is why I archived the name and UUID strings
+                    self.disconnect("Banned: %s" % banreason)  # maybe because I got these two lines reversed? disc and then log.info?
+                    self.log.info("Banned player %s tried to connect:\n %s" % (playerwas, banreason))
                     return False
 
                 if not self.wrapper.callEvent("player.preLogin", {
                     "player": self.username, 
-                    "online_uuid": self.uuid.string, 
+                    "online_uuid": self.uuid.string,
                     "offline_uuid": self.serverUUID.string, 
                     "ip": self.addr[0]
                 }):
