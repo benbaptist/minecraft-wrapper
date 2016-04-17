@@ -662,7 +662,7 @@ class Client:
                     self.original = original
                 except EOFError as eof:
                     # This error is often erroneous since socket data recv length is 0 when transmit ends
-                    self.log.exception("Client Packet EOF (%s)", eof)
+                    #self.log.exception("Client Packet EOF (%s)", eof)
                     self.close()
                     break
                 except Exception as e:
