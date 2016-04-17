@@ -376,7 +376,8 @@ class Packet:
         else:  # $ find out why next line sometimes errors out bad file descriptor
             d = self.socket.recv(length)
             if len(d) == 0:
-                raise EOFError("Packet was zero length, disconnecting")
+                pass  # temporarily remove this because it spams console
+                # raise EOFError("Packet was zero length, disconnecting")
       # while length > len(d):
       #     print "Need %d more" % length - len(d)
       #     d += self.socket.recv(length - len(d))
