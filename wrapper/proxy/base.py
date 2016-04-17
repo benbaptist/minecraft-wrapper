@@ -109,7 +109,7 @@ class Proxy:
         :return: the matching client
         """
         for client in self.clients:
-            if client.serverUUID.string == uuid.string:
+            if client.serverUUID.string == str(uuid):
                 self.uuidTranslate[uuid] = client.uuid.string
                 return client
         return False # no client
