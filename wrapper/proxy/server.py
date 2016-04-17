@@ -561,12 +561,12 @@ class Server:
                             break
                 except EOFError as eof:
                     # This error is often erroneous, see https://github.com/suresttexas00/minecraft-wrapper/issues/30
-                    self.log.exception("Packet EOF (%s)", eof)
+                    # self.log.exception("Packet EOF (%s)", eof)  # temp off for this error logging in staging
                     self.close()
                     break
                 except Exception as e1:
                     # Bad file descriptor often occurs, see https://github.com/suresttexas00/minecraft-wrapper/issues/30
-                    self.log.exception("Failed to grab packet [SERVER] (%s):", e1)
+                    # self.log.exception("Failed to grab packet [SERVER] (%s):", e1)  # temp off for this error logging in staging
                     return
                 if self.client.abort:
                     self.close()
