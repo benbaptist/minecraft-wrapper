@@ -93,7 +93,7 @@ class Client:
                 self.server_temp.connect()
                 self.server.close(kill_client=False)
                 self.server.client = None
-                self.server = self.server_temp
+                self.server = self.server_temp
             except Exception as e:
                 self.server_temp.close(kill_client=False)
                 self.server_temp = None
@@ -143,7 +143,7 @@ class Client:
     def disconnect(self, message):
         try:
             message = json.loads(message["string"])
-        except Exception as e:
+        except Exception as e:
             pass
 
         if self.state == State.ACTIVE:
@@ -201,7 +201,7 @@ class Client:
                 for i in self.wrapper.server.players:
                     player = self.wrapper.server.players[i]
                     if player.username not in HIDDEN_OPS:
-                        sample.append({"name": player.username, "id": str(player.uuid)})
+                        sample.append({"name": player.username, "id": str(player.uuid)})
                     if len(sample) > 5:
                         break
                 if UNIVERSAL_CONNECT:
@@ -231,7 +231,7 @@ class Client:
                 data = self.read("string:username")
                 self.username = data["username"]
 
-                if self.config["Proxy"]["online-mode"]:
+                if self.config["Proxy"]["online-mode"]:
                     self.state = State.AUTHORIZING
                     self.verifyToken = encryption.generate_challenge_token()
                     self.serverID = encryption.generate_server_id()
@@ -266,7 +266,7 @@ class Client:
                 h.update(self.publicKey)
                 serverId = self.packet.hexdigest(h)
 
-                self.packet.sendCipher = encryption.AES128CFB8(sharedSecret)
+                self.packet.sendCipher = encryption.AES128CFB8(sharedSecret)
                 self.packet.recvCipher = encryption.AES128CFB8(sharedSecret)
 
                 if not verifyToken == self.verifyToken:
@@ -329,7 +329,7 @@ class Client:
                                         with open("whitelist.json", "w") as f:
                                             f.write(json.dumps(data))
                                         self.wrapper.server.console("whitelist reload")
-                                        with open("%s/.wrapper-proxy-whitelist-migrate" % worldName, "a") as f:
+                                        with open("%s/.wrapper-proxy-whitelist-migrate" % worldName, "a") as f:
                                             f.write("%s %s\n" % (self.uuid.string, self.serverUUID.string))
 
                 self.serverUUID = self.wrapper.UUIDFromName("OfflinePlayer:%s" % self.username)
@@ -368,7 +368,7 @@ class Client:
                 self.state = State.ACTIVE
 
                 self.connect()
-
+
                 self.log.info("%s logged in (UUID: %s | IP: %s)", self.username, self.uuid.string, self.addr[0])
                 return False
             elif self.state == State.PING: # ping packet during status request
@@ -662,7 +662,7 @@ class Client:
                     self.original = original
                 except EOFError as eof:
                     # This error is often erroneous since socket data recv length is 0 when transmit ends
-                    # self.log.exception("Client Packet EOF (%s)", eof)
+                    self.log.exception("Client Packet EOF (%s)", eof)
                     self.close()
                     break
                 except Exception as e:
