@@ -662,12 +662,12 @@ class Client:
                     self.original = original
                 except EOFError as eof:
                     # This error is often erroneous since socket data recv length is 0 when transmit ends
-                    #self.log.exception("Client Packet EOF (%s)", eof)
+                    # self.log.exception("Client Packet EOF (%s)", eof)  # temp shutoff only on staging branch
                     self.close()
                     break
                 except Exception as e:
                     # Bad file descriptor often occurs, cause is currently unknown, but seemingly harmless
-                    self.log.exception("Failed to grab packet [CLIENT] (%s):", e)
+                    # self.log.exception("Failed to grab packet [CLIENT] (%s):", e)  # temp shutoff only on staging branch
                     self.close()
                     break
                 # DISABLED until github #5 is resolved
