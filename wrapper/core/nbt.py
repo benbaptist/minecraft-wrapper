@@ -4,11 +4,7 @@
 Handle the NBT (Named Binary Tag) data format
 """
 
-import zlib
-import os
-import io
-
-import exceptions
+from exceptions import MalformedFileError
 
 from collections import MutableMapping, MutableSequence, Sequence
 from struct import Struct, error as StructError
@@ -521,7 +517,7 @@ class NBTFile(TAG_Compound):
     def __init__(self, filename=None, buffer=None, fileobj=None):
         super(NBTFile, self).__init__()
         self.filename = filename
-        self.type = TAG_Byte(self.id)
+        self.type = TAG_Byte(self.tid)
         closefile = True
         # make a file object
         if filename:
@@ -565,7 +561,7 @@ class NBTFile(TAG_Compound):
         if self.file:
             try:
                 type = TAG_Byte(buffer=self.file)
-                if type.value == self.id:
+                if type.value == self.tid:
                     name = TAG_String(buffer=self.file).value
                     self._parse_buffer(self.file)
                     self.name = name
@@ -598,7 +594,7 @@ class NBTFile(TAG_Compound):
         elif not self.file:
             raise ValueError("NBTFile.write_file(): Need to specify either a filename or a file object")
         # Render tree to file
-        TAG_Byte(self.id)._render_buffer(self.file)
+        TAG_Byte(self.tid)._render_buffer(self.file)
         TAG_String(self.name)._render_buffer(self.file)
         self._render_buffer(self.file)
         # make sure the file is complete
