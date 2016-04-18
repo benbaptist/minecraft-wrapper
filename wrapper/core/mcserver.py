@@ -417,6 +417,7 @@ class MCServer:
             self.reloadProperties()
             self.proc = subprocess.Popen(self.args, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
             self.players = {}
+            self.wrapper.AcceptEula() # Auto accept eula
             while True:
                 time.sleep(0.1)
                 if self.proc.poll() is not None:
