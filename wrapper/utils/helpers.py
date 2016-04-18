@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+
 import os
 import json
 import time
@@ -26,7 +27,8 @@ def get_jsonFile(filename, directory="./"):
             except ValueError:
                 return None
             #  Exit yielding None (no data)
-    else: return False  # bad directory or filename
+    else:
+        return False  # bad directory or filename
 
 def put_jsonFile(data, filename, directory="./", indent_spaces=2):
     """

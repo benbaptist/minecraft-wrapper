@@ -35,7 +35,7 @@ DEFAULT_CONFIG = dict({
             "stream": "ext://sys.stdout"
         },
         "wrapper_file_handler": {
-            "class": "logging.handlers.RotatingFileHandler",
+            "class": "utils.log.WrapperHandler",
             "level": "DEBUG",
             "formatter": "file",
             "filters": [],
@@ -45,7 +45,7 @@ DEFAULT_CONFIG = dict({
             "encoding": "utf8"
         },
         "error_file_handler": {
-            "class": "logging.handlers.RotatingFileHandler",
+            "class": "utils.log.WrapperHandler",
             "level": "ERROR",
             "formatter": "file",
             "filters": [],
@@ -55,7 +55,7 @@ DEFAULT_CONFIG = dict({
             "encoding": "utf8"
         },
         "trace_file_handler": {
-            "class": "logging.handlers.RotatingFileHandler",
+            "class": "utils.log.WrapperHandler",
             "level": "TRACE",
             "formatter": "trace",
             "filters": [],
@@ -73,23 +73,10 @@ DEFAULT_CONFIG = dict({
 
 
 def configure_logger():
-    # We need to setup each log file since the default file
-    # handlers will not do this for us
-    setupLog("logs/wrapper/wrapper.log")
-    setupLog("logs/wrapper/wrapper.errors.log")
-    setupLog("logs/wrapper/wrapper.trace.log")
     setCustomLevels()
     loadConfig()
 
     logger = logging.getLogger()
-
-def setupLog(filename):
-    if not os.path.exists(os.path.dirname(filename)):
-        try:
-            os.makedirs(os.path.dirname(filename))
-        except OSError as exc: # Guard against race condition
-            if exc.errno != errno.EEXIST:
-                raise
 
 def setCustomLevels():
     # Create a TRACE level
@@ -113,6 +100,16 @@ def loadConfig(file="logging.json"):
             logging.warn("Unable to locate %s -- Using default logging configuration", file)
     except Exception as e:
         logging.exception("Unable to load or create %s! (%s)", file, e)
+
+def mkdir_p(path):
+    try:
+        os.makedirs(path, exist_ok=True)  # Python > 3.2
+    except TypeError:
+        try:
+            os.makedirs(path) # Python > 2.5
+        except OSError as exc: # Guard against race condition
+            if exc.errno != errno.EEXIST:
+                raise
 
 class ColorFormatter(logging.Formatter):
     """
@@ -148,3 +145,8 @@ class ColorFormatter(logging.Formatter):
         record.msg = msg
 
         return super(ColorFormatter, self).format(record)
+
+class WrapperHandler(logging.handlers.RotatingFileHandler):
+    def __init__(self, filename, mode='a', maxBytes=0, backupCount=0, encoding=None, delay=0):
+        mkdir_p(os.path.dirname(filename))
+        super(WrapperHandler, self).__init__(filename, mode, maxBytes, backupCount, encoding, delay)
