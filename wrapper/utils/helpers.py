@@ -50,15 +50,15 @@ def put_jsonFile(data, filename, directory="./", indent_spaces=2):
             return True
     return False
 
-def find_iteminJsonlist(jsonlist, keyname, searchvalue):
+def find_in_json(jsonlist, keyname, searchvalue):
     for items in jsonlist:
         if items[keyname] == searchvalue:
             return items
     return None
 
-def readtimestring(mc_time_string):
+def read_timestr(mc_time_string):
     """
-    Minecraft server (or wrapper, using epochtotimestr) creates a string like this: - "2016-04-15 16:52:15 -0400"
+    Minecraft server (or wrapper, using epoch_to_timestr) creates a string like this: - "2016-04-15 16:52:15 -0400"
     this reads out the date and returns the epoch time (well, really the server local time, I suppose)
     :param mc_time_string: minecraft time string
     :return: regular seconds from epoch (integer).  Invalid data (like "forever") returns 9999999999 (what forever is).
@@ -73,7 +73,7 @@ def readtimestring(mc_time_string):
         epoch = 9999999999
     return epoch
 
-def epochtotimestr(epoch_time):
+def epoch_to_timestr(epoch_time):
     """
     takes a time represented as integer/string which you supply and converts it to a formatted string.
     :param epoch_time: string or integer (in seconds) of epoch time

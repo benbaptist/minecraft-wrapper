@@ -25,7 +25,7 @@ from api.player import Player
 from api.world import World
 
 from backups import Backups
-from exceptions import UnsupportedOSException, InvalidServerState
+from exceptions import UnsupportedOSException, InvalidServerStateError
 
 try:
     import resource
@@ -147,7 +147,7 @@ class MCServer:
             else:
                 raise UnsupportedOSException("Your current OS (%s) does not support this command at this time." % os.name)
         else:
-            raise InvalidServerState("Server is not started. Please run '/start' to boot it up.")
+            raise InvalidServerStateError("Server is not started. Please run '/start' to boot it up.")
 
     def unfreeze(self):
         """
@@ -163,7 +163,7 @@ class MCServer:
             else:
                 raise UnsupportedOSException("Your current OS (%s) does not support this command at this time." % os.name)
         else:
-            raise InvalidServerState("Server is not started. Please run '/start' to boot it up.")
+            raise InvalidServerStateError("Server is not started. Please run '/start' to boot it up.")
 
     def broadcast(self, message=""):
         """
@@ -355,7 +355,7 @@ class MCServer:
         if self.state in (1, 2, 3):
             self.proc.stdin.write("%s\n" % command)
         else:
-            raise InvalidServerState("Server is not started. Please run '/start' to boot it up.")
+            raise InvalidServerStateError("Server is not started. Please run '/start' to boot it up.")
 
     def changeState(self, state, reason=None):
         """
@@ -417,7 +417,7 @@ class MCServer:
             self.reloadProperties()
             self.proc = subprocess.Popen(self.args, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
             self.players = {}
-            self.wrapper.AcceptEula() # Auto accept eula
+            self.wrapper.acceptEula() # Auto accept eula
             while True:
                 time.sleep(0.1)
                 if self.proc.poll() is not None:

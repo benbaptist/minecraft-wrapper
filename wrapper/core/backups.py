@@ -30,7 +30,7 @@ class Backups:
         self.backups = []
         self.api.registerEvent("timer.second", self.onTick)
 
-    def broadcast(self, message):
+    def broadcast(self, message): # Are wrappers like this really necessary?
         self.api.minecraft.broadcast(message, irc=False)
 
     def console(self, msg):

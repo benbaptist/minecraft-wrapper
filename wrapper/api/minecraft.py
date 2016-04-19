@@ -65,7 +65,7 @@ class Minecraft:
             if type(username) != str:
                 continue
             if online:
-                if str(self.wrapper.UUIDFromName(username)) == puuid:
+                if str(self.wrapper.getUUIDFromName(username)) == puuid:
                     continue
             with open("wrapper-data/players/" + uuidf) as f:
                 data = f.read()
@@ -141,9 +141,13 @@ class Minecraft:
         except Exception as e:
             raise Exception("No such player %s is logged in" % username)
 
-    def lookupUUID(self, uuid):
-        """ Returns the username from the specified UUID. If the player has never logged in before and isn't in the user cache, it will poll Mojang's API. The function will raise an exception if the UUID is invalid. """
-        return self.wrapper.lookupUsernamebyUUID(uuid)
+    def lookupUUID(self, uuid): # This function appears to be unused, but that does not mean that it is useless.
+        """
+        Returns the username from the specified UUID.
+        If the player has never logged in before and isn't in the user cache, it will poll Mojang's API.
+        The function will raise an exception if the UUID is invalid.
+        """
+        return self.wrapper.getUsernamebyUUID(uuid)
 
     def getPlayers(self):  # returns a list of players
         """ Returns a list of the currently connected players. """
