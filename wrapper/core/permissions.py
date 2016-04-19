@@ -14,9 +14,9 @@ class Permissions:
         else:
             self.permissions["groups"]
 
-    def doesGroupExist(self, groupName):
+    def groupExists(self, groupName):
         return groupName in self.permissions["groups"]
 
     # Check for permissions
-    def doesPlayerHavePermission(self, player, node):
+    def hasPermission(self, player, node):
         uuid = player.uuid # This would be an MCUUID object

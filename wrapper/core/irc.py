@@ -357,7 +357,7 @@ class IRC:
                                 msg("Server Memory Usage: %d bytes" % self.wrapper.server.getMemoryUsage())
                         elif get_args(message.split(" "), 0) == 'check-update':
                             msg("Checking for new updates...")
-                            update = self.wrapper.checkForNewUpdate()
+                            update = self.wrapper.getWrapperUpdate()
                             if update:
                                 version, build, repotype = update
                                 if repotype == "stable":
@@ -376,7 +376,7 @@ class IRC:
                                     msg("No new development Wrapper.py versions available.")
                         elif get_args(message.split(" "), 0) == 'update-wrapper':
                             msg("Checking for new updates...")
-                            update = self.wrapper.checkForNewUpdate()
+                            update = self.wrapper.getWrapperUpdate()
                             if update:
                                 version, build, repotype = update
                                 if repotype == "stable":

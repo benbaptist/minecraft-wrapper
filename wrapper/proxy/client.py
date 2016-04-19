@@ -164,7 +164,7 @@ class Client:
             return self.wrapper.server.players[self.username]
         return False
 
-    def editsign(self, position, line1, line2, line3, line4):
+    def editSign(self, position, line1, line2, line3, line4):
         self.server.send(self.pktSB.PLAYER_UPDATE_SIGN, "position|string|string|string|string", (position, line1, line2, line3, line4))
 
     def message(self, string):
@@ -241,8 +241,8 @@ class Client:
                         self.send(0x01, "string|bytearray|bytearray", (self.serverID, self.publicKey, self.verifyToken))
                 else:
                     self.connect()
-                    self.uuid = self.wrapper.UUIDFromName("OfflinePlayer:%s" % self.username) # MCUUID object
-                    self.serverUUID = self.wrapper.UUIDFromName("OfflinePlayer:%s" % self.username) # MCUUID object
+                    self.uuid = self.wrapper.getUUIDFromName("OfflinePlayer:%s" % self.username) # MCUUID object
+                    self.serverUUID = self.wrapper.getUUIDFromName("OfflinePlayer:%s" % self.username) # MCUUID object
                     self.send(0x02, "string|string", (self.uuid.string, self.username))
                     self.state = State.ACTIVE
                     self.log.info("%s logged in (IP: %s)", self.username, self.addr[0])
@@ -293,7 +293,7 @@ class Client:
                     else:
                         self.disconnect("Server Session Error (HTTP Status Code %d)" % r.status_code)
                         return False
-                    newUsername = self.wrapper.lookupUsernamebyUUID(self.uuid.string)
+                    newUsername = self.wrapper.getUsernamebyUUID(self.uuid.string)
                     if newUsername:
                         if newUsername != self.username:
                             self.log.info("%s logged in with new name, falling back to %s", self.username, newUsername)
@@ -332,7 +332,7 @@ class Client:
                                         with open("%s/.wrapper-proxy-whitelist-migrate" % worldName, "a") as f:
                                             f.write("%s %s\n" % (self.uuid.string, self.serverUUID.string))
 
-                self.serverUUID = self.wrapper.UUIDFromName("OfflinePlayer:%s" % self.username)
+                self.serverUUID = self.wrapper.getUUIDFromName("OfflinePlayer:%s" % self.username)
                 self.ip = self.addr[0]
                 playerwas = str(self.username)
                 uuidwas = self.uuid.string  # TODO somewhere between HERE and ...
@@ -344,13 +344,13 @@ class Client:
                 # player ban code!  Uses vanilla json files - In wrapper proxy mode, supports
                 #       temp-bans (the "expires" field of the ban record is used!)
 
-                if self.proxy.isIPbanned(self.addr[0]):
+                if self.proxy.isIPBanned(self.addr[0]):
                     self.disconnect("Your address is IP-banned from this server!.")
                     return False
                 testforban = self.proxy.isUUIDBanned(uuidwas)
                 self.log.debug("Value - testforban: %s", testforban)
                 if self.proxy.isUUIDBanned(uuidwas):  # TODO ...HERE, the player stuff becomes "None" (was self.uuid)
-                    banreason = self.wrapper.proxy.getUUIDbanreason(uuidwas)  # TODO- which is why I archived the name and UUID strings
+                    banreason = self.wrapper.proxy.getUUIDBanReason(uuidwas)  # TODO- which is why I archived the name and UUID strings
                     self.disconnect("Banned: %s" % banreason)  # maybe because I got these two lines reversed? disc and then log.info?
                     self.log.info("Banned player %s tried to connect:\n %s" % (playerwas, banreason))
                     return False
@@ -623,7 +623,7 @@ class Client:
                     l3 = payload["line3"]
                 if "line4" in payload:
                     l4 = payload["line4"]
-            self.editsign(position, l1, l2, l3, l4)
+            self.editSign(position, l1, l2, l3, l4)
             return False
         
         if pkid == self.pktSB.CLIENT_SETTINGS: # read Client Settings

@@ -29,7 +29,7 @@ class Player:
 
         self.uuid = self.wrapper.getUUID(username) # This is an MCUUID object
         # TODO: See if this can be accomplished via MCUUID
-        self.offlineuuid = self.wrapper.UUIDFromName("OfflinePlayer:%s" % username)
+        self.offlineuuid = self.wrapper.getUUIDFromName("OfflinePlayer:%s" % username)
         self.ipaddress =  "127.0.0.0"
 
         self.client = None
@@ -51,14 +51,14 @@ class Player:
             self.data["firstLoggedIn"] = (time.time(), time.tzname)
         if "logins" not in self.data:
             self.data["logins"] = {}
-        t = threading.Thread(target=self.__track__, args=())
+        t = threading.Thread(target=self.track, args=())
         t.daemon = True
         t.start()
 
     def __str__(self):
         return self.username
 
-    def __track__(self):
+    def track(self):
         self.data["logins"][int(self.loggedIn)] = time.time()
         while not self.abort:
             self.data["logins"][int(self.loggedIn)] = int(time.time())
@@ -109,7 +109,7 @@ class Player:
         else:
             return self.client
 
-    def processColorCodesOld(self, message):
+    def processOldColorCodes(self, message):
         """
         :param message: message text containing '&' to represent the chat formatting codes
         :return: mofified text containing the section sign (§) and the formatting code.
@@ -177,7 +177,7 @@ class Player:
 
     def actionMessage(self, message=""):
         if self.getClient().version > 10:
-            self.getClient().send(self.clientPackets.CHAT_MESSAGE, "string|byte", (json.dumps({"text": self.processColorCodesOld(message)}), 2))
+            self.getClient().send(self.clientPackets.CHAT_MESSAGE, "string|byte", (json.dumps({"text": self.processOldColorCodes(message)}), 2))
 
     def setVisualXP(self, progress, level, total):
         """ Change the XP bar on the client's side only. Does not affect actual XP levels. """
@@ -198,11 +198,13 @@ class Player:
     # endregion Visual notifications
 
     # region Abilities & Client-Side Stuff
-    def getClientpacketlist(self):
-        """allow plugins to get the players client plugin list per their
-        client version (list in mcpky.py).. eg:
-                packets = player.getClientpacketlist()
-                player.client.send(packets.playerabilities, "byte|float|float", (0x0F, 1, 1))"""
+    def getClientPacketList(self):
+        """
+        Allow plugins to get the players client plugin list per their client version
+        e.g.:
+        packets = player.getClientPacketList()
+        player.client.send(packets.playerabilities, "byte|float|float", (0x0F, 1, 1))
+        """
         return self.clientPackets
 
     # UNFINISHED FUNCTION - setting byte bits 0x2 and 0x4 (set flying, allow
@@ -290,7 +292,7 @@ class Player:
 
     def hasGroup(self, group):
         """ Returns a boolean of whether or not the player is in the specified permission group. """
-        self.uuid = self.wrapper.lookupUUIDbyUsername(self.username)  # init the perms for new player, this is an MCUUID
+        self.uuid = self.wrapper.getUUIDByUsername(self.username)  # init the perms for new player, this is an MCUUID
         if "users" not in self.permissions:
             self.permissions["users"] = {}
         for uuid in self.permissions["users"]:
@@ -302,7 +304,7 @@ class Player:
         """ Returns a list of permission groups that the player is in. """
         if "users" not in self.permissions:
             self.permissions["users"] = {}
-        self.uuid = self.wrapper.lookupUUIDbyUsername(self.username)  # init the perms for new player, this is an MCUUID
+        self.uuid = self.wrapper.getUUIDByUsername(self.username)  # init the perms for new player, this is an MCUUID
         for uuid in self.permissions["users"]:
             if uuid == self.uuid.string:
                 return self.permissions["users"][uuid]["groups"]
@@ -312,7 +314,7 @@ class Player:
         """ Adds the player to a specified group. If the group does not exist, an IndexError is raised. """
         if group not in self.permissions["groups"]:
             raise IndexError("No group with the name '%s' exists" % group)
-        self.uuid = self.wrapper.lookupUUIDbyUsername(self.username)  # init the perms for new player, this is an MCUUID
+        self.uuid = self.wrapper.getUUIDByUsername(self.username)  # init the perms for new player, this is an MCUUID
         if "users" not in self.permissions:
             self.permissions["users"] = {}
         for uuid in self.permissions["users"]:
@@ -323,7 +325,7 @@ class Player:
         """ Removes the player to a specified group. If they are not part of the specified group, an IndexError is raised. """
         if "users" not in self.permissions:
             self.permissions["users"] = {}
-        self.uuid = self.wrapper.lookupUUIDbyUsername(self.username)  # init the perms for new player, this is an MCUUID
+        self.uuid = self.wrapper.getUUIDByUsername(self.username)  # init the perms for new player, this is an MCUUID
         for uuid in self.permissions["users"]:
             if uuid == self.uuid.string:
                 if group in self.permissions["users"][uuid]["groups"]:

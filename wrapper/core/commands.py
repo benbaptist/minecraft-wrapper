@@ -70,7 +70,7 @@ class Commands:
                 subcommand = get_args(payload["args"], 0)
                 if subcommand == "update":
                     player.message({"text": "Checking for new Wrapper.py updates...", "color": "yellow"})
-                    update = self.wrapper.checkForNewUpdate()
+                    update = self.wrapper.getWrapperUpdate()
                     if update:
                         version, build, repotype = update
                         player.message("&bNew Wrapper.py Version %s (Build #%d) available!)" % (".".join([str(_) for _ in version]), build))
@@ -186,7 +186,7 @@ class Commands:
 
         if str(payload["command"]).lower() == "ban-ip":
             if player.isOp():
-                if not self.wrapper.isgoodipv4(get_args(payload["args"], 0)):
+                if not self.wrapper.isIPv4Address(get_args(payload["args"], 0)):
                     player.message("&cInvalid IP address format: %s" % get_args(payload["args"], 0))
                     return False
                 returnmessage = self.wrapper.proxy.banIP(get_args(payload["args"], 0))
@@ -199,7 +199,7 @@ class Commands:
 
         if str(payload["command"]).lower() == "pardon-ip":
             if player.isOp():
-                if not self.wrapper.isgoodipv4(get_args(payload["args"], 0)):
+                if not self.wrapper.isIPv4Address(get_args(payload["args"], 0)):
                     player.message("&cInvalid IP address format: %s" % get_args(payload["args"], 0))
                     return False
                 returnmessage = self.wrapper.proxy.pardonIP(get_args(payload["args"], 0))
@@ -430,7 +430,7 @@ class Commands:
                         player.message("&aUsers in the group '%s':" % group)
                         for uuid in self.wrapper.permissions["users"]:
                             if group in self.wrapper.permissions["users"][uuid]["groups"]:
-                                player.message("%s: &2%s" % (self.wrapper.lookupUsernamebyUUID(uuid), uuid))
+                                player.message("%s: &2%s" % (self.wrapper.getUsernamebyUUID(uuid), uuid))
                         player.message("&aPermissions for the group '%s':" % group)
                         for node in self.wrapper.permissions["groups"][group]["permissions"]:
                             value = self.wrapper.permissions["groups"][group]["permissions"][node]
@@ -448,7 +448,7 @@ class Commands:
                     subcommand = get_args(payload["args"], 2)
                     # try:
                     if len(username) > 0:
-                        uuid = self.wrapper.lookupUUIDbyUsername(username).string
+                        uuid = self.wrapper.getUUIDByUsername(username).string
                     # except:
                     # player.message("&cUsername '%s' does not exist." % username)
                     # return False
