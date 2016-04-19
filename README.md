@@ -109,7 +109,7 @@ Wrapper continues to be a work in progress and changes often happen faster than 
 <li>poll.py allows players to vote for certain things on the server. It isn't very up-to-date at the moment, however. </li>
 </ul>
 </br>Tip:  
-If you want to see more error messages and other useful messages while developing plugins or debuggin wrapper,
+If you want to see more error messages and other useful messages while developing plugins or debugging wrapper,
 look for the logging.json file and make changes to the "console" section:  
 ```json
 ...
