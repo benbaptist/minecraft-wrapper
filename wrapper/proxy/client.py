@@ -280,7 +280,7 @@ class Client:
                         self.uuid = MCUUID(data["id"])
                         #print data["id"]
                         #print self.uuid
-                        #print self.uuid.__str__()
+                        #print self.uuid.string
 
                         if data["name"] != self.username:
                             self.disconnect("Client's username did not match Mojang's record")
@@ -335,9 +335,9 @@ class Client:
                 self.serverUUID = self.wrapper.UUIDFromName("OfflinePlayer:%s" % self.username)
                 self.ip = self.addr[0]
                 playerwas = str(self.username)
-                uuidwas = self.uuid.__str__()  # TODO somewhere between HERE and ...
-                print playerwas
-                print uuidwas
+                uuidwas = self.uuid.string  # TODO somewhere between HERE and ...
+                self.log.debug("Value - playerwas: %s", playerwas)
+                self.log.debug("Value - uuidwas: %s", uuidwas)
                 if self.version > 26:
                     self.packet.setCompression(256)
 
@@ -348,7 +348,7 @@ class Client:
                     self.disconnect("Your address is IP-banned from this server!.")
                     return False
                 testforban = self.proxy.isUUIDBanned(uuidwas)
-                print testforban
+                self.log.debug("Value - testforban: %s", testforban)
                 if self.proxy.isUUIDBanned(uuidwas):  # TODO ...HERE, the player stuff becomes "None" (was self.uuid)
                     banreason = self.wrapper.proxy.getUUIDbanreason(uuidwas)  # TODO- which is why I archived the name and UUID strings
                     self.disconnect("Banned: %s" % banreason)  # maybe because I got these two lines reversed? disc and then log.info?

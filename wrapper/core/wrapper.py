@@ -116,6 +116,19 @@ class Wrapper:
         d[8] |= 0x80
         return MCUUID(bytes=str(d))
 
+    def AcceptEula(self):
+        if os.path.isfile("eula.txt"):
+            self.log.debug("Checking EULA agreement...")
+            with open("eula.txt", "r") as f:
+                eula = f.read()
+
+            if "false" in eula:
+                self.log.debug("EULA agreement was not accepted, forcing acceptance...")
+                with open("eula.txt", "w") as f:
+                    f.write(eula.replace("false", "true"))
+
+            self.log.debug("EULA agreement has been accepted!")
+
     def lookupUUIDbyUsername(self, username):
         """
         Lookup users name and update local wrapper usercache. Will check Mojang once per day only.
@@ -381,7 +394,6 @@ class Wrapper:
             t.start()
 
         self.server.__handle_server__()
-
         self.plugins.disablePlugins()
 
     def startProxy(self):
