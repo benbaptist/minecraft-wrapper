@@ -18,7 +18,7 @@ if __name__ == "__main__":
             os.system("reset")
         wrapper.plugins.disablePlugins()
         wrapper.halt = True
-        wrapper.server.console("save-all")
+        wrapper.server.console("save-all flush")  # required to have a flush argument
         wrapper.server.stop("Wrapper.py received shutdown signal - bye", save=False)
     except Exception as ex:
         log.critical("Wrapper.py crashed - stopping server to be safe (%s)", ex, exc_info=True)
