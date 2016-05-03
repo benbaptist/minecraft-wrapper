@@ -4,6 +4,7 @@ import time
 import fnmatch
 import json
 import threading
+from traceback import format_stack as stacktrace
 
 from base import API
 
@@ -17,6 +18,14 @@ class Player:
     upon logging off. """
 
     def __init__(self, username, wrapper):
+        """
+        UUID terminologies:
+        Mojang uuid - the bought and paid Mojand UUID.
+        offline uuid - created as a MD5 hash of "OfflinePlayer:%s" % username
+        server uuid = the local server uuid... used to reference the player on the local server.  Could be same as
+            Mojang UUID if server is in online mode or same as offline if server is in offline mode (proxy mode)..
+        """
+
         self.wrapper = wrapper
         self.server = wrapper.server
         self.permissions = wrapper.permissions
@@ -27,9 +36,10 @@ class Player:
         self.loggedIn = time.time()
         self.abort = False
 
-        self.uuid = self.wrapper.getUUID(username) # This is an MCUUID object
-        # TODO: See if this can be accomplished via MCUUID
-        self.offlineuuid = self.wrapper.getUUIDFromName("OfflinePlayer:%s" % username)
+        self.mojangUuid = self.wrapper.getUUIDByUsername(username)  # This is a MCUUID object
+        self.offlineuuid = self.wrapper.getUUIDFromName("OfflinePlayer:%s" % username)  # This is a MCUUID object
+        # Need to figure out what vaue self.uuid should be - server/offline/Mojang..?
+        self.uuid = self.wrapper.getUUID(username)  # This is a MCUUID object - This is the player.uuid per the API.
         self.ipaddress =  "127.0.0.0"
 
         self.client = None
@@ -42,7 +52,7 @@ class Player:
                     self.uuid = client.uuid # Both MCUUID objects
                     self.offlineuuid = client.serverUUID
                     self.ipaddress = client.ip
-                    if self.getClient().version > 49:
+                    if self.getClient().version > 49:  # packet numbers fluctuated  wildly between 48 and 107
                         self.clientPackets = mcpacket.ClientBound19
                     break
 
@@ -51,18 +61,32 @@ class Player:
             self.data["firstLoggedIn"] = (time.time(), time.tzname)
         if "logins" not in self.data:
             self.data["logins"] = {}
-        t = threading.Thread(target=self.track, args=())
+        t = threading.Thread(target=self._track_, args=())
         t.daemon = True
         t.start()
 
     def __str__(self):
         return self.username
 
-    def track(self):
+    def _track_(self):
+        """
+        internal tracking that updates a players last login time. Not intended as a part of the public player object API
+        """
         self.data["logins"][int(self.loggedIn)] = time.time()
         while not self.abort:
             self.data["logins"][int(self.loggedIn)] = int(time.time())
             time.sleep(60)
+    @staticmethod
+    def _processOldColorCodes_(message):
+        """
+        Internal private method - Not intended as a part of the public player object API
+
+         message: message text containing '&' to represent the chat formatting codes
+        :return: mofified text containing the section sign (§) and the formatting code.
+        """
+        for i in API.colorCodes:
+            message = message.replace("&" + i, "\xc2\xa7" + i)
+        return message
 
     def console(self, string):
         """
@@ -74,26 +98,26 @@ class Player:
     def execute(self, string):
         """
         :param string: command to execute (no preceding slash)
-         Run a command as this player. If proxy mode is not enabled,
-        it simply falls back to using the 1.8 'execute' command.
-        To be clear, this does NOT work with any Wrapper.py or commands.
-        The command is sent straight to the server without going through the wrapper.
+         Run a command as this player. To be clear, this does NOT work with
+         any Wrapper.py or commands.  The command is sent straight to the
+         server console without going through the wrapper.
         """
-        try:
-            self.client.message("/%s" % string)
-        except Exception as e:
-            self.console("execute %s ~ ~ ~ %s" % (self.name, string))
+        self.console("execute %s ~ ~ ~ %s" % (self.name, string))
 
     def say(self, string):
-        """ :param string: message sent to the server as the player.
+        """ :param string: message/command sent to the server as the player.
         Send a message as a player.
 
         Beware: the message string is sent directly to the server
-        without wrapper filtering,so it could be used to execute commands as the player if
-        the string is prefixed with a slah, for instance.
+        without wrapper filtering,so it could be used to execute minecraft
+        commands as the player if the string is prefixed with a slash.
         * Only works in proxy mode. """
-        self.client.message(string)
-
+        if self.client:
+            self.client.message(string)
+        else:
+            self.log.warn("attempted player.say, but wrapper is not in proxy mode (no proxy client exists)")
+            # let user set debug to find out which plugin called this function without using an Exception or stopping
+            self.log.debug("Player.say called with no client: \n%s" % ''.join(stacktrace()))
     def getClient(self):
         """
         :returns: player client object
@@ -105,18 +129,9 @@ class Player:
                         self.client = client
                         return self.client
                 except Exception as e:
-                    pass
+                    self.log.warn("getClient could not return a client for:%s \nException:%s" % (self.username, e))
         else:
             return self.client
-
-    def processOldColorCodes(self, message):
-        """
-        :param message: message text containing '&' to represent the chat formatting codes
-        :return: mofified text containing the section sign (§) and the formatting code.
-        """
-        for i in API.colorCodes:
-            message = message.replace("&" + i, "\xc2\xa7" + i)
-        return message
 
     def getPosition(self):
         """:returns: a tuple of the player's current position, if they're on ground, and yaw/pitch of head. """
@@ -177,7 +192,7 @@ class Player:
 
     def actionMessage(self, message=""):
         if self.getClient().version > 10:
-            self.getClient().send(self.clientPackets.CHAT_MESSAGE, "string|byte", (json.dumps({"text": self.processOldColorCodes(message)}), 2))
+            self.getClient().send(self.clientPackets.CHAT_MESSAGE, "string|byte", (json.dumps({"text": self._processOldColorCodes_(message)}), 2))
 
     def setVisualXP(self, progress, level, total):
         """ Change the XP bar on the client's side only. Does not affect actual XP levels. """
@@ -203,7 +218,7 @@ class Player:
         Allow plugins to get the players client plugin list per their client version
         e.g.:
         packets = player.getClientPacketList()
-        player.client.send(packets.playerabilities, "byte|float|float", (0x0F, 1, 1))
+        player.client.send(packets.PLAYER_ABILITIES, "byte|float|float", (0x0F, 1, 1))
         """
         return self.clientPackets
 

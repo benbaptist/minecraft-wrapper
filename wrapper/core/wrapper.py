@@ -131,16 +131,21 @@ class Wrapper:
 
     def getUUIDByUsername(self, username):
         """
-        Lookup users name and update local wrapper usercache. Will check Mojang once per day only.
+        Lookup user's UUID using the username. Primarily searches the wrapper usercache.  If record is
+        older than 30 days (or cannot be found in the cache), it will poll Mojang and also attempt a full
+        update of the cache using getUsernamebyUUID as well.
+
         :param username:  username as string
         :returns: returns the MCUUID object from the given name. Updates the wrapper usercache.json
                 Yields False if failed.
         """
-        # frequency = 86400  # check once per day at most for existing players
+        frequency = 2592000  # 30 days.  If a cache update is specifically required any sooner, use getUsernamebyUUID.
         for useruuid in self.usercache: # try wrapper cache first
             if username in (self.usercache.key(useruuid)["name"], self.usercache.key(useruuid)["localname"]):
-                return MCUUID(useruuid)
-        # try mojang  (a new player, likely)
+                if (time.time() - self.usercache.key(useruuid)["time"]) < frequency:
+                    return MCUUID(useruuid)
+
+        # try mojang  (a new player or player changed names.)
         r = requests.get("https://api.mojang.com/users/profiles/minecraft/%s" % username)
         if r.status_code == 200:
             useruuid = self.formatUUID(r.json()["id"])
@@ -152,11 +157,6 @@ class Wrapper:
                 return MCUUID(useruuid)
             return False
         else:
-            if "uuid-cache" not in self.proxy.storage: # try for any old proxy-data record as a last resort
-                return False  # no old proxy uuid-cache exists.
-            for useruuid in self.proxy.storage["uuid-cache"]:
-                if self.storage["uuid-cache"][useruuid]["name"] == username:
-                    return MCUUID(useruuid)
             return False  # if no old proxy record
 
     def getUsernamebyUUID(self, useruuid):
@@ -165,19 +165,20 @@ class Wrapper:
         If the player has never logged in before and isn't in the user cache, it will poll Mojang's API.
         Polling is restricted to once per day.
         Updates will be made to the wrapper usercache.json when this function is executed.
+
         :param useruuid:  string UUID
         :returns: returns the username from the specified uuid, else returns False if failed.
         """
-        frequency = 86400  # check once per day at most for existing players
+        frequency = 86400  # if called directly, can update cache daily (refresh names list, etc)
         names = self._pollMojangUUID(useruuid)
         numbofnames = len(names)
         if self.usercache.key(useruuid):  # if user is in the cache...
             # and was recently polled...
             if (time.time() - self.usercache.key(useruuid)["time"]) < frequency:
-                return self.usercache.key(useruuid)["name"]  # dont re-poll.
+                return self.usercache.key(useruuid)["name"]  # dont re-poll if same time frame (daily = 86400).
             else:
-                if not names or names is None:  # not a huge deal, we'll re-poll another time
-                    self.usercache.key(useruuid)["time"] = time.time() - frequency + 7200  # delay 2 more hours
+                if not names or names is None:  # service might be down.. not a huge deal, we'll re-poll another time
+                    self.usercache.key(useruuid)["time"] = time.time() - frequency + 7200  # may try again in 2 hours
                     return self.usercache.key(useruuid)["name"]
         else:  # user is not in cache
             if not names or names is None or numbofnames == 0:  # mojang service failed or UUID not found
@@ -239,25 +240,28 @@ class Wrapper:
             if rx.status_code == 200:
                 rx = rx.json()
                 for i in xrange(0, len(rx)):
+                    # changed these error levels to warning, which is per https://docs.python.org/2/howto/logging.html#when-to-use-logging
+                    # using "warn" for these since "software is still working as expected".
                     if "account.mojang.com" in rx[i]:
                         if rx[i]["account.mojang.com"] == "green":
-                            self.log.error("Mojang accounts is green, but request failed - have you over-polled (large busy server) or supplied an incorrect UUID??")
-                            self.log.error("uuid: %s", useruuid)
-                            self.log.debug("response: \n%s", str(rx))
+                            self.log.warn("Mojang accounts is green, but request failed - have you over-polled (large busy server) or supplied an incorrect UUID??")
+                            self.log.warn("uuid: %s", useruuid)
+                            self.log.warn("response: \n%s", str(rx))
                             return None
                         elif rx[i]["account.mojang.com"] in ("yellow", "red"):
-                            self.log.error("Mojang accounts is experiencing issues (%s).", rx[i]["account.mojang.com"])
+                            self.log.warn("Mojang accounts is experiencing issues (%s).", rx[i]["account.mojang.com"])
                             return False
-                        self.log.error("Mojang Status found, but corrupted or in an unexpected format (status code %s)", r.status_code)
+                        self.log.warn("Mojang Status found, but corrupted or in an unexpected format (status code %s)", r.status_code)
                         return False
                     else:
-                        self.log.error("Mojang Status not found - no internet connection, perhaps? (status code %s)", rx.status_code)
+                        self.log.warn("Mojang Status not found - no internet connection, perhaps? (status code %s)", rx.status_code)
                         return self.usercache[useruuid]["name"]
             
 
     def getUsername(self, useruuid): # We should see about getting rid of this wrapper
         """
         :param useruuid - the string representation of the player uuid.
+
         used by commands.py in commands-playerstats and in api/minecraft.getAllPlayers
         mostly a wrapper for getUsernamebyUUID which also checks the offline server usercache...
         """

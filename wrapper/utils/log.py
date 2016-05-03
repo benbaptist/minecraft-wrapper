@@ -76,7 +76,7 @@ def configure_logger():
     setCustomLevels()
     loadConfig()
 
-    logger = logging.getLogger()
+    logging.getLogger()
 
 def setCustomLevels():
     # Create a TRACE level
@@ -86,20 +86,20 @@ def setCustomLevels():
     logging.addLevelName(logging.TRACE, "TRACE")
     logging.Logger.trace = lambda inst, msg, *args, **kwargs: inst.log(logging.TRACE, msg, *args, **kwargs)
 
-def loadConfig(file="logging.json"):
+def loadConfig(configfile="logging.json"):
     dictConfig(DEFAULT_CONFIG) # Load default config
     try:
-        if os.path.isfile(file):
-            with open(file, "r") as f:
+        if os.path.isfile(configfile):
+            with open(configfile, "r") as f:
                 conf = json.load(f)
             dictConfig(conf)
-            logging.info("Logging configuration file %s located and loaded, logging configuration set!", file)
+            logging.info("Logging configuration file %s located and loaded, logging configuration set!", configfile)
         else:
-            with open(file, "w") as f:
+            with open(configfile, "w") as f:
                 f.write(json.dumps(DEFAULT_CONFIG, indent=4, separators=(',', ': ')))
-            logging.warn("Unable to locate %s -- Using default logging configuration", file)
+            logging.warn("Unable to locate %s -- Using default logging configuration", configfile)
     except Exception as e:
-        logging.exception("Unable to load or create %s! (%s)", file, e)
+        logging.exception("Unable to load or create %s! (%s)", configfile, e)
 
 def mkdir_p(path):
     try:
