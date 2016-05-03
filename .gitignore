@@ -32,3 +32,6 @@ pip-log.txt
 # Minecraft Wrapper
 *.md5
 build/version.json
+
+# PyCharm project
+*.idea
