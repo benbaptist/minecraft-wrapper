@@ -43,6 +43,16 @@ class Player:
 
         self.client = None
         self.clientPackets = mcpacket.ClientBound18
+        self.serverPackets = mcpacket.ServerBound18
+
+        #some player properties
+        self.field_of_view = float(1) # default is 1.  Should normally be congruent with speed.
+        self.godmode = 0x00  # Client set godmode is 0x01
+        self.creative = 0x00  # Client set creative is 0x08
+        self.fly_speed = float(1)  # default is 1
+
+        if self.server.version > mcpacket.PROTOCOL_1_9START:
+            self.serverPackets = mcpacket.ServerBound19
 
         if self.wrapper.proxy:
             for client in self.wrapper.proxy.clients:
@@ -188,24 +198,62 @@ class Player:
             self.wrapper.server.console("tellraw %s %s" % (self.username, self.wrapper.server.processColorCodes(message)))
 
     def actionMessage(self, message=""):
-        if self.getClient().version > 10:
+        if self.getClient().version > mcpacket.PROTOCOL_1_8START:
             self.getClient().send(self.clientPackets.CHAT_MESSAGE, "string|byte", (json.dumps({"text": self._processOldColorCodes(message)}), 2))
 
     def setVisualXP(self, progress, level, total):
-        """ Change the XP bar on the client's side only. Does not affect actual XP levels. """
-        if self.getClient().version > 10:
+        """
+         Change the XP bar on the client's side only. Does not affect actual XP levels.
+
+        Args:
+            progress:  Float between Between 0 and 1
+            level:  Integer (short in older versions) of EXP level
+            total: Total EXP.
+
+        Returns:
+
+        """
+        if self.getClient().version > mcpacket.PROTOCOL_1_8START:
             self.getClient().send(self.clientPackets.SET_EXPERIENCE, "float|varint|varint", (progress, level, total))
         else:
             self.getClient().send(self.clientPackets.SET_EXPERIENCE, "float|short|short", (progress, level, total))
 
-    def openWindow(self, type, title, slots):
+    def openWindow(self, windowtype, title, slots):
+        """
+        Opens an inventory window on the client side.  EntityHorse is not supported due to further EID requirement.
+
+        Args:
+            windowtype:  Window Type (text string). See below or applicable wiki entry (for version specific info)
+            title: Window title - wiki says chat object (could be string too?)
+            slots:
+
+        Returns: None
+
+        Type names (1.9)
+            minecraft:chest	Chest, large chest, or minecart with chest
+            minecraft:crafting_table	Crafting table
+            minecraft:furnace	Furnace
+            minecraft:dispenser	Dispenser
+            minecraft:enchanting_table	Enchantment table
+            minecraft:brewing_stand	Brewing stand
+            minecraft:villager	Villager
+            minecraft:beacon	Beacon
+            minecraft:anvil	Anvil
+            minecraft:hopper	Hopper or minecart with hopper
+            minecraft:dropper	Dropper
+            EntityHorse	Horse, donkey, or mule
+
+
+        """
+
         self.getClient().windowCounter += 1
         if self.getClient().windowCounter > 200:
             self.getClient().windowCounter = 2
-        if self.getClient().version > 10:
+        # TODO Test what kind of field title is (json or text)
+        if self.getClient().version > mcpacket.PROTOCOL_1_8START:
             self.getClient().send(
                 self.clientPackets.OPEN_WINDOW, "ubyte|string|json|ubyte", (
-                    self.getClient().windowCounter, "0", {"text": title}, slots))
+                    self.getClient().windowCounter, windowtype, {"text": title}, slots))
         return None  # return a Window object soon
     # endregion Visual notifications
 
@@ -222,13 +270,35 @@ class Player:
     # UNFINISHED FUNCTION - setting byte bits 0x2 and 0x4 (set flying, allow
     # flying)
     def setPlayerFlying(self, fly):
-        if fly:
-            self.getClient().send(self.clientPackets.PLAYER_ABILITIES, "byte|float|float", (0x06, 1, 1))  # player abilities
-        else:
-            self.getClient().send(self.clientPackets.PLAYER_ABILITIES, "byte|float|float", (0x00, 1, 1))
+        """
+        Args:
+            fly: Booolean - Fly is true, (else False to unset fly mode)
 
-    # Unfinished function, will be used to make phantom blocks visible ONLY to
-    # the client
+        Returns: Nothing
+
+        Bitflags used (for all versions): (so flying and is flying is x06)
+            Invulnerable	0x01
+            Flying	        0x02
+            Allow Flying	0x04
+            Creative Mode	0x08
+
+        """
+        # TODO later add and keep track of godmode and creative- code will currently unset them.
+        if fly:
+            setfly = 0x06  # for set fly
+        else:
+            setfly = 0x00
+
+        bitfield = self.godmode | self.creative | setfly
+        # Note in versions before 1.8, field of view is the walking speed for client (still a float)
+        #   Server field of view is still walking speed
+        self.getClient().send(self.clientPackets.PLAYER_ABILITIES, "byte|float|float",
+                              (bitfield, self.fly_speed, self.field_of_view))
+        self.getClient().server.send(self.serverPackets.PLAYER_ABILITIES, "byte|float|float",
+                                     (bitfield, self.fly_speed, self.field_of_view))
+
+
+    # Unfinished function, will be used to make phantom blocks visible ONLY to the client
     def setBlock(self, position):
         pass
     # endregion
@@ -241,15 +311,26 @@ class Player:
     def getHeldItem(self):
         """ Returns the item object of an item currently being held. """
         return self.getClient().inventory[36 + self.getClient().slot]
+
     # Permissions-related
 
     def hasPermission(self, node):
-        """ If the player has the specified permission node (either directly, or inherited from a group that the player is in), it will return the value (usually True) of the node. Otherwise, it returns False. """
+        """
+        If the player has the specified permission node (either directly, or inherited from a group that
+        the player is in), it will return the value (usually True) of the node. Otherwise, it returns False.
+
+        Args:
+            node: Permission node (string)
+
+        Returns:  Boolean of whether player has permission or not.
+
+        """
+
         if node is None:
             return True
         if "users" not in self.permissions:
             self.permissions["users"] = {}
-        if self.uuid.string in self.permissions["users"]:
+        if self.uuid.string in self.permissions["users"]:  # TODO Wrong UUID - should use mojang
             for perm in self.permissions["users"][self.uuid.string]["permissions"]:
                 if node in fnmatch.filter([node], perm):
                     return self.permissions["users"][self.uuid.string]["permissions"][perm]
@@ -280,30 +361,59 @@ class Player:
         return False
 
     def setPermission(self, node, value=True):
-        """ Adds the specified permission node and optionally a value to the player. 
+        """
+        Adds the specified permission node and optionally a value to the player.
 
-        Value defaults to True, but can be set to False to explicitly revoke a particular permission from the player, or to any arbitrary value. """
+        Args:
+            node: Permission node (string)
+            value: defaults to True, but can be set to False to explicitly revoke a particular permission
+                from the player, or to any arbitrary value.
+        Returns: Nothing
+
+        """
         if "users" not in self.permissions:
             self.permissions["users"] = {}
         for uuid in self.permissions["users"]:
-            if uuid == self.uuid.string:
+            if uuid == self.uuid.string:  # TODO this is probably not using the correct UUID.
                 self.permissions["users"][uuid]["permissions"][node] = value
+        # TODO code should probably initialize the permission record if none exists for the specified UUID
 
     def removePermission(self, node):
-        """ Completely removes a permission node from the player. They will inherit this permission from their groups or from plugin defaults. 
+        """ Completely removes a permission node from the player. They will inherit this permission from their
+         groups or from plugin defaults.
 
-        If the player does not have the specific permission, an IndexError is raised. Note that this method has no effect on nodes inherited from groups or plugin defaults. """
+        If the player does not have the specific permission, an IndexError is raised. Note that this method has no
+        effect on nodes inherited from groups or plugin defaults.
+
+        Args:
+            node: Permission node (string)
+
+        Returns:  Boolean; True if operation succeeds, False if it fails (set debug mode to see/log error).
+    """
+
         if "users" not in self.permissions:
             self.permissions["users"] = {}
         for uuid in self.permissions["users"]:
-            if uuid == self.uuid.string:
+            if uuid == self.uuid.string:  # TODO this is probably not using the correct UUID.  This UUID needs to be
+                                        # TODO     Mojang (so perms don't change with name changes)
                 if node in self.permissions["users"][uuid]["permissions"]:
                     del self.permissions["users"][uuid]["permissions"][node]
+                    return True
                 else:
-                    raise IndexError("%s does not have permission node '%s'" % (self.username, node))
+                    self.log.debug("%s does not have permission node '%s'", (self.username, node))
+                    return False
+        self.log.debug("Player %s uuid:%s does not have permission node '%s'", (self.username, self.uuid.string, node))
+        return False
 
     def hasGroup(self, group):
-        """ Returns a boolean of whether or not the player is in the specified permission group. """
+        """ Returns a boolean of whether or not the player is in the specified permission group.
+
+        Args:
+            group: Group node (string)
+
+        Returns:  Boolean of whether player has permission or not.
+        """
+        # TODO This is using the correct UUID, but that may not be the player.uuid (inconsistent with other functions)
         self.uuid = self.wrapper.getUUIDByUsername(self.username)  # init the perms for new player, this is an MCUUID
         if "users" not in self.permissions:
             self.permissions["users"] = {}
@@ -313,9 +423,13 @@ class Player:
         return False
 
     def getGroups(self):
-        """ Returns a list of permission groups that the player is in. """
+        """ Returns a list of permission groups that the player is in.
+
+        Returns:  list of groups
+        """
         if "users" not in self.permissions:
             self.permissions["users"] = {}
+        # TODO This is using the correct UUID, but that may not be the player.uuid (inconsistent with other functions)
         self.uuid = self.wrapper.getUUIDByUsername(self.username)  # init the perms for new player, this is an MCUUID
         for uuid in self.permissions["users"]:
             if uuid == self.uuid.string:
@@ -323,20 +437,38 @@ class Player:
         return []  # If the user is not in the permission database, return this
 
     def setGroup(self, group):
-        """ Adds the player to a specified group. If the group does not exist, an IndexError is raised. """
+        """
+        Adds the player to a specified group.  Returns False if group does not exist (set debiug to see error).
+        Args:
+            group: Group node (string)
+
+        Returns:  Boolean; True if operation succeeds, False if it fails (set debug mode to see/log error).
+        """
         if group not in self.permissions["groups"]:
-            raise IndexError("No group with the name '%s' exists" % group)
+            self.log.debug("No group with the name '%s' exists", group)
+            return False
+        # TODO This is using the correct UUID, but that may not be the player.uuid (inconsistent with other functions)
         self.uuid = self.wrapper.getUUIDByUsername(self.username)  # init the perms for new player, this is an MCUUID
         if "users" not in self.permissions:
             self.permissions["users"] = {}
         for uuid in self.permissions["users"]:
             if uuid == self.uuid.string:
                 self.permissions["users"][uuid]["groups"].append(group)
+                return True
+        self.log.debug("Player %s uuid:%s: Could not  '%s'", (self.username, self.uuid.string, group))
+        # TODO code should probably initialize the permission record if none exists for the specified UUID
+        return False
 
     def removeGroup(self, group):
-        """ Removes the player to a specified group. If they are not part of the specified group, an IndexError is raised. """
+        """ Removes the player to a specified group. If they are not part of the specified group, an IndexError is raised.
+        Args:
+            group: Group node (string)
+
+        Returns:
+            """
         if "users" not in self.permissions:
             self.permissions["users"] = {}
+        # TODO This is using the correct UUID, but that may not be the player.uuid (inconsistent with other functions)
         self.uuid = self.wrapper.getUUIDByUsername(self.username)  # init the perms for new player, this is an MCUUID
         for uuid in self.permissions["users"]:
             if uuid == self.uuid.string:
@@ -344,13 +476,25 @@ class Player:
                     self.permissions["users"][uuid]["groups"].remove(group)
                 else:
                     raise IndexError("%s is not part of the group '%s'" % (self.username, group))
+
     # Player Information
 
     def getFirstLogin(self):
-        """ Returns a tuple containing the timestamp of when the user first logged in for the first time, and the timezone (same as time.tzname). """
+        """ Returns a tuple containing the timestamp of when the user first logged in for the first time,
+        and the timezone (same as time.tzname). """
         return self.data["firstLoggedIn"]
     # Cross-server commands
 
     def connect(self, address, port):
-        """ Upon calling, the player object will become defunct and the client will be transferred to another server (provided it has online-mode turned off). """
+        """
+        Upon calling, the player object will become defunct and the client will be transferred to another
+         server (provided it has online-mode turned off).
+
+        Args:
+            address: server address (local address)
+            port: server port (local port)
+
+        Returns: Nothing
+        """
         self.client.connect(address, port)
+

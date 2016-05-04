@@ -15,7 +15,7 @@ set something False using 0xEE
 PROTOCOL_1_9_1_PRE = 108  # post- 1.9 "pre releases (1.9.1 pre-3 and later
 PROTOCOL_1_9REL1 = 107    # start of stable 1.9 release (or most current snapshop that is documented by protocol)
 PROTOCOL_1_9START = 48    # start of 1.9 snapshots
-PROTOCOL_1_8START = 6     # 1.8
+PROTOCOL_1_8START = 6     # 1.8 snapshots started here
 
 class ServerBound18:
     """ wrapper's "Client" process, which handles connections from client to wrapper.
@@ -37,6 +37,7 @@ class ServerBound18:
     CLIENT_SETTINGS = 0x15
     CLICK_WINDOW = 0x0e
     SPECTATE = 0x18
+    PLAYER_ABILITIES = 0x13  # corrected/added/verified wiki.vg/Protocol_History#16w07b see 15w31a serverbound
     USE_ITEM = 0xEE  # Does not exist in 1.8
     TELEPORT_CONFIRM = 0xEE  # Does not exist in 1.8
 
@@ -61,6 +62,7 @@ class ServerBound19:  # Updated To Protocol 94 15w51b
     CLIENT_SETTINGS = 0x04
     CLICK_WINDOW = 0x07
     SPECTATE = 0x1b
+    PLAYER_ABILITIES = 0x12  # corrected/added/verified wiki.vg/Protocol_History#16w07b see 15w43a serverbound
     USE_ITEM = 0x1d  # Only Used For Animation Purposes
     TELEPORT_CONFIRM = 0x00
 
@@ -74,7 +76,7 @@ class ClientBound18:
     CHAT_MESSAGE = 0x02
     PLAYER_POSLOOK = 0x08
     PLAYER_LIST_ITEM = 0x38
-    PLAYER_ABILITIES = 0x13
+    PLAYER_ABILITIES = 0x39  # corrected/added/verified wiki.vg/Protocol_History#16w07b see 15w43a clientbound
     JOIN_GAME = 0x01
     DISCONNECT = 0x40
     RESPAWN = 0x07
@@ -115,7 +117,7 @@ class ClientBound19:  # Updated To Protocol 107 1.9 Minecraft
     CHAT_MESSAGE = 0x0f
     PLAYER_POSLOOK = 0x2e
     PLAYER_LIST_ITEM = 0x2d
-    PLAYER_ABILITIES = 0x2b
+    PLAYER_ABILITIES = 0x2b  # corrected/added/verified wiki.vg/Protocol_History#16w07b see 15w43a clientbound
     JOIN_GAME = 0x23
     DISCONNECT = 0x1a
     RESPAWN = 0x33
