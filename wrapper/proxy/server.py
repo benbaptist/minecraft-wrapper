@@ -33,7 +33,7 @@ class Server:
         self.eid = None
 
         # Determine packet set to use (backwards compatibility)
-        if self.version >= mcpacket.PROTOCOLv1_9REL1:
+        if self.version >= mcpacket.PROTOCOL_1_9REL1:
             self.pktSB = mcpacket.ServerBound19
             self.pktCB = mcpacket.ClientBound19
         else:
@@ -331,7 +331,7 @@ class Server:
             self.wrapper.server.world.entities[data["eid"]] = Entity(eid, entityuuid, type_, (x, y, z), (pitch, yaw, head_pitch), False)
         
         if pkid == self.pktCB.ENTITY_RELATIVE_MOVE:  # Entity Relative Move
-            if self.version < mcpacket.PROTOCOLv1_8START:
+            if self.version < mcpacket.PROTOCOL_1_8START:
                 # TODO: These packets need to be filtered for cross-server stuff.
                 return True
             data = self.read("varint:eid|byte:dx|byte:dy|byte:dz")
@@ -342,7 +342,7 @@ class Server:
                 self.wrapper.server.world.getEntityByEID(data["eid"]).moveRelative((data["dx"], data["dy"], data["dz"]))
 
         if pkid == self.pktCB.ENTITY_TELEPORT:  # Entity Teleport
-            if self.version < mcpacket.PROTOCOLv1_8START:
+            if self.version < mcpacket.PROTOCOL_1_8START:
                 # TODO: These packets need to be filtered for cross-server stuff.
                 return True
             data = self.read("varint:eid|int:x|int:y|int:z|byte:yaw|byte:pitch")
@@ -357,14 +357,14 @@ class Server:
             self.log.trace("(PROXY SERVER) -> Parsed ENTITY_HEAD_LOOK packet:\n%s", data)
         
         if pkid == self.pktCB.ENTITY_STATUS:  # Entity Status
-            if self.version < mcpacket.PROTOCOLv1_8START:
+            if self.version < mcpacket.PROTOCOL_1_8START:
                 # TODO: These packets need to be filtered for cross-server stuff.
                 return True
             data = self.read("int:eid|byte:status")
             self.log.trace("(PROXY SERVER) -> Parsed ENTITY_STATUS packet:\n%s", data)
         
         if pkid == self.pktCB.ATTACH_ENTITY:  # Attach Entity
-            if self.version < mcpacket.PROTOCOLv1_8START:
+            if self.version < mcpacket.PROTOCOL_1_8START:
                 # TODO: These packets need to be filtered for cross-server stuff.
                 return True
             data = self.read("varint:eid|varint:vid|bool:leash")
@@ -388,7 +388,7 @@ class Server:
                     return False
         
         if pkid == self.pktCB.ENTITY_METADATA:  # Entity Metadata
-            if self.version < mcpacket.PROTOCOLv1_8START:
+            if self.version < mcpacket.PROTOCOL_1_8START:
                 # TODO: These packets need to be filtered for cross-server stuff.
                 return True
             data = self.read("varint:eid|rest:metadata")
@@ -398,7 +398,7 @@ class Server:
                 return False
         
         if pkid == self.pktCB.ENTITY_EFFECT: # Entity Effect
-            if self.version < mcpacket.PROTOCOLv1_8START:
+            if self.version < mcpacket.PROTOCOL_1_8START:
                 # TODO: These packets need to be filtered for cross-server stuff.
                 return True
             data = self.read("varint:eid|byte:effect_id|byte:amplifier|varint:duration|bool:hide")
@@ -408,7 +408,7 @@ class Server:
                 return False
         
         if pkid == self.pktCB.REMOVE_ENTITY_EFFECT: # Remove Entity Effect
-            if self.version < mcpacket.PROTOCOLv1_8START:
+            if self.version < mcpacket.PROTOCOL_1_8START:
                 # TODO: These packets need to be filtered for cross-server stuff.
                 return True
             data = self.read("varint:eid|byte:effect_id")
@@ -418,7 +418,7 @@ class Server:
                 return False
         
         if pkid == self.pktCB.ENTITY_PROPERTIES:  # Entity Properties
-            if self.version < mcpacket.PROTOCOLv1_8START:
+            if self.version < mcpacket.PROTOCOL_1_8START:
                 # TODO: These packets need to be filtered for cross-server stuff.
                 return True
             data = self.read("varint:eid|rest:properties")
@@ -435,14 +435,14 @@ class Server:
 
 
         # if self.pktCB.BLOCK_CHANGE: # Block Change - disabled - not doing anything at this point
-        #     if self.version < mcpacket.PROTOCOLv1_8START:
+        #     if self.version < mcpacket.PROTOCOL_1_8START:
         #         # TODO: These packets need to be filtered for cross-server stuff.
         #         return True
         #     data = self.read("position:location|varint:pkid")
         #     self.log.trace("(PROXY SERVER) -> Parsed BLOCK_CHANGE packet:\n%s", data)
         
         if pkid == self.pktCB.MAP_CHUNK_BULK: # Map Chunk Bulk (no longer exists in 1.9)
-            if self.version > mcpacket.PROTOCOLv1_8START and self.version < mcpacket.PROTOCOL_1_9START:
+            if self.version > mcpacket.PROTOCOL_1_8START and self.version < mcpacket.PROTOCOL_1_9START:
                 data = self.read("bool:skylight|varint:chunks")
                 self.log.trace("(PROXY SERVER) -> Parsed MAP_CHUNK_BULK packet:\n%s", data)
                 for chunk in xrange(data["chunks"]):
@@ -468,7 +468,7 @@ class Server:
             self.log.trace("(PROXY SERVER) -> Parsed CHANGE_GAME_STATE packet:\n%s", data)
         
         if pkid == self.pktCB.SET_SLOT:  # Set Slot
-            if self.version < mcpacket.PROTOCOLv1_8START:
+            if self.version < mcpacket.PROTOCOL_1_8START:
                 # TODO: These packets need to be filtered for cross-server stuff.
                 return True
             data = self.read("byte:wid|short:slot|slot:data")
@@ -485,7 +485,7 @@ class Server:
         #   self.log.trace("(PROXY SERVER) -> Parsed 0x30 packet:\n%s", data)
 
         if pkid == self.pktCB.PLAYER_LIST_ITEM:  # player list item
-            if self.version > mcpacket.PROTOCOLv1_8START:
+            if self.version > mcpacket.PROTOCOL_1_8START:
                 head = self.read("varint:action|varint:length")
                 z = 0
                 while z < head["length"]:

@@ -13,9 +13,9 @@ set something False using 0xEE
 
 # Version Coding
 PROTOCOL_1_9_1_PRE = 108  # post- 1.9 "pre releases (1.9.1 pre-3 and later
-PROTOCOLv1_9REL1 = 107    # start of stable 1.9 release (or most current snapshop that is documented by protocol)
+PROTOCOL_1_9REL1 = 107    # start of stable 1.9 release (or most current snapshop that is documented by protocol)
 PROTOCOL_1_9START = 48    # start of 1.9 snapshots
-PROTOCOLv1_8START = 6     # 1.8
+PROTOCOL_1_8START = 6     # 1.8
 
 class ServerBound18:
     """ wrapper's "Client" process, which handles connections from client to wrapper.

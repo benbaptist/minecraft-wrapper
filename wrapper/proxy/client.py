@@ -76,7 +76,7 @@ class Client:
             self.inventory[i] = None
 
         # Determine packet types - currently 1.8 is the lowest version supported.
-        if self.serverversion >= mcpacket.PROTOCOLv1_9REL1:
+        if self.serverversion >= mcpacket.PROTOCOL_1_9REL1:
             self.pktSB = mcpacket.ServerBound19
             self.pktCB = mcpacket.ClientBound19
         else:
@@ -120,7 +120,7 @@ class Client:
                 self.server.send(0x00, "varint|string|ushort|varint", (self.version, "localhost", self.config["Proxy"]["server-port"], 2))
         self.server.send(0x00, "string", (self.username,))
 
-        if self.version > mcpacket.PROTOCOLv1_8START:  # Ben's anti-rain hack for cross server, lobby return, connections
+        if self.version > mcpacket.PROTOCOL_1_8START:  # Ben's anti-rain hack for cross server, lobby return, connections
             if self.config["Proxy"]["online-mode"]:
                 self.send(self.pktCB.CHANGE_GAME_STATE, "ubyte|float", (1, 0))
                 pass
@@ -184,7 +184,7 @@ class Client:
                         if not UNIVERSAL_CONNECT:
                             self.disconnect("You're not running the same Minecraft version as the server!")
                             return
-                        if mcpacket.PROTOCOL_1_9START < self.version < mcpacket.PROTOCOLv1_9REL1:
+                        if mcpacket.PROTOCOL_1_9START < self.version < mcpacket.PROTOCOL_1_9REL1:
                             self.disconnect("You're running unsupported or outdated snapshots (%s)!" % self.version)
                             return
                 if not self.wrapper.server.state == 2:
@@ -439,7 +439,7 @@ class Client:
         if pkid == self.pktSB.PLAYER_DIGGING: # Player Block Dig
             if not self.isLocal:
                 return True
-            if self.version < mcpacket.PROTOCOLv1_8START:
+            if self.version < mcpacket.PROTOCOL_1_8START:
                 data = self.read("byte:status|int:x|ubyte:y|int:z|byte:face")
                 position = (data["x"], data["y"], data["z"])
                 self.log.trace("(PROXY CLIENT) -> Parsed PLAYER_DIGGING packet:\n%s", data)
@@ -504,14 +504,14 @@ class Client:
 
             if not self.isLocal:
                 return True
-            if self.version < mcpacket.PROTOCOLv1_8START:
+            if self.version < mcpacket.PROTOCOL_1_8START:
                 data = self.read("int:x|ubyte:y|int:z|byte:face|slot:item")
                 position = (data["x"], data["y"], data["z"])
                 # just FYI, notchian servers have been ignoring this field
                 # for a long time, using server inventory instead.
                 helditem = data["item"]
             else:
-                if self.version >= mcpacket.PROTOCOLv1_9REL1:
+                if self.version >= mcpacket.PROTOCOL_1_9REL1:
                     data = self.read("position:Location|varint:face|varint:hand|byte:CurPosX|byte:CurPosY|byte:CurPosZ")
                     hand = data["hand"]
                 else:
@@ -595,7 +595,7 @@ class Client:
         if pkid == self.pktSB.PLAYER_UPDATE_SIGN: # player update sign
             if not self.isLocal:
                 return True  # ignore signs from child wrapper/server instance
-            if self.version < mcpacket.PROTOCOLv1_8START:
+            if self.version < mcpacket.PROTOCOL_1_8START:
                 return True  # player.createsign not implemented for older minecraft versions
             data = self.read("position:position|string:line1|string:line2|string:line3|string:line4")
             position = data["position"]
