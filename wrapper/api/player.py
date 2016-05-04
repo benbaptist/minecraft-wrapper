@@ -4,7 +4,6 @@ import time
 import fnmatch
 import json
 import threading
-from traceback import format_stack as stacktrace
 
 from base import API
 
@@ -61,14 +60,14 @@ class Player:
             self.data["firstLoggedIn"] = (time.time(), time.tzname)
         if "logins" not in self.data:
             self.data["logins"] = {}
-        t = threading.Thread(target=self._track_, args=())
+        t = threading.Thread(target=self._track, args=())
         t.daemon = True
         t.start()
 
     def __str__(self):
         return self.username
 
-    def _track_(self):
+    def _track(self):
         """
         internal tracking that updates a players last login time. Not intended as a part of the public player object API
         """
@@ -77,7 +76,7 @@ class Player:
             self.data["logins"][int(self.loggedIn)] = int(time.time())
             time.sleep(60)
     @staticmethod
-    def _processOldColorCodes_(message):
+    def _processOldColorCodes(message):
         """
         Internal private method - Not intended as a part of the public player object API
 
@@ -115,9 +114,7 @@ class Player:
         if self.client:
             self.client.message(string)
         else:
-            self.log.warn("attempted player.say, but wrapper is not in proxy mode (no proxy client exists)")
-            # let user set debug to find out which plugin called this function without using an Exception or stopping
-            self.log.debug("Player.say called with no client: \n%s" % ''.join(stacktrace()))
+            self.log.warn("attempted player.say, but wrapper is not in proxy mode (no proxy client exists)", exc_info=True)
     def getClient(self):
         """
         :returns: player client object
@@ -129,7 +126,7 @@ class Player:
                         self.client = client
                         return self.client
                 except Exception as e:
-                    self.log.warn("getClient could not return a client for:%s \nException:%s" % (self.username, e))
+                    self.log.warn("getClient could not return a client for:%s \nException:%s", (self.username, e))
         else:
             return self.client
 
@@ -192,7 +189,7 @@ class Player:
 
     def actionMessage(self, message=""):
         if self.getClient().version > 10:
-            self.getClient().send(self.clientPackets.CHAT_MESSAGE, "string|byte", (json.dumps({"text": self._processOldColorCodes_(message)}), 2))
+            self.getClient().send(self.clientPackets.CHAT_MESSAGE, "string|byte", (json.dumps({"text": self._processOldColorCodes(message)}), 2))
 
     def setVisualXP(self, progress, level, total):
         """ Change the XP bar on the client's side only. Does not affect actual XP levels. """
