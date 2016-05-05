@@ -5,11 +5,9 @@ import fnmatch
 import json
 import threading
 
-from base import API
-
 import proxy.mcpacket as mcpacket
-
 from core.storage import Storage
+from base import API
 
 class Player:
     """
@@ -22,7 +20,8 @@ class Player:
         Mojang uuid - the bought and paid Mojand UUID.
         offline uuid - created as a MD5 hash of "OfflinePlayer:%s" % username
         server uuid = the local server uuid... used to reference the player on the local server.  Could be same as
-            Mojang UUID if server is in online mode or same as offline if server is in offline mode (proxy mode)..
+            Mojang UUID if server is in online mode or same as offline if server is in offline mode (proxy mode).
+        client uuid - what the client stores as the uuid
         """
 
         self.wrapper = wrapper
@@ -36,16 +35,16 @@ class Player:
         self.abort = False
 
         self.mojangUuid = self.wrapper.getUUIDByUsername(username)  # This is a MCUUID object
-        self.offlineuuid = self.wrapper.getUUIDFromName("OfflinePlayer:%s" % username)  # This is a MCUUID object
-        # Need to figure out what vaue self.uuid should be - server/offline/Mojang..?
-        self.uuid = self.wrapper.getUUID(username)  # This is a MCUUID object - This is the player.uuid per the API.
+        self.offlineUuid = self.wrapper.getUUIDFromName("OfflinePlayer:%s" % self.username)  # This is a MCUUID object
+        self.clientUuid = self.wrapper.getUUID(username)  # This is a MCUUID object - This is the player.uuid per the API.
         self.ipaddress =  "127.0.0.0"
+        self.operatordict = self._readOpsFile()
 
         self.client = None
         self.clientPackets = mcpacket.ClientBound18
         self.serverPackets = mcpacket.ServerBound18
 
-        #some player properties
+        # some player properties associated with abilities
         self.field_of_view = float(1) # default is 1.  Should normally be congruent with speed.
         self.godmode = 0x00  # Client set godmode is 0x01
         self.creative = 0x00  # Client set creative is 0x08
@@ -58,14 +57,14 @@ class Player:
             for client in self.wrapper.proxy.clients:
                 if client.username == username:
                     self.client = client
-                    self.uuid = client.uuid # Both MCUUID objects
-                    self.offlineuuid = client.serverUUID
+                    self.clientuuid = client.uuid # Both MCUUID objects  # TODO - resolve what UUID each instance is suppose to be in client
+                    self.serverUuid = client.serverUUID
                     self.ipaddress = client.ip
                     if self.getClient().version > 49:  # packet numbers fluctuated  wildly between 48 and 107
                         self.clientPackets = mcpacket.ClientBound19
                     break
 
-        self.data = Storage(self.uuid.string, root="wrapper-data/players")
+        self.data = Storage(self.clientUuid.string, root="wrapper-data/players")
         if "firstLoggedIn" not in self.data:
             self.data["firstLoggedIn"] = (time.time(), time.tzname)
         if "logins" not in self.data:
@@ -97,6 +96,16 @@ class Player:
             message = message.replace("&" + i, "\xc2\xa7" + i)
         return message
 
+    @staticmethod
+    def _readOpsFile():
+        """
+        Internal private method - Not intended as a part of the public player object API
+        Returns: contents of ops.json as a dict
+        """
+        with open("ops.json", "r") as f:
+            ops = json.loads(f.read())
+        return ops
+
     def console(self, string):
         """
         :param string: command to execute (no preceding slash) in the console
@@ -114,17 +123,16 @@ class Player:
         self.console("execute %s ~ ~ ~ %s" % (self.name, string))
 
     def say(self, string):
-        """ :param string: message/command sent to the server as the player.
+        """
+        :param string: message/command sent to the server as the player.
         Send a message as a player.
 
         Beware: the message string is sent directly to the server
         without wrapper filtering,so it could be used to execute minecraft
         commands as the player if the string is prefixed with a slash.
         * Only works in proxy mode. """
-        if self.client:
-            self.client.message(string)
-        else:
-            self.log.warn("attempted player.say, but wrapper is not in proxy mode (no proxy client exists)", exc_info=True)
+        self.client.message(string)
+
     def getClient(self):
         """
         :returns: player client object
@@ -141,7 +149,7 @@ class Player:
             return self.client
 
     def getPosition(self):
-        """:returns: a tuple of the player's current position, if they're on ground, and yaw/pitch of head. """
+        """:returns: a tuple of the player's current position x, y, z, and yaw, pitch of head. """
         return self.getClient().position + self.getClient().head
 
     def getGamemode(self):
@@ -173,7 +181,7 @@ class Player:
         resource packs, the user will be prompted to change to the specified resource pack.
         Probably broken right now.
         """
-        if self.getClient().version < 7:
+        if self.getClient().version < mcpacket.PROTOCOL_1_8START:
             self.client.send(0x3f, "string|bytearray", ("MC|RPack", url))
         else:
             self.client.send(self.clientPackets.RESOURCE_PACK_SEND,
@@ -182,11 +190,31 @@ class Player:
     def isOp(self):
         """
         :returns: whether or not the player is currently a server operator.
+        Accepts player as OP based on either the username OR server UUID (which may not
+        be the actual online UUID).
+        This should not be used in a recursive loop or a very frequently run function
+         because it accesses the disk file (ops.json) at each call!
         """
-        with open("ops.json", "r") as f:
-            operators = json.loads(f.read())
+
+        operators = self._readOpsFile()
         for ops in operators:
-            if ops["uuid"] == self.uuid.string or ops["name"] == self.username:
+            # this one SHOULD be self.clientUuid - which should be the uuid used by the server instance (offline/online)
+            # this never broke before because the statement also accepts a username to determine OP status
+            if ops["uuid"] == self.clientUuid.string or ops["name"] == self.username:
+                return True
+        return False
+
+    def isOp_fast(self):
+        """
+        :returns: whether or not the player is currently a server operator.
+        Works like isOp(), but uses an oplist cached from the players login point.
+        Suitable for quick fast lookup without accessing disk, but someone who is deopped after the
+        player logs in will still show as OP.
+        """
+        for ops in self.operatordict:
+            # this one SHOULD be self.clientUuid - which should be the uuid used by the server instance (offline/online)
+            # this never broke before because the statement also accepts a username to determine OP status
+            if ops["uuid"] == self.clientUuid.string or ops["name"] == self.username:
                 return True
         return False
 
@@ -267,16 +295,24 @@ class Player:
         """
         return self.clientPackets
 
-    # UNFINISHED FUNCTION - setting byte bits 0x2 and 0x4 (set flying, allow
-    # flying)
-    def setPlayerFlying(self, fly):
+
+    def setPlayerAbilities(self, fly):
+        # based on old playerSetFly (which was an unfinished function)
         """
+        this will set 'is flying' and 'can fly' to true for the player.
+        these flags/settings will be applied as well:
+
+        getPlayer().godmode  (defaults are all 0x00 - unset, or float of 1.0, as applicable)
+        getPlayer().creative
+        getPlayer().field_of_view
+        getPlayer().fly_speed
+
         Args:
             fly: Booolean - Fly is true, (else False to unset fly mode)
 
         Returns: Nothing
 
-        Bitflags used (for all versions): (so flying and is flying is x06)
+        Bitflags used (for all versions): (so 'flying' and 'is flying' is 0x06)
             Invulnerable	0x01
             Flying	        0x02
             Allow Flying	0x04
@@ -288,7 +324,6 @@ class Player:
             setfly = 0x06  # for set fly
         else:
             setfly = 0x00
-
         bitfield = self.godmode | self.creative | setfly
         # Note in versions before 1.8, field of view is the walking speed for client (still a float)
         #   Server field of view is still walking speed
@@ -330,15 +365,15 @@ class Player:
             return True
         if "users" not in self.permissions:
             self.permissions["users"] = {}
-        if self.uuid.string in self.permissions["users"]:  # TODO Wrong UUID - should use mojang
-            for perm in self.permissions["users"][self.uuid.string]["permissions"]:
+        if self.mojangUuid.string in self.permissions["users"]:  # was self.clientUuid.string
+            for perm in self.permissions["users"][self.mojangUuid.string]["permissions"]:
                 if node in fnmatch.filter([node], perm):
-                    return self.permissions["users"][self.uuid.string]["permissions"][perm]
-        if self.uuid.string not in self.permissions["users"]:
+                    return self.permissions["users"][self.mojangUuid.string]["permissions"][perm]
+        if self.mojangUuid.string not in self.permissions["users"]:
             return False
         allgroups = []  # summary of groups included children groups
         # get the parent groups
-        for group in self.permissions["users"][self.uuid.string]["groups"]:
+        for group in self.permissions["users"][self.mojangUuid.string]["groups"]:
             if group not in allgroups:
                 allgroups.append(group)
         itemsToProcess = allgroups[:]  # process and find child groups
@@ -374,7 +409,7 @@ class Player:
         if "users" not in self.permissions:
             self.permissions["users"] = {}
         for uuid in self.permissions["users"]:
-            if uuid == self.uuid.string:  # TODO this is probably not using the correct UUID.
+            if uuid == self.mojangUuid.string:  # was self.clientUuid.string
                 self.permissions["users"][uuid]["permissions"][node] = value
         # TODO code should probably initialize the permission record if none exists for the specified UUID
 
@@ -394,15 +429,14 @@ class Player:
         if "users" not in self.permissions:
             self.permissions["users"] = {}
         for uuid in self.permissions["users"]:
-            if uuid == self.uuid.string:  # TODO this is probably not using the correct UUID.  This UUID needs to be
-                                        # TODO     Mojang (so perms don't change with name changes)
+            if uuid == self.mojangUuid.string:  # was self.clientUuid.string
                 if node in self.permissions["users"][uuid]["permissions"]:
                     del self.permissions["users"][uuid]["permissions"][node]
                     return True
                 else:
                     self.log.debug("%s does not have permission node '%s'", (self.username, node))
                     return False
-        self.log.debug("Player %s uuid:%s does not have permission node '%s'", (self.username, self.uuid.string, node))
+        self.log.debug("Player %s uuid:%s does not have permission node '%s'", (self.username, self.mojangUuid.string, node))
         return False
 
     def hasGroup(self, group):
@@ -413,12 +447,10 @@ class Player:
 
         Returns:  Boolean of whether player has permission or not.
         """
-        # TODO This is using the correct UUID, but that may not be the player.uuid (inconsistent with other functions)
-        self.uuid = self.wrapper.getUUIDByUsername(self.username)  # init the perms for new player, this is an MCUUID
         if "users" not in self.permissions:
             self.permissions["users"] = {}
         for uuid in self.permissions["users"]:
-            if uuid == self.uuid.string:
+            if uuid == self.mojangUuid.string:  # was self.clientUuid.string
                 return group in self.permissions["users"][uuid]["groups"]
         return False
 
@@ -429,10 +461,8 @@ class Player:
         """
         if "users" not in self.permissions:
             self.permissions["users"] = {}
-        # TODO This is using the correct UUID, but that may not be the player.uuid (inconsistent with other functions)
-        self.uuid = self.wrapper.getUUIDByUsername(self.username)  # init the perms for new player, this is an MCUUID
         for uuid in self.permissions["users"]:
-            if uuid == self.uuid.string:
+            if uuid == self.mojangUuid.string:  # was self.clientUuid.string
                 return self.permissions["users"][uuid]["groups"]
         return []  # If the user is not in the permission database, return this
 
@@ -447,15 +477,13 @@ class Player:
         if group not in self.permissions["groups"]:
             self.log.debug("No group with the name '%s' exists", group)
             return False
-        # TODO This is using the correct UUID, but that may not be the player.uuid (inconsistent with other functions)
-        self.uuid = self.wrapper.getUUIDByUsername(self.username)  # init the perms for new player, this is an MCUUID
         if "users" not in self.permissions:
             self.permissions["users"] = {}
         for uuid in self.permissions["users"]:
-            if uuid == self.uuid.string:
+            if uuid == self.mojangUuid.string:  # was self.clientUuid.string
                 self.permissions["users"][uuid]["groups"].append(group)
                 return True
-        self.log.debug("Player %s uuid:%s: Could not  '%s'", (self.username, self.uuid.string, group))
+        self.log.debug("Player %s uuid:%s: Could not be added to group '%s'", (self.username, self.mojangUuid.string, group))
         # TODO code should probably initialize the permission record if none exists for the specified UUID
         return False
 
@@ -468,13 +496,12 @@ class Player:
             """
         if "users" not in self.permissions:
             self.permissions["users"] = {}
-        # TODO This is using the correct UUID, but that may not be the player.uuid (inconsistent with other functions)
-        self.uuid = self.wrapper.getUUIDByUsername(self.username)  # init the perms for new player, this is an MCUUID
         for uuid in self.permissions["users"]:
-            if uuid == self.uuid.string:
+            if uuid == self.mojangUuid.string:  # was self.clientUuid.string:
                 if group in self.permissions["users"][uuid]["groups"]:
                     self.permissions["users"][uuid]["groups"].remove(group)
                 else:
+                    # TODO DO something about this other than raise exception??
                     raise IndexError("%s is not part of the group '%s'" % (self.username, group))
 
     # Player Information
