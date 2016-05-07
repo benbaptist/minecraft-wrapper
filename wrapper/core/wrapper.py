@@ -10,7 +10,7 @@ import os
 import logging
 import socket as sock_module
 
-import core.globals as global_version_info  # renamed this from global_version_info because global_version_info() is a built-in
+import core.globals as global_version_info  # renamed this from global_version_info because globals() is a built-in
 
 import proxy.base as proxy
 
