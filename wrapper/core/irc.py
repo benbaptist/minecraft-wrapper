@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+# py3 non-compliant
+
 import socket
 import time
 import threading
@@ -181,7 +183,7 @@ class IRC:
             for i, message in enumerate(self.msgQueue):
                 for channel in self.channels:
                     if len(message) > 400:
-                        for l in xrange(int(math.ceil(len(message) / 400.0))):
+                        for l in range(int(math.ceil(len(message) / 400.0))):  # TODO Py3-2
                             chunk = message[l * 400:(l + 1) * 400]
                             self.send("PRIVMSG %s :%s" % (channel, chunk))
                     else:
@@ -220,7 +222,7 @@ class IRC:
             self.nickAttempts += 1
             if self.nickAttempts > 2:
                 name = bytearray(self.nickname)
-                for i in xrange(3):
+                for i in range(3):  # TODO Py3-2
                     name[len(self.nickname) / 3 * i] = chr(random.randrange(97, 122))
                 self.nickname = str(name)
             else:

@@ -1,5 +1,8 @@
 #-*- coding: utf-8 -*-
 
+# p2 and py3 compliant (no PyCharm IDE-flagged errors)
+#  (has warnings in both versions due to the manner of import)
+
 import socket
 import datetime
 import time
@@ -11,21 +14,27 @@ import os
 import json
 import signal
 import traceback
-import StringIO
-import ConfigParser
 import sys
 import codecs
 import ctypes
 import platform
 import ast
 
+# Py3-2
+try:
+    import configparser as ConfigParser
+    from io import StringIO as StringIO
+except ImportError:
+    import ConfigParser
+    import StringIO
+
 from utils.helpers import get_args, get_argsAfter
 from api.base import API
 from api.player import Player
 from api.world import World
 
-from backups import Backups
-from exceptions import UnsupportedOSException, InvalidServerStateError
+from core.backups import Backups
+from core.exceptions import UnsupportedOSException, InvalidServerStateError
 
 try:
     import resource
@@ -490,7 +499,7 @@ class MCServer:
             line = " ".join(buff.split(" ")[2:])
         else:
             line = " ".join(buff.split(" ")[3:])
-        print buff
+        print(buff)
         deathPrefixes = ["fell", "was", "drowned", "blew", "walked", "went", "burned", "hit", "tried",
                          "died", "got", "starved", "suffocated", "withered"]
         if not self.config["General"]["pre-1.7-mode"]:

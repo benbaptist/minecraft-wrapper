@@ -45,6 +45,16 @@ try:
 except ImportError:
     requests = False
 
+try:
+    unicode
+    basestring
+    PY2 = True
+except NameError:
+    unicode = str  # compatibility for Python 3
+    basestring = str  # compatibility for Python 3
+    PY2 = False
+
+
 
 class Wrapper:
 
@@ -212,7 +222,7 @@ class Wrapper:
                     "IP": None,
                     "names": []
                 }
-            for i in xrange(0, numbofnames):
+            for i in range(0, numbofnames):  # TODO py2-3
                 if "changedToAt" not in names[i]:  # find the original name
                     self.usercache[useruuid]["original"] = names[i]["name"]
                     self.usercache[useruuid]["online"] = True
@@ -257,7 +267,7 @@ class Wrapper:
             rx = requests.get("https://status.mojang.com/check")
             if rx.status_code == 200:
                 rx = rx.json()
-                for i in xrange(0, len(rx)):
+                for i in range(0, len(rx)):  # TODO py2-3
                     # changed these error levels to warning, which is per https://docs.python.org/2/howto/logging.html#when-to-use-logging
                     # using "warn" for these since "software is still working as expected".
                     if "account.mojang.com" in rx[i]:
@@ -542,7 +552,10 @@ class Wrapper:
     def console(self):
         while not self.halt:
             try:
-                cinput = raw_input("")
+                if PY2:
+                    cinput = raw_input("")
+                else:
+                    cinput = eval(input())
             except Exception as e:
                 continue
 

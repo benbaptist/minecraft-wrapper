@@ -80,7 +80,7 @@ class Web:
         }))
 
     def onPlayerJoin(self, payload):
-        print payload
+        print(payload)
         while len(self.chatScrollback) > 200:
             try:
                 del self.chatScrollback[0]
@@ -94,7 +94,7 @@ class Web:
         }))
 
     def onPlayerLeave(self, payload):
-        print payload
+        print(payload)
         while len(self.chatScrollback) > 200:
             try:
                 del self.chatScrollback[0]
@@ -137,11 +137,11 @@ class Web:
     def makeKey(self, rememberMe):
         a = ""
         z = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@-_"
-        for i in xrange(64):
+        for i in range(64):  # TODO Py2-3
             a += z[random.randrange(0, len(z))]
             # a += chr(random.randrange(97, 122))
         if rememberMe:
-            print "Will remember!"
+            print("Will remember!")
         self.data["keys"].append([a, time.time(), rememberMe])
         return a
 
@@ -168,8 +168,8 @@ class Web:
                 if self.bind():
                     self.listen()
                 else:
-                    self.log.error("Could not bind web to %s:%d - retrying in 5 seconds", \
-                        self.config["Web"]["web-bind"], self.config["Web"]["web-port"])
+                    self.log.error("Could not bind web to %s:%d - retrying in 5 seconds",
+                                   self.config["Web"]["web-bind"], self.config["Web"]["web-port"])
             except Exception as e:
                 self.log.exception(e)
             time.sleep(5)
@@ -187,8 +187,8 @@ class Web:
             return False
 
     def listen(self):
-        self.log.info("Web Interface bound to %s:%d", \
-            self.config["Web"]["web-bind"], self.config["Web"]["web-port"])
+        self.log.info("Web Interface bound to %s:%d",
+                      self.config["Web"]["web-bind"], self.config["Web"]["web-port"])
         while not self.wrapper.halt:
             sock, addr = self.socket.accept()
             # self.log.debug("(WEB) Connection %s started", str(addr))
@@ -350,8 +350,8 @@ class WebClient:
             if os.path.exists(file):
                 try:
                     os.rename(file, rename)
-                except Exception, e:
-                    print traceback.format_exc()
+                except Exception as e:
+                    print(traceback.format_exc())
                     return False
                 return True
             return False
@@ -367,8 +367,8 @@ class WebClient:
                         os.removedirs(file)
                     else:
                         os.remove(file)
-                except Exception, e:
-                    print traceback.format_exc()
+                except Exception as e:
+                    print(traceback.format_exc())
                     return False
                 return True
             return False
@@ -436,7 +436,7 @@ class WebClient:
             chatScrollback = []
             for line in self.web.chatScrollback:
                 if line[0] > refreshTime:
-                    print line[1]
+                    print(line[1])
                     chatScrollback.append(line[1])
             memoryGraph = []
             for line in self.web.memoryGraph:
@@ -591,7 +591,7 @@ class WebClient:
                 self.write(json.dumps(self.handleAction(request)))
             except Exception as e:
                 self.headers(status="300 Internal Server Error")
-                print traceback.format_exc()
+                print(traceback.format_exc())
             self.close()
             return False
         else:
@@ -633,7 +633,7 @@ class WebClient:
                 #self.log.debug("(WEB) Connection %s closed", str(self.addr))
                 break
             if len(self.buffer) < 1:
-                print "Web connection closed suddenly"
+                print("Web connection closed suddenly")
                 return False
             for line in self.buffer:
                 if get_args(line.split(" "), 0) == "GET":

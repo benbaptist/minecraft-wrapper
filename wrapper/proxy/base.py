@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+# p2 and py3 compliant
+
 import socket
 import threading
 import time
@@ -9,8 +11,8 @@ import utils.encryption as encryption
 from utils.helpers import get_jsonFile, put_jsonFile, find_in_json, epoch_to_timestr, read_timestr
 
 from core.storage import Storage
-from client import Client
-from packet import Packet
+from proxy.client import Client
+from proxy.packet import Packet
 
 try:
     import requests

@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+# p2 and py3 compliant
+#  (has warnings due to the manner of import)
+
 import time
 import threading
 import random

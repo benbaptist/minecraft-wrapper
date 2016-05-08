@@ -11,7 +11,11 @@ import traceback
 import sys
 import logging
 
-from config import Config
+# Py3-2
+try:
+    import configparser as ConfigParser
+except ImportError:
+    import ConfigParser
 
 class Storage:
 
@@ -61,7 +65,7 @@ class Storage:
                     try:
                         self.save()
                     except Exception as e:
-                        print traceback.format_exc()
+                        print(traceback.format_exc())
                     self.time = time.time()
             time.sleep(1)
 

@@ -447,7 +447,7 @@ class Server:
             if self.version > mcpacket.PROTOCOL_1_8START and self.version < mcpacket.PROTOCOL_1_9START:
                 data = self.read("bool:skylight|varint:chunks")
                 self.log.trace("(PROXY SERVER) -> Parsed MAP_CHUNK_BULK packet:\n%s", data)
-                for chunk in xrange(data["chunks"]):
+                for chunk in range(data["chunks"]):  # TODO Py2-3
                     meta = self.read("int:x|int:z|ushort:primary")
                     bitmask = bin(meta["primary"])[2:].zfill(16)
                     chunkColumn = bytearray()
