@@ -285,9 +285,6 @@ class Client:
                     if r.status_code == 200:
                         data = r.json()
                         self.uuid = MCUUID(data["id"])
-                        #print data["id"]
-                        #print self.uuid
-                        #print self.uuid.string
 
                         if data["name"] != self.username:
                             self.disconnect("Client's username did not match Mojang's record")

@@ -219,7 +219,8 @@ class Server:
                 self.packet.compression = False
                 self.packet.compressThreshold = -1
             self.log.trace("(PROXY SERVER) -> Parsed 0x03 packet with server state 2 (LOGIN):\n%s", data)
-            return False
+            time.sleep(10)
+            return # False
 
         if self.state < State.ACTIVE:
             return True  # remaining packets are parsed solely per "play" state

@@ -40,10 +40,10 @@ except ImportError:
     readline = False
     pass
 
-try:
-    import requests
-except ImportError:
-    requests = False
+#try:
+import requests
+#except ImportError:
+#    requests = False
 
 try:
     unicode
@@ -170,7 +170,7 @@ class Wrapper:
         # try mojang  (a new player or player changed names.)
         r = requests.get("https://api.mojang.com/users/profiles/minecraft/%s" % username)
         if r.status_code == 200:
-            useruuid = self.formatUUID(r.json()["id"])
+            useruuid = self.formatUUID(r.json()["id"])  # returns a string uuid with dashes
             correctcapname = r.json()["name"]
             if username != correctcapname:
                 self.log.warn("%s's name is not correctly capitalized (offline name warning!)", correctcapname)
@@ -202,53 +202,54 @@ class Wrapper:
         numbofnames = len(names)
         if self.usercache.key(useruuid):  # if user is in the cache...
             # and was recently polled...
-            if (time.time() - self.usercache.key(useruuid)["time"]) < frequency:
+            if int((time.time() - self.usercache.key(useruuid)["time"])) < frequency:
                 return self.usercache.key(useruuid)["name"]  # dont re-poll if same time frame (daily = 86400).
             else:
                 if not names or names is None:  # service might be down.. not a huge deal, we'll re-poll another time
                     self.usercache.key(useruuid)["time"] = time.time() - frequency + 7200  # may try again in 2 hours
                     return self.usercache.key(useruuid)["name"]
-        else:  # user is not in cache
-            if not names or names is None or numbofnames == 0:  # mojang service failed or UUID not found
-                return False
-            pastnames = []
-            if useruuid not in self.usercache:
-                self.usercache[useruuid] = {
-                    "time": time.time(),
-                    "original": None,
-                    "name": None,
-                    "online": True,
-                    "localname": None,
-                    "IP": None,
-                    "names": []
-                }
-            for i in range(0, numbofnames):  # TODO py2-3
-                if "changedToAt" not in names[i]:  # find the original name
-                    self.usercache[useruuid]["original"] = names[i]["name"]
-                    self.usercache[useruuid]["online"] = True
-                    self.usercache[useruuid]["time"] = time.time()
-                    if numbofnames == 1:  # The user has never changed their name
-                        self.usercache[useruuid]["name"] = names[i]["name"]
-                        if self.usercache[useruuid]["localname"] is None:
-                            self.usercache[useruuid]["localname"] = names[i]["name"]
-                        break
+                #continue on and poll... because user is not in cache or is old record that needs re-polled
+        #else:  # user is not in cache
+        if not names or names is None or numbofnames == 0:  # mojang service failed or UUID not found
+            return False
+        pastnames = []
+        if useruuid not in self.usercache:
+            self.usercache[useruuid] = {
+                "time": time.time(),
+                "original": None,
+                "name": None,
+                "online": True,
+                "localname": None,
+                "IP": None,
+                "names": []
+            }
+        for i in range(0, numbofnames):  # TODO py2-3
+            if "changedToAt" not in names[i]:  # find the original name
+                self.usercache[useruuid]["original"] = names[i]["name"]
+                self.usercache[useruuid]["online"] = True
+                self.usercache[useruuid]["time"] = time.time()
+                if numbofnames == 1:  # The user has never changed their name
+                    self.usercache[useruuid]["name"] = names[i]["name"]
+                    if self.usercache[useruuid]["localname"] is None:
+                        self.usercache[useruuid]["localname"] = names[i]["name"]
+                    break
+            else:
+                # Convert java milleseconds to time.time seconds
+                changetime = names[i]["changedToAt"] / 1000
+                oldname = names[i]["name"]
+                if len(pastnames) == 0:
+                    pastnames.append({"name": oldname, "date": changetime})
+                    continue
+                if changetime > pastnames[0]["date"]:
+                    pastnames.insert(0, {"name": oldname, "date": changetime})
                 else:
-                    # Convert java milleseconds to time.time seconds
-                    changetime = names[i]["changedToAt"] / 1000
-                    oldname = names[i]["name"]
-                    if len(pastnames) == 0:
-                        pastnames.append({"name": oldname, "date": changetime})
-                        continue
-                    if changetime > pastnames[0]["date"]:
-                        pastnames.insert(0, {"name": oldname, "date": changetime})
-                    else:
-                        pastnames.append({"name": oldname, "date": changetime})
-            self.usercache[useruuid]["names"] = pastnames
-            if numbofnames > 1:
-                self.usercache[useruuid]["name"] = pastnames[0]["name"]
-                if self.usercache[useruuid]["localname"] is None:
-                    self.usercache[useruuid]["localname"] = pastnames[0]["name"]
-            return self.usercache[useruuid]["localname"]
+                    pastnames.append({"name": oldname, "date": changetime})
+        self.usercache[useruuid]["names"] = pastnames
+        if numbofnames > 1:
+            self.usercache[useruuid]["name"] = pastnames[0]["name"]
+            if self.usercache[useruuid]["localname"] is None:
+                self.usercache[useruuid]["localname"] = pastnames[0]["name"]
+        return self.usercache[useruuid]["localname"]
 
     def _pollMojangUUID(self, useruuid):
         """

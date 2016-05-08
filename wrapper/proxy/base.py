@@ -252,9 +252,6 @@ class Proxy:
         if banlist is not False:  # file and directory exist.
             if banlist is None:  # file was empty or not valid
                 return "No bans have ever been recorded..?"
-            #print "hello".__str__()
-            # should I be using this for uuid? what if a string gets passed instead? should I use .__str__ instead?
-            # __str__ should work for MCUUID and str objects, correct?
             banrecord = find_in_json(banlist, "uuid", str(uuid))
             if banrecord:
                 for x in banlist:
