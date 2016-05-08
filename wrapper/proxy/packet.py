@@ -4,15 +4,14 @@ import socket
 
 
 # Py2-3
-try:
-    import ConfigParser  # only used to set version
-    PY3 = False
-except ImportError:
-    ConfigParser = False
-    PY3 = True
+#try:
+#    import ConfigParser  # only used to set version
+#    PY3 = False
+#except ImportError:
+#    ConfigParser = False
+#    PY3 = True
 
 import io as io
-
 
 import json
 import struct
@@ -30,7 +29,6 @@ class Packet:
         self.version = 5
         self.bonk = False
         self.abort = False
-        #self.buffer = stringIO.StringIO()
         self.buffer = io.BytesIO()
 
         self.queue = []
@@ -67,26 +65,32 @@ class Packet:
         self.abort = True
 
     def hexdigest(self, sh):
-        if PY3:
-            d = int(sh.hexdigest(), 16)
-        else:
+        try:
             d = long(sh.hexdigest(), 16)
+        except NameError:  # Py3
+            d = int(sh.hexdigest(), 16)
         if d >> 39 * 4 & 0x8:
             return "-%x" % ((-d) & (2 ** (40 * 4) - 1))
         return "%x" % d
 
     def grabPacket(self):
-        length = self.unpack_varInt() # first field - Length (no comprression) / Packet Length (with compression)
+        length = self.unpack_varInt() # first field - entire raw Packet Length i.e. 55 in test (for annoying disconnect)
+        print("packet length %s" % length)
         dataLength = 0  # if 0, an uncompressed packet
         if self.compressThreshold != -1:  # if compressed:
+            print("Compression set")
             dataLength = self.unpack_varInt()  # length of the uncompressed (Packet ID + Data)
-            length =- len(self.pack_varInt(dataLength))  # here we are getting the length minus the packetID
+            length = length - len(self.pack_varInt(dataLength))  # find the len of the datalength field and subtract it
+        print("GB datalength %s" % dataLength)
         payload = self.recv(length)
-        if dataLength > 0:
+
+        if dataLength > 0:  # it is compressed, unpack it
             payload = zlib.decompress(payload)
-        #self.buffer = stringIO.StringIO(payload)
+
         self.buffer = io.BytesIO(payload)
         pkid = self.read_varInt()
+        print("GB pkid %s" % pkid)
+
         return (pkid, payload)
 
     def pack_varInt(self, val):
@@ -380,6 +384,7 @@ class Packet:
     # -- READING DATA TYPES -- #
 
     def recv(self, length):
+        #print("recv length is %d" % length)
         if length > 200:
             d = ""
             while len(d) < length:
@@ -403,6 +408,7 @@ class Packet:
         return self.recvCipher.decrypt(d)
 
     def read_data(self, length):
+        #print("packet length %d" % length)
         d = self.buffer.read(length)
         if len(d) == 0 and length is not 0:
             # print(self.obj)
