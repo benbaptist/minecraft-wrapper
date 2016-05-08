@@ -34,9 +34,13 @@ class Player:
         self.loggedIn = time.time()
         self.abort = False
 
-        self.mojangUuid = self.wrapper.getUUIDByUsername(username)  # This is a MCUUID object
-        self.offlineUuid = self.wrapper.getUUIDFromName("OfflinePlayer:%s" % self.username)  # This is a MCUUID object
-        self.clientUuid = self.wrapper.getUUID(username)  # This is a MCUUID object - This is the player.uuid per the API.
+        # these are all MCUUID objects.. I have separates out various uses of uuid to clarify for later refractoring
+        self.mojangUuid = self.wrapper.getUUIDByUsername(username)
+        self.offlineUuid = self.wrapper.getUUIDFromName("OfflinePlayer:%s" % self.username)
+        self.clientUuid = self.wrapper.getUUID(username)  # - The player.uuid used by old api (and internally here).
+        self.serverUuid = self.wrapper.getUUIDByUsername(username)
+        self.uuid = self.clientUuid  # for API compatibility with older plugins (for now).
+
         self.ipaddress =  "127.0.0.0"
         self.operatordict = self._readOpsFile()
 
@@ -57,15 +61,14 @@ class Player:
             for client in self.wrapper.proxy.clients:
                 if client.username == username:
                     self.client = client
-                    self.clientuuid = client.uuid # Both MCUUID objects  # TODO - resolve what UUID each instance is suppose to be in client
-                    self.serverUuid = client.serverUUID
+                    self.clientuuid = client.uuid # Both MCUUID objects  # TODO - resolve what UUID each instance is suppose to be in client as well
+                    self.serverUuid = client.serverUUID  # TODO this may be broken in client
                     self.ipaddress = client.ip
                     if self.getClient().version > 49:  # packet numbers fluctuated  wildly between 48 and 107
                         self.clientPackets = mcpacket.ClientBound19
                     break
 
         self.data = Storage(self.clientUuid.string, root="wrapper-data/players")
-        self.uuid = self.clientUuid  # for API compatibility with older plugins (for now).
 
         if "users" not in self.permissions: # top -level dict item should be just checked once here (not over and over)
             self.permissions["users"] = {}
@@ -196,31 +199,27 @@ class Player:
     def isOp(self):
         """
         :returns: whether or not the player is currently a server operator.
-        Accepts player as OP based on either the username OR server UUID (which may not
-        be the actual online UUID).
-        This should not be used in a recursive loop or a very frequently run function
-         because it accesses the disk file (ops.json) at each call!
+        Accepts player as OP based on either the username OR server UUID.
+        This should NOT be used in a recursive loop (like a protection plugin, etc)
+        or a very frequently run function because it accesses the disk file
+        (ops.json) at each call!  Use of isOP_fast() is recommended instead.
         """
 
         operators = self._readOpsFile()
         for ops in operators:
-            # this one SHOULD be self.clientUuid - which should be the uuid used by the server instance (offline/online)
-            # this never broke before because the statement also accepts a username to determine OP status
-            if ops["uuid"] == self.clientUuid.string or ops["name"] == self.username:
+            if ops["uuid"] == self.serverUuid.string or ops["name"] == self.username:
                 return True
         return False
 
     def isOp_fast(self):
         """
         :returns: whether or not the player is currently a server operator.
-        Works like isOp(), but uses an oplist cached from the players login point.
+        Works like isOp(), but uses an oplist cached from the __init__ of the player.py api for this player.
         Suitable for quick fast lookup without accessing disk, but someone who is deopped after the
         player logs in will still show as OP.
         """
         for ops in self.operatordict:
-            # this one SHOULD be self.clientUuid - which should be the uuid used by the server instance (offline/online)
-            # this never broke before because the statement also accepts a username to determine OP status
-            if ops["uuid"] == self.clientUuid.string or ops["name"] == self.username:
+            if ops["uuid"] == self.serverUuid.string or ops["name"] == self.username:
                 return True
         return False
 
@@ -355,31 +354,42 @@ class Player:
 
     # Permissions-related
 
-    def hasPermission(self, node):
+    def hasPermission(self, node, another_player=False):
         """
         If the player has the specified permission node (either directly, or inherited from a group that
         the player is in), it will return the value (usually True) of the node. Otherwise, it returns False.
 
         Args:
             node: Permission node (string)
+            another_player: sending a string name of another player will check THAT PLAYER's permission
+                instead! Useful for checking a player's permission for someone who is not logged in and
+                has no player object.
 
         Returns:  Boolean of whether player has permission or not.
 
         """
 
+        #this might be a useful thing to implement into all permissions methods
+        uuid_to_check = self.mojangUuid.string
         if node is None:
             return True
-        if "users" not in self.permissions:
-            self.permissions["users"] = {}
-        if self.mojangUuid.string in self.permissions["users"]:  # was self.clientUuid.string
-            for perm in self.permissions["users"][self.mojangUuid.string]["permissions"]:
+        if another_player:
+            other_uuid = self.wrapper.getUUIDByUsername(another_player)
+            if other_uuid: # make sure other player permission is initialized.
+                if self.mojangUuid.string not in self.permissions["users"]:  # no reason not to do this here too
+                    self.permissions["users"][self.mojangUuid.string] = {"groups": [], "permissions": {}}
+            else:
+                return False  # probably a bad name provided.. No further check needed.
+
+        if uuid_to_check in self.permissions["users"]:  # was self.clientUuid.string
+            for perm in self.permissions["users"][uuid_to_check]["permissions"]:
                 if node in fnmatch.filter([node], perm):
-                    return self.permissions["users"][self.mojangUuid.string]["permissions"][perm]
-        if self.mojangUuid.string not in self.permissions["users"]:
+                    return self.permissions["users"][uuid_to_check]["permissions"][perm]
+        if uuid_to_check not in self.permissions["users"]:
             return False
         allgroups = []  # summary of groups included children groups
         # get the parent groups
-        for group in self.permissions["users"][self.mojangUuid.string]["groups"]:
+        for group in self.permissions["users"][uuid_to_check]["groups"]:
             if group not in allgroups:
                 allgroups.append(group)
         itemsToProcess = allgroups[:]  # process and find child groups
