@@ -24,6 +24,8 @@ class ServerBound18:
     These packets are being sent to the server (i.e., wrapper's proxy) from the client.
     Proxy, in turn, can "send" these on, or drop them (return False)
     """
+    def __init__(self):
+        pass
 
     KEEP_ALIVE = 0x00  # Client's Response To Server Challenge
     CHAT_MESSAGE = 0x01
@@ -49,6 +51,8 @@ class ServerBound19:  # Updated To Protocol 94 15w51b
     These packets are being sent to the server (i.e., wrapper's proxy) from the client.
     Proxy, in turn, can "send" these on, or drop them (return False)
     """
+    def __init__(self):
+        pass
 
     KEEP_ALIVE = 0x0b  # Client's Response To Server Challenge
     CHAT_MESSAGE = 0x02
@@ -73,6 +77,8 @@ class ClientBound18:
     These packets are being sent to the client (i.e., wrapper's proxy) from the server.
     Proxy, in turn reads the info and passes it on the client (making any needed mods).
     """
+    def __init__(self):
+        pass
 
     KEEP_ALIVE = 0x00  # Server Challenge To Client
     CHAT_MESSAGE = 0x02
@@ -114,6 +120,8 @@ class ClientBound19:  # Updated To Protocol 107 1.9 Minecraft
     These packets are being sent to the client (i.e., wrapper's proxy) from the server.
     Proxy, in turn reads the info and passes it on the client (making any needed mods).
     """
+    def __init__(self):
+        pass
 
     KEEP_ALIVE = 0x1f  # Server Challenge To Client
     CHAT_MESSAGE = 0x0f
