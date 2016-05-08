@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+# p2 and py3 compliant (no PyCharm IDE-flagged errors)
+#  (still has weak warnings in both versions)
+
 import ast
 import random
 
@@ -446,12 +449,10 @@ class Commands:
                 elif command == "users":
                     username = get_args(payload["args"], 1)
                     subcommand = get_args(payload["args"], 2)
-                    # try:
-                    if len(username) > 0:
-                        uuid = self.wrapper.getUUIDByUsername(username).string
-                    # except:
-                    # player.message("&cUsername '%s' does not exist." % username)
-                    # return False
+                    uuid = self.wrapper.getUUIDByUsername(username).string
+                    if not uuid:
+                        player.message("&cNo valid UUID exists for '%s'." % username)
+                        return False
                     if len(username) > 0:
                         if uuid not in self.wrapper.permissions["users"]:
                             self.wrapper.permissions["users"][uuid] = {"groups": [], "permissions": {}}

@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+# py3 non-compliant due to use of xrange, unicode reference in getUsername(), and
+# raw_input("") in console().  (imports corrected)
+
 import sys
 import json
 import signal
@@ -10,38 +13,38 @@ import os
 import logging
 import socket as sock_module
 
-import core.globals as globals
+import core.globals as global_version_info  # renamed this from global_version_info because globals() is a built-in
 
 import proxy.base as proxy
 
 from management.web import Web as web
-from management.dashboard import Web as dashboard
+# from management.dashboard import Web as dashboard - unused right now
 from utils.helpers import get_args, get_argsAfter
 
 from api.base import API
 
-from mcuuid import MCUUID
-from config import Config
-from irc import IRC
-from mcserver import MCServer
-from scripts import Scripts
-from plugins import Plugins
-from commands import Commands
-from events import Events
-from storage import Storage
-from exceptions import UnsupportedOSException, InvalidServerStateError
+from core.mcuuid import MCUUID
+from core.config import Config
+from core.irc import IRC
+from core.mcserver import MCServer
+from core.scripts import Scripts
+from core.plugins import Plugins
+from core.commands import Commands
+from core.events import Events
+from core.storage import Storage
+from core.exceptions import UnsupportedOSException, InvalidServerStateError
 
 try:
     import readline
 except ImportError:
-    # readline does not exist for windows
+    readline = False
     pass
 
 try:
     import requests
-    IMPORT_REQUESTS = True
 except ImportError:
-    IMPORT_REQUESTS = False
+    requests = False
+
 
 class Wrapper:
 
@@ -66,7 +69,7 @@ class Wrapper:
         # Aliases for compatibility
         self.callEvent = self.events.callEvent
 
-        if not IMPORT_REQUESTS and self.configManager.config["Proxy"]["proxy-enabled"]:
+        if not requests and self.configManager.config["Proxy"]["proxy-enabled"]:
             self.log.error("You must have the requests module installed to run in proxy mode!")
             return
 
@@ -140,10 +143,19 @@ class Wrapper:
                 Yields False if failed.
         """
         frequency = 2592000  # 30 days.  If a cache update is specifically required any sooner, use getUsernamebyUUID.
+        user_uuid_matched = None
         for useruuid in self.usercache: # try wrapper cache first
-            if username in (self.usercache.key(useruuid)["name"], self.usercache.key(useruuid)["localname"]):
+            if username == self.usercache.key(useruuid)["localname"]:
+                '''This search need only be done by 'localname', which is always populated and is always
+                the same as the 'name', unless a localname has been assigned on the server (such as
+                when "falling back' on an old name).'''
                 if (time.time() - self.usercache.key(useruuid)["time"]) < frequency:
                     return MCUUID(useruuid)
+                # if over the time frequency, it needs to be updated by using actual last polled name.
+                username = self.usercache.key(useruuid)["name"]
+                # TODO cautionary - someone 'out there' could change their name to one taken on the server (be aware)
+                #  The code needs some upgrade to the to handle this possibility; perhaps during login.
+                user_uuid_matched = useruuid # cache this for later in case multiple name changes require a uuid lookup.
 
         # try mojang  (a new player or player changed names.)
         r = requests.get("https://api.mojang.com/users/profiles/minecraft/%s" % username)
@@ -156,8 +168,14 @@ class Wrapper:
             if nameisnow:
                 return MCUUID(useruuid)
             return False
+        elif r.status_code == 204:  # try last matching UUID instead.  This will populate current name back in 'name'
+            if user_uuid_matched:
+                nameisnow = self.getUsernamebyUUID(user_uuid_matched)
+                if nameisnow:
+                    return MCUUID(user_uuid_matched)
+                return False
         else:
-            return False  # if no old proxy record
+            return False  # No other options but to fail request
 
     def getUsernamebyUUID(self, useruuid):
         """
@@ -425,13 +443,13 @@ class Wrapper:
         os.system(" ".join(sys.argv) + "&")
 
     def getBuildString(self):
-        if globals.__branch__ == "dev":
-            return "%s (development build #%d)" % (globals.__version__, globals.__build__)
+        if global_version_info.__branch__ == "dev":
+            return "%s (development build #%d)" % (global_version_info.__version__, global_version_info.__build__)
         else:
-            return "%s (stable)" % globals.__version__
+            return "%s (stable)" % global_version_info.__version__
 
     def checkForDevUpdate(self):
-        if not IMPORT_REQUESTS:
+        if not requests:
             self.log.error("Can't automatically check for new Wrapper.py versions because you do not have the requests module installed!")
             return
         while not self.halt:
@@ -445,14 +463,14 @@ class Wrapper:
             version, build, repotype = update
             if repotype == "dev":
                 if auto and not self.config["General"]["auto-update-dev-build"]:
-                    self.log.info("New Wrapper.py development build #%d available for download! (currently on #%d)", build, globals.__build__)
+                    self.log.info("New Wrapper.py development build #%d available for download! (currently on #%d)", build, global_version_info.__build__)
                     self.log.info("Because you are running a development build, you must manually update Wrapper.py. To update Wrapper.py manually, please type /update-wrapper.")
                 else:
-                    self.log.info("New Wrapper.py development build #%d available! Updating... (currently on #%d)", build, globals.__build__)
+                    self.log.info("New Wrapper.py development build #%d available! Updating... (currently on #%d)", build, global_version_info.__build__)
                 self.performUpdate(version, build, repotype)
             else:
-                self.log.info("New Wrapper.py stable %s available! Updating... (currently on %s)", \
-                    ".".join([str(_) for _ in version]), globals.__version__)
+                self.log.info("New Wrapper.py stable %s available! Updating... (currently on %s)",
+                    ".".join([str(_) for _ in version]), global_version_info.__version__)
                 self.performUpdate(version, build, repotype)
         else:
             self.log.info("No new versions available.")
@@ -460,7 +478,7 @@ class Wrapper:
 
     def getWrapperUpdate(self, repotype=None):
         if repotype is None:
-            repotype = globals.__branch__
+            repotype = global_version_info.__branch__
         if repotype == "dev":
             r = requests.get("https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/build/version.json")
             if r.status_code == 200:
@@ -468,7 +486,7 @@ class Wrapper:
                 if self.update:
                     if self.update > data["build"]:
                         return False
-                if data["build"] > globals.__build__ and data["repotype"] == "dev":
+                if data["build"] > global_version_info.__build__ and data["repotype"] == "dev":
                     return (data["version"], data["build"], data["repotype"])
                 else:
                     return False
@@ -482,7 +500,7 @@ class Wrapper:
                 if self.update:
                     if self.update > data["build"]:
                         return False
-                if data["build"] > globals.__build__ and data["repotype"] == "stable":
+                if data["build"] > global_version_info.__build__ and data["repotype"] == "stable":
                     return (data["version"], data["build"], data["repotype"])
                 else:
                     return False

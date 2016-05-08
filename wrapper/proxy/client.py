@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+# py3 non-compliant due to use of xrange and no py3 requests (local system issue?)
+
 import socket  # holy cow this is also the name of a __init__ arg!
 import threading
 import time
@@ -11,10 +13,10 @@ import shutil
 import os
 
 import utils.encryption as encryption
-import mcpacket
+import proxy.mcpacket as mcpacket
 
-from server import Server
-from packet import Packet
+from proxy.server import Server
+from proxy.packet import Packet
 from core.mcuuid import MCUUID
 import requests  # wrapper.py will check for requests to run proxy mode
 

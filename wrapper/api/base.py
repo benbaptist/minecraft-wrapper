@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
 
+# p2 and py3 compliant (no PyCharm IDE-flagged errors)
+#  (still has weak warnings in both versions)
+
 import time
 
 import core.exceptions as exceptions
 
-from minecraft import Minecraft
+from api.minecraft import Minecraft
 from core.storage import Storage
 
 """ api.py contains the majority of code for the plugin API. """
