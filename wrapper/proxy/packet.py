@@ -4,7 +4,7 @@ import socket
 
 # Py2-3
 try:
-    import io as StringIO
+    import io.BytesIO as StringIO
     PY3 = True
 except ImportError:
     import StringIO
