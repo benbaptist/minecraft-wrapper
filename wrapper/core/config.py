@@ -178,7 +178,7 @@ class Config:
             for item in defaults[section]:
                 if item not in self.config[section]:
                     self.config[section][item] = defaults[section][item]
-                    self.parser.set(section, item, defaults[section][item])
+                    self.parser.set(section, item, str(defaults[section][item]))
                     self.log.debug("Key %s in section %s not in wrapper.properties - adding", item, section)
                     self.exit = True
                 else:
@@ -194,5 +194,5 @@ class Config:
             sys.exit()
 
     def save(self):
-        with open("wrapper.properties", "wb") as f:
+        with open("wrapper.properties", "w") as f:
             self.parser.write(f)
