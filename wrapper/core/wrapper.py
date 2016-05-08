@@ -13,7 +13,7 @@ import os
 import logging
 import socket as sock_module
 
-import core.buildinfo as global_version_info  # renamed from globals (a built-in)
+import core.buildinfo as version_info  # renamed from globals (a built-in)
 
 import proxy.base as proxy
 
@@ -443,10 +443,10 @@ class Wrapper:
         os.system(" ".join(sys.argv) + "&")
 
     def getBuildString(self):
-        if global_version_info.__branch__ == "dev":
-            return "%s (development build #%d)" % (global_version_info.__version__, global_version_info.__build__)
+        if version_info.__branch__ == "dev":
+            return "%s (development build #%d)" % (version_info.__version__, version_info.__build__)
         else:
-            return "%s (stable)" % global_version_info.__version__
+            return "%s (stable)" % version_info.__version__
 
     def checkForDevUpdate(self):
         if not requests:
@@ -463,14 +463,14 @@ class Wrapper:
             version, build, repotype = update
             if repotype == "dev":
                 if auto and not self.config["General"]["auto-update-dev-build"]:
-                    self.log.info("New Wrapper.py development build #%d available for download! (currently on #%d)", build, global_version_info.__build__)
+                    self.log.info("New Wrapper.py development build #%d available for download! (currently on #%d)", build, version_info.__build__)
                     self.log.info("Because you are running a development build, you must manually update Wrapper.py. To update Wrapper.py manually, please type /update-wrapper.")
                 else:
-                    self.log.info("New Wrapper.py development build #%d available! Updating... (currently on #%d)", build, global_version_info.__build__)
+                    self.log.info("New Wrapper.py development build #%d available! Updating... (currently on #%d)", build, version_info.__build__)
                 self.performUpdate(version, build, repotype)
             else:
                 self.log.info("New Wrapper.py stable %s available! Updating... (currently on %s)",
-                    ".".join([str(_) for _ in version]), global_version_info.__version__)
+                    ".".join([str(_) for _ in version]), version_info.__version__)
                 self.performUpdate(version, build, repotype)
         else:
             self.log.info("No new versions available.")
@@ -478,7 +478,7 @@ class Wrapper:
 
     def getWrapperUpdate(self, repotype=None):
         if repotype is None:
-            repotype = global_version_info.__branch__
+            repotype = version_info.__branch__
         if repotype == "dev":
             r = requests.get("https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/build/version.json")
             if r.status_code == 200:
@@ -486,7 +486,7 @@ class Wrapper:
                 if self.update:
                     if self.update > data["build"]:
                         return False
-                if data["build"] > global_version_info.__build__ and data["repotype"] == "dev":
+                if data["build"] > version_info.__build__ and data["repotype"] == "dev":
                     return (data["version"], data["build"], data["repotype"])
                 else:
                     return False
@@ -500,7 +500,7 @@ class Wrapper:
                 if self.update:
                     if self.update > data["build"]:
                         return False
-                if data["build"] > global_version_info.__build__ and data["repotype"] == "stable":
+                if data["build"] > version_info.__build__ and data["repotype"] == "stable":
                     return (data["version"], data["build"], data["repotype"])
                 else:
                     return False
