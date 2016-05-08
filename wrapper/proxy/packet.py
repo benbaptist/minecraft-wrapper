@@ -1,7 +1,15 @@
 # -*- coding: utf-8 -*-
 
 import socket
-import StringIO
+
+# Py2-3
+try:
+    import io as StringIO
+    PY3 = True
+except ImportError:
+    import StringIO
+    PY3 = False
+
 import json
 import struct
 import zlib
@@ -53,7 +61,10 @@ class Packet:
         self.abort = True
 
     def hexdigest(self, sh):
-        d = long(sh.hexdigest(), 16)
+        if PY3:
+            d = int(sh.hexdigest(), 16)
+        else:
+            d = long(sh.hexdigest(), 16)
         if d >> 39 * 4 & 0x8:
             return "-%x" % ((-d) & (2 ** (40 * 4) - 1))
         return "%x" % d
@@ -292,11 +303,11 @@ class Packet:
             elif type_ == 4:
                 b += self.send_string(value)
             elif type_ == 5:
-                print "WIP 5"
+                print("WIP 5")
             elif type_ == 6:
-                print "WIP 6"
+                print("WIP 6")
             elif type_ == 6:
-                print "WIP 7"
+                print("WIP 7")
         b += self.send_ubyte(0x7f)
         return b
 
@@ -540,7 +551,7 @@ class Packet:
         r = []
         btype = self.read_byte()
         length = self.read_int()
-        for l in xrange(length):
+        for l in range(length):  # TODO Py2-3
             b = {}
             b["type"] = btype
             b["name"] = ""

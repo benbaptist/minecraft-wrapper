@@ -1,7 +1,16 @@
 # -*- coding: utf-8 -*-
 
+# p2 and py3 compliant (no PyCharm IDE-flagged errors)
+#  (has warnings in both versions due to the manner of import)
+
 import traceback
-import ConfigParser
+
+# Py3-2
+try:
+    import configparser as ConfigParser
+except ImportError:
+    import ConfigParser
+
 import ast
 import time
 import os

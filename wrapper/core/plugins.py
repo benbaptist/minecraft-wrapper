@@ -6,7 +6,11 @@ import logging
 
 from api.base import API
 
-from importlib import import_module
+try:
+    from importlib import reload
+except ImportError:
+    from importlib import import_module as reload  # name shadows in 2.x (un avoidable)
+
 
 class Plugins:
 
@@ -40,7 +44,7 @@ class Plugins:
             self.wrapper.storage["disabled_plugins"] = []
         self.log.debug("Parsing plugin %s...", i)
         if i[-3:] == ".py":
-            plugin = import_module(i[:-3])
+            plugin = reload(i[:-3])
         else:
             return False
 

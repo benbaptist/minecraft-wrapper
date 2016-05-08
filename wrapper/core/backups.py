@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+# p2 and py3 compliant (no PyCharm IDE-flagged errors)
+#  (still has warnings in both versions)
+
 import datetime
 import time
 import sys
@@ -121,7 +124,7 @@ class Backups:
                     try:
                         os.remove('%s/%s' % (self.config["Backups"]["backup-location"], backup[1]))
                     except Exception as e:
-                        print "Failed to delete backup (%s)" % e
+                        print("Failed to delete backup (%s)" % e)
                     self.log.info("Deleting old backup: %s", datetime.datetime.fromtimestamp(int(backup[0])).strftime('%Y-%m-%d_%H:%M:%S'))
                     hink = self.backups[0][1][:]
                     del self.backups[0]

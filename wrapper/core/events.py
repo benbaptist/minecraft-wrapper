@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
-import traceback
+# p2 and py3 compliant (no PyCharm IDE-flagged errors)
+#  (has weak warnings in both versions)
+
 
 class Events:
 

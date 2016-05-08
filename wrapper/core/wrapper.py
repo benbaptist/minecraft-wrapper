@@ -13,7 +13,7 @@ import os
 import logging
 import socket as sock_module
 
-import core.globals as global_version_info  # renamed this from global_version_info because globals() is a built-in
+import core.buildinfo as version_info  # renamed from globals (a built-in)
 
 import proxy.base as proxy
 
@@ -44,6 +44,16 @@ try:
     import requests
 except ImportError:
     requests = False
+
+try:
+    unicode
+    basestring
+    PY2 = True
+except NameError:
+    unicode = str  # compatibility for Python 3
+    basestring = str  # compatibility for Python 3
+    PY2 = False
+
 
 
 class Wrapper:
@@ -212,7 +222,7 @@ class Wrapper:
                     "IP": None,
                     "names": []
                 }
-            for i in xrange(0, numbofnames):
+            for i in range(0, numbofnames):  # TODO py2-3
                 if "changedToAt" not in names[i]:  # find the original name
                     self.usercache[useruuid]["original"] = names[i]["name"]
                     self.usercache[useruuid]["online"] = True
@@ -257,7 +267,7 @@ class Wrapper:
             rx = requests.get("https://status.mojang.com/check")
             if rx.status_code == 200:
                 rx = rx.json()
-                for i in xrange(0, len(rx)):
+                for i in range(0, len(rx)):  # TODO py2-3
                     # changed these error levels to warning, which is per https://docs.python.org/2/howto/logging.html#when-to-use-logging
                     # using "warn" for these since "software is still working as expected".
                     if "account.mojang.com" in rx[i]:
@@ -443,10 +453,10 @@ class Wrapper:
         os.system(" ".join(sys.argv) + "&")
 
     def getBuildString(self):
-        if global_version_info.__branch__ == "dev":
-            return "%s (development build #%d)" % (global_version_info.__version__, global_version_info.__build__)
+        if version_info.__branch__ == "dev":
+            return "%s (development build #%d)" % (version_info.__version__, version_info.__build__)
         else:
-            return "%s (stable)" % global_version_info.__version__
+            return "%s (stable)" % version_info.__version__
 
     def checkForDevUpdate(self):
         if not requests:
@@ -463,14 +473,14 @@ class Wrapper:
             version, build, repotype = update
             if repotype == "dev":
                 if auto and not self.config["General"]["auto-update-dev-build"]:
-                    self.log.info("New Wrapper.py development build #%d available for download! (currently on #%d)", build, global_version_info.__build__)
+                    self.log.info("New Wrapper.py development build #%d available for download! (currently on #%d)", build, version_info.__build__)
                     self.log.info("Because you are running a development build, you must manually update Wrapper.py. To update Wrapper.py manually, please type /update-wrapper.")
                 else:
-                    self.log.info("New Wrapper.py development build #%d available! Updating... (currently on #%d)", build, global_version_info.__build__)
+                    self.log.info("New Wrapper.py development build #%d available! Updating... (currently on #%d)", build, version_info.__build__)
                 self.performUpdate(version, build, repotype)
             else:
                 self.log.info("New Wrapper.py stable %s available! Updating... (currently on %s)",
-                    ".".join([str(_) for _ in version]), global_version_info.__version__)
+                    ".".join([str(_) for _ in version]), version_info.__version__)
                 self.performUpdate(version, build, repotype)
         else:
             self.log.info("No new versions available.")
@@ -478,7 +488,7 @@ class Wrapper:
 
     def getWrapperUpdate(self, repotype=None):
         if repotype is None:
-            repotype = global_version_info.__branch__
+            repotype = version_info.__branch__
         if repotype == "dev":
             r = requests.get("https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/build/version.json")
             if r.status_code == 200:
@@ -486,7 +496,7 @@ class Wrapper:
                 if self.update:
                     if self.update > data["build"]:
                         return False
-                if data["build"] > global_version_info.__build__ and data["repotype"] == "dev":
+                if data["build"] > version_info.__build__ and data["repotype"] == "dev":
                     return (data["version"], data["build"], data["repotype"])
                 else:
                     return False
@@ -500,7 +510,7 @@ class Wrapper:
                 if self.update:
                     if self.update > data["build"]:
                         return False
-                if data["build"] > global_version_info.__build__ and data["repotype"] == "stable":
+                if data["build"] > version_info.__build__ and data["repotype"] == "stable":
                     return (data["version"], data["build"], data["repotype"])
                 else:
                     return False
@@ -542,7 +552,10 @@ class Wrapper:
     def console(self):
         while not self.halt:
             try:
-                cinput = raw_input("")
+                if PY2:
+                    cinput = raw_input("")
+                else:
+                    cinput = eval(input())
             except Exception as e:
                 continue
 

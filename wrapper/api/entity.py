@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+# p2 and py3 compliant
+
 ENTITIES = {  # Unfinished list of entities
     48: {"Name": "Mob"},
     49: {"Name": "Monster"},

@@ -6,7 +6,7 @@ import errno
 import logging
 from logging.config import dictConfig
 
-import termcolors
+import utils.termcolors as termcolors
 
 DEFAULT_CONFIG = dict({
     "version": 1,              

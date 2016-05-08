@@ -53,7 +53,7 @@ def get_version(version=None):
         mapping = {'alpha': 'a', 'beta': 'b', 'rc': 'rc'}
         sub = mapping[version[3]] + str(version[4])
 
-    print str(main + sub)
+    print(str(main + sub))
     return str(main + sub)
 
 def get_main_version(version=None):
@@ -80,7 +80,7 @@ def get_docs_version(version=None):
     if version[3] != 'final':
         return 'dev'
     else:
-        return '%d.%d' % version[:2]
+        return '%d.%d' % version[:2]  # TODO "Too few arguments for formatstring"
 
 def get_git_changeset():
     """Returns a numeric identifier of the latest git changeset.

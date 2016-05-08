@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
 
+# p2 and py3 compliant
+#  (has errors due to the manner of import)
+
 """
 Handle the NBT (Named Binary Tag) data format
 """
 
-from exceptions import MalformedFileError
+from core.exceptions import MalformedFileError
 
 from collections import MutableMapping, MutableSequence, Sequence
 from struct import Struct, error as StructError
@@ -332,7 +335,7 @@ class TAG_List(TAG, MutableSequence):
         self.tagID = TAG_Byte(buffer=buffer).value
         self.tags = []
         length = TAG_Int(buffer=buffer)
-        for x in xrange(length.value):
+        for x in range(length.value):  # TODO Py2-3
             self.tags.append(TAGLIST[self.tagID](buffer=buffer))
 
     def _render_buffer(self, buffer):

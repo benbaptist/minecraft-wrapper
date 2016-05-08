@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+# p2 and py3 compliant
+
 from __future__ import unicode_literals
 
 import json

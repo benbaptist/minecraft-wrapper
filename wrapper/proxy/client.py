@@ -18,7 +18,12 @@ import proxy.mcpacket as mcpacket
 from proxy.server import Server
 from proxy.packet import Packet
 from core.mcuuid import MCUUID
-import requests  # wrapper.py will check for requests to run proxy mode
+
+# wrapper.py will check for requests to run proxy mode
+try:
+    import requests
+except ImportError:
+    requests = False
 
 UNIVERSAL_CONNECT = False # tells the client "same version as you" or does not disconnect dissimilar clients
 HIDDEN_OPS = ["SurestTexas00", "BenBaptist"]
@@ -74,7 +79,7 @@ class Client:
         self.clientSettings = None
         self.clientSettingsSent = False
 
-        for i in xrange(45):
+        for i in range(45):  # TODO Py2-3
             self.inventory[i] = None
 
         # Determine packet types - currently 1.8 is the lowest version supported.
