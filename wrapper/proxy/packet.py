@@ -2,13 +2,17 @@
 
 import socket
 
+
 # Py2-3
 try:
-    import io.BytesIO as StringIO
-    PY3 = True
-except ImportError:
-    import StringIO
+    import ConfigParser  # only used to set version
     PY3 = False
+except ImportError:
+    ConfigParser = False
+    PY3 = True
+
+import io as io
+
 
 import json
 import struct
@@ -26,7 +30,9 @@ class Packet:
         self.version = 5
         self.bonk = False
         self.abort = False
-        self.buffer = StringIO.StringIO()
+        #self.buffer = stringIO.StringIO()
+        self.buffer = io.BytesIO()
+
         self.queue = []
 
         self._ENCODERS = {
@@ -70,19 +76,16 @@ class Packet:
         return "%x" % d
 
     def grabPacket(self):
-        length = self.unpack_varInt()
-        # if length == 0: return None
-        # if length > 256:
-        #     print "Length: %d" % length
-        dataLength = 0
-        if self.compressThreshold != -1:
-            dataLength = self.unpack_varInt()
-            length = length - len(self.pack_varInt(dataLength))
-        # $ part of the bad file descriptor rabbit trail
+        length = self.unpack_varInt() # first field - Length (no comprression) / Packet Length (with compression)
+        dataLength = 0  # if 0, an uncompressed packet
+        if self.compressThreshold != -1:  # if compressed:
+            dataLength = self.unpack_varInt()  # length of the uncompressed (Packet ID + Data)
+            length =- len(self.pack_varInt(dataLength))  # here we are getting the length minus the packetID
         payload = self.recv(length)
         if dataLength > 0:
             payload = zlib.decompress(payload)
-        self.buffer = StringIO.StringIO(payload)
+        #self.buffer = stringIO.StringIO(payload)
+        self.buffer = io.BytesIO(payload)
         pkid = self.read_varInt()
         return (pkid, payload)
 
