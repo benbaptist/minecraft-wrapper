@@ -1,15 +1,17 @@
 # -*- coding: utf-8 -*-
 
+# py3 non-compliant due to use of xrange (imports pass)
+
 import socket
 import threading
 import time
 import json
 
-import mcpacket
+import proxy.mcpacket as mcpacket
 
 from api.entity import Entity
 
-from packet import Packet
+from proxy.packet import Packet
 
 UNIVERSAL_CONNECT = False # tells the client "same version as you" or does not disconnect dissimilar clients
 HIDDEN_OPS = ["SurestTexas00", "BenBaptist"]

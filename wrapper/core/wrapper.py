@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+# py3 non-compliant due to use of xrange, unicode reference in getUsername(), and
+# raw_input("") in console().  (imports corrected)
+
 import sys
 import json
 import signal
@@ -20,16 +23,16 @@ from utils.helpers import get_args, get_argsAfter
 
 from api.base import API
 
-from mcuuid import MCUUID
-from config import Config
-from irc import IRC
-from mcserver import MCServer
-from scripts import Scripts
-from plugins import Plugins
-from commands import Commands
-from events import Events
-from storage import Storage
-from exceptions import UnsupportedOSException, InvalidServerStateError
+from core.mcuuid import MCUUID
+from core.config import Config
+from core.irc import IRC
+from core.mcserver import MCServer
+from core.scripts import Scripts
+from core.plugins import Plugins
+from core.commands import Commands
+from core.events import Events
+from core.storage import Storage
+from core.exceptions import UnsupportedOSException, InvalidServerStateError
 
 try:
     import readline

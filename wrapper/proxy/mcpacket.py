@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+# p2 and py3 compliant (no PyCharm IDE-flagged warnings or errors)
+
 """
 Ways to reference packets by names and not hard-coded numbers
 It is up to wrapper to know what the actual connection versions are.

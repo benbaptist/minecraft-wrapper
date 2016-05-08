@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+# p2 and py3 compliant (no PyCharm IDE-flagged errors)
+#  (still has weak warnings in both versions)
+
 import ast
 import random
 

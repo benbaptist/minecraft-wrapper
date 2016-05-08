@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+# p2 and py3 compliant (no PyCharm IDE-flagged warnings or errors)
+
 import time
 import fnmatch
 import json
@@ -7,7 +9,7 @@ import threading
 
 import proxy.mcpacket as mcpacket
 from core.storage import Storage
-from base import API
+from api.base import API
 
 class Player:
     """
