@@ -1,16 +1,16 @@
 # -*- coding: utf-8 -*-
 
 import os
-import sys
 import logging
 
 from api.base import API
 
-try:
-    from importlib import reload
-except ImportError:
-    from importlib import import_module as reload  # name shadows in 2.x (un avoidable)
 
+# Py3-2
+import sys
+PY3 = sys.version_info > (3,)
+
+import importlib
 
 class Plugins:
 
@@ -44,7 +44,7 @@ class Plugins:
             self.wrapper.storage["disabled_plugins"] = []
         self.log.debug("Parsing plugin %s...", i)
         if i[-3:] == ".py":
-            plugin = reload(i[:-3])
+            plugin = importlib.import_module(i[:-3])
         else:
             return False
 
@@ -94,10 +94,6 @@ class Plugins:
             self.log.debug("Plugin %s disabled (has no onDisable() event)." % plugin)
         except Exception as  e:
             self.log.exception("Error while disabling plugin '%s': \n%s", (plugin, e))
-        try:
-            reload(self.plugins[plugin]["module"])
-        except Exception as  e:
-            self.log.exception("Error while reloading plugin '%s' -- it was probably deleted or is a bugged version", plugin)
 
     def loadPlugins(self):
         self.log.info("Loading plugins...")
@@ -128,7 +124,7 @@ class Plugins:
             except Exception as  e:
                 self.log.exception("Failed to unload plugin '%s' (%s)", i, e)
                 try:
-                    reload(self.plugins[i]["module"])
+                    plugin = importlib.import_module(self.plugins[i]["module"])
                 except Exception as  ex:
                     pass
         self.plugins = {}

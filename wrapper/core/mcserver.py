@@ -3,30 +3,18 @@
 # p2 and py3 compliant (no PyCharm IDE-flagged errors)
 #  (has warnings in both versions due to the manner of import)
 
-import socket
-import datetime
 import time
-import sys
 import threading
 import random
 import subprocess
 import os
 import json
-import signal
-import traceback
-import sys
-import codecs
 import ctypes
 import platform
-import ast
 
 # Py3-2
-try:
-    import configparser as ConfigParser
-    from io import StringIO as StringIO
-except ImportError:
-    import ConfigParser
-    import StringIO
+import sys
+PY3 = sys.version_info > (3,)
 
 from utils.helpers import get_args, get_argsAfter
 from api.base import API
@@ -80,6 +68,7 @@ class MCServer:
         self.onlineMode = True
         self.serverIcon = None
 
+        self.properties = {}
         self.reloadProperties()
 
         self.api.registerEvent("irc.message", self.onChannelMessage)
@@ -335,27 +324,20 @@ class MCServer:
         # Load server icon
         if os.path.exists("server-icon.png"):
             with open("server-icon.png", "rb") as f:
-                self.serverIcon = "data:image/png;base64," + f.read().encode("base64")
+                self.serverIcon = "data:image/png;base64," + f.read().encode("base64")  # TODO - broken
         # Read server.properties and extract some information out of it
+        # the PY3.5 ConfigParser seems broken.  This way was much more straightforward and works in both PY2 and PY3
         if os.path.exists("server.properties"):
-            s = StringIO.StringIO()  # Stupid StringIO doesn't support __exit__()
             with open("server.properties", "r") as f:
-                config = f.read()
-            s.write("[main]\n" + config)
-            s.seek(0)
-            try:
-                self.properties = ConfigParser.ConfigParser(allow_no_value=True)
-                self.properties.readfp(s)
-                self.worldName = self.properties.get("main", "level-name")
-                self.motd = self.properties.get("main", "motd")
-                self.maxPlayers = int(self.properties.get("main", "max-players"))
-                self.onlineMode = self.properties.get("main", "online-mode")
-                if self.onlineMode == "false":
-                    self.onlineMode = False
-                else:
-                    self.onlineMode = True
-            except Exception as e:
-                self.log.exception(e)
+                configfile = f.read()
+            self.worldName = configfile.split("level-name=")[1].split("\n")[0]
+            self.motd = configfile.split("motd=")[1].split("\n")[0]
+            self.maxPlayers = configfile.split("max-players=")[1].split("\n")[0]
+            self.onlineMode = configfile.split("online-mode=")[1].split("\n")[0]
+            if self.onlineMode == "false":
+                self.onlineMode = False
+            else:
+                self.onlineMode = True
 
     def console(self, command):
         """
