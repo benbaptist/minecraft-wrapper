@@ -1,18 +1,16 @@
 # -*- coding: utf-8 -*-
 
 import socket
-import traceback
 import time
 import threading
 import random
 import math
 
-import globals
+import core.buildinfo as version_info
 
 from utils.helpers import get_args, get_argsAfter
 from api.base import API
 
-from config import Config
 
 class IRC:
 
@@ -365,14 +363,14 @@ class IRC:
                                         ( ".".join([str(_) for _ in version]), self.wrapper.getBuildString()))
                                 elif repotype == "dev":
                                     msg("New Wrapper.py development build %s #%d available! (you have %s #%d)" % 
-                                        (".".join([str(_) for _ in version]), build, globals.__version__, globals.__build__))
+                                        (".".join([str(_) for _ in version]), build, version_info.__version__, version_info.__build__))
                                 else:
                                     msg("Unknown new version: %s | %d | %s" % (version, build, repotype))
                                 msg("To perform the update, type update-wrapper.")
                             else:
-                                if globals.__branch__ == "stable":
+                                if version_info.__branch__ == "stable":
                                     msg("No new stable Wrapper.py versions available.")
-                                elif globals.__branch__ == "dev":
+                                elif version_info.__branch__ == "dev":
                                     msg("No new development Wrapper.py versions available.")
                         elif get_args(message.split(" "), 0) == 'update-wrapper':
                             msg("Checking for new updates...")
@@ -384,7 +382,7 @@ class IRC:
                                         (".".join([str(_) for _ in version]), self.wrapper.getBuildString()))
                                 elif repotype == "dev":
                                     msg("New Wrapper.py development build %s #%d available! (you have %s #%d)" % \
-                                        (".".join(version), build, globals.__version__, globals.__build__))
+                                        (".".join(version), build, version_info.__version__, version_info.__build__))
                                 else:
                                     msg("Unknown new version: %s | %d | %s" % (version, build, repotype))
                                 msg("Performing update..")
@@ -395,12 +393,12 @@ class IRC:
                                     msg("Please check the Wrapper.py console as soon as possible for an explanation and traceback.")
                                     msg("If you are unsure of the cause, please file a bug report on http://github.com/benbaptist/minecraft-wrapper.")
                             else:
-                                if globals.__branch__ == "stable":
+                                if version_info.__branch__ == "stable":
                                     msg("No new stable Wrapper.py versions available.")
-                                elif globals.__branch__ == "dev":
+                                elif version_info.__branch__ == "dev":
                                     msg("No new development Wrapper.py versions available.")
                         elif get_args(message.split(" "), 0) == "about":
-                            msg("Wrapper.py by benbaptist - Version %s (build #%d)" % (globals.__version__, globals.__branch__))
+                            msg("Wrapper.py by benbaptist - Version %s (build #%d)" % (version_info.__version__, version_info.__branch__))
                         else:
                             msg('Unknown command. Type help for more commands')
                     else:
