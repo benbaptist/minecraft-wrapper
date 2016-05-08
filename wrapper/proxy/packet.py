@@ -75,13 +75,11 @@ class Packet:
 
     def grabPacket(self):
         length = self.unpack_varInt() # first field - entire raw Packet Length i.e. 55 in test (for annoying disconnect)
-        print("packet length %s" % length)
         dataLength = 0  # if 0, an uncompressed packet
         if self.compressThreshold != -1:  # if compressed:
-            print("Compression set")
             dataLength = self.unpack_varInt()  # length of the uncompressed (Packet ID + Data)
+            # using augmented assignment in the next line will BREAK this
             length = length - len(self.pack_varInt(dataLength))  # find the len of the datalength field and subtract it
-        print("GB datalength %s" % dataLength)
         payload = self.recv(length)
 
         if dataLength > 0:  # it is compressed, unpack it
@@ -89,8 +87,6 @@ class Packet:
 
         self.buffer = io.BytesIO(payload)
         pkid = self.read_varInt()
-        print("GB pkid %s" % pkid)
-
         return (pkid, payload)
 
     def pack_varInt(self, val):
@@ -136,8 +132,6 @@ class Packet:
                     packet = self.pack_varInt(len(packet)) + packet
             else:
                 packet = self.pack_varInt(len(packet)) + packet
-            # if not self.obj.isServer:
-            #   print packet.encode("hex")
             if self.sendCipher is None:
                 self.socket.send(packet)
             else:
@@ -341,7 +335,6 @@ class Packet:
         r = ""
         typesList = []
         for i in tag:
-            # print("list element type: %s" %i['type'])
             typesList.append(i['type'])
             if len(set(typesList)) != 1:
                 # raise Exception("Types in list dosn't match!")
@@ -376,7 +369,6 @@ class Packet:
         r += self.send_short(slot["damage"])
         if slot["nbt"]:
             r += self.send_tag(slot['nbt'])
-            # print(r)
         else:
             r += "\x00"
         return r
@@ -384,7 +376,6 @@ class Packet:
     # -- READING DATA TYPES -- #
 
     def recv(self, length):
-        #print("recv length is %d" % length)
         if length > 200:
             d = ""
             while len(d) < length:
@@ -396,22 +387,13 @@ class Packet:
             d = self.socket.recv(length)
             if len(d) == 0:
                 raise EOFError("Packet was zero length, disconnecting")
-      # while length > len(d):
-      #     print "Need %d more" % length - len(d)
-      #     d += self.socket.recv(length - len(d))
-      #     if not length == len(d):
-      #         print "ACTUAL PACKET NOT LONG %d %d" % (length, len(d))
-      #         print "Read more: %d" % len(self.socket.recv(1024))
-      #       raise EOFError("Actual length of packet was not as long as expected!")
         if self.recvCipher is None:
             return d
         return self.recvCipher.decrypt(d)
 
     def read_data(self, length):
-        #print("packet length %d" % length)
         d = self.buffer.read(length)
         if len(d) == 0 and length is not 0:
-            # print(self.obj)
             self.obj.disconnect("Received no data or less data than expected - connection closed")
             return ""
         return d
@@ -551,7 +533,6 @@ class Packet:
         a = {}
         a["type"] = self.read_byte()
         if a["type"] != 0:
-            # print("NBT TYPE: %s" %a["type"])
             a["name"] = self.read_short_string()
             a["value"] = self._DECODERS[a["type"]]()
         return a

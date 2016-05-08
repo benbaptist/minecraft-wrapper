@@ -170,15 +170,11 @@ class Wrapper:
         # try mojang  (a new player or player changed names.)
         r = requests.get("https://api.mojang.com/users/profiles/minecraft/%s" % username)
         if r.status_code == 200:
-            print(r.json())
             useruuid = self.formatUUID(r.json()["id"])  # returns a string uuid with dashes
             correctcapname = r.json()["name"]
-            print(correctcapname)
-            print(username)
             if username != correctcapname:
                 self.log.warn("%s's name is not correctly capitalized (offline name warning!)", correctcapname)
             nameisnow = self.getUsernamebyUUID(useruuid)
-            print("names is now %s" % nameisnow)
             if nameisnow:
                 return MCUUID(useruuid)
             return False
@@ -203,24 +199,17 @@ class Wrapper:
         """
         frequency = 86400  # if called directly, can update cache daily (refresh names list, etc)
         names = self._pollMojangUUID(useruuid)
-        print("names=%s" % names)
         numbofnames = len(names)
-        print numbofnames
         if self.usercache.key(useruuid):  # if user is in the cache...
             # and was recently polled...
-            print("why am i here")
             if int((time.time() - self.usercache.key(useruuid)["time"])) < frequency:
-                print("why am i here2")
-                print("returning: %s" % self.usercache.key(useruuid)["name"])
                 return self.usercache.key(useruuid)["name"]  # dont re-poll if same time frame (daily = 86400).
             else:
                 if not names or names is None:  # service might be down.. not a huge deal, we'll re-poll another time
-                    print("why am i here3")
                     self.usercache.key(useruuid)["time"] = time.time() - frequency + 7200  # may try again in 2 hours
                     return self.usercache.key(useruuid)["name"]
                 #continue on and poll... because user is not in cache or is old record that needs re-polled
         #else:  # user is not in cache
-        print("did not look in usercache")
         if not names or names is None or numbofnames == 0:  # mojang service failed or UUID not found
             return False
         pastnames = []
@@ -234,7 +223,6 @@ class Wrapper:
                 "IP": None,
                 "names": []
             }
-        print(self.usercache[useruuid])
         for i in range(0, numbofnames):  # TODO py2-3
             if "changedToAt" not in names[i]:  # find the original name
                 self.usercache[useruuid]["original"] = names[i]["name"]
@@ -275,7 +263,6 @@ class Wrapper:
 
         r = requests.get("https://api.mojang.com/user/profiles/%s/names" % useruuid.replace("-", ""))
         if r.status_code == 200:
-            print(r.json())
             return r.json()
         else:
             rx = requests.get("https://status.mojang.com/check")
@@ -349,7 +336,6 @@ class Wrapper:
         else:
             # proxy mode is on... poll mojang and wrapper cache
             search = self.getUUIDByUsername(username)
-            print(search)
             if not search:
                 self.log.warn("Server online but unable to getUUID (even by polling!) for username: %s - "
                               "returned an Offline uuid...", username)
