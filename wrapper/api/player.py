@@ -21,7 +21,7 @@ class Player:
         offline uuid - created as a MD5 hash of "OfflinePlayer:%s" % username
         server uuid = the local server uuid... used to reference the player on the local server.  Could be same as
             Mojang UUID if server is in online mode or same as offline if server is in offline mode (proxy mode).
-        client uuid - what the client stores as the uuid
+        client uuid - what the client stores as the uuid (should be the same as Mojang?)
         """
 
         self.wrapper = wrapper
@@ -65,6 +65,12 @@ class Player:
                     break
 
         self.data = Storage(self.clientUuid.string, root="wrapper-data/players")
+        self.uuid = self.clientUuid  # for API compatibility with older plugins (for now).
+
+        if "users" not in self.permissions: # top -level dict item should be just checked once here (not over and over)
+            self.permissions["users"] = {}
+        if self.mojangUuid.string not in self.permissions["users"]:  # no reason not to do this here too
+            self.permissions["users"][self.mojangUuid.string] = {"groups": [], "permissions": {}}
         if "firstLoggedIn" not in self.data:
             self.data["firstLoggedIn"] = (time.time(), time.tzname)
         if "logins" not in self.data:
@@ -406,12 +412,10 @@ class Player:
         Returns: Nothing
 
         """
-        if "users" not in self.permissions:
-            self.permissions["users"] = {}
         for uuid in self.permissions["users"]:
             if uuid == self.mojangUuid.string:  # was self.clientUuid.string
                 self.permissions["users"][uuid]["permissions"][node] = value
-        # TODO code should probably initialize the permission record if none exists for the specified UUID
+                return
 
     def removePermission(self, node):
         """ Completely removes a permission node from the player. They will inherit this permission from their
@@ -426,8 +430,6 @@ class Player:
         Returns:  Boolean; True if operation succeeds, False if it fails (set debug mode to see/log error).
     """
 
-        if "users" not in self.permissions:
-            self.permissions["users"] = {}
         for uuid in self.permissions["users"]:
             if uuid == self.mojangUuid.string:  # was self.clientUuid.string
                 if node in self.permissions["users"][uuid]["permissions"]:
@@ -447,8 +449,6 @@ class Player:
 
         Returns:  Boolean of whether player has permission or not.
         """
-        if "users" not in self.permissions:
-            self.permissions["users"] = {}
         for uuid in self.permissions["users"]:
             if uuid == self.mojangUuid.string:  # was self.clientUuid.string
                 return group in self.permissions["users"][uuid]["groups"]
@@ -459,8 +459,6 @@ class Player:
 
         Returns:  list of groups
         """
-        if "users" not in self.permissions:
-            self.permissions["users"] = {}
         for uuid in self.permissions["users"]:
             if uuid == self.mojangUuid.string:  # was self.clientUuid.string
                 return self.permissions["users"][uuid]["groups"]
@@ -477,14 +475,11 @@ class Player:
         if group not in self.permissions["groups"]:
             self.log.debug("No group with the name '%s' exists", group)
             return False
-        if "users" not in self.permissions:
-            self.permissions["users"] = {}
         for uuid in self.permissions["users"]:
             if uuid == self.mojangUuid.string:  # was self.clientUuid.string
                 self.permissions["users"][uuid]["groups"].append(group)
                 return True
         self.log.debug("Player %s uuid:%s: Could not be added to group '%s'", (self.username, self.mojangUuid.string, group))
-        # TODO code should probably initialize the permission record if none exists for the specified UUID
         return False
 
     def removeGroup(self, group):
@@ -494,8 +489,6 @@ class Player:
 
         Returns:
             """
-        if "users" not in self.permissions:
-            self.permissions["users"] = {}
         for uuid in self.permissions["users"]:
             if uuid == self.mojangUuid.string:  # was self.clientUuid.string:
                 if group in self.permissions["users"][uuid]["groups"]:
