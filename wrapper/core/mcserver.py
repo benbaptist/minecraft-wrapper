@@ -406,7 +406,8 @@ class MCServer:
             self.changeState(1)
             self.log.info("Starting server...")
             self.reloadProperties()
-            self.proc = subprocess.Popen(self.args, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+            #self.proc = subprocess.Popen(self.args, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+            self.proc = subprocess.Popen(self.args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
             self.players = {}
             self.wrapper.acceptEula() # Auto accept eula
             while True:
