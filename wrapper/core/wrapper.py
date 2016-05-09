@@ -38,22 +38,14 @@ try:
     import readline
 except ImportError:
     readline = False
-    pass
-
-#try:
-import requests
-#except ImportError:
-#    requests = False
 
 try:
-    unicode
-    basestring
-    PY2 = True
-except NameError:
-    unicode = str  # compatibility for Python 3
-    basestring = str  # compatibility for Python 3
-    PY2 = False
+    import requests
+except ImportError:
+    requests = False
 
+import sys
+PY3 = sys.version_info > (3,)
 
 
 class Wrapper:
@@ -78,6 +70,9 @@ class Wrapper:
         self.help = {}
         # Aliases for compatibility
         self.callEvent = self.events.callEvent
+
+        if not readline:
+            self.log.warning("'readline' not imported.")
 
         if not requests and self.configManager.config["Proxy"]["proxy-enabled"]:
             self.log.error("You must have the requests module installed to run in proxy mode!")
@@ -552,10 +547,10 @@ class Wrapper:
     def console(self):
         while not self.halt:
             try:
-                if PY2:
-                    cinput = raw_input("")
-                else:
+                if PY3:
                     cinput = eval(input())
+                else:
+                    cinput = raw_input("")
             except Exception as e:
                 continue
 
