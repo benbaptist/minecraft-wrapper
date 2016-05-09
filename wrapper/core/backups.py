@@ -46,7 +46,7 @@ class Backups:
         if time.time() - self.time > self.config["Backups"]["backup-interval"]:
             self.time = time.time()
             if not os.path.exists(self.config["Backups"]["backup-location"]):
-                self.log.warn("Backup location %s does not exist -- creating target location...", self.config["Backups"]["backup-location"])
+                self.log.warning("Backup location %s does not exist -- creating target location...", self.config["Backups"]["backup-location"])
                 os.mkdir(self.config["Backups"]["backup-location"])
             if len(self.backups) == 0 and os.path.exists(self.config["Backups"]["backup-location"] + "/backups.json"):
                 with open(self.config["Backups"]["backup-location"] + "/backups.json", "r") as f:
@@ -96,7 +96,7 @@ class Backups:
                 return
 
             if not self.wrapper.callEvent("wrapper.backupBegin", {"file": filename}):
-                self.log.warn("A backup was scheduled, but was cancelled by a plugin!")
+                self.log.warning("A backup was scheduled, but was cancelled by a plugin!")
                 return
             if self.config["Backups"]["backup-notification"]:
                 self.broadcast("&cBacking up... lag may occur!")
@@ -105,7 +105,7 @@ class Backups:
                 if os.path.exists(file):
                     arguments.append(file)
                 else:
-                    self.log.warn("Backup file '%s' does not exist - canceling backup", file)
+                    self.log.warning("Backup file '%s' does not exist - canceling backup", file)
                     self.wrapper.callEvent("wrapper.backupFailure", {"reasonCode": 3, "reasonText": "Backup file '%s' does not exist." % file})
                     return
             statusCode = os.system(" ".join(arguments))
