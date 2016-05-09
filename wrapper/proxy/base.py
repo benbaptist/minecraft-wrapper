@@ -277,7 +277,7 @@ class Proxy:
                         self.log.info("UUID: %s was pardoned (expired ban)" % str(uuid))
                         return False  # player is "NOT" banned (anymore)
                     else:
-                        self.log.warn("isUUIDBanned attempted a pardon of uuid: %s (expired ban), but it failed:\n %s", uuid, pardoning)
+                        self.log.warning("isUUIDBanned attempted a pardon of uuid: %s (expired ban), but it failed:\n %s", uuid, pardoning)
                 return True  # player is still banned
         return False # banlist empty or record not found
 
@@ -292,7 +292,7 @@ class Proxy:
                         self.log.info("IP: %s was pardoned (expired ban)", ipaddress)
                         return False  # IP is "NOT" banned (anymore)
                     else:
-                        self.log.warn("isIPBanned attempted a pardon of IP: %s (expired ban), but it failed:\n %s", ipaddress, pardoning)
+                        self.log.warning("isIPBanned attempted a pardon of IP: %s (expired ban), but it failed:\n %s", ipaddress, pardoning)
                 return True  # IP is still banned
         return False # banlist empty or record not found
 
@@ -314,5 +314,5 @@ class Proxy:
             self.skinTextures[uuid] = r.content.encode("base64")
             return self.skinTextures[uuid]
         else:
-            self.log.warn("Could not fetch skin texture! (status code %d)", r.status_code)
+            self.log.warning("Could not fetch skin texture! (status code %d)", r.status_code)
             return False

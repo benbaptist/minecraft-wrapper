@@ -8,7 +8,6 @@ import threading
 import time
 import copy
 import traceback
-import sys
 import logging
 
 # Py3-2
@@ -69,15 +68,12 @@ class Storage:
                     self.time = time.time()
             time.sleep(1)
 
-    def mkdir(self, path):
-        directory = ""
-        for part in path.split("/"):
-            directory += part + "/"
-        try:
-            if not os.path.exists(directory):
-                os.mkdir(directory)
-        except Exception as e:
-            pass
+    def mkdir(self, dirpath):
+        if not os.path.exists(dirpath):
+            try:
+                os.makedirs(dirpath, exist_ok=True)
+            except Exception as e:
+                self.log.warning("Could not create directory '%s' \n(%s)", dirpath, e)
 
     def load(self):
         self.mkdir(self.root)

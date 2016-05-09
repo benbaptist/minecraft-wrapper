@@ -53,7 +53,7 @@ class MCServer:
         self.data = []
 
         if not self.wrapper.storage["serverState"]:
-            self.log.warn("NOTE: Server was in 'STOP' state last time Wrapper.py was running. To start the server, run /start.")
+            self.log.warning("NOTE: Server was in 'STOP' state last time Wrapper.py was running. To start the server, run /start.")
             time.sleep(5)
 
         # Server Information

@@ -155,7 +155,7 @@ class Player:
                         self.client = client
                         return self.client
                 except Exception as e:
-                    self.log.warn("getClient could not return a client for:%s \nException:%s", (self.username, e))
+                    self.log.warning("getClient could not return a client for:%s \nException:%s", (self.username, e))
         else:
             return self.client
 

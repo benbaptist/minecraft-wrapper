@@ -173,7 +173,7 @@ class Wrapper:
             useruuid = self.formatUUID(r.json()["id"])  # returns a string uuid with dashes
             correctcapname = r.json()["name"]
             if username != correctcapname:
-                self.log.warn("%s's name is not correctly capitalized (offline name warning!)", correctcapname)
+                self.log.warning("%s's name is not correctly capitalized (offline name warning!)", correctcapname)
             nameisnow = self.getUsernamebyUUID(useruuid)
             if nameisnow:
                 return MCUUID(useruuid)
@@ -273,20 +273,19 @@ class Wrapper:
                     # using "warn" for these since "software is still working as expected".
                     if "account.mojang.com" in rx[i]:
                         if rx[i]["account.mojang.com"] == "green":
-                            self.log.warn("Mojang accounts is green, but request failed - have you over-polled (large busy server) or supplied an incorrect UUID??")
-                            self.log.warn("uuid: %s", useruuid)
-                            self.log.warn("response: \n%s", str(rx))
+                            self.log.warning("Mojang accounts is green, but request failed - have you over-polled (large busy server) or supplied an incorrect UUID??")
+                            self.log.warning("uuid: %s", useruuid)
+                            self.log.warning("response: \n%s", str(rx))
                             return None
                         elif rx[i]["account.mojang.com"] in ("yellow", "red"):
-                            self.log.warn("Mojang accounts is experiencing issues (%s).", rx[i]["account.mojang.com"])
+                            self.log.warning("Mojang accounts is experiencing issues (%s).", rx[i]["account.mojang.com"])
                             return False
-                        self.log.warn("Mojang Status found, but corrupted or in an unexpected format (status code %s)", r.status_code)
+                        self.log.warning("Mojang Status found, but corrupted or in an unexpected format (status code %s)", r.status_code)
                         return False
                     else:
-                        self.log.warn("Mojang Status not found - no internet connection, perhaps? (status code %s)", rx.status_code)
+                        self.log.warning("Mojang Status not found - no internet connection, perhaps? (status code %s)", rx.status_code)
                         return self.usercache[useruuid]["name"]
             
-
     def getUsername(self, useruuid): # We should see about getting rid of this wrapper
         """
         :param useruuid - the string representation of the player uuid.
@@ -337,7 +336,7 @@ class Wrapper:
             # proxy mode is on... poll mojang and wrapper cache
             search = self.getUUIDByUsername(username)
             if not search:
-                self.log.warn("Server online but unable to getUUID (even by polling!) for username: %s - "
+                self.log.warning("Server online but unable to getUUID (even by polling!) for username: %s - "
                               "returned an Offline uuid...", username)
                 return self.getUUIDFromName("OfflinePlayer:%s" % username)
             else:
@@ -502,7 +501,7 @@ class Wrapper:
                 else:
                     return False
             else:
-                self.log.warn("Failed to check for updates - are you connected to the internet? (Status Code %d)", r.status_code)
+                self.log.warning("Failed to check for updates - are you connected to the internet? (Status Code %d)", r.status_code)
                 
         else:
             r = requests.get("https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master/build/version.json")
@@ -516,7 +515,7 @@ class Wrapper:
                 else:
                     return False
             else:
-                self.log.warn("Failed to check for updates - are you connected to the internet? (Status Code %d)", r.status_code)
+                self.log.warning("Failed to check for updates - are you connected to the internet? (Status Code %d)", r.status_code)
         return False
 
     def performUpdate(self, version, build, repotype):
@@ -604,12 +603,12 @@ class Wrapper:
                     else:
                         self.log.info("Usage: /raw [command]")
                 except InvalidServerStateError as e:
-                    self.log.warn(e)
+                    self.log.warning(e)
             elif command == "freeze":
                 try:
                     self.server.freeze()
                 except InvalidServerStateError as e:
-                    self.log.warn(e)
+                    self.log.warning(e)
                 except UnsupportedOSException as ex:
                     self.log.error(ex)
                 except Exception as exc:
@@ -618,7 +617,7 @@ class Wrapper:
                 try:
                     self.server.unfreeze()
                 except InvalidServerStateError as e:
-                    self.log.warn(e)
+                    self.log.warning(e)
                 except UnsupportedOSException as ex:
                     self.log.error(ex)
                 except Exception as exc:
