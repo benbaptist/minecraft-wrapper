@@ -15,6 +15,7 @@ from Crypto.PublicKey import RSA
 from Crypto import Random
 from Crypto.Cipher import AES, DES
 from hashlib import md5
+from struct import unpack
 
 
 def decode_public_key(bytes):

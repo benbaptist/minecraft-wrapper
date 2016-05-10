@@ -6,7 +6,7 @@ Wrapper.py is an easy to use Minecraft server wrapper for adding extra functiona
 [![Join the chat at https://gitter.im/benbaptist/minecraft-wrapper](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/benbaptist/minecraft-wrapper?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 #Installation#
-Wrapper.py doesn't require any special modules for most of the basic features to work, but web mode and proxy mode require `requests` and `pkg_resources`.
+Wrapper.py doesn't require any special modules for most of the basic features to work, but web mode and proxy mode require `requests` and `pycrypto`, and `pkg_resources`.
 
 You will also need `tar` installed if you need backups. Most Linux distros have this pre-installed, but you may need to install it manually on Windows: http://gnuwin32.sourceforge.net/packages/gtar.htm
 
@@ -24,7 +24,7 @@ or the following to download the unstable, development version of Wrapper.py:
 
 To install dependencies, use pip (note: you may need to use sudo in some cases):
 
-```pip install requests```
+```pip install requests pycrypto```
 
 Make sure Python's setuptools is also installed. On Debian-based systems, run the following:
 
@@ -47,11 +47,12 @@ pip install pip
 pip install setuptools
 ```
 
-Before installing requests, you will need to install the [Microsoft Visual C++ Compiler for Python 2.7](http://www.microsoft.com/en-us/download/details.aspx?id=44266).
+Before installing requests and pycrypto, you will need to install the [Microsoft Visual C++ Compiler for Python 2.7](http://www.microsoft.com/en-us/download/details.aspx?id=44266).
 
 Then from the command prompt:
 ```
 pip install requests
+pip install pycrypto
 ```
 
 Download the wrapper.py file and place it in your minecraft folder, then create a batch file to run the wrapper, or start it from the command prompt:

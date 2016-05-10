@@ -426,13 +426,13 @@ class Wrapper:
         self.plugins.disablePlugins()
 
     def startProxy(self):
-        self.proxy = proxy.Proxy(self)
-        if proxy.requests:
+        if proxy.IMPORT_SUCCESS:
+            self.proxy = proxy.Proxy(self)
             proxyThread = threading.Thread(target=self.proxy.host, args=())
             proxyThread.daemon = True
             proxyThread.start()
         else:
-            self.log.error("Proxy mode could not be started because you do not have 'requests' installed")
+            self.log.error("Proxy mode could not be started because you do not have one or more of the following modules installed: pycrypto and requests")
 
     def sigint(self, s, f):
         self.shutdown()
