@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 
-# py3 non-compliant due to use of xrange and no py3 requests (local system issue?)
+# py3 compliant syntax
 
-import socket  # holy cow this is also the name of a __init__ arg!
 import threading
 import time
 import json
