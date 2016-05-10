@@ -16,9 +16,9 @@ from proxy.packet import Packet
 
 try:
     import requests
-    IMPORT_SUCCESS = True
 except ImportError:
-    IMPORT_SUCCESS = False
+    requests = False
+
 
 UNIVERSAL_CONNECT = False # tells the client "same version as you" or does not disconnect dissimilar clients
 HIDDEN_OPS = ["SurestTexas00", "BenBaptist"]
@@ -28,7 +28,8 @@ class Proxy:
         self.wrapper = wrapper
         self.server = wrapper.server
         self.log = wrapper.log
-        self.socket = False
+        self.proxy_socket = socket.socket()
+        self.usingSocket = False
         self.isServer = False
         self.clients = []
         self.skins = {}
@@ -39,6 +40,9 @@ class Proxy:
         self.privateKey = encryption.generate_key_pair()
         self.publicKey = encryption.encode_public_key(self.privateKey)
 
+        if not requests:
+            raise Exception("You must have the requests module installed to run in proxy mode!")
+
     def host(self):
         # get the protocol version from the server
         while not self.wrapper.server.state == 2:
@@ -48,35 +52,34 @@ class Proxy:
         except Exception as e:
             self.log.exception("Proxy could not poll the Minecraft server - are you sure that the ports are configured properly? (%s)", e)
 
-        while not self.socket:
+        # bind server socket
+        while not self.usingSocket:
             try:
-                self.socket = socket.socket()
-                self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                self.socket.bind((self.wrapper.config["Proxy"]["proxy-bind"], self.wrapper.config["Proxy"]["proxy-port"]))
-                self.socket.listen(5)
+                self.proxy_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                self.proxy_socket.bind((self.wrapper.config["Proxy"]["proxy-bind"], self.wrapper.config["Proxy"]["proxy-port"]))
+                self.usingSocket = True
+                self.proxy_socket.listen(5)
             except Exception as e:
-                self.log.exception("Proxy mode could not bind - retrying in five seconds (%s)", e)
-                self.socket = False
-            time.sleep(5)
+                self.log.exception("Proxy mode could not bind - retrying in ten seconds (%s)", e)
+                self.usingSocket = False
+            time.sleep(10)
+
         while not self.wrapper.halt:
             try:
-                sock, addr = self.socket.accept()
-                client = Client(sock, addr, self.wrapper, self.publicKey, self.privateKey, self)
+                sock, addr = self.proxy_socket.accept()
+            except Exception as e:
+                self.log.exception("An error has occured while trying to accept a socket connection \n(%s)", e)
+                continue
 
-                t = threading.Thread(target=client.handle, args=())
-                t.daemon = True
-                t.start()
+            client = Client(sock, addr, self.wrapper, self.publicKey, self.privateKey, self)
 
-                self.clients.append(client)
+            t = threading.Thread(target=client.handle, args=())
+            t.daemon = True
+            t.start()
 
-                self.removeStaleClients()
-                
-            except Exception as e:  # Not quite sure what's going on
-                self.log.exception("An error has occured in the proxy (%s)", e)
-                try:
-                    client.disconnect(e)
-                except Exception as ex:
-                    self.log.exception("Failed to disconnect client (%s)", ex)
+            self.clients.append(client)
+            self.removeStaleClients()
+
 
     def removeStaleClients(self):
         try:
@@ -88,9 +91,9 @@ class Proxy:
 
 
     def pollServer(self):
-        sock = socket.socket()
-        sock.connect(("localhost", self.wrapper.config["Proxy"]["server-port"]))
-        packet = Packet(sock, self)
+        server_sock = socket.socket()
+        server_sock.connect(("localhost", self.wrapper.config["Proxy"]["server-port"]))
+        packet = Packet(server_sock, self)
 
         packet.send(0x00, "varint|string|ushort|varint", (5, "localhost", self.wrapper.config["Proxy"]["server-port"], 1))
         packet.send(0x00, "", ())
@@ -103,7 +106,7 @@ class Proxy:
                 self.wrapper.server.protocolVersion = data["version"]["protocol"]
                 self.wrapper.server.version = data["version"]["name"]
                 break
-        sock.close()
+        server_sock.close()
 
     def getClientByOfflineServerUUID(self, uuid):
         """
@@ -126,8 +129,7 @@ class Proxy:
         :param expires:
         :return:
         """
-        # TODO - legacy server support (pre-1.7.10)
-        pass
+        print(" # TODO - legacy server support (pre-1.7.10) %s%s%s%s%s" % (self, reason, source, expires, playername))
 
     @staticmethod
     def getUUIDBanReason(uuid):
@@ -298,8 +300,13 @@ class Proxy:
 
     def getSkinTexture(self, uuid):
         """
-        Will assume that uuid is input as a string for now
+        Args:
+            uuid: uuid (accept MCUUID or string)
+        Returns:
+            skin texture (False if request fails)
         """
+        if "MCUUID" in str(type(uuid)):
+            uuid = uuid.string
         if uuid not in self.skins:
             return False
         if uuid in self.skinTextures:
