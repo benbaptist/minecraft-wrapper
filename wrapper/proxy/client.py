@@ -5,7 +5,6 @@
 import threading
 import time
 import json
-import random  # keep for now -- used by commented out keepalive code
 import hashlib
 import uuid
 import shutil
@@ -24,19 +23,38 @@ try:
 except ImportError:
     requests = False
 
+#import random   # -- used by commented out keepalive code
+
 UNIVERSAL_CONNECT = False # tells the client "same version as you" or does not disconnect dissimilar clients
 HIDDEN_OPS = ["SurestTexas00", "BenBaptist"]
 
 class Client:
     def __init__(self, sock, addr, wrapper, publicKey, privateKey, proxy):
+        """
+        Client receives "SERVER BOUND" packets from client.  These are what get parsed (SERVER BOUND format).
+        'server.send' - sends a packet to the server (use SERVER BOUND packet format)
+        'self.send' - sends a packet back to the client (use CLIENT BOUND packet format)
+
+        Args: (self explanatory, hopefully)
+            sock:
+            addr:
+            wrapper:
+            publicKey:
+            privateKey:
+            proxy:
+
+        """
         self.socket = sock
+        self.addr = addr
         self.wrapper = wrapper
-        self.config = wrapper.config
         self.publicKey = publicKey
         self.privateKey = privateKey
         self.proxy = proxy
-        self.addr = addr
 
+        self.log = wrapper.log
+        self.config = wrapper.config
+
+        # Get serverversion for mcpacket use
         try:
             self.serverversion = self.wrapper.server.protocolVersion
         except AttributeError:
@@ -45,25 +63,28 @@ class Client:
             self.serverversion = 47
 
         self.abort = False
-        self.log = wrapper.log
         self.tPing = time.time()
         self.server = None
         self.isServer = False
         self.isLocal = True
-        self.uuid = None # Expect this to be an MCUUID
-        self.serverUUID = None # Expect this to be an MCUUID
+
+        # UUIDs - all should use MCUUID unless otherwise specified
+        self.uuid = None # this is intended to be the client UUID
+        self.serverUuid = None # Server UUID - which Could be the local offline UUID.
         self.server = None
         self.address = None
-        self.ip = None
-        self.handshake = False
+        self.ip = None  # this will gather the cleint IP for use by player.py
 
+        self.handshake = False
         self.state = State.INIT
 
+        # some aliases
         self.packet = Packet(self.socket, self)
         self.send = self.packet.send
         self.read = self.packet.read
         self.sendRaw = self.packet.sendRaw
 
+        # Items gathered for player info for player api
         self.username = ""
         self.gamemode = 0
         self.dimension = 0
@@ -90,6 +111,13 @@ class Client:
             self.pktCB = mcpacket.ClientBound18
 
     def connect(self, ip=None, port=None):
+        """
+        Args:
+            ip: server IP
+            port: server port
+
+        this is the connection to the client. incoming packets are 'server bound' format.
+        """
         self.clientSettingsSent = False
         if self.server is not None:
             self.address = (ip, port)
@@ -248,7 +276,7 @@ class Client:
                 else:
                     self.connect()
                     self.uuid = self.wrapper.getUUIDFromName("OfflinePlayer:%s" % self.username) # MCUUID object
-                    self.serverUUID = self.wrapper.getUUIDFromName("OfflinePlayer:%s" % self.username) # MCUUID object
+                    self.serverUuid = self.wrapper.getUUIDFromName("OfflinePlayer:%s" % self.username) # MCUUID object
                     self.send(0x02, "string|string", (self.uuid.string, self.username))
                     self.state = State.ACTIVE
                     self.log.info("%s logged in (IP: %s)", self.username, self.addr[0])
@@ -309,22 +337,22 @@ class Client:
                     if self.config["Proxy"]["online-mode"]:
                         # Check player files, and rename them accordingly to offline-mode UUID
                         worldName = self.wrapper.server.worldName
-                        if not os.path.exists("%s/playerdata/%s.dat" % (worldName, self.serverUUID.string)):
+                        if not os.path.exists("%s/playerdata/%s.dat" % (worldName, self.serverUuid.string)):
                             if os.path.exists("%s/playerdata/%s.dat" % (worldName, self.uuid.string)):
                                 self.log.info("Migrating %s's playerdata file to proxy mode", self.username)
                                 shutil.move("%s/playerdata/%s.dat" % (worldName, self.uuid.string),
-                                            "%s/playerdata/%s.dat" % (worldName, self.serverUUID.string))
+                                            "%s/playerdata/%s.dat" % (worldName, self.serverUuid.string))
                                 with open("%s/.wrapper-proxy-playerdata-migrate" % worldName, "a") as f:
-                                    f.write("%s %s\n" % (self.uuid.string, self.serverUUID.string))
+                                    f.write("%s %s\n" % (self.uuid.string, self.serverUuid.string))
                         # Change whitelist entries to offline mode versions
                         if os.path.exists("whitelist.json"):
                             with open("whitelist.json", "r") as f:
                                 data = json.loads(f.read())
                             if data:
                                 for player in data:
-                                    if not player["uuid"] == self.serverUUID.string and player["uuid"] == self.uuid.string:
+                                    if not player["uuid"] == self.serverUuid.string and player["uuid"] == self.uuid.string:
                                         self.log.info("Migrating %s's whitelist entry to proxy mode", self.username)
-                                        data.append({"uuid": self.serverUUID.string, "name": self.username})
+                                        data.append({"uuid": self.serverUuid.string, "name": self.username})
                                         # TODO I think the indent on this is wrong... looks like it will overwrite with each record
                                         # either that, or it is making an insane number of re-writes (each time a record is processed)
                                         # since you can't append a json file like this, I assume the whole file should be written at once,
@@ -333,9 +361,9 @@ class Client:
                                             f.write(json.dumps(data))
                                         self.wrapper.server.console("whitelist reload")
                                         with open("%s/.wrapper-proxy-whitelist-migrate" % worldName, "a") as f:
-                                            f.write("%s %s\n" % (self.uuid.string, self.serverUUID.string))
+                                            f.write("%s %s\n" % (self.uuid.string, self.serverUuid.string))
 
-                self.serverUUID = self.wrapper.getUUIDFromName("OfflinePlayer:%s" % self.username)
+                self.serverUuid = self.wrapper.getUUIDFromName("OfflinePlayer:%s" % self.username)
                 self.ip = self.addr[0]
                 playerwas = str(self.username)
                 uuidwas = self.uuid.string  # TODO somewhere between HERE and ...
@@ -361,7 +389,7 @@ class Client:
                 if not self.wrapper.callEvent("player.preLogin", {
                     "player": self.username, 
                     "online_uuid": self.uuid.string,
-                    "offline_uuid": self.serverUUID.string, 
+                    "offline_uuid": self.serverUuid.string, 
                     "ip": self.addr[0]
                 }):
                     self.disconnect("Login denied.")
@@ -493,18 +521,12 @@ class Client:
 
         if pkid == self.pktSB.PLAYER_BLOCK_PLACEMENT: # Player Block Placement
             player = self.getPlayerObject()
-            curposx = False  # pre- 1.8
-            curposy = False
-            curposz = False
+            #curposx = False  # pre- 1.8 - not used by wrapper
+            #curposy = False
+            #curposz = False
             hand = 0  # main hand
 
-            # see which one works best
-            # helditem = self.client.inventory[self.client.slot]
-            # helditem = player.getClient().inventory[self.slot]
             helditem = player.getHeldItem()
-            # helditem = self.wrapper.getClient()inventory[self.slot]
-            # "helditem: %s" % helditem)  # wanna see if this differs from the held item dispensed by 1.8 slot
-
             if not self.isLocal:
                 return True
             if self.version < mcpacket.PROTOCOL_1_8START:
@@ -520,11 +542,11 @@ class Client:
                 else:
                     data = self.read("position:Location|byte:face|slot:item|byte:CurPosX|byte:CurPosY|byte:CurPosZ")
                     helditem = data["item"]
-                curposx = data["CurPosX"]
-                curposy = data["CurPosY"]
-                curposz = data["CurPosZ"]
+                position = data["Location"]
+                #curposx = data["CurPosX"]
+                #curposy = data["CurPosY"]
+                #curposz = data["CurPosZ"]
             # Face and Position exist in all version protocols at this point
-            position = data["Location"]
             clickposition = data["Location"]
             face = data["face"]
             # all variables populated for all versions for:
@@ -545,7 +567,7 @@ class Client:
                 position = (position[0] - 1, position[1], position[2])
             elif face == 5:
                 position = (position[0] + 1, position[1], position[2])
-            if helditem == None:
+            if helditem is None:
                 # if no item, treat as interaction (according to wrappers
                 # inventory :(, return False  )
                 if not self.wrapper.callEvent("player.interact", {
@@ -574,7 +596,7 @@ class Client:
             self.log.trace("(PROXY CLIENT) -> Parsed USE_ITEM packet:\n%s", data)
             player = self.getPlayerObject()
             position = self.lastplacecoords
-            helditem = player.getHeldItem()
+            # helditem = player.getHeldItem()
             # if helditem is not None:
             if "pack" in data:
                 if data["pack"] == '\x00':
@@ -590,7 +612,7 @@ class Client:
         if pkid == self.pktSB.HELD_ITEM_CHANGE: # Held Item Change
             slot = self.read("short:short")["short"]
             self.log.trace("(PROXY CLIENT) -> Parsed HELD_ITEM_CHANGE packet:\n%s", slot)
-            if self.slot > -1 and self.slot < 9:
+            if 9 > self.slot > -1:
                 self.slot = slot
             else:
                 return False
@@ -649,7 +671,7 @@ class Client:
             self.log.trace("(PROXY CLIENT) -> Parsed SPECTATE packet:\n%s", data)
             for client in self.proxy.clients:
                 if data["target_player"].hex == client.uuid.hex:
-                    self.server.send(self.pktSB.SPECTATE, "uuid", [client.serverUUID]) # Convert SPECTATE packet...
+                    self.server.send(self.pktSB.SPECTATE, "uuid", [client.serverUuid]) # Convert SPECTATE packet...
                     return False
 
         return True # Default case
@@ -721,3 +743,5 @@ class State:
     ACTIVE = 3
     AUTHORIZING = 4
     PING = 5
+    def __init__(self):
+        pass
