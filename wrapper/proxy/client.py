@@ -598,14 +598,14 @@ class Client:
                     self.log.info("Banned player %s tried to connect:\n %s" % (playerwas, banreason))
                     return False
 
-                #if not self.wrapper.callEvent("player.preLogin", {
-                #    "player": self.username,
-                #    "online_uuid": self.uuid.string,
-                #    "offline_uuid": self.serverUuid.string,
-                #    "ip": self.addr[0]
-                #}):
-                #    self.disconnect("Login denied.")
-                #    return False
+                if not self.wrapper.callEvent("player.preLogin", {
+                    "player": self.username,
+                    "online_uuid": self.uuid.string,
+                    "offline_uuid": self.serverUuid.string,
+                    "ip": self.addr[0]
+                }):
+                    self.disconnect("Login denied.")
+                    return False
 
                 self.packet.send(0x02, "string|string", (self.uuid.string, self.username))
                 self.packet.send(0x02, "string|string", (self.uuid.string, self.username))
@@ -687,7 +687,7 @@ class Client:
                     else:
                         self.disconnect("You're not running the same Minecraft version as the server!")
                         return False
-                #self.disconnect("Invalid client state request for handshake: '%d'" % data["state"])
+                self.disconnect("Invalid client state request for handshake: '%d'" % data["state"])
                 return False
 
     def handle(self):
