@@ -55,6 +55,11 @@ class Client:
         self.config = wrapper.config
         self.packet = Packet(self.socket, self)
 
+        self._refresh_server_version()
+        self.verifyToken = encryption.generate_challenge_token()
+        self.serverID = encryption.generate_server_id()
+        self.MOTD = {}
+
         self.clientversion = self.serverversion  # client will reset this later, if need be..
         self.abort = False
         self.tPing = time.time()
@@ -92,10 +97,6 @@ class Client:
 
         for i in range(45):  # TODO Py2-3
             self.inventory[i] = None
-
-        self._refresh_server_version()
-        self.verifyToken = encryption.generate_challenge_token()
-        self.serverID = encryption.generate_server_id()
 
     def connect(self, ip=None, port=None):
         """
@@ -154,7 +155,7 @@ class Client:
         try:
             self.socket.close()
         except Exception as e:
-            self.log.exception("Could not close client socket! (%s)", e)
+            self.log.debug("Client socket already closed!")
         if self.server:
             self.server.abort = True
             self.server.close()
@@ -597,15 +598,16 @@ class Client:
                     self.log.info("Banned player %s tried to connect:\n %s" % (playerwas, banreason))
                     return False
 
-                if not self.wrapper.callEvent("player.preLogin", {
-                    "player": self.username,
-                    "online_uuid": self.uuid.string,
-                    "offline_uuid": self.serverUuid.string,
-                    "ip": self.addr[0]
-                }):
-                    self.disconnect("Login denied.")
-                    return False
+                #if not self.wrapper.callEvent("player.preLogin", {
+                #    "player": self.username,
+                #    "online_uuid": self.uuid.string,
+                #    "offline_uuid": self.serverUuid.string,
+                #    "ip": self.addr[0]
+                #}):
+                #    self.disconnect("Login denied.")
+                #    return False
 
+                self.packet.send(0x02, "string|string", (self.uuid.string, self.username))
                 self.packet.send(0x02, "string|string", (self.uuid.string, self.username))
                 self.state = ClientState.PLAY
 
@@ -618,10 +620,9 @@ class Client:
             if pkid == 0x01:
                 data = self.packet.read("long:payload")
                 self.log.trace("(PROXY CLIENT) -> Received '0x01' Ping in STATUS mode")
-                self.packet.send(0x01, "long", data["payload"])
+                self.packet.send(0x01, "long", (data["payload"],))
                 self.state = ClientState.HANDSHAKE
                 return False
-                pass
             if pkid == 0x00:
                 self.log.trace("(PROXY CLIENT) -> Received '0x00' request (no payload) for list packet in STATUS mode")
                 sample = []
@@ -638,10 +639,10 @@ class Client:
                 else:
                     reported_version = self.wrapper.server.protocolVersion
                     reported_name = self.wrapper.server.version
-                MOTD = {
+                self.MOTD = {
                     "description": json.loads(self.wrapper.server.processColorCodes(self.wrapper.server.motd.replace("\\", ""))),
                     "players": {
-                        "max": self.wrapper.server.maxPlayers,
+                        "max": int(self.wrapper.server.maxPlayers),
                         "online": len(self.wrapper.server.players),
                         "sample": sample
                     },
@@ -651,9 +652,8 @@ class Client:
                     }
                 }
                 if self.wrapper.server.serverIcon:  # add Favicon, if it exists
-                    MOTD["favicon"] = self.wrapper.server.serverIcon
-
-                self.packet.send(0x00, "string", (json.dumps(MOTD),))
+                    self.MOTD["favicon"] = self.wrapper.server.serverIcon
+                self.packet.send(0x00, "string", (json.dumps(self.MOTD),))
                 return False
             # Unknown packet type, return to Handshake:
             self.state = ClientState.HANDSHAKE
@@ -687,7 +687,7 @@ class Client:
                     else:
                         self.disconnect("You're not running the same Minecraft version as the server!")
                         return False
-                self.disconnect("Invalid client state request for handshake: '%d'" % data["state"])
+                #self.disconnect("Invalid client state request for handshake: '%d'" % data["state"])
                 return False
 
     def handle(self):
@@ -699,8 +699,8 @@ class Client:
                 try:
                     pkid, original = self.packet.grabPacket()
                 except EOFError as eof:
-                    # This error is often erroneous since socket data recv length is 0 when transmit ends
-                    self.log.exception("Client Packet EOF (%s)", eof)
+                    # This is not an error.. It means the client disconnected and is not sending packet stream anymore
+                    self.log.debug("Client Packet steam ended (EOF)")
                     self.close()
                     break
                 except Exception as e:
