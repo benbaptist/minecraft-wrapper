@@ -38,22 +38,14 @@ try:
     import readline
 except ImportError:
     readline = False
-    pass
-
-#try:
-import requests
-#except ImportError:
-#    requests = False
 
 try:
-    unicode
-    basestring
-    PY2 = True
-except NameError:
-    unicode = str  # compatibility for Python 3
-    basestring = str  # compatibility for Python 3
-    PY2 = False
+    import requests
+except ImportError:
+    requests = False
 
+import sys
+PY3 = sys.version_info > (3,)
 
 
 class Wrapper:
@@ -78,6 +70,9 @@ class Wrapper:
         self.help = {}
         # Aliases for compatibility
         self.callEvent = self.events.callEvent
+
+        if not readline:
+            self.log.warning("'readline' not imported.")
 
         if not requests and self.configManager.config["Proxy"]["proxy-enabled"]:
             self.log.error("You must have the requests module installed to run in proxy mode!")
@@ -149,7 +144,7 @@ class Wrapper:
         update of the cache using getUsernamebyUUID as well.
 
         :param username:  username as string
-        :returns: returns the MCUUID object from the given name. Updates the wrapper usercache.json
+        :returns: returns the online/Mojang MCUUID object from the given name. Updates the wrapper usercache.json
                 Yields False if failed.
         """
         frequency = 2592000  # 30 days.  If a cache update is specifically required any sooner, use getUsernamebyUUID.
@@ -431,13 +426,14 @@ class Wrapper:
         self.plugins.disablePlugins()
 
     def startProxy(self):
-        if proxy.IMPORT_SUCCESS:
-            self.proxy = proxy.Proxy(self)
+        self.proxy = proxy.Proxy(self)
+        if proxy.requests:  # requests will be set to False if requests or any crptography is missing.
             proxyThread = threading.Thread(target=self.proxy.host, args=())
             proxyThread.daemon = True
             proxyThread.start()
         else:
-            self.log.error("Proxy mode could not be started because you do not have one or more of the following modules installed: pycrypto and requests")
+            self.log.error("Proxy mode could not be started because you do not have one or more of the following "
+                           "modules installed: pycrypto and requests")
 
     def sigint(self, s, f):
         self.shutdown()
@@ -552,10 +548,10 @@ class Wrapper:
     def console(self):
         while not self.halt:
             try:
-                if PY2:
-                    cinput = raw_input("")
-                else:
+                if PY3:
                     cinput = eval(input())
+                else:
+                    cinput = raw_input("")
             except Exception as e:
                 continue
 
