@@ -386,7 +386,7 @@ class Packet:
         else:  # $ find out why next line sometimes errors out bad file descriptor
             d = self.socket.recv(length)
             if len(d) == 0:
-                raise EOFError("Packet was zero length, disconnecting")
+                raise EOFError("Packet stream ended (Client disconnected")
         if self.recvCipher is None:
             return d
         return self.recvCipher.decrypt(d)
