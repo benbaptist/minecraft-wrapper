@@ -33,7 +33,7 @@ class Client:
         """
         Client receives "SERVER BOUND" packets from client.  These are what get parsed (SERVER BOUND format).
         'server.send' - sends a packet to the server (use SERVER BOUND packet format)
-        'self.send' - sends a packet back to the client (use CLIENT BOUND packet format)
+        'self.packet.send' - sends a packet back to the client (use CLIENT BOUND packet format)
 
         Args: (self explanatory, hopefully)
             sock:
@@ -53,6 +53,7 @@ class Client:
 
         self.log = wrapper.log
         self.config = wrapper.config
+        self.packet = Packet(self.socket, self)
 
         # Get serverversion for mcpacket use
         try:
@@ -62,27 +63,24 @@ class Client:
             # This can be modified to any version
             self.serverversion = 47
 
+        self.clientversion = self.serverversion  # client will reset this later, if need be..
         self.abort = False
         self.tPing = time.time()
         self.server = None
         self.isServer = False
         self.isLocal = True
+        self.server_temp = None
 
         # UUIDs - all should use MCUUID unless otherwise specified
         self.uuid = None # this is intended to be the client UUID
         self.serverUuid = None # Server UUID - which Could be the local offline UUID.
+        self.mojangUuid = None # Online UUID (should be same as client) - included for now to help refactoring
         self.server = None
         self.address = None
-        self.ip = None  # this will gather the cleint IP for use by player.py
+        self.ip = None  # this will gather the client IP for use by player.py
 
         self.handshake = False
-        self.state = State.INIT
-
-        # some aliases
-        self.packet = Packet(self.socket, self)
-        self.send = self.packet.send
-        self.read = self.packet.read
-        self.sendRaw = self.packet.sendRaw
+        self.state = ClientState.INIT
 
         # Items gathered for player info for player api
         self.username = ""
@@ -98,6 +96,7 @@ class Client:
         self.properties = {}
         self.clientSettings = None
         self.clientSettingsSent = False
+        self.skinBlob = {}
 
         for i in range(45):  # TODO Py2-3
             self.inventory[i] = None
@@ -131,7 +130,9 @@ class Client:
             except Exception as e:
                 self.server_temp.close(kill_client=False)
                 self.server_temp = None
-                self.send(self.pktCB.CHAT_MESSAGE, "string|byte", ("""{"text": "Could not connect to that server!", "color": "red", "bold": "true"}""", 0))
+                self.packet.send(self.pktCB.CHAT_MESSAGE, "string|byte",
+                                 ("""{"text": "Could not connect to that server!", "color": "red", "bold": "true"}""",
+                                  0))
                 self.address = None
                 return
         else:
@@ -146,17 +147,17 @@ class Client:
 
         if self.config["Proxy"]["spigot-mode"]:
             payload = "localhost\x00%s\x00%s" % (self.addr[0], self.uuid.hex)
-            self.server.send(0x00, "varint|string|ushort|varint", (self.version, payload, self.config["Proxy"]["server-port"], 2))
+            self.server.send(0x00, "varint|string|ushort|varint", (self.clientversion, payload, self.config["Proxy"]["server-port"], 2))
         else:
             if UNIVERSAL_CONNECT:
                 self.server.send(0x00, "varint|string|ushort|varint", (self.wrapper.server.protocolVersion, "localhost", self.config["Proxy"]["server-port"], 2))
             else:
-                self.server.send(0x00, "varint|string|ushort|varint", (self.version, "localhost", self.config["Proxy"]["server-port"], 2))
+                self.server.send(0x00, "varint|string|ushort|varint", (self.clientversion, "localhost", self.config["Proxy"]["server-port"], 2))
         self.server.send(0x00, "string", (self.username,))
 
-        if self.version > mcpacket.PROTOCOL_1_8START:  # Ben's anti-rain hack for cross server, lobby return, connections
+        if self.clientversion > mcpacket.PROTOCOL_1_8START:  # Ben's anti-rain hack for cross server, lobby return, connections
             if self.config["Proxy"]["online-mode"]:
-                self.send(self.pktCB.CHANGE_GAME_STATE, "ubyte|float", (1, 0))
+                self.packet.send(self.pktCB.CHANGE_GAME_STATE, "ubyte|float", (1, 0))
                 pass
         self.server.state = 2
 
@@ -180,10 +181,10 @@ class Client:
         except Exception as e:
             pass
 
-        if self.state == State.ACTIVE:
-            self.send(self.pktCB.DISCONNECT, "json", (message,))
+        if self.state == ClientState.ACTIVE:
+            self.packet.send(self.pktCB.DISCONNECT, "json", (message,))
         else:
-            self.send(0x00, "json", ({"text": message, "color": "red"},))
+            self.packet.send(0x00, "json", ({"text": message, "color": "red"},))
 
         time.sleep(1)
         self.close()
@@ -205,12 +206,11 @@ class Client:
         self.server.send(self.pktSB.CHAT_MESSAGE, "string", (string,))
 
     def parse(self, pkid):  # server - bound parse ("Client" class connection)
-        if pkid == 0x00 and self.state != State.ACTIVE:  # 0x00 is a 1.9 gameplay packet of "spawn object"
-            if self.state == State.INIT:   # Handshake
-                data = self.read("varint:version|string:address|ushort:port|varint:state")
-                self.version = data["version"]
-                self.packet.version = self.version
-                if not self.wrapper.server.protocolVersion == self.version and data["state"] == 2:
+        if pkid == 0x00 and self.state != ClientState.ACTIVE:  # 0x00 is a 1.9 gameplay packet of "spawn object"
+            if self.state == ClientState.INIT:   # Handshake
+                data = self.packet.read("varint:version|string:address|ushort:port|varint:state")
+                self.clientversion = data["version"]
+                if not self.wrapper.server.protocolVersion == self.clientversion and data["state"] == 2:
                     if self.wrapper.server.protocolVersion == -1:
                         self.disconnect("Proxy client was unable to connect to the server.")
                         return
@@ -218,19 +218,19 @@ class Client:
                         if not UNIVERSAL_CONNECT:
                             self.disconnect("You're not running the same Minecraft version as the server!")
                             return
-                        if mcpacket.PROTOCOL_1_9START < self.version < mcpacket.PROTOCOL_1_9REL1:
-                            self.disconnect("You're running unsupported or outdated snapshots (%s)!" % self.version)
+                        if mcpacket.PROTOCOL_1_9START < self.clientversion < mcpacket.PROTOCOL_1_9REL1:
+                            self.disconnect("You're running unsupported or outdated snapshots (%s)!" % self.clientversion)
                             return
                 if not self.wrapper.server.state == 2:
                     self.disconnect("Server has not finished booting. Please try connecting again in a few seconds")
                     return
-                if data["state"] in (State.MOTD, State.LOGIN):
+                if data["state"] in (ClientState.MOTD, ClientState.LOGIN):
                     self.state = data["state"]
                 else:
                     self.disconnect("Invalid state '%d'" % data["state"])
                 self.log.trace("(PROXY CLIENT) -> Parsed 0x00 packet with client state 0 (HANDSHAKE):\n%s", data)
                 return False
-            elif self.state == State.MOTD:
+            elif self.state == ClientState.MOTD:
                 sample = []
                 for i in self.wrapper.server.players:
                     player = self.wrapper.server.players[i]
@@ -239,7 +239,7 @@ class Client:
                     if len(sample) > 5:
                         break
                 if UNIVERSAL_CONNECT:
-                    reported_version = self.version
+                    reported_version = self.clientversion
                     reported_name = "%s (Compatibility mode)" % self.wrapper.server.version
                 else:
                     reported_version = self.wrapper.server.protocolVersion
@@ -258,38 +258,38 @@ class Client:
                 }
                 if self.wrapper.server.serverIcon:
                     MOTD["favicon"] = self.wrapper.server.serverIcon
-                self.send(0x00, "string", (json.dumps(MOTD),))
-                self.state = State.PING
+                self.packet.send(0x00, "string", (json.dumps(MOTD),))
+                self.state = ClientState.PING
                 return False
-            elif self.state == State.LOGIN:
-                data = self.read("string:username")
+            elif self.state == ClientState.LOGIN:
+                data = self.packet.read("string:username")
                 self.username = data["username"]
 
                 if self.config["Proxy"]["online-mode"]:
-                    self.state = State.AUTHORIZING
+                    self.state = ClientState.AUTHORIZING
                     self.verifyToken = encryption.generate_challenge_token()
                     self.serverID = encryption.generate_server_id()
                     if self.wrapper.server.protocolVersion < 6:  # 1.7.x versions
-                        self.send(0x01, "string|bytearray_short|bytearray_short", (self.serverID, self.publicKey, self.verifyToken))
+                        self.packet.send(0x01, "string|bytearray_short|bytearray_short", (self.serverID, self.publicKey, self.verifyToken))
                     else:
-                        self.send(0x01, "string|bytearray|bytearray", (self.serverID, self.publicKey, self.verifyToken))
+                        self.packet.send(0x01, "string|bytearray|bytearray", (self.serverID, self.publicKey, self.verifyToken))
                 else:
                     self.connect()
                     self.uuid = self.wrapper.getUUIDFromName("OfflinePlayer:%s" % self.username) # MCUUID object
                     self.serverUuid = self.wrapper.getUUIDFromName("OfflinePlayer:%s" % self.username) # MCUUID object
-                    self.send(0x02, "string|string", (self.uuid.string, self.username))
-                    self.state = State.ACTIVE
+                    self.packet.send(0x02, "string|string", (self.uuid.string, self.username))
+                    self.state = ClientState.ACTIVE
                     self.log.info("%s logged in (IP: %s)", self.username, self.addr[0])
                 self.log.trace("(PROXY CLIENT) -> Parsed 0x00 packet with client state 2:\n%s", data)
                 return False
 
         if pkid == 0x01:
             # Moved 'if state == 3' out and created the if pkid == self.pktSB.CHAT_MESSAGE
-            if self.state == State.AUTHORIZING:  # Encryption Response Packet
+            if self.state == ClientState.AUTHORIZING:  # Encryption Response Packet
                 if self.wrapper.server.protocolVersion < 6:
-                    data = self.read("bytearray_short:shared_secret|bytearray_short:verify_token")
+                    data = self.packet.read("bytearray_short:shared_secret|bytearray_short:verify_token")
                 else:
-                    data = self.read("bytearray:shared_secret|bytearray:verify_token")
+                    data = self.packet.read("bytearray:shared_secret|bytearray:verify_token")
                 self.log.trace("(PROXY CLIENT) -> Parsed 0x01 packet with client state 4 (ENCRYPTION RESPONSE):\n%s", data)
 
                 sharedSecret = encryption.decrypt_shared_secret(data["shared_secret"], self.privateKey)
@@ -369,7 +369,7 @@ class Client:
                 uuidwas = self.uuid.string  # TODO somewhere between HERE and ...
                 self.log.debug("Value - playerwas: %s", playerwas)
                 self.log.debug("Value - uuidwas: %s", uuidwas)
-                if self.version > 26:
+                if self.clientversion > 26:
                     self.packet.setCompression(256)
 
                 # player ban code!  Uses vanilla json files - In wrapper proxy mode, supports
@@ -395,21 +395,21 @@ class Client:
                     self.disconnect("Login denied.")
                     return False
 
-                self.send(0x02, "string|string", (self.uuid.string, self.username))
-                self.state = State.ACTIVE
+                self.packet.send(0x02, "string|string", (self.uuid.string, self.username))
+                self.state = ClientState.ACTIVE
 
                 self.connect()
 
                 self.log.info("%s logged in (UUID: %s | IP: %s)", self.username, self.uuid.string, self.addr[0])
                 return False
-            elif self.state == State.PING: # ping packet during status request
-                keepAlive = self.read("long:keepAlive")["keepAlive"]
-                self.send(0x01, "long", (keepAlive,))
+            elif self.state == ClientState.PING: # ping packet during status request
+                keepAlive = self.packet.read("long:keepAlive")["keepAlive"]
+                self.packet.send(0x01, "long", (keepAlive,))
                 self.log.trace("(PROXY CLIENT) -> Parsed 0x01 packet with client state 5 (PING)")
                 pass
 
-        if pkid == self.pktSB.CHAT_MESSAGE and self.state == State.ACTIVE:
-            data = self.read("string:message")
+        if pkid == self.pktSB.CHAT_MESSAGE and self.state == ClientState.ACTIVE:
+            data = self.packet.read("string:message")
             self.log.trace("(PROXY CLIENT) -> Parsed CHAT_MESSAGE packet with client state 3:\n%s", data)
             if data is None:
                 return False
@@ -449,20 +449,20 @@ class Client:
             #     pass
 
         if pkid == self.pktSB.PLAYER_POSITION: # player position
-            data = self.read("double:x|double:y|double:z|bool:on_ground")
+            data = self.packet.read("double:x|double:y|double:z|bool:on_ground")
             self.position = (data["x"], data["y"], data["z"])
             self.log.trace("(PROXY CLIENT) -> Parsed PLAYER_POSITION packet:\n%s", data)
         
         if pkid == self.pktSB.PLAYER_POSLOOK: # player position and look
-            data = self.read("double:x|double:y|double:z|float:yaw|float:pitch|bool:on_ground")
+            data = self.packet.read("double:x|double:y|double:z|float:yaw|float:pitch|bool:on_ground")
             self.position = (data["x"], data["y"], data["z"])
             self.head = (data["yaw"], data["pitch"])
             self.log.trace("(PROXY CLIENT) -> Parsed PLAYER_POSLOOK packet:\n%s", data)
-            if self.server.state != State.ACTIVE:
+            if self.server.state != ClientState.ACTIVE:
                 return False
 
         if pkid == self.pktSB.PLAYER_LOOK: # Player Look
-            data = self.read("float:yaw|float:pitch|bool:on_ground")
+            data = self.packet.read("float:yaw|float:pitch|bool:on_ground")
             yaw, pitch = data["yaw"], data["pitch"]
             self.head = (yaw, pitch)
             self.log.trace("(PROXY CLIENT) -> Parsed PLAYER_LOOK packet:\n%s", data)
@@ -470,12 +470,12 @@ class Client:
         if pkid == self.pktSB.PLAYER_DIGGING: # Player Block Dig
             if not self.isLocal:
                 return True
-            if self.version < mcpacket.PROTOCOL_1_8START:
-                data = self.read("byte:status|int:x|ubyte:y|int:z|byte:face")
+            if self.clientversion < mcpacket.PROTOCOL_1_8START:
+                data = self.packet.read("byte:status|int:x|ubyte:y|int:z|byte:face")
                 position = (data["x"], data["y"], data["z"])
                 self.log.trace("(PROXY CLIENT) -> Parsed PLAYER_DIGGING packet:\n%s", data)
             else:
-                data = self.read("byte:status|position:position|byte:face")
+                data = self.packet.read("byte:status|position:position|byte:face")
                 position = data["position"]
                 self.log.trace("(PROXY CLIENT) -> Parsed PLAYER_DIGGING packet:\n%s", data)
             if data is None:
@@ -516,7 +516,7 @@ class Client:
                         "action": "finish_using"
                     }):
                         return False
-            if self.server.state != State.ACTIVE:
+            if self.server.state != ClientState.ACTIVE:
                 return False
 
         if pkid == self.pktSB.PLAYER_BLOCK_PLACEMENT: # Player Block Placement
@@ -529,18 +529,18 @@ class Client:
             helditem = player.getHeldItem()
             if not self.isLocal:
                 return True
-            if self.version < mcpacket.PROTOCOL_1_8START:
-                data = self.read("int:x|ubyte:y|int:z|byte:face|slot:item")
+            if self.clientversion < mcpacket.PROTOCOL_1_8START:
+                data = self.packet.read("int:x|ubyte:y|int:z|byte:face|slot:item")
                 position = (data["x"], data["y"], data["z"])
                 # just FYI, notchian servers have been ignoring this field
                 # for a long time, using server inventory instead.
                 helditem = data["item"]
             else:
-                if self.version >= mcpacket.PROTOCOL_1_9REL1:
-                    data = self.read("position:Location|varint:face|varint:hand|byte:CurPosX|byte:CurPosY|byte:CurPosZ")
+                if self.clientversion >= mcpacket.PROTOCOL_1_9REL1:
+                    data = self.packet.read("position:Location|varint:face|varint:hand|byte:CurPosX|byte:CurPosY|byte:CurPosZ")
                     hand = data["hand"]
                 else:
-                    data = self.read("position:Location|byte:face|slot:item|byte:CurPosX|byte:CurPosY|byte:CurPosZ")
+                    data = self.packet.read("position:Location|byte:face|slot:item|byte:CurPosX|byte:CurPosY|byte:CurPosZ")
                     helditem = data["item"]
                 position = data["Location"]
                 #curposx = data["CurPosX"]
@@ -592,7 +592,7 @@ class Client:
         if pkid == self.pktSB.USE_ITEM:
             if self.isLocal is not True:
                 return True
-            data = self.read("rest:pack")
+            data = self.packet.read("rest:pack")
             self.log.trace("(PROXY CLIENT) -> Parsed USE_ITEM packet:\n%s", data)
             player = self.getPlayerObject()
             position = self.lastplacecoords
@@ -610,7 +610,7 @@ class Client:
                         return False
 
         if pkid == self.pktSB.HELD_ITEM_CHANGE: # Held Item Change
-            slot = self.read("short:short")["short"]
+            slot = self.packet.read("short:short")["short"]
             self.log.trace("(PROXY CLIENT) -> Parsed HELD_ITEM_CHANGE packet:\n%s", slot)
             if 9 > self.slot > -1:
                 self.slot = slot
@@ -620,9 +620,9 @@ class Client:
         if pkid == self.pktSB.PLAYER_UPDATE_SIGN: # player update sign
             if not self.isLocal:
                 return True  # ignore signs from child wrapper/server instance
-            if self.version < mcpacket.PROTOCOL_1_8START:
+            if self.clientversion < mcpacket.PROTOCOL_1_8START:
                 return True  # player.createsign not implemented for older minecraft versions
-            data = self.read("position:position|string:line1|string:line2|string:line3|string:line4")
+            data = self.packet.read("position:position|string:line1|string:line2|string:line3|string:line4")
             position = data["position"]
             l1 = data["line1"]
             l2 = data["line2"]
@@ -652,22 +652,22 @@ class Client:
             return False
         
         if pkid == self.pktSB.CLIENT_SETTINGS: # read Client Settings
-            if self.version < mcpacket.PROTOCOL_1_9START:
-                data = self.read("string:locale|byte:view_distance|byte:chat_mode|bool:chat_colors|ubyte:displayed_skin_parts")
+            if self.clientversion < mcpacket.PROTOCOL_1_9START:
+                data = self.packet.read("string:locale|byte:view_distance|byte:chat_mode|bool:chat_colors|ubyte:displayed_skin_parts")
             else:
-                data = self.read("string:locale|byte:view_distance|varint:chat_mode|bool:chat_colors|ubyte:displayed_skin_parts|varint:main_hand")
+                data = self.packet.read("string:locale|byte:view_distance|varint:chat_mode|bool:chat_colors|ubyte:displayed_skin_parts|varint:main_hand")
             self.clientSettings = data
             self.log.trace("(PROXY CLIENT) -> Parsed CLIENT_SETTINGS packet:\n%s", data)
         
         if pkid == self.pktSB.CLICK_WINDOW: # click window
-            data = self.read("ubyte:wid|short:slot|byte:button|short:action|byte:mode|slot:clicked")
+            data = self.packet.read("ubyte:wid|short:slot|byte:button|short:action|byte:mode|slot:clicked")
             data['player'] = self.getPlayerObject()
             self.log.trace("(PROXY CLIENT) -> Parsed CLICK_WINDOW packet:\n%s", data)
             if not self.wrapper.callEvent("player.slotClick", data):
                 return False
         
         if pkid == self.pktSB.SPECTATE: # Spectate - convert packet to local server UUID
-            data = self.read("uuid:target_player")
+            data = self.packet.read("uuid:target_player")
             self.log.trace("(PROXY CLIENT) -> Parsed SPECTATE packet:\n%s", data)
             for client in self.proxy.clients:
                 if data["target_player"].hex == client.uuid.hex:
@@ -684,7 +684,6 @@ class Client:
             while not self.abort:
                 try:
                     pkid, original = self.packet.grabPacket()
-                    self.original = original
                 except EOFError as eof:
                     # This error is often erroneous since socket data recv length is 0 when transmit ends
                     self.log.exception("Client Packet EOF (%s)", eof)
@@ -696,12 +695,12 @@ class Client:
                     self.close()
                     break
                 # DISABLED until github #5 is resolved
-                # if time.time() - self.tPing > 1 and self.state == State.ACTIVE:
-                #     if self.version > 32:
-                #         self.send(self.pktCB.KEEP_ALIVE, "varint",
+                # if time.time() - self.tPing > 1 and self.state == ClientState.ACTIVE:
+                #     if self.clientversion > 32:
+                #         self.packet.send(self.pktCB.KEEP_ALIVE, "varint",
                 #                   (random.randrange(0, 99999),))
                 #         if self.clientSettings and not self.clientSettingsSent:
-                #             if self.version < mcpacket.PROTOCOL_1_9START:
+                #             if self.clientversion < mcpacket.PROTOCOL_1_9START:
                 #                 self.server.send(self.pktSB.CLIENT_SETTINGS, "string|byte|byte|bool|ubyte", (
                 #                     self.clientSettings["locale"],
                 #                     self.clientSettings["view_distance"],
@@ -723,7 +722,7 @@ class Client:
                 #                 self.clientSettingsSent = True
                 #     else:
                 #         # _OLD_ MC version
-                #         self.send(0x00, "int", (random.randrange(0, 99999),))
+                #         self.packet.send(0x00, "int", (random.randrange(0, 99999),))
                 #     self.tPing = time.time()
                 if self.parse(pkid) and self.server:
                     if self.server.state == 3:
@@ -731,7 +730,7 @@ class Client:
         except Exception as ex:
             self.log.exception("Error in the [Client] -> [Server] handle (%s):", ex)
 
-class State:
+class ClientState:
     """
     This class represents proxy Client states
     """
