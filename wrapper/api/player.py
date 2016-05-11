@@ -32,16 +32,14 @@ class Player:
         self.log = wrapper.log
 
         self.username = username
-        self.name = self.username  # just an alias - same variable
         self.loggedIn = time.time()
         self.abort = False
 
-        # these are all MCUUID objects.. I have separates out various uses of uuid to clarify for later refractoring
+        # these are all MCUUID objects.. I have separated out various uses of uuid to clarify for later refractoring
         self.mojangUuid = self.wrapper.getUUIDByUsername(username)
         self.offlineUuid = self.wrapper.getUUIDFromName("OfflinePlayer:%s" % self.username)
         self.clientUuid = self.wrapper.getUUID(username)  # - The player.uuid used by old api (and internally here).
         self.serverUuid = self.wrapper.getUUIDByUsername(username)
-        self.uuid = self.clientUuid  # for API compatibility with older plugins (for now).
 
         self.ipaddress =  "127.0.0.0"
         self.operatordict = self._readOpsFile()
@@ -63,8 +61,8 @@ class Player:
             for client in self.wrapper.proxy.clients:
                 if client.username == username:
                     self.client = client
-                    self.clientuuid = client.uuid # Both MCUUID objects  # TODO - resolve what UUID each instance is suppose to be in client as well
-                    self.serverUuid = client.serverUUID  # TODO this may be broken in client
+                    self.clientUuid = client.uuid # Both MCUUID objects
+                    self.serverUuid = client.serverUuid
                     self.ipaddress = client.ip
                     if self.getClient().version > 49:  # packet numbers fluctuated  wildly between 48 and 107
                         self.clientPackets = mcpacket.ClientBound19
@@ -86,6 +84,14 @@ class Player:
 
     def __str__(self):
         return self.username
+
+    @property
+    def name(self):
+        return self.username
+
+    @property
+    def uuid(self):
+        return self.clientUuid
 
     def _track(self):
         """
@@ -376,7 +382,7 @@ class Player:
         if node is None:
             return True
         if another_player:
-            other_uuid = self.wrapper.getUUIDByUsername(another_player)
+            other_uuid = self.wrapper.getUUIDByUsername(another_player)  # get other player mojang uuid
             if other_uuid: # make sure other player permission is initialized.
                 if self.mojangUuid.string not in self.permissions["users"]:  # no reason not to do this here too
                     self.permissions["users"][self.mojangUuid.string] = {"groups": [], "permissions": {}}
