@@ -144,7 +144,7 @@ class Wrapper:
         update of the cache using getUsernamebyUUID as well.
 
         :param username:  username as string
-        :returns: returns the MCUUID object from the given name. Updates the wrapper usercache.json
+        :returns: returns the online/Mojang MCUUID object from the given name. Updates the wrapper usercache.json
                 Yields False if failed.
         """
         frequency = 2592000  # 30 days.  If a cache update is specifically required any sooner, use getUsernamebyUUID.
