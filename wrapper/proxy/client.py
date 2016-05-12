@@ -18,7 +18,6 @@ from proxy.server import Server
 from proxy.packet import Packet
 from core.mcuuid import MCUUID
 
-
 # wrapper.py will check for requests to run proxy mode
 try:
     import requests
@@ -35,7 +34,6 @@ class Client:
         Client receives "SERVER BOUND" packets from client.  These are what get parsed (SERVER BOUND format).
         'server.packet.send' - sends a packet to the server (use SERVER BOUND packet format)
         'self.packet.send' - sends a packet back to the client (use CLIENT BOUND packet format)
-        This part of proxy 'pretends' to be the server interacting with the client.
 
         Args: (self explanatory, hopefully)
             sock:
@@ -100,10 +98,6 @@ class Client:
 
         for i in range(45):
             self.inventory[i] = None
-
-    @property
-    def version(self):
-        return self.clientversion
 
     def connect_to_server(self, ip=None, port=None):
         """
@@ -172,7 +166,7 @@ class Client:
 
     def disconnect(self, message):
         try:
-            message = json.loads(message)
+            message = json.loads(message["string"])
         except ValueError: # optionally use json
             pass
 
@@ -219,20 +213,16 @@ class Client:
 
     def parse(self, pkid):  # server - bound parse ("Client" class connection)
         if self.state == ClientState.PLAY:
-
             # TODO - elif these packet parsers
             if pkid == self.pktCB.KEEP_ALIVE:
                 if self.serverversion < mcpacket.PROTOCOL_1_8START:
                     data = self.packet.read("int:payload")
-                    self.packet.send(self.pktSB.KEEP_ALIVE, "int", (pkid,))
                 else:  # self.version >= mcpacket.PROTOCOL_1_8START:
                     data = self.packet.read("varint:payload")
-                    self.packet.send(self.pktSB.KEEP_ALIVE, "varint", (pkid,))
                 self.log.trace("(PROXY CLIENT) -> Received KEEP_ALIVE from client:\n%s", data)
                 if data["payload"] == self.keepalive_val:
                     self.time_client_responded = time.time()
                 return False
-
             if pkid == self.pktSB.CHAT_MESSAGE:
                 data = self.packet.read("string:message")
                 self.log.trace("(PROXY CLIENT) -> Parsed CHAT_MESSAGE packet with client state PLAY:\n%s", data)
@@ -631,17 +621,15 @@ class Client:
                 self.time_client_responded = time.time()
                 self.state = ClientState.PLAY
 
-                self.log.info("%s logged in (UUID: %s | IP: %s)", self.username, self.uuid.string, self.addr[0])
-                #self.packet.send(self.pktCB.CHAT_MESSAGE, "string|byte",
-                #                 ("""{"text": "Welcome %s. Connecting...", "color": "aqua", "bold": "false"}""" %
-                #                  self.username, 0))
-
                 # This will keep client connected regardless of server status (unless we explicitly disconnect it)
-                t_keepalives = threading.Thread(target=self._keep_alive_tracker(), args=())
+                t_keepalives = threading.Thread(target=self._keep_alive_tracker, args=())
                 t_keepalives.daemon = True
                 t_keepalives.start()
 
                 #self.connect_to_server()
+
+                self.log.info("%s logged in (UUID: %s | IP: %s)", self.username, self.uuid.string, self.addr[0])
+                return False
 
         elif self.state == ClientState.STATUS:
             if pkid == 0x01:
