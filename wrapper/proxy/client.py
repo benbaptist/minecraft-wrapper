@@ -9,6 +9,7 @@ import hashlib
 import uuid
 import shutil
 import os
+import random
 
 import utils.encryption as encryption
 import proxy.mcpacket as mcpacket
@@ -23,7 +24,6 @@ try:
 except ImportError:
     requests = False
 
-#import random   # -- used by commented out keepalive code
 
 UNIVERSAL_CONNECT = False # tells the client "same version as you" or does not disconnect dissimilar clients
 HIDDEN_OPS = ["SurestTexas00", "BenBaptist"]
@@ -62,8 +62,10 @@ class Client:
 
         self.clientversion = self.serverversion  # client will reset this later, if need be..
         self.abort = False
-        self.tPing = time.time()
-        self.server = None
+        self.time_server_pinged = time.time()
+        self.time_client_responded = time.time()
+        self.keepalive_val = 0
+        self.server = None  # Server()
         self.isServer = False
         self.isLocal = True
         self.server_temp = None
@@ -98,14 +100,15 @@ class Client:
         for i in range(45):  # TODO Py2-3
             self.inventory[i] = None
 
-    def connect(self, ip=None, port=None):
+    def connect_to_server(self, ip=None, port=None):
         """
         Args:
             ip: server IP
             port: server port
 
-        this is the connection to the client. incoming packets are 'server bound' format.
+        this is the connection to the server.
         """
+
         self.clientSettingsSent = False
         if self.server is not None:
             self.address = (ip, port)
@@ -119,9 +122,7 @@ class Client:
             except Exception as e:
                 self.server_temp.close(kill_client=False)
                 self.server_temp = None
-                self.packet.send(self.pktCB.CHAT_MESSAGE, "string|byte",
-                                 ("""{"text": "Could not connect to that server!", "color": "red", "bold": "true"}""",
-                                  0))
+                self.packet.send(self.pktCB.CHAT_MESSAGE, "string|byte", ("""{"text": "Could not connect to that server!", "color": "red", "bold": "true"}""", 0))
                 self.address = None
                 return
         else:
@@ -150,6 +151,7 @@ class Client:
                 pass
         self.server.state = 2
 
+
     def close(self):
         self.abort = True
         try:
@@ -162,7 +164,6 @@ class Client:
         for i, client in enumerate(self.wrapper.proxy.clients):
             if client.username == self.username:
                 del self.wrapper.proxy.clients[i]
-        
 
     def disconnect(self, message):
         try:
@@ -213,17 +214,24 @@ class Client:
 
     def parse(self, pkid):  # server - bound parse ("Client" class connection)
         if self.state == ClientState.PLAY:
+            # TODO - elif these packet parsers
+            if pkid == self.pktSB.KEEP_ALIVE:
+                data = self.packet.read("varint:payload")
+                self.log.trace("(PROXY CLIENT) -> Received KEEP_ALIVE from client:\n%s", data)
+                if data["payload"] == self.keepalive_val:
+                    self.time_client_responded = time.time()
+                return False
             if pkid == self.pktSB.CHAT_MESSAGE:
                 data = self.packet.read("string:message")
-                self.log.trace("(PROXY CLIENT) -> Parsed CHAT_MESSAGE packet with client state 3:\n%s", data)
+                self.log.trace("(PROXY CLIENT) -> Parsed CHAT_MESSAGE packet with client state PLAY:\n%s", data)
                 if data is None:
                     return False
-                try:
+                try:  # TODO - OMG A huge try-except!
                     chatmsg = data["message"]
                     if not self.isLocal and chatmsg == "/lobby":
                         self.server.close(reason="Lobbification", kill_client=False)
                         self.address = None
-                        self.connect()
+                        self.connect_to_server()
                         self.isLocal = True
                         return False
                     if not self.isLocal:
@@ -489,7 +497,7 @@ class Client:
                         self.packet.send(0x01, "string|bytearray|bytearray", (self.serverID, self.publicKey,
                                                                               self.verifyToken))
                 else:
-                    self.connect()
+                    self.connect_to_server()
                     self.uuid = self.wrapper.getUUIDFromName("OfflinePlayer:%s" % self.username) # MCUUID object
                     self.serverUuid = self.wrapper.getUUIDFromName("OfflinePlayer:%s" % self.username) # MCUUID object
                     self.packet.send(0x02, "string|string", (self.uuid.string, self.username))
@@ -606,12 +614,17 @@ class Client:
                 }):
                     self.disconnect("Login denied.")
                     return False
-
+                print(self.uuid.string)
                 self.packet.send(0x02, "string|string", (self.uuid.string, self.username))
-                self.packet.send(0x02, "string|string", (self.uuid.string, self.username))
+                self.time_client_responded = time.time()
                 self.state = ClientState.PLAY
 
-                self.connect()
+                # This will keep client connected regardless of server status (unless we explicitly disconnect it)
+                t_keepalives = threading.Thread(target=self._keep_alive_tracker, args=())
+                t_keepalives.daemon = True
+                t_keepalives.start()
+
+                # self.connect_to_server()
 
                 self.log.info("%s logged in (UUID: %s | IP: %s)", self.username, self.uuid.string, self.addr[0])
                 return False
@@ -708,41 +721,52 @@ class Client:
                     self.log.exception("Failed to grab packet [CLIENT] (%s):", e)
                     self.close()
                     break
-                # DISABLED until github #5 is resolved
-                # if time.time() - self.tPing > 1 and self.state == ClientState.PLAY:
-                #     if self.clientversion > 32:
-                #         self.packet.send(self.pktCB.KEEP_ALIVE, "varint",
-                #                   (random.randrange(0, 99999),))
-                #         if self.clientSettings and not self.clientSettingsSent:
-                #             if self.clientversion < mcpacket.PROTOCOL_1_9START:
-                #                 self.server.send(self.pktSB.CLIENT_SETTINGS, "string|byte|byte|bool|ubyte", (
-                #                     self.clientSettings["locale"],
-                #                     self.clientSettings["view_distance"],
-                #                     self.clientSettings["chat_mode"],
-                #                     self.clientSettings["chat_colors"],
-                #                     self.clientSettings["displayed_skin_parts"]
-                #                 ))
-                #                 self.clientSettingsSent = True
-                #             else:
-                #                 self.server.send(self.pktSB.CLIENT_SETTINGS, "string|byte|varint|bool|ubyte|varint", (
-                #                     self.clientSettings["locale"],
-                #                     self.clientSettings["view_distance"],
-                #                     self.clientSettings["chat_mode"],
-                #                     self.clientSettings["chat_colors"],
-                #                     self.clientSettings[
-                #                         "displayed_skin_parts"],
-                #                     self.clientSettings["main_hand"]
-                #                 ))
-                #                 self.clientSettingsSent = True
-                #     else:
-                #         # _OLD_ MC version
-                #         self.packet.send(0x00, "int", (random.randrange(0, 99999),))
-                #     self.tPing = time.time()
+
+                # send packet if server available and parsing passed.
                 if self.parse(pkid) and self.server:
                     if self.server.state == 3:
                         self.server.sendRaw(original)
         except Exception as ex:
             self.log.exception("Error in the [Client] -> [Server] handle (%s):", ex)
+
+    def _keep_alive_tracker(self):
+        # send keep alives to client and send client settings to server.
+        while not self.abort:
+            time.sleep(1)
+            while self.state == ClientState.PLAY:
+                if time.time() - self.time_server_pinged > 10:  # client expects < 20sec
+                    self.keepalive_val = random.randrange(0, 99999)
+                    if self.clientversion > 32:
+                        self.packet.send(self.pktCB.KEEP_ALIVE, "varint",
+                                   (self.keepalive_val,))
+                        if self.clientSettings and not self.clientSettingsSent:
+                            if self.clientversion < mcpacket.PROTOCOL_1_9START:
+                                self.server.send(self.pktSB.CLIENT_SETTINGS, "string|byte|byte|bool|ubyte", (
+                                    self.clientSettings["locale"],
+                                    self.clientSettings["view_distance"],
+                                    self.clientSettings["chat_mode"],
+                                    self.clientSettings["chat_colors"],
+                                    self.clientSettings["displayed_skin_parts"]
+                                ))
+                                self.clientSettingsSent = True
+                            else:
+                                self.server.send(self.pktSB.CLIENT_SETTINGS, "string|byte|varint|bool|ubyte|varint", (
+                                    self.clientSettings["locale"],
+                                    self.clientSettings["view_distance"],
+                                    self.clientSettings["chat_mode"],
+                                    self.clientSettings["chat_colors"],
+                                    self.clientSettings["displayed_skin_parts"],
+                                    self.clientSettings["main_hand"]
+                                ))
+                                self.clientSettingsSent = True
+                    else:
+                        # _OLD_ MC version
+                        self.packet.send(0x00, "int", (self.keepalive_val,))
+                    self.time_server_pinged = time.time()
+                # ckeck for active client keep alive status:
+                if time.time() - self.time_client_responded > 20:  # server can allow up to 30 seconds for response
+                    self.log.debug("Closing client due to lack of keepalive response")
+                    self.close()
 
 class ClientState:
     """
