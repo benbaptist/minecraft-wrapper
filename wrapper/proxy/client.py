@@ -92,7 +92,7 @@ class Client:
         self.lastplacecoords = (0, 0, 0) # last placement (for use in cases of bucket use)
         self.windowCounter = 2
         self.properties = {}
-        self.clientSettings = None
+        self.clientSettings = False
         self.clientSettingsSent = False
         self.skinBlob = {}
 
@@ -240,7 +240,29 @@ class Client:
                 self.log.trace("(PROXY CLIENT) -> Received KEEP_ALIVE from client:\n%s", data)
                 if data["payload"] == self.keepalive_val:
                     self.time_client_responded = time.time()
+                # Arbitrary place for this.  It works since Keep alives will be received periodically
+                # Needed to move out of the _keep_alive_tracker thread
+                if self.clientSettings and not self.clientSettingsSent:
+                    if self.clientversion < mcpacket.PROTOCOL_1_9START:
+                        self.server.packet.send(self.pktSB.CLIENT_SETTINGS, "string|byte|byte|bool|ubyte", (
+                            self.clientSettings["locale"],
+                            self.clientSettings["view_distance"],
+                            self.clientSettings["chat_mode"],
+                            self.clientSettings["chat_colors"],
+                            self.clientSettings["displayed_skin_parts"]
+                        ))
+                    else:
+                        self.server.packet.send(self.pktSB.CLIENT_SETTINGS, "string|byte|varint|bool|ubyte|varint", (
+                            self.clientSettings["locale"],
+                            self.clientSettings["view_distance"],
+                            self.clientSettings["chat_mode"],
+                            self.clientSettings["chat_colors"],
+                            self.clientSettings["displayed_skin_parts"],
+                            self.clientSettings["main_hand"]
+                        ))
+                    self.clientSettingsSent = True
                 return False
+
             elif pkid == self.pktSB.CHAT_MESSAGE:
                 data = self.packet.read("string:message")
                 self.log.trace("(PROXY CLIENT) -> Parsed CHAT_MESSAGE packet with client state PLAY:\n%s", data)
@@ -769,33 +791,13 @@ class Client:
     def _keep_alive_tracker(self, playername):
         # send keep alives to client and send client settings to server.
         while not self.abort:
-            time.sleep(1)
+            time.sleep(5)
             while self.state == ClientState.PLAY:
                 if time.time() - self.time_server_pinged > 10:  # client expects < 20sec
                     self.keepalive_val = random.randrange(0, 99999)
-                    if self.clientversion > 32:
+                    if self.clientversion > mcpacket.PROTOCOL_1_8START:
                         self.packet.send(self.pktCB.KEEP_ALIVE, "varint",
                                    (self.keepalive_val,))
-                        if self.clientSettings and not self.clientSettingsSent:
-                            if self.clientversion < mcpacket.PROTOCOL_1_9START:
-                                self.server.packet.send(self.pktSB.CLIENT_SETTINGS, "string|byte|byte|bool|ubyte", (
-                                    self.clientSettings["locale"],
-                                    self.clientSettings["view_distance"],
-                                    self.clientSettings["chat_mode"],
-                                    self.clientSettings["chat_colors"],
-                                    self.clientSettings["displayed_skin_parts"]
-                                ))
-                                self.clientSettingsSent = True
-                            else:
-                                self.server.packet.send(self.pktSB.CLIENT_SETTINGS, "string|byte|varint|bool|ubyte|varint", (
-                                    self.clientSettings["locale"],
-                                    self.clientSettings["view_distance"],
-                                    self.clientSettings["chat_mode"],
-                                    self.clientSettings["chat_colors"],
-                                    self.clientSettings["displayed_skin_parts"],
-                                    self.clientSettings["main_hand"]
-                                ))
-                                self.clientSettingsSent = True
                     else:
                         # _OLD_ MC version
                         self.packet.send(0x00, "int", (self.keepalive_val,))

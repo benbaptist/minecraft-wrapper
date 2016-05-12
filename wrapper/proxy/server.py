@@ -149,10 +149,10 @@ class Server:
             if pkid == self.pktCB.KEEP_ALIVE:
                 if self.version < mcpacket.PROTOCOL_1_8START:
                     data = self.packet.read("int:payload")
-                    self.packet.send(self.pktSB.KEEP_ALIVE, "int", (data,))
+                    self.packet.send(self.pktSB.KEEP_ALIVE, "int", (data["payload"],))
                 else:  # self.version >= mcpacket.PROTOCOL_1_8START: - future elif in case protocol changes again.
                     data = self.packet.read("varint:payload")
-                    self.packet.send(self.pktSB.KEEP_ALIVE, "varint", (data,))
+                    self.packet.send(self.pktSB.KEEP_ALIVE, "varint", (data["payload"],))
                 self.log.trace("(PROXY SERVER) -> Parsed KEEP_ALIVE packet with server state 3 (PLAY)")
                 return False
 
