@@ -103,6 +103,11 @@ class Client:
     def version(self):
         return self.clientversion
 
+    def send(self, packetid, xpr, payload):  # not supported... no docstring. For backwards compatability purposes only.
+        self.log.debug("deprecated client.send() called (by a plugin)")
+        self.packet.send(packetid, xpr, payload)
+        pass
+
     def connect_to_server(self, ip=None, port=None):
         """
         Args:

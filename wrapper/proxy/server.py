@@ -68,6 +68,11 @@ class Server:
             self.pktSB = mcpacket.ServerBound18
             self.pktCB = mcpacket.ClientBound18
 
+    def send(self, packetid, xpr, payload):  # not supported... no docstring. For backwards compatability purposes only.
+        self.log.debug("deprecated server.send() called (by a plugin)")
+        self.packet.send(packetid, xpr, payload)
+        pass
+
     def connect(self):
         if self.ip is None:
             self.server_socket.connect(("localhost", self.wrapper.config["Proxy"]["server-port"]))
