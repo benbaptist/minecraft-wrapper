@@ -99,6 +99,10 @@ class Client:
         for i in range(45):
             self.inventory[i] = None
 
+    @property
+    def version(self):
+        return self.clientversion
+
     def connect_to_server(self, ip=None, port=None):
         """
         Args:
@@ -626,7 +630,7 @@ class Client:
                 t_keepalives.daemon = True
                 t_keepalives.start()
 
-                #self.connect_to_server()
+                self.connect_to_server()
 
                 self.log.info("%s logged in (UUID: %s | IP: %s)", self.username, self.uuid.string, self.addr[0])
                 return False
@@ -727,7 +731,7 @@ class Client:
                 # send packet if server available and parsing passed.
                 if self.parse(pkid) and self.server:
                     if self.server.state == 3:
-                        self.server.sendRaw(original)
+                        self.server.packet.sendRaw(original)
         except Exception as ex:
             self.log.exception("Error in the [Client] -> [Server] handle (%s):", ex)
 

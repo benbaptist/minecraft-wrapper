@@ -93,13 +93,13 @@ class Server:
 
         if not self.client.isLocal and kill_client:  # Ben's cross-server hack
             self.client.isLocal = True
-            self.client.send(self.pktCB.CHANGE_GAME_STATE, "ubyte|float", (1, 0))  # "end raining"
-            self.client.send(self.pktCB.CHAT_MESSAGE, "string|byte", ("{text:'Disconnected from server: %s', color:red}" % reason.replace("'", "\\'"), 0))
+            self.client.packet.send(self.pktCB.CHANGE_GAME_STATE, "ubyte|float", (1, 0))  # "end raining"
+            self.client.packet.send(self.pktCB.CHAT_MESSAGE, "string|byte", ("{text:'Disconnected from server: %s', color:red}" % reason.replace("'", "\\'"), 0))
             self.client.connect()
             return
 
         # I may remove this later so the client can remain connected upon server disconnection
-        # self.client.send(0x02, "string|byte", (json.dumps({"text": "Disconnected from server. Reason: %s" % reason, "color": "red"}),0))
+        # self.client.packet.send(0x02, "string|byte", (json.dumps({"text": "Disconnected from server. Reason: %s" % reason, "color": "red"}),0))
         # self.abort = True
         # self.client.connect()
         if kill_client:
@@ -169,11 +169,11 @@ class Server:
                 #   when creating complex items like the minecraft chat object.
                 elif type(payload) == dict:  # if payload returns a "chat" protocol formatted dictionary http://wiki.vg/Chat
                     chatmsg = json.dumps(payload)
-                    self.client.send(self.pktCB.CHAT_MESSAGE, "string|byte", (chatmsg, position)) # send fake packet with modded payload
+                    self.client.packet.send(self.pktCB.CHAT_MESSAGE, "string|byte", (chatmsg, position)) # send fake packet with modded payload
                     return False  # reject the orginal packet (it will not reach the client)
                 elif type(payload) == str:  # if payload (plugin dev) returns a string-only object...
                     self.log.warning("player.Chatbox return payload sent as string")
-                    self.client.send(self.pktCB.CHAT_MESSAGE, "string|byte", (payload, position))
+                    self.client.packet.send(self.pktCB.CHAT_MESSAGE, "string|byte", (payload, position))
                     return False
                 else:  # no payload was spefified, nor was the packet rejected.. packet passes to the client (and his chat)
                     return True  # just gathering info with these parses.
@@ -220,7 +220,7 @@ class Server:
                 data = self.packet.read("varint:eid|position:location")
                 self.log.trace("(PROXY SERVER) -> Parsed USE_BED packet:\n%s", data)
                 if data["eid"] == self.eid:
-                    self.client.send(self.pktCB.USE_BED, "varint|position", (self.client.eid, data["location"]))
+                    self.client.packet.send(self.pktCB.USE_BED, "varint|position", (self.client.eid, data["location"]))
                     return False
                 return True
 
@@ -228,7 +228,7 @@ class Server:
                 data = self.packet.read("varint:eid|ubyte:animation")
                 self.log.trace("(PROXY SERVER) -> Parsed ANIMATION packet:\n%s", data)
                 if data["eid"] == self.eid:
-                    self.client.send(self.pktCB.ANIMATION, "varint|ubyte", (self.client.eid, data["animation"]))
+                    self.client.packet.send(self.pktCB.ANIMATION, "varint|ubyte", (self.client.eid, data["animation"]))
                     return False
                 return True
 
@@ -239,7 +239,7 @@ class Server:
                         data["item"] = 0
                     clientserverid = self.proxy.getClientByOfflineServerUUID(data["uuid"])
                     if clientserverid:
-                        self.client.send(self.pktCB.SPAWN_PLAYER, "varint|uuid|int|int|int|byte|byte|short|raw", (
+                        self.client.packet.send(self.pktCB.SPAWN_PLAYER, "varint|uuid|int|int|int|byte|byte|short|raw", (
                             data["eid"],
                             clientserverid.uuid, # This is an MCUUID object
                             data["x"],
@@ -256,7 +256,7 @@ class Server:
                     data = self.packet.read("varint:eid|uuid:uuid|int:x|int:y|int:z|byte:yaw|byte:pitch|rest:metadata")
                     clientserverid = self.proxy.getClientByOfflineServerUUID(data["uuid"])
                     if clientserverid:
-                        self.client.send(self.pktCB.SPAWN_PLAYER, "varint|uuid|int|int|int|byte|byte|raw", (
+                        self.client.packet.send(self.pktCB.SPAWN_PLAYER, "varint|uuid|int|int|int|byte|byte|raw", (
                             data["eid"],
                             clientserverid.uuid, # This is an MCUUID object
                             data["x"],
@@ -352,7 +352,7 @@ class Server:
                         self.client.riding = self.wrapper.server.world.getEntityByEID(vid)
                         self.wrapper.server.world.getEntityByEID(vid).rodeBy = self.client
                     if eid != self.client.eid:
-                        self.client.send(self.pktCB.ATTACH_ENTITY, "varint|varint|bool", (self.client.eid, vid, leash))
+                        self.client.packet.send(self.pktCB.ATTACH_ENTITY, "varint|varint|bool", (self.client.eid, vid, leash))
                         return False
 
             if pkid == self.pktCB.ENTITY_METADATA:
@@ -362,7 +362,7 @@ class Server:
                 data = self.packet.read("varint:eid|rest:metadata")
                 self.log.trace("(PROXY SERVER) -> Parsed ENTITY_METADATA packet:\n%s", data)
                 if data["eid"] == self.eid:
-                    self.client.send(self.pktCB.ENTITY_METADATA,"varint|raw", (self.client.eid, data["metadata"]))
+                    self.client.packet.send(self.pktCB.ENTITY_METADATA,"varint|raw", (self.client.eid, data["metadata"]))
                     return False
 
             if pkid == self.pktCB.ENTITY_EFFECT:
@@ -372,7 +372,7 @@ class Server:
                 data = self.packet.read("varint:eid|byte:effect_id|byte:amplifier|varint:duration|bool:hide")
                 self.log.trace("(PROXY SERVER) -> Parsed ENTITY_EFFECT packet:\n%s", data)
                 if data["eid"] == self.eid:
-                    self.client.send(self.pktCB.ENTITY_EFFECT, "varint|byte|byte|varint|bool", (self.client.eid, data["effect_id"], data["amplifier"], data["duration"], data["hide"]))
+                    self.client.packet.send(self.pktCB.ENTITY_EFFECT, "varint|byte|byte|varint|bool", (self.client.eid, data["effect_id"], data["amplifier"], data["duration"], data["hide"]))
                     return False
 
             if pkid == self.pktCB.REMOVE_ENTITY_EFFECT:
@@ -382,7 +382,7 @@ class Server:
                 data = self.packet.read("varint:eid|byte:effect_id")
                 self.log.trace("(PROXY SERVER) -> Parsed REMOVE_ENTITY_EFFECT packet:\n%s", data)
                 if data["eid"] == self.eid:
-                    self.client.send(self.pktCB.REMOVE_ENTITY_EFFECT, "varint|byte", (self.client.eid, data["effect_id"]))
+                    self.client.packet.send(self.pktCB.REMOVE_ENTITY_EFFECT, "varint|byte", (self.client.eid, data["effect_id"]))
                     return False
 
             if pkid == self.pktCB.ENTITY_PROPERTIES:
@@ -392,7 +392,7 @@ class Server:
                 data = self.packet.read("varint:eid|rest:properties")
                 self.log.trace("(PROXY SERVER) -> Parsed ENTITY_PROPERTIES packet:\n%s", data)
                 if data["eid"] == self.eid:
-                    self.client.send(self.pktCB.ENTITY_PROPERTIES, "varint|raw", (self.client.eid, data["properties"]))
+                    self.client.packet.send(self.pktCB.ENTITY_PROPERTIES, "varint|raw", (self.client.eid, data["properties"]))
                     return False
 
             # if pkid == self.pktCB.CHUNK_DATA:
@@ -484,25 +484,25 @@ class Server:
                             raw += self.client.packet.send_varInt(0)
                             raw += self.client.packet.send_varInt(0)
                             raw += self.client.packet.send_bool(False)
-                            self.client.send(self.pktCB.PLAYER_LIST_ITEM, "varint|varint|uuid|string|varint|raw", (0, 1, playerclient.uuid, playerclient.username, len(properties), raw))
+                            self.client.packet.send(self.pktCB.PLAYER_LIST_ITEM, "varint|varint|uuid|string|varint|raw", (0, 1, playerclient.uuid, playerclient.username, len(properties), raw))
                         elif head["action"] == 1:
                             data = self.packet.read("varint:gamemode")
                             self.log.trace("(PROXY SERVER) -> Parsed PLAYER_LIST_ITEM packet:\n%s", data)
-                            self.client.send(self.pktCB.PLAYER_LIST_ITEM, "varint|varint|uuid|varint", (1, 1, uuid, data["gamemode"]))
+                            self.client.packet.send(self.pktCB.PLAYER_LIST_ITEM, "varint|varint|uuid|varint", (1, 1, uuid, data["gamemode"]))
                         elif head["action"] == 2:
                             data = self.packet.read("varint:ping")
                             self.log.trace("(PROXY SERVER) -> Parsed PLAYER_LIST_ITEM packet:\n%s", data)
-                            self.client.send(self.pktCB.PLAYER_LIST_ITEM, "varint|varint|uuid|varint", (2, 1, uuid, data["ping"]))
+                            self.client.packet.send(self.pktCB.PLAYER_LIST_ITEM, "varint|varint|uuid|varint", (2, 1, uuid, data["ping"]))
                         elif head["action"] == 3:
                             data = self.packet.read("bool:has_display")
                             if data["has_display"]:
                                 data = self.packet.read("string:displayname")
                                 self.log.trace("(PROXY SERVER) -> Parsed PLAYER_LIST_ITEM packet:\n%s", data)
-                                self.client.send(self.pktCB.PLAYER_LIST_ITEM, "varint|varint|uuid|bool|string", (3, 1, uuid, True, data["displayname"]))
+                                self.client.packet.send(self.pktCB.PLAYER_LIST_ITEM, "varint|varint|uuid|bool|string", (3, 1, uuid, True, data["displayname"]))
                             else:
-                                self.client.send(self.pktCB.PLAYER_LIST_ITEM, "varint|varint|uuid|varint", (3, 1, uuid, False))
+                                self.client.packet.send(self.pktCB.PLAYER_LIST_ITEM, "varint|varint|uuid|varint", (3, 1, uuid, False))
                         elif head["action"] == 4:
-                            self.client.send(self.pktCB.PLAYER_LIST_ITEM, "varint|varint|uuid", (4, 1, uuid))
+                            self.client.packet.send(self.pktCB.PLAYER_LIST_ITEM, "varint|varint|uuid", (4, 1, uuid))
                         return False
             if pkid == self.pktCB.DISCONNECT:
                 message = self.packet.read("json:json")["json"]
