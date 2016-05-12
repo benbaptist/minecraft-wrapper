@@ -34,7 +34,6 @@ class Client:
         Client receives "SERVER BOUND" packets from client.  These are what get parsed (SERVER BOUND format).
         'server.packet.send' - sends a packet to the server (use SERVER BOUND packet format)
         'self.packet.send' - sends a packet back to the client (use CLIENT BOUND packet format)
-        This part of proxy 'pretends' to be the server interacting with the client.
 
         Args: (self explanatory, hopefully)
             sock:
@@ -97,8 +96,12 @@ class Client:
         self.clientSettingsSent = False
         self.skinBlob = {}
 
-        for i in range(45):  # TODO Py2-3
+        for i in range(45):
             self.inventory[i] = None
+
+    @property
+    def version(self):
+        return self.clientversion
 
     def connect_to_server(self, ip=None, port=None):
         """
@@ -119,7 +122,7 @@ class Client:
                 self.server.close(kill_client=False)
                 self.server.client = None
                 self.server = self.server_temp
-            except Exception as e:
+            except OSError:
                 self.server_temp.close(kill_client=False)
                 self.server_temp = None
                 self.packet.send(self.pktCB.CHAT_MESSAGE, "string|byte", ("""{"text": "Could not connect to that server!", "color": "red", "bold": "true"}""", 0))
@@ -156,8 +159,8 @@ class Client:
         self.abort = True
         try:
             self.socket.close()
-        except Exception as e:
-            self.log.debug("Client socket already closed!")
+        except OSError:
+            self.log.debug("Client socket for %s already closed!", self.username)
         if self.server:
             self.server.abort = True
             self.server.close()
@@ -167,7 +170,7 @@ class Client:
 
     def disconnect(self, message):
         try:
-            message = json.loads(message)
+            message = json.loads(message["string"])
         except ValueError: # optionally use json
             pass
 
@@ -214,20 +217,16 @@ class Client:
 
     def parse(self, pkid):  # server - bound parse ("Client" class connection)
         if self.state == ClientState.PLAY:
-
             # TODO - elif these packet parsers
-            if pkid == self.pktCB.KEEP_ALIVE:
+            if pkid == self.pktSB.KEEP_ALIVE:
                 if self.serverversion < mcpacket.PROTOCOL_1_8START:
                     data = self.packet.read("int:payload")
-                    self.packet.send(self.pktSB.KEEP_ALIVE, "int", (pkid,))
                 else:  # self.version >= mcpacket.PROTOCOL_1_8START:
                     data = self.packet.read("varint:payload")
-                    self.packet.send(self.pktSB.KEEP_ALIVE, "varint", (pkid,))
                 self.log.trace("(PROXY CLIENT) -> Received KEEP_ALIVE from client:\n%s", data)
                 if data["payload"] == self.keepalive_val:
                     self.time_client_responded = time.time()
                 return False
-
             if pkid == self.pktSB.CHAT_MESSAGE:
                 data = self.packet.read("string:message")
                 self.log.trace("(PROXY CLIENT) -> Parsed CHAT_MESSAGE packet with client state PLAY:\n%s", data)
@@ -517,7 +516,8 @@ class Client:
                     data = self.packet.read("bytearray_short:shared_secret|bytearray_short:verify_token")
                 else:
                     data = self.packet.read("bytearray:shared_secret|bytearray:verify_token")
-                self.log.trace("(PROXY CLIENT) -> Parsed 0x01 packet with client state 4 (ENCRYPTION RESPONSE):\n%s", data)
+                self.log.trace("(PROXY CLIENT) -> Parsed 0x01 ENCRYPTION RESPONSE packet with client state LOGIN:\n%s",
+                               data)
 
                 sharedSecret = encryption.decrypt_shared_secret(data["shared_secret"], self.privateKey)
                 verifyToken = encryption.decrypt_shared_secret(data["verify_token"], self.privateKey)
@@ -621,7 +621,6 @@ class Client:
                 }):
                     self.disconnect("Login denied.")
                     return False
-                print(self.uuid.string)
                 self.packet.send(0x02, "string|string", (self.uuid.string, self.username))
                 self.time_client_responded = time.time()
                 self.state = ClientState.PLAY
@@ -631,9 +630,10 @@ class Client:
                 t_keepalives.daemon = True
                 t_keepalives.start()
 
-                self.log.info("%s logged in (UUID: %s | IP: %s)", self.username, self.uuid.string, self.addr[0])
-
                 self.connect_to_server()
+
+                self.log.info("%s logged in (UUID: %s | IP: %s)", self.username, self.uuid.string, self.addr[0])
+                return False
 
         elif self.state == ClientState.STATUS:
             if pkid == 0x01:
@@ -731,13 +731,12 @@ class Client:
                 # send packet if server available and parsing passed.
                 if self.parse(pkid) and self.server:
                     if self.server.state == 3:
-                        self.server.sendRaw(original)
+                        self.server.packet.sendRaw(original)
         except Exception as ex:
             self.log.exception("Error in the [Client] -> [Server] handle (%s):", ex)
 
     def _keep_alive_tracker(self):
         # send keep alives to client and send client settings to server.
-
         while not self.abort:
             time.sleep(1)
             while self.state == ClientState.PLAY:
@@ -773,7 +772,7 @@ class Client:
                 # ckeck for active client keep alive status:
                 if time.time() - self.time_client_responded > 20:  # server can allow up to 30 seconds for response
                     self.state = ClientState.HANDSHAKE
-                    self.log.debug("Closing client due to lack of keepalive response")
+                    self.log.debug("Closing %s's client due to lack of keepalive response", "unknown")
                     self.close()
 
 class ClientState:
