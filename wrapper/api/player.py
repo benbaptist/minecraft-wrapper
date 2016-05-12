@@ -42,7 +42,7 @@ class Player:
         self.serverUuid = self.wrapper.getUUIDByUsername(username)
 
         self.ipaddress =  "127.0.0.0"
-        self.operatordict = self._readOpsFile()
+        self.operatordict = self._read_ops_file()
 
         self.client = None
         self.clientPackets = mcpacket.ClientBound18
@@ -91,7 +91,7 @@ class Player:
 
     @property
     def uuid(self):
-        return self.clientUuid
+        return self.mojangUuid
 
     def _track(self):
         """
@@ -101,6 +101,7 @@ class Player:
         while not self.abort:
             self.data["logins"][int(self.loggedIn)] = int(time.time())
             time.sleep(60)
+
     @staticmethod
     def _processOldColorCodes(message):
         """
@@ -114,7 +115,7 @@ class Player:
         return message
 
     @staticmethod
-    def _readOpsFile():
+    def _read_ops_file():
         """
         Internal private method - Not intended as a part of the public player object API
         Returns: contents of ops.json as a dict
@@ -199,9 +200,9 @@ class Player:
         Probably broken right now.
         """
         if self.getClient().version < mcpacket.PROTOCOL_1_8START:
-            self.client.send(0x3f, "string|bytearray", ("MC|RPack", url))
+            self.client.packet.send(0x3f, "string|bytearray", ("MC|RPack", url))
         else:
-            self.client.send(self.clientPackets.RESOURCE_PACK_SEND,
+            self.client.packet.send(self.clientPackets.RESOURCE_PACK_SEND,
                              "string|string", (url, hashrp))
 
     def isOp(self):
@@ -213,7 +214,7 @@ class Player:
         (ops.json) at each call!  Use of isOP_fast() is recommended instead.
         """
 
-        operators = self._readOpsFile()
+        operators = self._read_ops_file()
         for ops in operators:
             if ops["uuid"] == self.serverUuid.string or ops["name"] == self.username:
                 return True
@@ -240,7 +241,8 @@ class Player:
 
     def actionMessage(self, message=""):
         if self.getClient().version > mcpacket.PROTOCOL_1_8START:
-            self.getClient().send(self.clientPackets.CHAT_MESSAGE, "string|byte", (json.dumps({"text": self._processOldColorCodes(message)}), 2))
+            self.getClient().packet.send(self.clientPackets.CHAT_MESSAGE, "string|byte",
+                                         (json.dumps({"text": self._processOldColorCodes(message)}), 2))
 
     def setVisualXP(self, progress, level, total):
         """
@@ -255,9 +257,9 @@ class Player:
 
         """
         if self.getClient().version > mcpacket.PROTOCOL_1_8START:
-            self.getClient().send(self.clientPackets.SET_EXPERIENCE, "float|varint|varint", (progress, level, total))
+            self.getClient().packet.send(self.clientPackets.SET_EXPERIENCE, "float|varint|varint", (progress, level, total))
         else:
-            self.getClient().send(self.clientPackets.SET_EXPERIENCE, "float|short|short", (progress, level, total))
+            self.getClient().packet.send(self.clientPackets.SET_EXPERIENCE, "float|short|short", (progress, level, total))
 
     def openWindow(self, windowtype, title, slots):
         """
@@ -292,7 +294,7 @@ class Player:
             self.getClient().windowCounter = 2
         # TODO Test what kind of field title is (json or text)
         if self.getClient().version > mcpacket.PROTOCOL_1_8START:
-            self.getClient().send(
+            self.getClient().packet.send(
                 self.clientPackets.OPEN_WINDOW, "ubyte|string|json|ubyte", (
                     self.getClient().windowCounter, windowtype, {"text": title}, slots))
         return None  # return a Window object soon
@@ -304,7 +306,7 @@ class Player:
         Allow plugins to get the players client plugin list per their client version
         e.g.:
         packets = player.getClientPacketList()
-        player.client.send(packets.PLAYER_ABILITIES, "byte|float|float", (0x0F, 1, 1))
+        player.client.packet.send(packets.PLAYER_ABILITIES, "byte|float|float", (0x0F, 1, 1))
         """
         return self.clientPackets
 
@@ -340,9 +342,9 @@ class Player:
         bitfield = self.godmode | self.creative | setfly
         # Note in versions before 1.8, field of view is the walking speed for client (still a float)
         #   Server field of view is still walking speed
-        self.getClient().send(self.clientPackets.PLAYER_ABILITIES, "byte|float|float",
+        self.getClient().packet.send(self.clientPackets.PLAYER_ABILITIES, "byte|float|float",
                               (bitfield, self.fly_speed, self.field_of_view))
-        self.getClient().server.send(self.serverPackets.PLAYER_ABILITIES, "byte|float|float",
+        self.getClient().server.packet.send(self.serverPackets.PLAYER_ABILITIES, "byte|float|float",
                                      (bitfield, self.fly_speed, self.field_of_view))
 
 
@@ -404,7 +406,8 @@ class Player:
         while len(itemsToProcess) > 0:
             parseparent = itemsToProcess.pop(0)
             for groupPerm in self.permissions["groups"][parseparent]["permissions"]:
-                if (groupPerm in self.permissions["groups"]) and self.permissions["groups"][parseparent]["permissions"][groupPerm] and (groupPerm not in allgroups):
+                if (groupPerm in self.permissions["groups"]) and \
+                        self.permissions["groups"][parseparent]["permissions"][groupPerm] and (groupPerm not in allgroups):
                     allgroups.append(groupPerm)
                     itemsToProcess.append(groupPerm)
         for group in allgroups:
