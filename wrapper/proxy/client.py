@@ -130,7 +130,12 @@ class Client:
             except OSError:
                 self.server_temp.close(kill_client=False)
                 self.server_temp = None
-                self.packet.send(self.pktCB.CHAT_MESSAGE, "string|byte", ("""{"text": "Could not connect to that server!", "color": "red", "bold": "true"}""", 0))
+                if self.state == ClientState.PLAY:
+                    self.packet.send(self.pktCB.CHAT_MESSAGE, "string",
+                                 ("""{"text": "Could not connect to that server!", "color": "red", "bold": "true"}""", 0))
+                else:
+                    self.packet.send(0x00, "string",
+                                 ("""{"text": "Could not connect to that server!", "color": "red", "bold": "true"}""",))
                 self.address = None
                 return
         else:
@@ -145,15 +150,19 @@ class Client:
 
         if self.config["Proxy"]["spigot-mode"]:
             payload = "localhost\x00%s\x00%s" % (self.addr[0], self.uuid.hex)
-            self.server.packet.send(0x00, "varint|string|ushort|varint", (self.clientversion, payload, self.config["Proxy"]["server-port"], 2))
+            self.server.packet.send(0x00, "varint|string|ushort|varint", (self.clientversion, payload,
+                                                                          self.config["Proxy"]["server-port"], 2))
         else:
             if UNIVERSAL_CONNECT:
-                self.server.packet.send(0x00, "varint|string|ushort|varint", (self.wrapper.server.protocolVersion, "localhost", self.config["Proxy"]["server-port"], 2))
+                self.server.packet.send(0x00, "varint|string|ushort|varint",
+                                        (self.wrapper.server.protocolVersion, "localhost",
+                                         self.config["Proxy"]["server-port"], 2))
             else:
-                self.server.packet.send(0x00, "varint|string|ushort|varint", (self.clientversion, "localhost", self.config["Proxy"]["server-port"], 2))
+                self.server.packet.send(0x00, "varint|string|ushort|varint",
+                                        (self.clientversion, "localhost", self.config["Proxy"]["server-port"], 2))
         self.server.packet.send(0x00, "string", (self.username,))
 
-        if self.clientversion > mcpacket.PROTOCOL_1_8START:  # Ben's anti-rain hack for cross server, lobby return, connections
+        if self.clientversion > mcpacket.PROTOCOL_1_8START:  # anti-rain hack for cross server, lobby return, connections
             if self.config["Proxy"]["online-mode"]:
                 self.packet.send(self.pktCB.CHANGE_GAME_STATE, "ubyte|float", (1, 0))
                 pass
@@ -198,7 +207,8 @@ class Client:
         return False
 
     def editSign(self, position, line1, line2, line3, line4):
-        self.server.packet.send(self.pktSB.PLAYER_UPDATE_SIGN, "position|string|string|string|string", (position, line1, line2, line3, line4))
+        self.server.packet.send(self.pktSB.PLAYER_UPDATE_SIGN, "position|string|string|string|string",
+                                (position, line1, line2, line3, line4))
 
     def message(self, string):
         self.server.packet.send(self.pktSB.CHAT_MESSAGE, "string", (string,))
@@ -222,7 +232,6 @@ class Client:
 
     def parse(self, pkid):  # server - bound parse ("Client" class connection)
         if self.state == ClientState.PLAY:
-            # TODO - elif these packet parsers
             if pkid == self.pktSB.KEEP_ALIVE:
                 if self.serverversion < mcpacket.PROTOCOL_1_8START:
                     data = self.packet.read("int:payload")
@@ -232,7 +241,7 @@ class Client:
                 if data["payload"] == self.keepalive_val:
                     self.time_client_responded = time.time()
                 return False
-            if pkid == self.pktSB.CHAT_MESSAGE:
+            elif pkid == self.pktSB.CHAT_MESSAGE:
                 data = self.packet.read("string:message")
                 self.log.trace("(PROXY CLIENT) -> Parsed CHAT_MESSAGE packet with client state PLAY:\n%s", data)
                 if data is None:
@@ -268,28 +277,29 @@ class Client:
                     return False
                 except Exception as e:
                     self.log.exception("Formulating CHAT_MESSAGE failed (%s)", e)
+                return True
 
-                # if self.getPlayerObject().hasGroup("test"):
-                #     pass
-
-            if pkid == self.pktSB.PLAYER_POSITION: # player position
+            elif pkid == self.pktSB.PLAYER_POSITION: # player position
                 data = self.packet.read("double:x|double:y|double:z|bool:on_ground")
                 self.position = (data["x"], data["y"], data["z"])
                 self.log.trace("(PROXY CLIENT) -> Parsed PLAYER_POSITION packet:\n%s", data)
+                return True
 
-            if pkid == self.pktSB.PLAYER_POSLOOK: # player position and look
+            elif pkid == self.pktSB.PLAYER_POSLOOK: # player position and look
                 data = self.packet.read("double:x|double:y|double:z|float:yaw|float:pitch|bool:on_ground")
                 self.position = (data["x"], data["y"], data["z"])
                 self.head = (data["yaw"], data["pitch"])
                 self.log.trace("(PROXY CLIENT) -> Parsed PLAYER_POSLOOK packet:\n%s", data)
+                return True
 
-            if pkid == self.pktSB.PLAYER_LOOK: # Player Look
+            elif pkid == self.pktSB.PLAYER_LOOK: # Player Look
                 data = self.packet.read("float:yaw|float:pitch|bool:on_ground")
                 yaw, pitch = data["yaw"], data["pitch"]
                 self.head = (yaw, pitch)
                 self.log.trace("(PROXY CLIENT) -> Parsed PLAYER_LOOK packet:\n%s", data)
+                return True
 
-            if pkid == self.pktSB.PLAYER_DIGGING: # Player Block Dig
+            elif pkid == self.pktSB.PLAYER_DIGGING: # Player Block Dig
                 if not self.isLocal:
                     return True
                 if self.clientversion < mcpacket.PROTOCOL_1_8START:
@@ -338,8 +348,9 @@ class Client:
                             "action": "finish_using"
                         }):
                             return False
+                return True
 
-            if pkid == self.pktSB.PLAYER_BLOCK_PLACEMENT: # Player Block Placement
+            elif pkid == self.pktSB.PLAYER_BLOCK_PLACEMENT: # Player Block Placement
                 player = self.getPlayerObject()
                 #curposx = False  # pre- 1.8 - not used by wrapper
                 #curposy = False
@@ -403,13 +414,14 @@ class Client:
                     "position": position,
                     "clickposition": clickposition,
                     "hand": hand,
-                    "item": helditem
-                }):
-                    return False
-                if self.server.state != 3:
+                    "item": helditem}):
                     return False
 
-            if pkid == self.pktSB.USE_ITEM:
+                if self.server.state != ClientState.PLAY:  # PLAY is some in both
+                    return False
+                return True
+
+            elif pkid == self.pktSB.USE_ITEM:
                 if self.isLocal is not True:
                     return True
                 data = self.packet.read("rest:pack")
@@ -428,16 +440,18 @@ class Client:
                             "action": "useitem"
                         }):
                             return False
+                return True
 
-            if pkid == self.pktSB.HELD_ITEM_CHANGE: # Held Item Change
+            elif pkid == self.pktSB.HELD_ITEM_CHANGE: # Held Item Change
                 slot = self.packet.read("short:short")["short"]
                 self.log.trace("(PROXY CLIENT) -> Parsed HELD_ITEM_CHANGE packet:\n%s", slot)
                 if 9 > self.slot > -1:
                     self.slot = slot
                 else:
                     return False
+                return True
 
-            if pkid == self.pktSB.PLAYER_UPDATE_SIGN: # player update sign
+            elif pkid == self.pktSB.PLAYER_UPDATE_SIGN: # player update sign
                 if not self.isLocal:
                     return True  # ignore signs from child wrapper/server instance
                 if self.clientversion < mcpacket.PROTOCOL_1_8START:
@@ -471,30 +485,34 @@ class Client:
                 self.editSign(position, l1, l2, l3, l4)
                 return False
 
-            if pkid == self.pktSB.CLIENT_SETTINGS: # read Client Settings
+            elif pkid == self.pktSB.CLIENT_SETTINGS: # read Client Settings
                 if self.clientversion < mcpacket.PROTOCOL_1_9START:
-                    data = self.packet.read("string:locale|byte:view_distance|byte:chat_mode|bool:chat_colors|ubyte:displayed_skin_parts")
+                    data = self.packet.read("string:locale|byte:view_distance|byte:chat_mode|bool:chat_colors|"
+                                            "ubyte:displayed_skin_parts")
                 else:
-                    data = self.packet.read("string:locale|byte:view_distance|varint:chat_mode|bool:chat_colors|ubyte:displayed_skin_parts|varint:main_hand")
+                    data = self.packet.read("string:locale|byte:view_distance|varint:chat_mode|bool:chat_colors|"
+                                            "ubyte:displayed_skin_parts|varint:main_hand")
                 self.clientSettings = data
                 self.log.trace("(PROXY CLIENT) -> Parsed CLIENT_SETTINGS packet:\n%s", data)
 
-            if pkid == self.pktSB.CLICK_WINDOW: # click window
+            elif pkid == self.pktSB.CLICK_WINDOW: # click window
                 data = self.packet.read("ubyte:wid|short:slot|byte:button|short:action|byte:mode|slot:clicked")
                 data['player'] = self.getPlayerObject()
                 self.log.trace("(PROXY CLIENT) -> Parsed CLICK_WINDOW packet:\n%s", data)
                 if not self.wrapper.callEvent("player.slotClick", data):
                     return False
+                return True
 
-            if pkid == self.pktSB.SPECTATE: # Spectate - convert packet to local server UUID
+            elif pkid == self.pktSB.SPECTATE: # Spectate - convert packet to local server UUID
                 data = self.packet.read("uuid:target_player")
                 self.log.trace("(PROXY CLIENT) -> Parsed SPECTATE packet:\n%s", data)
                 for client in self.proxy.clients:
                     if data["target_player"].hex == client.uuid.hex:
-                        self.server.packet.send(self.pktSB.SPECTATE, "uuid", ([client.serverUuid],)) # Convert SPECTATE packet...
+                        self.server.packet.send(self.pktSB.SPECTATE, "uuid", ([client.serverUuid],))
                         return False
-            # no packet parsed - just pass to server...
-            return True
+            else:
+                # no packet parsed - just pass to server...
+                return True
 
         elif self.state == ClientState.LOGIN:
             if pkid == 0x00:  # login start packet
@@ -516,7 +534,7 @@ class Client:
                     self.log.info("%s logged in (IP: %s)", self.username, self.addr[0])
                 self.log.trace("(PROXY CLIENT) -> Parsed 0x00 packet with client state LOGIN: \n%s", data)
                 return False
-            if pkid == 0x01:
+            elif pkid == 0x01:
                 if self.wrapper.server.protocolVersion < 6:
                     data = self.packet.read("bytearray_short:shared_secret|bytearray_short:verify_token")
                 else:
@@ -631,13 +649,17 @@ class Client:
                 self.state = ClientState.PLAY
 
                 # This will keep client connected regardless of server status (unless we explicitly disconnect it)
-                t_keepalives = threading.Thread(target=self._keep_alive_tracker, args=())
+                t_keepalives = threading.Thread(target=self._keep_alive_tracker, kwargs={'playername': self.username})
                 t_keepalives.daemon = True
                 t_keepalives.start()
 
                 self.connect_to_server()
 
                 self.log.info("%s logged in (UUID: %s | IP: %s)", self.username, self.uuid.string, self.addr[0])
+                return False
+            else:
+                # Unknown packet for login; return to Handshake:
+                self.state = ClientState.HANDSHAKE
                 return False
 
         elif self.state == ClientState.STATUS:
@@ -647,7 +669,7 @@ class Client:
                 self.packet.send(0x01, "long", (data["payload"],))
                 self.state = ClientState.HANDSHAKE
                 return False
-            if pkid == 0x00:
+            elif pkid == 0x00:
                 self.log.trace("(PROXY CLIENT) -> Received '0x00' request (no payload) for list packet in STATUS mode")
                 sample = []
                 for i in self.wrapper.server.players:
@@ -679,9 +701,10 @@ class Client:
                     self.MOTD["favicon"] = self.wrapper.server.serverIcon
                 self.packet.send(0x00, "string", (json.dumps(self.MOTD),))
                 return False
-            # Unknown packet type, return to Handshake:
-            self.state = ClientState.HANDSHAKE
-            return False
+            else:
+                # Unknown packet type, return to Handshake:
+                self.state = ClientState.HANDSHAKE
+                return False
 
         elif self.state == ClientState.HANDSHAKE:
             if pkid == 0x00:
@@ -713,6 +736,9 @@ class Client:
                         return False
                 self.disconnect("Invalid client state request for handshake: '%d'" % data["state"])
                 return False
+        else:
+            self.log.error("(PROXY CLIENT) Unknown gamestate encountered: %s", self.state)
+            return False
 
     def handle(self):
         t = threading.Thread(target=self.flush, args=())
@@ -740,7 +766,7 @@ class Client:
         except Exception as ex:
             self.log.exception("Error in the [Client] -> [Server] handle (%s):", ex)
 
-    def _keep_alive_tracker(self):
+    def _keep_alive_tracker(self, playername):
         # send keep alives to client and send client settings to server.
         while not self.abort:
             time.sleep(1)
@@ -777,7 +803,7 @@ class Client:
                 # ckeck for active client keep alive status:
                 if time.time() - self.time_client_responded > 20:  # server can allow up to 30 seconds for response
                     self.state = ClientState.HANDSHAKE
-                    self.log.debug("Closing %s's client due to lack of keepalive response", "unknown")
+                    self.log.debug("Closing %s's client thread due to lack of keepalive response", playername)
                     self.close()
 
 class ClientState:

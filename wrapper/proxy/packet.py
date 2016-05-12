@@ -61,10 +61,11 @@ class Packet:
         self.abort = True
 
     def hexdigest(self, sh):
-        try:
-            d = long(sh.hexdigest(), 16)
-        except NameError:  # Py3
+        if PY3:
             d = int(sh.hexdigest(), 16)
+        else:
+            d = long(sh.hexdigest(), 16)
+
         if d >> 39 * 4 & 0x8:
             return "-%x" % ((-d) & (2 ** (40 * 4) - 1))
         return "%x" % d
