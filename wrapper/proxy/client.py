@@ -214,7 +214,7 @@ class Client:
     def parse(self, pkid):  # server - bound parse ("Client" class connection)
         if self.state == ClientState.PLAY:
             # TODO - elif these packet parsers
-            if pkid == self.pktCB.KEEP_ALIVE:
+            if pkid == self.pktSB.KEEP_ALIVE:
                 if self.serverversion < mcpacket.PROTOCOL_1_8START:
                     data = self.packet.read("int:payload")
                 else:  # self.version >= mcpacket.PROTOCOL_1_8START:
