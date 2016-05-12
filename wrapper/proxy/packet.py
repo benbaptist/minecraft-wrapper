@@ -3,13 +3,9 @@
 import socket
 
 
-# Py2-3
-#try:
-#    import ConfigParser  # only used to set version
-#    PY3 = False
-#except ImportError:
-#    ConfigParser = False
-#    PY3 = True
+# Py3-2
+import sys
+PY3 = sys.version_info > (3,)
 
 import io as io
 

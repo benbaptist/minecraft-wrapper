@@ -32,8 +32,9 @@ class Client:
     def __init__(self, sock, addr, wrapper, publicKey, privateKey, proxy):
         """
         Client receives "SERVER BOUND" packets from client.  These are what get parsed (SERVER BOUND format).
-        'server.send' - sends a packet to the server (use SERVER BOUND packet format)
+        'server.packet.send' - sends a packet to the server (use SERVER BOUND packet format)
         'self.packet.send' - sends a packet back to the client (use CLIENT BOUND packet format)
+        This part of proxy 'pretends' to be the server interacting with the client.
 
         Args: (self explanatory, hopefully)
             sock:
@@ -78,7 +79,6 @@ class Client:
         self.address = None
         self.ip = None  # this will gather the client IP for use by player.py
 
-        self.handshake = False
         self.state = ClientState.HANDSHAKE
 
         # Items gathered for player info for player api
@@ -137,13 +137,13 @@ class Client:
 
         if self.config["Proxy"]["spigot-mode"]:
             payload = "localhost\x00%s\x00%s" % (self.addr[0], self.uuid.hex)
-            self.server.send(0x00, "varint|string|ushort|varint", (self.clientversion, payload, self.config["Proxy"]["server-port"], 2))
+            self.server.packet.send(0x00, "varint|string|ushort|varint", (self.clientversion, payload, self.config["Proxy"]["server-port"], 2))
         else:
             if UNIVERSAL_CONNECT:
-                self.server.send(0x00, "varint|string|ushort|varint", (self.wrapper.server.protocolVersion, "localhost", self.config["Proxy"]["server-port"], 2))
+                self.server.packet.send(0x00, "varint|string|ushort|varint", (self.wrapper.server.protocolVersion, "localhost", self.config["Proxy"]["server-port"], 2))
             else:
-                self.server.send(0x00, "varint|string|ushort|varint", (self.clientversion, "localhost", self.config["Proxy"]["server-port"], 2))
-        self.server.send(0x00, "string", (self.username,))
+                self.server.packet.send(0x00, "varint|string|ushort|varint", (self.clientversion, "localhost", self.config["Proxy"]["server-port"], 2))
+        self.server.packet.send(0x00, "string", (self.username,))
 
         if self.clientversion > mcpacket.PROTOCOL_1_8START:  # Ben's anti-rain hack for cross server, lobby return, connections
             if self.config["Proxy"]["online-mode"]:
@@ -167,8 +167,8 @@ class Client:
 
     def disconnect(self, message):
         try:
-            message = json.loads(message["string"])
-        except Exception as e:
+            message = json.loads(message)
+        except ValueError: # optionally use json
             pass
 
         if self.state == ClientState.PLAY:
@@ -214,13 +214,20 @@ class Client:
 
     def parse(self, pkid):  # server - bound parse ("Client" class connection)
         if self.state == ClientState.PLAY:
+
             # TODO - elif these packet parsers
-            if pkid == self.pktSB.KEEP_ALIVE:
-                data = self.packet.read("varint:payload")
+            if pkid == self.pktCB.KEEP_ALIVE:
+                if self.serverversion < mcpacket.PROTOCOL_1_8START:
+                    data = self.packet.read("int:payload")
+                    self.packet.send(self.pktSB.KEEP_ALIVE, "int", (pkid,))
+                else:  # self.version >= mcpacket.PROTOCOL_1_8START:
+                    data = self.packet.read("varint:payload")
+                    self.packet.send(self.pktSB.KEEP_ALIVE, "varint", (pkid,))
                 self.log.trace("(PROXY CLIENT) -> Received KEEP_ALIVE from client:\n%s", data)
                 if data["payload"] == self.keepalive_val:
                     self.time_client_responded = time.time()
                 return False
+
             if pkid == self.pktSB.CHAT_MESSAGE:
                 data = self.packet.read("string:message")
                 self.log.trace("(PROXY CLIENT) -> Parsed CHAT_MESSAGE packet with client state PLAY:\n%s", data)
@@ -624,10 +631,9 @@ class Client:
                 t_keepalives.daemon = True
                 t_keepalives.start()
 
-                # self.connect_to_server()
-
                 self.log.info("%s logged in (UUID: %s | IP: %s)", self.username, self.uuid.string, self.addr[0])
-                return False
+
+                self.connect_to_server()
 
         elif self.state == ClientState.STATUS:
             if pkid == 0x01:
@@ -711,7 +717,7 @@ class Client:
             while not self.abort:
                 try:
                     pkid, original = self.packet.grabPacket()
-                except EOFError as eof:
+                except EOFError:
                     # This is not an error.. It means the client disconnected and is not sending packet stream anymore
                     self.log.debug("Client Packet steam ended (EOF)")
                     self.close()
@@ -731,6 +737,7 @@ class Client:
 
     def _keep_alive_tracker(self):
         # send keep alives to client and send client settings to server.
+
         while not self.abort:
             time.sleep(1)
             while self.state == ClientState.PLAY:
@@ -765,6 +772,7 @@ class Client:
                     self.time_server_pinged = time.time()
                 # ckeck for active client keep alive status:
                 if time.time() - self.time_client_responded > 20:  # server can allow up to 30 seconds for response
+                    self.state = ClientState.HANDSHAKE
                     self.log.debug("Closing client due to lack of keepalive response")
                     self.close()
 
