@@ -76,7 +76,7 @@ class Server:
             self.client.isLocal = False
 
         self.packet = Packet(self.server_socket, self)
-        self.packet.version = self.client.version
+        self.packet.version = self.client.clientversion
 
         t = threading.Thread(target=self.flush, args=())
         t.daemon = True
@@ -88,7 +88,7 @@ class Server:
         self.packet = None
         try:
             self.server_socket.close()
-        except Exception as e:
+        except OSError:
             pass
 
         if not self.client.isLocal and kill_client:  # Ben's cross-server hack
@@ -565,7 +565,7 @@ class Server:
                     self.close()
                     break
                 if self.parse(pkid) and self.client:
-                    self.client.sendRaw(original)
+                    self.client.packet.sendRaw(original)
         except Exception as e2:
             self.log.exception("Error in the [SERVER] -> [CLIENT] handle (%s):", e2)
             self.close()

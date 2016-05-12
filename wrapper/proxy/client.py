@@ -18,6 +18,7 @@ from proxy.server import Server
 from proxy.packet import Packet
 from core.mcuuid import MCUUID
 
+
 # wrapper.py will check for requests to run proxy mode
 try:
     import requests
@@ -97,8 +98,12 @@ class Client:
         self.clientSettingsSent = False
         self.skinBlob = {}
 
-        for i in range(45):  # TODO Py2-3
+        for i in range(45):
             self.inventory[i] = None
+
+    @property
+    def version(self):
+        return self.clientversion
 
     def connect_to_server(self, ip=None, port=None):
         """
@@ -119,7 +124,7 @@ class Client:
                 self.server.close(kill_client=False)
                 self.server.client = None
                 self.server = self.server_temp
-            except Exception as e:
+            except OSError:
                 self.server_temp.close(kill_client=False)
                 self.server_temp = None
                 self.packet.send(self.pktCB.CHAT_MESSAGE, "string|byte", ("""{"text": "Could not connect to that server!", "color": "red", "bold": "true"}""", 0))
@@ -156,8 +161,8 @@ class Client:
         self.abort = True
         try:
             self.socket.close()
-        except Exception as e:
-            self.log.debug("Client socket already closed!")
+        except OSError:
+            self.log.debug("Client socket for %s already closed!", self.username)
         if self.server:
             self.server.abort = True
             self.server.close()
@@ -517,7 +522,8 @@ class Client:
                     data = self.packet.read("bytearray_short:shared_secret|bytearray_short:verify_token")
                 else:
                     data = self.packet.read("bytearray:shared_secret|bytearray:verify_token")
-                self.log.trace("(PROXY CLIENT) -> Parsed 0x01 packet with client state 4 (ENCRYPTION RESPONSE):\n%s", data)
+                self.log.trace("(PROXY CLIENT) -> Parsed 0x01 ENCRYPTION RESPONSE packet with client state LOGIN:\n%s",
+                               data)
 
                 sharedSecret = encryption.decrypt_shared_secret(data["shared_secret"], self.privateKey)
                 verifyToken = encryption.decrypt_shared_secret(data["verify_token"], self.privateKey)
@@ -621,19 +627,21 @@ class Client:
                 }):
                     self.disconnect("Login denied.")
                     return False
-                print(self.uuid.string)
                 self.packet.send(0x02, "string|string", (self.uuid.string, self.username))
                 self.time_client_responded = time.time()
                 self.state = ClientState.PLAY
 
+                self.log.info("%s logged in (UUID: %s | IP: %s)", self.username, self.uuid.string, self.addr[0])
+                #self.packet.send(self.pktCB.CHAT_MESSAGE, "string|byte",
+                #                 ("""{"text": "Welcome %s. Connecting...", "color": "aqua", "bold": "false"}""" %
+                #                  self.username, 0))
+
                 # This will keep client connected regardless of server status (unless we explicitly disconnect it)
-                t_keepalives = threading.Thread(target=self._keep_alive_tracker, args=())
+                t_keepalives = threading.Thread(target=self._keep_alive_tracker(), args=())
                 t_keepalives.daemon = True
                 t_keepalives.start()
 
-                self.log.info("%s logged in (UUID: %s | IP: %s)", self.username, self.uuid.string, self.addr[0])
-
-                self.connect_to_server()
+                #self.connect_to_server()
 
         elif self.state == ClientState.STATUS:
             if pkid == 0x01:
@@ -737,7 +745,6 @@ class Client:
 
     def _keep_alive_tracker(self):
         # send keep alives to client and send client settings to server.
-
         while not self.abort:
             time.sleep(1)
             while self.state == ClientState.PLAY:
@@ -773,7 +780,7 @@ class Client:
                 # ckeck for active client keep alive status:
                 if time.time() - self.time_client_responded > 20:  # server can allow up to 30 seconds for response
                     self.state = ClientState.HANDSHAKE
-                    self.log.debug("Closing client due to lack of keepalive response")
+                    self.log.debug("Closing %s's client due to lack of keepalive response", "unknown")
                     self.close()
 
 class ClientState:
