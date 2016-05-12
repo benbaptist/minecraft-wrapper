@@ -198,10 +198,10 @@ class Client:
         return False
 
     def editSign(self, position, line1, line2, line3, line4):
-        self.server.send(self.pktSB.PLAYER_UPDATE_SIGN, "position|string|string|string|string", (position, line1, line2, line3, line4))
+        self.server.packet.send(self.pktSB.PLAYER_UPDATE_SIGN, "position|string|string|string|string", (position, line1, line2, line3, line4))
 
     def message(self, string):
-        self.server.send(self.pktSB.CHAT_MESSAGE, "string", (string,))
+        self.server.packet.send(self.pktSB.CHAT_MESSAGE, "string", (string,))
 
     def _refresh_server_version(self):
         # Get serverversion for mcpacket use
@@ -491,7 +491,7 @@ class Client:
                 self.log.trace("(PROXY CLIENT) -> Parsed SPECTATE packet:\n%s", data)
                 for client in self.proxy.clients:
                     if data["target_player"].hex == client.uuid.hex:
-                        self.server.send(self.pktSB.SPECTATE, "uuid", [client.serverUuid]) # Convert SPECTATE packet...
+                        self.server.packet.send(self.pktSB.SPECTATE, "uuid", ([client.serverUuid],)) # Convert SPECTATE packet...
                         return False
             # no packet parsed - just pass to server...
             return True
@@ -752,7 +752,7 @@ class Client:
                                    (self.keepalive_val,))
                         if self.clientSettings and not self.clientSettingsSent:
                             if self.clientversion < mcpacket.PROTOCOL_1_9START:
-                                self.server.send(self.pktSB.CLIENT_SETTINGS, "string|byte|byte|bool|ubyte", (
+                                self.server.packet.send(self.pktSB.CLIENT_SETTINGS, "string|byte|byte|bool|ubyte", (
                                     self.clientSettings["locale"],
                                     self.clientSettings["view_distance"],
                                     self.clientSettings["chat_mode"],
@@ -761,7 +761,7 @@ class Client:
                                 ))
                                 self.clientSettingsSent = True
                             else:
-                                self.server.send(self.pktSB.CLIENT_SETTINGS, "string|byte|varint|bool|ubyte|varint", (
+                                self.server.packet.send(self.pktSB.CLIENT_SETTINGS, "string|byte|varint|bool|ubyte|varint", (
                                     self.clientSettings["locale"],
                                     self.clientSettings["view_distance"],
                                     self.clientSettings["chat_mode"],

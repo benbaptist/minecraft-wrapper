@@ -199,9 +199,9 @@ class Player:
         Probably broken right now.
         """
         if self.getClient().version < mcpacket.PROTOCOL_1_8START:
-            self.client.send(0x3f, "string|bytearray", ("MC|RPack", url))
+            self.client.packet.send(0x3f, "string|bytearray", ("MC|RPack", url))
         else:
-            self.client.send(self.clientPackets.RESOURCE_PACK_SEND,
+            self.client.packet.send(self.clientPackets.RESOURCE_PACK_SEND,
                              "string|string", (url, hashrp))
 
     def isOp(self):
@@ -240,7 +240,7 @@ class Player:
 
     def actionMessage(self, message=""):
         if self.getClient().version > mcpacket.PROTOCOL_1_8START:
-            self.getClient().send(self.clientPackets.CHAT_MESSAGE, "string|byte", (json.dumps({"text": self._processOldColorCodes(message)}), 2))
+            self.getClient().packet.send(self.clientPackets.CHAT_MESSAGE, "string|byte", (json.dumps({"text": self._processOldColorCodes(message)}), 2))
 
     def setVisualXP(self, progress, level, total):
         """
@@ -255,9 +255,9 @@ class Player:
 
         """
         if self.getClient().version > mcpacket.PROTOCOL_1_8START:
-            self.getClient().send(self.clientPackets.SET_EXPERIENCE, "float|varint|varint", (progress, level, total))
+            self.getClient().packet.send(self.clientPackets.SET_EXPERIENCE, "float|varint|varint", (progress, level, total))
         else:
-            self.getClient().send(self.clientPackets.SET_EXPERIENCE, "float|short|short", (progress, level, total))
+            self.getClient().packet.send(self.clientPackets.SET_EXPERIENCE, "float|short|short", (progress, level, total))
 
     def openWindow(self, windowtype, title, slots):
         """
@@ -292,7 +292,7 @@ class Player:
             self.getClient().windowCounter = 2
         # TODO Test what kind of field title is (json or text)
         if self.getClient().version > mcpacket.PROTOCOL_1_8START:
-            self.getClient().send(
+            self.getClient().packet.send(
                 self.clientPackets.OPEN_WINDOW, "ubyte|string|json|ubyte", (
                     self.getClient().windowCounter, windowtype, {"text": title}, slots))
         return None  # return a Window object soon
@@ -304,7 +304,7 @@ class Player:
         Allow plugins to get the players client plugin list per their client version
         e.g.:
         packets = player.getClientPacketList()
-        player.client.send(packets.PLAYER_ABILITIES, "byte|float|float", (0x0F, 1, 1))
+        player.client.packet.send(packets.PLAYER_ABILITIES, "byte|float|float", (0x0F, 1, 1))
         """
         return self.clientPackets
 
@@ -340,9 +340,9 @@ class Player:
         bitfield = self.godmode | self.creative | setfly
         # Note in versions before 1.8, field of view is the walking speed for client (still a float)
         #   Server field of view is still walking speed
-        self.getClient().send(self.clientPackets.PLAYER_ABILITIES, "byte|float|float",
+        self.getClient().packet.send(self.clientPackets.PLAYER_ABILITIES, "byte|float|float",
                               (bitfield, self.fly_speed, self.field_of_view))
-        self.getClient().server.send(self.serverPackets.PLAYER_ABILITIES, "byte|float|float",
+        self.getClient().server.packet.send(self.serverPackets.PLAYER_ABILITIES, "byte|float|float",
                                      (bitfield, self.fly_speed, self.field_of_view))
 
 
