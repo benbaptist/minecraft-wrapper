@@ -24,7 +24,7 @@ ENTITIES = {  # Unfinished list of entities
 
 class Entity:
 
-    def __init__(self, eid, uuid, entitytype, position, look, isObject):
+    def __init__(self, eid, uuid, entitytype, position, look, isobject):
         self.eid = eid  # Entity ID
         self.uuid = uuid  # Entity UUID
         self.entitytype = entitytype  # Type of Entity
@@ -32,7 +32,7 @@ class Entity:
         self.look = look  # Head Position
         self.rodeBy = False
         self.riding = False
-        self.isObject = isObject  # Boat/Minecart/other non-living Entities are objects
+        self.isObject = isobject  # Boat/Minecart/other non-living Entities are objects
         if entitytype in ENTITIES and not self.isObject:
             self.entitytype = ENTITIES[entitytype]
             # print("entity type is: %s" % str(self.entitytype["Name"]))

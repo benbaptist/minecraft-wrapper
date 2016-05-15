@@ -10,7 +10,7 @@ import urllib
 import os
 import logging
 
-from utils.helpers import get_args, get_argsAfter
+from utils.helpers import getargs, getargsafter
 from api.base import API
 from core.storage import Storage
 
@@ -636,9 +636,9 @@ class WebClient:
                 print("Web connection closed suddenly")
                 return False
             for line in self.buffer:
-                if get_args(line.split(" "), 0) == "GET":
-                    self.get(get_args(line.split(" "), 1))
-                if get_args(line.split(" "), 0) == "POST":
-                    self.request = get_args(line.split(" "), 1)
+                if getargs(line.split(" "), 0) == "GET":
+                    self.get(getargs(line.split(" "), 1))
+                if getargs(line.split(" "), 0) == "POST":
+                    self.request = getargs(line.split(" "), 1)
                     self.headers(status="400 Bad Request")
                     self.write("<h1>Invalid request. Sorry.</h1>")

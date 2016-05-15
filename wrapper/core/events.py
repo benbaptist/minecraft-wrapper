@@ -34,7 +34,7 @@ class Events:
 
     def callevent(self, event, payload):
         if event == "player.runCommand":
-            if not self.wrapper.commands.playerCommand(payload):
+            if not self.wrapper.commands.playercommand(payload):
                 return False
         for sock in self.listeners:
             sock.append({"event": event, "payload": payload})

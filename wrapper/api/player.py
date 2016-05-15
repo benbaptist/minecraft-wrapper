@@ -11,6 +11,7 @@ import proxy.mcpacket as mcpacket
 from core.storage import Storage
 from api.base import API
 
+
 class Player:
     """
     Player objects contains methods and data of a currently logged-in player. This object is destroyed
@@ -49,7 +50,7 @@ class Player:
         self.serverPackets = mcpacket.ServerBound18
 
         # some player properties associated with abilities
-        self.field_of_view = float(1) # default is 1.  Should normally be congruent with speed.
+        self.field_of_view = float(1)  # default is 1.  Should normally be congruent with speed.
         self.godmode = 0x00  # Client set godmode is 0x01
         self.creative = 0x00  # Client set creative is 0x08
         self.fly_speed = float(1)  # default is 1
@@ -61,7 +62,7 @@ class Player:
             for client in self.wrapper.proxy.clients:
                 if client.username == username:
                     self.client = client
-                    self.clientUuid = client.uuid # Both MCUUID objects
+                    self.clientUuid = client.uuid  # Both MCUUID objects
                     self.serverUuid = client.serverUuid
                     self.ipaddress = client.ip
                     if self.getClient().version > 49:  # packet numbers fluctuated  wildly between 48 and 107
@@ -70,7 +71,7 @@ class Player:
 
         self.data = Storage(self.clientUuid.string, root="wrapper-data/players")
 
-        if "users" not in self.permissions: # top -level dict item should be just checked once here (not over and over)
+        if "users" not in self.permissions:  # top -level dict item should be just checked once here (not over and over)
             self.permissions["users"] = {}
         if self.mojangUuid.string not in self.permissions["users"]:  # no reason not to do this here too
             self.permissions["users"][self.mojangUuid.string] = {"groups": [], "permissions": {}}
@@ -103,7 +104,7 @@ class Player:
             time.sleep(60)
 
     @staticmethod
-    def _processOldColorCodes(message):
+    def _processoldcolorcodes(message):
         """
         Internal private method - Not intended as a part of the public player object API
 
@@ -126,12 +127,38 @@ class Player:
 
     def execute(self, string):
         """
-        :param string: command to execute (no preceding slash)
-         Run a command as this player. To be clear, this does NOT work with
-         any Wrapper.py or commands.  The command is sent straight to the
-         server console without going through the wrapper.
+        Sends a command directly to the server console. To be clear, this
+        does NOT work with any Wrapper.py or plugin commands.  The command
+        does not pass through the wrapper.
+
+        Args:
+            string: full command string to execute as the player from his current
+            position.
+
+        Returns: Nothing; passes the command to console as and "execute" command.
+
         """
         self.wrapper.server.console("execute %s ~ ~ ~ %s" % (self.name, string))
+
+    def sendCommand(self, command, args):
+        """
+        Sends a command to the wrapper interface as the player instance.
+        This would find a nice application with a '\sudo' plugin command.
+
+        Sample usage:
+            ```
+            player=getPlayer("username")
+            player.wrapperCommand("perms", ("users", "SurestTexas00", "info"))
+            ```
+        Args:
+            command: The wrapper (or plugin) command to execute; no slash prefix
+            args: list of arguments (I think it is a list, not a tuple or dict!)
+
+        Returns: Nothing; passes command through commands.py function 'playercommand()'
+
+        """
+        pay = {"player": self, "command": command, "args": args}
+        self.wrapper.api.callEvent("player.runCommand", pay)
 
     def say(self, string):
         """
@@ -155,7 +182,8 @@ class Player:
                         self.client = client
                         return self.client
                 except Exception as e:
-                    self.log.warning("getClient could not return a client for:%s \nException:%s", (self.username, e))
+                    self.log.warning("getClient could not return a client for:%s \nException:%s",
+                                     (self.username, e))
         else:
             return self.client
 
@@ -166,7 +194,7 @@ class Player:
         client logs in to the server.  Allow some time after server login to verify the wrapper has had
         the oppportunity to parse a suitable packet to get the information!
         """
-        # TODO these sorts of problems should have a better solution; perhaps reading the player.dat file to populate the defaults
+        # TODO these need a better solution; perhaps reading the player.dat file to populate the defaults
         return self.getClient().position + self.getClient().head
 
     def getGamemode(self):
@@ -211,7 +239,7 @@ class Player:
             self.client.packet.send(0x3f, "string|bytearray", ("MC|RPack", url))
         else:
             self.client.packet.send(self.clientPackets.RESOURCE_PACK_SEND,
-                             "string|string", (url, hashrp))
+                                    "string|string", (url, hashrp))
 
     def isOp(self):
         """
@@ -245,12 +273,13 @@ class Player:
         if isinstance(message, dict):
             self.wrapper.server.console("tellraw %s %s" % (self.username, json.dumps(message)))
         else:
-            self.wrapper.server.console("tellraw %s %s" % (self.username, self.wrapper.server.processcolorcodes(message)))
+            self.wrapper.server.console("tellraw %s %s" % (self.username,
+                                                           self.wrapper.server.processcolorcodes(message)))
 
     def actionMessage(self, message=""):
         if self.getClient().version > mcpacket.PROTOCOL_1_8START:
             self.getClient().packet.send(self.clientPackets.CHAT_MESSAGE, "string|byte",
-                                         (json.dumps({"text": self._processOldColorCodes(message)}), 2))
+                                         (json.dumps({"text": self._processoldcolorcodes(message)}), 2))
 
     def setVisualXP(self, progress, level, total):
         """
@@ -265,16 +294,20 @@ class Player:
 
         """
         if self.getClient().version > mcpacket.PROTOCOL_1_8START:
-            self.getClient().packet.send(self.clientPackets.SET_EXPERIENCE, "float|varint|varint", (progress, level, total))
+            self.getClient().packet.send(self.clientPackets.SET_EXPERIENCE, "float|varint|varint",
+                                         (progress, level, total))
         else:
-            self.getClient().packet.send(self.clientPackets.SET_EXPERIENCE, "float|short|short", (progress, level, total))
+            self.getClient().packet.send(self.clientPackets.SET_EXPERIENCE, "float|short|short",
+                                         (progress, level, total))
 
     def openWindow(self, windowtype, title, slots):
         """
-        Opens an inventory window on the client side.  EntityHorse is not supported due to further EID requirement.
+        Opens an inventory window on the client side.  EntityHorse is not supported due to further
+        EID requirement.
 
         Args:
-            windowtype:  Window Type (text string). See below or applicable wiki entry (for version specific info)
+            windowtype:  Window Type (text string). See below or applicable wiki entry
+                        (for version specific info)
             title: Window title - wiki says chat object (could be string too?)
             slots:
 
@@ -309,7 +342,7 @@ class Player:
     # endregion Visual notifications
 
     # region Abilities & Client-Side Stuff
-    def getClientPacketList(self):
+    def getClientPackets(self):
         """
         Allow plugins to get the players client plugin list per their client version
         e.g.:
@@ -317,7 +350,6 @@ class Player:
         player.client.packet.send(packets.PLAYER_ABILITIES, "byte|float|float", (0x0F, 1, 1))
         """
         return self.clientPackets
-
 
     def setPlayerAbilities(self, fly):
         # based on old playerSetFly (which was an unfinished function)
@@ -351,10 +383,9 @@ class Player:
         # Note in versions before 1.8, field of view is the walking speed for client (still a float)
         #   Server field of view is still walking speed
         self.getClient().packet.send(self.clientPackets.PLAYER_ABILITIES, "byte|float|float",
-                              (bitfield, self.fly_speed, self.field_of_view))
-        self.getClient().server.packet.send(self.serverPackets.PLAYER_ABILITIES, "byte|float|float",
                                      (bitfield, self.fly_speed, self.field_of_view))
-
+        self.getClient().server.packet.send(self.serverPackets.PLAYER_ABILITIES, "byte|float|float",
+                                            (bitfield, self.fly_speed, self.field_of_view))
 
     # Unfinished function, will be used to make phantom blocks visible ONLY to the client
     def setBlock(self, position):
@@ -387,7 +418,7 @@ class Player:
 
         """
 
-        #this might be a useful thing to implement into all permissions methods
+        # this might be a useful thing to implement into all permissions methods
         uuid_to_check = self.mojangUuid.string
         if node is None:
             return True
@@ -410,14 +441,15 @@ class Player:
         for group in self.permissions["users"][uuid_to_check]["groups"]:
             if group not in allgroups:
                 allgroups.append(group)
-        itemsToProcess = allgroups[:]  # process and find child groups
-        while len(itemsToProcess) > 0:
-            parseparent = itemsToProcess.pop(0)
+        itemstoprocess = allgroups[:]  # process and find child groups
+        while len(itemstoprocess) > 0:
+            parseparent = itemstoprocess.pop(0)
             for groupPerm in self.permissions["groups"][parseparent]["permissions"]:
                 if (groupPerm in self.permissions["groups"]) and \
-                        self.permissions["groups"][parseparent]["permissions"][groupPerm] and (groupPerm not in allgroups):
+                        self.permissions["groups"][parseparent]["permissions"][groupPerm] and \
+                        (groupPerm not in allgroups):
                     allgroups.append(groupPerm)
-                    itemsToProcess.append(groupPerm)
+                    itemstoprocess.append(groupPerm)
         for group in allgroups:
             for perm in self.permissions["groups"][group]["permissions"]:
                 if node in fnmatch.filter([node], perm):
@@ -450,8 +482,8 @@ class Player:
         """ Completely removes a permission node from the player. They will inherit this permission from their
          groups or from plugin defaults.
 
-        If the player does not have the specific permission, an IndexError is raised. Note that this method has no
-        effect on nodes inherited from groups or plugin defaults.
+        If the player does not have the specific permission, an IndexError is raised. Note that this method
+        has no effect on nodes inherited from groups or plugin defaults.
 
         Args:
             node: Permission node (string)
@@ -467,7 +499,8 @@ class Player:
                 else:
                     self.log.debug("%s does not have permission node '%s'", (self.username, node))
                     return False
-        self.log.debug("Player %s uuid:%s does not have permission node '%s'", (self.username, self.mojangUuid.string, node))
+        self.log.debug("Player %s uuid:%s does not have permission node '%s'",
+                       (self.username, self.mojangUuid.string, node))
         return False
 
     def hasGroup(self, group):
@@ -508,11 +541,14 @@ class Player:
             if uuid == self.mojangUuid.string:  # was self.clientUuid.string
                 self.permissions["users"][uuid]["groups"].append(group)
                 return True
-        self.log.debug("Player %s uuid:%s: Could not be added to group '%s'", (self.username, self.mojangUuid.string, group))
+        self.log.debug("Player %s uuid:%s: Could not be added to group '%s'",
+                       (self.username, self.mojangUuid.string, group))
         return False
 
     def removeGroup(self, group):
-        """ Removes the player to a specified group. If they are not part of the specified group, an IndexError is raised.
+        """ Removes the player to a specified group. If they are not part of the specified
+        group, an IndexError is raised.
+
         Args:
             group: Group node (string)
 
@@ -546,4 +582,3 @@ class Player:
         Returns: Nothing
         """
         self.client.connect(address, port)
-

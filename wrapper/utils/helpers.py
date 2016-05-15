@@ -5,16 +5,19 @@ import json
 import time
 import datetime
 
-def get_args(arginput, i):
+
+def getargs(arginput, i):
     if not i >= len(arginput):
         return arginput[i]
     else:
         return ""
 
-def get_argsAfter(arginput, i):
+
+def getargsafter(arginput, i):
     return " ".join(arginput[i:])
 
-def get_jsonFile(filename, directory="./"):
+
+def getjsonfile(filename, directory="./"):
     """
     :param filename: filename without extension
     :param directory: by default, wrapper script directory.
@@ -30,7 +33,8 @@ def get_jsonFile(filename, directory="./"):
     else:
         return False  # bad directory or filename
 
-def put_jsonFile(data, filename, directory="./", indent_spaces=2):
+
+def putjsonfile(data, filename, directory="./", indent_spaces=2):
     """
     writes entire data to a json file.
     This is not for appending items to an existing file!
@@ -50,11 +54,13 @@ def put_jsonFile(data, filename, directory="./", indent_spaces=2):
             return True
     return False
 
+
 def find_in_json(jsonlist, keyname, searchvalue):
     for items in jsonlist:
         if items[keyname] == searchvalue:
             return items
     return None
+
 
 def read_timestr(mc_time_string):
     """
@@ -72,6 +78,7 @@ def read_timestr(mc_time_string):
     except ValueError:
         epoch = 9999999999
     return epoch
+
 
 def epoch_to_timestr(epoch_time):
     """

@@ -17,7 +17,7 @@ import proxy.base as proxy
 
 import management.web as manageweb
 
-from utils.helpers import get_args, get_argsAfter
+from utils.helpers import getargs, getargsafter
 
 from api.base import API
 
@@ -596,7 +596,7 @@ class Wrapper:
                     break
                 continue
 
-            command = get_args(consoleinput[1:].split(" "), 0)
+            command = getargs(consoleinput[1:].split(" "), 0)
 
             if command == "halt":
                 self.server.stop("Halting server...", save=False)
@@ -626,8 +626,8 @@ class Wrapper:
                     self.log.exception("Something went wrong when trying to fetch memory usage! (%s)", ex)
             elif command == "raw":
                 try:
-                    if len(get_argsAfter(consoleinput[1:].split(" "), 1)) > 0:
-                        self.server.console(get_argsAfter(consoleinput[1:].split(" "), 1))
+                    if len(getargsafter(consoleinput[1:].split(" "), 1)) > 0:
+                        self.server.console(getargsafter(consoleinput[1:].split(" "), 1))
                     else:
                         self.log.info("Usage: /raw [command]")
                 except InvalidServerStateError as e:

@@ -12,10 +12,13 @@ from core.storage import Storage
 
 """ api.py contains the majority of code for the plugin API. """
 
+
 class API:
     """ 
-    The API class contains methods for basic plugin functionality, such as handling events, registering commands, and more. 
-    Most methods aren't related to gameplay, aside from commands and events, but for core stuff. See the Minecraft class (accessible at self.api.minecraft) for more gameplay-related methods. 
+    The API class contains methods for basic plugin functionality, such as handling events,
+    registering commands, and more. Most methods aren't related to gameplay, aside from commands
+    and events, but for core stuff. See the Minecraft class (accessible at self.api.minecraft)
+    for more gameplay-related methods.
     """
     statusEffects = {
         "speed": 1,
@@ -79,8 +82,10 @@ class API:
             self.id = someid
 
     def registerCommand(self, command, callback, permission=None):
-        """ This registers a command that, when executed in Minecraft, will execute callback(player, args). 
-        permission is an optional attribute if you want your command to only be executable if the player has a specified permission node.
+        """
+        This registers a command that, when executed in Minecraft, will execute callback(player, args).
+        permission is an optional attribute if you want your command to only be executable if the player
+        has a specified permission node.
         """
         commands = []
         if type(command) in (tuple, list):
@@ -95,42 +100,53 @@ class API:
                 self.wrapper.commands[self.id] = {}
             self.wrapper.commands[self.id][name] = {"callback": callback, "permission": permission}
 
-    def registerEvent(self, eventType, callback):
-        """ Register an event and a callback. See [doc link needed here] for a list of events. callback(payload) when an event occurs, and the contents of payload varies between events."""
+    def registerEvent(self, eventtype, callback):
+        """
+        Register an event and a callback. See [doc link needed here] for a list of events.
+        callback(payload) when an event occurs, and the contents of payload varies between events.
+        """
         if not self.internal:
-            self.wrapper.log.debug("[%s] Registered event '%s'", self.name, eventType)
+            self.wrapper.log.debug("[%s] Registered event '%s'", self.name, eventtype)
         if self.id not in self.wrapper.events:
             self.wrapper.events[self.id] = {}
-        self.wrapper.events[self.id][eventType] = callback
+        self.wrapper.events[self.id][eventtype] = callback
 
     def registerPermission(self, permission=None, value=False):
-        """ Used to set a default for a specific permission node. 
-        Note: You do not need to run this function unless you want certain permission nodes to be granted by default. 
-        i.e. `essentials.list` should be on by default, so players can run /list without having any permissions."""
+        """
+        Used to set a default for a specific permission node.
+        Note: You do not need to run this function unless you want certain permission nodes
+        to be granted by default.  i.e. `essentials.list` should be on by default, so players
+        can run /list without having any permissions.
+        """
         if not self.internal:
-            self.wrapper.log.debug("[%s] Registered permission '%s' with default value: %s", self.name, permission, value)
+            self.wrapper.log.debug("[%s] Registered permission '%s' with default value: %s",
+                                   self.name, permission, value)
         if self.id not in self.wrapper.permission:
             self.wrapper.permission[self.id] = {}
         self.wrapper.permission[self.id][permission] = value
 
-    def registerHelp(self, groupName, summary, commands):
-        """ Used to create a help group for the /help command. groupName is the name you'll see in the list when you run /help, and summary is the text that you'll see next to it.
+    def registerHelp(self, groupname, summary, commands):
+        """
+        Used to create a help group for the /help command. groupname is the name you'll see in
+        the list when you run /help, and summary is the text that you'll see next to it.
         The 'commands' argument is passed in the following format: 
-        [("/i <TileName>[:Data] [Count]", "Gives the player the requested item and puts it directly in their inventory.", "essentials.give"), ("/")]
+        [("/i <TileName>[:Data] [Count]", "Gives the player the requested item and puts it directly
+        in their inventory.", "essentials.give"), ("/")]
         """
         if not self.internal:
-            self.wrapper.log.debug("[%s] Registered help group '%s' with %d commands", self.name, groupName, len(commands))
+            self.wrapper.log.debug("[%s] Registered help group '%s' with %d commands",
+                                   self.name, groupname, len(commands))
         if self.id not in self.wrapper.help:
             self.wrapper.help[self.id] = {}
-        self.wrapper.help[self.id][groupName] = (summary, commands)
+        self.wrapper.help[self.id][groupname] = (summary, commands)
 
-    def blockForEvent(self, eventType):
+    def blockForEvent(self, eventtype):
         """ Blocks until the specified event is called. """
         sock = []
         self.wrapper.listeners.append(sock)
         while True:
             for event in sock:
-                if event["event"] == eventType:
+                if event["event"] == eventtype:
                     payload = event["payload"][:]
                     self.wrapper.listeners.remove(sock)
                     return payload
@@ -139,19 +155,26 @@ class API:
             time.sleep(0.05)
 
     def callEvent(self, event, payload):
-        """ Invokes the specific event. Payload is extra information relating to the event. Errors may occur if you don't specify the right payload information. """
+        """
+        Invokes the specific event. Payload is extra information relating to the event. Errors
+        may occur if you don't specify the right payload information.
+        """
         return self.wrapper.callevent(event, payload)
 
     def getPluginContext(self, pid):
-        """ Returns the content of another plugin with the specified ID. 
-        i.e. api.getPluginContext("com.benbaptist.plugins.essentials")"""
+        """
+        Returns the content of another plugin with the specified ID.
+        i.e. api.getPluginContext("com.benbaptist.plugins.essentials")
+        """
         if pid in self.wrapper.plugins:
             return self.wrapper.plugins[pid]["main"]
         else:
             raise exceptions.NonExistentPlugin("Plugin %s does not exist!" % pid)
 
     def getStorage(self, name, world=False):
-        """ Return a storage object for storing configurations, player data, and any other data your plugin will need to remember across reboots.
+        """
+        Return a storage object for storing configurations, player data, and any other data your
+        plugin will need to remember across reboots.
         Setting world=True will store the data inside the current world folder, for world-specific data.  
         """
         if not world:
