@@ -233,12 +233,12 @@ class IRC:
             nick = get_args(self.line.split(" "), 0)[1:get_args(self.line.split(" "), 0).find("!")]
             channel = get_args(self.line.split(" "), 2)[1:][:-1]
             self.log.info("%s joined %s", nick, channel)
-            self.wrapper.callEvent("irc.join", {"nick": nick, "channel": channel})
+            self.wrapper.callevent("irc.join", {"nick": nick, "channel": channel})
         if get_args(self.line.split(" "), 1) == "PART":
             nick = get_args(self.line.split(" "), 0)[1:get_args(self.line.split(" "), 0).find("!")]
             channel = get_args(self.line.split(" "), 2)
             self.log.info("%s parted %s", nick, channel)
-            self.wrapper.callEvent("irc.part", {"nick": nick, "channel": channel})
+            self.wrapper.callevent("irc.part", {"nick": nick, "channel": channel})
         if get_args(self.line.split(" "), 1) == "MODE":
             try:
                 nick = get_args(self.line.split(" "), 0)[1:get_args(self.line.split(" "), 0).find('!')]
@@ -260,7 +260,7 @@ class IRC:
             nick = get_args(self.line.split(" "), 0)[1:get_args(self.line.split(" "), 0).find("!")]
             message = get_argsAfter(self.line.split(" "), 2)[1:].strip("\n").strip("\r")
 
-            self.wrapper.callEvent("irc.quit", {"nick": nick, "message": message, "channel": None})
+            self.wrapper.callevent("irc.quit", {"nick": nick, "message": message, "channel": None})
         if get_args(self.line.split(" "), 1) == "PRIVMSG":
             channel = get_args(self.line.split(" "), 2)
             nick = get_args(self.line.split(" "), 0)[1:get_args(self.line.split(" "), 0).find("!")]
@@ -277,10 +277,10 @@ class IRC:
                 else:
                     message = message.decode("utf-8", "ignore")
                     if get_args(message.split(" "), 0) == "\x01ACTION":
-                        self.wrapper.callEvent("irc.action", {"nick": nick, "channel": channel, "action": get_argsAfter(message.split(" "), 1)[:-1]})
+                        self.wrapper.callevent("irc.action", {"nick": nick, "channel": channel, "action": get_argsAfter(message.split(" "), 1)[:-1]})
                         self.log.info("[%s] * %s %s", channel, nick, get_argsAfter(message.split(" "), 1)[:-1])
                     else:
-                        self.wrapper.callEvent("irc.message", {"nick": nick, "channel": channel, "message": message})
+                        self.wrapper.callevent("irc.message", {"nick": nick, "channel": channel, "message": message})
                         self.log.info("[%s] <%s> %s", channel, nick, message)
             elif self.config["IRC"]["control-from-irc"]:
                 self.log.info("[PRIVATE] (%s) %s", nick, message)
@@ -328,10 +328,10 @@ class IRC:
                         elif get_args(message.split(" "), 0) == 'halt':
                             self.wrapper.halt = True
                             self.server.console("stop")
-                            self.server.changeState(3)
+                            self.server.changestate(3)
                         elif get_args(message.split(" "), 0) == 'restart':
                             self.server.restart("Restarting server from IRC remote")
-                            self.server.changeState(3)
+                            self.server.changestate(3)
                         elif get_args(message.split(" "), 0) == 'stop':
                             self.server.console('stop')
                             self.server.stop("Stopped from IRC remote")
@@ -353,8 +353,8 @@ class IRC:
                                 msg("Server is in the process of shutting down/restarting.")
                             else:
                                 msg("Server is in unknown state. This is probably a Wrapper.py bug - report it! (state #%d)" % self.server.state)
-                            if self.wrapper.server.getMemoryUsage():
-                                msg("Server Memory Usage: %d bytes" % self.wrapper.server.getMemoryUsage())
+                            if self.wrapper.server.getmemoryusage():
+                                msg("Server Memory Usage: %d bytes" % self.wrapper.server.getmemoryusage())
                         elif get_args(message.split(" "), 0) == 'check-update':
                             msg("Checking for new updates...")
                             update = self.wrapper.getwrapperupdate()

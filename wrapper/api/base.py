@@ -140,7 +140,7 @@ class API:
 
     def callEvent(self, event, payload):
         """ Invokes the specific event. Payload is extra information relating to the event. Errors may occur if you don't specify the right payload information. """
-        return self.wrapper.callEvent(event, payload)
+        return self.wrapper.callevent(event, payload)
 
     def getPluginContext(self, pid):
         """ Returns the content of another plugin with the specified ID. 

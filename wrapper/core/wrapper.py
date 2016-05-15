@@ -54,7 +54,7 @@ class Wrapper:
     def __init__(self):
         self.log = logging.getLogger('Wrapper.py')
         self.configManager = Config()
-        self.configManager.loadConfig()  # Load initially for storage object
+        self.configManager.loadconfig()  # Load initially for storage object
         self.encoding = self.configManager.config["General"]["encoding"]  # This was to allow alternate encodings
         self.server = None
         self.api = None
@@ -75,7 +75,7 @@ class Wrapper:
         self.help = {}
         self.config = {}
         # Aliases for compatibility
-        self.callEvent = self.events.callEvent
+        self.callevent = self.events.callevent
 
         if not readline:
             self.log.warning("'readline' not imported.")
@@ -368,7 +368,7 @@ class Wrapper:
 
     def start(self):
         # Reload configuration each time server starts in order to detect changes
-        self.configManager.loadConfig()
+        self.configManager.loadconfig()
         self.config = self.configManager.config
 
         signal.signal(signal.SIGINT, self.sigint)
@@ -568,9 +568,9 @@ class Wrapper:
         t = time.time()
         while not self.halt:
             if time.time() - t > 1:
-                self.callEvent("timer.second", None)
+                self.callevent("timer.second", None)
                 t = time.time()
-            # self.callEvent("timer.tick", None)
+            # self.callevent("timer.tick", None)
             time.sleep(0.05)
 
     def console(self):
@@ -610,7 +610,7 @@ class Wrapper:
                 self.server.restart("Server restarting, be right back!")
             elif command == "reload":
                 self.plugins.reloadPlugins()
-                if self.server.getServerType() != "vanilla":
+                if self.server.getservertype() != "vanilla":
                     self.log.info("Note: If you meant to reload the server's plugins instead of the Wrapper's "
                                   "plugins, try running 'reload' without any slash OR '/raw /reload'.")
             elif command == "update-wrapper":
@@ -619,7 +619,7 @@ class Wrapper:
                 self.listplugins()
             elif command in ("mem", "memory"):
                 try:
-                    self.log.info("Server Memory Usage: %d bytes", self.server.getMemoryUsage())
+                    self.log.info("Server Memory Usage: %d bytes", self.server.getmemoryusage())
                 except UnsupportedOSException as e:
                     self.log.error(e)
                 except Exception as ex:

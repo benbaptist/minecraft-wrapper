@@ -583,7 +583,7 @@
 						<div id="tab-settings" style="display:none;">
 							<script type="text/javascript">
 								var settingsLoaded = false
-								reloadProperties = function(){
+								reloadproperties = function(){
 									var props = requests.admin("read_server_props", {}); BONK= props
 									if(!props) return
 									_("server_properties").value = props
@@ -597,13 +597,13 @@
 								}
 								onSettingsLoaded = function(){
 									if(!settingsLoaded){ 
-										reloadProperties()
+										reloadproperties()
 									}
 									settingsLoaded = true
 								}
 							</script>
 							<div style="margin-bottom: 5px;">
-								<button onclick="reloadProperties()" class="btn btn-default">Reload server.properties</button>
+								<button onclick="reloadproperties()" class="btn btn-default">Reload server.properties</button>
 								<button style="float:right;" class="btn btn-primary" onclick="saveProperties()">Save</button>
 							</div>
 							<textarea id="server_properties" style="width:100%;height:90%;" class="form-control" disabled></textarea>

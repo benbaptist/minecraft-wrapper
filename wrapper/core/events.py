@@ -32,7 +32,7 @@ class Events:
         for i in self.events:
             yield i
 
-    def callEvent(self, event, payload):
+    def callevent(self, event, payload):
         if event == "player.runCommand":
             if not self.wrapper.commands.playerCommand(payload):
                 return False
@@ -48,9 +48,10 @@ class Events:
                         if result is not True:
                             return result
                     except Exception as e:
-                        self.log.exception("Plugin '%s' errored out when executing callback event '%s':", pluginID, event)
+                        self.log.exception("Plugin '%s' errored out when executing callback event '%s': \n%s",
+                                           pluginID, event, e)
         except Exception as ex:
             pass
-            # For now.
-            # self.log.exception("A serious runtime error occurred - if you notice any strange behaviour, please restart immediately")
+            self.log.exception("A serious runtime error occurred - if you notice any strange behaviour, please "
+                               "restart immediately: \n%s", ex)
         return True

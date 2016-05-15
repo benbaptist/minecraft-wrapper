@@ -91,8 +91,8 @@ class Commands:
                     player.message("&cHalting Wrapper.py... goodbye!")
                     self.wrapper.shutdown()
                 elif subcommand in ("mem", "memory"):
-                    if self.wrapper.server.getMemoryUsage():
-                        player.message("&cServer Memory: %d bytes" % self.wrapper.server.getMemoryUsage())
+                    if self.wrapper.server.getmemoryusage():
+                        player.message("&cServer Memory: %d bytes" % self.wrapper.server.getmemoryusage())
                     else:
                         player.message("&cError: Couldn't retrieve memory usage for an unknown reason")
                 elif subcommand == "random":
@@ -180,7 +180,7 @@ class Commands:
                 try:
                     self.wrapper.plugins.reloadPlugins()
                     player.message({"text": "Plugins reloaded.", "color": "green"})
-                    if self.wrapper.server.getServerType() != "vanilla":
+                    if self.wrapper.server.getservertype() != "vanilla":
                         player.message({"text": "Note: If you meant to reload the server's plugins and not Wrapper.py's plugins, run `/reload server`.", "color": "gold"})
                 except Exception as e:
                     self.log.exception("Failure to reload plugins:")

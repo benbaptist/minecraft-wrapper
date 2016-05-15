@@ -119,8 +119,8 @@ class Web:
         while not self.wrapper.halt:
             while len(self.memoryGraph) > 200:
                 del self.memoryGraph[0]
-            if self.wrapper.server.getMemoryUsage():
-                self.memoryGraph.append([time.time(), self.wrapper.server.getMemoryUsage()])
+            if self.wrapper.server.getmemoryusage():
+                self.memoryGraph.append([time.time(), self.wrapper.server.getmemoryusage()])
             time.sleep(1)
 
     def checkLogin(self, password):
@@ -489,10 +489,10 @@ class WebClient:
                 "motd": self.wrapper.server.motd,
                 "refresh_time": time.time(),
                 "server_name": self.wrapper.config["General"]["server-name"],
-                "server_memory": self.wrapper.server.getMemoryUsage(),
+                "server_memory": self.wrapper.server.getmemoryusage(),
                 "server_memory_graph": memoryGraph,
                 "world_size": self.wrapper.server.worldSize,
-                "disk_avail": self.wrapper.server.getStorageAvailable("."),
+                "disk_avail": self.wrapper.server.getstorageavailable("."),
                 "topPlayers": topPlayers
             }
         if action == "console":

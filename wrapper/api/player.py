@@ -245,7 +245,7 @@ class Player:
         if isinstance(message, dict):
             self.wrapper.server.console("tellraw %s %s" % (self.username, json.dumps(message)))
         else:
-            self.wrapper.server.console("tellraw %s %s" % (self.username, self.wrapper.server.processColorCodes(message)))
+            self.wrapper.server.console("tellraw %s %s" % (self.username, self.wrapper.server.processcolorcodes(message)))
 
     def actionMessage(self, message=""):
         if self.getClient().version > mcpacket.PROTOCOL_1_8START:

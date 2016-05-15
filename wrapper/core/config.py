@@ -9,10 +9,9 @@ import traceback
 try:
     import configparser as ConfigParser
 except ImportError:
-    import ConfigParser
+    import ConfigParser as ConfigParser
 
 import ast
-import time
 import os
 import sys
 import logging
@@ -60,7 +59,8 @@ show-irc-join-part = True
 
 [Proxy]
 ;; This is a man-in-the-middle proxy similar to BungeeCord, which is used for extra plugin functionality. ;;
-;; online-mode must be set to False in server.properties. Make sure that the server is inaccessible directly from the outside world. ;;
+;; online-mode must be set to False in server.properties. Make sure that the server is inaccessible directly
+;; from the outside world. ;;
 ;; Note: the online-mode option here refers to the proxy only, not to the server's offline mode. ;;
 ;; It is recommended that you turn network-compression-threshold to -1 in server.properties for less issues. ;;
 proxy-enabled = False
@@ -89,7 +89,7 @@ class Config:
         self.config = {}
         self.exit = False
 
-    def loadConfig(self):
+    def loadconfig(self):
         # creates new wrapper.properties. The reason I do this is so the
         # ordering isn't random and is a bit prettier
         if not os.path.exists("wrapper.properties"):
@@ -99,7 +99,7 @@ class Config:
         # open("wrapper.properties", "a").close()
         self.parser = ConfigParser.ConfigParser(allow_no_value=True)
         with open("wrapper.properties", "r") as f:
-            self.parser.readfp(f)
+            self.parser.readfp(f)  # TODO deprecated in PY3.  The suggested replacement parser.readfile() does bot work
 
         sections = ["General", "Backups", "IRC", "Proxy", "Web"]
         defaults = {"General": {

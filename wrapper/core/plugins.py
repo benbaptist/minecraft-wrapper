@@ -109,7 +109,7 @@ class Plugins:
             except Exception as  e:
                 self.log.exception("Failed to import plugin '%s' (%s)", i, e)
                 self.plugins[i] = {"name": i, "good": False}
-        self.wrapper.events.callEvent("helloworld.event", {"testValue": True})
+        self.wrapper.events.callevent("helloworld.event", {"testValue": True})
 
     def disablePlugins(self):
         self.log.info("Disabling plugins...")
