@@ -53,10 +53,6 @@ class Web:
         self.loginAttempts = 0
         self.lastAttempt = 0
         self.disableLogins = 0
-        if pkg_resources and requests:
-            self.webisok = True
-        else:
-            self.webisok = False
 
         # t = threading.Thread(target=self.updateGraph, args=())
         # t.daemon = True

@@ -164,7 +164,7 @@ class Wrapper:
                     return MCUUID(useruuid)
                 # if over the time frequency, it needs to be updated by using actual last polled name.
                 username = self.usercache.key(useruuid)["name"]
-                # ODO cautionary - someone 'out there' could change their name to one taken on the server (be aware)
+                # TODO cautionary - someone 'out there' could change their name to one taken on the server (be aware)
                 #  The code needs some upgrade to the to handle this possibility; perhaps during login.
                 user_uuid_matched = useruuid  # cache for later in case multiple name changes require a uuid lookup.
 
@@ -224,7 +224,7 @@ class Wrapper:
                 "IP": None,
                 "names": []
             }
-        for i in range(0, numbofnames):  # ODO py2-3
+        for i in range(0, numbofnames):  # TODO py2-3
             if "changedToAt" not in names[i]:  # find the original name
                 self.usercache[useruuid]["original"] = names[i]["name"]
                 self.usercache[useruuid]["online"] = True
@@ -269,7 +269,7 @@ class Wrapper:
             rx = requests.get("https://status.mojang.com/check")
             if rx.status_code == 200:
                 rx = rx.json()
-                for i in range(0, len(rx)):  # ODO py2-3
+                for i in range(0, len(rx)):  # TODO py2-3
                     if "account.mojang.com" in rx[i]:
                         if rx[i]["account.mojang.com"] == "green":
                             self.log.warning("Mojang accounts is green, but request failed - have you "
