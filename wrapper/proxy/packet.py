@@ -380,7 +380,7 @@ class Packet:
                 if m > 5000:
                     m = 5000
                 d += self.socket.recv(m)
-        else:  # $ find out why next line sometimes errors out bad file descriptor
+        else:
             d = self.socket.recv(length)
             if len(d) == 0:
                 raise EOFError("Packet stream ended (Client disconnected")
