@@ -67,16 +67,16 @@ class API:
         "o": "\xc2\xa7o",  # italic,
     }
 
-    def __init__(self, wrapper, name="", aid=None, internal=False):
+    def __init__(self, wrapper, name="", someid=None, internal=False):
         self.wrapper = wrapper
         self.name = name
         self.minecraft = Minecraft(wrapper)
         self.server = wrapper.server
         self.internal = internal
-        if aid is None:
+        if someid is None:
             self.id = name
         else:
-            self.id = aid
+            self.id = someid
 
     def registerCommand(self, command, callback, permission=None):
         """ This registers a command that, when executed in Minecraft, will execute callback(player, args). 
@@ -155,6 +155,6 @@ class API:
         Setting world=True will store the data inside the current world folder, for world-specific data.  
         """
         if not world:
-            return Storage(name, False, root=".wrapper-data/plugins/%s" % self.id)
+            return Storage(name, root=".wrapper-data/plugins/%s" % self.id)
         else:
-            return Storage(name, True, root="%s/plugins/%s" % (self.minecraft.getWorldName(), self.id))
+            return Storage(name, root="%s/plugins/%s" % (self.minecraft.getWorldName(), self.id))

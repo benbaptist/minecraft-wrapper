@@ -2,6 +2,7 @@
 
 import uuid
 
+
 class MCUUID (uuid.UUID):
     """
     This class is currently not being used, but may be benefitial in regards to

@@ -2,6 +2,7 @@
 
 import os
 import logging
+import importlib
 
 from api.base import API
 
@@ -10,7 +11,6 @@ from api.base import API
 import sys
 PY3 = sys.version_info > (3,)
 
-import importlib
 
 class Plugins:
 
@@ -39,7 +39,7 @@ class Plugins:
         for i in self.plugins:
             yield i
 
-    def loadPlugin(self, i):
+    def loadplugin(self, i):
         if "disabled_plugins" not in self.wrapper.storage:
             self.wrapper.storage["disabled_plugins"] = []
         self.log.debug("Parsing plugin %s...", i)
@@ -65,12 +65,12 @@ class Plugins:
             # List data type must be used, even if only a single plugin (i.e. =
             # ["supportplugin.py"]
             for dependency in dependencies:
-                self.loadPlugin(dependency)
+                self.loadplugin(dependency)
 
         main = plugin.Main(API(self.wrapper, name, pid), logging.getLogger(name))
         self.plugins[pid] = {"main": main, "good": True, "module": plugin}  # "events": {}, "commands": {},
         self.plugins[pid]["name"] = name
-        self.plugins[pid]["version"] = getattr(plugin, 'VERSION', (0,1))
+        self.plugins[pid]["version"] = getattr(plugin, 'VERSION', (0, 1))
         self.plugins[pid]["summary"] = getattr(plugin, 'SUMMARY', None)
         self.plugins[pid]["description"] = getattr(plugin, 'DESCRIPTION', None)
         self.plugins[pid]["author"] = getattr(plugin, 'AUTHOR', None)
@@ -83,7 +83,7 @@ class Plugins:
         main.onEnable()
         self.log.info("Plugin %s loaded...", i)
 
-    def unloadPlugin(self, plugin):
+    def unloadplugin(self, plugin):
         del self.wrapper.commands[plugin]
         del self.wrapper.events[plugin]
         del self.wrapper.help[plugin]
@@ -92,10 +92,10 @@ class Plugins:
             self.log.debug("Plugin %s disabled with no errors." % plugin)
         except AttributeError:
             self.log.debug("Plugin %s disabled (has no onDisable() event)." % plugin)
-        except Exception as  e:
+        except Exception as e:
             self.log.exception("Error while disabling plugin '%s': \n%s", (plugin, e))
 
-    def loadPlugins(self):
+    def loadplugins(self):
         self.log.info("Loading plugins...")
         if not os.path.exists("wrapper-plugins"):
             os.mkdir("wrapper-plugins")
@@ -103,30 +103,26 @@ class Plugins:
         for i in os.listdir("wrapper-plugins"):
             try:
                 if i[-3:] == ".py":
-                    self.loadPlugin(i)
+                    self.loadplugin(i)
                 else:
                     continue  # don't attempt to load non-py files
-            except Exception as  e:
+            except Exception as e:
                 self.log.exception("Failed to import plugin '%s' (%s)", i, e)
                 self.plugins[i] = {"name": i, "good": False}
         self.wrapper.events.callevent("helloworld.event", {"testValue": True})
 
-    def disablePlugins(self):
+    def disableplugins(self):
         self.log.info("Disabling plugins...")
         for i in self.plugins:
-            self.unloadPlugin(i)
+            self.unloadplugin(i)
         self.log.info("Disabling plugins...Done!")
 
-    def reloadPlugins(self):
+    def reloadplugins(self):
         for i in self.plugins:
             try:
-                self.unloadPlugin(i)
-            except Exception as  e:
+                self.unloadplugin(i)
+            except Exception as e:
                 self.log.exception("Failed to unload plugin '%s' (%s)", i, e)
-                try:
-                    plugin = importlib.import_module(self.plugins[i]["module"])
-                except Exception as  ex:
-                    pass
         self.plugins = {}
-        self.loadPlugins()
+        self.loadplugins()
         self.log.info("Plugins reloaded")

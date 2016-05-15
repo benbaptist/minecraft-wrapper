@@ -533,16 +533,16 @@ class WebClient:
                 if plugin in self.wrapper.storage["disabled_plugins"]:
                     self.wrapper.storage["disabled_plugins"].remove(plugin)
                     self.log.warning("[%s] Enabled plugin '%s'", self.addr[0], plugin)
-                    self.wrapper.reloadPlugins()
+                    self.wrapper.reloadplugins()
             else:
                 if plugin not in self.wrapper.storage["disabled_plugins"]:
                     self.wrapper.storage["disabled_plugins"].append(plugin)
                     self.log.warning("[%s] Disabled plugin '%s'", self.addr[0], plugin)
-                    self.wrapper.reloadPlugins()
+                    self.wrapper.reloadplugins()
         if action == "reload_plugins":
             if not self.web.validateKey(get("key")):
                 return EOFError
-            self.wrapper.reloadPlugins()
+            self.wrapper.reloadplugins()
             return True
         if action == "server_action":
             if not self.web.validateKey(get("key")):

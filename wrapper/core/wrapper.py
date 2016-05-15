@@ -388,7 +388,7 @@ class Wrapper:
         self.server = MCServer(sys.argv, self.log, self.configManager.config, self)
         self.server.init()
 
-        self.plugins.loadPlugins()
+        self.plugins.loadplugins()
 
         if self.config["IRC"]["irc-enabled"]:
             self.irc = IRC(self.server, self.config, self.log, self)
@@ -438,7 +438,7 @@ class Wrapper:
             t.start()
 
         self.server.__handle_server__()
-        self.plugins.disablePlugins()
+        self.plugins.disableplugins()
 
     def startproxy(self):
         self.proxy = proxy.Proxy(self)
@@ -609,7 +609,7 @@ class Wrapper:
             elif command == "restart":
                 self.server.restart("Server restarting, be right back!")
             elif command == "reload":
-                self.plugins.reloadPlugins()
+                self.plugins.reloadplugins()
                 if self.server.getservertype() != "vanilla":
                     self.log.info("Note: If you meant to reload the server's plugins instead of the Wrapper's "
                                   "plugins, try running 'reload' without any slash OR '/raw /reload'.")

@@ -178,7 +178,7 @@ class Commands:
                 if get_args(payload["args"], 0) == "server":
                     return
                 try:
-                    self.wrapper.plugins.reloadPlugins()
+                    self.wrapper.plugins.reloadplugins()
                     player.message({"text": "Plugins reloaded.", "color": "green"})
                     if self.wrapper.server.getservertype() != "vanilla":
                         player.message({"text": "Note: If you meant to reload the server's plugins and not Wrapper.py's plugins, run `/reload server`.", "color": "gold"})

@@ -99,7 +99,7 @@ class Config:
         # open("wrapper.properties", "a").close()
         self.parser = ConfigParser.ConfigParser(allow_no_value=True)
         with open("wrapper.properties", "r") as f:
-            self.parser.readfp(f)  # TODO deprecated in PY3.  The suggested replacement parser.readfile() does bot work
+            self.parser.readfp(f)  # TODO deprecated in PY3.  The suggested replacement parser.readfile() does not work
 
         sections = ["General", "Backups", "IRC", "Proxy", "Web"]
         defaults = {"General": {
