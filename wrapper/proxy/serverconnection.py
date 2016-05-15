@@ -132,8 +132,14 @@ class Server:
 
     def flush(self):
         while not self.abort:
-            self.packet.flush()
+            try:
+                self.packet.flush()
+            except socket.error:
+                self.log.debug("serverconnection socket closed (bad file descriptor), closing flush..")
+                self.abort = True
+                break
             time.sleep(0.03)
+
 
     def parse(self, pkid):  # client - bound parse ("Server" class connection)
 
@@ -188,7 +194,7 @@ class Server:
                     return True  # just gathering info with these parses.
 
             elif pkid == self.pktCB.JOIN_GAME:
-                if self.version < mcpacket.PROTOCOL_1_9_1_PRE:
+                if self.version < mcpacket.PROTOCOL_1_9_1PRE:
                     data = self.packet.read("int:eid|ubyte:gm|byte:dim|ubyte:diff|ubyte:max_players|string:level_type")
                 else:
                     data = self.packet.read("int:eid|ubyte:gm|int:dim|ubyte:diff|ubyte:max_players|string:level_type")
@@ -592,6 +598,9 @@ class Server:
     def handle(self):
         try:
             while not self.abort:
+                if self.abort:
+                    self.close()
+                    break
                 try:
                     pkid, original = self.packet.grabPacket()
                     self.lastPacketIDs.append((hex(pkid), len(original)))
@@ -601,16 +610,19 @@ class Server:
                             break
                 except EOFError as eof:
                     # This error is often erroneous, see https://github.com/suresttexas00/minecraft-wrapper/issues/30
-                    self.log.exception("Packet EOF (%s)", eof)
+                    self.log.debug("Packet EOF (%s)", eof)
+                    self.abort = True
+                    self.close()
+                    break
+                except socket.error:  # Bad file descriptor occurs anytime a socket is closed.
+                    self.log.debug("Failed to grab packet [SERVER] socket closed; bad file descriptor")
+                    self.abort = True
                     self.close()
                     break
                 except Exception as e1:
-                    # Bad file descriptor often occurs, see https://github.com/suresttexas00/minecraft-wrapper/issues/30
-                    self.log.exception("Failed to grab packet [SERVER] (%s):", e1)
+                    # anything that gets here is a bona-fide error we need to become aware of
+                    self.log.debug("Failed to grab packet [SERVER] (%s):", e1)
                     return
-                if self.client.abort:
-                    self.close()
-                    break
                 if self.parse(pkid) and self.client:
                     self.client.packet.sendRaw(original)
         except Exception as e2:

@@ -124,13 +124,6 @@ class Player:
             ops = json.loads(f.read())
         return ops
 
-    def console(self, string):
-        """
-        :param string: command to execute (no preceding slash) in the console
-        Run a command in the Minecraft server's console.
-        """
-        self.wrapper.server.console(string)
-
     def execute(self, string):
         """
         :param string: command to execute (no preceding slash)
@@ -138,7 +131,7 @@ class Player:
          any Wrapper.py or commands.  The command is sent straight to the
          server console without going through the wrapper.
         """
-        self.console("execute %s ~ ~ ~ %s" % (self.name, string))
+        self.wrapper.server.console("execute %s ~ ~ ~ %s" % (self.name, string))
 
     def say(self, string):
         """
@@ -167,11 +160,22 @@ class Player:
             return self.client
 
     def getPosition(self):
-        """:returns: a tuple of the player's current position x, y, z, and yaw, pitch of head. """
+        """:returns: a tuple of the player's current position x, y, z, and yaw, pitch of head.
+        Notes:
+        The player's position is obtained by parsing client packets, which are not sent until the
+        client logs in to the server.  Allow some time after server login to verify the wrapper has had
+        the oppportunity to parse a suitable packet to get the information!
+        """
+        # TODO these sorts of problems should have a better solution; perhaps reading the player.dat file to populate the defaults
         return self.getClient().position + self.getClient().head
 
     def getGamemode(self):
-        """:returns:  the player's current gamemode. """
+        """:returns:  the player's current gamemode.
+        Notes:
+        The player's gammode may be obtained by parsing server packets, which are not sent until the
+        client logs in to the server.  Allow some time after server login to verify the wrapper has had
+        the oppportunity to parse a suitable packet to get the information!
+        """
         return self.getClient().gamemode
 
     def getDimension(self):
@@ -179,7 +183,11 @@ class Player:
         -1 for Nether,
          0 for Overworld
          1 for End.
-         """
+        Notes:
+        The player's position is obtained by parsing server/client packets, which are not sent until the
+        client logs in to the server.  Allow some time after server login to verify the wrapper has had
+        the oppportunity to parse a suitable packet to get the information!
+        """
         return self.getClient().dimension
 
     def setGamemode(self, gm=0):
@@ -189,7 +197,7 @@ class Player:
         """
         if gm in (0, 1, 2, 3):
             self.client.gamemode = gm
-            self.console("gamemode %d %s" % (gm, self.username))
+            self.wrapper.server.console("gamemode %d %s" % (gm, self.username))
 
     def setResourcePack(self, url, hashrp=""):
         """

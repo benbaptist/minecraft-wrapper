@@ -14,9 +14,11 @@ import random
 import utils.encryption as encryption
 import proxy.mcpacket as mcpacket
 
-from proxy.server import Server
+from proxy.serverconnection import Server
 from proxy.packet import Packet
 from core.mcuuid import MCUUID
+
+import socket # not explicitly reference in this module, but this import is used by error handling
 
 # wrapper.py will check for requests to run proxy mode
 try:
@@ -198,7 +200,12 @@ class Client:
 
     def flush(self):
         while not self.abort:
-            self.packet.flush()
+            try:
+                self.packet.flush()
+            except socket.error:
+                self.log.debug("clientconnection socket closed (bad file descriptor), closing flush..")
+                self.abort = True
+                break
             time.sleep(0.03)
 
     def getPlayerObject(self):
@@ -768,16 +775,26 @@ class Client:
         t.start()
         try:
             while not self.abort:
+                if self.abort:
+                    self.close()
+                    break
                 try:
                     pkid, original = self.packet.grabPacket()
                 except EOFError:
                     # This is not an error.. It means the client disconnected and is not sending packet stream anymore
-                    self.log.debug("Client Packet steam ended (EOF)")
+                    self.log.debug("Client Packet stream ended (EOF)")
+                    self.abort = True
+                    self.close()
+                    break
+                except socket.error:  # Bad file descriptor occurs anytime a socket is closed.
+                    self.log.debug("Failed to grab packet [CLIENT] socket closed; bad file descriptor")
+                    self.abort = True
                     self.close()
                     break
                 except Exception as e:
-                    # Bad file descriptor often occurs, cause is currently unknown, but seemingly harmless
-                    self.log.exception("Failed to grab packet [CLIENT] (%s):", e)
+                    # anything that gets here is a bona-fide error we need to become aware of
+                    self.log.error("Failed to grab packet [CLIENT] (%s):", e)
+                    self.abort = True
                     self.close()
                     break
 
@@ -791,9 +808,13 @@ class Client:
     def _keep_alive_tracker(self, playername):
         # send keep alives to client and send client settings to server.
         while not self.abort:
-            time.sleep(5)
+            if self.abort is True:
+                self.log.debug("Closing Keep alive tracker thread for %s's client.", playername)
+                self.close()
+                break
+            time.sleep(1)
             while self.state == ClientState.PLAY:
-                if time.time() - self.time_server_pinged > 10:  # client expects < 20sec
+                if time.time() - self.time_server_pinged > 5:  # client expects < 20sec
                     self.keepalive_val = random.randrange(0, 99999)
                     if self.clientversion > mcpacket.PROTOCOL_1_8START:
                         self.packet.send(self.pktCB.KEEP_ALIVE, "varint",
@@ -803,7 +824,7 @@ class Client:
                         self.packet.send(0x00, "int", (self.keepalive_val,))
                     self.time_server_pinged = time.time()
                 # ckeck for active client keep alive status:
-                if time.time() - self.time_client_responded > 20:  # server can allow up to 30 seconds for response
+                if time.time() - self.time_client_responded > 25:  # server can allow up to 30 seconds for response
                     self.state = ClientState.HANDSHAKE
                     self.log.debug("Closing %s's client thread due to lack of keepalive response", playername)
                     self.close()

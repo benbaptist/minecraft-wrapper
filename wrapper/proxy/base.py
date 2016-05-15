@@ -11,7 +11,7 @@ import utils.encryption as encryption
 from utils.helpers import get_jsonFile, put_jsonFile, find_in_json, epoch_to_timestr, read_timestr
 
 from core.storage import Storage
-from proxy.client import Client
+from proxy.clientconnection import Client
 from proxy.packet import Packet
 
 try:
