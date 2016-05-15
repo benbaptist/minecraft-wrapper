@@ -144,7 +144,7 @@ class API:
 
     def getPluginContext(self, pid):
         """ Returns the content of another plugin with the specified ID. 
-        i.e. api.getPluginContext(\"com.benbaptist.plugins.essentials\")"""
+        i.e. api.getPluginContext("com.benbaptist.plugins.essentials")"""
         if pid in self.wrapper.plugins:
             return self.wrapper.plugins[pid]["main"]
         else:
