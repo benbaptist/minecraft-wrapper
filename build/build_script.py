@@ -31,7 +31,7 @@ def build_wrapper(args):
     version["__branch__"] = args.branch
     version["release_time"] = time.time()
 
-  with open("core/globals.py", "w") as f:
+  with open("core/buildinfo.py", "w") as f:
     f.write("__build__=%d\n__branch__='%s'" % (version["build"], args.branch))
 
   with open("build/version.json", "w") as f:

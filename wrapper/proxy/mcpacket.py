@@ -1,27 +1,71 @@
 # -*- coding: utf-8 -*-
 
 """
-Ways to reference packets by names and not hard-coded numbers
+Ways to reference packets by names and not hard-coded numbers.
+
+This attempts to follow the wiki as much as possible.
+
 It is up to wrapper to know what the actual connection versions are.
 Once it knows the version, it can do something like:
-    `from mcpkt import serverBound18 as ClPkt`
+    `from mcpkt import server18 as ClPkt` (remember wrappers "server" process parses client-bound packets).
 the remainder of the wrapper/plugin code can simply reference
     `ClPkt.playerlook`
 
-set something False using 0xEE
+Protocol constants are named as follows:
+    first two digits are major version, third digit in minor version.
+    example: PROTOCOL_1_8_9 means - major version 1.8, minor version 9 (i.e., 1.8.9).
+    Explanatory text (pre, start, etc) may be last.
+
+packet classes are named as follows:
+    First word is the bound direction (as found in the protocol Wiki), followed by two digit major version.
+    example: Server189 means - "Server" bound packets (en-route to server),
+    major version 1.8, minor version 9 (i.e., 1.8.9). Explanatory text (pre, start, etc) are last and
+    are discouraged... Keeping packet classes to an actual major release is the ideal (although some
+    minor releases may be needed).
+
+set something False/unimplemented using 0xEE
+
 """
 
-# Version Coding
-PROTOCOL_1_9_1_PRE = 108  # post- 1.9 "pre releases (1.9.1 pre-3 and later
-PROTOCOLv1_9REL1 = 107    # start of stable 1.9 release (or most current snapshop that is documented by protocol)
+# Version Constants
+# use these constants to select which packet set to use.
+
+PROTOCOL_MAX = 1000  # used for lastest protocol end version.
+#
+# Use Server19/Client19
+PROTOCOL_1_9_4 = 110      # post- 1.9.3 "pre" releases (1.9.3 pre-2 -)
+
+# Use Server19/Client19
+PROTOCOL_1_9_3PRE3 = 109  # post- 1.9 "pre" releases (1.9.2 - 1.9.3 pre-1)
+PROTOCOL_1_9_1PRE = 108   # post- 1.9 "pre" releases (1.9.1 pre-3 through 1.9.1)
+PROTOCOL_1_9REL1 = 107    # start of stable 1.9 release
+
+# Between 49-106, the protocol is incredibly unstable.  Packet numbers changed almost weekly. Recommend
+#   you not have a client or server running in these protocol versions
+
+# Up to this point (<48), 18 is appropriate, but
 PROTOCOL_1_9START = 48    # start of 1.9 snapshots
-PROTOCOLv1_8START = 6     # 1.8
+
+# Use Server18/Client18
+PROTOCOL_1_8START = 6     # 1.8 snapshots start- # 47 Protocol docs - http://wiki.vg/index.php?title=Protocol&oldid=7368
+# below this, you take your chances!, but Client/Server18 may work.
+
+# for reference:
+PROTOCOL_1_7_9 = 5       # 1.7.6 - 1.7.10      http://wiki.vg/index.php?title=Protocol&oldid=6003
+PROTOCOL_1_7 = 4          # 1.7.1-pre to 1.7.5  http://wiki.vg/index.php?title=Protocol&oldid=5486
+
+"""Minecraft version 1.6.4 and older used a protocol versioning scheme separate from the current one.
+ Accordingly, an old protocol version number may ambiguously refer to an one of those old versions and
+ from the list above.  Do not run a 1.6.4 server with proxy mode."""
+
 
 class ServerBound18:
     """ wrapper's "Client" process, which handles connections from client to wrapper.
     These packets are being sent to the server (i.e., wrapper's proxy) from the client.
     Proxy, in turn, can "send" these on, or drop them (return False)
     """
+    def __init__(self):
+        pass
 
     KEEP_ALIVE = 0x00  # Client's Response To Server Challenge
     CHAT_MESSAGE = 0x01
@@ -37,6 +81,7 @@ class ServerBound18:
     CLIENT_SETTINGS = 0x15
     CLICK_WINDOW = 0x0e
     SPECTATE = 0x18
+    PLAYER_ABILITIES = 0x13  # corrected/added/verified wiki.vg/Protocol_History#16w07b see 15w31a serverbound
     USE_ITEM = 0xEE  # Does not exist in 1.8
     TELEPORT_CONFIRM = 0xEE  # Does not exist in 1.8
 
@@ -46,6 +91,8 @@ class ServerBound19:  # Updated To Protocol 94 15w51b
     These packets are being sent to the server (i.e., wrapper's proxy) from the client.
     Proxy, in turn, can "send" these on, or drop them (return False)
     """
+    def __init__(self):
+        pass
 
     KEEP_ALIVE = 0x0b  # Client's Response To Server Challenge
     CHAT_MESSAGE = 0x02
@@ -61,6 +108,7 @@ class ServerBound19:  # Updated To Protocol 94 15w51b
     CLIENT_SETTINGS = 0x04
     CLICK_WINDOW = 0x07
     SPECTATE = 0x1b
+    PLAYER_ABILITIES = 0x12  # corrected/added/verified wiki.vg/Protocol_History#16w07b see 15w43a serverbound
     USE_ITEM = 0x1d  # Only Used For Animation Purposes
     TELEPORT_CONFIRM = 0x00
 
@@ -69,12 +117,14 @@ class ClientBound18:
     These packets are being sent to the client (i.e., wrapper's proxy) from the server.
     Proxy, in turn reads the info and passes it on the client (making any needed mods).
     """
+    def __init__(self):
+        pass
 
     KEEP_ALIVE = 0x00  # Server Challenge To Client
     CHAT_MESSAGE = 0x02
     PLAYER_POSLOOK = 0x08
     PLAYER_LIST_ITEM = 0x38
-    PLAYER_ABILITIES = 0x13
+    PLAYER_ABILITIES = 0x39  # corrected/added/verified wiki.vg/Protocol_History#16w07b see 15w43a clientbound
     JOIN_GAME = 0x01
     DISCONNECT = 0x40
     RESPAWN = 0x07
@@ -110,12 +160,14 @@ class ClientBound19:  # Updated To Protocol 107 1.9 Minecraft
     These packets are being sent to the client (i.e., wrapper's proxy) from the server.
     Proxy, in turn reads the info and passes it on the client (making any needed mods).
     """
+    def __init__(self):
+        pass
 
     KEEP_ALIVE = 0x1f  # Server Challenge To Client
     CHAT_MESSAGE = 0x0f
     PLAYER_POSLOOK = 0x2e
     PLAYER_LIST_ITEM = 0x2d
-    PLAYER_ABILITIES = 0x2b
+    PLAYER_ABILITIES = 0x2b  # corrected/added/verified wiki.vg/Protocol_History#16w07b see 15w43a clientbound
     JOIN_GAME = 0x23
     DISCONNECT = 0x1a
     RESPAWN = 0x33

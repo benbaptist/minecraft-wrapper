@@ -1,22 +1,27 @@
 # -*- coding: utf-8 -*-
 
+# p2 and py3 compliant
+
 import socket
 import threading
 import time
 import json
 
 import utils.encryption as encryption
-from utils.helpers import get_jsonFile, put_jsonFile, find_iteminJsonlist, epochtotimestr, readtimestring
+from utils.helpers import get_jsonFile, put_jsonFile, find_in_json, epoch_to_timestr, read_timestr
 
 from core.storage import Storage
-from client import Client
-from packet import Packet
+from proxy.clientconnection import Client
+from proxy.packet import Packet
 
 try:
     import requests
-    IMPORT_SUCCESS = True
 except ImportError:
-    IMPORT_SUCCESS = False
+    requests = False
+
+if not encryption:
+    requests = False
+
 
 UNIVERSAL_CONNECT = False # tells the client "same version as you" or does not disconnect dissimilar clients
 HIDDEN_OPS = ["SurestTexas00", "BenBaptist"]
@@ -26,7 +31,8 @@ class Proxy:
         self.wrapper = wrapper
         self.server = wrapper.server
         self.log = wrapper.log
-        self.socket = False
+        self.proxy_socket = socket.socket()
+        self.usingSocket = False
         self.isServer = False
         self.clients = []
         self.skins = {}
@@ -37,6 +43,9 @@ class Proxy:
         self.privateKey = encryption.generate_key_pair()
         self.publicKey = encryption.encode_public_key(self.privateKey)
 
+        if not requests:
+            raise Exception("You must have the requests module installed to run in proxy mode!")
+
     def host(self):
         # get the protocol version from the server
         while not self.wrapper.server.state == 2:
@@ -46,35 +55,34 @@ class Proxy:
         except Exception as e:
             self.log.exception("Proxy could not poll the Minecraft server - are you sure that the ports are configured properly? (%s)", e)
 
-        while not self.socket:
+        # bind server socket
+        while not self.usingSocket:
             try:
-                self.socket = socket.socket()
-                self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                self.socket.bind((self.wrapper.config["Proxy"]["proxy-bind"], self.wrapper.config["Proxy"]["proxy-port"]))
-                self.socket.listen(5)
+                self.proxy_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                self.proxy_socket.bind((self.wrapper.config["Proxy"]["proxy-bind"], self.wrapper.config["Proxy"]["proxy-port"]))
+                self.usingSocket = True
+                self.proxy_socket.listen(5)
             except Exception as e:
-                self.log.exception("Proxy mode could not bind - retrying in five seconds (%s)", e)
-                self.socket = False
-            time.sleep(5)
+                self.log.exception("Proxy mode could not bind - retrying in ten seconds (%s)", e)
+                self.usingSocket = False
+            time.sleep(10)
+
         while not self.wrapper.halt:
             try:
-                sock, addr = self.socket.accept()
-                client = Client(sock, addr, self.wrapper, self.publicKey, self.privateKey, self)
+                sock, addr = self.proxy_socket.accept()
+            except Exception as e:
+                self.log.exception("An error has occured while trying to accept a socket connection \n(%s)", e)
+                continue
 
-                t = threading.Thread(target=client.handle, args=())
-                t.daemon = True
-                t.start()
+            client = Client(sock, addr, self.wrapper, self.publicKey, self.privateKey, self)
 
-                self.clients.append(client)
+            t = threading.Thread(target=client.handle, args=())
+            t.daemon = True
+            t.start()
 
-                self.removeStaleClients()
-                
-            except Exception as e:  # Not quite sure what's going on
-                self.log.exception("An error has occured in the proxy (%s)", e)
-                try:
-                    client.disconnect(e)
-                except Exception as ex:
-                    self.log.exception("Failed to disconnect client (%s)", ex)
+            self.clients.append(client)
+            self.removeStaleClients()
+
 
     def removeStaleClients(self):
         try:
@@ -86,9 +94,9 @@ class Proxy:
 
 
     def pollServer(self):
-        sock = socket.socket()
-        sock.connect(("localhost", self.wrapper.config["Proxy"]["server-port"]))
-        packet = Packet(sock, self)
+        server_sock = socket.socket()
+        server_sock.connect(("localhost", self.wrapper.config["Proxy"]["server-port"]))
+        packet = Packet(server_sock, self)
 
         packet.send(0x00, "varint|string|ushort|varint", (5, "localhost", self.wrapper.config["Proxy"]["server-port"], 1))
         packet.send(0x00, "", ())
@@ -101,7 +109,7 @@ class Proxy:
                 self.wrapper.server.protocolVersion = data["version"]["protocol"]
                 self.wrapper.server.version = data["version"]["name"]
                 break
-        sock.close()
+        server_sock.close()
 
     def getClientByOfflineServerUUID(self, uuid):
         """
@@ -109,7 +117,7 @@ class Proxy:
         :return: the matching client
         """
         for client in self.clients:
-            if client.serverUUID.string == str(uuid):
+            if client.serverUuid.string == str(uuid):
                 self.uuidTranslate[uuid] = client.uuid.string
                 return client
         return False # no client
@@ -124,14 +132,17 @@ class Proxy:
         :param expires:
         :return:
         """
-        # TODO - legacy server support (pre-1.7.10)
-        pass
+        print(" # TODO - legacy server support (pre-1.7.10) %s%s%s%s%s" % (self, reason, source, expires, playername))
 
     @staticmethod
-    def getUUIDbanreason(uuid):
+    def getUUIDBanReason(uuid):
+        """
+        :param uuid: uuid of player as string
+        :return: string representing ban reason
+        """
         banlist = get_jsonFile("banned-players")
         if banlist:  # in this case we just care if banlist exits in any fashion
-            banrecord = find_iteminJsonlist(banlist, "uuid", str(uuid))
+            banrecord = find_in_json(banlist, "uuid", uuid)
             return "%s by %s" % (banrecord["reason"], banrecord["source"])
         return "Banned by server"
 
@@ -150,21 +161,21 @@ class Proxy:
         if banlist is not False:  # file and directory exist.
             if banlist is None:  # file was empty or not valid
                 banlist= dict()  # ensure valid dict before operating on it
-            if find_iteminJsonlist(banlist, "uuid", str(uuid)):
+            if find_in_json(banlist, "uuid", str(uuid)):
                 return "player already banned"  # error text
             else:
                 if expires:
                     try:
-                        expiration = epochtotimestr(expires)
+                        expiration = epoch_to_timestr(expires)
                     except Exception as e:
                         print(e)
                         return "expiration date invalid"  # error text
                 else:
                     expiration = "forever"
-                name = self.wrapper.lookupUsernamebyUUID(uuid.string)
+                name = self.wrapper.getUsernamebyUUID(uuid.string)
                 banlist.append({"uuid": uuid.string,
                                 "name": name,
-                                "created": epochtotimestr(time.time()),
+                                "created": epoch_to_timestr(time.time()),
                                 "source": source,
                                 "expires": expiration,
                                 "reason": reason})
@@ -186,25 +197,25 @@ class Proxy:
 
         This probably only works on 1.7.10 servers or later
         """
-        if not self.wrapper.isgoodipv4(ipaddress):
+        if not self.wrapper.isIPv4Address(ipaddress):
             return "Invalid IPV4 address: %s" % ipaddress
         banlist = get_jsonFile("banned-ips")
         if banlist is not False:  # file and directory exist.
             if banlist is None:  # file was empty or not valid
                 banlist= dict()  # ensure valid dict before operating on it
-            if find_iteminJsonlist(banlist, "ip", ipaddress):
+            if find_in_json(banlist, "ip", ipaddress):
                 return "address already banned"  # error text
             else:
                 if expires:
                     try:
-                        expiration = epochtotimestr(expires)
+                        expiration = epoch_to_timestr(expires)
                     except Exception as e:
                         print(e)
                         return "expiration date invalid"  # error text
                 else:
                     expiration = "forever"
                 banlist.append({"ip": ipaddress,
-                                "created": epochtotimestr(time.time()),
+                                "created": epoch_to_timestr(time.time()),
                                 "source": source,
                                 "expires": expiration,
                                 "reason": reason})
@@ -221,13 +232,13 @@ class Proxy:
             return "Banlist not found on disk"
 
     def pardonIP(self, ipaddress):
-        if not self.wrapper.isgoodipv4(ipaddress):
+        if not self.wrapper.isIPv4Address(ipaddress):
             return "Invalid IPV4 address: %s" % ipaddress
         banlist = get_jsonFile("banned-ips")
         if banlist is not False:  # file and directory exist.
             if banlist is None:  # file was empty or not valid
                 return "No IP bans have ever been recorded."
-            banrecord = find_iteminJsonlist(banlist, "ip", ipaddress)
+            banrecord = find_in_json(banlist, "ip", ipaddress)
             if banrecord:
                 for x in banlist:
                     if x == banrecord:
@@ -246,16 +257,13 @@ class Proxy:
         if banlist is not False:  # file and directory exist.
             if banlist is None:  # file was empty or not valid
                 return "No bans have ever been recorded..?"
-            #print "hello".__str__()
-            # should I be using this for uuid? what if a string gets passed instead? should I use .__str__ instead?
-            # __str__ should work for MCUUID and str objects, correct?
-            banrecord = find_iteminJsonlist(banlist, "uuid", str(uuid))
+            banrecord = find_in_json(banlist, "uuid", str(uuid))
             if banrecord:
                 for x in banlist:
                     if x == banrecord:
                         banlist.remove(x)
                 if put_jsonFile(banlist, "banned-players"):
-                    name = self.wrapper.lookupUsernamebyUUID(str(uuid))
+                    name = self.wrapper.getUsernamebyUUID(str(uuid))
                     return "pardoned %s" % name
                 return "Could not write banlist to disk"
             else:
@@ -266,39 +274,42 @@ class Proxy:
     def isUUIDBanned(self, uuid):  # Check if the UUID of the user is banned
         banlist = get_jsonFile("banned-players")
         if banlist:  # in this case we just care if banlist exits in any fashion
-            banrecord = find_iteminJsonlist(banlist, "uuid", str(uuid))
+            banrecord = find_in_json(banlist, "uuid", str(uuid))
             if banrecord:
-                if readtimestring(banrecord["expires"]) < int(time.time()):  # if ban has expired
+                if read_timestr(banrecord["expires"]) < int(time.time()):  # if ban has expired
                     pardoning = self.pardonUUID(str(uuid))
                     if pardoning[:8] == "pardoned":
                         self.log.info("UUID: %s was pardoned (expired ban)" % str(uuid))
                         return False  # player is "NOT" banned (anymore)
                     else:
-                        self.log.warn("isUUIDBanned attempted a pardon of uuid: %s (expired ban), but it failed:\n %s"
-                                      % (str(uuid), pardoning))
+                        self.log.warning("isUUIDBanned attempted a pardon of uuid: %s (expired ban), but it failed:\n %s", uuid, pardoning)
                 return True  # player is still banned
         return False # banlist empty or record not found
 
-    def isIPbanned(self, ipaddress):  # Check if the IP address is banned
+    def isIPBanned(self, ipaddress):  # Check if the IP address is banned
         banlist = get_jsonFile("banned-ips")
         if banlist:  # in this case we just care if banlist exits in any fashion
-            banrecord = find_iteminJsonlist(banlist, "ip", ipaddress)
+            banrecord = find_in_json(banlist, "ip", ipaddress)
             if banrecord:
-                if readtimestring(banrecord["expires"]) < int(time.time()):  # if ban has expired
+                if read_timestr(banrecord["expires"]) < int(time.time()):  # if ban has expired
                     pardoning = self.pardonIP(ipaddress)
                     if pardoning[:8] == "pardoned":
-                        self.log.info("IP: %s was pardoned (expired ban)" % ipaddress)
+                        self.log.info("IP: %s was pardoned (expired ban)", ipaddress)
                         return False  # IP is "NOT" banned (anymore)
                     else:
-                        self.log.warn("isIPbanned attempted a pardon of IP: %s (expired ban), but it failed:\n %s"
-                                      % (ipaddress, pardoning))
+                        self.log.warning("isIPBanned attempted a pardon of IP: %s (expired ban), but it failed:\n %s", ipaddress, pardoning)
                 return True  # IP is still banned
         return False # banlist empty or record not found
 
     def getSkinTexture(self, uuid):
         """
-        Will assume that uuid is input as a string for now
+        Args:
+            uuid: uuid (accept MCUUID or string)
+        Returns:
+            skin texture (False if request fails)
         """
+        if "MCUUID" in str(type(uuid)):
+            uuid = uuid.string
         if uuid not in self.skins:
             return False
         if uuid in self.skinTextures:
@@ -313,5 +324,5 @@ class Proxy:
             self.skinTextures[uuid] = r.content.encode("base64")
             return self.skinTextures[uuid]
         else:
-            self.log.warn("Could not fetch skin texture! (status code %d)", r.status_code)
+            self.log.warning("Could not fetch skin texture! (status code %d)", r.status_code)
             return False

@@ -1,7 +1,14 @@
 # -*- coding: utf-8 -*-
 
 import socket
-import StringIO
+
+
+# Py3-2
+import sys
+PY3 = sys.version_info > (3,)
+
+import io as io
+
 import json
 import struct
 import zlib
@@ -18,7 +25,8 @@ class Packet:
         self.version = 5
         self.bonk = False
         self.abort = False
-        self.buffer = StringIO.StringIO()
+        self.buffer = io.BytesIO()
+
         self.queue = []
 
         self._ENCODERS = {
@@ -53,25 +61,28 @@ class Packet:
         self.abort = True
 
     def hexdigest(self, sh):
-        d = long(sh.hexdigest(), 16)
+        if PY3:
+            d = int(sh.hexdigest(), 16)
+        else:
+            d = long(sh.hexdigest(), 16)
+
         if d >> 39 * 4 & 0x8:
             return "-%x" % ((-d) & (2 ** (40 * 4) - 1))
         return "%x" % d
 
     def grabPacket(self):
-        length = self.unpack_varInt()
-        # if length == 0: return None
-        # if length > 256:
-        #     print "Length: %d" % length
-        dataLength = 0
-        if self.compressThreshold != -1:
-            dataLength = self.unpack_varInt()
-            length = length - len(self.pack_varInt(dataLength))
-        # $ part of the bad file descriptor rabbit trail
+        length = self.unpack_varInt() # first field - entire raw Packet Length i.e. 55 in test (for annoying disconnect)
+        dataLength = 0  # if 0, an uncompressed packet
+        if self.compressThreshold != -1:  # if compressed:
+            dataLength = self.unpack_varInt()  # length of the uncompressed (Packet ID + Data)
+            # using augmented assignment in the next line will BREAK this
+            length = length - len(self.pack_varInt(dataLength))  # find the len of the datalength field and subtract it
         payload = self.recv(length)
-        if dataLength > 0:
+
+        if dataLength > 0:  # it is compressed, unpack it
             payload = zlib.decompress(payload)
-        self.buffer = StringIO.StringIO(payload)
+
+        self.buffer = io.BytesIO(payload)
         pkid = self.read_varInt()
         return (pkid, payload)
 
@@ -118,8 +129,6 @@ class Packet:
                     packet = self.pack_varInt(len(packet)) + packet
             else:
                 packet = self.pack_varInt(len(packet)) + packet
-            # if not self.obj.isServer:
-            #   print packet.encode("hex")
             if self.sendCipher is None:
                 self.socket.send(packet)
             else:
@@ -292,11 +301,11 @@ class Packet:
             elif type_ == 4:
                 b += self.send_string(value)
             elif type_ == 5:
-                print "WIP 5"
+                print("WIP 5")
             elif type_ == 6:
-                print "WIP 6"
+                print("WIP 6")
             elif type_ == 6:
-                print "WIP 7"
+                print("WIP 7")
         b += self.send_ubyte(0x7f)
         return b
 
@@ -323,7 +332,6 @@ class Packet:
         r = ""
         typesList = []
         for i in tag:
-            # print("list element type: %s" %i['type'])
             typesList.append(i['type'])
             if len(set(typesList)) != 1:
                 # raise Exception("Types in list dosn't match!")
@@ -358,7 +366,6 @@ class Packet:
         r += self.send_short(slot["damage"])
         if slot["nbt"]:
             r += self.send_tag(slot['nbt'])
-            # print(r)
         else:
             r += "\x00"
         return r
@@ -373,18 +380,10 @@ class Packet:
                 if m > 5000:
                     m = 5000
                 d += self.socket.recv(m)
-        else:  # $ find out why next line sometimes errors out bad file descriptor
+        else:
             d = self.socket.recv(length)
             if len(d) == 0:
-                pass  # temporarily remove this because it spams console
-                # raise EOFError("Packet was zero length, disconnecting")
-      # while length > len(d):
-      #     print "Need %d more" % length - len(d)
-      #     d += self.socket.recv(length - len(d))
-      #     if not length == len(d):
-      #         print "ACTUAL PACKET NOT LONG %d %d" % (length, len(d))
-      #         print "Read more: %d" % len(self.socket.recv(1024))
-      #       raise EOFError("Actual length of packet was not as long as expected!")
+                raise EOFError("Packet stream ended (Client disconnected")
         if self.recvCipher is None:
             return d
         return self.recvCipher.decrypt(d)
@@ -392,7 +391,6 @@ class Packet:
     def read_data(self, length):
         d = self.buffer.read(length)
         if len(d) == 0 and length is not 0:
-            # print(self.obj)
             self.obj.disconnect("Received no data or less data than expected - connection closed")
             return ""
         return d
@@ -532,7 +530,6 @@ class Packet:
         a = {}
         a["type"] = self.read_byte()
         if a["type"] != 0:
-            # print("NBT TYPE: %s" %a["type"])
             a["name"] = self.read_short_string()
             a["value"] = self._DECODERS[a["type"]]()
         return a
@@ -541,7 +538,7 @@ class Packet:
         r = []
         btype = self.read_byte()
         length = self.read_int()
-        for l in xrange(length):
+        for l in range(length):  # TODO Py2-3
             b = {}
             b["type"] = btype
             b["name"] = ""

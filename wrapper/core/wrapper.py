@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+# py3 non-compliant due to use of xrange, unicode reference in getUsername(), and
+# raw_input("") in console().  (imports corrected)
+
 import sys
 import json
 import signal
@@ -10,38 +13,41 @@ import os
 import logging
 import socket as sock_module
 
-import core.globals as globals
+import core.buildinfo as version_info  # renamed from globals (a built-in)
 
 import proxy.base as proxy
 
 from management.web import Web as web
-from management.dashboard import Web as dashboard
+
 from utils.helpers import get_args, get_argsAfter
 
 from api.base import API
 
-from mcuuid import MCUUID
-from config import Config
-from irc import IRC
-from mcserver import MCServer
-from scripts import Scripts
-from plugins import Plugins
-from commands import Commands
-from events import Events
-from storage import Storage
-from exceptions import UnsupportedOSException, InvalidServerState
+from core.mcuuid import MCUUID
+from core.config import Config
+from core.irc import IRC
+from core.mcserver import MCServer
+from core.scripts import Scripts
+from core.plugins import Plugins
+from core.commands import Commands
+from core.events import Events
+from core.storage import Storage
+from core.exceptions import UnsupportedOSException, InvalidServerStateError
 
+# from management.dashboard import Web as dashboard - unused right now
 try:
     import readline
 except ImportError:
-    # readline does not exist for windows
-    pass
+    readline = False
 
 try:
     import requests
-    IMPORT_REQUESTS = True
 except ImportError:
-    IMPORT_REQUESTS = False
+    requests = False
+
+import sys
+PY3 = sys.version_info > (3,)
+
 
 class Wrapper:
 
@@ -66,7 +72,10 @@ class Wrapper:
         # Aliases for compatibility
         self.callEvent = self.events.callEvent
 
-        if not IMPORT_REQUESTS and self.configManager.config["Proxy"]["proxy-enabled"]:
+        if not readline:
+            self.log.warning("'readline' not imported.")
+
+        if not requests and self.configManager.config["Proxy"]["proxy-enabled"]:
             self.log.error("You must have the requests module installed to run in proxy mode!")
             return
 
@@ -85,7 +94,7 @@ class Wrapper:
         return False
 
     @staticmethod
-    def isgoodipv4(addr):
+    def isIPv4Address(addr):
         try:
             sock_module.inet_aton(addr) # Attempts to convert to an IPv4 address
         except sock_module.error as e: # If it fails, the ip is not in a valid format
@@ -102,7 +111,7 @@ class Wrapper:
         return MCUUID(bytes=playeruuid.decode("hex")).string
 
     @staticmethod
-    def UUIDFromName(name):
+    def getUUIDFromName(name):
         """
         :param name: should be passed as "OfflinePlayer:<playername>" to get the correct (offline) vanilla server uuid
         :return: a MCUUID object based on the name
@@ -116,95 +125,127 @@ class Wrapper:
         d[8] |= 0x80
         return MCUUID(bytes=str(d))
 
-    def lookupUUIDbyUsername(self, username):
+    def acceptEula(self):
+        if os.path.isfile("eula.txt"):
+            self.log.debug("Checking EULA agreement...")
+            with open("eula.txt", "r") as f:
+                eula = f.read()
+
+            if "false" in eula:
+                self.log.debug("EULA agreement was not accepted, forcing acceptance...")
+                with open("eula.txt", "w") as f:
+                    f.write(eula.replace("false", "true"))
+
+            self.log.debug("EULA agreement has been accepted!")
+
+    def getUUIDByUsername(self, username):
         """
-        Lookup users name and update local wrapper usercache. Will check Mojang once per day only.
+        Lookup user's UUID using the username. Primarily searches the wrapper usercache.  If record is
+        older than 30 days (or cannot be found in the cache), it will poll Mojang and also attempt a full
+        update of the cache using getUsernamebyUUID as well.
+
         :param username:  username as string
-        :returns: returns the MCUUID object from the given name. Updates the wrapper usercache.json
+        :returns: returns the online/Mojang MCUUID object from the given name. Updates the wrapper usercache.json
                 Yields False if failed.
         """
-        # frequency = 86400  # check once per day at most for existing players
+        frequency = 2592000  # 30 days.  If a cache update is specifically required any sooner, use getUsernamebyUUID.
+        user_uuid_matched = None
         for useruuid in self.usercache: # try wrapper cache first
-            if username in (self.usercache.key(useruuid)["name"], self.usercache.key(useruuid)["localname"]):
-                return MCUUID(useruuid)
-        # try mojang  (a new player, likely)
+            if username == self.usercache.key(useruuid)["localname"]:
+                '''This search need only be done by 'localname', which is always populated and is always
+                the same as the 'name', unless a localname has been assigned on the server (such as
+                when "falling back' on an old name).'''
+                if (time.time() - self.usercache.key(useruuid)["time"]) < frequency:
+                    return MCUUID(useruuid)
+                # if over the time frequency, it needs to be updated by using actual last polled name.
+                username = self.usercache.key(useruuid)["name"]
+                # TODO cautionary - someone 'out there' could change their name to one taken on the server (be aware)
+                #  The code needs some upgrade to the to handle this possibility; perhaps during login.
+                user_uuid_matched = useruuid # cache this for later in case multiple name changes require a uuid lookup.
+
+        # try mojang  (a new player or player changed names.)
         r = requests.get("https://api.mojang.com/users/profiles/minecraft/%s" % username)
         if r.status_code == 200:
-            useruuid = self.formatUUID(r.json()["id"])
+            useruuid = self.formatUUID(r.json()["id"])  # returns a string uuid with dashes
             correctcapname = r.json()["name"]
             if username != correctcapname:
-                self.log.warn("%s's name is not correctly capitalized (offline name warning!)", correctcapname)
-            nameisnow = self.lookupUsernamebyUUID(useruuid)
+                self.log.warning("%s's name is not correctly capitalized (offline name warning!)", correctcapname)
+            nameisnow = self.getUsernamebyUUID(useruuid)
             if nameisnow:
                 return MCUUID(useruuid)
             return False
+        elif r.status_code == 204:  # try last matching UUID instead.  This will populate current name back in 'name'
+            if user_uuid_matched:
+                nameisnow = self.getUsernamebyUUID(user_uuid_matched)
+                if nameisnow:
+                    return MCUUID(user_uuid_matched)
+                return False
         else:
-            if "uuid-cache" not in self.proxy.storage: # try for any old proxy-data record as a last resort
-                return False  # no old proxy uuid-cache exists.
-            for useruuid in self.proxy.storage["uuid-cache"]:
-                if self.storage["uuid-cache"][useruuid]["name"] == username:
-                    return MCUUID(useruuid)
-            return False  # if no old proxy record
+            return False  # No other options but to fail request
 
-    def lookupUsernamebyUUID(self, useruuid):
+    def getUsernamebyUUID(self, useruuid):
         """
-        Lookup users uuid/name and update local wrapper usercache. Will check Mojang once per day only.
-        :param useruuid:  UUID - as string with dashes!
-        :returns: returns the name from a uuid. Updates the wrapper usercache.json
-                Yields False if failed.
+        Returns the username from the specified UUID.
+        If the player has never logged in before and isn't in the user cache, it will poll Mojang's API.
+        Polling is restricted to once per day.
+        Updates will be made to the wrapper usercache.json when this function is executed.
+
+        :param useruuid:  string UUID
+        :returns: returns the username from the specified uuid, else returns False if failed.
         """
-        frequency = 86400  # check once per day at most for existing players
+        frequency = 86400  # if called directly, can update cache daily (refresh names list, etc)
         names = self._pollMojangUUID(useruuid)
         numbofnames = len(names)
         if self.usercache.key(useruuid):  # if user is in the cache...
             # and was recently polled...
-            if (time.time() - self.usercache.key(useruuid)["time"]) < frequency:
-                return self.usercache.key(useruuid)["name"]  # dont re-poll.
+            if int((time.time() - self.usercache.key(useruuid)["time"])) < frequency:
+                return self.usercache.key(useruuid)["name"]  # dont re-poll if same time frame (daily = 86400).
             else:
-                if not names or names is None:  # not a huge deal, we'll re-poll another time
-                    self.usercache.key(useruuid)["time"] = time.time() - frequency + 7200  # delay 2 more hours
+                if not names or names is None:  # service might be down.. not a huge deal, we'll re-poll another time
+                    self.usercache.key(useruuid)["time"] = time.time() - frequency + 7200  # may try again in 2 hours
                     return self.usercache.key(useruuid)["name"]
-        else:  # user is not in cache
-            if not names or names is None or numbofnames == 0:  # mojang service failed or UUID not found
-                return False
-            pastnames = []
-            if useruuid not in self.usercache:
-                self.usercache[useruuid] = {
-                    "time": time.time(),
-                    "original": None,
-                    "name": None,
-                    "online": True,
-                    "localname": None,
-                    "IP": None,
-                    "names": []
-                }
-            for i in xrange(0, numbofnames):
-                if "changedToAt" not in names[i]:  # find the original name
-                    self.usercache[useruuid]["original"] = names[i]["name"]
-                    self.usercache[useruuid]["online"] = True
-                    self.usercache[useruuid]["time"] = time.time()
-                    if numbofnames == 1:  # The user has never changed their name
-                        self.usercache[useruuid]["name"] = names[i]["name"]
-                        if self.usercache[useruuid]["localname"] is None:
-                            self.usercache[useruuid]["localname"] = names[i]["name"]
-                        break
+                #continue on and poll... because user is not in cache or is old record that needs re-polled
+        #else:  # user is not in cache
+        if not names or names is None or numbofnames == 0:  # mojang service failed or UUID not found
+            return False
+        pastnames = []
+        if useruuid not in self.usercache:
+            self.usercache[useruuid] = {
+                "time": time.time(),
+                "original": None,
+                "name": None,
+                "online": True,
+                "localname": None,
+                "IP": None,
+                "names": []
+            }
+        for i in range(0, numbofnames):  # TODO py2-3
+            if "changedToAt" not in names[i]:  # find the original name
+                self.usercache[useruuid]["original"] = names[i]["name"]
+                self.usercache[useruuid]["online"] = True
+                self.usercache[useruuid]["time"] = time.time()
+                if numbofnames == 1:  # The user has never changed their name
+                    self.usercache[useruuid]["name"] = names[i]["name"]
+                    if self.usercache[useruuid]["localname"] is None:
+                        self.usercache[useruuid]["localname"] = names[i]["name"]
+                    break
+            else:
+                # Convert java milleseconds to time.time seconds
+                changetime = names[i]["changedToAt"] / 1000
+                oldname = names[i]["name"]
+                if len(pastnames) == 0:
+                    pastnames.append({"name": oldname, "date": changetime})
+                    continue
+                if changetime > pastnames[0]["date"]:
+                    pastnames.insert(0, {"name": oldname, "date": changetime})
                 else:
-                    # Convert java milleseconds to time.time seconds
-                    changetime = names[i]["changedToAt"] / 1000
-                    oldname = names[i]["name"]
-                    if len(pastnames) == 0:
-                        pastnames.append({"name": oldname, "date": changetime})
-                        continue
-                    if changetime > pastnames[0]["date"]:
-                        pastnames.insert(0, {"name": oldname, "date": changetime})
-                    else:
-                        pastnames.append({"name": oldname, "date": changetime})
-            self.usercache[useruuid]["names"] = pastnames
-            if numbofnames > 1:
-                self.usercache[useruuid]["name"] = pastnames[0]["name"]
-                if self.usercache[useruuid]["localname"] is None:
-                    self.usercache[useruuid]["localname"] = pastnames[0]["name"]
-            return self.usercache[useruuid]["localname"]
+                    pastnames.append({"name": oldname, "date": changetime})
+        self.usercache[useruuid]["names"] = pastnames
+        if numbofnames > 1:
+            self.usercache[useruuid]["name"] = pastnames[0]["name"]
+            if self.usercache[useruuid]["localname"] is None:
+                self.usercache[useruuid]["localname"] = pastnames[0]["name"]
+        return self.usercache[useruuid]["localname"]
 
     def _pollMojangUUID(self, useruuid):
         """
@@ -223,33 +264,35 @@ class Wrapper:
             rx = requests.get("https://status.mojang.com/check")
             if rx.status_code == 200:
                 rx = rx.json()
-                for i in xrange(0, len(rx)):
+                for i in range(0, len(rx)):  # TODO py2-3
+                    # changed these error levels to warning, which is per https://docs.python.org/2/howto/logging.html#when-to-use-logging
+                    # using "warn" for these since "software is still working as expected".
                     if "account.mojang.com" in rx[i]:
                         if rx[i]["account.mojang.com"] == "green":
-                            self.log.error("Mojang accounts is green, but request failed - have you over-polled (large busy server) or supplied an incorrect UUID??")
-                            self.log.error("uuid: %s", useruuid)
-                            self.log.debug("response: \n%s", str(rx))
+                            self.log.warning("Mojang accounts is green, but request failed - have you over-polled (large busy server) or supplied an incorrect UUID??")
+                            self.log.warning("uuid: %s", useruuid)
+                            self.log.warning("response: \n%s", str(rx))
                             return None
                         elif rx[i]["account.mojang.com"] in ("yellow", "red"):
-                            self.log.error("Mojang accounts is experiencing issues (%s).", rx[i]["account.mojang.com"])
+                            self.log.warning("Mojang accounts is experiencing issues (%s).", rx[i]["account.mojang.com"])
                             return False
-                        self.log.error("Mojang Status found, but corrupted or in an unexpected format (status code %s)", r.status_code)
+                        self.log.warning("Mojang Status found, but corrupted or in an unexpected format (status code %s)", r.status_code)
                         return False
                     else:
-                        self.log.error("Mojang Status not found - no internet connection, perhaps? (status code %s)", rx.status_code)
+                        self.log.warning("Mojang Status not found - no internet connection, perhaps? (status code %s)", rx.status_code)
                         return self.usercache[useruuid]["name"]
             
-
-    def getUsername(self, useruuid):
+    def getUsername(self, useruuid): # We should see about getting rid of this wrapper
         """
-        :param useruuid - the string representation with dashes of the uuid.
+        :param useruuid - the string representation of the player uuid.
+
         used by commands.py in commands-playerstats and in api/minecraft.getAllPlayers
-        mostly a wrapper for lookupUsernamebyUUID which also checks the offline server usercache...
+        mostly a wrapper for getUsernamebyUUID which also checks the offline server usercache...
         """
         if type(useruuid) not in (str, unicode):
             return False
         if self.isOnlineMode():
-            name = self.lookupUsernamebyUUID(useruuid)
+            name = self.getUsernamebyUUID(useruuid)
             if name:
                 return self.usercache[useruuid]["localname"]
             return False
@@ -270,13 +313,13 @@ class Wrapper:
                         self.usercache[useruuid]["time"] = time.time()
                     return user["name"]
 
-    def getUUID(self, username):
+    def getUUID(self, username): # We should see about getting rid of this wrapper
         """
         :param username - string of user's name
-        :returns a MCUUID object, which means UUIDfromname and lookupUUIDbyUsername must return MCUUID obejcts
+        :returns a MCUUID object, which means UUIDfromname and getUUIDByUsername must return MCUUID obejcts
         """
         if not self.isOnlineMode():  # both server and wrapper in offline...
-            return self.UUIDFromName("OfflinePlayer:%s" % username)
+            return self.getUUIDFromName("OfflinePlayer:%s" % username)
 
         # proxy mode is off / not working
         if not self.proxy:
@@ -287,17 +330,17 @@ class Wrapper:
                     return MCUUID(user["uuid"])
         else:
             # proxy mode is on... poll mojang and wrapper cache
-            search = self.lookupUUIDbyUsername(username)
+            search = self.getUUIDByUsername(username)
             if not search:
-                self.log.warn("Server online but unable to getUUID (even by polling!) for username: %s - "
+                self.log.warning("Server online but unable to getUUID (even by polling!) for username: %s - "
                               "returned an Offline uuid...", username)
-                return self.UUIDFromName("OfflinePlayer:%s" % username)
+                return self.getUUIDFromName("OfflinePlayer:%s" % username)
             else:
                 return search
         # if both if and else fail to deliver a uuid create offline uuid:
-        return self.UUIDFromName("OfflinePlayer:%s" % username)
+        return self.getUUIDFromName("OfflinePlayer:%s" % username)
 
-    def listWrapperPlugins(self):
+    def listPlugins(self):
         self.log.info("List of Wrapper.py plugins installed:")
         for plid in self.plugins:
             plugin = self.plugins[plid]
@@ -318,8 +361,8 @@ class Wrapper:
         self.configManager.loadConfig()
         self.config = self.configManager.config
 
-        signal.signal(signal.SIGINT, self.SIGINT)
-        signal.signal(signal.SIGTERM, self.SIGINT)
+        signal.signal(signal.SIGINT, self.sigint)
+        signal.signal(signal.SIGTERM, self.sigint)
 
         self.api = API(self, "Wrapper.py")
         self.api.registerHelp("Wrapper", "Internal Wrapper.py commands ", [
@@ -376,24 +419,24 @@ class Wrapper:
             t.start()
 
         if self.config["General"]["auto-update-wrapper"]:
-            t = threading.Thread(target=self.checkForUpdates, args=())
+            t = threading.Thread(target=self.checkForDevUpdate, args=())
             t.daemon = True
             t.start()
 
         self.server.__handle_server__()
-
         self.plugins.disablePlugins()
 
     def startProxy(self):
-        if proxy.IMPORT_SUCCESS:
-            self.proxy = proxy.Proxy(self)
+        self.proxy = proxy.Proxy(self)
+        if proxy.requests:  # requests will be set to False if requests or any crptography is missing.
             proxyThread = threading.Thread(target=self.proxy.host, args=())
             proxyThread.daemon = True
             proxyThread.start()
         else:
-            self.log.error("Proxy mode could not be started because you do not have one or more of the following modules installed: pycrypto and requests")
+            self.log.error("Proxy mode could not be started because you do not have one or more of the following "
+                           "modules installed: pycrypto and requests")
 
-    def SIGINT(self, s, f):
+    def sigint(self, s, f):
         self.shutdown()
 
     def shutdown(self, status=0):
@@ -402,18 +445,18 @@ class Wrapper:
         time.sleep(1)
         sys.exit(status)
 
-    def rebootWrapper(self):
+    def reboot(self):
         self.halt = True
         os.system(" ".join(sys.argv) + "&")
 
     def getBuildString(self):
-        if globals.__branch__ == "dev":
-            return "%s (development build #%d)" % (globals.__version__, globals.__build__)
+        if version_info.__branch__ == "dev":
+            return "%s (development build #%d)" % (version_info.__version__, version_info.__build__)
         else:
-            return "%s (stable)" % globals.__version__
+            return "%s (stable)" % version_info.__version__
 
-    def checkForUpdates(self):
-        if not IMPORT_REQUESTS:
+    def checkForDevUpdate(self):
+        if not requests:
             self.log.error("Can't automatically check for new Wrapper.py versions because you do not have the requests module installed!")
             return
         while not self.halt:
@@ -422,27 +465,27 @@ class Wrapper:
 
     def checkForUpdate(self, auto):
         self.log.info("Checking for new builds...")
-        update = self.checkForNewUpdate()
+        update = self.getWrapperUpdate()
         if update:
             version, build, repotype = update
             if repotype == "dev":
                 if auto and not self.config["General"]["auto-update-dev-build"]:
-                    self.log.info("New Wrapper.py development build #%d available for download! (currently on #%d)", build, globals.__build__)
+                    self.log.info("New Wrapper.py development build #%d available for download! (currently on #%d)", build, version_info.__build__)
                     self.log.info("Because you are running a development build, you must manually update Wrapper.py. To update Wrapper.py manually, please type /update-wrapper.")
                 else:
-                    self.log.info("New Wrapper.py development build #%d available! Updating... (currently on #%d)", build, globals.__build__)
+                    self.log.info("New Wrapper.py development build #%d available! Updating... (currently on #%d)", build, version_info.__build__)
                 self.performUpdate(version, build, repotype)
             else:
-                self.log.info("New Wrapper.py stable %s available! Updating... (currently on %s)", \
-                    ".".join([str(_) for _ in version]), globals.__version__)
+                self.log.info("New Wrapper.py stable %s available! Updating... (currently on %s)",
+                    ".".join([str(_) for _ in version]), version_info.__version__)
                 self.performUpdate(version, build, repotype)
         else:
             self.log.info("No new versions available.")
 
 
-    def checkForNewUpdate(self, repotype=None):
+    def getWrapperUpdate(self, repotype=None):
         if repotype is None:
-            repotype = globals.__branch__
+            repotype = version_info.__branch__
         if repotype == "dev":
             r = requests.get("https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/build/version.json")
             if r.status_code == 200:
@@ -450,12 +493,12 @@ class Wrapper:
                 if self.update:
                     if self.update > data["build"]:
                         return False
-                if data["build"] > globals.__build__ and data["repotype"] == "dev":
+                if data["build"] > version_info.__build__ and data["repotype"] == "dev":
                     return (data["version"], data["build"], data["repotype"])
                 else:
                     return False
             else:
-                self.log.warn("Failed to check for updates - are you connected to the internet? (Status Code %d)", r.status_code)
+                self.log.warning("Failed to check for updates - are you connected to the internet? (Status Code %d)", r.status_code)
                 
         else:
             r = requests.get("https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master/build/version.json")
@@ -464,12 +507,12 @@ class Wrapper:
                 if self.update:
                     if self.update > data["build"]:
                         return False
-                if data["build"] > globals.__build__ and data["repotype"] == "stable":
+                if data["build"] > version_info.__build__ and data["repotype"] == "stable":
                     return (data["version"], data["build"], data["repotype"])
                 else:
                     return False
             else:
-                self.log.warn("Failed to check for updates - are you connected to the internet? (Status Code %d)", r.status_code)
+                self.log.warning("Failed to check for updates - are you connected to the internet? (Status Code %d)", r.status_code)
         return False
 
     def performUpdate(self, version, build, repotype):
@@ -506,7 +549,10 @@ class Wrapper:
     def console(self):
         while not self.halt:
             try:
-                cinput = raw_input("")
+                if PY3:
+                    cinput = eval(input())
+                else:
+                    cinput = raw_input("")
             except Exception as e:
                 continue
 
@@ -539,7 +585,7 @@ class Wrapper:
             elif command == "update-wrapper":
                 self.checkForUpdate(False)
             elif command == "plugins":
-                self.listWrapperPlugins()
+                self.listPlugins()
             elif command in ("mem", "memory"):
                 try:
                     self.log.info("Server Memory Usage: %d bytes", self.server.getMemoryUsage())
@@ -553,13 +599,13 @@ class Wrapper:
                         self.server.console(get_argsAfter(cinput[1:].split(" "), 1))
                     else:
                         self.log.info("Usage: /raw [command]")
-                except InvalidServerState as e:
-                    self.log.warn(e)
+                except InvalidServerStateError as e:
+                    self.log.warning(e)
             elif command == "freeze":
                 try:
                     self.server.freeze()
-                except InvalidServerState as e:
-                    self.log.warn(e)
+                except InvalidServerStateError as e:
+                    self.log.warning(e)
                 except UnsupportedOSException as ex:
                     self.log.error(ex)
                 except Exception as exc:
@@ -567,8 +613,8 @@ class Wrapper:
             elif command == "unfreeze":
                 try:
                     self.server.unfreeze()
-                except InvalidServerState as e:
-                    self.log.warn(e)
+                except InvalidServerStateError as e:
+                    self.log.warning(e)
                 except UnsupportedOSException as ex:
                     self.log.error(ex)
                 except Exception as exc:

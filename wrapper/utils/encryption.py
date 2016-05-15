@@ -15,7 +15,6 @@ from Crypto.PublicKey import RSA
 from Crypto import Random
 from Crypto.Cipher import AES, DES
 from hashlib import md5
-from struct import unpack
 
 
 def decode_public_key(bytes):
@@ -75,7 +74,7 @@ class RC4(object):
         self.key = key
         x = 0
         self.box = box = range(256)
-        for i in xrange(256):
+        for i in range(256):  # TODO was xrange Py2-3
             x = (x + box[i] + ord(key[i % len(key)])) % 256
             box[i], box[x] = box[x], box[i]
         self.x = self.y = 0
@@ -138,6 +137,6 @@ class PBEWithMD5AndDES(object):
 
     def _generate_key(self, key, salt, count, length):
         key = key + salt
-        for i in xrange(count):
+        for i in range(count):  # TODO was xrange Py2-3
             key = md5(key).digest()
         return key[:length]

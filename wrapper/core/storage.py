@@ -8,10 +8,13 @@ import threading
 import time
 import copy
 import traceback
-import sys
 import logging
 
-from config import Config
+# Py3-2
+try:
+    import configparser as ConfigParser
+except ImportError:
+    import ConfigParser
 
 class Storage:
 
@@ -61,19 +64,16 @@ class Storage:
                     try:
                         self.save()
                     except Exception as e:
-                        print traceback.format_exc()
+                        print(traceback.format_exc())
                     self.time = time.time()
             time.sleep(1)
 
-    def mkdir(self, path):
-        directory = ""
-        for part in path.split("/"):
-            directory += part + "/"
-        try:
-            if not os.path.exists(directory):
-                os.mkdir(directory)
-        except Exception as e:
-            pass
+    def mkdir(self, dirpath):
+        if not os.path.exists(dirpath):
+            try:
+                os.makedirs(dirpath, exist_ok=True)
+            except Exception as e:
+                self.log.warning("Could not create directory '%s' \n(%s)", dirpath, e)
 
     def load(self):
         self.mkdir(self.root)

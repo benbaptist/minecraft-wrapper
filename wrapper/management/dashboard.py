@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+# p2 and py3 compliant
+#  (has warnings due to the manner of import)
+
 import time
 import threading
 import random
@@ -57,7 +60,7 @@ class Web:
         self.loginAttempts += 1
         if self.loginAttempts > 10 and time.time() - self.lastAttempt < 60:
             self.disableLogins = time.time()
-            self.log.warn("Disabled login attempts for one minute")
+            self.log.warning("Disabled login attempts for one minute")
         self.lastAttempt = time.time()
 
     def makeKey(self, rememberMe):
@@ -108,7 +111,7 @@ class Web:
                 if self.checkLogin(password):
                     key = self.makeKey(rememberMe)
                     return redirect("/")
-                    # self.log.warn("%s logged in to web mode (remember me: %s)", request.addr, rememberMe)
+                    # self.log.warning("%s logged in to web mode (remember me: %s)", request.addr, rememberMe)
                 else:
                     badPass = True
 

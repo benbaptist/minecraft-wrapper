@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+# p2 and py3 compliant
+
 from __future__ import unicode_literals
 
 import json
@@ -65,7 +67,7 @@ class Minecraft:
             if type(username) != str:
                 continue
             if online:
-                if str(self.wrapper.UUIDFromName(username)) == puuid:
+                if str(self.wrapper.getUUIDFromName(username)) == puuid:
                     continue
             with open("wrapper-data/players/" + uuidf) as f:
                 data = f.read()
@@ -104,13 +106,17 @@ class Minecraft:
             raise Exception("Invalid status effect given!")
         self.console("effect %s %s %d %d" % (player, effectConverted, duration, amplifier))
 
-    def summonEntity(self, entity, x=0, y=0, z=0, dataTag={}):
+    def summonEntity(self, entity, x=0, y=0, z=0, datatag=None):
+        if not datatag:  # should not use mutable default arguments like dataTag={}
+            datatag = {}
         """ Summons an entity at the specified coordinates with the specified data tag. """
-        self.console("summon %s %d %d %d %s" % (entity, x, y, z, json.dumps(dataTag, self._encoding)))
+        self.console("summon %s %d %d %d %s" % (entity, x, y, z, json.dumps(datatag, self._encoding)))
 
-    def message(self, destination="", json_message={}):
+    def message(self, destination="", jsonmessage=None):
         """ **THIS METHOD WILL BE CHANGED.** Used to message some specific target. """
-        self.console("tellraw %s %s" % (destination, json.dumps(json_message, self._encoding)))
+        if not jsonmessage:  # should not use mutable default arguments like dataTag={}
+            datatag = {}
+        self.console("tellraw %s %s" % (destination, json.dumps(jsonmessage, self._encoding)))
 
     def broadcast(self, message="", irc=False):
         """ Broadcasts the specified message to all clients connected. message can be a JSON chat object, or a string with formatting codes using the & as a prefix.
@@ -141,9 +147,13 @@ class Minecraft:
         except Exception as e:
             raise Exception("No such player %s is logged in" % username)
 
-    def lookupUUID(self, uuid):
-        """ Returns the username from the specified UUID. If the player has never logged in before and isn't in the user cache, it will poll Mojang's API. The function will raise an exception if the UUID is invalid. """
-        return self.wrapper.lookupUsernamebyUUID(uuid)
+    def lookupUUID(self, uuid): # This function appears to be unused, but that does not mean that it is useless.
+        """
+        Returns the username from the specified UUID.
+        If the player has never logged in before and isn't in the user cache, it will poll Mojang's API.
+        The function will raise an exception if the UUID is invalid.
+        """
+        return self.wrapper.getUsernamebyUUID(uuid)
 
     def getPlayers(self):  # returns a list of players
         """ Returns a list of the currently connected players. """

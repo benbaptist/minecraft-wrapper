@@ -1,31 +1,28 @@
 #-*- coding: utf-8 -*-
 
-import socket
-import datetime
+# p2 and py3 compliant (no PyCharm IDE-flagged errors)
+#  (has warnings in both versions due to the manner of import)
+
 import time
-import sys
 import threading
 import random
 import subprocess
 import os
 import json
-import signal
-import traceback
-import StringIO
-import ConfigParser
-import sys
-import codecs
 import ctypes
 import platform
-import ast
+
+# Py3-2
+import sys
+PY3 = sys.version_info > (3,)
 
 from utils.helpers import get_args, get_argsAfter
 from api.base import API
 from api.player import Player
 from api.world import World
 
-from backups import Backups
-from exceptions import UnsupportedOSException, InvalidServerState
+from core.backups import Backups
+from core.exceptions import UnsupportedOSException, InvalidServerStateError
 
 try:
     import resource
@@ -56,7 +53,7 @@ class MCServer:
         self.data = []
 
         if not self.wrapper.storage["serverState"]:
-            self.log.warn("NOTE: Server was in 'STOP' state last time Wrapper.py was running. To start the server, run /start.")
+            self.log.warning("NOTE: Server was in 'STOP' state last time Wrapper.py was running. To start the server, run /start.")
             time.sleep(5)
 
         # Server Information
@@ -71,6 +68,7 @@ class MCServer:
         self.onlineMode = True
         self.serverIcon = None
 
+        self.properties = {}
         self.reloadProperties()
 
         self.api.registerEvent("irc.message", self.onChannelMessage)
@@ -147,7 +145,7 @@ class MCServer:
             else:
                 raise UnsupportedOSException("Your current OS (%s) does not support this command at this time." % os.name)
         else:
-            raise InvalidServerState("Server is not started. Please run '/start' to boot it up.")
+            raise InvalidServerStateError("Server is not started. Please run '/start' to boot it up.")
 
     def unfreeze(self):
         """
@@ -163,7 +161,7 @@ class MCServer:
             else:
                 raise UnsupportedOSException("Your current OS (%s) does not support this command at this time." % os.name)
         else:
-            raise InvalidServerState("Server is not started. Please run '/start' to boot it up.")
+            raise InvalidServerStateError("Server is not started. Please run '/start' to boot it up.")
 
     def broadcast(self, message=""):
         """
@@ -326,27 +324,20 @@ class MCServer:
         # Load server icon
         if os.path.exists("server-icon.png"):
             with open("server-icon.png", "rb") as f:
-                self.serverIcon = "data:image/png;base64," + f.read().encode("base64")
+                self.serverIcon = "data:image/png;base64," + f.read().encode("base64")  # TODO - broken
         # Read server.properties and extract some information out of it
+        # the PY3.5 ConfigParser seems broken.  This way was much more straightforward and works in both PY2 and PY3
         if os.path.exists("server.properties"):
-            s = StringIO.StringIO()  # Stupid StringIO doesn't support __exit__()
             with open("server.properties", "r") as f:
-                config = f.read()
-            s.write("[main]\n" + config)
-            s.seek(0)
-            try:
-                self.properties = ConfigParser.ConfigParser(allow_no_value=True)
-                self.properties.readfp(s)
-                self.worldName = self.properties.get("main", "level-name")
-                self.motd = self.properties.get("main", "motd")
-                self.maxPlayers = int(self.properties.get("main", "max-players"))
-                self.onlineMode = self.properties.get("main", "online-mode")
-                if self.onlineMode == "false":
-                    self.onlineMode = False
-                else:
-                    self.onlineMode = True
-            except Exception as e:
-                self.log.exception(e)
+                configfile = f.read()
+            self.worldName = configfile.split("level-name=")[1].split("\n")[0]
+            self.motd = configfile.split("motd=")[1].split("\n")[0]
+            self.maxPlayers = configfile.split("max-players=")[1].split("\n")[0]
+            self.onlineMode = configfile.split("online-mode=")[1].split("\n")[0]
+            if self.onlineMode == "false":
+                self.onlineMode = False
+            else:
+                self.onlineMode = True
 
     def console(self, command):
         """
@@ -355,7 +346,7 @@ class MCServer:
         if self.state in (1, 2, 3):
             self.proc.stdin.write("%s\n" % command)
         else:
-            raise InvalidServerState("Server is not started. Please run '/start' to boot it up.")
+            raise InvalidServerStateError("Server is not started. Please run '/start' to boot it up.")
 
     def changeState(self, state, reason=None):
         """
@@ -415,8 +406,11 @@ class MCServer:
             self.changeState(1)
             self.log.info("Starting server...")
             self.reloadProperties()
-            self.proc = subprocess.Popen(self.args, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+            #self.proc = subprocess.Popen(self.args, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+            self.proc = subprocess.Popen(self.args, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                         stdin=subprocess.PIPE, universal_newlines=True)
             self.players = {}
+            self.wrapper.acceptEula() # Auto accept eula
             while True:
                 time.sleep(0.1)
                 if self.proc.poll() is not None:
@@ -489,7 +483,7 @@ class MCServer:
             line = " ".join(buff.split(" ")[2:])
         else:
             line = " ".join(buff.split(" ")[3:])
-        print buff
+        print(buff)
         deathPrefixes = ["fell", "was", "drowned", "blew", "walked", "went", "burned", "hit", "tried",
                          "died", "got", "starved", "suffocated", "withered"]
         if not self.config["General"]["pre-1.7-mode"]:
