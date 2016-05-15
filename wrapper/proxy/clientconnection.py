@@ -556,8 +556,8 @@ class Client:
                                                                               self.verifyToken))
                 else:
                     self.connect_to_server()
-                    self.uuid = self.wrapper.getUUIDFromName("OfflinePlayer:%s" % self.username) # MCUUID object
-                    self.serverUuid = self.wrapper.getUUIDFromName("OfflinePlayer:%s" % self.username) # MCUUID object
+                    self.uuid = self.wrapper.getuuidfromname("OfflinePlayer:%s" % self.username) # MCUUID object
+                    self.serverUuid = self.wrapper.getuuidfromname("OfflinePlayer:%s" % self.username) # MCUUID object
                     self.packet.send(0x02, "string|string", (self.uuid.string, self.username))
                     self.state = ClientState.PLAY
                     self.log.info("%s logged in (IP: %s)", self.username, self.addr[0])
@@ -603,7 +603,7 @@ class Client:
                     else:
                         self.disconnect("Server Session Error (HTTP Status Code %d)" % r.status_code)
                         return False
-                    newUsername = self.wrapper.getUsernamebyUUID(self.uuid.string)
+                    newUsername = self.wrapper.getusernamebyuuid(self.uuid.string)
                     if newUsername:
                         if newUsername != self.username:
                             self.log.info("%s logged in with new name, falling back to %s", self.username, newUsername)
@@ -642,7 +642,7 @@ class Client:
                                         with open("%s/.wrapper-proxy-whitelist-migrate" % worldName, "a") as f:
                                             f.write("%s %s\n" % (self.uuid.string, self.serverUuid.string))
 
-                self.serverUuid = self.wrapper.getUUIDFromName("OfflinePlayer:%s" % self.username)
+                self.serverUuid = self.wrapper.getuuidfromname("OfflinePlayer:%s" % self.username)
                 self.ip = self.addr[0]
                 playerwas = str(self.username)
                 uuidwas = self.uuid.string  # TODO somewhere between HERE and ...
@@ -829,6 +829,7 @@ class Client:
                     self.log.debug("Closing %s's client thread due to lack of keepalive response", playername)
                     self.close()
 
+
 class ClientState:
     """
     This class represents proxy Client states
@@ -837,14 +838,14 @@ class ClientState:
     HANDSHAKE = 0  # this is the default mode of a server awaiting packets from a client out in the ether..
     # client will send a handshake (a 0x00 packet WITH payload) asking for STATUS or LOGIN mode
     STATUS = 1
-        # Status mode will await either a ping (0x01) containing a unique long int and will respond with same integer.
-        #     ... OR if it receives a 0x00 packet (with no payload), that signals server (client.py) to send
-        #         the MOTD json response packet.  This aspect was badly handled in pervious wrapper versions,
-        #         resulting in the dreaded "zero length packet" errors.
-        #         The ping will follow the 0x00 request for json response.  The ping will set wrapper/server
-        #         back to HANDSHAKE mode (to await next handshake).
+    # Status mode will await either a ping (0x01) containing a unique long int and will respond with same integer.
+    #     ... OR if it receives a 0x00 packet (with no payload), that signals server (client.py) to send
+    #         the MOTD json response packet.  This aspect was badly handled in pervious wrapper versions,
+    #         resulting in the dreaded "zero length packet" errors.
+    #         The ping will follow the 0x00 request for json response.  The ping will set wrapper/server
+    #         back to HANDSHAKE mode (to await next handshake).
     LOGIN = 2
-        #
+    #
     PLAY = 3
 
     def __init__(self):

@@ -273,7 +273,7 @@ class IRC:
                         users += "%s " % user
                     self.send("PRIVMSG %s :There are currently %s users on the server: %s" % (channel, len(self.server.players), users))
                 elif message.strip() == ".about":
-                    self.send("PRIVMSG %s :Wrapper.py Version %s" % (channel, self.wrapper.getBuildString()))
+                    self.send("PRIVMSG %s :Wrapper.py Version %s" % (channel, self.wrapper.getbuildstring()))
                 else:
                     message = message.decode("utf-8", "ignore")
                     if get_args(message.split(" "), 0) == "\x01ACTION":
@@ -310,7 +310,7 @@ class IRC:
                             msg("check-update - check for new Wrapper.py updates, but don't install them")
                             msg("update-wrapper - check and install new Wrapper.py updates")
                             msg("Wrapper.py Version %s by benbaptist" %
-                                self.wrapper.getBuildString())
+                                self.wrapper.getbuildstring())
                             # msg('console - toggle console output to this private message')
                         elif get_args(message.split(" "), 0) == 'togglebackups':
                             self.config["Backups"]["enabled"] = not self.config["Backups"]["enabled"]
@@ -357,12 +357,12 @@ class IRC:
                                 msg("Server Memory Usage: %d bytes" % self.wrapper.server.getMemoryUsage())
                         elif get_args(message.split(" "), 0) == 'check-update':
                             msg("Checking for new updates...")
-                            update = self.wrapper.getWrapperUpdate()
+                            update = self.wrapper.getwrapperupdate()
                             if update:
                                 version, build, repotype = update
                                 if repotype == "stable":
-                                    msg("New Wrapper.py Version %s available! (you have %s)" % 
-                                        ( ".".join([str(_) for _ in version]), self.wrapper.getBuildString()))
+                                    msg("New Wrapper.py Version %s available! (you have %s)" %
+                                        ( ".".join([str(_) for _ in version]), self.wrapper.getbuildstring()))
                                 elif repotype == "dev":
                                     msg("New Wrapper.py development build %s #%d available! (you have %s #%d)" % 
                                         (".".join([str(_) for _ in version]), build, version_info.__version__, version_info.__build__))
@@ -376,19 +376,19 @@ class IRC:
                                     msg("No new development Wrapper.py versions available.")
                         elif get_args(message.split(" "), 0) == 'update-wrapper':
                             msg("Checking for new updates...")
-                            update = self.wrapper.getWrapperUpdate()
+                            update = self.wrapper.getwrapperupdate()
                             if update:
                                 version, build, repotype = update
                                 if repotype == "stable":
                                     msg("New Wrapper.py Version %s available! (you have %s)" % \
-                                        (".".join([str(_) for _ in version]), self.wrapper.getBuildString()))
+                                        (".".join([str(_) for _ in version]), self.wrapper.getbuildstring()))
                                 elif repotype == "dev":
                                     msg("New Wrapper.py development build %s #%d available! (you have %s #%d)" % \
                                         (".".join(version), build, version_info.__version__, version_info.__build__))
                                 else:
                                     msg("Unknown new version: %s | %d | %s" % (version, build, repotype))
                                 msg("Performing update..")
-                                if self.wrapper.performUpdate(version, build, repotype):
+                                if self.wrapper.performupdate(version, build, repotype):
                                     msg("Update completed! Version %s #%d (%s) is now installed. Please reboot Wrapper.py to apply changes." % (version, build, repotype))
                                 else:
                                     msg("An error occured while performing update.")

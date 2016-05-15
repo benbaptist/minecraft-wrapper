@@ -172,7 +172,7 @@ class Proxy:
                         return "expiration date invalid"  # error text
                 else:
                     expiration = "forever"
-                name = self.wrapper.getUsernamebyUUID(uuid.string)
+                name = self.wrapper.getusernamebyuuid(uuid.string)
                 banlist.append({"uuid": uuid.string,
                                 "name": name,
                                 "created": epoch_to_timestr(time.time()),
@@ -197,7 +197,7 @@ class Proxy:
 
         This probably only works on 1.7.10 servers or later
         """
-        if not self.wrapper.isIPv4Address(ipaddress):
+        if not self.wrapper.isipv4address(ipaddress):
             return "Invalid IPV4 address: %s" % ipaddress
         banlist = get_jsonFile("banned-ips")
         if banlist is not False:  # file and directory exist.
@@ -232,7 +232,7 @@ class Proxy:
             return "Banlist not found on disk"
 
     def pardonIP(self, ipaddress):
-        if not self.wrapper.isIPv4Address(ipaddress):
+        if not self.wrapper.isipv4address(ipaddress):
             return "Invalid IPV4 address: %s" % ipaddress
         banlist = get_jsonFile("banned-ips")
         if banlist is not False:  # file and directory exist.
@@ -263,7 +263,7 @@ class Proxy:
                     if x == banrecord:
                         banlist.remove(x)
                 if put_jsonFile(banlist, "banned-players"):
-                    name = self.wrapper.getUsernamebyUUID(str(uuid))
+                    name = self.wrapper.getusernamebyuuid(str(uuid))
                     return "pardoned %s" % name
                 return "Could not write banlist to disk"
             else:

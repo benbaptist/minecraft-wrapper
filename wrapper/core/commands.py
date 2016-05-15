@@ -68,18 +68,18 @@ class Commands:
         if payload["command"] == "wrapper":
             if not player.isOp():
                 return
-            buildString = self.wrapper.getBuildString()
+            buildString = self.wrapper.getbuildstring()
             if len(get_args(payload["args"], 0)) > 0:
                 subcommand = get_args(payload["args"], 0)
                 if subcommand == "update":
                     player.message({"text": "Checking for new Wrapper.py updates...", "color": "yellow"})
-                    update = self.wrapper.getWrapperUpdate()
+                    update = self.wrapper.getwrapperupdate()
                     if update:
                         version, build, repotype = update
                         player.message("&bNew Wrapper.py Version %s (Build #%d) available!)" % (".".join([str(_) for _ in version]), build))
-                        player.message("&bYou are currently on %s." %  self.wrapper.getBuildString())
+                        player.message("&bYou are currently on %s." % self.wrapper.getbuildstring())
                         player.message("&aPerforming update...")
-                        if self.wrapper.performUpdate(version, build, repotype):
+                        if self.wrapper.performupdate(version, build, repotype):
                             player.message("&aUpdate completed! Version %s #%d (%s) is now installed. Please reboot Wrapper.py to apply changes." % (version, build, repotype))
                         else:
                             player.message("&cAn error occured while performing update.")
@@ -189,7 +189,7 @@ class Commands:
 
         if str(payload["command"]).lower() == "ban-ip":
             if player.isOp():
-                if not self.wrapper.isIPv4Address(get_args(payload["args"], 0)):
+                if not self.wrapper.isipv4address(get_args(payload["args"], 0)):
                     player.message("&cInvalid IP address format: %s" % get_args(payload["args"], 0))
                     return False
                 returnmessage = self.wrapper.proxy.banIP(get_args(payload["args"], 0))
@@ -202,7 +202,7 @@ class Commands:
 
         if str(payload["command"]).lower() == "pardon-ip":
             if player.isOp():
-                if not self.wrapper.isIPv4Address(get_args(payload["args"], 0)):
+                if not self.wrapper.isipv4address(get_args(payload["args"], 0)):
                     player.message("&cInvalid IP address format: %s" % get_args(payload["args"], 0))
                     return False
                 returnmessage = self.wrapper.proxy.pardonIP(get_args(payload["args"], 0))
@@ -337,7 +337,7 @@ class Commands:
                 for uu in players:
                     if "logins" not in players[uu]:
                         continue
-                    playerName = self.wrapper.getUsername(uu)
+                    playerName = self.wrapper.getusername(uu)
                     totalPlaytime[playerName] = [0, 0]
                     for i in players[uu]["logins"]:
                         totalPlaytime[playerName][0] += players[uu]["logins"][i] - int(i)
@@ -433,7 +433,7 @@ class Commands:
                         player.message("&aUsers in the group '%s':" % group)
                         for uuid in self.wrapper.permissions["users"]:
                             if group in self.wrapper.permissions["users"][uuid]["groups"]:
-                                player.message("%s: &2%s" % (self.wrapper.getUsernamebyUUID(uuid), uuid))
+                                player.message("%s: &2%s" % (self.wrapper.getusernamebyuuid(uuid), uuid))
                         player.message("&aPermissions for the group '%s':" % group)
                         for node in self.wrapper.permissions["groups"][group]["permissions"]:
                             value = self.wrapper.permissions["groups"][group]["permissions"][node]
@@ -449,7 +449,7 @@ class Commands:
                 elif command == "users":
                     username = get_args(payload["args"], 1)
                     subcommand = get_args(payload["args"], 2)
-                    uuid = self.wrapper.getUUIDByUsername(username).string
+                    uuid = self.wrapper.getuuidbyusername(username).string
                     if not uuid:
                         player.message("&cNo valid UUID exists for '%s'." % username)
                         return False

@@ -36,10 +36,10 @@ class Player:
         self.abort = False
 
         # these are all MCUUID objects.. I have separated out various uses of uuid to clarify for later refractoring
-        self.mojangUuid = self.wrapper.getUUIDByUsername(username)
-        self.offlineUuid = self.wrapper.getUUIDFromName("OfflinePlayer:%s" % self.username)
-        self.clientUuid = self.wrapper.getUUID(username)  # - The player.uuid used by old api (and internally here).
-        self.serverUuid = self.wrapper.getUUIDByUsername(username)
+        self.mojangUuid = self.wrapper.getuuidbyusername(username)
+        self.offlineUuid = self.wrapper.getuuidfromname("OfflinePlayer:%s" % self.username)
+        self.clientUuid = self.wrapper.getuuid(username)  # - The player.uuid used by old api (and internally here).
+        self.serverUuid = self.wrapper.getuuidbyusername(username)
 
         self.ipaddress =  "127.0.0.0"
         self.operatordict = self._read_ops_file()
@@ -392,7 +392,7 @@ class Player:
         if node is None:
             return True
         if another_player:
-            other_uuid = self.wrapper.getUUIDByUsername(another_player)  # get other player mojang uuid
+            other_uuid = self.wrapper.getuuidbyusername(another_player)  # get other player mojang uuid
             if other_uuid: # make sure other player permission is initialized.
                 if self.mojangUuid.string not in self.permissions["users"]:  # no reason not to do this here too
                     self.permissions["users"][self.mojangUuid.string] = {"groups": [], "permissions": {}}

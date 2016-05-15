@@ -52,7 +52,7 @@ class Minecraft:
 
     def getAllPlayers(self):
         """ Returns a dict containing all players ever connected to the server """
-        if self.wrapper.isOnlineMode():
+        if self.wrapper.isonlinemode():
             online = True
         else:
             online = False
@@ -63,11 +63,11 @@ class Minecraft:
                 # remove any old bad objects
                 os.remove("wrapper-data/players/" + uuidf)
                 continue
-            username = self.wrapper.getUsername(puuid)
+            username = self.wrapper.getusername(puuid)
             if type(username) != str:
                 continue
             if online:
-                if str(self.wrapper.getUUIDFromName(username)) == puuid:
+                if str(self.wrapper.getuuidfromname(username)) == puuid:
                     continue
             with open("wrapper-data/players/" + uuidf) as f:
                 data = f.read()
@@ -153,7 +153,7 @@ class Minecraft:
         If the player has never logged in before and isn't in the user cache, it will poll Mojang's API.
         The function will raise an exception if the UUID is invalid.
         """
-        return self.wrapper.getUsernamebyUUID(uuid)
+        return self.wrapper.getusernamebyuuid(uuid)
 
     def getPlayers(self):  # returns a list of players
         """ Returns a list of the currently connected players. """

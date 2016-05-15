@@ -410,7 +410,7 @@ class MCServer:
             self.proc = subprocess.Popen(self.args, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                          stdin=subprocess.PIPE, universal_newlines=True)
             self.players = {}
-            self.wrapper.acceptEula() # Auto accept eula
+            self.wrapper.accepteula() # Auto accept eula
             while True:
                 time.sleep(0.1)
                 if self.proc.poll() is not None:

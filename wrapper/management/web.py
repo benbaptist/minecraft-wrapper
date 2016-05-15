@@ -17,9 +17,9 @@ from core.storage import Storage
 try:
     import pkg_resources
     import requests
-    IMPORT_SUCCESS = True
-except:
-    IMPORT_SUCCESS = False
+except ImportError:
+    pkg_resources = False
+    requests = False
 
 # Yeah, I know. The code is awful. Probably not even a HTTP-compliant web
 # server anyways. I just wrote it at like 3AM in like an hour.
@@ -53,6 +53,10 @@ class Web:
         self.loginAttempts = 0
         self.lastAttempt = 0
         self.disableLogins = 0
+        if pkg_resources and requests:
+            self.webisok = True
+        else:
+            self.webisok = False
 
         # t = threading.Thread(target=self.updateGraph, args=())
         # t.daemon = True
@@ -447,7 +451,7 @@ class WebClient:
             # for uu in totalPlayers:
             #   if not "logins" in totalPlayers[uu]:
             #       continue
-            #   playerName = self.web.wrapper.getUsername(uu)
+            #   playerName = self.web.wrapper.getusername(uu)
             #   totalPlaytime[playerName] = [0, 0]
             #   for i in totalPlayers[uu]["logins"]:
             #       totalPlaytime[playerName][0] += totalPlayers[uu]["logins"][i] - int(i)
@@ -481,7 +485,7 @@ class WebClient:
                 "players": players,
                 "plugins": plugins,
                 "server_state": self.wrapper.server.state,
-                "wrapper_build": self.wrapper.getBuildString(),
+                "wrapper_build": self.wrapper.getbuildstring(),
                 "console": consoleScrollback,
                 "chat": chatScrollback,
                 "level_name": self.wrapper.server.worldName,

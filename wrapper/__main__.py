@@ -9,7 +9,7 @@ if __name__ == "__main__":
     configure_logger()
     wrapper = Wrapper()
     log = wrapper.log
-    log.info("Wrapper.py started - Version %s", wrapper.getBuildString())
+    log.info("Wrapper.py started - Version %s", wrapper.getbuildstring())
 
     try:
         wrapper.start()
