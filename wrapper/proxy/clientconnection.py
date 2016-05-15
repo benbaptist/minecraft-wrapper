@@ -14,7 +14,7 @@ import random
 import utils.encryption as encryption
 import proxy.mcpacket as mcpacket
 
-from proxy.server import Server
+from proxy.serverconnection import Server
 from proxy.packet import Packet
 from core.mcuuid import MCUUID
 

@@ -18,7 +18,7 @@ import core.buildinfo as version_info  # renamed from globals (a built-in)
 import proxy.base as proxy
 
 from management.web import Web as web
-# from management.dashboard import Web as dashboard - unused right now
+
 from utils.helpers import get_args, get_argsAfter
 
 from api.base import API
@@ -34,6 +34,7 @@ from core.events import Events
 from core.storage import Storage
 from core.exceptions import UnsupportedOSException, InvalidServerStateError
 
+# from management.dashboard import Web as dashboard - unused right now
 try:
     import readline
 except ImportError:
