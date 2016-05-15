@@ -35,6 +35,7 @@ TAG_LIST = 9
 TAG_COMPOUND = 10
 TAG_INT_ARRAY = 11
 
+
 class TAG(object):
     """TAG, a variable with an intrinsic name."""
     tid = None
@@ -65,11 +66,13 @@ class TAG(object):
 
     # Python 2 compatibility; Python 3 uses __str__ instead.
     def __unicode__(self):
-        """Return a unicode string with the result in human readable format. Unlike valuestr(), the result is recursive for iterators till at least one level deep."""
+        """Return a unicode string with the result in human readable format. Unlike valuestr(), the result is
+        recursive for iterators till at least one level deep."""
         return unicode(self.value)
 
     def __str__(self):
-        """Return a string (ascii formated for Python 2, unicode for Python 3) with the result in human readable format. Unlike valuestr(), the result is recursive for iterators till at least one level deep."""
+        """Return a string (ascii formated for Python 2, unicode for Python 3) with the result in human readable
+        format. Unlike valuestr(), the result is recursive for iterators till at least one level deep."""
         return str(self.value)
     # Unlike regular iterators, __repr__() is not recursive.
     # Use pretty_tree for recursive results.
@@ -77,7 +80,8 @@ class TAG(object):
     # iterators
 
     def __repr__(self):
-        """Return a string (ascii formated for Python 2, unicode for Python 3) describing the class, name and id for debugging purposes."""
+        """Return a string (ascii formated for Python 2, unicode for Python 3) describing the class, name and id
+        for debugging purposes."""
         return "<%s(%r) at 0x%x>" % (self.__class__.__name__, self.name, id(self))
 
 

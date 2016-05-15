@@ -8,7 +8,7 @@ import time
 import json
 
 import utils.encryption as encryption
-from utils.helpers import get_jsonFile, put_jsonFile, find_in_json, epoch_to_timestr, read_timestr
+from utils.helpers import getjsonfile, putjsonfile, find_in_json, epoch_to_timestr, read_timestr
 
 from core.storage import Storage
 from proxy.clientconnection import Client
@@ -140,7 +140,7 @@ class Proxy:
         :param uuid: uuid of player as string
         :return: string representing ban reason
         """
-        banlist = get_jsonFile("banned-players")
+        banlist = getjsonfile("banned-players")
         if banlist:  # in this case we just care if banlist exits in any fashion
             banrecord = find_in_json(banlist, "uuid", uuid)
             return "%s by %s" % (banrecord["reason"], banrecord["source"])
@@ -157,7 +157,7 @@ class Proxy:
 
         This probably only works on 1.7.10 servers or later
         """
-        banlist = get_jsonFile("banned-players")
+        banlist = getjsonfile("banned-players")
         if banlist is not False:  # file and directory exist.
             if banlist is None:  # file was empty or not valid
                 banlist= dict()  # ensure valid dict before operating on it
@@ -179,7 +179,7 @@ class Proxy:
                                 "source": source,
                                 "expires": expiration,
                                 "reason": reason})
-                if put_jsonFile(banlist, "banned-players"):
+                if putjsonfile(banlist, "banned-players"):
                     self.wrapper.server.console("kick %s Banned: %s" % (name, reason))
                     return "Banned %s: %s" % (name, reason)
                 return "Could not write banlist to disk"
@@ -199,7 +199,7 @@ class Proxy:
         """
         if not self.wrapper.isipv4address(ipaddress):
             return "Invalid IPV4 address: %s" % ipaddress
-        banlist = get_jsonFile("banned-ips")
+        banlist = getjsonfile("banned-ips")
         if banlist is not False:  # file and directory exist.
             if banlist is None:  # file was empty or not valid
                 banlist= dict()  # ensure valid dict before operating on it
@@ -219,7 +219,7 @@ class Proxy:
                                 "source": source,
                                 "expires": expiration,
                                 "reason": reason})
-                if put_jsonFile(banlist, "banned-ips"):
+                if putjsonfile(banlist, "banned-ips"):
                     banned = ""
                     for i in self.wrapper.server.players:
                         player = self.wrapper.server.players[i]
@@ -234,7 +234,7 @@ class Proxy:
     def pardonIP(self, ipaddress):
         if not self.wrapper.isipv4address(ipaddress):
             return "Invalid IPV4 address: %s" % ipaddress
-        banlist = get_jsonFile("banned-ips")
+        banlist = getjsonfile("banned-ips")
         if banlist is not False:  # file and directory exist.
             if banlist is None:  # file was empty or not valid
                 return "No IP bans have ever been recorded."
@@ -243,7 +243,7 @@ class Proxy:
                 for x in banlist:
                     if x == banrecord:
                         banlist.remove(x)
-                if put_jsonFile(banlist, "banned-ips"):
+                if putjsonfile(banlist, "banned-ips"):
                     return "pardoned %s" % ipaddress
                 return "Could not write banlist to disk"
             else:
@@ -253,7 +253,7 @@ class Proxy:
             return "Banlist not found on disk"  # error text
 
     def pardonUUID(self, uuid):
-        banlist = get_jsonFile("banned-players")
+        banlist = getjsonfile("banned-players")
         if banlist is not False:  # file and directory exist.
             if banlist is None:  # file was empty or not valid
                 return "No bans have ever been recorded..?"
@@ -262,7 +262,7 @@ class Proxy:
                 for x in banlist:
                     if x == banrecord:
                         banlist.remove(x)
-                if put_jsonFile(banlist, "banned-players"):
+                if putjsonfile(banlist, "banned-players"):
                     name = self.wrapper.getusernamebyuuid(str(uuid))
                     return "pardoned %s" % name
                 return "Could not write banlist to disk"
@@ -272,7 +272,7 @@ class Proxy:
             return "Banlist not found on disk"  # error text
 
     def isUUIDBanned(self, uuid):  # Check if the UUID of the user is banned
-        banlist = get_jsonFile("banned-players")
+        banlist = getjsonfile("banned-players")
         if banlist:  # in this case we just care if banlist exits in any fashion
             banrecord = find_in_json(banlist, "uuid", str(uuid))
             if banrecord:
@@ -287,7 +287,7 @@ class Proxy:
         return False # banlist empty or record not found
 
     def isIPBanned(self, ipaddress):  # Check if the IP address is banned
-        banlist = get_jsonFile("banned-ips")
+        banlist = getjsonfile("banned-ips")
         if banlist:  # in this case we just care if banlist exits in any fashion
             banrecord = find_in_json(banlist, "ip", ipaddress)
             if banrecord:

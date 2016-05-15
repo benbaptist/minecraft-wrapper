@@ -10,7 +10,7 @@ import urllib
 import os
 import logging
 
-from utils.helpers import get_args, get_argsAfter
+from utils.helpers import getargs, getargsafter
 from api.base import API
 from core.storage import Storage
 
@@ -53,10 +53,6 @@ class Web:
         self.loginAttempts = 0
         self.lastAttempt = 0
         self.disableLogins = 0
-        if pkg_resources and requests:
-            self.webisok = True
-        else:
-            self.webisok = False
 
         # t = threading.Thread(target=self.updateGraph, args=())
         # t.daemon = True
@@ -123,8 +119,8 @@ class Web:
         while not self.wrapper.halt:
             while len(self.memoryGraph) > 200:
                 del self.memoryGraph[0]
-            if self.wrapper.server.getMemoryUsage():
-                self.memoryGraph.append([time.time(), self.wrapper.server.getMemoryUsage()])
+            if self.wrapper.server.getmemoryusage():
+                self.memoryGraph.append([time.time(), self.wrapper.server.getmemoryusage()])
             time.sleep(1)
 
     def checkLogin(self, password):
@@ -493,10 +489,10 @@ class WebClient:
                 "motd": self.wrapper.server.motd,
                 "refresh_time": time.time(),
                 "server_name": self.wrapper.config["General"]["server-name"],
-                "server_memory": self.wrapper.server.getMemoryUsage(),
+                "server_memory": self.wrapper.server.getmemoryusage(),
                 "server_memory_graph": memoryGraph,
                 "world_size": self.wrapper.server.worldSize,
-                "disk_avail": self.wrapper.server.getStorageAvailable("."),
+                "disk_avail": self.wrapper.server.getstorageavailable("."),
                 "topPlayers": topPlayers
             }
         if action == "console":
@@ -537,16 +533,16 @@ class WebClient:
                 if plugin in self.wrapper.storage["disabled_plugins"]:
                     self.wrapper.storage["disabled_plugins"].remove(plugin)
                     self.log.warning("[%s] Enabled plugin '%s'", self.addr[0], plugin)
-                    self.wrapper.reloadPlugins()
+                    self.wrapper.reloadplugins()
             else:
                 if plugin not in self.wrapper.storage["disabled_plugins"]:
                     self.wrapper.storage["disabled_plugins"].append(plugin)
                     self.log.warning("[%s] Disabled plugin '%s'", self.addr[0], plugin)
-                    self.wrapper.reloadPlugins()
+                    self.wrapper.reloadplugins()
         if action == "reload_plugins":
             if not self.web.validateKey(get("key")):
                 return EOFError
-            self.wrapper.reloadPlugins()
+            self.wrapper.reloadplugins()
             return True
         if action == "server_action":
             if not self.web.validateKey(get("key")):
@@ -640,9 +636,9 @@ class WebClient:
                 print("Web connection closed suddenly")
                 return False
             for line in self.buffer:
-                if get_args(line.split(" "), 0) == "GET":
-                    self.get(get_args(line.split(" "), 1))
-                if get_args(line.split(" "), 0) == "POST":
-                    self.request = get_args(line.split(" "), 1)
+                if getargs(line.split(" "), 0) == "GET":
+                    self.get(getargs(line.split(" "), 1))
+                if getargs(line.split(" "), 0) == "POST":
+                    self.request = getargs(line.split(" "), 1)
                     self.headers(status="400 Bad Request")
                     self.write("<h1>Invalid request. Sorry.</h1>")

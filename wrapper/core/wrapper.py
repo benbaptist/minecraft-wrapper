@@ -17,7 +17,7 @@ import proxy.base as proxy
 
 import management.web as manageweb
 
-from utils.helpers import get_args, get_argsAfter
+from utils.helpers import getargs, getargsafter
 
 from api.base import API
 
@@ -54,7 +54,7 @@ class Wrapper:
     def __init__(self):
         self.log = logging.getLogger('Wrapper.py')
         self.configManager = Config()
-        self.configManager.loadConfig()  # Load initially for storage object
+        self.configManager.loadconfig()  # Load initially for storage object
         self.encoding = self.configManager.config["General"]["encoding"]  # This was to allow alternate encodings
         self.server = None
         self.api = None
@@ -75,7 +75,7 @@ class Wrapper:
         self.help = {}
         self.config = {}
         # Aliases for compatibility
-        self.callEvent = self.events.callEvent
+        self.callevent = self.events.callevent
 
         if not readline:
             self.log.warning("'readline' not imported.")
@@ -164,7 +164,7 @@ class Wrapper:
                     return MCUUID(useruuid)
                 # if over the time frequency, it needs to be updated by using actual last polled name.
                 username = self.usercache.key(useruuid)["name"]
-                # ODO cautionary - someone 'out there' could change their name to one taken on the server (be aware)
+                # TODO cautionary - someone 'out there' could change their name to one taken on the server (be aware)
                 #  The code needs some upgrade to the to handle this possibility; perhaps during login.
                 user_uuid_matched = useruuid  # cache for later in case multiple name changes require a uuid lookup.
 
@@ -224,7 +224,7 @@ class Wrapper:
                 "IP": None,
                 "names": []
             }
-        for i in range(0, numbofnames):  # ODO py2-3
+        for i in range(0, numbofnames):  # TODO py2-3
             if "changedToAt" not in names[i]:  # find the original name
                 self.usercache[useruuid]["original"] = names[i]["name"]
                 self.usercache[useruuid]["online"] = True
@@ -269,7 +269,7 @@ class Wrapper:
             rx = requests.get("https://status.mojang.com/check")
             if rx.status_code == 200:
                 rx = rx.json()
-                for i in range(0, len(rx)):  # ODO py2-3
+                for i in range(0, len(rx)):  # TODO py2-3
                     if "account.mojang.com" in rx[i]:
                         if rx[i]["account.mojang.com"] == "green":
                             self.log.warning("Mojang accounts is green, but request failed - have you "
@@ -368,7 +368,7 @@ class Wrapper:
 
     def start(self):
         # Reload configuration each time server starts in order to detect changes
-        self.configManager.loadConfig()
+        self.configManager.loadconfig()
         self.config = self.configManager.config
 
         signal.signal(signal.SIGINT, self.sigint)
@@ -388,7 +388,7 @@ class Wrapper:
         self.server = MCServer(sys.argv, self.log, self.configManager.config, self)
         self.server.init()
 
-        self.plugins.loadPlugins()
+        self.plugins.loadplugins()
 
         if self.config["IRC"]["irc-enabled"]:
             self.irc = IRC(self.server, self.config, self.log, self)
@@ -438,7 +438,7 @@ class Wrapper:
             t.start()
 
         self.server.__handle_server__()
-        self.plugins.disablePlugins()
+        self.plugins.disableplugins()
 
     def startproxy(self):
         self.proxy = proxy.Proxy(self)
@@ -568,9 +568,9 @@ class Wrapper:
         t = time.time()
         while not self.halt:
             if time.time() - t > 1:
-                self.callEvent("timer.second", None)
+                self.callevent("timer.second", None)
                 t = time.time()
-            # self.callEvent("timer.tick", None)
+            # self.callevent("timer.tick", None)
             time.sleep(0.05)
 
     def console(self):
@@ -596,7 +596,7 @@ class Wrapper:
                     break
                 continue
 
-            command = get_args(consoleinput[1:].split(" "), 0)
+            command = getargs(consoleinput[1:].split(" "), 0)
 
             if command == "halt":
                 self.server.stop("Halting server...", save=False)
@@ -609,8 +609,8 @@ class Wrapper:
             elif command == "restart":
                 self.server.restart("Server restarting, be right back!")
             elif command == "reload":
-                self.plugins.reloadPlugins()
-                if self.server.getServerType() != "vanilla":
+                self.plugins.reloadplugins()
+                if self.server.getservertype() != "vanilla":
                     self.log.info("Note: If you meant to reload the server's plugins instead of the Wrapper's "
                                   "plugins, try running 'reload' without any slash OR '/raw /reload'.")
             elif command == "update-wrapper":
@@ -619,15 +619,15 @@ class Wrapper:
                 self.listplugins()
             elif command in ("mem", "memory"):
                 try:
-                    self.log.info("Server Memory Usage: %d bytes", self.server.getMemoryUsage())
+                    self.log.info("Server Memory Usage: %d bytes", self.server.getmemoryusage())
                 except UnsupportedOSException as e:
                     self.log.error(e)
                 except Exception as ex:
                     self.log.exception("Something went wrong when trying to fetch memory usage! (%s)", ex)
             elif command == "raw":
                 try:
-                    if len(get_argsAfter(consoleinput[1:].split(" "), 1)) > 0:
-                        self.server.console(get_argsAfter(consoleinput[1:].split(" "), 1))
+                    if len(getargsafter(consoleinput[1:].split(" "), 1)) > 0:
+                        self.server.console(getargsafter(consoleinput[1:].split(" "), 1))
                     else:
                         self.log.info("Usage: /raw [command]")
                 except InvalidServerStateError as e:

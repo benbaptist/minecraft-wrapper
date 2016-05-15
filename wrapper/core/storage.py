@@ -7,7 +7,6 @@ import os
 import threading
 import time
 import copy
-import traceback
 import logging
 
 # Py3-2
@@ -16,9 +15,10 @@ try:
 except ImportError:
     import ConfigParser
 
+
 class Storage:
 
-    def __init__(self, name, isWorld=False, root="wrapper-data/json", encoding="UTF-8"):
+    def __init__(self, name, root="wrapper-data/json", encoding="UTF-8"):
         self.name = name
         self.root = root
         self.encoding = encoding
@@ -29,7 +29,7 @@ class Storage:
         self.time = time.time()
         self.log = logging.getLogger('Wrapper.py')
 
-        t = threading.Thread(target=self.periodicSave, args=())
+        t = threading.Thread(target=self.periodicsave, args=())
         t.daemon = True
         t.start()
 
@@ -57,14 +57,14 @@ class Storage:
         for i in self.data:
             yield i
 
-    def periodicSave(self):
+    def periodicsave(self):
         while not self.abort:
             if time.time() - self.time > 60:
                 if not self.data == self.dataOld:
                     try:
                         self.save()
                     except Exception as e:
-                        print(traceback.format_exc())
+                        self.log.warning("Could not periodicsave data \n(%s)", e)
                     self.time = time.time()
             time.sleep(1)
 
@@ -99,17 +99,17 @@ class Storage:
 
     def key(self, key, value=None):
         if value is None:
-            return self.getKey(key)
+            return self.getkey(key)
         else:
-            self.setKey(key, value)
+            self.setkey(key, value)
 
-    def getKey(self, key):
+    def getkey(self, key):
         if key in self.data:
             return self.data[key]
         else:
             return None
 
-    def setKey(self, key, value=None):
+    def setkey(self, key, value=None):
         if value is None:
             if key in self.data:
                 del self.data[key]
