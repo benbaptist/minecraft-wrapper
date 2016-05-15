@@ -73,22 +73,22 @@ DEFAULT_CONFIG = dict({
 
 
 def configure_logger():
-    setcustomlevels()
-    loadconfig()
+    setCustomLevels()
+    loadConfig()
 
     logging.getLogger()
 
 
-def setcustomlevels():
+def setCustomLevels():
     # Create a TRACE level
     # We should probably not do this, but for wrappers use case this is non-impacting.
     # See: https://docs.python.org/2/howto/logging.html#custom-levels
-    logging.TRACE = 5  # lower than DEBUG
+    logging.TRACE = 5 # lower than DEBUG
     logging.addLevelName(logging.TRACE, "TRACE")
     logging.Logger.trace = lambda inst, msg, *args, **kwargs: inst.log(logging.TRACE, msg, *args, **kwargs)
 
 
-def loadconfig(configfile="logging.json"):
+def loadConfig(configfile="logging.json"):
     dictConfig(DEFAULT_CONFIG)  # Load default config
     try:
         if os.path.isfile(configfile):
@@ -99,7 +99,7 @@ def loadconfig(configfile="logging.json"):
         else:
             with open(configfile, "w") as f:
                 f.write(json.dumps(DEFAULT_CONFIG, indent=4, separators=(',', ': ')))
-            logging.warning("Unable to locate %s -- Using default logging configuration", configfile)
+            logging.warn("Unable to locate %s -- Using default logging configuration", configfile)
     except Exception as e:
         logging.exception("Unable to load or create %s! (%s)", configfile, e)
 
@@ -143,7 +143,7 @@ class ColorFormatter(logging.Formatter):
                 crit_style = termcolors.make_style(fg="black", bg="red", opts=("bold",))
                 msg = crit_style(msg)
             elif record.levelno == logging.TRACE:
-                trace_style = termcolors.make_style(fg="black", bg="white")
+                trace_style  = termcolors.make_style(fg="black", bg="white")
                 msg = trace_style(msg)
 
         record.msg = msg
@@ -152,6 +152,6 @@ class ColorFormatter(logging.Formatter):
 
 
 class WrapperHandler(logging.handlers.RotatingFileHandler):
-    def __init__(self, filename, mode='a', maxbytes=0, backupcount=0, encoding=None, delay=0):
+    def __init__(self, filename, mode='a', maxBytes=0, backupCount=0, encoding=None, delay=0):
         mkdir_p(os.path.dirname(filename))
-        super(WrapperHandler, self).__init__(filename, mode, maxbytes, backupcount, encoding, delay)
+        super(WrapperHandler, self).__init__(filename, mode, maxBytes, backupCount, encoding, delay)
