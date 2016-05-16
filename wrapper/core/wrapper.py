@@ -615,7 +615,7 @@ class Wrapper:
                         self.log.info("Usage: /raw [command]")
                 except InvalidServerStateError as e:
                     self.log.warning(e)
-            elif command in ("/freeze", ):
+            elif command in ("/freeze", "freeze"):
                 try:
                     self.server.freeze()
                 except InvalidServerStateError as e:
