@@ -285,7 +285,7 @@ class Client:
                         return False
                     if not self.isLocal:
                         return True
-                    payload = self.wrapper.callevent("player.rawMessage", {
+                    payload = self.wrapper.events.callevent("player.rawMessage", {
                         "player": self.getPlayerObject(),
                         "message": data["message"]
                     })
@@ -294,7 +294,7 @@ class Client:
                     if type(payload) == str:
                         chatmsg = payload
                     if chatmsg[0] == "/":
-                        if self.wrapper.callevent("player.runCommand", {
+                        if self.wrapper.events.callevent("player.runCommand", {
                             "player": self.getPlayerObject(),
                             "command": chatmsg.split(" ")[0][1:].lower(),
                             "args": chatmsg.split(" ")[1:]
@@ -343,7 +343,7 @@ class Client:
                     return False
                 # finished digging
                 if data["status"] == 2:
-                    if not self.wrapper.callevent("player.dig", {
+                    if not self.wrapper.events.callevent("player.dig", {
                         "player": self.getPlayerObject(),
                         "position": position,
                         "action": "end_break",
@@ -353,7 +353,7 @@ class Client:
                 # started digging
                 if data["status"] == 0:
                     if self.gamemode != 1:
-                        if not self.wrapper.callevent("player.dig", {
+                        if not self.wrapper.events.callevent("player.dig", {
                             "player": self.getPlayerObject(),
                             "position": position,
                             "action": "begin_break",
@@ -361,7 +361,7 @@ class Client:
                         }):
                             return False
                     else:
-                        if not self.wrapper.callevent("player.dig", {
+                        if not self.wrapper.events.callevent("player.dig", {
                             "player": self.getPlayerObject(),
                             "position": position,
                             "action": "end_break",
@@ -371,7 +371,7 @@ class Client:
                 if data["status"] == 5 and data["face"] == 255:
                     if self.position != (0, 0, 0):
                         playerpos = self.position
-                        if not self.wrapper.callevent("player.interact", {
+                        if not self.wrapper.events.callevent("player.interact", {
                             "player": self.getPlayerObject(),
                             "position": playerpos,
                             "action": "finish_using"
@@ -430,7 +430,7 @@ class Client:
                 if helditem is None:
                     # if no item, treat as interaction (according to wrappers
                     # inventory :(, return False  )
-                    if not self.wrapper.callevent("player.interact", {
+                    if not self.wrapper.events.callevent("player.interact", {
                         "player": player,
                         "position": position,
                         "action": "useitem"
@@ -438,7 +438,7 @@ class Client:
                         return False
 
                 self.lastplacecoords = position
-                if not self.wrapper.callevent("player.place", {
+                if not self.wrapper.events.callevent("player.place", {
                     "player": player,
                     "position": position,
                     "clickposition": clickposition,
@@ -463,7 +463,7 @@ class Client:
                     if data["pack"] == '\x00':
                         # if helditem["pkid"] in (326, 326, 327):  # or just limit
                         # certain items use??
-                        if not self.wrapper.callevent("player.interact", {
+                        if not self.wrapper.events.callevent("player.interact", {
                             "player": player,
                             "position": position,
                             "action": "useitem"
@@ -491,7 +491,7 @@ class Client:
                 l2 = data["line2"]
                 l3 = data["line3"]
                 l4 = data["line4"]
-                payload = self.wrapper.callevent("player.createsign", {
+                payload = self.wrapper.events.callevent("player.createsign", {
                     "player": self.getPlayerObject(),
                     "position": position,
                     "line1": l1,
@@ -528,7 +528,7 @@ class Client:
                 data = self.packet.read("ubyte:wid|short:slot|byte:button|short:action|byte:mode|slot:clicked")
                 data['player'] = self.getPlayerObject()
                 self.log.trace("(PROXY CLIENT) -> Parsed CLICK_WINDOW packet:\n%s", data)
-                if not self.wrapper.callevent("player.slotClick", data):
+                if not self.wrapper.events.callevent("player.slotClick", data):
                     return False
                 return True
 
@@ -665,7 +665,7 @@ class Client:
                     self.log.info("Banned player %s tried to connect:\n %s" % (playerwas, banreason))
                     return False
 
-                if not self.wrapper.callevent("player.preLogin", {
+                if not self.wrapper.events.callevent("player.preLogin", {
                     "player": self.username,
                     "online_uuid": self.uuid.string,
                     "offline_uuid": self.serverUuid.string,

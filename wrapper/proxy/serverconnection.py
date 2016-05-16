@@ -172,7 +172,7 @@ class Server:
                 except Exception as e:
                     return
 
-                payload = self.wrapper.callevent("player.chatbox", {"player": self.client.getPlayerObject(), "json": data})
+                payload = self.wrapper.events.callevent("player.chatbox", {"player": self.client.getPlayerObject(), "json": data})
 
                 if payload is False:  # reject the packet .. no chat gets sent to the client
                     return False
@@ -372,10 +372,10 @@ class Server:
                     return
                 if eid == self.eid:
                     if vid == -1:
-                        self.wrapper.callevent("player.unmount", {"player": player})
+                        self.wrapper.events.callevent("player.unmount", {"player": player})
                         self.client.riding = None
                     else:
-                        self.wrapper.callevent("player.mount", {"player": player, "vehicle_id": vid, "leash": leash})
+                        self.wrapper.events.callevent("player.mount", {"player": player, "vehicle_id": vid, "leash": leash})
                         if not self.wrapper.server.world:
                             return
                         self.client.riding = self.wrapper.server.world.getEntityByEID(vid)

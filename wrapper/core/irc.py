@@ -233,12 +233,12 @@ class IRC:
             nick = getargs(self.line.split(" "), 0)[1:getargs(self.line.split(" "), 0).find("!")]
             channel = getargs(self.line.split(" "), 2)[1:][:-1]
             self.log.info("%s joined %s", nick, channel)
-            self.wrapper.callevent("irc.join", {"nick": nick, "channel": channel})
+            self.wrapper.events.callevent("irc.join", {"nick": nick, "channel": channel})
         if getargs(self.line.split(" "), 1) == "PART":
             nick = getargs(self.line.split(" "), 0)[1:getargs(self.line.split(" "), 0).find("!")]
             channel = getargs(self.line.split(" "), 2)
             self.log.info("%s parted %s", nick, channel)
-            self.wrapper.callevent("irc.part", {"nick": nick, "channel": channel})
+            self.wrapper.events.callevent("irc.part", {"nick": nick, "channel": channel})
         if getargs(self.line.split(" "), 1) == "MODE":
             try:
                 nick = getargs(self.line.split(" "), 0)[1:getargs(self.line.split(" "), 0).find('!')]
@@ -260,7 +260,7 @@ class IRC:
             nick = getargs(self.line.split(" "), 0)[1:getargs(self.line.split(" "), 0).find("!")]
             message = getargsafter(self.line.split(" "), 2)[1:].strip("\n").strip("\r")
 
-            self.wrapper.callevent("irc.quit", {"nick": nick, "message": message, "channel": None})
+            self.wrapper.events.callevent("irc.quit", {"nick": nick, "message": message, "channel": None})
         if getargs(self.line.split(" "), 1) == "PRIVMSG":
             channel = getargs(self.line.split(" "), 2)
             nick = getargs(self.line.split(" "), 0)[1:getargs(self.line.split(" "), 0).find("!")]
@@ -277,10 +277,10 @@ class IRC:
                 else:
                     message = message.decode("utf-8", "ignore")
                     if getargs(message.split(" "), 0) == "\x01ACTION":
-                        self.wrapper.callevent("irc.action", {"nick": nick, "channel": channel, "action": getargsafter(message.split(" "), 1)[:-1]})
+                        self.wrapper.events.callevent("irc.action", {"nick": nick, "channel": channel, "action": getargsafter(message.split(" "), 1)[:-1]})
                         self.log.info("[%s] * %s %s", channel, nick, getargsafter(message.split(" "), 1)[:-1])
                     else:
-                        self.wrapper.callevent("irc.message", {"nick": nick, "channel": channel, "message": message})
+                        self.wrapper.events.callevent("irc.message", {"nick": nick, "channel": channel, "message": message})
                         self.log.info("[%s] <%s> %s", channel, nick, message)
             elif self.config["IRC"]["control-from-irc"]:
                 self.log.info("[PRIVATE] (%s) %s", nick, message)

@@ -301,7 +301,7 @@ class MCServer:
         try:
             if username not in self.players:
                 self.players[username] = Player(username, self.wrapper)
-            self.wrapper.callevent("player.login", {"player": self.getplayer(username)})
+            self.wrapper.events.callevent("player.login", {"player": self.getplayer(username)})
         except Exception as e:
             self.log.exception(e)
 
@@ -309,7 +309,7 @@ class MCServer:
         """
         Called when a player logs out
         """
-        self.wrapper.callevent("player.logout", {"player": self.getplayer(username)})
+        self.wrapper.events.callevent("player.logout", {"player": self.getplayer(username)})
         # if self.wrapper.proxy:
         #     for client in self.wrapper.proxy.clients:
         #         uuid = self.players[username].uuid # This is not used
@@ -359,14 +359,14 @@ class MCServer:
         """
         self.state = state
         if self.state == 0:
-            self.wrapper.callevent("server.stopped", {"reason": reason})
+            self.wrapper.events.events.callevent("server.stopped", {"reason": reason})
         elif self.state == 1:
-            self.wrapper.callevent("server.starting", {"reason": reason})
+            self.wrapper.events.callevent("server.starting", {"reason": reason})
         elif self.state == 2:
-            self.wrapper.callevent("server.started", {"reason": reason})
+            self.wrapper.events.callevent("server.started", {"reason": reason})
         elif self.state == 3:
-            self.wrapper.callevent("server.stopping", {"reason": reason})
-        self.wrapper.callevent("server.state", {"state": state, "reason": reason})
+            self.wrapper.events.callevent("server.stopping", {"reason": reason})
+        self.wrapper.events.callevent("server.state", {"state": state, "reason": reason})
 
     def getservertype(self):
         if "spigot" in self.config["General"]["command"].lower():
@@ -476,7 +476,7 @@ class MCServer:
         """
         Internally-used function that parses a particular console line
         """
-        if not self.wrapper.callevent("server.consoleMessage", {"message": buff}):
+        if not self.wrapper.events.callevent("server.consoleMessage", {"message": buff}):
             return False
         if self.getservertype() == "spigot":
             line = " ".join(buff.split(" ")[2:])
@@ -500,7 +500,7 @@ class MCServer:
                 name = self.stripspecial(getargs(line.split(" "), 0)[1:-1])
                 message = self.stripspecial(getargsafter(line.split(" "), 1))
                 original = getargsafter(line.split(" "), 0)
-                self.wrapper.callevent("player.message", {
+                self.wrapper.events.callevent("player.message", {
                     "player": self.getplayer(name), 
                     "message": message, 
                     "original": original
@@ -514,7 +514,7 @@ class MCServer:
             elif getargs(line.split(" "), 0) == "*":
                 name = self.stripspecial(getargs(line.split(" "), 1))
                 message = self.stripspecial(getargsafter(line.split(" "), 2))
-                self.wrapper.callevent("player.action", {
+                self.wrapper.events.callevent("player.action", {
                     "player": self.getplayer(name),
                     "action": message
                 })
@@ -524,7 +524,7 @@ class MCServer:
                 name = self.stripspecial(getargs(line.split(" "), 0)[1:-1])
                 message = self.stripspecial(getargsafter(line.split(" "), 1))
                 original = getargsafter(line.split(" "), 0)
-                self.wrapper.callevent("server.say", {
+                self.wrapper.events.callevent("server.say", {
                     "player": name, 
                     "message": message, 
                     "original": original
@@ -533,13 +533,13 @@ class MCServer:
             elif getargs(line.split(" "), 1) == "has" and getargs(line.split(" "), 5) == "achievement":
                 name = self.stripspecial(getargs(line.split(" "), 0))
                 achievement = getargsafter(line.split(" "), 6)
-                self.wrapper.callevent("player.achievement", {
+                self.wrapper.events.callevent("player.achievement", {
                     "player": name, 
                     "achievement": achievement
                 })
             elif getargs(line.split(" "), 1) in deathprefixes:  # Player Death
                 name = self.stripspecial(getargs(line.split(" "), 0))
-                self.wrapper.callevent("player.death", {
+                self.wrapper.events.callevent("player.death", {
                     "player": self.getplayer(name), 
                     "death": getargsafter(line.split(" "), 4)
                 })
@@ -558,7 +558,7 @@ class MCServer:
                 name = self.stripspecial(getargs(line.split(" "), 3)[1:-1])
                 message = self.stripspecial(getargsafter(line.split(" "), 4))
                 original = getargsafter(line.split(" "), 3)
-                self.wrapper.callevent("player.message", {
+                self.wrapper.events.callevent("player.message", {
                     "player": self.getplayer(name), 
                     "message": message, 
                     "original": original
@@ -572,7 +572,7 @@ class MCServer:
             elif getargs(line.split(" "), 3) == "*":
                 name = self.stripspecial(getargs(line.split(" "), 4))
                 message = self.stripspecial(getargsafter(line.split(" "), 5))
-                self.wrapper.callevent("player.action", {
+                self.wrapper.events.callevent("player.action", {
                     "player": self.getplayer(name), 
                     "action": message
                 })
@@ -582,7 +582,7 @@ class MCServer:
                 original = getargsafter(line.split(" "), 3)
                 if name == "Server":
                     return
-                self.wrapper.callevent("server.say", {
+                self.wrapper.events.callevent("server.say", {
                     "player": name, 
                     "message": message, 
                     "original": original
@@ -591,7 +591,7 @@ class MCServer:
                 # Player Achievement
                 name = self.stripspecial(getargs(line.split(" "), 3))
                 achievement = getargsafter(line.split(" "), 9)
-                self.wrapper.callevent("player.achievement", {
+                self.wrapper.events.callevent("player.achievement", {
                     "player": name, 
                     "achievement": achievement
                 })
@@ -601,7 +601,7 @@ class MCServer:
                     0, len(self.config["Death"]["death-kick-messages"]))]
                 if self.config["Death"]["kick-on-death"] and name in self.config["Death"]["users-to-kick"]:
                     self.console("kick %s %s" % (name, deathmessage))
-                self.wrapper.callevent("player.death", {
+                self.wrapper.events.callevent("player.death", {
                     "player": self.getplayer(name), 
                     "death": getargsafter(line.split(" "), 4)
                 })

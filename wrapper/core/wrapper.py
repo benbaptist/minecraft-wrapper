@@ -14,6 +14,7 @@ import socket
 import core.buildinfo as version_info
 import proxy.base as proxy
 import management.web as manageweb
+import utils.termcolors as termcolors
 
 from utils.helpers import getargs, getargsafter
 from api.base import API
@@ -375,39 +376,7 @@ class Wrapper:
         signal.signal(signal.SIGTERM, self.sigint)
 
         self.api = API(self, "Wrapper.py")
-        # All commands listed herein also require player.isOp()
-        self.api.registerHelp("Wrapper", "Internal Wrapper.py commands ", [
-            ("/wrapper [update/memory/halt]",
-             "If no subcommand is provided, it will show the Wrapper version.",
-             None),
-            ("/playerstats [all]",
-             "Show the most active players. If no subcommand is provided, it'll show the top 10 players.",
-             None),
-            ("/plugins",
-             "Show a list of the installed plugins",
-             None),
-            ("/reload",
-             "Reload all plugins.",
-             None),
-            ("/permissions <groups/users/RESET>",
-             "Command used to manage permission groups and users, add permission nodes, etc.",
-             None),
-            ("/ban <name> [reason..] [time <h/d>]",
-             "Using a time creates a temp ban - (h)ours or (d)ays. Default is days(d)",
-             "mc1.7.6"),  # Minimum server version for commands to appear (register default perm later in code)
-            ("/ban-ip <address|name> [reason..] [time <h/d> (hours or days)",
-             "Reason and time optional. Default unit is days",
-             "mc1.7.6"),
-            ("/pardon <name>",
-             "pardon player 'name'. ",
-             "mc1.7.6"),
-            ("/banlist [players|ips|search] [args]",
-             "search/display banlist",
-             "mc1.7.6"),
-            ("/pardon-ip <address>",
-             "Pardon address",
-             "mc1.7.6")
-        ])
+        self._registerwrappershelp()
 
         self.server = MCServer(sys.argv, self.log, self.configManager.config, self)
         self.server.init()
@@ -674,21 +643,65 @@ class Wrapper:
                 except Exception as exc:
                     self.log.exception("Something went wrong when trying to unfreeze the server! (%s)", exc)
             elif command == "help":
-                self.log.info("/reload - Reload Wrapper.py plugins.")
-                self.log.info("/plugins - Lists Wrapper.py plugins.")
-                self.log.info("/update-wrapper - Checks for new Wrapper.py updates, and will install them "
-                              "automatically if one is available.")
-                self.log.info("/start - Start the minecraft server.")
-                self.log.info("/stop - Stop the minecraft server without auto-restarting and without shutting "
-                              "down Wrapper.py.")
-                self.log.info("/restart - Restarts the minecraft server.")
-                self.log.info("/halt - Shutdown Wrapper.py completely.")
-                self.log.info("/freeze - Temporarily locks the server up until /unfreeze is executed (Only "
-                              "works on *NIX servers).")
-                self.log.info("/unfreeze - Unlocks the server from a frozen state (Only works on *NIX servers).")
-                self.log.info("/mem - Get memory usage of the server (Only works on *NIX servers).")
-                self.log.info("/raw [command] - Send command to the Minecraft Server. Useful for Forge commands "
-                              "like '/fml confirm'.")
-                self.log.info("Wrapper.py Version %s", self.getbuildstring())
+                # This is the console help commands.  Below this in _registerwrappershelp is the in-game help
+                self._readout("/reload", "Reload Wrapper.py plugins.")
+                self._readout("/plugins", "Lists Wrapper.py plugins.")
+                self._readout("/update-wrapper", "Checks for new Wrapper.py updates, and will install\n"
+                              "    them automatically if one is available.")
+                self._readout("/start", "Start the minecraft server.")
+                self._readout("/stop", "Stop the minecraft server without auto-restarting and without\n"
+                              "    shuttingdown Wrapper.py.")
+                self._readout("/restart", "Restarts the minecraft server.")
+                self._readout("/halt", "Shutdown Wrapper.py completely.")
+                self._readout("/freeze", "Temporarily locks the server up until /unfreeze is executed\n"
+                              "    (Only works on *NIX servers).")
+                self._readout("/unfreeze", "Unlocks a frozen state server (Only works on *NIX servers).")
+                self._readout("/mem", "Get memory usage of the server (Only works on *NIX servers).")
+                self._readout("/raw [command]", "Send command to the Minecraft Server. Useful for Forge\n"
+                              "    commands like '/fml confirm'.")
+                self._readout("Wrapper.py Version %s", self.getbuildstring())
             else:
-                self.log.error("Invalid command -- %s", command)
+                self._readout("Invalid command", command)
+
+    @staticmethod
+    def _readout(commandtext, description):
+        commstyle = termcolors.make_style(fg="magenta", bg="white")
+        descstyle = termcolors.make_style(fg="yellow")
+        print("%s - %s" % (commstyle(commandtext), descstyle(description)))
+
+    def _registerwrappershelp(self):
+        # All commands listed herein are accessible in-game
+        # Also require player.isOp()
+        self.api.registerHelp("Wrapper", "Internal Wrapper.py commands ", [
+            ("/wrapper [update/memory/halt]",
+             "If no subcommand is provided, it will show the Wrapper version.",
+             None),
+            ("/playerstats [all]",
+             "Show the most active players. If no subcommand is provided, it'll show the top 10 players.",
+             None),
+            ("/plugins",
+             "Show a list of the installed plugins",
+             None),
+            ("/reload",
+             "Reload all plugins.",
+             None),
+            ("/permissions <groups/users/RESET>",
+             "Command used to manage permission groups and users, add permission nodes, etc.",
+             None),
+            ("/ban <name> [reason..] [time <h/d>]",
+             "Using a time creates a temp ban - (h)ours or (d)ays. Default is days(d)",
+             "mc1.7.6"),  # Minimum server version for commands to appear (register default perm later in code)
+            ("/ban-ip <address|name> [reason..] [time <h/d> (hours or days)",
+             "Reason and time optional. Default unit is days",
+             "mc1.7.6"),
+            ("/pardon <name>",
+             "pardon player 'name'. ",
+             "mc1.7.6"),
+            ("/banlist [players|ips|search] [args]",
+             "search/display banlist",
+             "mc1.7.6"),
+            ("/pardon-ip <address>",
+             "Pardon address",
+             "mc1.7.6")
+        ])
+
