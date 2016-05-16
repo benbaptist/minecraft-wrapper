@@ -44,9 +44,8 @@ try:
 except ImportError:
     requests = False
 
-# Py3-2
-import sys
-PY3 = sys.version_info > (3,)
+import sys  # used to pass sys.argv to server
+PY3 = sys.version_info > (3,)  # True of Python 3, False is Python 2
 
 
 class Wrapper:
@@ -74,8 +73,6 @@ class Wrapper:
         self.permission = {}
         self.help = {}
         self.config = {}
-        # Aliases for compatibility
-        self.callevent = self.events.callevent
 
         if not readline:
             self.log.warning("'readline' not imported.")
@@ -137,35 +134,37 @@ class Wrapper:
                 eula = f.read()
 
             if "false" in eula:
-                self.log.debug("EULA agreement was not accepted, forcing acceptance...")
+                # if forced, should be at info level since acceptance is a legal matter.
+                self.log.warning("EULA agreement was not accepted, accepting on your behalf...")
                 with open("eula.txt", "w") as f:
                     f.write(eula.replace("false", "true"))
 
-            self.log.debug("EULA agreement has been accepted!")
+            self.log.debug("EULA agreement has been accepted.")
 
-    def getuuidbyusername(self, username):
+    def getuuidbyusername(self, username, forcepoll=False):
         """
         Lookup user's UUID using the username. Primarily searches the wrapper usercache.  If record is
         older than 30 days (or cannot be found in the cache), it will poll Mojang and also attempt a full
         update of the cache using getusernamebyuuid as well.
 
         :param username:  username as string
+        :param forcepoll:  force polling even if record has been cached in past 30 days
         :returns: returns the online/Mojang MCUUID object from the given name. Updates the wrapper usercache.json
                 Yields False if failed.
         """
-        frequency = 2592000  # 30 days.  If a cache update is specifically required any sooner, use getusernamebyuuid.
+        frequency = 2592000  # 30 days.
+        if forcepoll:
+            frequency = 3600  # do not allow more than hourly
         user_uuid_matched = None
         for useruuid in self.usercache:  # try wrapper cache first
             if username == self.usercache.key(useruuid)["localname"]:
-                '''This search need only be done by 'localname', which is always populated and is always
-                the same as the 'name', unless a localname has been assigned on the server (such as
-                when "falling back' on an old name).'''
+                # This search need only be done by 'localname', which is always populated and is always
+                # the same as the 'name', unless a localname has been assigned on the server (such as
+                # when "falling back' on an old name).'''
                 if (time.time() - self.usercache.key(useruuid)["time"]) < frequency:
                     return MCUUID(useruuid)
                 # if over the time frequency, it needs to be updated by using actual last polled name.
                 username = self.usercache.key(useruuid)["name"]
-                # TODO cautionary - someone 'out there' could change their name to one taken on the server (be aware)
-                #  The code needs some upgrade to the to handle this possibility; perhaps during login.
                 user_uuid_matched = useruuid  # cache for later in case multiple name changes require a uuid lookup.
 
         # try mojang  (a new player or player changed names.)
@@ -173,22 +172,23 @@ class Wrapper:
         if r.status_code == 200:
             useruuid = self.formatuuid(r.json()["id"])  # returns a string uuid with dashes
             correctcapname = r.json()["name"]
-            if username != correctcapname:
+            if username != correctcapname:  # this code may not be needed if problems with /perms are corrected.
                 self.log.warning("%s's name is not correctly capitalized (offline name warning!)", correctcapname)
-            nameisnow = self.getusernamebyuuid(useruuid)
+            # This should only run subject to the above frequency (hence use of forcepoll=True)
+            nameisnow = self.getusernamebyuuid(useruuid, forcepoll=True)
             if nameisnow:
                 return MCUUID(useruuid)
             return False
         elif r.status_code == 204:  # try last matching UUID instead.  This will populate current name back in 'name'
             if user_uuid_matched:
-                nameisnow = self.getusernamebyuuid(user_uuid_matched)
+                nameisnow = self.getusernamebyuuid(user_uuid_matched, forcepoll=True)
                 if nameisnow:
                     return MCUUID(user_uuid_matched)
                 return False
         else:
             return False  # No other options but to fail request
 
-    def getusernamebyuuid(self, useruuid):
+    def getusernamebyuuid(self, useruuid, forcepoll=False):
         """
         Returns the username from the specified UUID.
         If the player has never logged in before and isn't in the user cache, it will poll Mojang's API.
@@ -196,9 +196,13 @@ class Wrapper:
         Updates will be made to the wrapper usercache.json when this function is executed.
 
         :param useruuid:  string UUID
+        :param forcepoll:  force polling even if record has been cached in past 30 days.
+
         :returns: returns the username from the specified uuid, else returns False if failed.
         """
-        frequency = 86400  # if called directly, can update cache daily (refresh names list, etc)
+        frequency = 2592000  # if called directly, can update cache daily (refresh names list, etc)
+        if forcepoll:
+            frequency = 600  # 10 minute limit
         names = self._pollmojanguuid(useruuid)
         numbofnames = len(names)
         if self.usercache.key(useruuid):  # if user is in the cache...
@@ -375,14 +379,38 @@ class Wrapper:
         signal.signal(signal.SIGTERM, self.sigint)
 
         self.api = API(self, "Wrapper.py")
+        # All commands listed herein also require player.isOp()
         self.api.registerHelp("Wrapper", "Internal Wrapper.py commands ", [
-            ("/wrapper [update/memory/halt]", "If no subcommand is provided, it will show the Wrapper version.", None),
-            ("/plugins", "Show a list of the installed plugins", None),
-            ("/permissions <groups/users/RESET>", "Command used to manage permission groups and users, add "
-                                                  "permission nodes, etc.", None),
-            ("/playerstats [all]", "Show the most active players. If no subcommand is provided, it'll show "
-                                   "the top 10 players.", None),
-            ("/reload", "Reload all plugins.", None)
+            ("/wrapper [update/memory/halt]",
+             "If no subcommand is provided, it will show the Wrapper version.",
+             None),
+            ("/playerstats [all]",
+             "Show the most active players. If no subcommand is provided, it'll show the top 10 players.",
+             None),
+            ("/plugins",
+             "Show a list of the installed plugins",
+             None),
+            ("/reload",
+             "Reload all plugins.",
+             None),
+            ("/permissions <groups/users/RESET>",
+             "Command used to manage permission groups and users, add permission nodes, etc.",
+             None),
+            ("/ban <name> [reason..] [time <h/d>]",
+             "Using a time creates a temp ban - (h)ours or (d)ays. Default is days(d)",
+             "mc1.7.6"),  # Minimum server version for commands to appear (register default perm later in code)
+            ("/ban-ip <address|name> [reason..] [time <h/d> (hours or days)",
+             "Reason and time optional. Default unit is days",
+             "mc1.7.6"),
+            ("/pardon <name>",
+             "pardon player 'name'. ",
+             "mc1.7.6"),
+            ("/banlist [players|ips|search] [args]",
+             "search/display banlist",
+             "mc1.7.6"),
+            ("/pardon-ip <address>",
+             "Pardon address",
+             "mc1.7.6")
         ])
 
         self.server = MCServer(sys.argv, self.log, self.configManager.config, self)
