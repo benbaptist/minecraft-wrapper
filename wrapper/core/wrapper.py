@@ -10,6 +10,7 @@ import time
 import os
 import logging
 import socket
+import sys  # used to pass sys.argv to server
 
 import core.buildinfo as version_info
 import proxy.base as proxy
@@ -40,8 +41,10 @@ try:
 except ImportError:
     requests = False
 
-import sys  # used to pass sys.argv to server
-PY3 = sys.version_info > (3,)  # True of Python 3, False is Python 2
+try:  # Manually define an input builtin that works indentically on PY2 and PY3
+    inputcons = raw_input
+except NameError:
+    inputcons = input
 
 
 class Wrapper:
@@ -567,11 +570,7 @@ class Wrapper:
     def console(self):
         while not self.halt:
             try:
-                if PY3:
-                    # I doubt this works on PY3 either (supported by Py2.7, but does not work)
-                    consoleinput = eval(input())
-                else:
-                    consoleinput = raw_input("")  # only Py2.7
+                consoleinput = inputcons("")
             except Exception as e:
                 print("[continue] variable 'consoleinput' in 'console()' did not evaluate \n%s" % e)
                 continue
