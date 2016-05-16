@@ -42,12 +42,12 @@ class Player:
         self.clientUuid = self.wrapper.getuuid(username)  # - The player.uuid used by old api (and internally here).
         self.serverUuid = self.wrapper.getuuidbyusername(username)
 
-        self.ipaddress =  "127.0.0.0"
+        self.ipaddress = "127.0.0.0"
         self.operatordict = self._read_ops_file()
 
         self.client = None
-        self.clientPackets = mcpacket.ClientBound18
-        self.serverPackets = mcpacket.ServerBound18
+        self.clientPackets = mcpacket.Client18
+        self.serverPackets = mcpacket.Server18
 
         # some player properties associated with abilities
         self.field_of_view = float(1)  # default is 1.  Should normally be congruent with speed.
@@ -56,7 +56,7 @@ class Player:
         self.fly_speed = float(1)  # default is 1
 
         if self.server.version > mcpacket.PROTOCOL_1_9START:
-            self.serverPackets = mcpacket.ServerBound19
+            self.serverPackets = mcpacket.Server19
 
         if self.wrapper.proxy:
             for client in self.wrapper.proxy.clients:
@@ -66,7 +66,7 @@ class Player:
                     self.serverUuid = client.serverUuid
                     self.ipaddress = client.ip
                     if self.getClient().version > 49:  # packet numbers fluctuated  wildly between 48 and 107
-                        self.clientPackets = mcpacket.ClientBound19
+                        self.clientPackets = mcpacket.Client19
                     break
 
         self.data = Storage(self.clientUuid.string, root="wrapper-data/players")

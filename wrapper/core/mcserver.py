@@ -79,7 +79,7 @@ class MCServer:
         self.api.registerEvent("irc.quit", self.onchannelquit)
         self.api.registerEvent("timer.second", self.eachsecond)
 
-    def init(self):  # TODO I don't think this is used
+    def init(self):
         """
         Start up the listen threads for reading server console output
         """
