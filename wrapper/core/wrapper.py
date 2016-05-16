@@ -11,16 +11,12 @@ import os
 import logging
 import socket
 
-import core.buildinfo as version_info  # renamed from globals (a built-in)
-
+import core.buildinfo as version_info
 import proxy.base as proxy
-
 import management.web as manageweb
 
 from utils.helpers import getargs, getargsafter
-
 from api.base import API
-
 from core.mcuuid import MCUUID
 from core.config import Config
 from core.irc import IRC
@@ -228,7 +224,7 @@ class Wrapper:
                 "IP": None,
                 "names": []
             }
-        for i in range(0, numbofnames):  # TODO py2-3
+        for i in range(0, numbofnames):
             if "changedToAt" not in names[i]:  # find the original name
                 self.usercache[useruuid]["original"] = names[i]["name"]
                 self.usercache[useruuid]["online"] = True
@@ -273,7 +269,7 @@ class Wrapper:
             rx = requests.get("https://status.mojang.com/check")
             if rx.status_code == 200:
                 rx = rx.json()
-                for i in range(0, len(rx)):  # TODO py2-3
+                for i in range(0, len(rx)):
                     if "account.mojang.com" in rx[i]:
                         if rx[i]["account.mojang.com"] == "green":
                             self.log.warning("Mojang accounts is green, but request failed - have you "
@@ -596,9 +592,8 @@ class Wrapper:
         t = time.time()
         while not self.halt:
             if time.time() - t > 1:
-                self.callevent("timer.second", None)
+                self.events.callevent("timer.second", None)
                 t = time.time()
-            # self.callevent("timer.tick", None)
             time.sleep(0.05)
 
     def console(self):
