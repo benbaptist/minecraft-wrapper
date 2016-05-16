@@ -231,11 +231,11 @@ class Client:
 
         # Determine packet types - currently 1.8 is the lowest version supported.
         if self.serverversion >= mcpacket.PROTOCOL_1_9REL1:
-            self.pktSB = mcpacket.ServerBound19
-            self.pktCB = mcpacket.ClientBound19
+            self.pktSB = mcpacket.Server19
+            self.pktCB = mcpacket.Client19
         else:
-            self.pktSB = mcpacket.ServerBound18
-            self.pktCB = mcpacket.ClientBound18
+            self.pktSB = mcpacket.Server18
+            self.pktCB = mcpacket.Client18
 
     def parse(self, pkid):  # server - bound parse ("Client" class connection)
         if self.state == ClientState.PLAY:
