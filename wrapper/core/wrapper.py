@@ -14,9 +14,8 @@ import socket
 import core.buildinfo as version_info
 import proxy.base as proxy
 import management.web as manageweb
-import utils.termcolors as termcolors
 
-from utils.helpers import getargs, getargsafter
+from utils.helpers import getargs, getargsafter, readout
 from api.base import API
 from core.mcuuid import MCUUID
 from core.config import Config
@@ -362,8 +361,8 @@ class Wrapper:
                     summary = "No description available for this plugin"
 
                 version = plugin["version"]
-
-                self.log.info("%s v%s - %s", name, ".".join([str(_) for _ in version]), summary)
+                readout(name, summary, separator=(" - v%s - " % ".".join([str(_) for _ in version])))
+                # self.log.info("%s v%s - %s", name, ".".join([str(_) for _ in version]), summary)
             else:
                 self.log.info("%s failed to load!", plugin)
 
@@ -580,43 +579,35 @@ class Wrapper:
             if len(consoleinput) < 1:
                 continue
 
-            if consoleinput[0] is not "/":
-                try:
-                    self.server.console(consoleinput)
-                except Exception as e:
-                    print("[BREAK] Console imput exception (nothing passed to server) \n%s" % e)
-                    break
-                continue
+            command = getargs(consoleinput[0:].split(" "), 0)
 
-            command = getargs(consoleinput[1:].split(" "), 0)
-
-            if command == "halt":
+            if command in ("/halt", "halt"):
                 self.server.stop("Halting server...", save=False)
                 self.halt = True
                 sys.exit()
-            elif command == "stop":
+            elif command in ("/stop", "stop"):
                 self.server.stop("Stopping server...")
-            elif command == "start":
+            elif command in ("/start", "start"):
                 self.server.start()
-            elif command == "restart":
+            elif command == "/restart":
                 self.server.restart("Server restarting, be right back!")
-            elif command == "reload":
+            elif command == "/reload":
                 self.plugins.reloadplugins()
                 if self.server.getservertype() != "vanilla":
                     self.log.info("Note: If you meant to reload the server's plugins instead of the Wrapper's "
                                   "plugins, try running 'reload' without any slash OR '/raw /reload'.")
-            elif command == "update-wrapper":
+            elif command in ("/update-wrapper", "update-wrapper"):
                 self.checkforupdate(False)
-            elif command == "plugins":
+            elif command in ("/plugins", "plugins"):
                 self.listplugins()
-            elif command in ("mem", "memory"):
+            elif command in ("/mem", "/memory", "mem", "memory"):
                 try:
                     self.log.info("Server Memory Usage: %d bytes", self.server.getmemoryusage())
                 except UnsupportedOSException as e:
                     self.log.error(e)
                 except Exception as ex:
                     self.log.exception("Something went wrong when trying to fetch memory usage! (%s)", ex)
-            elif command == "raw":
+            elif command in ("/raw", "raw"):
                 try:
                     if len(getargsafter(consoleinput[1:].split(" "), 1)) > 0:
                         self.server.console(getargsafter(consoleinput[1:].split(" "), 1))
@@ -624,7 +615,7 @@ class Wrapper:
                         self.log.info("Usage: /raw [command]")
                 except InvalidServerStateError as e:
                     self.log.warning(e)
-            elif command == "freeze":
+            elif command in ("/freeze", ):
                 try:
                     self.server.freeze()
                 except InvalidServerStateError as e:
@@ -633,7 +624,7 @@ class Wrapper:
                     self.log.error(ex)
                 except Exception as exc:
                     self.log.exception("Something went wrong when trying to freeze the server! (%s)", exc)
-            elif command == "unfreeze":
+            elif command in ("/unfreeze", "unfreeze"):
                 try:
                     self.server.unfreeze()
                 except InvalidServerStateError as e:
@@ -642,32 +633,37 @@ class Wrapper:
                     self.log.error(ex)
                 except Exception as exc:
                     self.log.exception("Something went wrong when trying to unfreeze the server! (%s)", exc)
+            elif command == "/version":
+                readout("/version", self.getbuildstring())
             elif command == "help":
+                readout("/help", "Get wrapper.py help.", separator=" (with a slash) - ")
+                self.server.console(consoleinput)
+            elif command == "/help":
                 # This is the console help commands.  Below this in _registerwrappershelp is the in-game help
-                self._readout("/reload", "Reload Wrapper.py plugins.")
-                self._readout("/plugins", "Lists Wrapper.py plugins.")
-                self._readout("/update-wrapper", "Checks for new Wrapper.py updates, and will install\n"
-                              "    them automatically if one is available.")
-                self._readout("/start", "Start the minecraft server.")
-                self._readout("/stop", "Stop the minecraft server without auto-restarting and without\n"
-                              "    shuttingdown Wrapper.py.")
-                self._readout("/restart", "Restarts the minecraft server.")
-                self._readout("/halt", "Shutdown Wrapper.py completely.")
-                self._readout("/freeze", "Temporarily locks the server up until /unfreeze is executed\n"
-                              "    (Only works on *NIX servers).")
-                self._readout("/unfreeze", "Unlocks a frozen state server (Only works on *NIX servers).")
-                self._readout("/mem", "Get memory usage of the server (Only works on *NIX servers).")
-                self._readout("/raw [command]", "Send command to the Minecraft Server. Useful for Forge\n"
-                              "    commands like '/fml confirm'.")
-                self._readout("Wrapper.py Version %s", self.getbuildstring())
+                readout("", "Get Minecraft help.", separator="help (with no slash) - ")
+                readout("/reload", "Reload Wrapper.py plugins.")
+                readout("/plugins", "Lists Wrapper.py plugins.")
+                readout("/update-wrapper", "Checks for new Wrapper.py updates, and will install\n"
+                                           "                  them automatically if one is available.")
+                readout("/stop", "Stop the minecraft server without auto-restarting and without\n"
+                                 "                  shuttingdown Wrapper.py.")
+                readout("/start", "Start the minecraft server.")
+                readout("/restart", "Restarts the minecraft server.")
+                readout("/halt", "Shutdown Wrapper.py completely.")
+                readout("/freeze", "Temporarily locks the server up until /unfreeze is executed\n"
+                                   "                  (Only works on *NIX servers).")
+                readout("/unfreeze", "Unlocks a frozen state server (Only works on *NIX servers).")
+                readout("/mem", "Get memory usage of the server (Only works on *NIX servers).")
+                readout("/raw [command]", "Send command to the Minecraft Server. Useful for Forge\n"
+                                          "                  commands like '/fml confirm'.")
+                readout("/version", self.getbuildstring())
             else:
-                self._readout("Invalid command", command)
-
-    @staticmethod
-    def _readout(commandtext, description):
-        commstyle = termcolors.make_style(fg="magenta", bg="white")
-        descstyle = termcolors.make_style(fg="yellow")
-        print("%s - %s" % (commstyle(commandtext), descstyle(description)))
+                try:
+                    self.server.console(consoleinput)
+                except Exception as e:
+                    print("[BREAK] Console imput exception (nothing passed to server) \n%s" % e)
+                    break
+                continue
 
     def _registerwrappershelp(self):
         # All commands listed herein are accessible in-game
@@ -704,4 +700,3 @@ class Wrapper:
              "Pardon address",
              "mc1.7.6")
         ])
-
