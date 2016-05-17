@@ -100,13 +100,14 @@ def loadconfig(configfile="logging.json"):
             if "wrapperversion" not in conf or (conf["wrapperversion"] < DEFAULT_CONFIG["wrapperversion"]):
                 with open(configfile, "w") as f:
                     f.write(json.dumps(DEFAULT_CONFIG, indent=4, separators=(',', ': ')))
+                logging.warning("Logging configuration updated %s -- creating new logging configuration", configfile)
             else:
                 dictConfig(conf)
                 logging.info("Logging configuration file %s located and loaded, logging configuration set!", configfile)
         else:
             with open(configfile, "w") as f:
                 f.write(json.dumps(DEFAULT_CONFIG, indent=4, separators=(',', ': ')))
-            logging.warning("Unable to locate %s -- Using default logging configuration", configfile)
+            logging.warning("Unable to locate %s -- Creating default logging configuration", configfile)
     except Exception as e:
         logging.exception("Unable to load or create %s! (%s)", configfile, e)
 
