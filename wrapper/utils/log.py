@@ -9,7 +9,8 @@ from logging.config import dictConfig
 import utils.termcolors as termcolors
 
 DEFAULT_CONFIG = dict({
-    "version": 1,              
+    "wrapperversion": 1,
+    "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
         "standard": {
@@ -36,7 +37,7 @@ DEFAULT_CONFIG = dict({
         },
         "wrapper_file_handler": {
             "class": "utils.log.WrapperHandler",
-            "level": "DEBUG",
+            "level": "INFO",
             "formatter": "file",
             "filters": [],
             "filename": "logs/wrapper/wrapper.log",
@@ -56,7 +57,7 @@ DEFAULT_CONFIG = dict({
         },
         "trace_file_handler": {
             "class": "utils.log.WrapperHandler",
-            "level": "TRACE",
+            "level": "ERROR",
             "formatter": "trace",
             "filters": [],
             "filename": "logs/wrapper/wrapper.trace.log",
@@ -94,8 +95,14 @@ def loadconfig(configfile="logging.json"):
         if os.path.isfile(configfile):
             with open(configfile, "r") as f:
                 conf = json.load(f)
-            dictConfig(conf)
-            logging.info("Logging configuration file %s located and loaded, logging configuration set!", configfile)
+            # Use newer logging configuration, if the one on disk is too old
+
+            if "wrapperversion" not in conf or (conf["wrapperversion"] < DEFAULT_CONFIG["wrapperversion"]):
+                with open(configfile, "w") as f:
+                    f.write(json.dumps(DEFAULT_CONFIG, indent=4, separators=(',', ': ')))
+            else:
+                dictConfig(conf)
+                logging.info("Logging configuration file %s located and loaded, logging configuration set!", configfile)
         else:
             with open(configfile, "w") as f:
                 f.write(json.dumps(DEFAULT_CONFIG, indent=4, separators=(',', ': ')))
