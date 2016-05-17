@@ -41,10 +41,16 @@ try:
 except ImportError:
     requests = False
 
-try:  # Manually define a raw input builtin that works indentically on PY2 and PY3
+# Manually define equivalent builtin functions between Py2 and Py3
+try:  # Manually define a raw input builtin shadow that works indentically on PY2 and PY3
     rawinput = raw_input
 except NameError:
     rawinput = input
+
+try:  # Manually define an xrange builtin that works indentically on both (to take advantage of xrange's speed in 2)
+    xxrange = xrange
+except NameError:
+    xxrange = range
 
 
 class Wrapper:
@@ -227,7 +233,7 @@ class Wrapper:
                 "IP": None,
                 "names": []
             }
-        for i in range(0, numbofnames):
+        for i in xxrange(0, numbofnames):
             if "changedToAt" not in names[i]:  # find the original name
                 self.usercache[useruuid]["original"] = names[i]["name"]
                 self.usercache[useruuid]["online"] = True
@@ -272,7 +278,7 @@ class Wrapper:
             rx = requests.get("https://status.mojang.com/check")
             if rx.status_code == 200:
                 rx = rx.json()
-                for i in range(0, len(rx)):
+                for i in xxrange(0, len(rx)):
                     if "account.mojang.com" in rx[i]:
                         if rx[i]["account.mojang.com"] == "green":
                             self.log.warning("Mojang accounts is green, but request failed - have you "

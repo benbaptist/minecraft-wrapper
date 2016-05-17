@@ -26,9 +26,14 @@ try:
 except ImportError:
     requests = False
 
+try:  # Manually define an xrange builtin that works indentically on both (to take advantage of xrange's speed in 2)
+    xxrange = xrange
+except NameError:
+    xxrange = range
 
-UNIVERSAL_CONNECT = False # tells the client "same version as you" or does not disconnect dissimilar clients
+UNIVERSAL_CONNECT = False  # tells the client "same version as you" or does not disconnect dissimilar clients
 HIDDEN_OPS = ["SurestTexas00", "BenBaptist"]
+
 
 class Client:
     def __init__(self, sock, addr, wrapper, publicKey, privateKey, proxy):
@@ -98,7 +103,7 @@ class Client:
         self.clientSettingsSent = False
         self.skinBlob = {}
 
-        for i in range(45):
+        for i in xxrange(45):
             self.inventory[i] = None
 
     @property

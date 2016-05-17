@@ -15,6 +15,12 @@ import zlib
 
 from core.mcuuid import MCUUID
 
+try:  # Manually define an xrange builtin that works indentically on both (to take advantage of xrange's speed in 2)
+    xxrange = xrange
+except NameError:
+    xxrange = range
+
+
 class Packet:
     def __init__(self, sock, obj):
         self.socket = sock
@@ -538,7 +544,7 @@ class Packet:
         r = []
         btype = self.read_byte()
         length = self.read_int()
-        for l in range(length):  # TODO Py2-3
+        for l in xxrange(length):
             b = {}
             b["type"] = btype
             b["name"] = ""
