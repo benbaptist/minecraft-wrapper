@@ -9,7 +9,7 @@ from logging.config import dictConfig
 import utils.termcolors as termcolors
 
 DEFAULT_CONFIG = dict({
-    "wrapperversion": 1,
+    "wrapperversion": 1.1,
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
@@ -100,10 +100,10 @@ def loadconfig(configfile="logging.json"):
             if "wrapperversion" not in conf or (conf["wrapperversion"] < DEFAULT_CONFIG["wrapperversion"]):
                 with open(configfile, "w") as f:
                     f.write(json.dumps(DEFAULT_CONFIG, indent=4, separators=(',', ': ')))
-                logging.warning("Logging configuration updated %s -- creating new logging configuration", configfile)
+                logging.warning("Logging configuration updated (%s) -- creating new logging configuration", configfile)
             else:
                 dictConfig(conf)
-                logging.info("Logging configuration file %s located and loaded, logging configuration set!", configfile)
+                logging.info("Logging configuration file (%s) located and loaded, logging configuration set!", configfile)
         else:
             with open(configfile, "w") as f:
                 f.write(json.dumps(DEFAULT_CONFIG, indent=4, separators=(',', ': ')))

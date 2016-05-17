@@ -359,7 +359,7 @@ class MCServer:
         """
         self.state = state
         if self.state == MCSState.OFF:
-            self.wrapper.events.events.callevent("server.stopped", {"reason": reason})
+            self.wrapper.events.callevent("server.stopped", {"reason": reason})
         elif self.state == MCSState.STARTING:
             self.wrapper.events.callevent("server.starting", {"reason": reason})
         elif self.state == MCSState.STARTED:
@@ -414,7 +414,7 @@ class MCServer:
             self.proc = subprocess.Popen(self.args, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                          stdin=subprocess.PIPE, universal_newlines=True)
             self.players = {}
-            self.wrapper.accepteula() # Auto accept eula
+            self.wrapper.accepteula()  # Auto accept eula
             while True:
                 time.sleep(0.1)
                 if self.proc.poll() is not None:
