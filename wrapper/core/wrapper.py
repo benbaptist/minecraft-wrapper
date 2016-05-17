@@ -41,10 +41,10 @@ try:
 except ImportError:
     requests = False
 
-try:  # Manually define an input builtin that works indentically on PY2 and PY3
-    inputcons = raw_input
+try:  # Manually define a raw input builtin that works indentically on PY2 and PY3
+    rawinput = raw_input
 except NameError:
-    inputcons = input
+    rawinput = input
 
 
 class Wrapper:
@@ -326,32 +326,33 @@ class Wrapper:
                         self.usercache[useruuid]["time"] = time.time()
                     return user["name"]
 
-    def getuuid(self, username):  # We should see about getting rid of this wrapper
-        """
-        :param username - string of user's name
-        :returns a MCUUID object, which means UUIDfromname and getuuidbyusername must return MCUUID obejcts
-        """
-        if not self.isonlinemode():  # both server and wrapper in offline...
-            return self.getuuidfromname("OfflinePlayer:%s" % username)
-
-        # proxy mode is off / not working
-        if not self.proxy:
-            with open("usercache.json", "r") as f:  # read offline server cache first
-                cache = json.loads(f.read())
-            for user in cache:
-                if user["name"] == username:
-                    return MCUUID(user["uuid"])
-        else:
-            # proxy mode is on... poll mojang and wrapper cache
-            search = self.getuuidbyusername(username)
-            if not search:
-                self.log.warning("Server online but unable to getuuid (even by polling!) for username: %s - "
-                                 "returned an Offline uuid...", username)
-                return self.getuuidfromname("OfflinePlayer:%s" % username)
-            else:
-                return search
-        # if both if and else fail to deliver a uuid create offline uuid:
-        return self.getuuidfromname("OfflinePlayer:%s" % username)
+    def getuuid(self, username):  # We should see about getting rid of this wrapper  # agreed!
+        pass
+    # """
+#        :param username - string of user's name
+#        :returns a MCUUID object, which means UUIDfromname and getuuidbyusername must return MCUUID obejcts
+#        """
+#        if not self.isonlinemode():  # both server and wrapper in offline...
+#            return self.getuuidfromname("OfflinePlayer:%s" % username)
+#
+#        # proxy mode is off / not working
+#        if not self.proxy:
+#            with open("usercache.json", "r") as f:  # read offline server cache first
+#                cache = json.loads(f.read())
+#            for user in cache:
+#                if user["name"] == username:
+#                    return MCUUID(user["uuid"])
+#        else:
+#            # proxy mode is on... poll mojang and wrapper cache
+#            search = self.getuuidbyusername(username)
+#            if not search:
+#                self.log.warning("Server online but unable to getuuid (even by polling!) for username: %s - "
+#                                 "returned an Offline uuid...", username)
+#                return self.getuuidfromname("OfflinePlayer:%s" % username)
+#            else:
+#                return search
+#        # if both if and else fail to deliver a uuid create offline uuid:
+#        return self.getuuidfromname("OfflinePlayer:%s" % username)
 
     def listplugins(self):
         self.log.info("List of Wrapper.py plugins installed:")
@@ -380,6 +381,7 @@ class Wrapper:
         self.api = API(self, "Wrapper.py")
         self._registerwrappershelp()
 
+        # This is not the actual server... the MCServer class is
         self.server = MCServer(sys.argv, self.log, self.configManager.config, self)
         self.server.init()
 
@@ -405,6 +407,7 @@ class Wrapper:
         if len(sys.argv) < 2:
             self.server.args = self.configManager.config["General"]["command"].split(" ")
         else:
+            # I think this allows you to run the server java command directly from the python prompt
             self.server.args = sys.argv[1:]
 
         consoledaemon = threading.Thread(target=self.console, args=())
@@ -570,7 +573,7 @@ class Wrapper:
     def console(self):
         while not self.halt:
             try:
-                consoleinput = inputcons("")
+                consoleinput = rawinput("")
             except Exception as e:
                 print("[continue] variable 'consoleinput' in 'console()' did not evaluate \n%s" % e)
                 continue
@@ -660,7 +663,7 @@ class Wrapper:
                 try:
                     self.server.console(consoleinput)
                 except Exception as e:
-                    print("[BREAK] Console imput exception (nothing passed to server) \n%s" % e)
+                    print("[BREAK] Console input exception (nothing passed to server) \n%s" % e)
                     break
                 continue
 

@@ -42,7 +42,7 @@ class Server:
         self.isServer = True
         self.server_socket = socket.socket()
 
-        self.state = State.HANDSHAKE
+        self.state = ProxServState.HANDSHAKE
         self.packet = None
         self.lastPacketIDs = []
 
@@ -143,14 +143,14 @@ class Server:
 
     def parse(self, pkid):  # client - bound parse ("Server" class connection)
 
-        if pkid == 0x00 and self.state < State.PLAY: # disconnect, I suppose...
+        if pkid == 0x00 and self.state < ProxServState.PLAY: # disconnect, I suppose...
             message = self.packet.read("string:string")
             self.log.info("Disconnected from server: %s", message["string"])
             self.client.disconnect(message)
             self.log.trace("(PROXY SERVER) -> Parsed 0x00 packet with server state < 3")
             return False
 
-        if self.state == State.PLAY:
+        if self.state == ProxServState.PLAY:
             # handle keep alive packets from server... nothing special here; we will just keep the server connected.
             if pkid == self.pktCB.KEEP_ALIVE:
                 if self.version < mcpacket.PROTOCOL_1_8START:
@@ -569,7 +569,7 @@ class Server:
             else:
                 return True  # no packets parsed - passing to client
 
-        if self.state == State.LOGIN:
+        if self.state == ProxServState.LOGIN:
             if pkid == 0x01:
                 # This is throwing a malformed json exception when online mode is set to true, this should be a json
                 # string
@@ -579,11 +579,11 @@ class Server:
                 return False
 
             if pkid == 0x02: # Login Success - UUID & Username are sent in this packet
-                self.state = State.PLAY
+                self.state = ProxServState.PLAY
                 self.log.trace("(PROXY SERVER) -> Parsed 0x02 packet with server state 2 (LOGIN)")
                 return False
 
-            if pkid == 0x03 and self.state == State.LOGIN:  # Set Compression
+            if pkid == 0x03 and self.state == ProxServState.LOGIN:  # Set Compression
                 data = self.packet.read("varint:threshold")
                 if data["threshold"] != -1:
                     self.packet.compression = True
@@ -629,7 +629,8 @@ class Server:
             self.log.exception("Error in the [SERVER] -> [CLIENT] handle (%s):", e2)
             self.close()
 
-class State:
+
+class ProxServState:
     """
     This class represents proxy Server states
     """
