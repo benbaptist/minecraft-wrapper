@@ -5,6 +5,11 @@ Wrapper.py is an easy to use Minecraft server wrapper for adding extra functiona
 
 [![Join the chat at https://gitter.im/benbaptist/minecraft-wrapper](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/benbaptist/minecraft-wrapper?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
+NOTICE: Wrapper will Accept the minecraft server EULA on your behalf.  Using wrapper means you also accept the EULA, which
+will be set to true in the eula.txt file in your server folder.
+[Mojang EULA](https://account.mojang.com/documents/minecraft_eula)
+
+
 #Installation#
 Wrapper.py doesn't require any special modules for most of the basic features to work, but web mode and proxy mode require `requests` and `pycrypto`, and `pkg_resources`.
 

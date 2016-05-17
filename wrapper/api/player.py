@@ -15,17 +15,10 @@ from api.base import API
 class Player:
     """
     Player objects contains methods and data of a currently logged-in player. This object is destroyed
-    upon logging off. """
+    upon logging off.
+    """
 
     def __init__(self, username, wrapper):
-        """
-        UUID terminologies:
-        Mojang uuid - the bought and paid Mojand UUID.
-        offline uuid - created as a MD5 hash of "OfflinePlayer:%s" % username
-        server uuid = the local server uuid... used to reference the player on the local server.  Could be same as
-            Mojang UUID if server is in online mode or same as offline if server is in offline mode (proxy mode).
-        client uuid - what the client stores as the uuid (should be the same as Mojang?)
-        """
 
         self.wrapper = wrapper
         self.server = wrapper.server
@@ -37,17 +30,28 @@ class Player:
         self.abort = False
 
         # these are all MCUUID objects.. I have separated out various uses of uuid to clarify for later refractoring
-        self.mojangUuid = self.wrapper.getuuidbyusername(username)
-        self.offlineUuid = self.wrapper.getuuidfromname("OfflinePlayer:%s" % self.username)
-        self.clientUuid = self.wrapper.getuuid(username)  # - The player.uuid used by old api (and internally here).
-        self.serverUuid = self.wrapper.getuuidbyusername(username)
+        # ---------------
+        # Mojang uuid - the bought and paid Mojand UUID.  Never changes- our one constant point of reference per player.
+        # offline uuid - created as a MD5 hash of "OfflinePlayer:%s" % username
+        # client uuid - what the client stores as the uuid (should be the same as Mojang?) The player.uuid used by
+        #     old api (and internally here).
+        # server uuid = the local server uuid... used to reference the player on the local server.  Could be same as
+        #     Mojang UUID if server is in online mode or same as offline if server is in offline mode (proxy mode).
 
-        self.ipaddress =  "127.0.0.0"
+        # This can be False if cache (and requests) Fail... bad name or bad Mojang service connection.
+        self.mojangUuid = self.wrapper.getuuidbyusername(username)
+        # IF False error carries forward, this is not a valid player, for whatever reason...
+        self.clientUuid = self.mojangUuid
+        # These two are offline by default.
+        self.offlineUuid = self.wrapper.getuuidfromname("OfflinePlayer:%s" % self.username)
+        self.serverUuid = self.offlineUuid  # Start out as the Offline - change it to Mojang if local server is Online
+
+        self.ipaddress = "127.0.0.0"
         self.operatordict = self._read_ops_file()
 
         self.client = None
-        self.clientPackets = mcpacket.ClientBound18
-        self.serverPackets = mcpacket.ServerBound18
+        self.clientPackets = mcpacket.Client18
+        self.serverPackets = mcpacket.Server18
 
         # some player properties associated with abilities
         self.field_of_view = float(1)  # default is 1.  Should normally be congruent with speed.
@@ -56,17 +60,17 @@ class Player:
         self.fly_speed = float(1)  # default is 1
 
         if self.server.version > mcpacket.PROTOCOL_1_9START:
-            self.serverPackets = mcpacket.ServerBound19
+            self.serverPackets = mcpacket.Server19
 
         if self.wrapper.proxy:
             for client in self.wrapper.proxy.clients:
-                if client.username == username:
+                if client.username == self.username:
                     self.client = client
                     self.clientUuid = client.uuid  # Both MCUUID objects
                     self.serverUuid = client.serverUuid
                     self.ipaddress = client.ip
                     if self.getClient().version > 49:  # packet numbers fluctuated  wildly between 48 and 107
-                        self.clientPackets = mcpacket.ClientBound19
+                        self.clientPackets = mcpacket.Client19
                     break
 
         self.data = Storage(self.clientUuid.string, root="wrapper-data/players")

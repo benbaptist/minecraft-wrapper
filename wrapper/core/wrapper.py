@@ -10,17 +10,14 @@ import time
 import os
 import logging
 import socket
+import sys  # used to pass sys.argv to server
 
-import core.buildinfo as version_info  # renamed from globals (a built-in)
-
+import core.buildinfo as version_info
 import proxy.base as proxy
-
 import management.web as manageweb
 
-from utils.helpers import getargs, getargsafter
-
+from utils.helpers import getargs, getargsafter, readout
 from api.base import API
-
 from core.mcuuid import MCUUID
 from core.config import Config
 from core.irc import IRC
@@ -44,9 +41,10 @@ try:
 except ImportError:
     requests = False
 
-# Py3-2
-import sys
-PY3 = sys.version_info > (3,)
+try:  # Manually define a raw input builtin that works indentically on PY2 and PY3
+    rawinput = raw_input
+except NameError:
+    rawinput = input
 
 
 class Wrapper:
@@ -74,8 +72,6 @@ class Wrapper:
         self.permission = {}
         self.help = {}
         self.config = {}
-        # Aliases for compatibility
-        self.callevent = self.events.callevent
 
         if not readline:
             self.log.warning("'readline' not imported.")
@@ -137,35 +133,37 @@ class Wrapper:
                 eula = f.read()
 
             if "false" in eula:
-                self.log.debug("EULA agreement was not accepted, forcing acceptance...")
+                # if forced, should be at info level since acceptance is a legal matter.
+                self.log.warning("EULA agreement was not accepted, accepting on your behalf...")
                 with open("eula.txt", "w") as f:
                     f.write(eula.replace("false", "true"))
 
-            self.log.debug("EULA agreement has been accepted!")
+            self.log.debug("EULA agreement has been accepted.")
 
-    def getuuidbyusername(self, username):
+    def getuuidbyusername(self, username, forcepoll=False):
         """
         Lookup user's UUID using the username. Primarily searches the wrapper usercache.  If record is
         older than 30 days (or cannot be found in the cache), it will poll Mojang and also attempt a full
         update of the cache using getusernamebyuuid as well.
 
         :param username:  username as string
+        :param forcepoll:  force polling even if record has been cached in past 30 days
         :returns: returns the online/Mojang MCUUID object from the given name. Updates the wrapper usercache.json
                 Yields False if failed.
         """
-        frequency = 2592000  # 30 days.  If a cache update is specifically required any sooner, use getusernamebyuuid.
+        frequency = 2592000  # 30 days.
+        if forcepoll:
+            frequency = 3600  # do not allow more than hourly
         user_uuid_matched = None
         for useruuid in self.usercache:  # try wrapper cache first
             if username == self.usercache.key(useruuid)["localname"]:
-                '''This search need only be done by 'localname', which is always populated and is always
-                the same as the 'name', unless a localname has been assigned on the server (such as
-                when "falling back' on an old name).'''
+                # This search need only be done by 'localname', which is always populated and is always
+                # the same as the 'name', unless a localname has been assigned on the server (such as
+                # when "falling back' on an old name).'''
                 if (time.time() - self.usercache.key(useruuid)["time"]) < frequency:
                     return MCUUID(useruuid)
                 # if over the time frequency, it needs to be updated by using actual last polled name.
                 username = self.usercache.key(useruuid)["name"]
-                # TODO cautionary - someone 'out there' could change their name to one taken on the server (be aware)
-                #  The code needs some upgrade to the to handle this possibility; perhaps during login.
                 user_uuid_matched = useruuid  # cache for later in case multiple name changes require a uuid lookup.
 
         # try mojang  (a new player or player changed names.)
@@ -173,22 +171,23 @@ class Wrapper:
         if r.status_code == 200:
             useruuid = self.formatuuid(r.json()["id"])  # returns a string uuid with dashes
             correctcapname = r.json()["name"]
-            if username != correctcapname:
+            if username != correctcapname:  # this code may not be needed if problems with /perms are corrected.
                 self.log.warning("%s's name is not correctly capitalized (offline name warning!)", correctcapname)
-            nameisnow = self.getusernamebyuuid(useruuid)
+            # This should only run subject to the above frequency (hence use of forcepoll=True)
+            nameisnow = self.getusernamebyuuid(useruuid, forcepoll=True)
             if nameisnow:
                 return MCUUID(useruuid)
             return False
         elif r.status_code == 204:  # try last matching UUID instead.  This will populate current name back in 'name'
             if user_uuid_matched:
-                nameisnow = self.getusernamebyuuid(user_uuid_matched)
+                nameisnow = self.getusernamebyuuid(user_uuid_matched, forcepoll=True)
                 if nameisnow:
                     return MCUUID(user_uuid_matched)
                 return False
         else:
             return False  # No other options but to fail request
 
-    def getusernamebyuuid(self, useruuid):
+    def getusernamebyuuid(self, useruuid, forcepoll=False):
         """
         Returns the username from the specified UUID.
         If the player has never logged in before and isn't in the user cache, it will poll Mojang's API.
@@ -196,9 +195,13 @@ class Wrapper:
         Updates will be made to the wrapper usercache.json when this function is executed.
 
         :param useruuid:  string UUID
+        :param forcepoll:  force polling even if record has been cached in past 30 days.
+
         :returns: returns the username from the specified uuid, else returns False if failed.
         """
-        frequency = 86400  # if called directly, can update cache daily (refresh names list, etc)
+        frequency = 2592000  # if called directly, can update cache daily (refresh names list, etc)
+        if forcepoll:
+            frequency = 600  # 10 minute limit
         names = self._pollmojanguuid(useruuid)
         numbofnames = len(names)
         if self.usercache.key(useruuid):  # if user is in the cache...
@@ -224,7 +227,7 @@ class Wrapper:
                 "IP": None,
                 "names": []
             }
-        for i in range(0, numbofnames):  # TODO py2-3
+        for i in range(0, numbofnames):
             if "changedToAt" not in names[i]:  # find the original name
                 self.usercache[useruuid]["original"] = names[i]["name"]
                 self.usercache[useruuid]["online"] = True
@@ -269,7 +272,7 @@ class Wrapper:
             rx = requests.get("https://status.mojang.com/check")
             if rx.status_code == 200:
                 rx = rx.json()
-                for i in range(0, len(rx)):  # TODO py2-3
+                for i in range(0, len(rx)):
                     if "account.mojang.com" in rx[i]:
                         if rx[i]["account.mojang.com"] == "green":
                             self.log.warning("Mojang accounts is green, but request failed - have you "
@@ -323,32 +326,33 @@ class Wrapper:
                         self.usercache[useruuid]["time"] = time.time()
                     return user["name"]
 
-    def getuuid(self, username):  # We should see about getting rid of this wrapper
-        """
-        :param username - string of user's name
-        :returns a MCUUID object, which means UUIDfromname and getuuidbyusername must return MCUUID obejcts
-        """
-        if not self.isonlinemode():  # both server and wrapper in offline...
-            return self.getuuidfromname("OfflinePlayer:%s" % username)
-
-        # proxy mode is off / not working
-        if not self.proxy:
-            with open("usercache.json", "r") as f:  # read offline server cache first
-                cache = json.loads(f.read())
-            for user in cache:
-                if user["name"] == username:
-                    return MCUUID(user["uuid"])
-        else:
-            # proxy mode is on... poll mojang and wrapper cache
-            search = self.getuuidbyusername(username)
-            if not search:
-                self.log.warning("Server online but unable to getuuid (even by polling!) for username: %s - "
-                                 "returned an Offline uuid...", username)
-                return self.getuuidfromname("OfflinePlayer:%s" % username)
-            else:
-                return search
-        # if both if and else fail to deliver a uuid create offline uuid:
-        return self.getuuidfromname("OfflinePlayer:%s" % username)
+    def getuuid(self, username):  # We should see about getting rid of this wrapper  # agreed!
+        pass
+    # """
+#        :param username - string of user's name
+#        :returns a MCUUID object, which means UUIDfromname and getuuidbyusername must return MCUUID obejcts
+#        """
+#        if not self.isonlinemode():  # both server and wrapper in offline...
+#            return self.getuuidfromname("OfflinePlayer:%s" % username)
+#
+#        # proxy mode is off / not working
+#        if not self.proxy:
+#            with open("usercache.json", "r") as f:  # read offline server cache first
+#                cache = json.loads(f.read())
+#            for user in cache:
+#                if user["name"] == username:
+#                    return MCUUID(user["uuid"])
+#        else:
+#            # proxy mode is on... poll mojang and wrapper cache
+#            search = self.getuuidbyusername(username)
+#            if not search:
+#                self.log.warning("Server online but unable to getuuid (even by polling!) for username: %s - "
+#                                 "returned an Offline uuid...", username)
+#                return self.getuuidfromname("OfflinePlayer:%s" % username)
+#            else:
+#                return search
+#        # if both if and else fail to deliver a uuid create offline uuid:
+#        return self.getuuidfromname("OfflinePlayer:%s" % username)
 
     def listplugins(self):
         self.log.info("List of Wrapper.py plugins installed:")
@@ -361,8 +365,8 @@ class Wrapper:
                     summary = "No description available for this plugin"
 
                 version = plugin["version"]
-
-                self.log.info("%s v%s - %s", name, ".".join([str(_) for _ in version]), summary)
+                readout(name, summary, separator=(" - v%s - " % ".".join([str(_) for _ in version])))
+                # self.log.info("%s v%s - %s", name, ".".join([str(_) for _ in version]), summary)
             else:
                 self.log.info("%s failed to load!", plugin)
 
@@ -375,16 +379,9 @@ class Wrapper:
         signal.signal(signal.SIGTERM, self.sigint)
 
         self.api = API(self, "Wrapper.py")
-        self.api.registerHelp("Wrapper", "Internal Wrapper.py commands ", [
-            ("/wrapper [update/memory/halt]", "If no subcommand is provided, it will show the Wrapper version.", None),
-            ("/plugins", "Show a list of the installed plugins", None),
-            ("/permissions <groups/users/RESET>", "Command used to manage permission groups and users, add "
-                                                  "permission nodes, etc.", None),
-            ("/playerstats [all]", "Show the most active players. If no subcommand is provided, it'll show "
-                                   "the top 10 players.", None),
-            ("/reload", "Reload all plugins.", None)
-        ])
+        self._registerwrappershelp()
 
+        # This is not the actual server... the MCServer class is
         self.server = MCServer(sys.argv, self.log, self.configManager.config, self)
         self.server.init()
 
@@ -410,6 +407,7 @@ class Wrapper:
         if len(sys.argv) < 2:
             self.server.args = self.configManager.config["General"]["command"].split(" ")
         else:
+            # I think this allows you to run the server java command directly from the python prompt
             self.server.args = sys.argv[1:]
 
         consoledaemon = threading.Thread(target=self.console, args=())
@@ -568,19 +566,14 @@ class Wrapper:
         t = time.time()
         while not self.halt:
             if time.time() - t > 1:
-                self.callevent("timer.second", None)
+                self.events.callevent("timer.second", None)
                 t = time.time()
-            # self.callevent("timer.tick", None)
             time.sleep(0.05)
 
     def console(self):
         while not self.halt:
             try:
-                if PY3:
-                    # I doubt this works on PY3 either (supported by Py2.7, but does not work)
-                    consoleinput = eval(input())
-                else:
-                    consoleinput = raw_input("")  # only Py2.7
+                consoleinput = rawinput("")
             except Exception as e:
                 print("[continue] variable 'consoleinput' in 'console()' did not evaluate \n%s" % e)
                 continue
@@ -588,43 +581,35 @@ class Wrapper:
             if len(consoleinput) < 1:
                 continue
 
-            if consoleinput[0] is not "/":
-                try:
-                    self.server.console(consoleinput)
-                except Exception as e:
-                    print("[BREAK] Console imput exception (nothing passed to server) \n%s" % e)
-                    break
-                continue
+            command = getargs(consoleinput[0:].split(" "), 0)
 
-            command = getargs(consoleinput[1:].split(" "), 0)
-
-            if command == "halt":
+            if command in ("/halt", "halt"):
                 self.server.stop("Halting server...", save=False)
                 self.halt = True
                 sys.exit()
-            elif command == "stop":
+            elif command in ("/stop", "stop"):
                 self.server.stop("Stopping server...")
-            elif command == "start":
+            elif command in ("/start", "start"):
                 self.server.start()
-            elif command == "restart":
+            elif command == "/restart":
                 self.server.restart("Server restarting, be right back!")
-            elif command == "reload":
+            elif command == "/reload":
                 self.plugins.reloadplugins()
                 if self.server.getservertype() != "vanilla":
                     self.log.info("Note: If you meant to reload the server's plugins instead of the Wrapper's "
                                   "plugins, try running 'reload' without any slash OR '/raw /reload'.")
-            elif command == "update-wrapper":
+            elif command in ("/update-wrapper", "update-wrapper"):
                 self.checkforupdate(False)
-            elif command == "plugins":
+            elif command in ("/plugins", "plugins"):
                 self.listplugins()
-            elif command in ("mem", "memory"):
+            elif command in ("/mem", "/memory", "mem", "memory"):
                 try:
                     self.log.info("Server Memory Usage: %d bytes", self.server.getmemoryusage())
                 except UnsupportedOSException as e:
                     self.log.error(e)
                 except Exception as ex:
                     self.log.exception("Something went wrong when trying to fetch memory usage! (%s)", ex)
-            elif command == "raw":
+            elif command in ("/raw", "raw"):
                 try:
                     if len(getargsafter(consoleinput[1:].split(" "), 1)) > 0:
                         self.server.console(getargsafter(consoleinput[1:].split(" "), 1))
@@ -632,7 +617,7 @@ class Wrapper:
                         self.log.info("Usage: /raw [command]")
                 except InvalidServerStateError as e:
                     self.log.warning(e)
-            elif command == "freeze":
+            elif command in ("/freeze", "freeze"):
                 try:
                     self.server.freeze()
                 except InvalidServerStateError as e:
@@ -641,7 +626,7 @@ class Wrapper:
                     self.log.error(ex)
                 except Exception as exc:
                     self.log.exception("Something went wrong when trying to freeze the server! (%s)", exc)
-            elif command == "unfreeze":
+            elif command in ("/unfreeze", "unfreeze"):
                 try:
                     self.server.unfreeze()
                 except InvalidServerStateError as e:
@@ -650,22 +635,70 @@ class Wrapper:
                     self.log.error(ex)
                 except Exception as exc:
                     self.log.exception("Something went wrong when trying to unfreeze the server! (%s)", exc)
+            elif command == "/version":
+                readout("/version", self.getbuildstring())
             elif command == "help":
-                self.log.info("/reload - Reload Wrapper.py plugins.")
-                self.log.info("/plugins - Lists Wrapper.py plugins.")
-                self.log.info("/update-wrapper - Checks for new Wrapper.py updates, and will install them "
-                              "automatically if one is available.")
-                self.log.info("/start - Start the minecraft server.")
-                self.log.info("/stop - Stop the minecraft server without auto-restarting and without shutting "
-                              "down Wrapper.py.")
-                self.log.info("/restart - Restarts the minecraft server.")
-                self.log.info("/halt - Shutdown Wrapper.py completely.")
-                self.log.info("/freeze - Temporarily locks the server up until /unfreeze is executed (Only "
-                              "works on *NIX servers).")
-                self.log.info("/unfreeze - Unlocks the server from a frozen state (Only works on *NIX servers).")
-                self.log.info("/mem - Get memory usage of the server (Only works on *NIX servers).")
-                self.log.info("/raw [command] - Send command to the Minecraft Server. Useful for Forge commands "
-                              "like '/fml confirm'.")
-                self.log.info("Wrapper.py Version %s", self.getbuildstring())
+                readout("/help", "Get wrapper.py help.", separator=" (with a slash) - ")
+                self.server.console(consoleinput)
+            elif command == "/help":
+                # This is the console help commands.  Below this in _registerwrappershelp is the in-game help
+                readout("", "Get Minecraft help.", separator="help (with no slash) - ")
+                readout("/reload", "Reload Wrapper.py plugins.")
+                readout("/plugins", "Lists Wrapper.py plugins.")
+                readout("/update-wrapper", "Checks for new Wrapper.py updates, and will install\n"
+                                           "                  them automatically if one is available.")
+                readout("/stop", "Stop the minecraft server without auto-restarting and without\n"
+                                 "                  shuttingdown Wrapper.py.")
+                readout("/start", "Start the minecraft server.")
+                readout("/restart", "Restarts the minecraft server.")
+                readout("/halt", "Shutdown Wrapper.py completely.")
+                readout("/freeze", "Temporarily locks the server up until /unfreeze is executed\n"
+                                   "                  (Only works on *NIX servers).")
+                readout("/unfreeze", "Unlocks a frozen state server (Only works on *NIX servers).")
+                readout("/mem", "Get memory usage of the server (Only works on *NIX servers).")
+                readout("/raw [command]", "Send command to the Minecraft Server. Useful for Forge\n"
+                                          "                  commands like '/fml confirm'.")
+                readout("/version", self.getbuildstring())
             else:
-                self.log.error("Invalid command -- %s", command)
+                try:
+                    self.server.console(consoleinput)
+                except Exception as e:
+                    print("[BREAK] Console input exception (nothing passed to server) \n%s" % e)
+                    break
+                continue
+
+    def _registerwrappershelp(self):
+        # All commands listed herein are accessible in-game
+        # Also require player.isOp()
+        self.api.registerHelp("Wrapper", "Internal Wrapper.py commands ", [
+            ("/wrapper [update/memory/halt]",
+             "If no subcommand is provided, it will show the Wrapper version.",
+             None),
+            ("/playerstats [all]",
+             "Show the most active players. If no subcommand is provided, it'll show the top 10 players.",
+             None),
+            ("/plugins",
+             "Show a list of the installed plugins",
+             None),
+            ("/reload",
+             "Reload all plugins.",
+             None),
+            ("/permissions <groups/users/RESET>",
+             "Command used to manage permission groups and users, add permission nodes, etc.",
+             None),
+            ("/ban <name> [reason..] [time <h/d>]",
+             "Using a time creates a temp ban - (h)ours or (d)ays. Default is days(d)",
+             "mc1.7.6"),  # Minimum server version for commands to appear (register default perm later in code)
+            ("/ban-ip <address|name> [reason..] [time <h/d> (hours or days)",
+             "Reason and time optional. Default unit is days",
+             "mc1.7.6"),
+            ("/pardon <name>",
+             "pardon player 'name'. ",
+             "mc1.7.6"),
+            ("/banlist [players|ips|search] [args]",
+             "search/display banlist",
+             "mc1.7.6"),
+            ("/pardon-ip <address>",
+             "Pardon address",
+             "mc1.7.6")
+        ])

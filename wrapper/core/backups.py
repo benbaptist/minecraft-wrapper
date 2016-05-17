@@ -50,7 +50,7 @@ class Backups:
                     except Exception as e:
                         self.log.error("NOTE - backups.json was unreadable. It might be corrupted. Backups will no "
                                        "longer be automatically pruned.")
-                        self.wrapper.callevent("wrapper.backupFailure", {
+                        self.wrapper.events.callevent("wrapper.backupFailure", {
                             "reasonCode": 4, 
                             "reasonText": "backups.json is corrupted. Please contact an administer instantly, as this "
                                           "may be critical."
@@ -88,7 +88,7 @@ class Backups:
             # Check if tar is installed
             which = "where" if platform.system() == "Windows" else "which"
             if not subprocess.call([which, "tar"]) == 0:
-                self.wrapper.callevent("wrapper.backupFailure", {"reasonCode": 1,
+                self.wrapper.events.callevent("wrapper.backupFailure", {"reasonCode": 1,
                                                                  "reasonText": "Tar is not installed. Please install "
                                                                                "tar before trying to make backups."})
                 self.log.error("The backup could not begin, because tar does not appear to be installed!")
@@ -97,7 +97,7 @@ class Backups:
                 self.log.error("If you are on Windows, you can find GNU/Tar from this link: http://goo.gl/SpJSVM")
                 return
 
-            if not self.wrapper.callevent("wrapper.backupBegin", {"file": filename}):
+            if not self.wrapper.events.callevent("wrapper.backupBegin", {"file": filename}):
                 self.log.warning("A backup was scheduled, but was cancelled by a plugin!")
                 return
             if self.config["Backups"]["backup-notification"]:
@@ -108,7 +108,7 @@ class Backups:
                     arguments.append(backupfile)
                 else:
                     self.log.warning("Backup file '%s' does not exist - canceling backup", backupfile)
-                    self.wrapper.callevent("wrapper.backupFailure", {"reasonCode": 3,
+                    self.wrapper.events.callevent("wrapper.backupFailure", {"reasonCode": 3,
                                                                      "reasonText": "Backup file '%s' does not exist."
                                                                                    % backupfile})
                     return
@@ -116,14 +116,14 @@ class Backups:
             self.api.minecraft.console("save-on")
             if self.config["Backups"]["backup-notification"]:
                 self.api.minecraft.broadcast("&aBackup complete!", irc=False)
-            self.wrapper.callevent("wrapper.backupEnd", {"file": filename, "status": statuscode})
+            self.wrapper.events.callevent("wrapper.backupEnd", {"file": filename, "status": statuscode})
             self.backups.append((timestamp, filename))
 
             if len(self.backups) > self.config["Backups"]["backups-keep"]:
                 self.log.info("Deleting old backups...")
                 while len(self.backups) > self.config["Backups"]["backups-keep"]:
                     backup = self.backups[0]
-                    if not self.wrapper.callevent("wrapper.backupDelete", {"file": filename}):
+                    if not self.wrapper.events.callevent("wrapper.backupDelete", {"file": filename}):
                         break
                     try:
                         os.remove('%s/%s' % (self.config["Backups"]["backup-location"], backup[1]))
@@ -137,6 +137,6 @@ class Backups:
                 f.write(json.dumps(self.backups))
 
             if not os.path.exists(self.config["Backups"]["backup-location"] + "/" + filename):
-                self.wrapper.callevent("wrapper.backupFailure", {"reasonCode": 2,
+                self.wrapper.events.callevent("wrapper.backupFailure", {"reasonCode": 2,
                                                                  "reasonText": "Backup file didn't exist after the tar "
                                                                                "command executed - assuming failure."})

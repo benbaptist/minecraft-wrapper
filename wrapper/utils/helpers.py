@@ -5,6 +5,8 @@ import json
 import time
 import datetime
 
+import utils.termcolors as termcolors
+
 
 def getargs(arginput, i):
     if not i >= len(arginput):
@@ -90,3 +92,11 @@ def epoch_to_timestr(epoch_time):
     t = datetime.datetime.fromtimestamp(tm)
     pattern = "%Y-%m-%d %H:%M:%S %z"
     return "%s-0100" % t.strftime(pattern)  # the %z does not work below py3.2 - we just create a fake offset.
+
+
+def readout(commandtext, description, separator=" - ", pad=15):
+    commstyle = termcolors.make_style(fg="magenta", opts=("bold",))
+    descstyle = termcolors.make_style(fg="yellow")
+    x = '{0: <%d}' % pad
+    commandtextpadded = x.format(commandtext)
+    print("%s%s%s" % (commstyle(commandtextpadded), separator, descstyle(description)))
