@@ -361,7 +361,7 @@ class Wrapper:
 #        return self.getuuidfromname("OfflinePlayer:%s" % username)
 
     def listplugins(self):
-        self.log.info("List of Wrapper.py plugins installed:")
+        readout("", "List of Wrapper.py plugins installed:", separator="", pad=4)
         for plid in self.plugins:
             plugin = self.plugins[plid]
             if plugin["good"]:
@@ -374,7 +374,7 @@ class Wrapper:
                 readout(name, summary, separator=(" - v%s - " % ".".join([str(_) for _ in version])))
                 # self.log.info("%s v%s - %s", name, ".".join([str(_) for _ in version]), summary)
             else:
-                self.log.info("%s failed to load!", plugin)
+                readout("failed to load plugin", plugin, " - ", pad=25)
 
     def start(self):
         # Reload configuration each time server starts in order to detect changes

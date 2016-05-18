@@ -95,6 +95,16 @@ def epoch_to_timestr(epoch_time):
 
 
 def readout(commandtext, description, separator=" - ", pad=15):
+    """
+    display console text only with no logging - useful for displaying pretty console-only messages.
+    Args:
+        commandtext: The first text field (magenta)
+        description: third text field (green)
+        separator: second (middle) field (white text)
+        pad: minimum number of characters the command text is padded to
+
+    Returns: Just prints to stdout/console
+    """
     commstyle = termcolors.make_style(fg="magenta", opts=("bold",))
     descstyle = termcolors.make_style(fg="yellow")
     x = '{0: <%d}' % pad
