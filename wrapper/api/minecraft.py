@@ -11,6 +11,7 @@ from core.nbt import NBTFile
 from core.items import Blocks
 
 
+# noinspection PyBroadException
 class Minecraft:
     """ This class contains functions related to in-game features directly. These methods are
     located at self.api.minecraft. """
@@ -87,13 +88,13 @@ class Minecraft:
         except:
             pass
 
-    def setBlock(self, x, y, z, tileName, dataValue=0, oldblockhandling="replace", datatag=None):
+    def setBlock(self, x, y, z, tilename, datavalue=0, oldblockhandling="replace", datatag=None):
         """ Sets a block at the specified coordinates with the specific details. Will fail if the
          chunk is not loaded. """
         if not datatag:
             datatag = {}
         self.console("setblock %d %d %d %s %d %s %s"
-                     % (x, y, z, tileName, dataValue, oldblockhandling,
+                     % (x, y, z, tilename, datavalue, oldblockhandling,
                         json.dumps(datatag, self._encoding).replace('"', "")))
 
     def giveStatusEffect(self, player, effect, duration=30, amplifier=30):
@@ -141,11 +142,11 @@ class Minecraft:
         if irc:
             try:
                 self.wrapper.irc.msgQueue.append(message)
-            except Exception as e:
+            except Exception:
                 pass
         try:
             self.wrapper.server.broadcast(message)
-        except Exception as e:
+        except Exception:
             pass
 
     def teleportAllEntities(self, entity, x, y, z):
@@ -165,7 +166,7 @@ class Minecraft:
         except Exception as e:
             self.log.error("No such player %s is logged in:\n%s", username, e)
 
-    def lookupUUID(self, uuid): # This function is just part of the API for plugin devs/users.
+    def lookupUUID(self, uuid):  # This function is just part of the API for plugin devs/users.
         """
         Returns the username from the specified UUID.
         If the player has never logged in before and isn't in the user cache, it will poll Mojang's API.

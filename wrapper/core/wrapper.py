@@ -41,10 +41,16 @@ try:
 except ImportError:
     requests = False
 
-try:  # Manually define a raw input builtin that works indentically on PY2 and PY3
+# Manually define equivalent builtin functions between Py2 and Py3
+try:  # Manually define a raw input builtin shadow that works indentically on PY2 and PY3
     rawinput = raw_input
 except NameError:
     rawinput = input
+
+try:  # Manually define an xrange builtin that works indentically on both (to take advantage of xrange's speed in 2)
+    xxrange = xrange
+except NameError:
+    xxrange = range
 
 
 class Wrapper:
@@ -227,7 +233,7 @@ class Wrapper:
                 "IP": None,
                 "names": []
             }
-        for i in range(0, numbofnames):
+        for i in xxrange(0, numbofnames):
             if "changedToAt" not in names[i]:  # find the original name
                 self.usercache[useruuid]["original"] = names[i]["name"]
                 self.usercache[useruuid]["online"] = True
@@ -272,7 +278,7 @@ class Wrapper:
             rx = requests.get("https://status.mojang.com/check")
             if rx.status_code == 200:
                 rx = rx.json()
-                for i in range(0, len(rx)):
+                for i in xxrange(0, len(rx)):
                     if "account.mojang.com" in rx[i]:
                         if rx[i]["account.mojang.com"] == "green":
                             self.log.warning("Mojang accounts is green, but request failed - have you "
@@ -355,7 +361,7 @@ class Wrapper:
 #        return self.getuuidfromname("OfflinePlayer:%s" % username)
 
     def listplugins(self):
-        self.log.info("List of Wrapper.py plugins installed:")
+        readout("", "List of Wrapper.py plugins installed:", separator="", pad=4)
         for plid in self.plugins:
             plugin = self.plugins[plid]
             if plugin["good"]:
@@ -368,7 +374,7 @@ class Wrapper:
                 readout(name, summary, separator=(" - v%s - " % ".".join([str(_) for _ in version])))
                 # self.log.info("%s v%s - %s", name, ".".join([str(_) for _ in version]), summary)
             else:
-                self.log.info("%s failed to load!", plugin)
+                readout("failed to load plugin", plugin, " - ", pad=25)
 
     def start(self):
         # Reload configuration each time server starts in order to detect changes

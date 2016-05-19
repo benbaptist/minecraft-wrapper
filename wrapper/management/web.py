@@ -21,11 +21,17 @@ except ImportError:
     pkg_resources = False
     requests = False
 
+
+try:  # Manually define an xrange builtin that works indentically on both (to take advantage of xrange's speed in 2)
+    xxrange = xrange
+except NameError:
+    xxrange = range
+
 # Yeah, I know. The code is awful. Probably not even a HTTP-compliant web
 # server anyways. I just wrote it at like 3AM in like an hour.
 
-class Web:
 
+class Web:
     def __init__(self, wrapper):
         self.wrapper = wrapper
         self.api = API(wrapper, "Web", internal=True)
@@ -137,7 +143,7 @@ class Web:
     def makeKey(self, rememberMe):
         a = ""
         z = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@-_"
-        for i in range(64):  # TODO Py2-3
+        for i in xxrange(64):
             a += z[random.randrange(0, len(z))]
             # a += chr(random.randrange(97, 122))
         if rememberMe:

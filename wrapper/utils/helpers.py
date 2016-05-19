@@ -4,8 +4,28 @@ import os
 import json
 import time
 import datetime
+from api.base import API
 
 import utils.termcolors as termcolors
+
+
+def epoch_to_timestr(epoch_time):
+    """
+    takes a time represented as integer/string which you supply and converts it to a formatted string.
+    :param epoch_time: string or integer (in seconds) of epoch time
+    :returns: the string version like "2016-04-14 22:05:13 -0400" suitable in ban files
+    """
+    tm = int(epoch_time)  # allow argument to be passed as a string or integer
+    t = datetime.datetime.fromtimestamp(tm)
+    pattern = "%Y-%m-%d %H:%M:%S %z"
+    return "%s-0100" % t.strftime(pattern)  # the %z does not work below py3.2 - we just create a fake offset.
+
+
+def find_in_json(jsonlist, keyname, searchvalue):
+    for items in jsonlist:
+        if items[keyname] == searchvalue:
+            return items
+    return None
 
 
 def getargs(arginput, i):
@@ -36,6 +56,107 @@ def getjsonfile(filename, directory="./"):
         return False  # bad directory or filename
 
 
+def processcolorcodes(message):
+    """
+    Used internally to process old-style color-codes with the & symbol, and returns a JSON chat object.
+    message received should be string (gets encoded to bytes here)
+    """
+    message = message  # .encode('ascii', 'ignore')  # encode to bytes
+    extras = []
+    bold = False
+    italic = False
+    underline = False
+    obfuscated = False
+    strikethrough = False
+    url = False
+    color = "white"
+    current = ""
+
+    it = iter(range(len(message)))
+
+    for i in it:
+        char = message[i]  # str(message[i:1])  # Py3 needs the length [x.1] to type as a bytes object
+
+        if char is not "&":
+            if char == " ":
+                url = False
+            current += char  # PY3
+        else:
+            if url:
+                clickevent = {"action": "open_url", "value": current}
+            else:
+                clickevent = {}
+
+            extras.append({
+                "text": current,
+                "color": color,
+                "obfuscated": obfuscated,
+                "underlined": underline,
+                "bold": bold,
+                "italic": italic,
+                "strikethrough": strikethrough,
+                "clickEvent": clickevent
+            })
+
+            current = ""
+
+            # noinspection PyBroadException
+            try:
+                code = message[i + 1]
+            except:
+                break
+
+            if code in "abcdef0123456789":
+                try:
+                    color = API.colorcodes[code]
+                except KeyError:
+                    color = "white"
+
+            obfuscated = (code == "k")
+            bold = (code == "l")
+            strikethrough = (code == "m")
+            underline = (code == "n")
+            italic = (code == "o")
+
+            if code == "&":
+                current += "&"
+            elif code == "@":
+                url = not url
+            elif code == "r":
+                bold = False
+                italic = False
+                underline = False
+                obfuscated = False
+                strikethrough = False
+                url = False
+                color = "white"
+
+            next(it)
+
+    extras.append({
+        "text": current,
+        "color": color,
+        "obfuscated": obfuscated,
+        "underlined": underline,
+        "bold": bold,
+        "italic": italic,
+        "strikethrough": strikethrough
+    })
+    return json.dumps({"text": "", "extra": extras})
+
+
+def processoldcolorcodes(message):
+    """
+    Internal private method - Not intended as a part of the public player object API
+
+     message: message text containing '&' to represent the chat formatting codes
+    :return: mofified text containing the section sign (§) and the formatting code.
+    """
+    for i in API.colorcodes:
+        message = message.replace("&" + i, "\xc2\xa7" + i)
+    return message
+
+
 def putjsonfile(data, filename, directory="./", indent_spaces=2):
     """
     writes entire data to a json file.
@@ -57,13 +178,6 @@ def putjsonfile(data, filename, directory="./", indent_spaces=2):
     return False
 
 
-def find_in_json(jsonlist, keyname, searchvalue):
-    for items in jsonlist:
-        if items[keyname] == searchvalue:
-            return items
-    return None
-
-
 def read_timestr(mc_time_string):
     """
     Minecraft server (or wrapper, using epoch_to_timestr) creates a string like this: - "2016-04-15 16:52:15 -0400"
@@ -82,19 +196,17 @@ def read_timestr(mc_time_string):
     return epoch
 
 
-def epoch_to_timestr(epoch_time):
-    """
-    takes a time represented as integer/string which you supply and converts it to a formatted string.
-    :param epoch_time: string or integer (in seconds) of epoch time
-    :returns: the string version like "2016-04-14 22:05:13 -0400" suitable in ban files
-    """
-    tm = int(epoch_time)  # allow argument to be passed as a string or integer
-    t = datetime.datetime.fromtimestamp(tm)
-    pattern = "%Y-%m-%d %H:%M:%S %z"
-    return "%s-0100" % t.strftime(pattern)  # the %z does not work below py3.2 - we just create a fake offset.
-
-
 def readout(commandtext, description, separator=" - ", pad=15):
+    """
+    display console text only with no logging - useful for displaying pretty console-only messages.
+    Args:
+        commandtext: The first text field (magenta)
+        description: third text field (green)
+        separator: second (middle) field (white text)
+        pad: minimum number of characters the command text is padded to
+
+    Returns: Just prints to stdout/console
+    """
     commstyle = termcolors.make_style(fg="magenta", opts=("bold",))
     descstyle = termcolors.make_style(fg="yellow")
     x = '{0: <%d}' % pad

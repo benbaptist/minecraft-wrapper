@@ -14,6 +14,11 @@ from utils.helpers import getargs, getargsafter
 from api.base import API
 
 
+try:  # Manually define an xrange builtin that works indentically on both (to take advantage of xrange's speed in 2)
+    xxrange = xrange
+except NameError:
+    xxrange = range
+
 class IRC:
 
     def __init__(self, server, config, log, wrapper):
@@ -183,7 +188,7 @@ class IRC:
             for i, message in enumerate(self.msgQueue):
                 for channel in self.channels:
                     if len(message) > 400:
-                        for l in range(int(math.ceil(len(message) / 400.0))):  # TODO Py3-2
+                        for l in xxrange(int(math.ceil(len(message) / 400.0))):
                             chunk = message[l * 400:(l + 1) * 400]
                             self.send("PRIVMSG %s :%s" % (channel, chunk))
                     else:
@@ -222,7 +227,7 @@ class IRC:
             self.nickAttempts += 1
             if self.nickAttempts > 2:
                 name = bytearray(self.nickname)
-                for i in range(3):  # TODO Py3-2
+                for i in xxrange(3):
                     name[len(self.nickname) / 3 * i] = chr(random.randrange(97, 122))
                 self.nickname = str(name)
             else:

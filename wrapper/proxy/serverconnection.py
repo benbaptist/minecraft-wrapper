@@ -12,6 +12,10 @@ from proxy.packet import Packet
 
 from api.entity import Entity
 
+try:  # Manually define an xrange builtin that works indentically on both (to take advantage of xrange's speed in 2)
+    xxrange = xrange
+except NameError:
+    xxrange = range
 
 class Server:
     def __init__(self, client, wrapper, ip=None, port=None):
@@ -167,7 +171,7 @@ class Server:
                 rawstring = rawdata["json"]
                 position = rawdata["position"]
                 try:
-                    data = json.loads(rawstring)
+                    data = json.loads(rawstring.decode('utf-8'))  # py3
                     self.log.trace("(PROXY SERVER) -> Parsed CHAT_MESSAGE packet with server state 3 (PLAY):\n%s", data)
                 except Exception as e:
                     return
@@ -453,7 +457,7 @@ class Server:
                 if mcpacket.PROTOCOL_1_9START > self.version > mcpacket.PROTOCOL_1_8START:
                     data = self.packet.read("bool:skylight|varint:chunks")
                     self.log.trace("(PROXY SERVER) -> Parsed MAP_CHUNK_BULK packet:\n%s", data)
-                    for chunk in range(data["chunks"]):  # TODO Py2-3
+                    for chunk in xxrange(data["chunks"]):
                         meta = self.packet.read("int:x|int:z|ushort:primary")
                         bitmask = bin(meta["primary"])[2:].zfill(16)
                         chunkColumn = bytearray()

@@ -22,6 +22,11 @@ except NameError:
     basestring = str  # compatibility for Python 3
 
 
+try:  # Manually define an xrange builtin that works indentically on both (to take advantage of xrange's speed in 2)
+    xxrange = xrange
+except NameError:
+    xxrange = range
+
 TAG_END = 0
 TAG_BYTE = 1
 TAG_SHORT = 2
@@ -339,7 +344,7 @@ class TAG_List(TAG, MutableSequence):
         self.tagID = TAG_Byte(buffer=buffer).value
         self.tags = []
         length = TAG_Int(buffer=buffer)
-        for x in range(length.value):  # TODO Py2-3
+        for x in xxrange(length.value):
             self.tags.append(TAGLIST[self.tagID](buffer=buffer))
 
     def _render_buffer(self, buffer):

@@ -105,7 +105,7 @@ class Proxy:
         while True:
             pkid, original = packet.grabPacket()
             if pkid == 0x00:
-                data = json.loads(packet.read("string:response")["response"])
+                data = json.loads(packet.read("string:response")["response"].decode('utf-8'))  # py3
                 self.wrapper.server.protocolVersion = data["version"]["protocol"]
                 self.wrapper.server.version = data["version"]["name"]
                 break

@@ -16,6 +16,10 @@ from Crypto import Random
 from Crypto.Cipher import AES, DES
 from hashlib import md5
 
+# Py3-2
+import sys
+PY3 = sys.version_info > (3,)
+
 
 def decode_public_key(bytes):
     """Decodes a public RSA key in ASN.1 format as defined by x.509"""
@@ -38,7 +42,10 @@ def generate_random_bytes(length):
 
 def generate_server_id():
     """Generates 20 random hex characters"""
-    return "".join("%02x" % ord(c) for c in generate_random_bytes(10))
+    if PY3:
+        return "".join("%02x" % c for c in generate_random_bytes(10))
+    else:
+        return "".join("%02x" % ord(c) for c in generate_random_bytes(10))
 
 
 def generate_challenge_token():
