@@ -125,7 +125,7 @@ class Packet:
     def flush(self):
         for p in self.queue:
             packet = p[1]
-            pkid = struct.unpack("B", packet[0])[0]
+            pkid = struct.unpack("B", packet[0:1])[0]  # py3
             if p[0] > -1:
                 if len(packet) > self.compressThreshold:
                     packetCompressed = self.pack_varInt(len(packet)) + zlib.compress(packet)
@@ -191,7 +191,7 @@ class Packet:
         return result
 
     def send(self, pkid, expression, payload):
-        result = ""
+        result = b""
         result += self.send_varInt(pkid)
         if len(expression) > 0:
             for i, type_ in enumerate(expression.split("|")):
@@ -485,7 +485,7 @@ class Packet:
         return self.read_data(self.read_varInt())
 
     def read_json(self):
-        return json.loads(self.read_string())
+        return json.loads(self.read_string().decode('utf-8'))
 
     def read_rest(self):
         return self.read_data(1024 * 1024)
