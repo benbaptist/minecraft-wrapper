@@ -180,7 +180,7 @@ class MCServer:
                 self.console("tellraw @a %s" % json.dumps(message))
         else:
             if self.config["General"]["pre-1.7-mode"]:
-                self.console("say %s" % self.chattocolorcodes(json.loads(self.processcolorcodes(message))))
+                self.console("say %s" % self.chattocolorcodes(json.loads(self.processcolorcodes(message)).decode('utf-8')))
             else:
                 self.console("tellraw @a %s" % self.processcolorcodes(message))
 
@@ -211,8 +211,9 @@ class MCServer:
     def processcolorcodes(self, message):
         """
         Used internally to process old-style color-codes with the & symbol, and returns a JSON chat object.
+        message received should be string (gets encoded to bytes here)
         """
-        message = message.encode('ascii', 'ignore')
+        message = message  # .encode('ascii', 'ignore')  # encode to bytes
         extras = []
         bold = False
         italic = False
@@ -226,12 +227,12 @@ class MCServer:
         it = iter(range(len(message)))
 
         for i in it:
-            char = message[i]
+            char = message[i]  # str(message[i:1])  # Py3 needs the length [x.1] to type as a bytes object
 
             if char is not "&":
                 if char == " ":
                     url = False
-                current += char
+                current += char  # PY3
             else:
                 if url:
                     clickevent = {"action": "open_url", "value": current}
@@ -239,7 +240,7 @@ class MCServer:
                     clickevent = {}
 
                 extras.append({
-                    "text": current, 
+                    "text": current,
                     "color": color, 
                     "obfuscated": obfuscated,
                     "underlined": underline, 
@@ -255,10 +256,11 @@ class MCServer:
                     code = message[i + 1]
                 except:
                     break
+
                 if code in "abcdef0123456789":
                     try:
                         color = API.colorCodes[code]
-                    except:
+                    except KeyError:
                         color = "white"
 
                 obfuscated = (code == "k")
@@ -280,10 +282,10 @@ class MCServer:
                     url = False
                     color = "white"
 
-                it.next()
+                next(it)
 
         extras.append({
-            "text": current, 
+            "text": current,
             "color": color, 
             "obfuscated": obfuscated,
             "underlined": underline, 
@@ -291,7 +293,7 @@ class MCServer:
             "italic": italic, 
             "strikethrough": strikethrough
         })
-
+        print(json.dumps({"text": "", "extra": extras}))
         return json.dumps({"text": "", "extra": extras})
 
     def login(self, username):
