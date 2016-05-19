@@ -3,7 +3,7 @@
 # p2 and py3 compliant (no PyCharm IDE-flagged errors)
 # (has warnings in both versions due to the manner of import)
 
-from utils.helpers import getargs, getargsafter
+from utils.helpers import getargs, getargsafter, processcolorcodes
 from api.base import API
 from api.player import Player
 from api.world import World
@@ -19,6 +19,7 @@ import os
 import json
 import ctypes
 import platform
+import base64
 
 # Py3-2
 import sys
@@ -30,6 +31,7 @@ except ImportError:
     resource = False
 
 
+# noinspection PyBroadException,PyUnusedLocal
 class MCServer:
 
     def __init__(self, args, log, config, wrapper):
@@ -180,14 +182,16 @@ class MCServer:
                 self.console("tellraw @a %s" % json.dumps(message))
         else:
             if self.config["General"]["pre-1.7-mode"]:
-                self.console("say %s" % self.chattocolorcodes(json.loads(self.processcolorcodes(message)).decode('utf-8')))
+                self.console("say %s" %
+                             self.chattocolorcodes(json.loads(processcolorcodes(message)).decode('utf-8')))
             else:
-                self.console("tellraw @a %s" % self.processcolorcodes(message))
+                self.console("tellraw @a %s" % processcolorcodes(message))
 
-    def chattocolorcodes(self, jsondata):
+    @staticmethod
+    def chattocolorcodes(jsondata):
         def getcolorcode(color):
-            for code in API.colorCodes:
-                if API.colorCodes[code] == color:
+            for code in API.colorcodes:
+                if API.colorcodes[code] == color:
                     return "\xa7\xc2" + code
             return ""
 
@@ -207,94 +211,6 @@ class MCServer:
             for extra in jsondata["extra"]:
                 total += handlechunk(extra)
         return total.encode("utf8")
-
-    def processcolorcodes(self, message):
-        """
-        Used internally to process old-style color-codes with the & symbol, and returns a JSON chat object.
-        message received should be string (gets encoded to bytes here)
-        """
-        message = message  # .encode('ascii', 'ignore')  # encode to bytes
-        extras = []
-        bold = False
-        italic = False
-        underline = False
-        obfuscated = False
-        strikethrough = False
-        url = False
-        color = "white"
-        current = ""
-
-        it = iter(range(len(message)))
-
-        for i in it:
-            char = message[i]  # str(message[i:1])  # Py3 needs the length [x.1] to type as a bytes object
-
-            if char is not "&":
-                if char == " ":
-                    url = False
-                current += char  # PY3
-            else:
-                if url:
-                    clickevent = {"action": "open_url", "value": current}
-                else:
-                    clickevent = {}
-
-                extras.append({
-                    "text": current,
-                    "color": color, 
-                    "obfuscated": obfuscated,
-                    "underlined": underline, 
-                    "bold": bold, 
-                    "italic": italic, 
-                    "strikethrough": strikethrough, 
-                    "clickEvent": clickevent
-                })
-
-                current = ""
-                
-                try:
-                    code = message[i + 1]
-                except:
-                    break
-
-                if code in "abcdef0123456789":
-                    try:
-                        color = API.colorCodes[code]
-                    except KeyError:
-                        color = "white"
-
-                obfuscated = (code == "k")
-                bold = (code == "l")
-                strikethrough = (code == "m")
-                underline = (code == "n")
-                italic = (code == "o")
-
-                if code == "&":
-                    current += "&"
-                elif code == "@":
-                    url = not url
-                elif code == "r":
-                    bold = False
-                    italic = False
-                    underline = False
-                    obfuscated = False
-                    strikethrough = False
-                    url = False
-                    color = "white"
-
-                next(it)
-
-        extras.append({
-            "text": current,
-            "color": color, 
-            "obfuscated": obfuscated,
-            "underlined": underline, 
-            "bold": bold, 
-            "italic": italic, 
-            "strikethrough": strikethrough
-        })
-        print(json.dumps({"text": "", "extra": extras}))
-        return json.dumps({"text": "", "extra": extras})
 
     def login(self, username):
         """
@@ -331,7 +247,9 @@ class MCServer:
         # Load server icon
         if os.path.exists("server-icon.png"):
             with open("server-icon.png", "rb") as f:
-                self.serverIcon = "data:image/png;base64," + f.read().encode("base64")  # TODO - broken PY3
+                theicon = f.read()
+                iconencoded = base64.standard_b64encode(theicon)
+                self.serverIcon = b"data:image/png;base64," + iconencoded
         # Read server.properties and extract some information out of it
         # the PY3.5 ConfigParser seems broken.  This way was much more straightforward and works in both PY2 and PY3
         if os.path.exists("server.properties"):
@@ -380,6 +298,7 @@ class MCServer:
 
     def __stdout__(self):
         while not self.wrapper.halt:
+            # noinspection PyBroadException,PyUnusedLocal
             try:
                 data = self.proc.stdout.readline()
                 for line in data.split("\n"):
@@ -446,7 +365,8 @@ class MCServer:
         except Exception as e:
             raise e
 
-    def getstorageavailable(self, folder):
+    @staticmethod
+    def getstorageavailable(folder):
         """
         Returns the disk space for the working directory in bytes
         """
@@ -459,15 +379,16 @@ class MCServer:
             st = os.statvfs(folder)
             return st.f_bavail * st.f_frsize
 
-    def stripspecial(self, text):
+    @staticmethod
+    def stripspecial(text):
         a = ""
         it = iter(range(len(text)))
         for i in it:
             char = text[i]
             if char == "\xc2":
                 try:
-                    it.next()
-                    it.next()
+                    next(it)
+                    next(it)
                 except Exception as e:
                     pass
             else:

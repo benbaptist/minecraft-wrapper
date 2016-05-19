@@ -3,6 +3,7 @@
 import struct
 import json
 
+
 class World:
 
     def __init__(self, name, server):

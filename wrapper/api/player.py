@@ -9,9 +9,10 @@ import threading
 
 import proxy.mcpacket as mcpacket
 from core.storage import Storage
-from api.base import API
+from utils.helpers import processoldcolorcodes, processcolorcodes
 
 
+# noinspection PyPep8Naming
 class Player:
     """
     Player objects contains methods and data of a currently logged-in player. This object is destroyed
@@ -106,18 +107,6 @@ class Player:
         while not self.abort:
             self.data["logins"][int(self.loggedIn)] = int(time.time())
             time.sleep(60)
-
-    @staticmethod
-    def _processoldcolorcodes(message):
-        """
-        Internal private method - Not intended as a part of the public player object API
-
-         message: message text containing '&' to represent the chat formatting codes
-        :return: mofified text containing the section sign (§) and the formatting code.
-        """
-        for i in API.colorCodes:
-            message = message.replace("&" + i, "\xc2\xa7" + i)
-        return message
 
     @staticmethod
     def _read_ops_file():
@@ -277,13 +266,12 @@ class Player:
         if isinstance(message, dict):
             self.wrapper.server.console("tellraw %s %s" % (self.username, json.dumps(message)))
         else:
-            self.wrapper.server.console("tellraw %s %s" % (self.username,
-                                                           self.wrapper.server.processcolorcodes(message)))
+            self.wrapper.server.console("tellraw %s %s" % (self.username, processcolorcodes(message)))
 
     def actionMessage(self, message=""):
         if self.getClient().version > mcpacket.PROTOCOL_1_8START:
             self.getClient().packet.send(self.clientPackets.CHAT_MESSAGE, "string|byte",
-                                         (json.dumps({"text": self._processoldcolorcodes(message)}), 2))
+                                         (json.dumps({"text": processoldcolorcodes(message)}), 2))
 
     def setVisualXP(self, progress, level, total):
         """
@@ -428,7 +416,7 @@ class Player:
             return True
         if another_player:
             other_uuid = self.wrapper.getuuidbyusername(another_player)  # get other player mojang uuid
-            if other_uuid: # make sure other player permission is initialized.
+            if other_uuid:  # make sure other player permission is initialized.
                 if self.mojangUuid.string not in self.permissions["users"]:  # no reason not to do this here too
                     self.permissions["users"][self.mojangUuid.string] = {"groups": [], "permissions": {}}
             else:
