@@ -191,8 +191,8 @@ class Client:
 
     def disconnect(self, message):
         try:
-            message = json.loads(message["string"])
-        except ValueError: # optionally use json
+            message = json.loads(message["string"].decode('utf-8'))  # py3
+        except ValueError:  # optionally use json
             pass
 
         if self.state == ClientState.PLAY:
