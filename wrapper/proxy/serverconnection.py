@@ -171,7 +171,7 @@ class Server:
                 rawstring = rawdata["json"]
                 position = rawdata["position"]
                 try:
-                    data = json.loads(rawstring)
+                    data = json.loads(rawstring.decode('utf-8'))  # py3
                     self.log.trace("(PROXY SERVER) -> Parsed CHAT_MESSAGE packet with server state 3 (PLAY):\n%s", data)
                 except Exception as e:
                     return
