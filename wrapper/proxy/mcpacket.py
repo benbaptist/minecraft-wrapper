@@ -64,12 +64,12 @@ class Server17:
     def __init__(self):
         pass
 
-    @property
-    def start(self):
+    @staticmethod
+    def start():
         return PROTOCOL_1_7
 
-    @property
-    def end(self):
+    @staticmethod
+    def end():
         return PROTOCOL_1_7
 
 
@@ -78,12 +78,12 @@ class Server179:
     def __init__(self):
         pass
 
-    @property
-    def start(self):
+    @staticmethod
+    def start():
         return PROTOCOL_1_7_9
 
-    @property
-    def end(self):
+    @staticmethod
+    def end():
         return PROTOCOL_1_7_9
 
 
@@ -95,12 +95,12 @@ class Server18:
     def __init__(self):
         pass
 
-    @property
-    def start(self):
+    @staticmethod
+    def start():
         return PROTOCOL_1_8START
 
-    @property
-    def end(self):
+    @staticmethod
+    def end():
         return PROTOCOL_1_9START - 1
 
     KEEP_ALIVE = 0x00  # Client's Response To Server Challenge
@@ -130,12 +130,12 @@ class Server19:  # Updated To Protocol 108
     def __init__(self):
         pass
 
-    @property
-    def start(self):
+    @staticmethod
+    def start():
         return PROTOCOL_1_9START
 
-    @property
-    def end(self):
+    @staticmethod
+    def end():
         return PROTOCOL_1_9_3PRE3
 
     KEEP_ALIVE = 0x0b  # Client's Response To Server Challenge
@@ -165,12 +165,12 @@ class Server194:
     def __init__(self):
         pass
 
-    @property
-    def start(self):
+    @staticmethod
+    def start():
         return PROTOCOL_1_9_4
 
-    @property
-    def end(self):
+    @staticmethod
+    def end():
         return PROTOCOL_MAX
 
     KEEP_ALIVE = 0x0b
@@ -197,12 +197,12 @@ class Client17:
     def __init__(self):
         pass
 
-    @property
-    def start(self):
+    @staticmethod
+    def start():
         return PROTOCOL_1_7
 
-    @property
-    def end(self):
+    @staticmethod
+    def end():
         return PROTOCOL_1_7
 
 
@@ -211,12 +211,12 @@ class Client179:
     def __init__(self):
         pass
 
-    @property
-    def start(self):
+    @staticmethod
+    def start():
         return PROTOCOL_1_7_9
 
-    @property
-    def end(self):
+    @staticmethod
+    def end():
         return PROTOCOL_1_7_9
 
 
@@ -228,12 +228,12 @@ class Client18:
     def __init__(self):
         pass
 
-    @property
-    def start(self):
+    @staticmethod
+    def start():
         return PROTOCOL_1_8START
 
-    @property
-    def end(self):
+    @staticmethod
+    def end():
         return PROTOCOL_1_9START - 1
 
     KEEP_ALIVE = 0x00  # Server Challenge To Client
@@ -279,12 +279,12 @@ class Client19:  # Updated To Protocol 108 1.9 Minecraft
     def __init__(self):
         pass
 
-    @property
-    def start(self):
+    @staticmethod
+    def start():
         return PROTOCOL_1_9START
 
-    @property
-    def end(self):
+    @staticmethod
+    def end():
         return PROTOCOL_1_9_3PRE3
 
     KEEP_ALIVE = 0x1f  # Server Challenge To Client
@@ -330,12 +330,12 @@ class Client194:
     def __init__(self):
         pass
 
-    @property
-    def start(self):
+    @staticmethod
+    def start():
         return PROTOCOL_1_9_4
 
-    @property
-    def end(self):
+    @staticmethod
+    def end():
         return PROTOCOL_MAX
 
     KEEP_ALIVE = 0x1f
@@ -352,12 +352,12 @@ class Client194:
     SPAWN_MOB = 0x03
     ATTACH_ENTITY = 0x3a
     ENTITY_RELATIVE_MOVE = 0x25
-    ENTITY_TELEPORT = 0x4a
+    ENTITY_TELEPORT = 0x49
     ENTITY_HEAD_LOOK = 0x34
     ENTITY_STATUS = 0x1b
     ENTITY_METADATA = 0x39
-    ENTITY_EFFECT = 0x4c
-    ENTITY_PROPERTIES = 0x4b
+    ENTITY_EFFECT = 0x4b
+    ENTITY_PROPERTIES = 0x4a
     REMOVE_ENTITY_EFFECT = 0x31
     SET_EXPERIENCE = 0x3d
     CHANGE_GAME_STATE = 0x1e

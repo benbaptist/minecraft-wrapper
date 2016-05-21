@@ -333,16 +333,16 @@ class Commands:
         if payload["command"] == "playerstats":
             subcommand = getargs(payload["args"], 0)
             if player.isOp():
-                totalPlaytime = {}
+                totalplaytime = {}
                 players = self.wrapper.api.minecraft.getAllPlayers()
                 for uu in players:
                     if "logins" not in players[uu]:
                         continue
-                    playerName = self.wrapper.getusername(uu)
-                    totalPlaytime[playerName] = [0, 0]
+                    playerName = self.wrapper.getusernamebyuuid(uu)
+                    totalplaytime[playerName] = [0, 0]
                     for i in players[uu]["logins"]:
-                        totalPlaytime[playerName][0] += players[uu]["logins"][i] - int(i)
-                        totalPlaytime[playerName][1] += 1
+                        totalplaytime[playerName][0] += players[uu]["logins"][i] - int(i)
+                        totalplaytime[playerName][1] += 1
 
                 def secondsToHuman(seconds):
                     result = "None at all!"
@@ -364,14 +364,14 @@ class Commands:
                     return result
                 if subcommand == "all":
                     player.message("&6----- All Players' Playtime -----")
-                    for name in totalPlaytime:
-                        seconds = totalPlaytime[name][0]
+                    for name in totalplaytime:
+                        seconds = totalplaytime[name][0]
                         result = secondsToHuman(seconds)
-                        player.message("&e%s: &6%s (%d logins)" % (name, result, totalPlaytime[name][1]))  # 86400.0
+                        player.message("&e%s: &6%s (%d logins)" % (name, result, totalplaytime[name][1]))  # 86400.0
                 else:
                     topPlayers = []
-                    for username in totalPlaytime:
-                        topPlayers.append((totalPlaytime[username][0], username))
+                    for username in totalplaytime:
+                        topPlayers.append((totalplaytime[username][0], username))
                     topPlayers.sort()
                     topPlayers.reverse()
                     player.message("&6----- Top 10 Players' Playtime -----")

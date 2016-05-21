@@ -2,7 +2,6 @@
 
 # py3 non-compliant at runtime
 
-import json
 import signal
 import hashlib
 import threading
@@ -85,6 +84,216 @@ class Wrapper:
         if not requests and self.configManager.config["Proxy"]["proxy-enabled"]:
             self.log.error("You must have the requests module installed to run in proxy mode!")
             return
+
+    def start(self):
+        """ wrapper should only start ONCE... old code made it restart over when only a server needed restarting"""
+        # Reload configuration each time wrapper starts in order to detect changes
+        self.configManager.loadconfig()
+        self.config = self.configManager.config
+
+        signal.signal(signal.SIGINT, self.sigint)
+        signal.signal(signal.SIGTERM, self.sigint)
+
+        self.api = API(self, "Wrapper.py")
+        self._registerwrappershelp()
+
+        # This is not the actual server... the MCServer class is a console wherein the server is started
+        self.server = MCServer(sys.argv, self.log, self.configManager.config, self)
+        self.server.init()
+
+        self.plugins.loadplugins()
+
+        if self.config["IRC"]["irc-enabled"]:  # this should be a plugin
+            self.irc = IRC(self.server, self.config, self.log, self)
+            t = threading.Thread(target=self.irc.init, args=())
+            t.daemon = True
+            t.start()
+
+        if self.config["Web"]["web-enabled"]:  # this should be a plugin
+            if manageweb.pkg_resources and manageweb.requests:
+                self.web = manageweb.Web(self)
+                t = threading.Thread(target=self.web.wrap, args=())
+                t.daemon = True
+                t.start()
+            else:
+                self.log.error("Web remote could not be started because you do not have the required modules "
+                               "installed: pkg_resources")
+                self.log.error("Hint: http://stackoverflow.com/questions/7446187")
+
+        # This is passed to MCserver console....
+        if len(sys.argv) < 2:
+            self.server.args = self.configManager.config["General"]["command"].split(" ")
+        else:
+            # I think this allows you to run the server java command directly from the python prompt
+            self.server.args = sys.argv[1:]
+
+        # Console Daemon runs while not wrapper.halt (here; self.halt)
+        consoledaemon = threading.Thread(target=self.parseconsoleinput, args=())
+        consoledaemon.daemon = True
+        consoledaemon.start()
+
+        # Timer also runs while not wrapper.halt
+        t = threading.Thread(target=self.timer, args=())
+        t.daemon = True
+        t.start()
+
+        if self.config["General"]["shell-scripts"]:
+            if os.name in ("posix", "mac"):
+                self.scripts = Scripts(self)
+            else:
+                self.log.error("Sorry, but shell scripts only work on *NIX-based systems! If you are using a "
+                               "*NIX-based system, please file a bug report.")
+
+        if self.config["Proxy"]["proxy-enabled"]:
+            t = threading.Thread(target=self.startproxy, args=())
+            t.daemon = True
+            t.start()
+
+        if self.config["General"]["auto-update-wrapper"]:
+            t = threading.Thread(target=self.checkfordevupdate, args=())
+            t.daemon = True
+            t.start()
+
+        self.bootserver()
+
+    def bootserver(self):
+        # This boots the server and loops in it
+        self.server.__handle_server__()
+        # until it stops
+        self.plugins.disableplugins()
+
+    def parseconsoleinput(self):
+        while not self.halt:
+            try:
+                consoleinput = rawinput("")
+            except Exception as e:
+                print("[continue] variable 'consoleinput' in 'console()' did not evaluate \n%s" % e)
+                continue
+
+            if len(consoleinput) < 1:
+                continue
+
+            command = getargs(consoleinput[0:].split(" "), 0)
+
+            if command in ("/halt", "halt"):
+                self.server.stop("Halting server...", save=False)
+                self.halt = True
+                sys.exit()
+            elif command in ("/stop", "stop"):
+                self.server.stop("Stopping server...")
+            elif command in ("/start", "start"):
+                self.server.start()
+            elif command == "/restart":
+                self.server.restart("Server restarting, be right back!")
+            elif command == "/reload":
+                self.plugins.reloadplugins()
+                if self.server.getservertype() != "vanilla":
+                    self.log.info("Note: If you meant to reload the server's plugins instead of the Wrapper's "
+                                  "plugins, try running 'reload' without any slash OR '/raw /reload'.")
+            elif command in ("/update-wrapper", "update-wrapper"):
+                self.checkforupdate(False)
+            elif command in ("/plugins", "plugins"):
+                self.listplugins()
+            elif command in ("/mem", "/memory", "mem", "memory"):
+                try:
+                    self.log.info("Server Memory Usage: %d bytes", self.server.getmemoryusage())
+                except UnsupportedOSException as e:
+                    self.log.error(e)
+                except Exception as ex:
+                    self.log.exception("Something went wrong when trying to fetch memory usage! (%s)", ex)
+            elif command in ("/raw", "raw"):
+                try:
+                    if len(getargsafter(consoleinput[1:].split(" "), 1)) > 0:
+                        self.server.console(getargsafter(consoleinput[1:].split(" "), 1))
+                    else:
+                        self.log.info("Usage: /raw [command]")
+                except InvalidServerStateError as e:
+                    self.log.warning(e)
+            elif command in ("/freeze", "freeze"):
+                try:
+                    self.server.freeze()
+                except InvalidServerStateError as e:
+                    self.log.warning(e)
+                except UnsupportedOSException as ex:
+                    self.log.error(ex)
+                except Exception as exc:
+                    self.log.exception("Something went wrong when trying to freeze the server! (%s)", exc)
+            elif command in ("/unfreeze", "unfreeze"):
+                try:
+                    self.server.unfreeze()
+                except InvalidServerStateError as e:
+                    self.log.warning(e)
+                except UnsupportedOSException as ex:
+                    self.log.error(ex)
+                except Exception as exc:
+                    self.log.exception("Something went wrong when trying to unfreeze the server! (%s)", exc)
+            elif command == "/version":
+                readout("/version", self.getbuildstring())
+            elif command == "help":
+                readout("/help", "Get wrapper.py help.", separator=" (with a slash) - ")
+                self.server.console(consoleinput)
+            elif command == "/help":
+                # This is the console help commands.  Below this in _registerwrappershelp is the in-game help
+                readout("", "Get Minecraft help.", separator="help (with no slash) - ")
+                readout("/reload", "Reload Wrapper.py plugins.")
+                readout("/plugins", "Lists Wrapper.py plugins.")
+                readout("/update-wrapper", "Checks for new Wrapper.py updates, and will install\n"
+                                           "                  them automatically if one is available.")
+                readout("/stop", "Stop the minecraft server without auto-restarting and without\n"
+                                 "                  shuttingdown Wrapper.py.")
+                readout("/start", "Start the minecraft server.")
+                readout("/restart", "Restarts the minecraft server.")
+                readout("/halt", "Shutdown Wrapper.py completely.")
+                readout("/freeze", "Temporarily locks the server up until /unfreeze is executed\n"
+                                   "                  (Only works on *NIX servers).")
+                readout("/unfreeze", "Unlocks a frozen state server (Only works on *NIX servers).")
+                readout("/mem", "Get memory usage of the server (Only works on *NIX servers).")
+                readout("/raw [command]", "Send command to the Minecraft Server. Useful for Forge\n"
+                                          "                  commands like '/fml confirm'.")
+                readout("/version", self.getbuildstring())
+            else:
+                try:
+                    self.server.console(consoleinput)
+                except Exception as e:
+                    print("[BREAK] Console input exception (nothing passed to server) \n%s" % e)
+                    break
+                continue
+
+    def _registerwrappershelp(self):
+        # All commands listed herein are accessible in-game
+        # Also require player.isOp()
+        self.api.registerHelp("Wrapper", "Internal Wrapper.py commands ", [
+            ("/wrapper [update/memory/halt]",
+             "If no subcommand is provided, it will show the Wrapper version.",
+             None),
+            ("/playerstats [all]",
+             "Show the most active players. If no subcommand is provided, it'll show the top 10 players.",
+             None),
+            ("/plugins",
+             "Show a list of the installed plugins",
+             None),
+            ("/reload",
+             "Reload all plugins.",
+             None),
+            ("/permissions <groups/users/RESET>",
+             "Command used to manage permission groups and users, add permission nodes, etc.",
+             None),
+            ("/ban <name> [reason..] [time <h/d>]",
+             "Using a time creates a temp ban - (h)ours or (d)ays. Default is days(d)",
+             "mc1.7.6"),  # Minimum server version for commands to appear (register default perm later in code)
+            ("/ban-ip <address|name> [reason..] [time <h/d> (hours or days)",
+             "Reason and time optional. Default unit is days",
+             "mc1.7.6"),
+            ("/pardon <name>",
+             "pardon player 'name'. ",
+             "mc1.7.6"),
+            ("/banlist [players|ips|search] [args]",
+             "search/display banlist",
+             "mc1.7.6"),
+            ("/pardon-ip <address>",
+             "Pardon address",
+             "mc1.7.6")
+        ])
 
     def isonlinemode(self):
         """
@@ -297,68 +506,6 @@ class Wrapper:
                         self.log.warning("Mojang Status not found - no internet connection, perhaps? "
                                          "(status code %s)", rx.status_code)
                         return self.usercache[useruuid]["name"]
-            
-    def getusername(self, arguseruuid):  # We should see about getting rid of this wrapper
-        """
-        :param arguseruuid - the string or MCUUID representation of the player uuid.
-
-        used by commands.py in commands-playerstats and in api/minecraft.getAllPlayers
-        mostly a wrapper for getusernamebyuuid which also checks the offline server usercache...
-        """
-        if "MCUUID" in str(type(arguseruuid)):
-            useruuid = arguseruuid.string
-        else:
-            useruuid = arguseruuid
-
-        if self.isonlinemode():
-            name = self.getusernamebyuuid(useruuid)
-            if name:
-                return self.usercache[useruuid]["localname"]
-            return False
-        else:
-            # this is the server's usercache.json (not the cache in wrapper-data)
-            with open("usercache.json", "r") as f:
-                cache = json.loads(f.read())
-            for user in cache:
-                if user["uuid"] == useruuid:
-                    if useruuid not in self.usercache:
-                        self.usercache[useruuid] = {
-                            "time": time.time(), 
-                            "name": None
-                        }
-                    if user["name"] != self.usercache[useruuid]["name"]:
-                        self.usercache[useruuid]["name"] = user["name"]
-                        self.usercache[useruuid]["online"] = False
-                        self.usercache[useruuid]["time"] = time.time()
-                    return user["name"]
-
-    def getuuid(self, username):  # We should see about getting rid of this wrapper  # agreed!
-        pass
-    # """
-#        :param username - string of user's name
-#        :returns a MCUUID object, which means UUIDfromname and getuuidbyusername must return MCUUID obejcts
-#        """
-#        if not self.isonlinemode():  # both server and wrapper in offline...
-#            return self.getuuidfromname("OfflinePlayer:%s" % username)
-#
-#        # proxy mode is off / not working
-#        if not self.proxy:
-#            with open("usercache.json", "r") as f:  # read offline server cache first
-#                cache = json.loads(f.read())
-#            for user in cache:
-#                if user["name"] == username:
-#                    return MCUUID(user["uuid"])
-#        else:
-#            # proxy mode is on... poll mojang and wrapper cache
-#            search = self.getuuidbyusername(username)
-#            if not search:
-#                self.log.warning("Server online but unable to getuuid (even by polling!) for username: %s - "
-#                                 "returned an Offline uuid...", username)
-#                return self.getuuidfromname("OfflinePlayer:%s" % username)
-#            else:
-#                return search
-#        # if both if and else fail to deliver a uuid create offline uuid:
-#        return self.getuuidfromname("OfflinePlayer:%s" % username)
 
     def listplugins(self):
         readout("", "List of Wrapper.py plugins installed:", separator="", pad=4)
@@ -375,74 +522,6 @@ class Wrapper:
                 # self.log.info("%s v%s - %s", name, ".".join([str(_) for _ in version]), summary)
             else:
                 readout("failed to load plugin", plugin, " - ", pad=25)
-
-    def start(self):
-        # Reload configuration each time server starts in order to detect changes
-        self.configManager.loadconfig()
-        self.config = self.configManager.config
-
-        signal.signal(signal.SIGINT, self.sigint)
-        signal.signal(signal.SIGTERM, self.sigint)
-
-        self.api = API(self, "Wrapper.py")
-        self._registerwrappershelp()
-
-        # This is not the actual server... the MCServer class is
-        self.server = MCServer(sys.argv, self.log, self.configManager.config, self)
-        self.server.init()
-
-        self.plugins.loadplugins()
-
-        if self.config["IRC"]["irc-enabled"]:
-            self.irc = IRC(self.server, self.config, self.log, self)
-            t = threading.Thread(target=self.irc.init, args=())
-            t.daemon = True
-            t.start()
-
-        if self.config["Web"]["web-enabled"]:
-            if manageweb.pkg_resources and manageweb.requests:
-                self.web = manageweb.Web(self)
-                t = threading.Thread(target=self.web.wrap, args=())
-                t.daemon = True
-                t.start()
-            else:
-                self.log.error("Web remote could not be started because you do not have the required modules "
-                               "installed: pkg_resources")
-                self.log.error("Hint: http://stackoverflow.com/questions/7446187")
-
-        if len(sys.argv) < 2:
-            self.server.args = self.configManager.config["General"]["command"].split(" ")
-        else:
-            # I think this allows you to run the server java command directly from the python prompt
-            self.server.args = sys.argv[1:]
-
-        consoledaemon = threading.Thread(target=self.console, args=())
-        consoledaemon.daemon = True
-        consoledaemon.start()
-
-        t = threading.Thread(target=self.timer, args=())
-        t.daemon = True
-        t.start()
-
-        if self.config["General"]["shell-scripts"]:
-            if os.name in ("posix", "mac"):
-                self.scripts = Scripts(self)
-            else:
-                self.log.error("Sorry, but shell scripts only work on *NIX-based systems! If you are using a "
-                               "*NIX-based system, please file a bug report.")
-
-        if self.config["Proxy"]["proxy-enabled"]:
-            t = threading.Thread(target=self.startproxy, args=())
-            t.daemon = True
-            t.start()
-
-        if self.config["General"]["auto-update-wrapper"]:
-            t = threading.Thread(target=self.checkfordevupdate, args=())
-            t.daemon = True
-            t.start()
-
-        self.server.__handle_server__()
-        self.plugins.disableplugins()
 
     def startproxy(self):
         self.proxy = proxy.Proxy(self)
@@ -575,136 +654,4 @@ class Wrapper:
                 self.events.callevent("timer.second", None)
                 t = time.time()
             time.sleep(0.05)
-
-    def console(self):
-        while not self.halt:
-            try:
-                consoleinput = rawinput("")
-            except Exception as e:
-                print("[continue] variable 'consoleinput' in 'console()' did not evaluate \n%s" % e)
-                continue
-
-            if len(consoleinput) < 1:
-                continue
-
-            command = getargs(consoleinput[0:].split(" "), 0)
-
-            if command in ("/halt", "halt"):
-                self.server.stop("Halting server...", save=False)
-                self.halt = True
-                sys.exit()
-            elif command in ("/stop", "stop"):
-                self.server.stop("Stopping server...")
-            elif command in ("/start", "start"):
-                self.server.start()
-            elif command == "/restart":
-                self.server.restart("Server restarting, be right back!")
-            elif command == "/reload":
-                self.plugins.reloadplugins()
-                if self.server.getservertype() != "vanilla":
-                    self.log.info("Note: If you meant to reload the server's plugins instead of the Wrapper's "
-                                  "plugins, try running 'reload' without any slash OR '/raw /reload'.")
-            elif command in ("/update-wrapper", "update-wrapper"):
-                self.checkforupdate(False)
-            elif command in ("/plugins", "plugins"):
-                self.listplugins()
-            elif command in ("/mem", "/memory", "mem", "memory"):
-                try:
-                    self.log.info("Server Memory Usage: %d bytes", self.server.getmemoryusage())
-                except UnsupportedOSException as e:
-                    self.log.error(e)
-                except Exception as ex:
-                    self.log.exception("Something went wrong when trying to fetch memory usage! (%s)", ex)
-            elif command in ("/raw", "raw"):
-                try:
-                    if len(getargsafter(consoleinput[1:].split(" "), 1)) > 0:
-                        self.server.console(getargsafter(consoleinput[1:].split(" "), 1))
-                    else:
-                        self.log.info("Usage: /raw [command]")
-                except InvalidServerStateError as e:
-                    self.log.warning(e)
-            elif command in ("/freeze", "freeze"):
-                try:
-                    self.server.freeze()
-                except InvalidServerStateError as e:
-                    self.log.warning(e)
-                except UnsupportedOSException as ex:
-                    self.log.error(ex)
-                except Exception as exc:
-                    self.log.exception("Something went wrong when trying to freeze the server! (%s)", exc)
-            elif command in ("/unfreeze", "unfreeze"):
-                try:
-                    self.server.unfreeze()
-                except InvalidServerStateError as e:
-                    self.log.warning(e)
-                except UnsupportedOSException as ex:
-                    self.log.error(ex)
-                except Exception as exc:
-                    self.log.exception("Something went wrong when trying to unfreeze the server! (%s)", exc)
-            elif command == "/version":
-                readout("/version", self.getbuildstring())
-            elif command == "help":
-                readout("/help", "Get wrapper.py help.", separator=" (with a slash) - ")
-                self.server.console(consoleinput)
-            elif command == "/help":
-                # This is the console help commands.  Below this in _registerwrappershelp is the in-game help
-                readout("", "Get Minecraft help.", separator="help (with no slash) - ")
-                readout("/reload", "Reload Wrapper.py plugins.")
-                readout("/plugins", "Lists Wrapper.py plugins.")
-                readout("/update-wrapper", "Checks for new Wrapper.py updates, and will install\n"
-                                           "                  them automatically if one is available.")
-                readout("/stop", "Stop the minecraft server without auto-restarting and without\n"
-                                 "                  shuttingdown Wrapper.py.")
-                readout("/start", "Start the minecraft server.")
-                readout("/restart", "Restarts the minecraft server.")
-                readout("/halt", "Shutdown Wrapper.py completely.")
-                readout("/freeze", "Temporarily locks the server up until /unfreeze is executed\n"
-                                   "                  (Only works on *NIX servers).")
-                readout("/unfreeze", "Unlocks a frozen state server (Only works on *NIX servers).")
-                readout("/mem", "Get memory usage of the server (Only works on *NIX servers).")
-                readout("/raw [command]", "Send command to the Minecraft Server. Useful for Forge\n"
-                                          "                  commands like '/fml confirm'.")
-                readout("/version", self.getbuildstring())
-            else:
-                try:
-                    self.server.console(consoleinput)
-                except Exception as e:
-                    print("[BREAK] Console input exception (nothing passed to server) \n%s" % e)
-                    break
-                continue
-
-    def _registerwrappershelp(self):
-        # All commands listed herein are accessible in-game
-        # Also require player.isOp()
-        self.api.registerHelp("Wrapper", "Internal Wrapper.py commands ", [
-            ("/wrapper [update/memory/halt]",
-             "If no subcommand is provided, it will show the Wrapper version.",
-             None),
-            ("/playerstats [all]",
-             "Show the most active players. If no subcommand is provided, it'll show the top 10 players.",
-             None),
-            ("/plugins",
-             "Show a list of the installed plugins",
-             None),
-            ("/reload",
-             "Reload all plugins.",
-             None),
-            ("/permissions <groups/users/RESET>",
-             "Command used to manage permission groups and users, add permission nodes, etc.",
-             None),
-            ("/ban <name> [reason..] [time <h/d>]",
-             "Using a time creates a temp ban - (h)ours or (d)ays. Default is days(d)",
-             "mc1.7.6"),  # Minimum server version for commands to appear (register default perm later in code)
-            ("/ban-ip <address|name> [reason..] [time <h/d> (hours or days)",
-             "Reason and time optional. Default unit is days",
-             "mc1.7.6"),
-            ("/pardon <name>",
-             "pardon player 'name'. ",
-             "mc1.7.6"),
-            ("/banlist [players|ips|search] [args]",
-             "search/display banlist",
-             "mc1.7.6"),
-            ("/pardon-ip <address>",
-             "Pardon address",
-             "mc1.7.6")
-        ])
+            # self.events.callevent("timer.tick", None)  # don't really advise the use of this timer

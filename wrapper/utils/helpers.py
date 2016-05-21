@@ -56,10 +56,10 @@ def getjsonfile(filename, directory="./"):
         return False  # bad directory or filename
 
 
-def processcolorcodes(message):
+def processcolorcodes(message, py3=False):
     """
     Used internally to process old-style color-codes with the & symbol, and returns a JSON chat object.
-    message received should be string (gets encoded to bytes here)
+    message received should be string
     """
     message = message  # .encode('ascii', 'ignore')  # encode to bytes
     extras = []
@@ -75,12 +75,12 @@ def processcolorcodes(message):
     it = iter(range(len(message)))
 
     for i in it:
-        char = message[i]  # str(message[i:1])  # Py3 needs the length [x.1] to type as a bytes object
+        char = message[i]
 
         if char is not "&":
             if char == " ":
                 url = False
-            current += char  # PY3
+            current += char
         else:
             if url:
                 clickevent = {"action": "open_url", "value": current}
@@ -131,7 +131,10 @@ def processcolorcodes(message):
                 url = False
                 color = "white"
 
-            next(it)
+            try:  # ugly but probably works  # TODO find a better solution
+                it.next()
+            except NameError:
+                next(it)
 
     extras.append({
         "text": current,

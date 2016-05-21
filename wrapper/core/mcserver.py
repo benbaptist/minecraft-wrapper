@@ -64,7 +64,7 @@ class MCServer:
         self.worldSize = 0
         self.maxPlayers = 20
         self.protocolVersion = -1  # -1 until proxy mode checks the server's MOTD on boot
-        self.version = None
+        self.version = None  # this is string name of the server version.
         self.world = None
         self.motd = None
         self.timeofday = -1  # -1 until a player logs on and server sends a time update
@@ -93,6 +93,39 @@ class MCServer:
         capturethread.daemon = True
         capturethread.start()
 
+    def __handle_server__(self):
+        """
+        Internally-used function that handles booting the server, parsing console output, and etc.
+        """
+        while not self.wrapper.halt:
+            self.proc = None
+            if not self.boot:
+                time.sleep(0.1)
+                continue
+            self.changestate(MCSState.STARTING)
+            self.log.info("Starting server...")
+            self.reloadproperties()
+            self.proc = subprocess.Popen(self.args, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                         stdin=subprocess.PIPE, universal_newlines=True)
+            self.players = {}
+            self.wrapper.accepteula()  # Auto accept eula
+
+            # The server loop
+            while True:
+                time.sleep(0.1)
+                if self.proc.poll() is not None:  # TODO isn't this the same as `if self.proc.poll():`?
+                    self.changestate(MCSState.OFF)
+                    if not self.config["General"]["auto-restart"]:
+                        self.wrapper.halt = True
+                    self.log.info("Server stopped")
+                    break
+                for line in self.data:
+                    try:
+                        self.readconsole(line.replace("\r", ""))
+                    except Exception as e:
+                        self.log.exception(e)
+                self.data = []
+
     def start(self, save=True):
         """
         Start the Minecraft server
@@ -120,7 +153,7 @@ class MCServer:
         self.boot = False
         if save:
             self.wrapper.storage["serverState"] = False
-        for player in self.players:
+        for player in self.players:  # TODO place that kicks players when server stops
             self.console("kick %s %s" % (player, reason))
         self.console("stop")
 
@@ -320,37 +353,6 @@ class MCServer:
                 time.sleep(0.1)
                 continue
 
-    def __handle_server__(self):
-        """
-        Internally-used function that handles booting the server, parsing console output, and etc.
-        """
-        while not self.wrapper.halt:
-            self.proc = None
-            if not self.boot:
-                time.sleep(0.1)
-                continue
-            self.changestate(MCSState.STARTING)
-            self.log.info("Starting server...")
-            self.reloadproperties()
-            self.proc = subprocess.Popen(self.args, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                         stdin=subprocess.PIPE, universal_newlines=True)
-            self.players = {}
-            self.wrapper.accepteula()  # Auto accept eula
-            while True:
-                time.sleep(0.1)
-                if self.proc.poll() is not None:
-                    self.changestate(MCSState.OFF)
-                    if not self.config["General"]["auto-restart"]:
-                        self.wrapper.halt = True
-                    self.log.info("Server stopped")
-                    break
-                for line in self.data:
-                    try:
-                        self.readconsole(line.replace("\r", ""))
-                    except Exception as e:
-                        self.log.exception(e)
-                self.data = []
-
     def getmemoryusage(self):
         """
         Returns allocated memory in bytes
@@ -430,6 +432,12 @@ class MCServer:
                 })
             elif getargs(line.split(" "), 1) == "logged":  # Player Login
                 name = self.stripspecial(getargs(line.split(" "), 0)[0:getargs(line.split(" "), 0).find("[")])
+                eid = int(getargs(line.split(" "), 6))
+                locationtext = getargs(line.split(" ("), 1)[:-1].split(", ")
+                location = int(locationtext[0]), int(locationtext[1], int(locationtext[2]))
+                if self.wrapper.proxy:  # this should be functional even without a proxy
+                    pass  # future population of data to proxy
+                print(locationtext)
                 self.login(name)
             elif getargs(line.split(" "), 1) == "lost":  # Player Logout
                 name = getargs(line.split(" "), 0)

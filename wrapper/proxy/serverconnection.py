@@ -17,6 +17,7 @@ try:  # Manually define an xrange builtin that works indentically on both (to ta
 except NameError:
     xxrange = range
 
+
 class Server:
     def __init__(self, client, wrapper, ip=None, port=None):
         """
@@ -50,6 +51,7 @@ class Server:
         self.packet = None
         self.lastPacketIDs = []
 
+        self.version = self.wrapper.server.protocolVersion
         self._refresh_server_version()
         self.username = self.client.username
 
@@ -65,10 +67,13 @@ class Server:
             self.version = 47
 
         # Determine packet types - currently 1.8 is the lowest version supported.
-        if self.version >= mcpacket.PROTOCOL_1_9REL1:
+        if mcpacket.Server194.end() >= self.version >= mcpacket.Server194.start():  # 1.9.4
+            self.pktSB = mcpacket.Server194
+            self.pktCB = mcpacket.Client194
+        elif mcpacket.Server19.end() >= self.version >= mcpacket.Server19.start():  # 1.9 - 1.9.3 Pre 3
             self.pktSB = mcpacket.Server19
             self.pktCB = mcpacket.Client19
-        else:
+        else:  # 1.8 default
             self.pktSB = mcpacket.Server18
             self.pktCB = mcpacket.Client18
 
@@ -131,7 +136,8 @@ class Server:
     def getPlayerContext(self, username):
         try:
             return self.wrapper.server.players[username]
-        except Exception as e:
+        except Exception as e:  # This could be masking an issue and would result in "False" player objects
+            self.log.error("getPlayerContext failed to get player %s: %s", username, e)
             return False
 
     def flush(self):
@@ -143,7 +149,6 @@ class Server:
                 self.abort = True
                 break
             time.sleep(0.03)
-
 
     def parse(self, pkid):  # client - bound parse ("Server" class connection)
 
@@ -218,6 +223,10 @@ class Server:
             elif pkid == self.pktCB.SPAWN_POSITION:
                 data = self.packet.read("position:spawn")
                 self.wrapper.server.spawnPoint = data["spawn"]
+                if self.client.position == (0, 0, 0):  # this is the actual point of a players "login: to the "server"
+                    self.client.position = data["spawn"]
+                    self.wrapper.events.callevent("player.spawned", {"player":
+                                                                     self.wrapper.server.players[self.client.username]})
                 self.log.trace("(PROXY SERVER) -> Parsed SPAWN_POSITION packet:\n%s", data)
                 return True
 
@@ -254,7 +263,7 @@ class Server:
             elif pkid == self.pktCB.SPAWN_PLAYER:
                 if self.version < mcpacket.PROTOCOL_1_9START:
                     data = self.packet.read("varint:eid|uuid:uuid|int:x|int:y|int:z|byte:yaw|byte:pitch|short:item|rest:metadata")
-                    if data["item"] < 0: # A negative Current Item crashes clients (just in case)
+                    if data["item"] < 0:  # A negative Current Item crashes clients (just in case)
                         data["item"] = 0
                     clientserverid = self.proxy.getClientByOfflineServerUUID(data["uuid"])
                     if clientserverid:
