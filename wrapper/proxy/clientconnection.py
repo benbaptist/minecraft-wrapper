@@ -869,5 +869,6 @@ class ClientState:
     #
     PLAY = 3
 
-    def __init__(self):
-        pass
+
+def __init__(self):
+    pass

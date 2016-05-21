@@ -20,10 +20,15 @@ from hashlib import md5
 import sys
 PY3 = sys.version_info > (3,)
 
+try:  # Manually define an xrange builtin that works identically on both (to take advantage of xrange's speed in 2)
+    xxrange = xrange
+except NameError:
+    xxrange = range
 
-def decode_public_key(bytes):
+
+def decode_public_key(thebytes):
     """Decodes a public RSA key in ASN.1 format as defined by x.509"""
-    return RSA.importKey(bytes)
+    return RSA.importKey(thebytes)
 
 
 def encode_public_key(key):
@@ -81,7 +86,7 @@ class RC4(object):
         self.key = key
         x = 0
         self.box = box = range(256)
-        for i in range(256):  # TODO was xrange Py2-3
+        for i in xxrange(256):
             x = (x + box[i] + ord(key[i % len(key)])) % 256
             box[i], box[x] = box[x], box[i]
         self.x = self.y = 0
@@ -104,22 +109,23 @@ def AES128CFB8(shared_secret):
     return AES.new(shared_secret, AES.MODE_CFB, shared_secret)
 
 
-def _pkcs1_unpad(bytes):
-    pos = bytes.find('\x00')
+def _pkcs1_unpad(thebytes):
+    pos = thebytes.find('\x00')
     if pos > 0:
-        return bytes[pos + 1:]
+        return thebytes[pos + 1:]
 
 
-def _pkcs1_pad(bytes):
-    assert len(bytes) < 117
+def _pkcs1_pad(thebytes):
+    assert len(thebytes) < 117
     padding = ""
-    while len(padding) < 125 - len(bytes):
+    while len(padding) < 125 - len(thebytes):
         byte = Random.get_random_bytes(1)
         if byte != '\x00':
             padding += byte
-    return '\x00\x02%s\x00%s' % (padding, bytes)
+    return '\x00\x02%s\x00%s' % (padding, thebytes)
 
 
+# noinspection PyMethodMayBeStatic
 class PBEWithMD5AndDES(object):
     """PBES1 implementation according to RFC 2898 section 6.1"""
     SALT = '\x0c\x9d\x4a\xe4\x1e\x83\x15\xfc'
@@ -144,6 +150,6 @@ class PBEWithMD5AndDES(object):
 
     def _generate_key(self, key, salt, count, length):
         key = key + salt
-        for i in range(count):  # TODO was xrange Py2-3
+        for _ in xxrange(count):
             key = md5(key).digest()
         return key[:length]
