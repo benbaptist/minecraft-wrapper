@@ -56,7 +56,7 @@ def getjsonfile(filename, directory="./"):
         return False  # bad directory or filename
 
 
-def processcolorcodes(message, py3=False):
+def processcolorcodes(message):
     """
     Used internally to process old-style color-codes with the & symbol, and returns a JSON chat object.
     message received should be string
@@ -215,3 +215,70 @@ def readout(commandtext, description, separator=" - ", pad=15):
     x = '{0: <%d}' % pad
     commandtextpadded = x.format(commandtext)
     print("%s%s%s" % (commstyle(commandtextpadded), separator, descstyle(description)))
+
+
+def secondstohuman(seconds):
+    results = "None at all!"
+    plural = "s"
+    if seconds > 0:
+        results = "%d seconds" % seconds
+    if seconds > 59:
+        if (seconds / 60) == 1:
+            plural = ""
+        results = "%d minute%s" % (seconds / 60, plural)
+    if seconds > 3599:
+        if (seconds / 3600) == 1:
+            plural = ""
+        results = "%d hour%s" % (seconds / 3600, plural)
+    if seconds > 86400:
+        if (seconds / 86400) == 1:
+            plural = ""
+        results = "%s day%s" % (str(seconds / 86400.0), plural)
+    return results
+
+
+def showpage(player, page, items, command, perpage):
+    pagecount = len(items) / perpage
+    if (int(len(items) / perpage)) != (float(len(items)) / perpage):
+        pagecount += 1
+    if page >= pagecount or page < 0:
+        player.message("&cNo such page '%s'!" % str(page + 1))
+        return
+    # Padding, for the sake of making it look a bit nicer
+    player.message(" ")
+    player.message({
+        "text": "--- Showing ",
+        "color": "dark_green",
+        "extra": [{
+            "text": "help",
+            "clickEvent": {
+                "action": "run_command",
+                "value": "/help"
+            }
+        }, {
+            "text": " page %d of %d ---" % (page + 1, pagecount)
+        }]
+    })
+    for i, v in enumerate(items):
+        if not i / perpage == page:
+            continue
+        player.message(v)
+    if pagecount > 1:
+        if page > 0:
+            prevbutton = {
+                "text": "Prev", "underlined": True, "clickEvent":
+                    {"action": "run_command", "value": "%s %d" % (command, page)}
+                }
+        else:
+            prevbutton = {"text": "Prev", "italic": True, "color": "gray"}
+        if page <= pagecount:
+            nextbutton = {
+                "text": "Next", "underlined": True, "clickEvent":
+                    {"action": "run_command", "value": "%s %d" % (command, page + 2)}
+                }
+        else:
+            nextbutton = {"text": "Next", "italic": True, "color": "gray"}
+        player.message({
+                           "text": "--- ", "color": "dark_green", "extra": [prevbutton, {"text": " | "},
+                                                                            nextbutton, {"text": " ---"}]
+                           })

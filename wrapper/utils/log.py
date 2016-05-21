@@ -103,7 +103,8 @@ def loadconfig(configfile="logging.json"):
                 logging.warning("Logging configuration updated (%s) -- creating new logging configuration", configfile)
             else:
                 dictConfig(conf)
-                logging.info("Logging configuration file (%s) located and loaded, logging configuration set!", configfile)
+                logging.info("Logging configuration file (%s) located and loaded, logging configuration set!",
+                             configfile)
         else:
             with open(configfile, "w") as f:
                 f.write(json.dumps(DEFAULT_CONFIG, indent=4, separators=(',', ': ')))

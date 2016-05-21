@@ -88,9 +88,9 @@ class Backups:
             # Check if tar is installed
             which = "where" if platform.system() == "Windows" else "which"
             if not subprocess.call([which, "tar"]) == 0:
-                self.wrapper.events.callevent("wrapper.backupFailure", {"reasonCode": 1,
-                                                                 "reasonText": "Tar is not installed. Please install "
-                                                                               "tar before trying to make backups."})
+                self.wrapper.events.callevent("wrapper.backupFailure",
+                                              {"reasonCode": 1, "reasonText": "Tar is not installed. Please install "
+                                                                              "tar before trying to make backups."})
                 self.log.error("The backup could not begin, because tar does not appear to be installed!")
                 self.log.error("If you are on a Linux-based system, please install it through your preferred package "
                                "manager.")
@@ -137,6 +137,6 @@ class Backups:
                 f.write(json.dumps(self.backups))
 
             if not os.path.exists(self.config["Backups"]["backup-location"] + "/" + filename):
-                self.wrapper.events.callevent("wrapper.backupFailure", {"reasonCode": 2,
-                                                                 "reasonText": "Backup file didn't exist after the tar "
-                                                                               "command executed - assuming failure."})
+                self.wrapper.events.callevent("wrapper.backupFailure",
+                                              {"reasonCode": 2, "reasonText": "Backup file didn't exist after the tar "
+                                                                              "command executed - assuming failure."})

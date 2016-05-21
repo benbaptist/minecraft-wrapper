@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import sys  # unused for now
-
 """ 
 Custom Wrapper Exception Classes
 """
