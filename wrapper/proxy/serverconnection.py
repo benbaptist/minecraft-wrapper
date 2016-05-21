@@ -17,6 +17,7 @@ try:  # Manually define an xrange builtin that works indentically on both (to ta
 except NameError:
     xxrange = range
 
+
 class Server:
     def __init__(self, client, wrapper, ip=None, port=None):
         """
@@ -65,10 +66,13 @@ class Server:
             self.version = 47
 
         # Determine packet types - currently 1.8 is the lowest version supported.
-        if self.version >= mcpacket.PROTOCOL_1_9REL1:
+        if mcpacket.Server194.end <= self.version >= mcpacket.Server194.start:  # 1.9.4
+            self.pktSB = mcpacket.Server194
+            self.pktCB = mcpacket.Client194
+        elif mcpacket.Server19.end <= self.version >= mcpacket.Server19.start:  # 1.9 - 1.9.3 Pre 3
             self.pktSB = mcpacket.Server19
             self.pktCB = mcpacket.Client19
-        else:
+        else:  # 1.8 default
             self.pktSB = mcpacket.Server18
             self.pktCB = mcpacket.Client18
 
@@ -143,7 +147,6 @@ class Server:
                 self.abort = True
                 break
             time.sleep(0.03)
-
 
     def parse(self, pkid):  # client - bound parse ("Server" class connection)
 
