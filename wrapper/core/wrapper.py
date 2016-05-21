@@ -86,7 +86,7 @@ class Wrapper:
             return
 
     def start(self):
-        # Reload configuration each time server starts in order to detect changes
+        # Reload configuration each time wrapper starts in order to detect changes
         self.configManager.loadconfig()
         self.config = self.configManager.config
 
@@ -96,7 +96,7 @@ class Wrapper:
         self.api = API(self, "Wrapper.py")
         self._registerwrappershelp()
 
-        # This is not the actual server... the MCServer class is
+        # This is not the actual server... the MCServer class is a console wherein the server is started
         self.server = MCServer(sys.argv, self.log, self.configManager.config, self)
         self.server.init()
 
@@ -119,13 +119,14 @@ class Wrapper:
                                "installed: pkg_resources")
                 self.log.error("Hint: http://stackoverflow.com/questions/7446187")
 
+        # This is passed to MCserver console....
         if len(sys.argv) < 2:
             self.server.args = self.configManager.config["General"]["command"].split(" ")
         else:
             # I think this allows you to run the server java command directly from the python prompt
             self.server.args = sys.argv[1:]
 
-        consoledaemon = threading.Thread(target=self.console, args=())
+        consoledaemon = threading.Thread(target=self.parseconsoleinput, args=())
         consoledaemon.daemon = True
         consoledaemon.start()
 
@@ -153,7 +154,7 @@ class Wrapper:
         self.server.__handle_server__()
         self.plugins.disableplugins()
 
-    def console(self):
+    def parseconsoleinput(self):
         while not self.halt:
             try:
                 consoleinput = rawinput("")

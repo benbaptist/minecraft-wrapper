@@ -336,6 +336,8 @@ class MCServer:
                                          stdin=subprocess.PIPE, universal_newlines=True)
             self.players = {}
             self.wrapper.accepteula()  # Auto accept eula
+
+            # The server loop
             while True:
                 time.sleep(0.1)
                 if self.proc.poll() is not None:
