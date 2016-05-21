@@ -26,12 +26,12 @@ try:
 except ImportError:
     requests = False
 
-try:  # Manually define an xrange builtin that works indentically on both (to take advantage of xrange's speed in 2)
+try:  # Manually define an xrange builtin that works identically on both (to take advantage of xrange's speed in 2)
     xxrange = xrange
 except NameError:
     xxrange = range
 
-UNIVERSAL_CONNECT = False  # tells the client "same version as you" or does not disconnect dissimilar clients
+UNIVERSAL_CONNECT = False  # will tell the clientconnection not to disconnect dissimilar clients
 HIDDEN_OPS = ["SurestTexas00", "BenBaptist"]
 
 
@@ -242,7 +242,7 @@ class Client:
         if mcpacket.Server194.end <= self.serverversion >= mcpacket.Server194.start:  # 1.9.4
             self.pktSB = mcpacket.Server194
             self.pktCB = mcpacket.Client194
-        elif mcpacket.Server19.end <= self.version >= mcpacket.Server19.start:  # 1.9 - 1.9.3 Pre 3
+        elif mcpacket.Server19.end <= self.serverversion >= mcpacket.Server19.start:  # 1.9 - 1.9.3 Pre 3
             self.pktSB = mcpacket.Server19
             self.pktCB = mcpacket.Client19
         else:  # 1.8 default
