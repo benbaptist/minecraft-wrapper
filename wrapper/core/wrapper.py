@@ -2,6 +2,7 @@
 
 # py3 non-compliant at runtime
 
+import json
 import signal
 import hashlib
 import threading
@@ -86,6 +87,7 @@ class Wrapper:
             return
 
     def start(self):
+        """ wrapper should only start ONCE... old code made it restart over when only a server needed restarting"""
         # Reload configuration each time wrapper starts in order to detect changes
         self.configManager.loadconfig()
         self.config = self.configManager.config
@@ -126,10 +128,12 @@ class Wrapper:
             # I think this allows you to run the server java command directly from the python prompt
             self.server.args = sys.argv[1:]
 
+        # Console Daemon runs while not wrapper.halt (here; self.halt)
         consoledaemon = threading.Thread(target=self.parseconsoleinput, args=())
         consoledaemon.daemon = True
         consoledaemon.start()
 
+        # Timer also runs while not wrapper.halt
         t = threading.Thread(target=self.timer, args=())
         t.daemon = True
         t.start()
@@ -151,7 +155,12 @@ class Wrapper:
             t.daemon = True
             t.start()
 
+        self.bootserver()
+
+    def bootserver(self):
+        # This boots the server and loops in it
         self.server.__handle_server__()
+        # until it stops
         self.plugins.disableplugins()
 
     def parseconsoleinput(self):
@@ -646,3 +655,4 @@ class Wrapper:
                 self.events.callevent("timer.second", None)
                 t = time.time()
             time.sleep(0.05)
+            # self.events.callevent("timer.tick", None)  # don't really advise the use of this timer

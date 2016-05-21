@@ -66,7 +66,7 @@ class Minecraft:
                 # remove any old bad objects
                 os.remove("wrapper-data/players/" + uuidf)
                 continue
-            username = self.wrapper.getusernamebyuuid(puuid)
+            username = self.wrapper.getusername(puuid)
             if type(username) != str:
                 continue
             if online:

@@ -51,6 +51,7 @@ class Server:
         self.packet = None
         self.lastPacketIDs = []
 
+        self.version = self.wrapper.server.protocolVersion
         self._refresh_server_version()
         self.username = self.client.username
 
@@ -66,10 +67,10 @@ class Server:
             self.version = 47
 
         # Determine packet types - currently 1.8 is the lowest version supported.
-        if mcpacket.Server194.end <= self.version >= mcpacket.Server194.start:  # 1.9.4
+        if mcpacket.Server194.end() >= self.version >= mcpacket.Server194.start():  # 1.9.4
             self.pktSB = mcpacket.Server194
             self.pktCB = mcpacket.Client194
-        elif mcpacket.Server19.end <= self.version >= mcpacket.Server19.start:  # 1.9 - 1.9.3 Pre 3
+        elif mcpacket.Server19.end() >= self.version >= mcpacket.Server19.start():  # 1.9 - 1.9.3 Pre 3
             self.pktSB = mcpacket.Server19
             self.pktCB = mcpacket.Client19
         else:  # 1.8 default
@@ -257,7 +258,7 @@ class Server:
             elif pkid == self.pktCB.SPAWN_PLAYER:
                 if self.version < mcpacket.PROTOCOL_1_9START:
                     data = self.packet.read("varint:eid|uuid:uuid|int:x|int:y|int:z|byte:yaw|byte:pitch|short:item|rest:metadata")
-                    if data["item"] < 0: # A negative Current Item crashes clients (just in case)
+                    if data["item"] < 0:  # A negative Current Item crashes clients (just in case)
                         data["item"] = 0
                     clientserverid = self.proxy.getClientByOfflineServerUUID(data["uuid"])
                     if clientserverid:

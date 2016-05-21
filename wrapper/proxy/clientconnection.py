@@ -62,12 +62,14 @@ class Client:
         self.config = wrapper.config
         self.packet = Packet(self.socket, self)
 
-        self._refresh_server_version()
         self.verifyToken = encryption.generate_challenge_token()
         self.serverID = encryption.generate_server_id()
         self.MOTD = {}
 
+        self.serverversion = self.wrapper.server.protocolVersion
         self.clientversion = self.serverversion  # client will reset this later, if need be..
+        self._refresh_server_version()
+
         self.abort = False
         self.time_server_pinged = time.time()
         self.time_client_responded = time.time()
@@ -239,10 +241,10 @@ class Client:
             self.serverversion = 47
 
         # Determine packet types - currently 1.8 is the lowest version supported.
-        if mcpacket.Server194.end <= self.serverversion >= mcpacket.Server194.start:  # 1.9.4
+        if mcpacket.Server194.end() >= self.serverversion >= mcpacket.Server194.start():  # 1.9.4
             self.pktSB = mcpacket.Server194
             self.pktCB = mcpacket.Client194
-        elif mcpacket.Server19.end <= self.serverversion >= mcpacket.Server19.start:  # 1.9 - 1.9.3 Pre 3
+        elif mcpacket.Server19.end() >= self.serverversion >= mcpacket.Server19.start():  # 1.9 - 1.9.3 Pre 3
             self.pktSB = mcpacket.Server19
             self.pktCB = mcpacket.Client19
         else:  # 1.8 default
