@@ -188,8 +188,6 @@ class Player:
         the oppportunity to parse a suitable packet to get the information!
         """
         # TODO these need a better solution; perhaps reading the player.dat file to populate the defaults
-        print(self.getClient().position)
-        print(self.getClient().head)
         return self.getClient().position + self.getClient().head
 
     def getGamemode(self):

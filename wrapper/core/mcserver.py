@@ -432,6 +432,12 @@ class MCServer:
                 })
             elif getargs(line.split(" "), 1) == "logged":  # Player Login
                 name = self.stripspecial(getargs(line.split(" "), 0)[0:getargs(line.split(" "), 0).find("[")])
+                eid = int(getargs(line.split(" "), 6))
+                locationtext = getargs(line.split(" ("), 1)[:-1].split(", ")
+                location = int(locationtext[0]), int(locationtext[1], int(locationtext[2]))
+                if self.wrapper.proxy:  # this should be functional even without a proxy
+                    pass  # future population of data to proxy
+                print(locationtext)
                 self.login(name)
             elif getargs(line.split(" "), 1) == "lost":  # Player Logout
                 name = getargs(line.split(" "), 0)

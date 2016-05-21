@@ -136,7 +136,8 @@ class Server:
     def getPlayerContext(self, username):
         try:
             return self.wrapper.server.players[username]
-        except Exception as e:
+        except Exception as e:  # This could be masking an issue and would result in "False" player objects
+            self.log.error("getPlayerContext failed to get player %s: %s", username, e)
             return False
 
     def flush(self):
@@ -222,6 +223,10 @@ class Server:
             elif pkid == self.pktCB.SPAWN_POSITION:
                 data = self.packet.read("position:spawn")
                 self.wrapper.server.spawnPoint = data["spawn"]
+                if self.client.position == (0, 0, 0):  # this is the actual point of a players "login: to the "server"
+                    self.client.position = data["spawn"]
+                    self.wrapper.events.callevent("player.spawned", {"player":
+                                                                     self.wrapper.server.players[self.client.username]})
                 self.log.trace("(PROXY SERVER) -> Parsed SPAWN_POSITION packet:\n%s", data)
                 return True
 

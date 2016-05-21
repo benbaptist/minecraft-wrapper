@@ -2,7 +2,6 @@
 
 # py3 non-compliant at runtime
 
-import json
 import signal
 import hashlib
 import threading
