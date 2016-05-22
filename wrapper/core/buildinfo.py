@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# p2 and py3 compliant
 
-__version__ = '0.7.7'
-__build__ = 111
+__version__ = [0, 8, 0]
+__build__ = 113
 __branch__ = 'dev'
