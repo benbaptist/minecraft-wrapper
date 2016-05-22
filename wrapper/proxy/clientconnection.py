@@ -168,7 +168,7 @@ class Client:
         else:
             if UNIVERSAL_CONNECT:
                 self.server.packet.send(0x00, "varint|string|ushort|varint",
-                                        (self.wrapper.server.protocolVersion, "localhost",
+                                        (self.wrapper.javaserver.protocolVersion, "localhost",
                                          self.config["Proxy"]["server-port"], 2))
             else:
                 self.server.packet.send(0x00, "varint|string|ushort|varint",
@@ -764,7 +764,7 @@ class Client:
                 self.log.trace("(PROXY CLIENT) -> Parsed 0x00 packet with client state HANDSHAKE:\n%s", data)
                 self.clientversion = data["version"]
                 self._refresh_server_version()
-                if not self.wrapper.server.state == 2:  # TODO - one day, allow connection despite this
+                if not self.wrapper.javaserver.state == 2:  # TODO - one day, allow connection despite this
                     self.disconnect("Server has not finished booting. Please try connecting again in a few seconds")
                     return False
                 if self.wrapper.javaserver.protocolVersion == -1:  # TODO make sure wrapper.mcserver.protocolVersion returns

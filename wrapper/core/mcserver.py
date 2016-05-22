@@ -249,12 +249,10 @@ class MCServer:
         """
         Called when a player logs in
         """
-        try:
-            if username not in self.players:
-                self.players[username] = Player(username, self.wrapper)
-            self.wrapper.events.callevent("player.login", {"player": self.getplayer(username)})
-        except Exception as e:
-            self.log.exception(e)
+        if username not in self.players:
+            self.players[username] = Player(username, self.wrapper)
+        time.sleep(1)
+        self.wrapper.events.callevent("player.login", {"player": self.getplayer(username)})
 
     def logout(self, username):
         """
