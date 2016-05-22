@@ -82,8 +82,6 @@ def processcolorcodes(messagestring):
     url = False
     color = "white"
     current = ""
-    print("The message: \n%s" % message)
-    print("The message type: %s" % type(message))
 
     it = iter(range(len(message)))
     for i in it:
@@ -157,8 +155,6 @@ def processcolorcodes(messagestring):
         "italic": italic,
         "strikethrough": strikethrough
     })
-
-    print(json.dumps({"text": "", "extra": extras}))
     return json.dumps({"text": "", "extra": extras})
 
 
