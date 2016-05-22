@@ -231,8 +231,7 @@ class Server:
                 self.wrapper.server.spawnPoint = data["spawn"]
                 if self.client.position == (0, 0, 0):  # this is the actual point of a players "login: to the "server"
                     self.client.position = data["spawn"]
-                    self.wrapper.events.callevent("player.spawned", {"player":
-                                                                     self.wrapper.server.players[self.client.username]})
+                    self.wrapper.events.callevent("player.spawned", {"player": self.client.getPlayerObject()})
                 self.log.trace("(PROXY SERVER) -> Parsed SPAWN_POSITION packet:\n%s", data)
                 return True
 
