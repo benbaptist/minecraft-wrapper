@@ -1,12 +1,18 @@
 # -*- coding: utf-8 -*-
 
 import os
+import sys
 import json
 import time
 import datetime
 from api.base import API
 
 import utils.termcolors as termcolors
+
+try:  # Manually define an xrange builtin that works indentically on both (to take advantage of xrange's speed in 2)
+    xxrange = xrange
+except NameError:
+    xxrange = range
 
 
 def epoch_to_timestr(epoch_time):
@@ -56,12 +62,17 @@ def getjsonfile(filename, directory="./"):
         return False  # bad directory or filename
 
 
-def processcolorcodes(message):
+def processcolorcodes(messagestring):
     """
     Used internally to process old-style color-codes with the & symbol, and returns a JSON chat object.
     message received should be string
     """
-    message = message  # .encode('ascii', 'ignore')  # encode to bytes
+    py3 = sys.version_info > (3,)
+    if not py3:
+        message = messagestring.encode('ascii', 'ignore')
+    else:
+        message = messagestring  # .encode('ascii', 'ignore')  # encode to bytes
+
     extras = []
     bold = False
     italic = False
@@ -71,13 +82,14 @@ def processcolorcodes(message):
     url = False
     color = "white"
     current = ""
+    print("The message: \n%s" % message)
+    print("The message type: %s" % type(message))
 
     it = iter(range(len(message)))
-
     for i in it:
         char = message[i]
 
-        if char is not "&":
+        if char not in ("&", u'&'):
             if char == " ":
                 url = False
             current += char
@@ -131,10 +143,10 @@ def processcolorcodes(message):
                 url = False
                 color = "white"
 
-            try:  # ugly but probably works  # TODO find a better solution
-                it.next()
-            except NameError:
+            if sys.version_info > (3,):
                 next(it)
+            else:
+                it.next()
 
     extras.append({
         "text": current,
@@ -145,6 +157,8 @@ def processcolorcodes(message):
         "italic": italic,
         "strikethrough": strikethrough
     })
+
+    print(json.dumps({"text": "", "extra": extras}))
     return json.dumps({"text": "", "extra": extras})
 
 
