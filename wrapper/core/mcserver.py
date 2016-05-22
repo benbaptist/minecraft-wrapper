@@ -252,6 +252,7 @@ class MCServer:
         if username not in self.players:
             self.players[username] = Player(username, self.wrapper)
         time.sleep(1)
+        print("playerlist is now:\n%s" % self.players)
         self.wrapper.events.callevent("player.login", {"player": self.getplayer(username)})
 
     def logout(self, username):
