@@ -14,7 +14,7 @@ import random
 import utils.encryption as encryption
 import proxy.mcpacket as mcpacket
 
-from proxy.serverconnection import Server
+from proxy.serverconnection import ServerConnection
 from proxy.packet import Packet
 from core.mcuuid import MCUUID
 from utils.helpers import processcolorcodes
@@ -130,7 +130,7 @@ class Client:
         if self.server is not None:
             self.address = (ip, port)
         if ip is not None:
-            self.server_temp = Server(self, self.wrapper, ip, port)
+            self.server_temp = ServerConnection(self, self.wrapper, ip, port)
             try:
                 self.server_temp.connect()
                 self.server.close(kill_client=False)
@@ -153,7 +153,7 @@ class Client:
                 self.address = None
                 return
         else:
-            self.server = Server(self, self.wrapper, ip, port)
+            self.server = ServerConnection(self, self.wrapper, ip, port)
             try:
                 self.server.connect()
             except Exception as e:
