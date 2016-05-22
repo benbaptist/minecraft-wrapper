@@ -6,20 +6,20 @@ wrapper's internal methods and stick strictly to the documented API..
  (self.wrapper.permissions, etc) by plugins will be broken with this version.
 
 - a few new methods were added to the API:
--- [api.minecraft] lookupName (uuid) Get name of player with UUID "uuid"
--- [api.minecraft] lookupUUID (name) Get UUID of player "name" - both will poll Mojang or the
+- [api.minecraft] lookupName (uuid) Get name of player with UUID "uuid"
+- [api.minecraft] lookupUUID (name) Get UUID of player "name" - both will poll Mojang or the
 wrapper cache and return _online_ versions
--- [api.player]:
---- "name" and "uuid" are deprecated properties that reference "username" and "mojangUuid"
+- [api.player]:
+- "name" and "uuid" are deprecated properties that reference "username" and "mojangUuid"
 respectively.
---- added player offlineUuid (offline server UUID) and ipaddress (the actual IP from proxy)
+- added player offlineUuid (offline server UUID) and ipaddress (the actual IP from proxy)
 self variables.
---- quicker isOp_fast() - similar to .isOP(), but does not read ops.json file each time.  For use in
+- quicker isOp_fast() - similar to .isOP(), but does not read ops.json file each time.  For use in
 iterative loops where re-reading a file is a performance issue.  Refreshes at each player login.
---- refreshOps() - refresh isOp_fast dictionary.
---- sendCommand(self, command, args) -Sends a command to the wrapper interface as the player
+- refreshOps() - refresh isOp_fast dictionary.
+- sendCommand(self, command, args) -Sends a command to the wrapper interface as the player
 instance. example: `player.sendCommand("perms", ("users", "SurestTexas00", "info"))`
---- self.clientboundPackets / serverboundPackets - contain the packet class constants being used
+- self.clientboundPackets / serverboundPackets - contain the packet class constants being used
 by wrapper.  Usage example: `player.getClient().packet.send(player.clientboundPackets.PLAYER_ABILITIES,
 "byte|float|float", (bitfield, self.fly_speed, self.field_of_view))` renaming these in the plugin
 code is fine:
@@ -27,8 +27,8 @@ code is fine:
 pktcb = player.clientboundPackets
 player.getClient().packet.send(pktcb.PLAYER_ABILITIES ...)
 ```
---- setPlayerAbilities(self, fly) - pass True to set player in flying mode.
--- added event "player.Spawn" - occurs after player.login; when the player actually
+- setPlayerAbilities(self, fly) - pass True to set player in flying mode.
+- added event "player.Spawn" - occurs after player.login; when the player actually
 spawns (i.e., when the player actaully sees something other than the "login, building terrain..")
 
 
