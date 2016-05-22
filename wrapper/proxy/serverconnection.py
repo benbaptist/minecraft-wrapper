@@ -52,7 +52,7 @@ class ServerConnection:
         self.packet = None
         self.lastPacketIDs = []
 
-        self.version = self.wrapper.server.protocolVersion
+        self.version = self.wrapper.javaserver.protocolVersion
         self._refresh_server_version()
         self.username = self.client.username
 
@@ -61,7 +61,7 @@ class ServerConnection:
     def _refresh_server_version(self):
         # Get serverversion for mcpacket use
         try:
-            self.version = self.wrapper.server.protocolVersion
+            self.version = self.wrapper.javaserver.protocolVersion
         except AttributeError:
             # Default to 1.8 if no server is running
             # This can be modified to any version
@@ -138,7 +138,7 @@ class ServerConnection:
 
     def getPlayerContext(self, username):
         try:
-            return self.wrapper.server.players[username]
+            return self.wrapper.javaserver.players[username]
         except Exception as e:  # This could be masking an issue and would result in "False" player objects
             self.log.error("getPlayerContext failed to get player %s: %s", username, e)
             return False
@@ -222,13 +222,13 @@ class ServerConnection:
 
             elif pkid == self.pktCB.TIME_UPDATE:
                 data = self.packet.read("long:worldage|long:timeofday")
-                self.wrapper.server.timeofday = data["timeofday"]
+                self.wrapper.javaserver.timeofday = data["timeofday"]
                 self.log.trace("(PROXY SERVER) -> Parsed TIME_UPDATE packet:\n%s", data)
                 return True
 
             elif pkid == self.pktCB.SPAWN_POSITION:
                 data = self.packet.read("position:spawn")
-                self.wrapper.server.spawnPoint = data["spawn"]
+                self.wrapper.javaserver.spawnPoint = data["spawn"]
                 if self.client.position == (0, 0, 0):  # this is the actual point of a players "login: to the "server"
                     self.client.position = data["spawn"]
                     self.wrapper.events.callevent("player.spawned", {"player": self.client.getPlayerObject()})
@@ -316,9 +316,9 @@ class ServerConnection:
                 eid, type_, x, y, z, pitch, yaw = \
                     data["eid"], data["type_"], data["x"], data["y"], data["z"], data["pitch"], data["yaw"]
                 self.log.trace("(PROXY SERVER) -> Parsed SPAWN_OBJECT packet:\n%s", data)
-                if not self.wrapper.server.world:
+                if not self.wrapper.javaserver.world:
                     return
-                self.wrapper.server.world.entities[data["eid"]] = Entity(
+                self.wrapper.javaserver.world.entities[data["eid"]] = Entity(
                         eid, entityuuid, type_, (x, y, z), (pitch, yaw), True)
                 return True
 
@@ -337,10 +337,10 @@ class ServerConnection:
                     data["eid"], data["type_"], data["x"], data["y"], data["z"], data["pitch"], data["yaw"], \
                     data["head_pitch"]
                 self.log.trace("(PROXY SERVER) -> Parsed SPAWN_MOB packet:\n%s", data)
-                if not self.wrapper.server.world:
+                if not self.wrapper.javaserver.world:
                     return
                 # this will need entity UUID's added at some point
-                self.wrapper.server.world.entities[data["eid"]] = Entity(eid, entityuuid, type_, (x, y, z),
+                self.wrapper.javaserver.world.entities[data["eid"]] = Entity(eid, entityuuid, type_, (x, y, z),
                                                                          (pitch, yaw, head_pitch), False)
                 return True
 
@@ -350,10 +350,10 @@ class ServerConnection:
                     return True
                 data = self.packet.read("varint:eid|byte:dx|byte:dy|byte:dz")
                 self.log.trace("(PROXY SERVER) -> Parsed ENTITY_RELATIVE_MOVE packet:\n%s", data)
-                if not self.wrapper.server.world:
+                if not self.wrapper.javaserver.world:
                     return
-                if self.wrapper.server.world.getEntityByEID(data["eid"]) is not None:
-                    self.wrapper.server.world.getEntityByEID(data["eid"]).moveRelative((data["dx"],
+                if self.wrapper.javaserver.world.getEntityByEID(data["eid"]) is not None:
+                    self.wrapper.javaserver.world.getEntityByEID(data["eid"]).moveRelative((data["dx"],
                                                                                         data["dy"], data["dz"]))
                 return True
 
@@ -363,10 +363,10 @@ class ServerConnection:
                     return True
                 data = self.packet.read("varint:eid|int:x|int:y|int:z|byte:yaw|byte:pitch")
                 self.log.trace("(PROXY SERVER) -> Parsed ENTITY_TELEPORT packet:\n%s", data)
-                if not self.wrapper.server.world:
+                if not self.wrapper.javaserver.world:
                     return
-                if self.wrapper.server.world.getEntityByEID(data["eid"]) is not None:
-                    self.wrapper.server.world.getEntityByEID(data["eid"]).teleport((data["x"], data["y"], data["z"]))
+                if self.wrapper.javaserver.world.getEntityByEID(data["eid"]) is not None:
+                    self.wrapper.javaserver.world.getEntityByEID(data["eid"]).teleport((data["x"], data["y"], data["z"]))
                 return True
 
             elif pkid == self.pktCB.ENTITY_HEAD_LOOK:
@@ -399,10 +399,10 @@ class ServerConnection:
                     else:
                         self.wrapper.events.callevent("player.mount", {"player": player, "vehicle_id": vid,
                                                                        "leash": leash})
-                        if not self.wrapper.server.world:
+                        if not self.wrapper.javaserver.world:
                             return
-                        self.client.riding = self.wrapper.server.world.getEntityByEID(vid)
-                        self.wrapper.server.world.getEntityByEID(vid).rodeBy = self.client
+                        self.client.riding = self.wrapper.javaserver.world.getEntityByEID(vid)
+                        self.wrapper.javaserver.world.getEntityByEID(vid).rodeBy = self.client
                     if eid != self.client.eid:
                         self.client.packet.send(self.pktCB.ATTACH_ENTITY, "varint|varint|bool",
                                                 (self.client.eid, vid, leash))
