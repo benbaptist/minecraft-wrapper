@@ -36,3 +36,22 @@ build/version.json
 # PyCharm project
 *.idea
 test.py
+
+#local test server environment
+wrapper-plugins
+backups
+plugins
+logs
+AllTheWorld
+wrapper-data
+banned-*
+eula.txt
+logging.json
+minecraft_server.*
+ops.json
+server-icon.png
+usercache.json
+whitelist.json
+wrapper.properties
+server.properties
+
