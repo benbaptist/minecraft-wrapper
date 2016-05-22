@@ -377,12 +377,13 @@ class Packet:
 
     def recv(self, length):
         if length > 200:
-            d = ""
+            d = bytearray  # TODO  PY2-3 COMPAT MODEL!!  Will use <str> for PY2 and <bytes> for PY3 !!!!.
+            d = b""        # TODO
             while len(d) < length:
                 m = length - len(d)
                 if m > 5000:
                     m = 5000
-                d += self.socket.recv(m)
+                d += self.socket.recv(m)  # TODO self.socket.recv(m) receives bytes in PY3, <str> in PY2
         else:
             d = self.socket.recv(length)
             if len(d) == 0:
