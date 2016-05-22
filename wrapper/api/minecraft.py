@@ -145,7 +145,7 @@ class Minecraft:
             except Exception:
                 pass
         try:
-            self.wrapper.server.broadcast(message)
+            self.wrapper.javaserver.broadcast(message)
         except Exception:
             pass
 
@@ -162,7 +162,7 @@ class Minecraft:
         the player is not logged in.
         """
         try:
-            return self.wrapper.server.players[str(username)]
+            return self.wrapper.javaserver.players[str(username)]
         except Exception as e:
             self.log.error("No such player %s is logged in:\n%s", username, e)
 
@@ -190,7 +190,7 @@ class Minecraft:
     def getLevelInfo(self, worldname=False):
         """ Return an NBT object of the world's level.dat. """
         if not worldname:
-            worldname = self.wrapper.server.worldName
+            worldname = self.wrapper.javaserver.worldName
         if not worldname:
             raise Exception("Server Uninitiated")
         f = NBTFile("%s/level.dat" % worldname, "rb")
@@ -207,7 +207,7 @@ class Minecraft:
 
     def getServer(self):
         """ Returns the server context. """
-        return self.wrapper.server
+        return self.wrapper.javaserver
 
     def getWorld(self):
         """ Returns the world context. """

@@ -22,7 +22,7 @@ class Player:
     def __init__(self, username, wrapper):
 
         self.wrapper = wrapper
-        self.server = wrapper.server
+        self.javaserver = wrapper.javaserver
         self.permissions = wrapper.permissions
         self.log = wrapper.log
 
@@ -128,7 +128,7 @@ class Player:
         Returns: Nothing; passes the command to console as and "execute" command.
 
         """
-        self.wrapper.server.console("execute %s ~ ~ ~ %s" % (self.name, string))
+        self.wrapper.javaserver.console("execute %s ~ ~ ~ %s" % (self.name, string))
 
     def sendCommand(self, command, args):
         """
@@ -215,7 +215,7 @@ class Player:
         """
         if gm in (0, 1, 2, 3):
             self.client.gamemode = gm
-            self.wrapper.server.console("gamemode %d %s" % (gm, self.username))
+            self.wrapper.javaserver.console("gamemode %d %s" % (gm, self.username))
 
     def setResourcePack(self, url, hashrp=""):
         """
@@ -264,9 +264,9 @@ class Player:
     # region Visual notifications
     def message(self, message=""):
         if isinstance(message, dict):
-            self.wrapper.server.console("tellraw %s %s" % (self.username, json.dumps(message)))
+            self.wrapper.javaserver.console("tellraw %s %s" % (self.username, json.dumps(message)))
         else:
-            self.wrapper.server.console("tellraw %s %s" % (self.username, processcolorcodes(message)))
+            self.wrapper.javaserver.console("tellraw %s %s" % (self.username, processcolorcodes(message)))
 
     def actionMessage(self, message=""):
         if self.getClient().version > mcpacket.PROTOCOL_1_8START:

@@ -126,8 +126,8 @@ class Web:
         while not self.wrapper.halt:
             while len(self.memoryGraph) > 200:
                 del self.memoryGraph[0]
-            if self.wrapper.server.getmemoryusage():
-                self.memoryGraph.append([time.time(), self.wrapper.server.getmemoryusage()])
+            if self.wrapper.javaserver.getmemoryusage():
+                self.memoryGraph.append([time.time(), self.wrapper.javaserver.getmemoryusage()])
             time.sleep(1)
 
     def checkLogin(self, password):
@@ -278,10 +278,10 @@ class WebClient:
             if not self.wrapper.config["Web"]["public-stats"]:
                 return EOFError  # Why are we returning error objects and not just raising them?
             players = []
-            for i in self.wrapper.server.players:
-                players.append({"name": i, "loggedIn": self.wrapper.server.players[i].loggedIn,
-                                "uuid": self.wrapper.server.players[i].uuid.string})
-            return {"playerCount": len(self.wrapper.server.players), "players": players}
+            for i in self.wrapper.javaserver.players:
+                players.append({"name": i, "loggedIn": self.wrapper.javaserver.players[i].loggedIn,
+                                "uuid": self.wrapper.javaserver.players[i].uuid.string})
+            return {"playerCount": len(self.wrapper.javaserver.players), "players": players}
         if action == "login":
             password = get("password")
             rememberme = get("remember-me")
@@ -402,12 +402,12 @@ class WebClient:
         if action == "admin_stats":
             if not self.web.validateKey(get("key")):
                 return EOFError
-            if not self.wrapper.server:
+            if not self.wrapper.javaserver:
                 return
             refreshtime = float(get("last_refresh"))
             players = []
-            for i in self.wrapper.server.players:
-                player = self.wrapper.server.players[i]
+            for i in self.wrapper.javaserver.players:
+                player = self.wrapper.javaserver.players[i]
                 players.append({
                     "name": i,
                     "loggedIn": player.loggedIn,
@@ -471,28 +471,28 @@ class WebClient:
             #   if i == 9: break
             #   topPlayers.sort(); topPlayers.reverse()
             return {
-                "playerCount": [len(self.wrapper.server.players), self.wrapper.server.maxPlayers],
+                "playerCount": [len(self.wrapper.javaserver.players), self.wrapper.javaserver.maxPlayers],
                 "players": players,
                 "plugins": plugins,
-                "server_state": self.wrapper.server.state,
+                "server_state": self.wrapper.javaserver.state,
                 "wrapper_build": self.wrapper.getbuildstring(),
                 "console": consolescrollback,
                 "chat": chatscrollback,
-                "level_name": self.wrapper.server.worldName,
-                "server_version": self.wrapper.server.version,
-                "motd": self.wrapper.server.motd,
+                "level_name": self.wrapper.javaserver.worldName,
+                "server_version": self.wrapper.javaserver.version,
+                "motd": self.wrapper.javaserver.motd,
                 "refresh_time": time.time(),
                 "server_name": self.wrapper.config["General"]["server-name"],
-                "server_memory": self.wrapper.server.getmemoryusage(),
+                "server_memory": self.wrapper.javaserver.getmemoryusage(),
                 "server_memory_graph": memorygraph,
-                "world_size": self.wrapper.server.worldSize,
-                "disk_avail": self.wrapper.server.getstorageavailable("."),
+                "world_size": self.wrapper.javaserver.worldSize,
+                "disk_avail": self.wrapper.javaserver.getstorageavailable("."),
                 "topPlayers": topplayers
             }
         if action == "console":
             if not self.web.validateKey(get("key")):
                 return EOFError
-            self.wrapper.server.console(get("execute"))
+            self.wrapper.javaserver.console(get("execute"))
             self.log.warning("[%s] Executed: %s", self.addr[0], get("execute"))
             return True
         if action == "chat":
@@ -500,7 +500,7 @@ class WebClient:
                 return EOFError
             message = get("message")
             self.web.chatScrollback.append((time.time(), {"type": "raw", "payload": "[WEB ADMIN] " + message}))
-            self.wrapper.server.broadcast("&c[WEB ADMIN]&r " + message)
+            self.wrapper.javaserver.broadcast("&c[WEB ADMIN]&r " + message)
             return True
         if action == "kick_player":
             if not self.web.validateKey(get("key")):
@@ -508,7 +508,7 @@ class WebClient:
             player = get("player")
             reason = get("reason")
             self.log.warning("[%s] %s was kicked with reason: %s", self.addr[0], player, reason)
-            self.wrapper.server.console("kick %s %s" % (player, reason))
+            self.wrapper.javaserver.console("kick %s %s" % (player, reason))
             return True
         if action == "ban_player":
             if not self.web.validateKey(get("key")):
@@ -516,7 +516,7 @@ class WebClient:
             player = get("player")
             reason = get("reason")
             self.log.warning("[%s] %s was banned with reason: %s", self.addr[0], player, reason)
-            self.wrapper.server.console("ban %s %s" % (player, reason))
+            self.wrapper.javaserver.console("ban %s %s" % (player, reason))
             return True
         if action == "change_plugin":
             if not self.web.validateKey(get("key")):
@@ -544,21 +544,21 @@ class WebClient:
             atype = get("action")
             if atype == "stop":
                 reason = get("reason")
-                self.wrapper.server.stop(reason)
+                self.wrapper.javaserver.stop(reason)
                 self.log.warning("[%s] Server stop with reason: %s", self.addr[0], reason)
                 return "success"
             elif atype == "restart":
                 reason = get("reason")
-                self.wrapper.server.restart(reason)
+                self.wrapper.javaserver.restart(reason)
                 self.log.warning("[%s] Server restart with reason: %s", self.addr[0], reason)
                 return "success"
             elif atype == "start":
                 reason = get("reason")
-                self.wrapper.server.start()
+                self.wrapper.javaserver.start()
                 self.log.warning("[%s] Server started", self.addr[0])
                 return "success"
             elif atype == "kill":
-                self.wrapper.server.kill()
+                self.wrapper.javaserver.kill()
                 self.log.warning("[%s] Server killed.", self.addr[0])
                 return "success"
             return {"error": "invalid_server_action"}
