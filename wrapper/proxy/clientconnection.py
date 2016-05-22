@@ -222,8 +222,9 @@ class Client:
     def getPlayerObject(self):
         if self.username in self.wrapper.server.players:
             return self.wrapper.server.players[self.username]
-        print(self.wrapper.server.players)
-        print(self.username)
+        self.log.error("In playerlist:\n%s\nI could not locate player: %s\n"
+                       "This resulted in setting the player object to FALSE!",
+                       self.wrapper.server.players, self.username)
         return False
 
     def editSign(self, position, line1, line2, line3, line4):
