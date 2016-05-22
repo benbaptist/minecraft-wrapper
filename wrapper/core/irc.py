@@ -22,10 +22,10 @@ except NameError:
 
 class IRC:
 
-    def __init__(self, server, config, log, wrapper):
+    def __init__(self, mcserver, config, log, wrapper):
         self.socket = False
         self.state = False
-        self.server = server
+        self.javaserver = mcserver
         self.config = config
         self.wrapper = wrapper
         self.address = self.config["IRC"]["server"]
@@ -205,7 +205,7 @@ class IRC:
             return name
 
     def rawConsole(self, payload):
-        self.server.console(payload)
+        self.javaserver.console(payload)
 
     def console(self, channel, payload):
         if self.config["IRC"]["show-channel-server"]:
@@ -275,10 +275,10 @@ class IRC:
             if channel[0] == "#":
                 if message.strip() == ".players":
                     users = ""
-                    for user in self.server.players:
+                    for user in self.javaserver.players:
                         users += "%s " % user
                     self.send("PRIVMSG %s :There are currently %s users on the server: %s" %
-                              (channel, len(self.server.players), users))
+                              (channel, len(self.javaserver.players), users))
                 elif message.strip() == ".about":
                     self.send("PRIVMSG %s :Wrapper.py Version %s" % (channel, self.wrapper.getbuildstring()))
                 else:
@@ -339,38 +339,38 @@ class IRC:
                                 msg('Usage: run [command]')
                             else:
                                 command = " ".join(message.split(' ')[1:])
-                                self.server.console(command)
+                                self.javaserver.console(command)
                         elif getargs(message.split(" "), 0) == 'halt':
                             self.wrapper.halt = True
-                            self.server.console("stop")
-                            self.server.changestate(3)
+                            self.javaserver.console("stop")
+                            self.javaserver.changestate(3)
                         elif getargs(message.split(" "), 0) == 'restart':
-                            self.server.restart("Restarting server from IRC remote")
-                            self.server.changestate(3)
+                            self.javaserver.restart("Restarting server from IRC remote")
+                            self.javaserver.changestate(3)
                         elif getargs(message.split(" "), 0) == 'stop':
-                            self.server.console('stop')
-                            self.server.stop("Stopped from IRC remote")
+                            self.javaserver.console('stop')
+                            self.javaserver.stop("Stopped from IRC remote")
                             msg("Server stopping")
                         elif getargs(message.split(" "), 0) == 'start':
-                            self.server.start()
+                            self.javaserver.start()
                             msg("Server starting")
                         elif getargs(message.split(" "), 0) == 'kill':
-                            self.server.kill("Killing server from IRC remote")
+                            self.javaserver.kill("Killing server from IRC remote")
                             msg("Server terminated.")
                         elif getargs(message.split(" "), 0) == 'status':
-                            if self.server.state == 2:
+                            if self.javaserver.state == 2:
                                 msg("Server is running.")
                             elif self.server.state == 1:
                                 msg("Server is currently starting/frozen.")
-                            elif self.server.state == 0:
+                            elif self.javaserver.state == 0:
                                 msg("Server is stopped. Type 'start' to fire it back up.")
-                            elif self.server.state == 3:
+                            elif self.javaserver.state == 3:
                                 msg("Server is in the process of shutting down/restarting.")
                             else:
                                 msg("Server is in unknown state. This is probably a Wrapper.py bug - report it! "
-                                    "(state #%d)" % self.server.state)
-                            if self.wrapper.server.getmemoryusage():
-                                msg("Server Memory Usage: %d bytes" % self.wrapper.server.getmemoryusage())
+                                    "(state #%d)" % self.javaserver.state)
+                            if self.wrapper.javaserver.getmemoryusage():
+                                msg("Server Memory Usage: %d bytes" % self.wrapper.javaserver.getmemoryusage())
                         elif getargs(message.split(" "), 0) == 'check-update':
                             msg("Checking for new updates...")
                             update = self.wrapper.getwrapperupdate()

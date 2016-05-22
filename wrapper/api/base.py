@@ -75,7 +75,7 @@ class API:
         self.wrapper = wrapper
         self.name = name
         self.minecraft = Minecraft(wrapper)
-        self.server = wrapper.server
+        self.javaserver = wrapper.javaserver
         self.internal = internal
         if someid is None:
             self.id = name

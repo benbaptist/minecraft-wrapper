@@ -66,7 +66,7 @@ class Client:
         self.serverID = encryption.generate_server_id()
         self.MOTD = {}
 
-        self.serverversion = self.wrapper.server.protocolVersion
+        self.serverversion = self.wrapper.javaserver.protocolVersion
         self.clientversion = self.serverversion  # client will reset this later, if need be..
         self._refresh_server_version()
 
@@ -74,7 +74,7 @@ class Client:
         self.time_server_pinged = time.time()
         self.time_client_responded = time.time()
         self.keepalive_val = 0
-        self.server = None  # Server()
+        self.server = None  # ServerConnection() (not the javaserver)
         self.isServer = False
         self.isLocal = True
         self.server_temp = None
@@ -83,7 +83,6 @@ class Client:
         self.uuid = None  # this is intended to be the client UUID
         self.serverUuid = None  # Server UUID - which Could be the local offline UUID.
         self.mojangUuid = None  # Online UUID (should be same as client) - included for now to help refactoring
-        self.server = None
         self.address = None
         self.ip = None  # this will gather the client IP for use by player.py
 
@@ -220,11 +219,11 @@ class Client:
             time.sleep(0.03)
 
     def getPlayerObject(self):
-        if self.username in self.wrapper.server.players:
-            return self.wrapper.server.players[self.username]
+        if self.username in self.wrapper.javaserver.players:
+            return self.wrapper.javaserver.players[self.username]
         self.log.error("In playerlist:\n%s\nI could not locate player: %s\n"
                        "This resulted in setting the player object to FALSE!",
-                       self.wrapper.server.players, self.username)
+                       self.wrapper.javaserver.players, self.username)
         return False
 
     def editSign(self, position, line1, line2, line3, line4):
@@ -237,7 +236,7 @@ class Client:
     def _refresh_server_version(self):
         # Get serverversion for mcpacket use
         try:
-            self.serverversion = self.wrapper.server.protocolVersion
+            self.serverversion = self.wrapper.javaserver.protocolVersion
         except AttributeError:
             # Default to 1.8 if no server is running
             # This can be modified to any version
@@ -566,7 +565,7 @@ class Client:
                 data = self.packet.read("string:username")
                 self.username = data["username"]
                 if self.config["Proxy"]["online-mode"]:
-                    if self.wrapper.server.protocolVersion < 6:  # 1.7.x versions
+                    if self.wrapper.javaserver.protocolVersion < 6:  # 1.7.x versions
                         self.packet.send(0x01, "string|bytearray_short|bytearray_short", (self.serverID, self.publicKey,
                                                                                           self.verifyToken))
                     else:
@@ -582,7 +581,7 @@ class Client:
                 self.log.trace("(PROXY CLIENT) -> Parsed 0x00 packet with client state LOGIN: \n%s", data)
                 return False
             elif pkid == 0x01:
-                if self.wrapper.server.protocolVersion < 6:
+                if self.wrapper.javaserver.protocolVersion < 6:
                     data = self.packet.read("bytearray_short:shared_secret|bytearray_short:verify_token")
                 else:
                     data = self.packet.read("bytearray:shared_secret|bytearray:verify_token")
@@ -633,7 +632,7 @@ class Client:
                 if self.config["Proxy"]["convert-player-files"]:  # Rename UUIDs accordingly
                     if self.config["Proxy"]["online-mode"]:
                         # Check player files, and rename them accordingly to offline-mode UUID
-                        worldname = self.wrapper.server.worldName
+                        worldname = self.wrapper.javaserver.worldName
                         if not os.path.exists("%s/playerdata/%s.dat" % (worldname, self.serverUuid.string)):
                             if os.path.exists("%s/playerdata/%s.dat" % (worldname, self.uuid.string)):
                                 self.log.info("Migrating %s's playerdata file to proxy mode", self.username)
@@ -660,7 +659,7 @@ class Client:
                                         # after all the records are appended
                                         with open("whitelist.json", "w") as f:
                                             f.write(json.dumps(data))
-                                        self.wrapper.server.console("whitelist reload")
+                                        self.wrapper.javaserver.console("whitelist reload")
                                         with open("%s/.wrapper-proxy-whitelist-migrate" % worldname, "a") as f:
                                             f.write("%s %s\n" % (self.uuid.string, self.serverUuid.string))
 
@@ -725,8 +724,8 @@ class Client:
             elif pkid == 0x00:
                 self.log.trace("(PROXY CLIENT) -> Received '0x00' request (no payload) for list packet in STATUS mode")
                 sample = []
-                for i in self.wrapper.server.players:
-                    player = self.wrapper.server.players[i]
+                for i in self.wrapper.javaserver.players:
+                    player = self.wrapper.javaserver.players[i]
                     if player.username not in HIDDEN_OPS:
                         sample.append({"name": player.username, "id": str(player.mojangUuid)})
                     if len(sample) > 5:
@@ -734,15 +733,15 @@ class Client:
                 if UNIVERSAL_CONNECT:
                     reported_version = self.clientversion
                     self.log.debug("(During status request, client reported it's version as: %s", self.clientversion)
-                    reported_name = "%s (Compatibility mode)" % self.wrapper.server.version
+                    reported_name = "%s (Compatibility mode)" % self.wrapper.javaserver.version
                 else:
-                    reported_version = self.wrapper.server.protocolVersion
-                    reported_name = self.wrapper.server.version
+                    reported_version = self.wrapper.javaserver.protocolVersion
+                    reported_name = self.wrapper.javaserver.version
                 self.MOTD = {
-                    "description": json.loads(processcolorcodes(self.wrapper.server.motd.replace("\\", ""))),
+                    "description": json.loads(processcolorcodes(self.wrapper.javaserver.motd.replace("\\", ""))),
                     "players": {
-                        "max": int(self.wrapper.server.maxPlayers),
-                        "online": len(self.wrapper.server.players),
+                        "max": int(self.wrapper.javaserver.maxPlayers),
+                        "online": len(self.wrapper.javaserver.players),
                         "sample": sample
                     },
                     "version": {
@@ -750,8 +749,8 @@ class Client:
                         "protocol": reported_version
                     }
                 }
-                if self.wrapper.server.serverIcon:  # add Favicon, if it exists
-                    self.MOTD["favicon"] = self.wrapper.server.serverIcon
+                if self.wrapper.javaserver.serverIcon:  # add Favicon, if it exists
+                    self.MOTD["favicon"] = self.wrapper.javaserver.serverIcon
                 self.packet.send(0x00, "string", (json.dumps(self.MOTD),))
                 return False
             else:
@@ -768,7 +767,7 @@ class Client:
                 if not self.wrapper.server.state == 2:  # TODO - one day, allow connection despite this
                     self.disconnect("Server has not finished booting. Please try connecting again in a few seconds")
                     return False
-                if self.wrapper.server.protocolVersion == -1:  # TODO make sure wrapper.mcserver.protocolVersion returns
+                if self.wrapper.javaserver.protocolVersion == -1:  # TODO make sure wrapper.mcserver.protocolVersion returns
                     #  ... -1 to signal no server
                     self.disconnect("Proxy client was unable to connect to the server.")
                     return False
