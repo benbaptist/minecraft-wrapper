@@ -341,7 +341,7 @@ class ServerConnection:
                     return
                 # this will need entity UUID's added at some point
                 self.wrapper.javaserver.world.entities[data["eid"]] = Entity(eid, entityuuid, type_, (x, y, z),
-                                                                         (pitch, yaw, head_pitch), False)
+                                                                             (pitch, yaw, head_pitch), False)
                 return True
 
             elif pkid == self.pktCB.ENTITY_RELATIVE_MOVE:
@@ -354,7 +354,7 @@ class ServerConnection:
                     return
                 if self.wrapper.javaserver.world.getEntityByEID(data["eid"]) is not None:
                     self.wrapper.javaserver.world.getEntityByEID(data["eid"]).moveRelative((data["dx"],
-                                                                                        data["dy"], data["dz"]))
+                                                                                            data["dy"], data["dz"]))
                 return True
 
             elif pkid == self.pktCB.ENTITY_TELEPORT:
@@ -366,7 +366,9 @@ class ServerConnection:
                 if not self.wrapper.javaserver.world:
                     return
                 if self.wrapper.javaserver.world.getEntityByEID(data["eid"]) is not None:
-                    self.wrapper.javaserver.world.getEntityByEID(data["eid"]).teleport((data["x"], data["y"], data["z"]))
+                    self.wrapper.javaserver.world.getEntityByEID(data["eid"]).teleport((data["x"],
+                                                                                        data["y"],
+                                                                                        data["z"]))
                 return True
 
             elif pkid == self.pktCB.ENTITY_HEAD_LOOK:
@@ -651,7 +653,7 @@ class ServerConnection:
                 if self.parse(pkid) and self.client:
                     self.client.packet.sendRaw(original)
         except Exception as e2:
-            self.log.exception("Error in the [SERVER] -> [CLIENT] handle (%s):", e2)
+            self.log.exception("Error in the [SERVER] -> [PROXY] handle (%s):", e2)
             self.close()
 
 

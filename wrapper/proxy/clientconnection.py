@@ -76,7 +76,7 @@ class Client:
         self.time_server_pinged = time.time()
         self.time_client_responded = time.time()
         self.keepalive_val = 0
-        self.server = None  # ServerConnection() (not the javaserver)
+        self.server = None  # Proxy ServerConnection() (not the javaserver)
         self.isServer = False
         self.isLocal = True
         self.server_temp = None
@@ -620,7 +620,7 @@ class Client:
                                 self.wrapper.proxy.skins[self.uuid.string] = self.skinBlob
                         self.properties = data["properties"]
                     else:
-                        self.disconnect("Server Session Error (HTTP Status Code %d)" % r.status_code)
+                        self.disconnect("Proxy Client Session Error (HTTP Status Code %d)" % r.status_code)
                         return False
                     newusername = self.wrapper.getusernamebyuuid(self.uuid.string)
                     if newusername:
@@ -836,7 +836,7 @@ class Client:
                     if self.server.state == 3:
                         self.server.packet.sendRaw(original)
         except Exception as ex:
-            self.log.exception("Error in the [Client] -> [Server] handle (%s):", ex)
+            self.log.exception("Error in the [PROXY] <- [CLIENT] handle (%s):", ex)
 
     def _keep_alive_tracker(self, playername):
         # send keep alives to client and send client settings to server.
