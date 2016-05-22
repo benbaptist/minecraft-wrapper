@@ -1,20 +1,24 @@
 # -*- coding: utf-8 -*-
 
-import socket
-
-
-# Py3-2
-import sys
-PY3 = sys.version_info > (3,)
-
-import io as io
-
+import io
 import json
 import struct
 import zlib
 
 from core.mcuuid import MCUUID
 
+# Py3-2
+import sys
+PY3 = sys.version_info > (3,)
+
+
+try:  # Manually define an xrange builtin that works indentically on both (to take advantage of xrange's speed in 2)
+    xxrange = xrange
+except NameError:
+    xxrange = range
+
+
+# noinspection PyMethodMayBeStatic,PyBroadException,PyAugmentAssignment
 class Packet:
     def __init__(self, sock, obj):
         self.socket = sock
@@ -71,20 +75,20 @@ class Packet:
         return "%x" % d
 
     def grabPacket(self):
-        length = self.unpack_varInt() # first field - entire raw Packet Length i.e. 55 in test (for annoying disconnect)
-        dataLength = 0  # if 0, an uncompressed packet
+        length = self.unpack_varInt()  # first field - entire raw Packet Length
+        datalength = 0  # if 0, an uncompressed packet
         if self.compressThreshold != -1:  # if compressed:
-            dataLength = self.unpack_varInt()  # length of the uncompressed (Packet ID + Data)
+            datalength = self.unpack_varInt()  # length of the uncompressed (Packet ID + Data)
             # using augmented assignment in the next line will BREAK this
-            length = length - len(self.pack_varInt(dataLength))  # find the len of the datalength field and subtract it
+            length = length - len(self.pack_varInt(datalength))  # find the len of the datalength field and subtract it
         payload = self.recv(length)
 
-        if dataLength > 0:  # it is compressed, unpack it
+        if datalength > 0:  # it is compressed, unpack it
             payload = zlib.decompress(payload)
 
         self.buffer = io.BytesIO(payload)
         pkid = self.read_varInt()
-        return (pkid, payload)
+        return pkid, payload
 
     def pack_varInt(self, val):
         total = b''
@@ -119,11 +123,11 @@ class Packet:
     def flush(self):
         for p in self.queue:
             packet = p[1]
-            pkid = struct.unpack("B", packet[0])[0]
+            pkid = struct.unpack("B", packet[0:1])[0]  # py3
             if p[0] > -1:
                 if len(packet) > self.compressThreshold:
-                    packetCompressed = self.pack_varInt(len(packet)) + zlib.compress(packet)
-                    packet = self.pack_varInt(len(packetCompressed)) + packetCompressed
+                    packetcompressed = self.pack_varInt(len(packet)) + zlib.compress(packet)
+                    packet = self.pack_varInt(len(packetcompressed)) + packetcompressed
                 else:
                     packet = self.pack_varInt(0) + packet
                     packet = self.pack_varInt(len(packet)) + packet
@@ -185,7 +189,7 @@ class Packet:
         return result
 
     def send(self, pkid, expression, payload):
-        result = ""
+        result = b""
         result += self.send_varInt(pkid)
         if len(expression) > 0:
             for i, type_ in enumerate(expression.split("|")):
@@ -314,7 +318,6 @@ class Packet:
             return self.send_byte(1)
         else:
             return self.send_byte(0)
-        
 
     # Similar to send_string, but uses a short as length prefix
     def send_short_string(self, string):
@@ -330,17 +333,17 @@ class Packet:
     def send_list(self, tag):
         # Check that all values are the same type
         r = ""
-        typesList = []
+        typeslist = []
         for i in tag:
-            typesList.append(i['type'])
-            if len(set(typesList)) != 1:
+            typeslist.append(i['type'])
+            if len(set(typeslist)) != 1:
                 # raise Exception("Types in list dosn't match!")
                 return b''
         # If ok, then continue
-        r += self.send_byte(typesList[0])  # items type
+        r += self.send_byte(typeslist[0])  # items type
         r += self.send_int(len(tag))  # lenght
         for e in tag:  # send every tag
-            r += self._ENCODERS[typesList[0]](e["value"])
+            r += self._ENCODERS[typeslist[0]](e["value"])
         return r
 
     def send_comp(self, tag):
@@ -374,12 +377,13 @@ class Packet:
 
     def recv(self, length):
         if length > 200:
-            d = ""
+            d = bytearray  # TODO  PY2-3 COMPAT MODEL!!  Will use <str> for PY2 and <bytes> for PY3 !!!!.
+            d = b""        # TODO
             while len(d) < length:
                 m = length - len(d)
                 if m > 5000:
                     m = 5000
-                d += self.socket.recv(m)
+                d += self.socket.recv(m)  # TODO self.socket.recv(m) receives bytes in PY3, <str> in PY2
         else:
             d = self.socket.recv(length)
             if len(d) == 0:
@@ -417,7 +421,7 @@ class Packet:
         return struct.unpack(">d", self.read_data(8))[0]
 
     def read_bool(self):
-        return (self.read_data(1) == 0x01)
+        return self.read_data(1) == 0x01
 
     def read_short(self):
         return struct.unpack(">h", self.read_data(2))[0]
@@ -440,15 +444,15 @@ class Packet:
         if position == 0xFFFFFFFFFFFFFFFF:
             return None
         x = int(position >> 38)
-        if (x & 0x2000000):
+        if x & 0x2000000:
             x = (x & 0x1FFFFFF) - 0x2000000
         y = int((position >> 26) & 0xFFF)
-        if (y & 0x800):
+        if y & 0x800:
             y = (y & 0x4FF) - 0x800
         z = int(position & 0x3FFFFFF)
-        if (z & 0x2000000):
+        if z & 0x2000000:
             z = (z & 0x1FFFFFF) - 0x2000000
-        return (x, y, z)
+        return x, y, z
 
     def read_slot(self):
         sid = self.read_short()
@@ -479,7 +483,7 @@ class Packet:
         return self.read_data(self.read_varInt())
 
     def read_json(self):
-        return json.loads(self.read_string())
+        return json.loads(self.read_string().decode('utf-8'))
 
     def read_rest(self):
         return self.read_data(1024 * 1024)
@@ -517,18 +521,15 @@ class Packet:
 
     def read_comp(self):
         a = []
-        done = 0
-        while done == 0:
+        while True:
             b = self.read_tag()
             if b['type'] == 0:
-                done = 1
                 break
             a.append(b)
         return a
 
     def read_tag(self):
-        a = {}
-        a["type"] = self.read_byte()
+        a = {"type": self.read_byte()}
         if a["type"] != 0:
             a["name"] = self.read_short_string()
             a["value"] = self._DECODERS[a["type"]]()
@@ -538,10 +539,9 @@ class Packet:
         r = []
         btype = self.read_byte()
         length = self.read_int()
-        for l in range(length):  # TODO Py2-3
-            b = {}
-            b["type"] = btype
-            b["name"] = ""
-            b["value"] = self._DECODERS[btype]()
+        for _ in xxrange(length):  # _ signifies throwaway variable whose values is not used
+            b = {"type": btype,
+                 "name": "",
+                 "value": self._DECODERS[btype]()}
             r.append(b)
         return r

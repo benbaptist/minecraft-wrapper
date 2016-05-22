@@ -13,6 +13,7 @@ from core.storage import Storage
 """ api.py contains the majority of code for the plugin API. """
 
 
+# noinspection PyPep8Naming
 class API:
     """ 
     The API class contains methods for basic plugin functionality, such as handling events,
@@ -20,7 +21,7 @@ class API:
     and events, but for core stuff. See the Minecraft class (accessible at self.api.minecraft)
     for more gameplay-related methods.
     """
-    statusEffects = {
+    statuseffects = {
         "speed": 1,
         "slowness": 2,
         "haste": 3,
@@ -45,7 +46,7 @@ class API:
         "absorption": 22,
         "saturation": 23
     }
-    colorCodes = {
+    colorcodes = {
         "0": "black",
         "1": "dark_blue",
         "2": "dark_green",

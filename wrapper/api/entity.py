@@ -41,13 +41,17 @@ class Entity:
         return str(self.entitytype)
 
     def moveRelative(self, position):
-        """ Move the entity relative to their position, unless it is illegal. """
+        """ Move the entity relative to their position, unless it is illegal.
+
+        Args:
+            position:
+        """
         x, y, z = position
-        oldPosition = [self.position[0], self.position[1], self.position[2]]
-        oldPosition[0] += x / 32.0
-        oldPosition[1] += y / 32.0
-        oldPosition[2] += z / 32.0
-        self.position = (oldPosition[0], oldPosition[1], oldPosition[2])
+        oldposition = [self.position[0], self.position[1], self.position[2]]
+        oldposition[0] += x / 32.0
+        oldposition[1] += y / 32.0
+        oldposition[2] += z / 32.0
+        self.position = (oldposition[0], oldposition[1], oldposition[2])
         if self.rodeBy:
             self.rodeBy.position = self.position
 

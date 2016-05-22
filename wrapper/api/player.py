@@ -9,23 +9,17 @@ import threading
 
 import proxy.mcpacket as mcpacket
 from core.storage import Storage
-from api.base import API
+from utils.helpers import processoldcolorcodes, processcolorcodes
 
 
+# noinspection PyPep8Naming
 class Player:
     """
     Player objects contains methods and data of a currently logged-in player. This object is destroyed
-    upon logging off. """
+    upon logging off.
+    """
 
     def __init__(self, username, wrapper):
-        """
-        UUID terminologies:
-        Mojang uuid - the bought and paid Mojand UUID.
-        offline uuid - created as a MD5 hash of "OfflinePlayer:%s" % username
-        server uuid = the local server uuid... used to reference the player on the local server.  Could be same as
-            Mojang UUID if server is in online mode or same as offline if server is in offline mode (proxy mode).
-        client uuid - what the client stores as the uuid (should be the same as Mojang?)
-        """
 
         self.wrapper = wrapper
         self.server = wrapper.server
@@ -37,17 +31,28 @@ class Player:
         self.abort = False
 
         # these are all MCUUID objects.. I have separated out various uses of uuid to clarify for later refractoring
-        self.mojangUuid = self.wrapper.getuuidbyusername(username)
-        self.offlineUuid = self.wrapper.getuuidfromname("OfflinePlayer:%s" % self.username)
-        self.clientUuid = self.wrapper.getuuid(username)  # - The player.uuid used by old api (and internally here).
-        self.serverUuid = self.wrapper.getuuidbyusername(username)
+        # ---------------
+        # Mojang uuid - the bought and paid Mojand UUID.  Never changes- our one constant point of reference per player.
+        # offline uuid - created as a MD5 hash of "OfflinePlayer:%s" % username
+        # client uuid - what the client stores as the uuid (should be the same as Mojang?) The player.uuid used by
+        #     old api (and internally here).
+        # server uuid = the local server uuid... used to reference the player on the local server.  Could be same as
+        #     Mojang UUID if server is in online mode or same as offline if server is in offline mode (proxy mode).
 
-        self.ipaddress =  "127.0.0.0"
+        # This can be False if cache (and requests) Fail... bad name or bad Mojang service connection.
+        self.mojangUuid = self.wrapper.getuuidbyusername(username)
+        # IF False error carries forward, this is not a valid player, for whatever reason...
+        self.clientUuid = self.mojangUuid
+        # These two are offline by default.
+        self.offlineUuid = self.wrapper.getuuidfromname("OfflinePlayer:%s" % self.username)
+        self.serverUuid = self.offlineUuid  # Start out as the Offline - change it to Mojang if local server is Online
+
+        self.ipaddress = "127.0.0.0"
         self.operatordict = self._read_ops_file()
 
         self.client = None
-        self.clientPackets = mcpacket.ClientBound18
-        self.serverPackets = mcpacket.ServerBound18
+        self.clientPackets = mcpacket.Client18
+        self.serverPackets = mcpacket.Server18
 
         # some player properties associated with abilities
         self.field_of_view = float(1)  # default is 1.  Should normally be congruent with speed.
@@ -56,17 +61,17 @@ class Player:
         self.fly_speed = float(1)  # default is 1
 
         if self.server.version > mcpacket.PROTOCOL_1_9START:
-            self.serverPackets = mcpacket.ServerBound19
+            self.serverPackets = mcpacket.Server19
 
         if self.wrapper.proxy:
             for client in self.wrapper.proxy.clients:
-                if client.username == username:
+                if client.username == self.username:
                     self.client = client
                     self.clientUuid = client.uuid  # Both MCUUID objects
                     self.serverUuid = client.serverUuid
                     self.ipaddress = client.ip
                     if self.getClient().version > 49:  # packet numbers fluctuated  wildly between 48 and 107
-                        self.clientPackets = mcpacket.ClientBound19
+                        self.clientPackets = mcpacket.Client19
                     break
 
         self.data = Storage(self.clientUuid.string, root="wrapper-data/players")
@@ -102,18 +107,6 @@ class Player:
         while not self.abort:
             self.data["logins"][int(self.loggedIn)] = int(time.time())
             time.sleep(60)
-
-    @staticmethod
-    def _processoldcolorcodes(message):
-        """
-        Internal private method - Not intended as a part of the public player object API
-
-         message: message text containing '&' to represent the chat formatting codes
-        :return: mofified text containing the section sign (§) and the formatting code.
-        """
-        for i in API.colorCodes:
-            message = message.replace("&" + i, "\xc2\xa7" + i)
-        return message
 
     @staticmethod
     def _read_ops_file():
@@ -273,13 +266,12 @@ class Player:
         if isinstance(message, dict):
             self.wrapper.server.console("tellraw %s %s" % (self.username, json.dumps(message)))
         else:
-            self.wrapper.server.console("tellraw %s %s" % (self.username,
-                                                           self.wrapper.server.processcolorcodes(message)))
+            self.wrapper.server.console("tellraw %s %s" % (self.username, processcolorcodes(message)))
 
     def actionMessage(self, message=""):
         if self.getClient().version > mcpacket.PROTOCOL_1_8START:
             self.getClient().packet.send(self.clientPackets.CHAT_MESSAGE, "string|byte",
-                                         (json.dumps({"text": self._processoldcolorcodes(message)}), 2))
+                                         (json.dumps({"text": processoldcolorcodes(message)}), 2))
 
     def setVisualXP(self, progress, level, total):
         """
@@ -424,7 +416,7 @@ class Player:
             return True
         if another_player:
             other_uuid = self.wrapper.getuuidbyusername(another_player)  # get other player mojang uuid
-            if other_uuid: # make sure other player permission is initialized.
+            if other_uuid:  # make sure other player permission is initialized.
                 if self.mojangUuid.string not in self.permissions["users"]:  # no reason not to do this here too
                     self.permissions["users"][self.mojangUuid.string] = {"groups": [], "permissions": {}}
             else:

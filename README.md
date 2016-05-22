@@ -1,9 +1,25 @@
+#About this fork#
+This is a fork of Benbaptist's minecraft wrapper.  Much of this is pretty bleeding edge! If you are looking for something stable, use the development branch.  Experimental (the default branch you are viewing) is the branch where all the changes are actively being made and is constantly changing.
+
+TO use this branches' code, do not use the pre-built wrapper.py file, as it does not get updated.  Run the source code folder `/wrapper` directly from python:
+
+place the /wrapper folder in the same server folder with your server.jar file, set up your server.properties (and wrapper.properties after it gets created) appropriately and simply run the source code:
+
+```python /path to your server/your_server/wrapper```
+
+So far, it is only fully functional in Python 2, but it will start and minimally function in python 3 (but is still full of errors)
+
 #Overview#
 Wrapper.py is an easy to use Minecraft server wrapper for adding extra functionality into the server without modifying the server jar file.
 
 </br></br>It also comes with a relatively simple and straight-forward - yet powerful - plugin API that can be used to create Bukkit-like plugins on vanilla.
 
 [![Join the chat at https://gitter.im/benbaptist/minecraft-wrapper](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/benbaptist/minecraft-wrapper?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
+NOTICE: Wrapper will Accept the minecraft server EULA on your behalf.  Using wrapper means you also accept the EULA, which
+will be set to true in the eula.txt file in your server folder.
+[Mojang EULA](https://account.mojang.com/documents/minecraft_eula)
+
 
 #Installation#
 Wrapper.py doesn't require any special modules for most of the basic features to work, but web mode and proxy mode require `requests` and `pycrypto`, and `pkg_resources`.

@@ -14,6 +14,12 @@ from utils.helpers import getargs, getargsafter
 from api.base import API
 
 
+try:  # Manually define an xrange builtin that works indentically on both (to take advantage of xrange's speed in 2)
+    xxrange = xrange
+except NameError:
+    xxrange = range
+
+
 class IRC:
 
     def __init__(self, server, config, log, wrapper):
@@ -155,7 +161,7 @@ class IRC:
     def handle(self):
         while self.socket:
             try:
-                irc_buffer = self.socket.recv(1024)  # changed name because 'buffer' is a builtin name
+                irc_buffer = self.socket.recv(1024)  # more duck typing
                 if irc_buffer == "":
                     self.log.error("Disconnected from IRC")
                     self.socket = False
@@ -183,7 +189,7 @@ class IRC:
             for i, message in enumerate(self.msgQueue):
                 for channel in self.channels:
                     if len(message) > 400:
-                        for l in range(int(math.ceil(len(message) / 400.0))):  # TODO Py3-2
+                        for l in xxrange(int(math.ceil(len(message) / 400.0))):
                             chunk = message[l * 400:(l + 1) * 400]
                             self.send("PRIVMSG %s :%s" % (channel, chunk))
                     else:
@@ -222,7 +228,7 @@ class IRC:
             self.nickAttempts += 1
             if self.nickAttempts > 2:
                 name = bytearray(self.nickname)
-                for i in range(3):  # TODO Py3-2
+                for i in xxrange(3):
                     name[len(self.nickname) / 3 * i] = chr(random.randrange(97, 122))
                 self.nickname = str(name)
             else:
@@ -233,12 +239,12 @@ class IRC:
             nick = getargs(self.line.split(" "), 0)[1:getargs(self.line.split(" "), 0).find("!")]
             channel = getargs(self.line.split(" "), 2)[1:][:-1]
             self.log.info("%s joined %s", nick, channel)
-            self.wrapper.callevent("irc.join", {"nick": nick, "channel": channel})
+            self.wrapper.events.callevent("irc.join", {"nick": nick, "channel": channel})
         if getargs(self.line.split(" "), 1) == "PART":
             nick = getargs(self.line.split(" "), 0)[1:getargs(self.line.split(" "), 0).find("!")]
             channel = getargs(self.line.split(" "), 2)
             self.log.info("%s parted %s", nick, channel)
-            self.wrapper.callevent("irc.part", {"nick": nick, "channel": channel})
+            self.wrapper.events.callevent("irc.part", {"nick": nick, "channel": channel})
         if getargs(self.line.split(" "), 1) == "MODE":
             try:
                 nick = getargs(self.line.split(" "), 0)[1:getargs(self.line.split(" "), 0).find('!')]
@@ -260,7 +266,7 @@ class IRC:
             nick = getargs(self.line.split(" "), 0)[1:getargs(self.line.split(" "), 0).find("!")]
             message = getargsafter(self.line.split(" "), 2)[1:].strip("\n").strip("\r")
 
-            self.wrapper.callevent("irc.quit", {"nick": nick, "message": message, "channel": None})
+            self.wrapper.events.callevent("irc.quit", {"nick": nick, "message": message, "channel": None})
         if getargs(self.line.split(" "), 1) == "PRIVMSG":
             channel = getargs(self.line.split(" "), 2)
             nick = getargs(self.line.split(" "), 0)[1:getargs(self.line.split(" "), 0).find("!")]
@@ -271,16 +277,22 @@ class IRC:
                     users = ""
                     for user in self.server.players:
                         users += "%s " % user
-                    self.send("PRIVMSG %s :There are currently %s users on the server: %s" % (channel, len(self.server.players), users))
+                    self.send("PRIVMSG %s :There are currently %s users on the server: %s" %
+                              (channel, len(self.server.players), users))
                 elif message.strip() == ".about":
                     self.send("PRIVMSG %s :Wrapper.py Version %s" % (channel, self.wrapper.getbuildstring()))
                 else:
                     message = message.decode("utf-8", "ignore")
                     if getargs(message.split(" "), 0) == "\x01ACTION":
-                        self.wrapper.callevent("irc.action", {"nick": nick, "channel": channel, "action": getargsafter(message.split(" "), 1)[:-1]})
+                        self.wrapper.events.callevent("irc.action", {"nick": nick,
+                                                                     "channel": channel,
+                                                                     "action":
+                                                                         getargsafter(message.split(" "), 1)[:-1]})
                         self.log.info("[%s] * %s %s", channel, nick, getargsafter(message.split(" "), 1)[:-1])
                     else:
-                        self.wrapper.callevent("irc.message", {"nick": nick, "channel": channel, "message": message})
+                        self.wrapper.events.callevent("irc.message", {"nick": nick,
+                                                                      "channel": channel,
+                                                                      "message": message})
                         self.log.info("[%s] <%s> %s", channel, nick, message)
             elif self.config["IRC"]["control-from-irc"]:
                 self.log.info("[PRIVATE] (%s) %s", nick, message)
@@ -289,7 +301,7 @@ class IRC:
                     self.log.info("[PRIVATE] (%s) %s", self.nickname, string)
                     self.send("PRIVMSG %s :%s" % (nick, string))
                 if self.config["IRC"]["control-irc-pass"] == "password":
-                    msg("Please change your password from 'password' in wrapper.properties. I will not allow you to use that password. It's an awful password. Please change it.")
+                    msg("A new password is required in wrapper.properties. Please change it.")
                     return
                 if "password" in self.config["IRC"]["control-irc-pass"]:
                     msg("Please choose a password that doesn't contain the term 'password'.")
@@ -302,10 +314,13 @@ class IRC:
                             # eventually I need to make help only one or two
                             # lines, to prevent getting kicked/banned for spam
                             msg("run [command] - run command on server")
-                            msg("togglebackups - temporarily turn backups on or off. this setting is not permanent and will be lost on restart")
+                            msg("togglebackups - temporarily turn backups on or off. this setting is not permanent "
+                                "and will be lost on restart")
                             msg("halt - shutdown server and Wrapper.py, will not auto-restart")
-                            msg("kill - force server restart without clean shutdown - only use when server is unresponsive")
-                            msg("start/restart/stop - start the server/automatically stop and start server/stop the server without shutting down Wrapper")
+                            msg("kill - force server restart without clean shutdown - only use when server "
+                                "is unresponsive")
+                            msg("start/restart/stop - start the server/automatically stop and start server/stop "
+                                "the server without shutting down Wrapper")
                             msg("status - show status of the server")
                             msg("check-update - check for new Wrapper.py updates, but don't install them")
                             msg("update-wrapper - check and install new Wrapper.py updates")
@@ -352,7 +367,8 @@ class IRC:
                             elif self.server.state == 3:
                                 msg("Server is in the process of shutting down/restarting.")
                             else:
-                                msg("Server is in unknown state. This is probably a Wrapper.py bug - report it! (state #%d)" % self.server.state)
+                                msg("Server is in unknown state. This is probably a Wrapper.py bug - report it! "
+                                    "(state #%d)" % self.server.state)
                             if self.wrapper.server.getmemoryusage():
                                 msg("Server Memory Usage: %d bytes" % self.wrapper.server.getmemoryusage())
                         elif getargs(message.split(" "), 0) == 'check-update':
@@ -362,10 +378,11 @@ class IRC:
                                 version, build, repotype = update
                                 if repotype == "stable":
                                     msg("New Wrapper.py Version %s available! (you have %s)" %
-                                        ( ".".join([str(_) for _ in version]), self.wrapper.getbuildstring()))
+                                        (".".join([str(_) for _ in version]), self.wrapper.getbuildstring()))
                                 elif repotype == "dev":
                                     msg("New Wrapper.py development build %s #%d available! (you have %s #%d)" % 
-                                        (".".join([str(_) for _ in version]), build, version_info.__version__, version_info.__build__))
+                                        (".".join([str(_) for _ in version]), build, version_info.__version__,
+                                         version_info.__build__))
                                 else:
                                     msg("Unknown new version: %s | %d | %s" % (version, build, repotype))
                                 msg("To perform the update, type update-wrapper.")
@@ -380,27 +397,31 @@ class IRC:
                             if update:
                                 version, build, repotype = update
                                 if repotype == "stable":
-                                    msg("New Wrapper.py Version %s available! (you have %s)" % \
+                                    msg("New Wrapper.py Version %s available! (you have %s)" %
                                         (".".join([str(_) for _ in version]), self.wrapper.getbuildstring()))
                                 elif repotype == "dev":
-                                    msg("New Wrapper.py development build %s #%d available! (you have %s #%d)" % \
+                                    msg("New Wrapper.py development build %s #%d available! (you have %s #%d)" %
                                         (".".join(version), build, version_info.__version__, version_info.__build__))
                                 else:
                                     msg("Unknown new version: %s | %d | %s" % (version, build, repotype))
                                 msg("Performing update..")
                                 if self.wrapper.performupdate(version, build, repotype):
-                                    msg("Update completed! Version %s #%d (%s) is now installed. Please reboot Wrapper.py to apply changes." % (version, build, repotype))
+                                    msg("Update completed! Version %s #%d (%s) is now installed. Please reboot "
+                                        "Wrapper.py to apply changes." % (version, build, repotype))
                                 else:
                                     msg("An error occured while performing update.")
-                                    msg("Please check the Wrapper.py console as soon as possible for an explanation and traceback.")
-                                    msg("If you are unsure of the cause, please file a bug report on http://github.com/benbaptist/minecraft-wrapper.")
+                                    msg("Please check the Wrapper.py console as soon as possible for an explanation "
+                                        "and traceback.")
+                                    msg("If you are unsure of the cause, please file a bug report on http://github.com"
+                                        "/benbaptist/minecraft-wrapper.")
                             else:
                                 if version_info.__branch__ == "stable":
                                     msg("No new stable Wrapper.py versions available.")
                                 elif version_info.__branch__ == "dev":
                                     msg("No new development Wrapper.py versions available.")
                         elif getargs(message.split(" "), 0) == "about":
-                            msg("Wrapper.py by benbaptist - Version %s (build #%d)" % (version_info.__version__, version_info.__branch__))
+                            msg("Wrapper.py by benbaptist - Version %s (build #%d)" % (version_info.__version__,
+                                                                                       version_info.__branch__))
                         else:
                             msg('Unknown command. Type help for more commands')
                     else:

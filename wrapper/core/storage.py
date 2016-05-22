@@ -9,12 +9,6 @@ import time
 import copy
 import logging
 
-# Py3-2
-try:
-    import configparser as ConfigParser
-except ImportError:
-    import ConfigParser
-
 
 class Storage:
 

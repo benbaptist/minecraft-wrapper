@@ -23,8 +23,9 @@ if not encryption:
     requests = False
 
 
-UNIVERSAL_CONNECT = False # tells the client "same version as you" or does not disconnect dissimilar clients
+UNIVERSAL_CONNECT = False  # tells the client "same version as you" or does not disconnect dissimilar clients
 HIDDEN_OPS = ["SurestTexas00", "BenBaptist"]
+
 
 class Proxy:
     def __init__(self, wrapper):
@@ -53,13 +54,15 @@ class Proxy:
         try:
             self.pollServer()
         except Exception as e:
-            self.log.exception("Proxy could not poll the Minecraft server - are you sure that the ports are configured properly? (%s)", e)
+            self.log.exception("Proxy could not poll the Minecraft server - are you sure that the ports are "
+                               "configured properly? (%s)", e)
 
         # bind server socket
         while not self.usingSocket:
             try:
                 self.proxy_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                self.proxy_socket.bind((self.wrapper.config["Proxy"]["proxy-bind"], self.wrapper.config["Proxy"]["proxy-port"]))
+                self.proxy_socket.bind((self.wrapper.config["Proxy"]["proxy-bind"],
+                                        self.wrapper.config["Proxy"]["proxy-port"]))
                 self.usingSocket = True
                 self.proxy_socket.listen(5)
             except Exception as e:
@@ -83,29 +86,28 @@ class Proxy:
             self.clients.append(client)
             self.removeStaleClients()
 
-
     def removeStaleClients(self):
         try:
             for i, client in enumerate(self.wrapper.proxy.clients):
                 if client.abort:
                     del self.wrapper.proxy.clients[i]
         except Exception as e:
-            raise e # rethrow exception
-
+            raise e  # rethrow exception
 
     def pollServer(self):
         server_sock = socket.socket()
         server_sock.connect(("localhost", self.wrapper.config["Proxy"]["server-port"]))
         packet = Packet(server_sock, self)
 
-        packet.send(0x00, "varint|string|ushort|varint", (5, "localhost", self.wrapper.config["Proxy"]["server-port"], 1))
+        packet.send(0x00, "varint|string|ushort|varint", (5, "localhost",
+                                                          self.wrapper.config["Proxy"]["server-port"], 1))
         packet.send(0x00, "", ())
         packet.flush()
 
         while True:
             pkid, original = packet.grabPacket()
             if pkid == 0x00:
-                data = json.loads(packet.read("string:response")["response"])
+                data = json.loads(packet.read("string:response")["response"].decode('utf-8'))  # py3
                 self.wrapper.server.protocolVersion = data["version"]["protocol"]
                 self.wrapper.server.version = data["version"]["name"]
                 break
@@ -120,7 +122,7 @@ class Proxy:
             if client.serverUuid.string == str(uuid):
                 self.uuidTranslate[uuid] = client.uuid.string
                 return client
-        return False # no client
+        return False  # no client
 
     def banPlayer(self, playername, reason="Banned by an operator", source="Wrapper", expires="forever"):
         """
@@ -160,7 +162,7 @@ class Proxy:
         banlist = getjsonfile("banned-players")
         if banlist is not False:  # file and directory exist.
             if banlist is None:  # file was empty or not valid
-                banlist= dict()  # ensure valid dict before operating on it
+                banlist = dict()  # ensure valid dict before operating on it
             if find_in_json(banlist, "uuid", str(uuid)):
                 return "player already banned"  # error text
             else:
@@ -202,7 +204,7 @@ class Proxy:
         banlist = getjsonfile("banned-ips")
         if banlist is not False:  # file and directory exist.
             if banlist is None:  # file was empty or not valid
-                banlist= dict()  # ensure valid dict before operating on it
+                banlist = dict()  # ensure valid dict before operating on it
             if find_in_json(banlist, "ip", ipaddress):
                 return "address already banned"  # error text
             else:
@@ -282,9 +284,10 @@ class Proxy:
                         self.log.info("UUID: %s was pardoned (expired ban)" % str(uuid))
                         return False  # player is "NOT" banned (anymore)
                     else:
-                        self.log.warning("isUUIDBanned attempted a pardon of uuid: %s (expired ban), but it failed:\n %s", uuid, pardoning)
+                        self.log.warning("isUUIDBanned attempted a pardon of uuid: %s (expired ban), "
+                                         "but it failed:\n %s", uuid, pardoning)
                 return True  # player is still banned
-        return False # banlist empty or record not found
+        return False  # banlist empty or record not found
 
     def isIPBanned(self, ipaddress):  # Check if the IP address is banned
         banlist = getjsonfile("banned-ips")
@@ -297,9 +300,10 @@ class Proxy:
                         self.log.info("IP: %s was pardoned (expired ban)", ipaddress)
                         return False  # IP is "NOT" banned (anymore)
                     else:
-                        self.log.warning("isIPBanned attempted a pardon of IP: %s (expired ban), but it failed:\n %s", ipaddress, pardoning)
+                        self.log.warning("isIPBanned attempted a pardon of IP: %s (expired ban), but it failed:\n %s",
+                                         ipaddress, pardoning)
                 return True  # IP is still banned
-        return False # banlist empty or record not found
+        return False  # banlist empty or record not found
 
     def getSkinTexture(self, uuid):
         """
@@ -314,12 +318,12 @@ class Proxy:
             return False
         if uuid in self.skinTextures:
             return self.skinTextures[uuid]
-        skinBlob = json.loads(self.skins[uuid].decode("base64"))
-        if "SKIN" not in skinBlob["textures"]: # Player has no skin, so set to Alex [fix from #160]
-            skinBlob["textures"]["SKIN"] = {
+        skinblob = json.loads(self.skins[uuid].decode("base64"))
+        if "SKIN" not in skinblob["textures"]:  # Player has no skin, so set to Alex [fix from #160]
+            skinblob["textures"]["SKIN"] = {
                 "url": "http://hydra-media.cursecdn.com/minecraft.gamepedia.com/f/f2/Alex_skin.png"
             }
-        r = requests.get(skinBlob["textures"]["SKIN"]["url"])
+        r = requests.get(skinblob["textures"]["SKIN"]["url"])
         if r.status_code == 200:
             self.skinTextures[uuid] = r.content.encode("base64")
             return self.skinTextures[uuid]

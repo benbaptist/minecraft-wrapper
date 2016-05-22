@@ -3,7 +3,7 @@
 # p2 and py3 compliant (no PyCharm IDE-flagged errors)
 # (has warnings in both versions due to the manner of import)
 
-from utils.helpers import getargs, getargsafter
+from utils.helpers import getargs, getargsafter, processcolorcodes
 from api.base import API
 from api.player import Player
 from api.world import World
@@ -19,6 +19,7 @@ import os
 import json
 import ctypes
 import platform
+import base64
 
 # Py3-2
 import sys
@@ -30,6 +31,7 @@ except ImportError:
     resource = False
 
 
+# noinspection PyBroadException,PyUnusedLocal
 class MCServer:
 
     def __init__(self, args, log, config, wrapper):
@@ -44,7 +46,7 @@ class MCServer:
             self.wrapper.storage["serverState"] = True
 
         self.players = {}
-        self.state = 0  # 0 is off, 1 is starting, 2 is started, 3 is shutting down, 4 is idle, 5 is frozen
+        self.state = MCSState.OFF
         self.bootTime = time.time()
         self.boot = self.wrapper.storage["serverState"]
         self.proc = None
@@ -62,7 +64,7 @@ class MCServer:
         self.worldSize = 0
         self.maxPlayers = 20
         self.protocolVersion = -1  # -1 until proxy mode checks the server's MOTD on boot
-        self.version = None
+        self.version = None  # this is string name of the server version.
         self.world = None
         self.motd = None
         self.timeofday = -1  # -1 until a player logs on and server sends a time update
@@ -79,7 +81,7 @@ class MCServer:
         self.api.registerEvent("irc.quit", self.onchannelquit)
         self.api.registerEvent("timer.second", self.eachsecond)
 
-    def init(self):  # TODO I don't think this is used
+    def init(self):
         """
         Start up the listen threads for reading server console output
         """
@@ -90,6 +92,39 @@ class MCServer:
         capturethread = threading.Thread(target=self.__stderr__, args=())
         capturethread.daemon = True
         capturethread.start()
+
+    def __handle_server__(self):
+        """
+        Internally-used function that handles booting the server, parsing console output, and etc.
+        """
+        while not self.wrapper.halt:
+            self.proc = None
+            if not self.boot:
+                time.sleep(0.1)
+                continue
+            self.changestate(MCSState.STARTING)
+            self.log.info("Starting server...")
+            self.reloadproperties()
+            self.proc = subprocess.Popen(self.args, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                         stdin=subprocess.PIPE, universal_newlines=True)
+            self.players = {}
+            self.wrapper.accepteula()  # Auto accept eula
+
+            # The server loop
+            while True:
+                time.sleep(0.1)
+                if self.proc.poll() is not None:  # TODO isn't this the same as `if self.proc.poll():`?
+                    self.changestate(MCSState.OFF)
+                    if not self.config["General"]["auto-restart"]:
+                        self.wrapper.halt = True
+                    self.log.info("Server stopped")
+                    break
+                for line in self.data:
+                    try:
+                        self.readconsole(line.replace("\r", ""))
+                    except Exception as e:
+                        self.log.exception(e)
+                self.data = []
 
     def start(self, save=True):
         """
@@ -104,7 +139,7 @@ class MCServer:
         Restart the Minecraft server, and kick people with the specified reason
         """
         self.log.info("Restarting Minecraft server with reason: %s", reason)
-        self.changestate(3, reason)
+        self.changestate(MCSState.STOPPING, reason)
         for player in self.players:
             self.console("kick %s %s" % (player, reason))
         self.console("stop")
@@ -114,11 +149,11 @@ class MCServer:
         Stop the Minecraft server, prevent it from auto-restarting and kick people with the specified reason
         """
         self.log.info("Stopping Minecraft server with reason: %s", reason)
-        self.changestate(3, reason)
+        self.changestate(MCSState.STOPPING, reason)
         self.boot = False
         if save:
             self.wrapper.storage["serverState"] = False
-        for player in self.players:
+        for player in self.players:  # TODO place that kicks players when server stops
             self.console("kick %s %s" % (player, reason))
         self.console("stop")
 
@@ -127,7 +162,7 @@ class MCServer:
         Forcefully kill the server. It will auto-restart if set in the configuration file
         """
         self.log.info("Killing Minecraft server with reason: %s", reason)
-        self.changestate(0, reason)
+        self.changestate(MCSState.OFF, reason)
         self.proc.kill()
 
     def freeze(self, reason="Server is now frozen. You may disconnect momentarily."):
@@ -138,29 +173,29 @@ class MCServer:
         'reason' argument is printed in the chat for all currently-connected players, unless you specify None.
         This command currently only works for *NIX based systems
         """
-        if self.state != 0:
+        if self.state != MCSState.OFF:
             if os.name == "posix":
                 self.log.info("Freezing server with reason: %s", reason)
                 self.broadcast("&c%s" % reason)
                 time.sleep(0.5)
-                self.changestate(5)
+                self.changestate(MCSState.FROZEN)
                 os.system("kill -STOP %d" % self.proc.pid)
             else:
                 raise UnsupportedOSException("Your current OS (%s) does not support this command at this time."
                                              % os.name)
         else:
-            raise InvalidServerStateError("Server is not started. Please run '/start' to boot it up.")
+            raise InvalidServerStateError("Server is not started. You may run '/start' to boot it up.")
 
     def unfreeze(self):
         """
         Unfreeze the server with `kill -CONT`. Counterpart to .freeze(reason)
         This command currently only works for *NIX based systems
         """
-        if self.state != 0:
+        if self.state != MCSState.OFF:
             if os.name == "posix":
                 self.log.info("Unfreezing server...")
                 self.broadcast("&aServer unfrozen.")
-                self.changestate(2)
+                self.changestate(MCSState.STARTED)
                 os.system("kill -CONT %d" % self.proc.pid)
             else:
                 raise UnsupportedOSException("Your current OS (%s) does not support this command at this time."
@@ -180,14 +215,16 @@ class MCServer:
                 self.console("tellraw @a %s" % json.dumps(message))
         else:
             if self.config["General"]["pre-1.7-mode"]:
-                self.console("say %s" % self.chattocolorcodes(json.loads(self.processcolorcodes(message))))
+                self.console("say %s" %
+                             self.chattocolorcodes(json.loads(processcolorcodes(message)).decode('utf-8')))
             else:
-                self.console("tellraw @a %s" % self.processcolorcodes(message))
+                self.console("tellraw @a %s" % processcolorcodes(message))
 
-    def chattocolorcodes(self, jsondata):
+    @staticmethod
+    def chattocolorcodes(jsondata):
         def getcolorcode(color):
-            for code in API.colorCodes:
-                if API.colorCodes[code] == color:
+            for code in API.colorcodes:
+                if API.colorcodes[code] == color:
                     return "\xa7\xc2" + code
             return ""
 
@@ -208,92 +245,6 @@ class MCServer:
                 total += handlechunk(extra)
         return total.encode("utf8")
 
-    def processcolorcodes(self, message):
-        """
-        Used internally to process old-style color-codes with the & symbol, and returns a JSON chat object.
-        """
-        message = message.encode('ascii', 'ignore')
-        extras = []
-        bold = False
-        italic = False
-        underline = False
-        obfuscated = False
-        strikethrough = False
-        url = False
-        color = "white"
-        current = ""
-
-        it = iter(range(len(message)))
-
-        for i in it:
-            char = message[i]
-
-            if char is not "&":
-                if char == " ":
-                    url = False
-                current += char
-            else:
-                if url:
-                    clickevent = {"action": "open_url", "value": current}
-                else:
-                    clickevent = {}
-
-                extras.append({
-                    "text": current, 
-                    "color": color, 
-                    "obfuscated": obfuscated,
-                    "underlined": underline, 
-                    "bold": bold, 
-                    "italic": italic, 
-                    "strikethrough": strikethrough, 
-                    "clickEvent": clickevent
-                })
-
-                current = ""
-                
-                try:
-                    code = message[i + 1]
-                except:
-                    break
-                if code in "abcdef0123456789":
-                    try:
-                        color = API.colorCodes[code]
-                    except:
-                        color = "white"
-
-                obfuscated = (code == "k")
-                bold = (code == "l")
-                strikethrough = (code == "m")
-                underline = (code == "n")
-                italic = (code == "o")
-
-                if code == "&":
-                    current += "&"
-                elif code == "@":
-                    url = not url
-                elif code == "r":
-                    bold = False
-                    italic = False
-                    underline = False
-                    obfuscated = False
-                    strikethrough = False
-                    url = False
-                    color = "white"
-
-                it.next()
-
-        extras.append({
-            "text": current, 
-            "color": color, 
-            "obfuscated": obfuscated,
-            "underlined": underline, 
-            "bold": bold, 
-            "italic": italic, 
-            "strikethrough": strikethrough
-        })
-
-        return json.dumps({"text": "", "extra": extras})
-
     def login(self, username):
         """
         Called when a player logs in
@@ -301,7 +252,7 @@ class MCServer:
         try:
             if username not in self.players:
                 self.players[username] = Player(username, self.wrapper)
-            self.wrapper.callevent("player.login", {"player": self.getplayer(username)})
+            self.wrapper.events.callevent("player.login", {"player": self.getplayer(username)})
         except Exception as e:
             self.log.exception(e)
 
@@ -309,7 +260,7 @@ class MCServer:
         """
         Called when a player logs out
         """
-        self.wrapper.callevent("player.logout", {"player": self.getplayer(username)})
+        self.wrapper.events.callevent("player.logout", {"player": self.getplayer(username)})
         # if self.wrapper.proxy:
         #     for client in self.wrapper.proxy.clients:
         #         uuid = self.players[username].uuid # This is not used
@@ -329,7 +280,9 @@ class MCServer:
         # Load server icon
         if os.path.exists("server-icon.png"):
             with open("server-icon.png", "rb") as f:
-                self.serverIcon = "data:image/png;base64," + f.read().encode("base64")  # TODO - broken PY3
+                theicon = f.read()
+                iconencoded = base64.standard_b64encode(theicon)
+                self.serverIcon = b"data:image/png;base64," + iconencoded
         # Read server.properties and extract some information out of it
         # the PY3.5 ConfigParser seems broken.  This way was much more straightforward and works in both PY2 and PY3
         if os.path.exists("server.properties"):
@@ -348,7 +301,7 @@ class MCServer:
         """
         Execute a console command on the server
         """
-        if self.state in (1, 2, 3):
+        if self.state in (MCSState.STARTING, MCSState.STARTED, MCSState.STOPPING):
             self.proc.stdin.write("%s\n" % command)
         else:
             raise InvalidServerStateError("Server is not started. Please run '/start' to boot it up.")
@@ -358,15 +311,15 @@ class MCServer:
         Change the boot state of the server, with a reason message
         """
         self.state = state
-        if self.state == 0:
-            self.wrapper.callevent("server.stopped", {"reason": reason})
-        elif self.state == 1:
-            self.wrapper.callevent("server.starting", {"reason": reason})
-        elif self.state == 2:
-            self.wrapper.callevent("server.started", {"reason": reason})
-        elif self.state == 3:
-            self.wrapper.callevent("server.stopping", {"reason": reason})
-        self.wrapper.callevent("server.state", {"state": state, "reason": reason})
+        if self.state == MCSState.OFF:
+            self.wrapper.events.callevent("server.stopped", {"reason": reason})
+        elif self.state == MCSState.STARTING:
+            self.wrapper.events.callevent("server.starting", {"reason": reason})
+        elif self.state == MCSState.STARTED:
+            self.wrapper.events.callevent("server.started", {"reason": reason})
+        elif self.state == MCSState.STOPPING:
+            self.wrapper.events.callevent("server.stopping", {"reason": reason})
+        self.wrapper.events.callevent("server.state", {"state": state, "reason": reason})
 
     def getservertype(self):
         if "spigot" in self.config["General"]["command"].lower():
@@ -378,6 +331,7 @@ class MCServer:
 
     def __stdout__(self):
         while not self.wrapper.halt:
+            # noinspection PyBroadException,PyUnusedLocal
             try:
                 data = self.proc.stdout.readline()
                 for line in data.split("\n"):
@@ -399,37 +353,6 @@ class MCServer:
                 time.sleep(0.1)
                 continue
 
-    def __handle_server__(self):
-        """
-        Internally-used function that handles booting the server, parsing console output, and etc.
-        """
-        while not self.wrapper.halt:
-            self.proc = None
-            if not self.boot:
-                time.sleep(0.1)
-                continue
-            self.changestate(1)
-            self.log.info("Starting server...")
-            self.reloadproperties()
-            self.proc = subprocess.Popen(self.args, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                         stdin=subprocess.PIPE, universal_newlines=True)
-            self.players = {}
-            self.wrapper.accepteula() # Auto accept eula
-            while True:
-                time.sleep(0.1)
-                if self.proc.poll() is not None:
-                    self.changestate(0)
-                    if not self.config["General"]["auto-restart"]:
-                        self.wrapper.halt = True
-                    self.log.info("Server stopped")
-                    break
-                for line in self.data:
-                    try:
-                        self.readconsole(line.replace("\r", ""))
-                    except Exception as e:
-                        self.log.exception(e)
-                self.data = []
-
     def getmemoryusage(self):
         """
         Returns allocated memory in bytes
@@ -444,7 +367,8 @@ class MCServer:
         except Exception as e:
             raise e
 
-    def getstorageavailable(self, folder):
+    @staticmethod
+    def getstorageavailable(folder):
         """
         Returns the disk space for the working directory in bytes
         """
@@ -457,15 +381,16 @@ class MCServer:
             st = os.statvfs(folder)
             return st.f_bavail * st.f_frsize
 
-    def stripspecial(self, text):
+    @staticmethod
+    def stripspecial(text):
         a = ""
         it = iter(range(len(text)))
         for i in it:
             char = text[i]
             if char == "\xc2":
                 try:
-                    it.next()
-                    it.next()
+                    next(it)
+                    next(it)
                 except Exception as e:
                     pass
             else:
@@ -476,7 +401,7 @@ class MCServer:
         """
         Internally-used function that parses a particular console line
         """
-        if not self.wrapper.callevent("server.consoleMessage", {"message": buff}):
+        if not self.wrapper.events.callevent("server.consoleMessage", {"message": buff}):
             return False
         if self.getservertype() == "spigot":
             line = " ".join(buff.split(" ")[2:])
@@ -489,7 +414,7 @@ class MCServer:
             if len(getargs(line.split(" "), 0)) < 1:
                 return
             if getargs(line.split(" "), 0) == "Done":  # Confirmation that the server finished booting
-                self.changestate(2)
+                self.changestate(MCSState.STARTED)
                 self.log.info("Server started")
                 self.bootTime = time.time()
             # Getting world name
@@ -500,13 +425,18 @@ class MCServer:
                 name = self.stripspecial(getargs(line.split(" "), 0)[1:-1])
                 message = self.stripspecial(getargsafter(line.split(" "), 1))
                 original = getargsafter(line.split(" "), 0)
-                self.wrapper.callevent("player.message", {
+                self.wrapper.events.callevent("player.message", {
                     "player": self.getplayer(name), 
                     "message": message, 
                     "original": original
                 })
             elif getargs(line.split(" "), 1) == "logged":  # Player Login
                 name = self.stripspecial(getargs(line.split(" "), 0)[0:getargs(line.split(" "), 0).find("[")])
+                eid = int(getargs(line.split(" "), 6))
+                locationtext = getargs(line.split(" ("), 1)[:-1].split(", ")
+                location = int(float(locationtext[0])), int(float(locationtext[1])), int(float(locationtext[2]))
+                if self.wrapper.proxy:  # this should be functional even without a proxy
+                    pass  # future population of data to proxy
                 self.login(name)
             elif getargs(line.split(" "), 1) == "lost":  # Player Logout
                 name = getargs(line.split(" "), 0)
@@ -514,7 +444,7 @@ class MCServer:
             elif getargs(line.split(" "), 0) == "*":
                 name = self.stripspecial(getargs(line.split(" "), 1))
                 message = self.stripspecial(getargsafter(line.split(" "), 2))
-                self.wrapper.callevent("player.action", {
+                self.wrapper.events.callevent("player.action", {
                     "player": self.getplayer(name),
                     "action": message
                 })
@@ -524,7 +454,7 @@ class MCServer:
                 name = self.stripspecial(getargs(line.split(" "), 0)[1:-1])
                 message = self.stripspecial(getargsafter(line.split(" "), 1))
                 original = getargsafter(line.split(" "), 0)
-                self.wrapper.callevent("server.say", {
+                self.wrapper.events.callevent("server.say", {
                     "player": name, 
                     "message": message, 
                     "original": original
@@ -533,13 +463,13 @@ class MCServer:
             elif getargs(line.split(" "), 1) == "has" and getargs(line.split(" "), 5) == "achievement":
                 name = self.stripspecial(getargs(line.split(" "), 0))
                 achievement = getargsafter(line.split(" "), 6)
-                self.wrapper.callevent("player.achievement", {
+                self.wrapper.events.callevent("player.achievement", {
                     "player": name, 
                     "achievement": achievement
                 })
             elif getargs(line.split(" "), 1) in deathprefixes:  # Player Death
                 name = self.stripspecial(getargs(line.split(" "), 0))
-                self.wrapper.callevent("player.death", {
+                self.wrapper.events.callevent("player.death", {
                     "player": self.getplayer(name), 
                     "death": getargsafter(line.split(" "), 4)
                 })
@@ -547,7 +477,7 @@ class MCServer:
             if len(getargs(line.split(" "), 3)) < 1:
                 return
             if getargs(line.split(" "), 3) == "Done":  # Confirmation that the server finished booting
-                self.changestate(2)
+                self.changestate(MCSState.STARTED)
                 self.log.info("Server started")
                 self.bootTime = time.time()
             elif getargs(line.split(" "), 3) == "Preparing" and getargs(line.split(" "), 4) == "level":
@@ -558,7 +488,7 @@ class MCServer:
                 name = self.stripspecial(getargs(line.split(" "), 3)[1:-1])
                 message = self.stripspecial(getargsafter(line.split(" "), 4))
                 original = getargsafter(line.split(" "), 3)
-                self.wrapper.callevent("player.message", {
+                self.wrapper.events.callevent("player.message", {
                     "player": self.getplayer(name), 
                     "message": message, 
                     "original": original
@@ -572,7 +502,7 @@ class MCServer:
             elif getargs(line.split(" "), 3) == "*":
                 name = self.stripspecial(getargs(line.split(" "), 4))
                 message = self.stripspecial(getargsafter(line.split(" "), 5))
-                self.wrapper.callevent("player.action", {
+                self.wrapper.events.callevent("player.action", {
                     "player": self.getplayer(name), 
                     "action": message
                 })
@@ -582,7 +512,7 @@ class MCServer:
                 original = getargsafter(line.split(" "), 3)
                 if name == "Server":
                     return
-                self.wrapper.callevent("server.say", {
+                self.wrapper.events.callevent("server.say", {
                     "player": name, 
                     "message": message, 
                     "original": original
@@ -591,7 +521,7 @@ class MCServer:
                 # Player Achievement
                 name = self.stripspecial(getargs(line.split(" "), 3))
                 achievement = getargsafter(line.split(" "), 9)
-                self.wrapper.callevent("player.achievement", {
+                self.wrapper.events.callevent("player.achievement", {
                     "player": name, 
                     "achievement": achievement
                 })
@@ -601,7 +531,7 @@ class MCServer:
                     0, len(self.config["Death"]["death-kick-messages"]))]
                 if self.config["Death"]["kick-on-death"] and name in self.config["Death"]["users-to-kick"]:
                     self.console("kick %s %s" % (name, deathmessage))
-                self.wrapper.callevent("player.death", {
+                self.wrapper.events.callevent("player.death", {
                     "player": self.getplayer(name), 
                     "death": getargsafter(line.split(" "), 4)
                 })
@@ -679,3 +609,18 @@ class MCServer:
                     for f in os.listdir(i[0]):
                         size += os.path.getsize(os.path.join(i[0], f))
                 self.worldSize = size
+
+
+class MCSState:
+    """
+    This class represents Minecraft Console Server states
+    """
+
+    OFF = 0  # this is the start mode.
+    STARTING = 1
+    STARTED = 2
+    STOPPING = 3
+    FROZEN = 4
+
+    def __init__(self):
+        pass

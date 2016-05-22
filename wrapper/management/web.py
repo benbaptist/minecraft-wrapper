@@ -10,7 +10,7 @@ import urllib
 import os
 import logging
 
-from utils.helpers import getargs, getargsafter
+from utils.helpers import getargs
 from api.base import API
 from core.storage import Storage
 
@@ -21,11 +21,18 @@ except ImportError:
     pkg_resources = False
     requests = False
 
+
+try:  # Manually define an xrange builtin that works indentically on both (to take advantage of xrange's speed in 2)
+    xxrange = xrange
+except NameError:
+    xxrange = range
+
 # Yeah, I know. The code is awful. Probably not even a HTTP-compliant web
 # server anyways. I just wrote it at like 3AM in like an hour.
 
-class Web:
 
+# noinspection PyBroadException,PyUnusedLocal
+class Web:
     def __init__(self, wrapper):
         self.wrapper = wrapper
         self.api = API(wrapper, "Web", internal=True)
@@ -134,25 +141,25 @@ class Web:
             self.log.warning("Disabled login attempts for one minute")
         self.lastAttempt = time.time()
 
-    def makeKey(self, rememberMe):
+    def makeKey(self, rememberme):
         a = ""
         z = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@-_"
-        for i in range(64):  # TODO Py2-3
+        for i in xxrange(64):
             a += z[random.randrange(0, len(z))]
             # a += chr(random.randrange(97, 122))
-        if rememberMe:
+        if rememberme:
             print("Will remember!")
-        self.data["keys"].append([a, time.time(), rememberMe])
+        self.data["keys"].append([a, time.time(), rememberme])
         return a
 
     def validateKey(self, key):
         for i in self.data["keys"]:
-            expireTime = 2592000
+            expiretime = 2592000
             if len(i) > 2:
                 if not i[2]:
-                    expireTime = 21600
+                    expiretime = 21600
             # Validate key and ensure it's under a week old
-            if i[0] == key and time.time() - i[1] < expireTime:
+            if i[0] == key and time.time() - i[1] < expiretime:
                 self.loginAttempts = 0
                 return True
         return False
@@ -190,7 +197,7 @@ class Web:
         self.log.info("Web Interface bound to %s:%d",
                       self.config["Web"]["web-bind"], self.config["Web"]["web-port"])
         while not self.wrapper.halt:
-            sock, addr = self.socket.accept()
+            sock, addr = self.socket.accept()  # TODO yea! duck typing!
             # self.log.debug("(WEB) Connection %s started", str(addr))
             client = WebClient(self.wrapper, sock, addr, self)
             t = threading.Thread(target=client.wrap, args=())
@@ -198,6 +205,7 @@ class Web:
             t.start()
 
 
+# noinspection PyBroadException,PyUnusedLocal,PyMethodMayBeStatic
 class WebClient:
 
     def __init__(self, wrapper, sock, addr, web):
@@ -216,10 +224,10 @@ class WebClient:
     def write(self, message):
         self.socket.send(message)
 
-    def headers(self, status="200 Good", contentType="text/html", location=""):
+    def headers(self, status="200 Good", contenttype="text/html", location=""):
         self.write("HTTP/1.0 %s\n" % status)
         if len(location) < 1:
-            self.write("Content-Type: %s\n" % contentType)
+            self.write("Content-Type: %s\n" % contenttype)
 
         if len(location) > 0:
             self.write("Location: %s\n" % location)
@@ -229,7 +237,7 @@ class WebClient:
     def close(self):
         try:
             self.socket.close()
-            #self.log.debug("(WEB) Connection %s closed", str(self.addr))
+            # self.log.debug("(WEB) Connection %s closed", str(self.addr))
         except Exception as e:
             pass
 
@@ -260,29 +268,30 @@ class WebClient:
         os.getcwd()
 
     def runAction(self, request):
-        def get(i):
+        def get(something):  # There is two "get()'s in this module! - this local nested one and another self.get()
             for a in request.split("/")[1:][1].split("?")[1].split("&"):
-                if a[0:a.find("=")] == i:
+                if a[0:a.find("=")] == something:
                     return urllib.unquote(a[a.find("=") + 1:])
             return ""
         action = request.split("/")[1:][1].split("?")[0]
         if action == "stats":
             if not self.wrapper.config["Web"]["public-stats"]:
-                return EOFError # Why are we returning error objects and not just raising them?
+                return EOFError  # Why are we returning error objects and not just raising them?
             players = []
             for i in self.wrapper.server.players:
-                players.append({"name": i, "loggedIn": self.wrapper.server.players[i].loggedIn, "uuid": self.wrapper.server.players[i].uuid.string})
+                players.append({"name": i, "loggedIn": self.wrapper.server.players[i].loggedIn,
+                                "uuid": self.wrapper.server.players[i].uuid.string})
             return {"playerCount": len(self.wrapper.server.players), "players": players}
         if action == "login":
             password = get("password")
-            rememberMe = get("remember-me")
-            if rememberMe == "true":
-                rememberMe = True
+            rememberme = get("remember-me")
+            if rememberme == "true":
+                rememberme = True
             else:
-                rememberMe = False
+                rememberme = False
             if self.web.checkLogin(password):
-                key = self.web.makeKey(rememberMe)
-                self.log.warning("%s logged in to web mode (remember me: %s)", self.addr[0], rememberMe)
+                key = self.web.makeKey(rememberme)
+                self.log.warning("%s logged in to web mode (remember me: %s)", self.addr[0], rememberme)
                 return {"session-key": key}
             else:
                 self.log.warning("%s failed to login", self.addr[0])
@@ -318,9 +327,9 @@ class WebClient:
             if not self.wrapper.config["Web"]["web-allow-file-management"]:
                 return EOFError
             safe = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWYXZ0123456789_-/ "
-            pathUnfiltered = get("path")
+            pathunfiltered = get("path")
             path = ""
-            for i in pathUnfiltered:
+            for i in pathunfiltered:
                 if i in safe:
                     path += i
             if path == "":
@@ -345,11 +354,11 @@ class WebClient:
                 return EOFError
             if not self.wrapper.config["Web"]["web-allow-file-management"]:
                 return EOFError
-            file = get("path")
+            workfile = get("path")
             rename = get("rename")
-            if os.path.exists(file):
+            if os.path.exists(workfile):
                 try:
-                    os.rename(file, rename)
+                    os.rename(workfile, rename)
                 except Exception as e:
                     print(traceback.format_exc())
                     return False
@@ -360,13 +369,13 @@ class WebClient:
                 return EOFError
             if not self.wrapper.config["Web"]["web-allow-file-management"]:
                 return EOFError
-            file = get("path")
-            if os.path.exists(file):
+            workfile = get("path")
+            if os.path.exists(workfile):
                 try:
-                    if os.path.isdir(file):
-                        os.removedirs(file)
+                    if os.path.isdir(workfile):
+                        os.removedirs(workfile)
                     else:
-                        os.remove(file)
+                        os.remove(workfile)
                 except Exception as e:
                     print(traceback.format_exc())
                     return False
@@ -395,7 +404,7 @@ class WebClient:
                 return EOFError
             if not self.wrapper.server:
                 return
-            refreshTime = float(get("last_refresh"))
+            refreshtime = float(get("last_refresh"))
             players = []
             for i in self.wrapper.server.players:
                 player = self.wrapper.server.players[i]
@@ -429,51 +438,36 @@ class WebClient:
                         "name": plugin["name"],
                         "good": False
                     })
-            consoleScrollback = []
+            consolescrollback = []
             for line in self.web.consoleScrollback:
-                if line[0] > refreshTime:
-                    consoleScrollback.append(line[1])
-            chatScrollback = []
+                if line[0] > refreshtime:
+                    consolescrollback.append(line[1])
+            chatscrollback = []
             for line in self.web.chatScrollback:
-                if line[0] > refreshTime:
+                if line[0] > refreshtime:
                     print(line[1])
-                    chatScrollback.append(line[1])
-            memoryGraph = []
+                    chatscrollback.append(line[1])
+            memorygraph = []
             for line in self.web.memoryGraph:
-                if line[0] > refreshTime:
-                    memoryGraph.append(line[1])
+                if line[0] > refreshtime:
+                    memorygraph.append(line[1])
             # totalPlaytime = {}
             # totalPlayers = self.web.api.minecraft.getAllPlayers()
             # for uu in totalPlayers:
             #   if not "logins" in totalPlayers[uu]:
             #       continue
-            #   playerName = self.web.wrapper.getusername(uu)
+            #   playerName = self.web.wrapper.getusernamebyuuid(uu)
             #   totalPlaytime[playerName] = [0, 0]
             #   for i in totalPlayers[uu]["logins"]:
             #       totalPlaytime[playerName][0] += totalPlayers[uu]["logins"][i] - int(i)
             #       totalPlaytime[playerName][1] += 1
 
-            def secondsToHuman(seconds):
-                result = "None at all!"
-                plural = "s"
-                if seconds > 0:
-                    result = "%d seconds" % seconds
-                if seconds > 59:
-                    if (seconds / 60) == 1:
-                        plural = ""
-                    result = "%d minute%s" % (seconds / 60, plural)
-                if seconds > 3599:
-                    if (seconds / 3600) == 1:
-                        plural = ""
-                    result = "%d hour%s" % (seconds / 3600, plural)
-                if seconds > 86400:
-                    if (seconds / 86400) == 1:
-                        plural = ""
-                    result = "%s day%s" % (str(seconds / 86400.0), plural)
-                return result
-            topPlayers = []
+            # secondstohuman was removed from here... a new version is in utils.helpers, if needed later.
+
+            topplayers = []
             # for i,username in enumerate(totalPlaytime):
-            #   topPlayers.append((totalPlaytime[username][0], secondsToHuman(totalPlaytime[username][0]), totalPlaytime[username][1], username))
+            #   topPlayers.append((totalPlaytime[username][0], secondsToHuman(totalPlaytime[username][0]),
+            #                                   totalPlaytime[username][1], username))
             #   if i == 9: break
             #   topPlayers.sort(); topPlayers.reverse()
             return {
@@ -482,18 +476,18 @@ class WebClient:
                 "plugins": plugins,
                 "server_state": self.wrapper.server.state,
                 "wrapper_build": self.wrapper.getbuildstring(),
-                "console": consoleScrollback,
-                "chat": chatScrollback,
+                "console": consolescrollback,
+                "chat": chatscrollback,
                 "level_name": self.wrapper.server.worldName,
                 "server_version": self.wrapper.server.version,
                 "motd": self.wrapper.server.motd,
                 "refresh_time": time.time(),
                 "server_name": self.wrapper.config["General"]["server-name"],
                 "server_memory": self.wrapper.server.getmemoryusage(),
-                "server_memory_graph": memoryGraph,
+                "server_memory_graph": memorygraph,
                 "world_size": self.wrapper.server.worldSize,
                 "disk_avail": self.wrapper.server.getstorageavailable("."),
-                "topPlayers": topPlayers
+                "topPlayers": topplayers
             }
         if action == "console":
             if not self.web.validateKey(get("key")):
@@ -570,7 +564,7 @@ class WebClient:
             return {"error": "invalid_server_action"}
         return False
 
-    def getContentType(self, filename):
+    def getcontenttype(self, filename):
         ext = filename[filename.rfind("."):][1:]
         if ext == "js":
             return "application/javascript"
@@ -578,14 +572,14 @@ class WebClient:
             return "text/css"
         if ext in ("txt", "html"):
             return "text/html"
-        if ext in ("ico"):
+        if ext == "ico":
             return "image/x-icon"
         return "application/octet-stream"
 
     def get(self, request):
         # print "GET request: %s" % request
         if request == "/":
-            file = "index.html"
+            workfile = "index.html"
         elif request.split("/")[1:][0] == "action":
             try:
                 self.write(json.dumps(self.handleAction(request)))
@@ -595,25 +589,25 @@ class WebClient:
             self.close()
             return False
         else:
-            file = request.replace("..", "").replace("%", "").replace("\\", "")
-        if file == "/admin.html":
+            workfile = request.replace("..", "").replace("%", "").replace("\\", "")
+        if workfile == "/admin.html":
             self.headers(status="301 Go Away", location="/admin")
             return False
-        if file == "/login.html":
+        if workfile == "/login.html":
             self.headers(status="301 Go Away", location="/login")
             return False
-        if file == ".":
+        if workfile == ".":
             self.headers(status="400 Bad Request")
             self.write("<h1>BAD REQUEST</h1>")
             self.close()
             return False
         try:
-            if file == "/admin":
-                file = "admin.html"
-            if file == "/login":
-                file = "login.html"
-            data = self.read(file)
-            self.headers(contentType=self.getContentType(file))
+            if workfile == "/admin":
+                workfile = "admin.html"
+            if workfile == "/login":
+                workfile = "login.html"
+            data = self.read(workfile)
+            self.headers(contenttype=self.getcontenttype(workfile))
             self.write(data)
         except Exception as e:
             self.headers(status="404 Not Found")
@@ -630,7 +624,7 @@ class WebClient:
                 self.buffer = data.split("\n")
             except Exception as e:
                 self.close()
-                #self.log.debug("(WEB) Connection %s closed", str(self.addr))
+                # self.log.debug("(WEB) Connection %s closed", str(self.addr))
                 break
             if len(self.buffer) < 1:
                 print("Web connection closed suddenly")

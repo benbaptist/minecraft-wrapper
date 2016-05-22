@@ -19,6 +19,7 @@ try:
 except ImportError:
     IMPORT_SUCCESS = False
 
+
 class Web:
 
     def __init__(self, wrapper):
@@ -63,11 +64,11 @@ class Web:
             self.log.warning("Disabled login attempts for one minute")
         self.lastAttempt = time.time()
 
-    def makeKey(self, rememberMe):
+    def makeKey(self, rememberme):
         chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@-_"
         a = "".join([random.choice(chars) for i in range(64)])
 
-        self.data["keys"].append([a, time.time(), rememberMe])
+        self.data["keys"].append([a, time.time(), rememberme])
         return a
 
     def validateKey(self):
@@ -76,12 +77,12 @@ class Web:
 
         key = request.cookie["__wrapper_cookie"]
         for i in self.data["keys"]:
-            expireTime = 7884000  # Three weeks old
+            expiretime = 7884000  # Three weeks old
             if len(i) > 2:
                 if not i[2]:
-                    expireTime = 21600
-            # Validate key and ensure it's under the expireTime
-            if i[0] == key and time.time() - i[1] < expireTime:
+                    expiretime = 21600
+            # Validate key and ensure it's under the expiretime
+            if i[0] == key and time.time() - i[1] < expiretime:
                 self.loginAttempts = 0
                 return True
         return False
@@ -103,19 +104,19 @@ class Web:
 
         @self.app.route("/login", methods=["GET", "POST"])
         def login():
-            badPass = False
+            badpass = False
             if request.method == "POST":
                 password = request.form["password"]
-                rememberMe = "remember" in request.form
+                rememberme = "remember" in request.form
 
                 if self.checkLogin(password):
-                    key = self.makeKey(rememberMe)
+                    key = self.makeKey(rememberme)
                     return redirect("/")
-                    # self.log.warning("%s logged in to web mode (remember me: %s)", request.addr, rememberMe)
+                    # self.log.warning("%s logged in to web mode (remember me: %s)", request.addr, rememberme)
                 else:
-                    badPass = True
+                    badpass = True
 
-            return render_template("login.html", badPass=badPass)
+            return render_template("login.html", badPass=badpass)
 
         @self.socketio.on('connect')
         def handle_connect():
@@ -126,4 +127,5 @@ class Web:
             pass
 
     def run(self):
-        self.socketio.run(self.app, host=self.wrapper.config["Web"]["web-bind"], port=self.wrapper.config["Web"]["web-port"])
+        self.socketio.run(self.app, host=self.wrapper.config["Web"]["web-bind"],
+                          port=self.wrapper.config["Web"]["web-port"])
