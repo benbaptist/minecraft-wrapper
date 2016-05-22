@@ -6,11 +6,11 @@ import json
 
 class World:
 
-    def __init__(self, name, server):
+    def __init__(self, name, mcserver):
         self.chunks = {}
         self.entities = {}
         self.name = name
-        self.server = server
+        self.javaserver = mcserver
 
     def __str__(self):
         return self.name
@@ -35,7 +35,7 @@ class World:
     def setBlock(self, x, y, z, tilename, damage=0, mode="replace", data=None):
         if not data:
             data = {}
-        self.server.console("setblock %d %d %d %s %d %s %s" % (
+        self.javaserver.console("setblock %d %d %d %s %d %s %s" % (
             x, y, z, tilename, damage, mode, json.dumps(data)))
 
     def fill(self, position1, position2, tilename, damage=0, mode="destroy", data=None):
@@ -48,21 +48,21 @@ class World:
             raise Exception("Invalid mode: %s" % mode)
         x1, y1, z1 = position1
         x2, y2, z2 = position2
-        if self.server.protocolVersion < 6:
+        if self.javaserver.protocolVersion < 6:
             raise Exception("Must be running Minecraft 1.8 or above to use the world.fill() method.")
         else:
-            self.server.console("fill %d %d %d %d %d %d %s %d %s %s" % (
+            self.javaserver.console("fill %d %d %d %d %d %d %s %d %s %s" % (
                 x1, y1, z1, x2, y2, z2, tilename, damage, mode, json.dumps(data)))
 
     def replace(self, position1, position2, tilename1, damage1, tilename2, damage2=0):
         """ Replace specified blocks within a 3D cube with another specified block. """
         x1, y1, z1 = position1
         x2, y2, z2 = position2
-        if self.server.protocolVersion < 6:
+        if self.javaserver.protocolVersion < 6:
             raise Exception(
                 "Must be running Minecraft 1.8 or above to use the world.replace() method.")
         else:
-            self.server.console("fill %d %d %d %d %d %d %s %d replace %s %d" % (
+            self.javaserver.console("fill %d %d %d %d %d %d %s %d replace %s %d" % (
                 x1, y1, z1, x2, y2, z2, tilename2, damage2, tilename1, damage1))
 
 

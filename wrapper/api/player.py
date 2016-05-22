@@ -22,7 +22,7 @@ class Player:
     def __init__(self, username, wrapper):
 
         self.wrapper = wrapper
-        self.server = wrapper.server
+        self.javaserver = wrapper.javaserver
         self.permissions = wrapper.permissions
         self.log = wrapper.log
 
@@ -51,17 +51,14 @@ class Player:
         self.operatordict = self._read_ops_file()
 
         self.client = None
-        self.clientPackets = mcpacket.Client18
-        self.serverPackets = mcpacket.Server18
+        self.clientboundPackets = mcpacket.Client18
+        self.serverboundPackets = mcpacket.Server18
 
         # some player properties associated with abilities
         self.field_of_view = float(1)  # default is 1.  Should normally be congruent with speed.
         self.godmode = 0x00  # Client set godmode is 0x01
         self.creative = 0x00  # Client set creative is 0x08
         self.fly_speed = float(1)  # default is 1
-
-        if self.server.version > mcpacket.PROTOCOL_1_9START:
-            self.serverPackets = mcpacket.Server19
 
         if self.wrapper.proxy:
             for client in self.wrapper.proxy.clients:
@@ -70,8 +67,8 @@ class Player:
                     self.clientUuid = client.uuid  # Both MCUUID objects
                     self.serverUuid = client.serverUuid
                     self.ipaddress = client.ip
-                    if self.getClient().version > 49:  # packet numbers fluctuated  wildly between 48 and 107
-                        self.clientPackets = mcpacket.Client19
+                    self.clientboundPackets = self.client.pktCB
+                    self.serverboundPackets = self.client.pktSB
                     break
 
         self.data = Storage(self.clientUuid.string, root="wrapper-data/players")
@@ -131,7 +128,7 @@ class Player:
         Returns: Nothing; passes the command to console as and "execute" command.
 
         """
-        self.wrapper.server.console("execute %s ~ ~ ~ %s" % (self.name, string))
+        self.wrapper.javaserver.console("execute %s ~ ~ ~ %s" % (self.name, string))
 
     def sendCommand(self, command, args):
         """
@@ -141,7 +138,7 @@ class Player:
         Sample usage:
             ```
             player=getPlayer("username")
-            player.wrapperCommand("perms", ("users", "SurestTexas00", "info"))
+            player.sendCommand("perms", ("users", "SurestTexas00", "info"))
             ```
         Args:
             command: The wrapper (or plugin) command to execute; no slash prefix
@@ -218,7 +215,7 @@ class Player:
         """
         if gm in (0, 1, 2, 3):
             self.client.gamemode = gm
-            self.wrapper.server.console("gamemode %d %s" % (gm, self.username))
+            self.wrapper.javaserver.console("gamemode %d %s" % (gm, self.username))
 
     def setResourcePack(self, url, hashrp=""):
         """
@@ -231,7 +228,7 @@ class Player:
         if self.getClient().version < mcpacket.PROTOCOL_1_8START:
             self.client.packet.send(0x3f, "string|bytearray", ("MC|RPack", url))
         else:
-            self.client.packet.send(self.clientPackets.RESOURCE_PACK_SEND,
+            self.client.packet.send(self.clientboundPackets.RESOURCE_PACK_SEND,
                                     "string|string", (url, hashrp))
 
     def isOp(self):
@@ -261,16 +258,19 @@ class Player:
                 return True
         return False
 
+    def refreshOps(self):
+        self.operatordict = self._read_ops_file()
+
     # region Visual notifications
     def message(self, message=""):
         if isinstance(message, dict):
-            self.wrapper.server.console("tellraw %s %s" % (self.username, json.dumps(message)))
+            self.wrapper.javaserver.console("tellraw %s %s" % (self.username, json.dumps(message)))
         else:
-            self.wrapper.server.console("tellraw %s %s" % (self.username, processcolorcodes(message)))
+            self.wrapper.javaserver.console("tellraw %s %s" % (self.username, processcolorcodes(message)))
 
     def actionMessage(self, message=""):
         if self.getClient().version > mcpacket.PROTOCOL_1_8START:
-            self.getClient().packet.send(self.clientPackets.CHAT_MESSAGE, "string|byte",
+            self.getClient().packet.send(self.clientboundPackets.CHAT_MESSAGE, "string|byte",
                                          (json.dumps({"text": processoldcolorcodes(message)}), 2))
 
     def setVisualXP(self, progress, level, total):
@@ -286,10 +286,10 @@ class Player:
 
         """
         if self.getClient().version > mcpacket.PROTOCOL_1_8START:
-            self.getClient().packet.send(self.clientPackets.SET_EXPERIENCE, "float|varint|varint",
+            self.getClient().packet.send(self.clientboundPackets.SET_EXPERIENCE, "float|varint|varint",
                                          (progress, level, total))
         else:
-            self.getClient().packet.send(self.clientPackets.SET_EXPERIENCE, "float|short|short",
+            self.getClient().packet.send(self.clientboundPackets.SET_EXPERIENCE, "float|short|short",
                                          (progress, level, total))
 
     def openWindow(self, windowtype, title, slots):
@@ -328,21 +328,12 @@ class Player:
         # TODO Test what kind of field title is (json or text)
         if self.getClient().version > mcpacket.PROTOCOL_1_8START:
             self.getClient().packet.send(
-                self.clientPackets.OPEN_WINDOW, "ubyte|string|json|ubyte", (
+                self.clientboundPackets.OPEN_WINDOW, "ubyte|string|json|ubyte", (
                     self.getClient().windowCounter, windowtype, {"text": title}, slots))
         return None  # return a Window object soon
     # endregion Visual notifications
 
     # region Abilities & Client-Side Stuff
-    def getClientPackets(self):
-        """
-        Allow plugins to get the players client plugin list per their client version
-        e.g.:
-        packets = player.getClientPacketList()
-        player.client.packet.send(packets.PLAYER_ABILITIES, "byte|float|float", (0x0F, 1, 1))
-        """
-        return self.clientPackets
-
     def setPlayerAbilities(self, fly):
         # based on old playerSetFly (which was an unfinished function)
         """
@@ -374,9 +365,9 @@ class Player:
         bitfield = self.godmode | self.creative | setfly
         # Note in versions before 1.8, field of view is the walking speed for client (still a float)
         #   Server field of view is still walking speed
-        self.getClient().packet.send(self.clientPackets.PLAYER_ABILITIES, "byte|float|float",
+        self.getClient().packet.send(self.clientboundPackets.PLAYER_ABILITIES, "byte|float|float",
                                      (bitfield, self.fly_speed, self.field_of_view))
-        self.getClient().server.packet.send(self.serverPackets.PLAYER_ABILITIES, "byte|float|float",
+        self.getClient().server.packet.send(self.serverboundPackets.PLAYER_ABILITIES, "byte|float|float",
                                             (bitfield, self.fly_speed, self.field_of_view))
 
     # Unfinished function, will be used to make phantom blocks visible ONLY to the client

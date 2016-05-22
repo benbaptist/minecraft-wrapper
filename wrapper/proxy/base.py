@@ -30,7 +30,7 @@ HIDDEN_OPS = ["SurestTexas00", "BenBaptist"]
 class Proxy:
     def __init__(self, wrapper):
         self.wrapper = wrapper
-        self.server = wrapper.server
+        self.javaserver = wrapper.javaserver
         self.log = wrapper.log
         self.proxy_socket = socket.socket()
         self.usingSocket = False
@@ -49,7 +49,7 @@ class Proxy:
 
     def host(self):
         # get the protocol version from the server
-        while not self.wrapper.server.state == 2:
+        while not self.wrapper.javaserver.state == 2:
             time.sleep(.2)
         try:
             self.pollServer()
@@ -108,8 +108,8 @@ class Proxy:
             pkid, original = packet.grabPacket()
             if pkid == 0x00:
                 data = json.loads(packet.read("string:response")["response"].decode('utf-8'))  # py3
-                self.wrapper.server.protocolVersion = data["version"]["protocol"]
-                self.wrapper.server.version = data["version"]["name"]
+                self.wrapper.javaserver.protocolVersion = data["version"]["protocol"]
+                self.wrapper.javaserver.version = data["version"]["name"]
                 break
         server_sock.close()
 
@@ -182,7 +182,7 @@ class Proxy:
                                 "expires": expiration,
                                 "reason": reason})
                 if putjsonfile(banlist, "banned-players"):
-                    self.wrapper.server.console("kick %s Banned: %s" % (name, reason))
+                    self.wrapper.javaserver.console("kick %s Banned: %s" % (name, reason))
                     return "Banned %s: %s" % (name, reason)
                 return "Could not write banlist to disk"
         else:
@@ -223,10 +223,10 @@ class Proxy:
                                 "reason": reason})
                 if putjsonfile(banlist, "banned-ips"):
                     banned = ""
-                    for i in self.wrapper.server.players:
-                        player = self.wrapper.server.players[i]
+                    for i in self.wrapper.javaserver.players:
+                        player = self.wrapper.javaserver.players[i]
                         if str(player.client.addr[0]) == str(ipaddress):
-                            self.wrapper.server.console("kick %s Your IP is Banned!" % player.username)
+                            self.wrapper.javaserver.console("kick %s Your IP is Banned!" % player.username)
                             banned += "\n%s" % player.username
                     return "Banned ip address: %s\nPlayers kicked as a result:%s" % (ipaddress, banned)
                 return "Could not write banlist to disk"
