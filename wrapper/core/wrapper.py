@@ -59,7 +59,7 @@ class Wrapper:
         self.configManager = Config()
         self.configManager.loadconfig()  # Load initially for storage object
         self.encoding = self.configManager.config["General"]["encoding"]  # This was to allow alternate encodings
-        self.server = None
+        self.javaserver = None
         self.api = None
         self.irc = None
         self.scripts = None
@@ -98,13 +98,13 @@ class Wrapper:
         self._registerwrappershelp()
 
         # This is not the actual server... the MCServer class is a console wherein the server is started
-        self.server = MCServer(sys.argv, self.log, self.configManager.config, self)
-        self.server.init()
+        self.javaserver = MCServer(sys.argv, self.log, self.configManager.config, self)
+        self.javaserver.init()
 
         self.plugins.loadplugins()
 
         if self.config["IRC"]["irc-enabled"]:  # this should be a plugin
-            self.irc = IRC(self.server, self.config, self.log, self)
+            self.irc = IRC(self.javaserver, self.config, self.log, self)
             t = threading.Thread(target=self.irc.init, args=())
             t.daemon = True
             t.start()
@@ -122,10 +122,10 @@ class Wrapper:
 
         # This is passed to MCserver console....
         if len(sys.argv) < 2:
-            self.server.args = self.configManager.config["General"]["command"].split(" ")
+            self.javaserver.args = self.configManager.config["General"]["command"].split(" ")
         else:
             # I think this allows you to run the server java command directly from the python prompt
-            self.server.args = sys.argv[1:]
+            self.javaserver.args = sys.argv[1:]
 
         # Console Daemon runs while not wrapper.halt (here; self.halt)
         consoledaemon = threading.Thread(target=self.parseconsoleinput, args=())
@@ -158,7 +158,7 @@ class Wrapper:
 
     def bootserver(self):
         # This boots the server and loops in it
-        self.server.__handle_server__()
+        self.javaserver.__handle_server__()
         # until it stops
         self.plugins.disableplugins()
 
@@ -176,18 +176,18 @@ class Wrapper:
             command = getargs(consoleinput[0:].split(" "), 0)
 
             if command in ("/halt", "halt"):
-                self.server.stop("Halting server...", save=False)
+                self.javaserver.stop("Halting server...", save=False)
                 self.halt = True
                 sys.exit()
             elif command in ("/stop", "stop"):
-                self.server.stop("Stopping server...")
+                self.javaserver.stop("Stopping server...")
             elif command in ("/start", "start"):
-                self.server.start()
+                self.javaserver.start()
             elif command == "/restart":
-                self.server.restart("Server restarting, be right back!")
+                self.javaserver.restart("Server restarting, be right back!")
             elif command == "/reload":
                 self.plugins.reloadplugins()
-                if self.server.getservertype() != "vanilla":
+                if self.javaserver.getservertype() != "vanilla":
                     self.log.info("Note: If you meant to reload the server's plugins instead of the Wrapper's "
                                   "plugins, try running 'reload' without any slash OR '/raw /reload'.")
             elif command in ("/update-wrapper", "update-wrapper"):
@@ -196,7 +196,7 @@ class Wrapper:
                 self.listplugins()
             elif command in ("/mem", "/memory", "mem", "memory"):
                 try:
-                    self.log.info("Server Memory Usage: %d bytes", self.server.getmemoryusage())
+                    self.log.info("Server Memory Usage: %d bytes", self.javaserver.getmemoryusage())
                 except UnsupportedOSException as e:
                     self.log.error(e)
                 except Exception as ex:
@@ -204,14 +204,14 @@ class Wrapper:
             elif command in ("/raw", "raw"):
                 try:
                     if len(getargsafter(consoleinput[1:].split(" "), 1)) > 0:
-                        self.server.console(getargsafter(consoleinput[1:].split(" "), 1))
+                        self.javaserver.console(getargsafter(consoleinput[1:].split(" "), 1))
                     else:
                         self.log.info("Usage: /raw [command]")
                 except InvalidServerStateError as e:
                     self.log.warning(e)
             elif command in ("/freeze", "freeze"):
                 try:
-                    self.server.freeze()
+                    self.javaserver.freeze()
                 except InvalidServerStateError as e:
                     self.log.warning(e)
                 except UnsupportedOSException as ex:
@@ -220,7 +220,7 @@ class Wrapper:
                     self.log.exception("Something went wrong when trying to freeze the server! (%s)", exc)
             elif command in ("/unfreeze", "unfreeze"):
                 try:
-                    self.server.unfreeze()
+                    self.javaserver.unfreeze()
                 except InvalidServerStateError as e:
                     self.log.warning(e)
                 except UnsupportedOSException as ex:
@@ -231,7 +231,7 @@ class Wrapper:
                 readout("/version", self.getbuildstring())
             elif command == "help":
                 readout("/help", "Get wrapper.py help.", separator=" (with a slash) - ")
-                self.server.console(consoleinput)
+                self.javaserver.console(consoleinput)
             elif command == "/help":
                 # This is the console help commands.  Below this in _registerwrappershelp is the in-game help
                 readout("", "Get Minecraft help.", separator="help (with no slash) - ")
@@ -253,7 +253,7 @@ class Wrapper:
                 readout("/version", self.getbuildstring())
             else:
                 try:
-                    self.server.console(consoleinput)
+                    self.javaserver.console(consoleinput)
                 except Exception as e:
                     print("[BREAK] Console input exception (nothing passed to server) \n%s" % e)
                     break
@@ -304,8 +304,8 @@ class Wrapper:
         if self.config["Proxy"]["proxy-enabled"]:
             # if wrapper is using proxy mode (which should be set to online)
             return self.config["Proxy"]["online-mode"]
-        if self.server is not None:
-            if self.server.onlineMode:
+        if self.javaserver is not None:
+            if self.javaserver.onlineMode:
                 return True  # if local server is online-mode
         return False
 
@@ -539,7 +539,7 @@ class Wrapper:
 
     def shutdown(self, status=0):
         self.halt = True
-        self.server.stop(reason="Wrapper.py Shutting Down", save=False)
+        self.javaserver.stop(reason="Wrapper.py Shutting Down", save=False)
         time.sleep(1)
         sys.exit(status)
 

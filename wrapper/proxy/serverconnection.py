@@ -19,7 +19,7 @@ except NameError:
 
 
 # noinspection PyBroadException,PyUnusedLocal
-class Server:
+class ServerConnection:
     def __init__(self, client, wrapper, ip=None, port=None):
         """
         Server receives "CLIENT BOUND" packets from server.  These are what get parsed (CLIENT BOUND format).
