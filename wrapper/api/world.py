@@ -3,6 +3,7 @@
 import struct
 import json
 
+
 class World:
 
     def __init__(self, name, server):
@@ -16,10 +17,10 @@ class World:
 
     def getBlock(self, pos):
         x, y, z = pos
-        chunkX, chunkZ = int(x / 16), int(z / 16)
-        localX, localZ = (x / 16.0 - x / 16) * 16, (z / 16.0 - z / 16) * 16
-        # print chunkX, chunkZ, localX, y, localZ
-        return self.chunks[chunkX][chunkZ].getBlock(localX, y, localZ)
+        chunkx, chunkz = int(x / 16), int(z / 16)
+        localx, localz = (x / 16.0 - x / 16) * 16, (z / 16.0 - z / 16) * 16
+        # print chunkx, chunkz, localx, y, localz
+        return self.chunks[chunkx][chunkz].getBlock(localx, y, localz)
 
     def setChunk(self, x, z, chunk):
         if x not in self.chunks:
@@ -31,14 +32,18 @@ class World:
         if eid in self.entities:
             return self.entities[eid]
 
-    def setBlock(self, x, y, z, tilename, damage=0, mode="replace", data={}):
+    def setBlock(self, x, y, z, tilename, damage=0, mode="replace", data=None):
+        if not data:
+            data = {}
         self.server.console("setblock %d %d %d %s %d %s %s" % (
             x, y, z, tilename, damage, mode, json.dumps(data)))
 
-    def fill(self, position1, position2, tilename, damage=0, mode="destroy", data={}):
+    def fill(self, position1, position2, tilename, damage=0, mode="destroy", data=None):
         """ Fill a 3D cube with a certain block.
 
         Modes: destroy, hollow, keep, outline"""
+        if not data:
+            data = {}
         if mode not in ("destroy", "hollow", "keep", "outline"):
             raise Exception("Invalid mode: %s" % mode)
         x1, y1, z1 = position1
@@ -63,11 +68,11 @@ class World:
 
 class Chunk:
 
-    def __init__(self, bytearray, x, z):
-        self.ids = struct.unpack("<" + ("H" * (len(bytearray) / 2)), bytearray)
+    def __init__(self, bytesarray, x, z):
+        self.ids = struct.unpack("<" + ("H" * (len(bytesarray) / 2)), bytesarray)
         self.x = x
         self.z = z
-        # for i,v in enumerate(bytearray):
+        # for i,v in enumerate(bytesarray):
         #   y = math.ceil(i/256)
         #   if y not in self.blocks: self.blocks[y] = {}
         #   z = int((i/256.0 - int(i/256.0)) * 16)

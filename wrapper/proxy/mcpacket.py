@@ -59,13 +59,49 @@ PROTOCOL_1_7 = 4          # 1.7.1-pre to 1.7.5  http://wiki.vg/index.php?title=P
  from the list above.  Do not run a 1.6.4 server with proxy mode."""
 
 
-class ServerBound18:
+class Server17:
+    """Not used"""
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def start():
+        return PROTOCOL_1_7
+
+    @staticmethod
+    def end():
+        return PROTOCOL_1_7
+
+
+class Server179:
+    """Not used"""
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def start():
+        return PROTOCOL_1_7_9
+
+    @staticmethod
+    def end():
+        return PROTOCOL_1_7_9
+
+
+class Server18:
     """ wrapper's "Client" process, which handles connections from client to wrapper.
     These packets are being sent to the server (i.e., wrapper's proxy) from the client.
     Proxy, in turn, can "send" these on, or drop them (return False)
     """
     def __init__(self):
         pass
+
+    @staticmethod
+    def start():
+        return PROTOCOL_1_8START
+
+    @staticmethod
+    def end():
+        return PROTOCOL_1_9START - 1
 
     KEEP_ALIVE = 0x00  # Client's Response To Server Challenge
     CHAT_MESSAGE = 0x01
@@ -86,13 +122,21 @@ class ServerBound18:
     TELEPORT_CONFIRM = 0xEE  # Does not exist in 1.8
 
 
-class ServerBound19:  # Updated To Protocol 94 15w51b
+class Server19:  # Updated To Protocol 108
     """ wrapper's "Client" process, which handles connections from client to wrapper.
     These packets are being sent to the server (i.e., wrapper's proxy) from the client.
     Proxy, in turn, can "send" these on, or drop them (return False)
     """
     def __init__(self):
         pass
+
+    @staticmethod
+    def start():
+        return PROTOCOL_1_9START
+
+    @staticmethod
+    def end():
+        return PROTOCOL_1_9_3PRE3
 
     KEEP_ALIVE = 0x0b  # Client's Response To Server Challenge
     CHAT_MESSAGE = 0x02
@@ -112,13 +156,85 @@ class ServerBound19:  # Updated To Protocol 94 15w51b
     USE_ITEM = 0x1d  # Only Used For Animation Purposes
     TELEPORT_CONFIRM = 0x00
 
-class ClientBound18:
+
+class Server194:
+    """ wrapper's "Client" process, which handles connections from client to wrapper.
+    These packets are being sent to the server (i.e., wrapper's proxy) from the client.
+    Proxy, in turn, can "send" these on, or drop them (return False)
+    """
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def start():
+        return PROTOCOL_1_9_4
+
+    @staticmethod
+    def end():
+        return PROTOCOL_MAX
+
+    KEEP_ALIVE = 0x0b
+    CHAT_MESSAGE = 0x02
+    USE_ENTITY = 0x0a
+    PLAYER = 0x0f  # Onground
+    PLAYER_POSITION = 0x0c
+    PLAYER_POSLOOK = 0x0d
+    PLAYER_LOOK = 0x0e
+    PLAYER_DIGGING = 0x13
+    PLAYER_BLOCK_PLACEMENT = 0x1c
+    PLAYER_UPDATE_SIGN = 0x19
+    HELD_ITEM_CHANGE = 0x17
+    CLIENT_SETTINGS = 0x04
+    CLICK_WINDOW = 0x07
+    SPECTATE = 0x1b
+    PLAYER_ABILITIES = 0x12  # corrected/added/verified wiki.vg/Protocol_History#16w07b see 15w43a serverbound
+    USE_ITEM = 0x1d  # Only Used For Animation Purposes
+    TELEPORT_CONFIRM = 0x00
+
+
+class Client17:
+    """Not used"""
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def start():
+        return PROTOCOL_1_7
+
+    @staticmethod
+    def end():
+        return PROTOCOL_1_7
+
+
+class Client179:
+    """Not used"""
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def start():
+        return PROTOCOL_1_7_9
+
+    @staticmethod
+    def end():
+        return PROTOCOL_1_7_9
+
+
+class Client18:
     """ wrapper's "Server" process, which handles connections from server to wrapper.
     These packets are being sent to the client (i.e., wrapper's proxy) from the server.
     Proxy, in turn reads the info and passes it on the client (making any needed mods).
     """
     def __init__(self):
         pass
+
+    @staticmethod
+    def start():
+        return PROTOCOL_1_8START
+
+    @staticmethod
+    def end():
+        return PROTOCOL_1_9START - 1
 
     KEEP_ALIVE = 0x00  # Server Challenge To Client
     CHAT_MESSAGE = 0x02
@@ -155,13 +271,21 @@ class ClientBound18:
     ANIMATION = 0x0b
 
 
-class ClientBound19:  # Updated To Protocol 107 1.9 Minecraft
+class Client19:  # Updated To Protocol 108 1.9 Minecraft
     """ wrapper's "Server" process, which handles connections from server to wrapper.
     These packets are being sent to the client (i.e., wrapper's proxy) from the server.
     Proxy, in turn reads the info and passes it on the client (making any needed mods).
     """
     def __init__(self):
         pass
+
+    @staticmethod
+    def start():
+        return PROTOCOL_1_9START
+
+    @staticmethod
+    def end():
+        return PROTOCOL_1_9_3PRE3
 
     KEEP_ALIVE = 0x1f  # Server Challenge To Client
     CHAT_MESSAGE = 0x0f
@@ -196,3 +320,55 @@ class ClientBound19:  # Updated To Protocol 107 1.9 Minecraft
     USE_BED = 0x2f
     TIME_UPDATE = 0x44
     ANIMATION = 0x06
+
+
+class Client194:
+    """ wrapper's "Server" process, which handles connections from server to wrapper.
+    These packets are being sent to the client (i.e., wrapper's proxy) from the server.
+    Proxy, in turn reads the info and passes it on the client (making any needed mods).
+    """
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def start():
+        return PROTOCOL_1_9_4
+
+    @staticmethod
+    def end():
+        return PROTOCOL_MAX
+
+    KEEP_ALIVE = 0x1f
+    CHAT_MESSAGE = 0x0f
+    PLAYER_POSLOOK = 0x2e
+    PLAYER_LIST_ITEM = 0x2d
+    PLAYER_ABILITIES = 0x2b  # corrected/added/verified wiki.vg/Protocol_History#16w07b see 15w43a clientbound
+    JOIN_GAME = 0x23
+    DISCONNECT = 0x1a
+    RESPAWN = 0x33
+    SPAWN_POSITION = 0x43
+    SPAWN_PLAYER = 0x05
+    SPAWN_OBJECT = 0x00
+    SPAWN_MOB = 0x03
+    ATTACH_ENTITY = 0x3a
+    ENTITY_RELATIVE_MOVE = 0x25
+    ENTITY_TELEPORT = 0x49
+    ENTITY_HEAD_LOOK = 0x34
+    ENTITY_STATUS = 0x1b
+    ENTITY_METADATA = 0x39
+    ENTITY_EFFECT = 0x4b
+    ENTITY_PROPERTIES = 0x4a
+    REMOVE_ENTITY_EFFECT = 0x31
+    SET_EXPERIENCE = 0x3d
+    CHANGE_GAME_STATE = 0x1e
+    NAMED_SOUND_EFFECT = 0x19
+    RESOURCE_PACK_SEND = 0x32
+    CHUNK_DATA = 0x20
+    BLOCK_CHANGE = 0xEE  # -0x0b  disabled: wrapper code prior to build 109 does nothing
+    MAP_CHUNK_BULK = 0xEE  # Deprecated And Not Used In 1.9
+    SET_SLOT = 0x16
+    OPEN_WINDOW = 0x13
+    USE_BED = 0x2f
+    TIME_UPDATE = 0x44
+    ANIMATION = 0x06
+    UPDATE_BLOCK_ENTITY = 0xEE  # Added protocol 110

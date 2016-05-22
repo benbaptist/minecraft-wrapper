@@ -32,8 +32,15 @@ import datetime
 import os
 import subprocess
 
+
 def get_version(version=None):
-    "Returns a PEP 440-compliant version number from VERSION."
+    """
+    Returns a PEP 440-compliant version number from VERSION.
+    Args:
+        version:
+    Returns:
+    """
+
     version = get_complete_version(version)
 
     # Now build the two parts of the version number:
@@ -56,8 +63,14 @@ def get_version(version=None):
     print(str(main + sub))
     return str(main + sub)
 
+
 def get_main_version(version=None):
-    "Returns main version (X.Y[.Z]) from VERSION."
+    """
+    Returns main version (X.Y[.Z]) from VERSION.
+    Args:
+        version:
+    Returns:
+    """
     version = get_complete_version(version)
     parts = 2 if version[2] == 0 else 3
     return '.'.join(str(x) for x in version[:parts])
@@ -68,12 +81,13 @@ def get_complete_version(version=None):
     then checks for correctness of the tuple provided.
     """
     if version is None:
-        from wrapper import VERSION as version
+        from wrapper import VERSION as version  # TODO "constant variable imported as non-constant."
     else:
         assert len(version) == 5
         assert version[3] in ('alpha', 'beta', 'rc', 'final')
 
     return version
+
 
 def get_docs_version(version=None):
     version = get_complete_version(version)
@@ -82,8 +96,10 @@ def get_docs_version(version=None):
     else:
         return '%d.%d' % version[:2]  # TODO "Too few arguments for formatstring"
 
+
 def get_git_changeset():
-    """Returns a numeric identifier of the latest git changeset.
+    """
+    Returns a numeric identifier of the latest git changeset.
     The result is the UTC timestamp of the changeset in YYYYMMDDHHMMSS format.
     This value isn't guaranteed to be unique, but collisions are very unlikely,
     so it's sufficient for generating the development version numbers.

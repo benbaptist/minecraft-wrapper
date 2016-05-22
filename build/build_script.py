@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import os
-import sys
 import time
 import json
 import hashlib
@@ -11,59 +10,71 @@ import zipfile
 import subprocess
 
 parser = argparse.ArgumentParser(
-  description='Build script for Wrapper.py!', 
-  epilog='Created by Jason Bristol')
+    description='Build script for Wrapper.py!',
+    epilog='Created by Jason Bristol')
 
 parser.add_argument('source', type=str, default='.', help='the top level source directory')
-parser.add_argument('branch', type=str, choices=('dev', 'stable'), default='dev', help='branch to commit changes to')
-parser.add_argument('--commit',  '-c', action='store_true', help='commit changes to specified branch')
+parser.add_argument('branch', type=str, choices=('dev', 'stable'), default='dev',
+                    help='branch to commit changes to')
+parser.add_argument('--commit', '-c', action='store_true', help='commit changes to specified branch')
 parser.add_argument('--message', '-m', type=str, default='build revision', help='commit message') 
 parser.add_argument('--verbose', '-v', action='store_true', help='verbose flag')
 
 args = parser.parse_args()
 
-def build_wrapper(args):
-  os.chdir(args.source)
 
-  with open("build/version.json", "r") as f:
-    version = json.loads(f.read())
-    version["__build__"] += 1
-    version["__branch__"] = args.branch
-    version["release_time"] = time.time()
+def build_wrapper(buildargs):
+    os.chdir(buildargs.source)
 
-  with open("core/buildinfo.py", "w") as f:
-    f.write("__build__=%d\n__branch__='%s'" % (version["build"], args.branch))
+    with open("build/version.json", "r") as f:
+        version = json.loads(f.read())
+        version["__build__"] += 1
+        version["__branch__"] = buildargs.branch
+        version["release_time"] = time.time()
 
-  with open("build/version.json", "w") as f:
-    f.write(json.dumps(version))
+    with open("core/buildinfo.py", "w") as f:
+        f.write("__build__=%d\n__branch__='%s'" % (version["build"], buildargs.branch))
 
-  if os.path.exists("Wrapper.py"): os.remove("Wrapper.py") # Time to start with a clean Wrapper.py!
-  # subprocess.Popen("zip Wrapper.py -r . -x *~ -x *pyc", shell=True).wait()
+    with open("build/version.json", "w") as f:
+        f.write(json.dumps(version))
 
-  if args.verbose: print 'Creating Archive...'
-  zf = zipfile.ZipFile('Wrapper.py', mode='w')
-  try:
-    if args.verbose: print 'Adding Files...'
-    for root, dirs, files in os.walk("wrapper"):
-      for f in files:
-        path = os.path.join(root, f)
-        if args.verbose: print 'Archiving %s...' % path
-        zf.write(path, arcname=path[4:])
-  finally:
-    if args.verbose: print 'Closing Archive...'
-    zf.close()
+    if os.path.exists("Wrapper.py"):
+        os.remove("Wrapper.py")  # Time to start with a clean Wrapper.py!
+    # subprocess.Popen("zip Wrapper.py -r . -x *~ -x *pyc", shell=True).wait()
 
-  with open("Wrapper.py", "r") as f:
-    content = f.read()
+    if buildargs.verbose:
+        print('Creating Archive...')
+    zf = zipfile.ZipFile('Wrapper.py', mode='w')
+    try:
+        if buildargs.verbose:
+            print('Adding Files...')
+        for root, dirs, files in os.walk("wrapper"):
+            for f in files:
+                path = os.path.join(root, f)
+                if buildargs.verbose:
+                    print('Archiving %s...' % path)
+                zf.write(path, arcname=path[4:])
+    finally:
+        if buildargs.verbose:
+            print('Closing Archive...')
+        zf.close()
 
-  with open("build/Wrapper.py.md5", "w") as f:
-    f.write(hashlib.md5(content).hexdigest())
+    with open("Wrapper.py", "r") as f:
+        content = f.read()
 
-  if args.commit: # Mainly just for me (benbaptist), since most people will probably want to build locally without committing to anything
-    subprocess.Popen("git add --update :/", shell=True).wait()
-    subprocess.Popen("git commit -m 'Build %s %d | %s'" % (args.branch, version["__build__"], args.message), shell=True).wait()
-    subprocess.Popen("git push", shell=True).wait()
-  print "Built version %d (%s build)" % (version["__build__"], args.branch)
+    with open("build/Wrapper.py.md5", "w") as f:
+        f.write(hashlib.md5(content).hexdigest())
 
-try:    build_wrapper(args)
-except: print "\n{}: {}\n".format("Unexpected error", sys.exc_info()[1])
+    # Mainly just for me (benbaptist), since most people will probably want to build locally without committing.
+    if buildargs.commit:
+        subprocess.Popen("git add --update :/", shell=True).wait()
+        subprocess.Popen("git commit -m 'Build %s %d | %s'" % (buildargs.branch, version["__build__"],
+                                                               buildargs.message),
+                         shell=True).wait()
+        subprocess.Popen("git push", shell=True).wait()
+    print("Built version %d (%s build)" % (version["__build__"], buildargs.branch))
+
+try:
+    build_wrapper(args)
+except Exception as e:
+    print("Unexpected error: \n%s", e)

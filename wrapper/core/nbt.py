@@ -22,6 +22,11 @@ except NameError:
     basestring = str  # compatibility for Python 3
 
 
+try:  # Manually define an xrange builtin that works indentically on both (to take advantage of xrange's speed in 2)
+    xxrange = xrange
+except NameError:
+    xxrange = range
+
 TAG_END = 0
 TAG_BYTE = 1
 TAG_SHORT = 2
@@ -34,6 +39,7 @@ TAG_STRING = 8
 TAG_LIST = 9
 TAG_COMPOUND = 10
 TAG_INT_ARRAY = 11
+
 
 class TAG(object):
     """TAG, a variable with an intrinsic name."""
@@ -65,11 +71,13 @@ class TAG(object):
 
     # Python 2 compatibility; Python 3 uses __str__ instead.
     def __unicode__(self):
-        """Return a unicode string with the result in human readable format. Unlike valuestr(), the result is recursive for iterators till at least one level deep."""
+        """Return a unicode string with the result in human readable format. Unlike valuestr(), the result is
+        recursive for iterators till at least one level deep."""
         return unicode(self.value)
 
     def __str__(self):
-        """Return a string (ascii formated for Python 2, unicode for Python 3) with the result in human readable format. Unlike valuestr(), the result is recursive for iterators till at least one level deep."""
+        """Return a string (ascii formated for Python 2, unicode for Python 3) with the result in human readable
+        format. Unlike valuestr(), the result is recursive for iterators till at least one level deep."""
         return str(self.value)
     # Unlike regular iterators, __repr__() is not recursive.
     # Use pretty_tree for recursive results.
@@ -77,7 +85,8 @@ class TAG(object):
     # iterators
 
     def __repr__(self):
-        """Return a string (ascii formated for Python 2, unicode for Python 3) describing the class, name and id for debugging purposes."""
+        """Return a string (ascii formated for Python 2, unicode for Python 3) describing the class, name and id
+        for debugging purposes."""
         return "<%s(%r) at 0x%x>" % (self.__class__.__name__, self.name, id(self))
 
 
@@ -330,12 +339,12 @@ class TAG_List(TAG, MutableSequence):
         if self.tagID is None:
             raise ValueError("No type specified for list: %s" % (name))
 
-    #Parsers and Generators
+    # Parsers and Generators
     def _parse_buffer(self, buffer):
         self.tagID = TAG_Byte(buffer=buffer).value
         self.tags = []
         length = TAG_Int(buffer=buffer)
-        for x in range(length.value):  # TODO Py2-3
+        for x in xxrange(length.value):
             self.tags.append(TAGLIST[self.tagID](buffer=buffer))
 
     def _render_buffer(self, buffer):
@@ -511,8 +520,11 @@ class TAG_Compound(TAG, MutableMapping):
         return '\n'.join(output)
 
 
-TAGLIST = {TAG_END: _TAG_End, TAG_BYTE: TAG_Byte, TAG_SHORT: TAG_Short, TAG_INT: TAG_Int, TAG_LONG: TAG_Long, TAG_FLOAT: TAG_Float, TAG_DOUBLE: TAG_Double,
-           TAG_BYTE_ARRAY: TAG_Byte_Array, TAG_STRING: TAG_String, TAG_LIST: TAG_List, TAG_COMPOUND: TAG_Compound, TAG_INT_ARRAY: TAG_Int_Array}
+TAGLIST = {TAG_END: _TAG_End, TAG_BYTE: TAG_Byte, TAG_SHORT: TAG_Short, TAG_INT: TAG_Int, TAG_LONG: TAG_Long,
+           TAG_FLOAT: TAG_Float, TAG_DOUBLE: TAG_Double,
+           TAG_BYTE_ARRAY: TAG_Byte_Array, TAG_STRING: TAG_String, TAG_LIST: TAG_List, TAG_COMPOUND: TAG_Compound,
+           TAG_INT_ARRAY: TAG_Int_Array}
+
 
 class NBTFile(TAG_Compound):
     """Represent an NBT file object."""
