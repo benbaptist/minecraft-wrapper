@@ -18,6 +18,7 @@ from proxy.serverconnection import ServerConnection
 from proxy.packet import Packet
 from core.mcuuid import MCUUID
 from utils.helpers import processcolorcodes
+from api.player import Player
 
 import socket  # not explicitly reference in this module, but this import is used by error handling
 
@@ -704,8 +705,7 @@ class Client:
 
                 # Put player object into server! (player login will be called later by mcserver.py)
                 if self.username not in self.wrapper.javaserver.players:
-                    self.wrapper.javaserver.players[self.username] = self.wrapper.javaserver.Player(self.username,
-                                                                                                    self.wrapper)
+                    self.wrapper.javaserver.players[self.username] = Player(self.username, self.wrapper)
 
                 # TODO sadsadas
                 # This will keep client connected regardless of server status (unless we explicitly disconnect it)
