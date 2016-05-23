@@ -58,6 +58,8 @@ class ServerConnection:
 
         self.eid = None
 
+        self.headlooks = 0
+
     def _refresh_server_version(self):
         # Get serverversion for mcpacket use
         try:
@@ -218,6 +220,9 @@ class ServerConnection:
                 self.client.dimension = data["dim"]
                 self.client.eid = data["eid"]  # This is the EID of the player on this particular server -
                 # not always the EID that the client is aware of.
+
+                # this is an attempt to clear the gm3 noclip issue on relogging.
+                self.client.packet.send(self.pktCB.CHANGE_GAME_STATE, "ubyte|float", (3, self.client.gamemode))
                 return True
 
             elif pkid == self.pktCB.TIME_UPDATE:
@@ -370,9 +375,14 @@ class ServerConnection:
                 return True
 
             elif pkid == self.pktCB.ENTITY_HEAD_LOOK:
-                data = self.packet.read("varint:eid|byte:angle")
-                self.log.trace("(PROXY SERVER) -> Parsed ENTITY_HEAD_LOOK packet:\n%s", data)
-                return True
+                # these packets are insanely numerous
+                if self.headlooks > 20:
+                    self.headlooks = 0
+                    return True
+                # reading these often causes disconnection
+                # data = self.packet.read("varint:eid|byte:angle")
+                # self.log.trace("(PROXY SERVER) -> Parsed ENTITY_HEAD_LOOK packet:\n%s", data)
+                return False  # discard 95% of them
 
             elif pkid == self.pktCB.ENTITY_STATUS:
                 if self.version < mcpacket.PROTOCOL_1_8START:
