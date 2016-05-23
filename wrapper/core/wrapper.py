@@ -234,7 +234,7 @@ class Wrapper:
                 self.javaserver.console(consoleinput)
             elif command == "/help":
                 # This is the console help commands.  Below this in _registerwrappershelp is the in-game help
-                readout("", "Get Minecraft help.", separator="help (with no slash) - ")
+                readout("", "Get Minecraft help.", separator="help (no slash) - ", pad=0)
                 readout("/reload", "Reload Wrapper.py plugins.")
                 readout("/plugins", "Lists Wrapper.py plugins.")
                 readout("/update-wrapper", "Checks for new Wrapper.py updates, and will install\n"
@@ -251,6 +251,21 @@ class Wrapper:
                 readout("/raw [command]", "Send command to the Minecraft Server. Useful for Forge\n"
                                           "                  commands like '/fml confirm'.")
                 readout("/version", self.getbuildstring())
+                readout("/bans", "Display the ban help page.")
+            elif command == "/bans":
+                # ban commands help.
+                readout("", "Bans - To use the server's versions, do not type a slash.", separator="", pad=5)
+                readout("", "", separator="-----1.7.6 and later ban commands-----", pad=10)
+                readout("/ban", " - Ban a player. Specifying h:<hours> or d:<days> creates a temp ban.",
+                        separator="<name> [reason..] [d:<days>/h:<hours>] ", pad=12)
+                readout("/ban-ip", " - Ban an IP address. Reason and days (d:) are optional.",
+                        separator="<ip> [<reason..> <d:<number of days>] ", pad=12)
+                readout("/pardon", " - pardon a player.",
+                        separator="<player> ", pad=12)
+                readout("/pardon-ip", " - Pardon an IP address.",
+                        separator="<address> ", pad=12)
+                readout("/banlist", " - search and display the banlist (warning - displays on single page!)",
+                        separator="[players|ips] [searchtext] ", pad=12)
             else:
                 try:
                     self.javaserver.console(consoleinput)
@@ -264,35 +279,23 @@ class Wrapper:
         # Also require player.isOp()
         self.api.registerHelp("Wrapper", "Internal Wrapper.py commands ", [
             ("/wrapper [update/memory/halt]",
-             "If no subcommand is provided, it will show the Wrapper version.",
-             None),
+             "If no subcommand is provided, it will show the Wrapper version.", None),
             ("/playerstats [all]",
-             "Show the most active players. If no subcommand is provided, it'll show the top 10 players.",
-             None),
+             "Show the most active players. If no subcommand is provided, it'll show the top 10 players.", None),
             ("/plugins",
-             "Show a list of the installed plugins",
-             None),
-            ("/reload",
-             "Reload all plugins.",
-             None),
+             "Show a list of the installed plugins", None),
+            ("/reload", "Reload all plugins.", None),
             ("/permissions <groups/users/RESET>",
-             "Command used to manage permission groups and users, add permission nodes, etc.",
-             None),
-            ("/ban <name> [reason..] [time <h/d>]",
-             "Using a time creates a temp ban - (h)ours or (d)ays. Default is days(d)",
-             "mc1.7.6"),  # Minimum server version for commands to appear (register default perm later in code)
-            ("/ban-ip <address|name> [reason..] [time <h/d> (hours or days)",
-             "Reason and time optional. Default unit is days",
-             "mc1.7.6"),
-            ("/pardon <name>",
-             "pardon player 'name'. ",
-             "mc1.7.6"),
-            ("/banlist [players|ips|search] [args]",
-             "search/display banlist",
-             "mc1.7.6"),
-            ("/pardon-ip <address>",
-             "Pardon address",
-             "mc1.7.6")
+             "Command used to manage permission groups and users, add permission nodes, etc.", None),
+            # Minimum server version for commands to appear is 1.7.6 (registers perm later in serverconnection.py)
+            ("/ban <name> [reason..] [d:<days>/h:<hours>]",
+             "Ban a player. Specifying h:<hours> or d:<days> creates a temp ban.", "mc1.7.6"),
+            ("/ban-ip <ip> [<reason..> <d:<number of days>]",
+             "- Ban an IP address. Reason and days (d:) are optional.", "mc1.7.6"),
+            ("/pardon <player>", "pardon a player.", "mc1.7.6"),
+            ("/pardon-ip <address>", "Pardon an IP address.", "mc1.7.6"),
+            ("/banlist [players|ips] [searchtext]",
+             "search and display the banlist (warning - displays on single page!)", "mc1.7.6")
         ])
 
     def isonlinemode(self):

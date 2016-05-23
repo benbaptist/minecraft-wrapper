@@ -79,6 +79,9 @@ class ServerConnection:
         else:  # 1.8 default
             self.pktSB = mcpacket.Server18
             self.pktCB = mcpacket.Client18
+        if self.version > mcpacket.PROTOCOL_1_7:
+            # used by ban code to enable wrapper group help display for ban items.
+            self.wrapper.api.registerPermission("mc1.7.6", value=True)
 
     def send(self, packetid, xpr, payload):  # not supported... no docstring. For backwards compatability purposes only.
         self.log.debug("deprecated server.send() called (by a plugin)")
@@ -261,7 +264,7 @@ class ServerConnection:
                     x, y, z, yaw, pitch, conf = data["x"], data["y"], data["z"], data["yaw"], data["pitch"], data["con"]
                     self.packet.send(self.pktSB.PLAYER_POSLOOK, "double|double|double|float|float|varint",
                                      (x, y, z, yaw, pitch, conf))
-                # self.client.position = (x, y, z)  # we don't actaully get position from this
+                self.client.position = (x, y, z)  # not a bad idea to fill player position
                 self.log.trace("(PROXY SERVER) -> Parsed PLAYER_POSLOOK packet:\n%s", data)
                 return True  # it will be sent to the client to keep it honest.
 
