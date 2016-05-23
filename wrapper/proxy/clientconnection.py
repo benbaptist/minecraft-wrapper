@@ -18,6 +18,8 @@ from proxy.serverconnection import ServerConnection
 from proxy.packet import Packet
 from core.mcuuid import MCUUID
 from utils.helpers import processcolorcodes
+from api.player import Player
+
 import socket  # not explicitly reference in this module, but this import is used by error handling
 
 # wrapper.py will check for requests to run proxy mode
@@ -74,7 +76,7 @@ class Client:
         self.time_server_pinged = time.time()
         self.time_client_responded = time.time()
         self.keepalive_val = 0
-        self.server = None  # ServerConnection() (not the javaserver)
+        self.server = None  # Proxy ServerConnection() (not the javaserver)
         self.isServer = False
         self.isLocal = True
         self.server_temp = None
@@ -577,7 +579,7 @@ class Client:
                     self.serverUuid = self.wrapper.getuuidfromname("OfflinePlayer:%s" % self.username)  # MCUUID object
                     self.packet.send(0x02, "string|string", (self.uuid.string, self.username))
                     self.state = ClientState.PLAY
-                    self.log.info("%s logged in (IP: %s)", self.username, self.addr[0])
+                    self.log.info("%s's client LOGON in (IP: %s)", self.username, self.addr[0])
                 self.log.trace("(PROXY CLIENT) -> Parsed 0x00 packet with client state LOGIN: \n%s", data)
                 return False
             elif pkid == 0x01:
@@ -618,12 +620,13 @@ class Client:
                                 self.wrapper.proxy.skins[self.uuid.string] = self.skinBlob
                         self.properties = data["properties"]
                     else:
-                        self.disconnect("Server Session Error (HTTP Status Code %d)" % r.status_code)
+                        self.disconnect("Proxy Client Session Error (HTTP Status Code %d)" % r.status_code)
                         return False
                     newusername = self.wrapper.getusernamebyuuid(self.uuid.string)
                     if newusername:
                         if newusername != self.username:
-                            self.log.info("%s logged in with new name, falling back to %s", self.username, newusername)
+                            self.log.info("%s's client performed LOGON in with new name, falling back to %s",
+                                          self.username, newusername)
                             self.username = newusername
                 else:
                     # TODO: See if this can be accomplished via MCUUID
@@ -675,7 +678,7 @@ class Client:
                 # player ban code!  Uses vanilla json files - In wrapper proxy mode, supports
                 #       temp-bans (the "expires" field of the ban record is used!)
 
-                if self.proxy.isIPBanned(self.addr[0]):
+                if self.proxy.isIPBanned(self.addr[0]):  # TODO make sure ban code is not using player objects
                     self.disconnect("Your address is IP-banned from this server!.")
                     return False
                 testforban = self.proxy.isUUIDBanned(uuidwas)
@@ -694,12 +697,17 @@ class Client:
                     "offline_uuid": self.serverUuid.string,
                     "ip": self.addr[0]
                 }):
-                    self.disconnect("Login denied.")
+                    self.disconnect("Login denied by a Plugin.")
                     return False
                 self.packet.send(0x02, "string|string", (self.uuid.string, self.username))
                 self.time_client_responded = time.time()
                 self.state = ClientState.PLAY
 
+                # Put player object into server! (player login will be called later by mcserver.py)
+                if self.username not in self.wrapper.javaserver.players:
+                    self.wrapper.javaserver.players[self.username] = Player(self.username, self.wrapper)
+
+                # TODO sadsadas
                 # This will keep client connected regardless of server status (unless we explicitly disconnect it)
                 t_keepalives = threading.Thread(target=self._keep_alive_tracker, kwargs={'playername': self.username})
                 t_keepalives.daemon = True
@@ -707,7 +715,8 @@ class Client:
 
                 self.connect_to_server()
 
-                self.log.info("%s logged in (UUID: %s | IP: %s)", self.username, self.uuid.string, self.addr[0])
+                self.log.info("%s's client LOGON occurred: (UUID: %s | IP: %s)",
+                              self.username, self.uuid.string, self.addr[0])
                 return False
             else:
                 # Unknown packet for login; return to Handshake:
@@ -767,8 +776,8 @@ class Client:
                 if not self.wrapper.javaserver.state == 2:  # TODO - one day, allow connection despite this
                     self.disconnect("Server has not finished booting. Please try connecting again in a few seconds")
                     return False
-                if self.wrapper.javaserver.protocolVersion == -1:  # TODO make sure wrapper.mcserver.protocolVersion returns
-                    #  ... -1 to signal no server
+                if self.wrapper.javaserver.protocolVersion == -1:  # TODO make sure wrapper.mcserver.protocolVersion
+                    #  ... returns -1 to signal no server
                     self.disconnect("Proxy client was unable to connect to the server.")
                     return False
                 if self.serverversion == self.clientversion and data["state"] == ClientState.LOGIN:
@@ -827,7 +836,7 @@ class Client:
                     if self.server.state == 3:
                         self.server.packet.sendRaw(original)
         except Exception as ex:
-            self.log.exception("Error in the [Client] -> [Server] handle (%s):", ex)
+            self.log.exception("Error in the [PROXY] <- [CLIENT] handle (%s):", ex)
 
     def _keep_alive_tracker(self, playername):
         # send keep alives to client and send client settings to server.
@@ -871,6 +880,5 @@ class ClientState:
     #
     PLAY = 3
 
-
-def __init__(self):
-    pass
+    def __init__(self):
+        pass

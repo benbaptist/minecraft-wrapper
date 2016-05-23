@@ -31,15 +31,21 @@ def build_wrapper(buildargs):
 
     with open("build/version.json", "r") as f:
         version = json.loads(f.read())
-        if not "__build__" in version:
+        if "__build__" not in version:
             version["__build__"] = version["build"] + 1
         else:
             version["__build__"] += 1
         version["__branch__"] = buildargs.branch
         version["release_time"] = time.time()
 
+    filetext = ("# -*- coding: utf-8 -*-\n\n\n__version__ = %s\n__build__ = %d\n__branch__ = '%s'\n" %
+                (version["version"], version["__build__"], version["__branch__"]))
+
     with open("build/buildinfo.py", "w") as f:
-        f.write("__build__=%d\n__branch__='%s'" % (version["build"], buildargs.branch))
+        f.write(filetext)
+
+    with open("wrapper/core/buildinfo.py", "w") as f:
+        f.write(filetext)
 
     with open("build/version.json", "w") as f:
         f.write(json.dumps(version))
