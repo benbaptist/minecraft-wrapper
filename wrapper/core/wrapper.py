@@ -64,7 +64,8 @@ class Wrapper:
         self.irc = None
         self.scripts = None
         self.web = None
-        self.proxy = False
+        self.proxy = None
+        self.proxymode = False
         self.halt = False
         self.update = False
         self.storage = Storage("main", encoding=self.encoding)
@@ -84,6 +85,7 @@ class Wrapper:
         if not requests and self.configManager.config["Proxy"]["proxy-enabled"]:
             self.log.error("You must have the requests module installed to run in proxy mode!")
             return
+        self.proxymode = self.configManager.config["Proxy"]["proxy-enabled"]
 
     def start(self):
         """ wrapper should only start ONCE... old code made it restart over when only a server needed restarting"""
@@ -144,7 +146,7 @@ class Wrapper:
                 self.log.error("Sorry, but shell scripts only work on *NIX-based systems! If you are using a "
                                "*NIX-based system, please file a bug report.")
 
-        if self.config["Proxy"]["proxy-enabled"]:
+        if self.proxymode:
             t = threading.Thread(target=self.startproxy, args=())
             t.daemon = True
             t.start()
@@ -254,18 +256,22 @@ class Wrapper:
                 readout("/bans", "Display the ban help page.")
             elif command == "/bans":
                 # ban commands help.
-                readout("", "Bans - To use the server's versions, do not type a slash.", separator="", pad=5)
-                readout("", "", separator="-----1.7.6 and later ban commands-----", pad=10)
-                readout("/ban", " - Ban a player. Specifying h:<hours> or d:<days> creates a temp ban.",
-                        separator="<name> [reason..] [d:<days>/h:<hours>] ", pad=12)
-                readout("/ban-ip", " - Ban an IP address. Reason and days (d:) are optional.",
-                        separator="<ip> [<reason..> <d:<number of days>] ", pad=12)
-                readout("/pardon", " - pardon a player.",
-                        separator="<player> ", pad=12)
-                readout("/pardon-ip", " - Pardon an IP address.",
-                        separator="<address> ", pad=12)
-                readout("/banlist", " - search and display the banlist (warning - displays on single page!)",
-                        separator="[players|ips] [searchtext] ", pad=12)
+                if self.proxymode:
+                    readout("", "Bans - To use the server's versions, do not type a slash.", separator="", pad=5)
+                    readout("", "", separator="-----1.7.6 and later ban commands-----", pad=10)
+                    readout("/ban", " - Ban a player. Specifying h:<hours> or d:<days> creates a temp ban.",
+                            separator="<name> [reason..] [d:<days>/h:<hours>] ", pad=12)
+                    readout("/ban-ip", " - Ban an IP address. Reason and days (d:) are optional.",
+                            separator="<ip> [<reason..> <d:<number of days>] ", pad=12)
+                    readout("/pardon", " - pardon a player.",
+                            separator="<player> ", pad=12)
+                    readout("/pardon-ip", " - Pardon an IP address.",
+                            separator="<address> ", pad=12)
+                    readout("/banlist", " - search and display the banlist (warning - displays on single page!)",
+                            separator="[players|ips] [searchtext] ", pad=12)
+                else:
+                    readout("ERROR - ", "Bans are not enabled (proxy mode is not on).",
+                            separator="", pad=10)
             else:
                 try:
                     self.javaserver.console(consoleinput)
@@ -288,6 +294,7 @@ class Wrapper:
             ("/permissions <groups/users/RESET>",
              "Command used to manage permission groups and users, add permission nodes, etc.", None),
             # Minimum server version for commands to appear is 1.7.6 (registers perm later in serverconnection.py)
+            # These won't appear is proxy mode not on (since serverconnection is part of proxy).
             ("/ban <name> [reason..] [d:<days>/h:<hours>]",
              "Ban a player. Specifying h:<hours> or d:<days> creates a temp ban.", "mc1.7.6"),
             ("/ban-ip <ip> [<reason..> <d:<number of days>]",
@@ -304,7 +311,7 @@ class Wrapper:
         This should normally 'always' render True, unless you want hackers coming on :(
         not sure what circumstances you would want a different confguration...
         """
-        if self.config["Proxy"]["proxy-enabled"]:
+        if self.proxymode:
             # if wrapper is using proxy mode (which should be set to online)
             return self.config["Proxy"]["online-mode"]
         if self.javaserver is not None:
@@ -533,6 +540,7 @@ class Wrapper:
             proxythread.daemon = True
             proxythread.start()
         else:
+            self.proxymode = False
             self.log.error("Proxy mode could not be started because you do not have one or more of the following "
                            "modules installed: pycrypto and requests")
 

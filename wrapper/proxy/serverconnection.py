@@ -290,7 +290,7 @@ class ServerConnection:
                         "varint:eid|uuid:uuid|int:x|int:y|int:z|byte:yaw|byte:pitch|short:item|rest:metadata")
                     if data["item"] < 0:  # A negative Current Item crashes clients (just in case)
                         data["item"] = 0
-                    clientserverid = self.proxy.getClientByOfflineServerUUID(data["uuid"])
+                    clientserverid = self.proxy.getclientbyofflineserveruuid(data["uuid"])
                     if clientserverid:
                         self.client.packet.send(self.pktCB.SPAWN_PLAYER, "varint|uuid|int|int|int|byte|byte|short|raw",
                                                 (
@@ -308,7 +308,7 @@ class ServerConnection:
                     return False
                 else:
                     data = self.packet.read("varint:eid|uuid:uuid|int:x|int:y|int:z|byte:yaw|byte:pitch|rest:metadata")
-                    clientserverid = self.proxy.getClientByOfflineServerUUID(data["uuid"])
+                    clientserverid = self.proxy.getclientbyofflineserveruuid(data["uuid"])
                     if clientserverid:
                         self.client.packet.send(self.pktCB.SPAWN_PLAYER, "varint|uuid|int|int|int|byte|byte|raw", (
                             data["eid"],
@@ -553,7 +553,7 @@ class ServerConnection:
                     z = 0
                     while z < head["length"]:
                         serveruuid = self.packet.read("uuid:uuid")["uuid"]
-                        playerclient = self.client.proxy.getClientByOfflineServerUUID(serveruuid)
+                        playerclient = self.client.proxy.getclientbyofflineserveruuid(serveruuid)
                         if not playerclient:
                             z += 1
                             continue

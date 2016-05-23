@@ -680,13 +680,13 @@ class Client:
                 # player ban code!  Uses vanilla json files - In wrapper proxy mode, supports
                 #       temp-bans (the "expires" field of the ban record is used!)
 
-                if self.proxy.isIPBanned(self.addr[0]):  # TODO make sure ban code is not using player objects
+                if self.proxy.isipbanned(self.addr[0]):  # TODO make sure ban code is not using player objects
                     self.disconnect("Your address is IP-banned from this server!.")
                     return False
-                testforban = self.proxy.isUUIDBanned(uuidwas)
+                testforban = self.proxy.isuuidbanned(uuidwas)
                 self.log.debug("Value - testforban: %s", testforban)
-                if self.proxy.isUUIDBanned(uuidwas):  # TODO ...HERE, the player stuff becomes "None" (was self.uuid)
-                    banreason = self.wrapper.proxy.getUUIDBanReason(uuidwas)  # TODO- which is why I archived the name
+                if self.proxy.isuuidbanned(uuidwas):  # TODO ...HERE, the player stuff becomes "None" (was self.uuid)
+                    banreason = self.wrapper.proxy.getuuidbanreason(uuidwas)  # TODO- which is why I archived the name
                     # and UUID strings
                     # maybe because I got these two lines reversed? disc and then log.info?
                     self.disconnect("Banned: %s" % banreason)

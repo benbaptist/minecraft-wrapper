@@ -202,7 +202,7 @@ class Commands:
                 if not self.wrapper.isipv4address(getargs(payload["args"], 0)):
                     player.message("&cInvalid IP address format: %s" % getargs(payload["args"], 0))
                     return False
-                returnmessage = self.wrapper.proxy.banIP(getargs(payload["args"], 0))
+                returnmessage = self.wrapper.proxy.banip(getargs(payload["args"], 0))
                 if returnmessage[:6] == "Banned":
                     player.message({"text": "%s" % returnmessage, "color": "yellow"})
                 else:
@@ -215,7 +215,7 @@ class Commands:
                 if not self.wrapper.isipv4address(getargs(payload["args"], 0)):
                     player.message("&cInvalid IP address format: %s" % getargs(payload["args"], 0))
                     return False
-                returnmessage = self.wrapper.proxy.pardonIP(getargs(payload["args"], 0))
+                returnmessage = self.wrapper.proxy.pardonip(getargs(payload["args"], 0))
                 if returnmessage[:8] == "pardoned":
                     player.message({"text": "IP address unbanned!", "color": "yellow"} %
                                    str((getargs(payload["args"], 0))))

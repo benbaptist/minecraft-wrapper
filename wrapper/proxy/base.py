@@ -52,7 +52,7 @@ class Proxy:
         while not self.wrapper.javaserver.state == 2:
             time.sleep(.2)
         try:
-            self.pollServer()
+            self.pollserver()
         except Exception as e:
             self.log.exception("Proxy could not poll the Minecraft server - are you sure that the ports are "
                                "configured properly? (%s)", e)
@@ -84,9 +84,9 @@ class Proxy:
             t.start()
 
             self.clients.append(client)
-            self.removeStaleClients()
+            self.removestaleclients()
 
-    def removeStaleClients(self):
+    def removestaleclients(self):
         try:
             for i, client in enumerate(self.wrapper.proxy.clients):
                 if client.abort:
@@ -94,7 +94,7 @@ class Proxy:
         except Exception as e:
             raise e  # rethrow exception
 
-    def pollServer(self):
+    def pollserver(self):
         server_sock = socket.socket()
         server_sock.connect(("localhost", self.wrapper.config["Proxy"]["server-port"]))
         packet = Packet(server_sock, self)
@@ -113,7 +113,7 @@ class Proxy:
                 break
         server_sock.close()
 
-    def getClientByOfflineServerUUID(self, uuid):
+    def getclientbyofflineserveruuid(self, uuid):
         """
         :param uuid: - MCUUID .. I believe.
         :return: the matching client
@@ -124,7 +124,7 @@ class Proxy:
                 return client
         return False  # no client
 
-    def banPlayer(self, playername, reason="Banned by an operator", source="Wrapper", expires="forever"):
+    def banplayer(self, playername, reason="Banned by an operator", source="Wrapper", expires="forever"):
         """
         * placeholder code for future feature*
         This is not used by code yet... for banning by username only for pre-uuid servers
@@ -134,10 +134,10 @@ class Proxy:
         :param expires:
         :return:
         """
-        print(" # TODO - legacy server support (pre-1.7.10) %s%s%s%s%s" % (self, reason, source, expires, playername))
+        print(" # TODO - legacy server support (pre-1.7.6) %s%s%s%s%s" % (self, reason, source, expires, playername))
 
     @staticmethod
-    def getUUIDBanReason(uuid):
+    def getuuidbanreason(uuid):
         """
         :param uuid: uuid of player as string
         :return: string representing ban reason
@@ -148,7 +148,7 @@ class Proxy:
             return "%s by %s" % (banrecord["reason"], banrecord["source"])
         return "Banned by server"
 
-    def banUUID(self, uuid, reason="The Ban Hammer has spoken!", source="Wrapper", expires=False):
+    def banuuid(self, uuid, reason="The Ban Hammer has spoken!", source="Wrapper", expires=False):
         """
         Ban someone by UUID
         :param uuid - uuid to ban (MCUUID)
@@ -188,7 +188,7 @@ class Proxy:
         else:
             return "Banlist not found on disk"
 
-    def banIP(self, ipaddress, reason="The Ban Hammer has spoken!", source="Wrapper", expires=False):
+    def banip(self, ipaddress, reason="The Ban Hammer has spoken!", source="Wrapper", expires=False):
         """
         Ban an IP address (IPV-4)
         :param ipaddress - ip address to ban
@@ -233,7 +233,7 @@ class Proxy:
         else:
             return "Banlist not found on disk"
 
-    def pardonIP(self, ipaddress):
+    def pardonip(self, ipaddress):
         if not self.wrapper.isipv4address(ipaddress):
             return "Invalid IPV4 address: %s" % ipaddress
         banlist = getjsonfile("banned-ips")
@@ -254,7 +254,7 @@ class Proxy:
         else:
             return "Banlist not found on disk"  # error text
 
-    def pardonUUID(self, uuid):
+    def pardonuuid(self, uuid):
         banlist = getjsonfile("banned-players")
         if banlist is not False:  # file and directory exist.
             if banlist is None:  # file was empty or not valid
@@ -273,39 +273,39 @@ class Proxy:
         else:
             return "Banlist not found on disk"  # error text
 
-    def isUUIDBanned(self, uuid):  # Check if the UUID of the user is banned
+    def isuuidbanned(self, uuid):  # Check if the UUID of the user is banned
         banlist = getjsonfile("banned-players")
         if banlist:  # in this case we just care if banlist exits in any fashion
             banrecord = find_in_json(banlist, "uuid", str(uuid))
             if banrecord:
                 if read_timestr(banrecord["expires"]) < int(time.time()):  # if ban has expired
-                    pardoning = self.pardonUUID(str(uuid))
+                    pardoning = self.pardonuuid(str(uuid))
                     if pardoning[:8] == "pardoned":
                         self.log.info("UUID: %s was pardoned (expired ban)" % str(uuid))
                         return False  # player is "NOT" banned (anymore)
                     else:
-                        self.log.warning("isUUIDBanned attempted a pardon of uuid: %s (expired ban), "
+                        self.log.warning("isuuidbanned attempted a pardon of uuid: %s (expired ban), "
                                          "but it failed:\n %s", uuid, pardoning)
                 return True  # player is still banned
         return False  # banlist empty or record not found
 
-    def isIPBanned(self, ipaddress):  # Check if the IP address is banned
+    def isipbanned(self, ipaddress):  # Check if the IP address is banned
         banlist = getjsonfile("banned-ips")
         if banlist:  # in this case we just care if banlist exits in any fashion
             banrecord = find_in_json(banlist, "ip", ipaddress)
             if banrecord:
                 if read_timestr(banrecord["expires"]) < int(time.time()):  # if ban has expired
-                    pardoning = self.pardonIP(ipaddress)
+                    pardoning = self.pardonip(ipaddress)
                     if pardoning[:8] == "pardoned":
                         self.log.info("IP: %s was pardoned (expired ban)", ipaddress)
                         return False  # IP is "NOT" banned (anymore)
                     else:
-                        self.log.warning("isIPBanned attempted a pardon of IP: %s (expired ban), but it failed:\n %s",
+                        self.log.warning("isipbanned attempted a pardon of IP: %s (expired ban), but it failed:\n %s",
                                          ipaddress, pardoning)
                 return True  # IP is still banned
         return False  # banlist empty or record not found
 
-    def getSkinTexture(self, uuid):
+    def getskintexture(self, uuid):
         """
         Args:
             uuid: uuid (accept MCUUID or string)
