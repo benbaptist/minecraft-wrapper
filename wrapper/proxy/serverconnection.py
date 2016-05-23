@@ -381,6 +381,7 @@ class ServerConnection:
                 if self.headlooks > 20:
                     self.headlooks = 0
                     return True
+                self.headlooks += 1
                 # reading these often causes disconnection
                 # data = self.packet.read("varint:eid|byte:angle")
                 # self.log.trace("(PROXY SERVER) -> Parsed ENTITY_HEAD_LOOK packet:\n%s", data)
