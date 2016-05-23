@@ -247,12 +247,23 @@ class ServerConnection:
                 self.log.trace("(PROXY SERVER) -> Parsed RESPAWN packet:\n%s", data)
                 return True
 
+            # this packet is just a server-correct item... it usually does not get from client to our server in time
+            # see note at same client (server-bound) packet in clientconnection.py
+            # Wrapper will handle the response here, just like the keep alives
             elif pkid == self.pktCB.PLAYER_POSLOOK:
-                data = self.packet.read("double:x|double:y|double:z|float:yaw|float:pitch")
-                x, y, z, yaw, pitch = data["x"], data["y"], data["z"], data["yaw"], data["pitch"]
-                self.client.position = (x, y, z)
+                if self.version < mcpacket.Client18.end():
+                    data = self.packet.read("double:x|double:y|double:z|float:yaw|float:pitch")
+                    x, y, z, yaw, pitch = data["x"], data["y"], data["z"], data["yaw"], data["pitch"]
+                    self.packet.send(self.pktSB.PLAYER_POSLOOK, "double|double|double|float|float",
+                                     (x, y, z, yaw, pitch))
+                else:
+                    data = self.packet.read("double:x|double:y|double:z|float:yaw|float:pitch|varint:con")
+                    x, y, z, yaw, pitch, conf = data["x"], data["y"], data["z"], data["yaw"], data["pitch"], data["con"]
+                    self.packet.send(self.pktSB.PLAYER_POSLOOK, "double|double|double|float|float|varint",
+                                     (x, y, z, yaw, pitch, conf))
+                # self.client.position = (x, y, z)  # we don't actaully get position from this
                 self.log.trace("(PROXY SERVER) -> Parsed PLAYER_POSLOOK packet:\n%s", data)
-                return True
+                return True  # it will be sent to the client to keep it honest.
 
             elif pkid == self.pktCB.USE_BED:
                 data = self.packet.read("varint:eid|position:location")

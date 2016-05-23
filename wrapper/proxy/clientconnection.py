@@ -332,12 +332,14 @@ class Client:
                 self.log.trace("(PROXY CLIENT) -> Parsed PLAYER_POSITION packet:\n%s", data)
                 return True
 
+            # this packet is sent in response to the corresponding server packet.
+            # since we already handled the response back in serverconnection, we can silently discard the response
             elif pkid == self.pktSB.PLAYER_POSLOOK:  # player position and look
-                data = self.packet.read("double:x|double:y|double:z|float:yaw|float:pitch|bool:on_ground")
-                self.position = (data["x"], data["y"], data["z"])
-                self.head = (data["yaw"], data["pitch"])
-                self.log.trace("(PROXY CLIENT) -> Parsed PLAYER_POSLOOK packet:\n%s", data)
-                return True
+                # data = self.packet.read("double:x|double:y|double:z|float:yaw|float:pitch|bool:on_ground")
+                # self.position = (data["x"], data["y"], data["z"])
+                # self.head = (data["yaw"], data["pitch"])
+                # self.log.trace("(PROXY CLIENT) -> Parsed PLAYER_POSLOOK packet:\n%s", data)
+                return False
 
             elif pkid == self.pktSB.PLAYER_LOOK:  # Player Look
                 data = self.packet.read("float:yaw|float:pitch|bool:on_ground")
