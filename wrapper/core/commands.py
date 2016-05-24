@@ -94,6 +94,9 @@ class Commands:
         if str(payload["command"]).lower() == "ban":
             return self.command_banplayer(player, payload)
 
+        if str(payload["command"]).lower() == "pardon":
+            return self.command_pardon(player, payload)
+
         if str(payload["command"]).lower() == "ban-ip":
             return self.command_banip(player, payload)
 
@@ -152,6 +155,29 @@ class Commands:
             else:
                 player.message({"text": "IP ban failed!", "color": "red"})
                 player.message(returnmessage)
+            return returnmessage
+
+    def command_pardon(self, player, payload):
+        if player.isOp() > 2:  # see http://minecraft.gamepedia.com/Server.properties#Minecraft_server_properties
+            commargs = payload["args"]
+            playername = getargs(commargs, 0)
+            byuuid = True
+            if str(getargs(commargs, -1))[-5:].lower() == "false":  # last five letters of last argument
+                byuuid = False
+            lookupuuid = self.wrapper.getuuidbyusername(playername)
+            if not lookupuuid and byuuid:
+                player.message({"text": "Not a valid Username!", "color": "red"})
+                return False
+            if byuuid:
+                returnmessage = self.wrapper.proxy.pardonuuid(lookupuuid)
+            else:
+                returnmessage = self.wrapper.proxy.pardonname(playername)
+
+            if returnmessage[:8] == "pardoned":
+                player.message({"text": "player %s unbanned!" % playername, "color": "yellow"})
+            else:
+                player.message({"text": "player unban %s failed!" % playername, "color": "red"})
+            player.message(returnmessage)
             return returnmessage
 
     def command_pardonip(self, player, payload):
