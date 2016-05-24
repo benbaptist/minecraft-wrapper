@@ -41,36 +41,6 @@ class Commands:
     def playercommand(self, payload):
         player = payload["player"]
         self.log.info("%s executed: /%s %s", payload["player"], payload["command"], " ".join(payload["args"]))
-        # This section calls the commands defined by api.registerCommand()
-        for pluginID in self.commands:
-            command = payload["command"]
-            if pluginID == "Wrapper.py":
-                try:
-                    self.commands[pluginID][command](payload["player"], payload["args"])
-                except Exception as e:
-                    pass
-                continue
-            if pluginID not in self.wrapper.plugins:
-                continue
-            plugin = self.wrapper.plugins[pluginID]
-            if not plugin["good"]:
-                continue
-            commandname = payload["command"]
-            if commandname in self.commands[pluginID]:
-                try:
-                    command = self.commands[pluginID][commandname]
-                    if player.hasPermission(command["permission"]):
-                        command["callback"](payload["player"], payload["args"])
-                    else:
-                        player.message({"translate": "commands.generic.permission", "color": "red"})
-                    return False
-                except Exception as e:
-                    self.log.exception("Plugin '%s' errored out when executing command: '<%s> /%s':",
-                                       pluginID, payload["player"], command)
-                    payload["player"].message({"text": "An internal error occurred on the server side "
-                                                       "while trying to execute this command. Apologies.",
-                                               "color": "red"})
-                    return False
 
         # We should get of this by creating a wrapper command registering set
         if str(payload["command"]).lower in ("plugins", "pl"):
@@ -102,6 +72,37 @@ class Commands:
 
         if str(payload["command"]).lower() == "pardon-ip":
             return self.command_pardonip(player, payload)
+
+        # This section calls the commands defined by api.registerCommand()
+        for pluginID in self.commands:
+            command = payload["command"]
+            if pluginID == "Wrapper.py":
+                try:
+                    self.commands[pluginID][command](payload["player"], payload["args"])
+                except Exception as e:
+                    pass
+                continue
+            if pluginID not in self.wrapper.plugins:
+                continue
+            plugin = self.wrapper.plugins[pluginID]
+            if not plugin["good"]:
+                continue
+            commandname = payload["command"]
+            if commandname in self.commands[pluginID]:
+                try:
+                    command = self.commands[pluginID][commandname]
+                    if player.hasPermission(command["permission"]):
+                        command["callback"](payload["player"], payload["args"])
+                    else:
+                        player.message({"translate": "commands.generic.permission", "color": "red"})
+                    return False
+                except Exception as e:
+                    self.log.exception("Plugin '%s' errored out when executing command: '<%s> /%s':",
+                                       pluginID, payload["player"], command)
+                    payload["player"].message({"text": "An internal error occurred on the server side "
+                                                       "while trying to execute this command. Apologies.",
+                                               "color": "red"})
+                    return False
 
         return True  # These returns allow or prevent the text from passing to the server. TODO - find out...
 

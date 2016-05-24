@@ -324,8 +324,8 @@ class Wrapper:
              "Ban a player. Specifying h:<hours> or d:<days> creates a temp ban.", "mc1.7.6"),
             ("/ban-ip <ip> [<reason..> <d:<number of days>]",
              "- Ban an IP address. Reason and days (d:) are optional.", "mc1.7.6"),
-            ("/pardon <player>", " - pardon a player. Default is byuuidonly.  To unban a specific "
-                                 "name (without checking uuid), use `pardon <player> False`", "mc1.7.6"),
+            ("/pardon <player> [False]", " - pardon a player. Default is byuuidonly.  To unban a specific "
+                                         "name (without checking uuid), use `pardon <player> False`", "mc1.7.6"),
             ("/pardon-ip <address>", "Pardon an IP address.", "mc1.7.6"),
             ("/banlist [players|ips] [searchtext]",
              "search and display the banlist (warning - displays on single page!)", "mc1.7.6")
@@ -751,5 +751,5 @@ class ConsolePlayer:
         pass
 
     @staticmethod
-    def hasPermission(**kwargs):
+    def hasPermission(*args):
         return True
