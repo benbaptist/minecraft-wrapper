@@ -288,7 +288,7 @@ class Wrapper:
                     readout("/ban-ip", " - Ban an IP address. Reason and days (d:) are optional.",
                             separator="<ip> [<reason..> <d:<number of days>] ", pad=12)
                     readout("/pardon", " - pardon a player. Default is byuuidonly.  To unban a"
-                                       "specific name (without checking uuid), use `pardon player False`",
+                                       "specific name (without checking uuid), use `pardon <player> False`",
                             separator="<player> [byuuidonly(true/false)]", pad=12)
                     readout("/pardon-ip", " - Pardon an IP address.",
                             separator="<address> ", pad=12)
@@ -325,7 +325,7 @@ class Wrapper:
             ("/ban-ip <ip> [<reason..> <d:<number of days>]",
              "- Ban an IP address. Reason and days (d:) are optional.", "mc1.7.6"),
             ("/pardon <player>", " - pardon a player. Default is byuuidonly.  To unban a specific "
-                                 "name (without checking uuid), use `pardon player False`", "mc1.7.6"),
+                                 "name (without checking uuid), use `pardon <player> False`", "mc1.7.6"),
             ("/pardon-ip <address>", "Pardon an IP address.", "mc1.7.6"),
             ("/banlist [players|ips] [searchtext]",
              "search and display the banlist (warning - displays on single page!)", "mc1.7.6")
