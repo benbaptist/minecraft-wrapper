@@ -18,18 +18,34 @@ class Minecraft:
 
     def __init__(self, wrapper):
         self.wrapper = wrapper
+        self.proxy = wrapper.proxy
         self.log = wrapper.log
         self._encoding = wrapper.config["General"]["encoding"]
         self.blocks = Blocks
 
     def isServerStarted(self):
-        """ Returns a boolean if the server is fully booted or not. """
+        """
+
+        Returns: Returns a boolean if the server is fully booted or not.
+
+        """
         if self.getServer():
             if self.getServer().state == 2:
                 return True
         return False
 
     def getTimeofDay(self, dttmformat=0):
+        """
+        Returns the "virtual" world time of day on the server.
+
+        Args:
+            dttmformat: 0 = ticks, 1 = Military, (else = civilian AM/PM). Ticks are useful for
+                timebased- events (like spawing your own mobs at night, etc). Miliary or civilian
+                is useful for player displays.
+
+        Returns: The appropriately formatted time string
+
+        """
         # 0 = ticks, 1 = Military, else = civilian AM/PM, return -1 if no one
         # on or server not started
         if self.isServerStarted() is True:
@@ -53,8 +69,39 @@ class Minecraft:
             return "%d:%02d %s" % (cth, mins, ampm)
         return -1
 
+    def giveStatusEffect(self, player, effect, duration=30, amplifier=30):
+        """
+        Gives the specified status effect to the specified target.
+
+        Args:
+            player: A player name or any valid string target selector (@p/e/a) with arguments ([r=...], etc)
+            effect:
+            duration:
+            amplifier:
+
+        Returns: Nothing; runs in console
+
+        """
+        if type(effect) == int:
+            effectconverted = str(effect)
+        else:
+            try:
+                effectconverted = int(effect)
+            except:  # a non-number was passed, so we'll figure out what status effect it was in word form
+                if effect in self.wrapper.api.statusEffects:
+                    effectconverted = str(self.wrapper.api.statusEffects[effect])
+                else:
+                    raise Exception("Invalid status effect given!")
+        if int(effectconverted) > 24 or int(effectconverted) < 1:
+            raise Exception("Invalid status effect given!")
+        self.console("effect %s %s %d %d" % (player, effectconverted, duration, amplifier))
+
     def getAllPlayers(self):
-        """ Returns a dict containing all players ever connected to the server """
+        """
+
+        Returns: Returns a dict containing all players ever connected to the server
+
+        """
         if self.wrapper.isonlinemode():
             online = True
         else:
@@ -85,43 +132,75 @@ class Minecraft:
                 os.remove("wrapper-data/players/" + uuidf)
         return players
 
+    def getPlayers(self):  # returns a list of players
+        """
+
+        Returns: Returns a list of the currently connected players.
+
+        """
+        return self.getServer().players
+
+    def getPlayer(self, username=""):
+        """
+        Returns the player object of the specified logged-in player. Will raise an exception if
+        the player is not logged in.
+        Args:
+            username: playername
+
+        Returns: The Player Class object for "playername".
+
+        """
+        try:
+            return self.wrapper.javaserver.players[str(username)]
+        except Exception as e:
+            self.log.error("No such player %s is logged in:\n%s", username, e)
+
+    def getPlayerDat(self, name):
+        pass
+
+    def lookupName(self, uuid):  # This function is just part of the API for plugin devs/users.
+        """
+        Returns the username from the specified UUID.
+        If the player has never logged in before and isn't in the user cache, it will poll Mojang's API.
+        The function will raise an exception if the UUID is invalid.
+
+        Args:
+            uuid: string uuid with dashes
+
+        Returns: username
+
+        """
+        return self.wrapper.getusernamebyuuid(uuid)
+
+    def lookupUUID(self, name):  # This function is just part of the API for plugin devs/users.
+        """
+        Returns the UUID from the specified username.
+        If the player has never logged in before and isn't in the user cache, it will poll Mojang's API.
+        The function will raise an exception if the name is invalid.
+
+        Args:
+            name:  player name
+
+        Returns: a UUID object (wrapper type MCUUID)
+
+        """
+        return self.wrapper.getuuidbyusername(name)
+
+    # World and console interaction
+
     def console(self, string):
-        """ Run a command in the Minecraft server's console. """
+        """
+        Run a command in the Minecraft server's console.
+        Args:
+            string: Full command text(without slash)
+
+        Returns: Nothing
+
+        """
         try:
             self.getServer().console(string)
         except:
             pass
-
-    def setBlock(self, x, y, z, tilename, datavalue=0, oldblockhandling="replace", datatag=None):
-        """ Sets a block at the specified coordinates with the specific details. Will fail if the
-         chunk is not loaded. """
-        if not datatag:
-            datatag = {}
-        self.console("setblock %d %d %d %s %d %s %s"
-                     % (x, y, z, tilename, datavalue, oldblockhandling,
-                        json.dumps(datatag, self._encoding).replace('"', "")))
-
-    def giveStatusEffect(self, player, effect, duration=30, amplifier=30):
-        """ Gives the specified status effect to the specified target. """
-        if type(effect) == int:
-            effectconverted = str(effect)
-        else:
-            try:
-                effectconverted = int(effect)
-            except:  # a non-number was passed, so we'll figure out what status effect it was in word form
-                if effect in self.wrapper.api.statusEffects:
-                    effectconverted = str(self.wrapper.api.statusEffects[effect])
-                else:
-                    raise Exception("Invalid status effect given!")
-        if int(effectconverted) > 24 or int(effectconverted) < 1:
-            raise Exception("Invalid status effect given!")
-        self.console("effect %s %s %d %d" % (player, effectconverted, duration, amplifier))
-
-    def summonEntity(self, entity, x=0, y=0, z=0, datatag=None):
-        if not datatag:  # should not use mutable default arguments like dataTag={}
-            datatag = {}
-        """ Summons an entity at the specified coordinates with the specified data tag. """
-        self.console("summon %s %d %d %d %s" % (entity, x, y, z, json.dumps(datatag, self._encoding)))
 
     def message(self, destination="", jsonmessage=""):
         """
@@ -142,6 +221,13 @@ class Minecraft:
         or a string with formatting codes using the & as a prefix. Setting irc=True will also broadcast
         the specified message on IRC channels that Wrapper.py is connected to. Formatting might not
         work properly.
+
+        Args:
+            message:
+            irc: Broadcast to IRC if set to True.
+
+        Returns:
+
         """
         if irc:
             try:
@@ -153,46 +239,71 @@ class Minecraft:
         except Exception:
             pass
 
+    def setBlock(self, x, y, z, tilename, datavalue=0, oldblockhandling="replace", datatag=None):
+        """
+        Sets a block at the specified coordinates with the specific details. Will fail if the
+         chunk is not loaded.
+        Args:  See wiki for setblock
+            x:
+            y:
+            z:
+            tilename:
+            datavalue:
+            oldblockhandling:
+            datatag:
+
+        Returns: Nothing.
+
+        """
+        if not datatag:
+            datatag = {}
+        self.console("setblock %d %d %d %s %d %s %s"
+                     % (x, y, z, tilename, datavalue, oldblockhandling,
+                        json.dumps(datatag, self._encoding).replace('"', "")))
+
+    def summonEntity(self, entity, x=0, y=0, z=0, datatag=None):
+        """
+        Summons an entity at the specified coordinates with the specified data tag.
+        Args:
+            entity: string entity name type (capitalized correctly!)
+            x: coords
+            y:
+            z:
+            datatag: strict json text datatag
+
+        Returns: Nothing - console executes command.
+
+        """
+        if not datatag:  # should not use mutable default arguments like dataTag={}
+            datatag = {}
+        self.console("summon %s %d %d %d %s" % (entity, x, y, z, json.dumps(datatag, self._encoding)))
+
     def teleportAllEntities(self, entity, x, y, z):
-        """ Teleports all of the specific entity type to the specified coordinates. """
+        """
+        Teleports all of the specific entity type to the specified coordinates.
+
+        Args:
+            entity: string entity name type (capitalized correctly!)
+            x: coords
+            y:
+            z:
+
+        Returns: Nothing - console executes command.
+
+        """
         self.console("tp @e[type=%s] %d %d %d" % (entity, x, y, z))
 
-    def getPlayerDat(self, name):
-        pass
-
-    def getPlayer(self, username=""):
-        """
-        Returns the player object of the specified logged-in player. Will raise an exception if
-        the player is not logged in.
-        """
-        try:
-            return self.wrapper.javaserver.players[str(username)]
-        except Exception as e:
-            self.log.error("No such player %s is logged in:\n%s", username, e)
-
-    def lookupName(self, uuid):  # This function is just part of the API for plugin devs/users.
-        """
-        Returns the username from the specified UUID.
-        If the player has never logged in before and isn't in the user cache, it will poll Mojang's API.
-        The function will raise an exception if the UUID is invalid.
-        """
-        return self.wrapper.getusernamebyuuid(uuid)
-
-    def lookupUUID(self, name):  # This function is just part of the API for plugin devs/users.
-        """
-        Returns the UUID from the specified username.
-        If the player has never logged in before and isn't in the user cache, it will poll Mojang's API.
-        The function will raise an exception if the name is invalid.
-        """
-        return self.wrapper.getuuidbyusername(name)
-
-    def getPlayers(self):  # returns a list of players
-        """ Returns a list of the currently connected players. """
-        return self.getServer().players
-
     # Get world-based information
+
     def getLevelInfo(self, worldname=False):
-        """ Return an NBT object of the world's level.dat. """
+        """
+
+        Args:
+            worldname: optional world name.  If not specified, Wrapper looks up the server worldName.
+
+        Returns: Return an NBT object of the world's level.dat.
+
+        """
         if not worldname:
             worldname = self.wrapper.javaserver.worldName
         if not worldname:
@@ -201,22 +312,102 @@ class Minecraft:
         return f["Data"]
 
     def getSpawnPoint(self):
-        """ Returns the spawn point of the current world. """
+        """
+
+        Returns: Returns the spawn point of the current world.
+
+        """
         return (int(str(self.getLevelInfo()["SpawnX"])), int(str(self.getLevelInfo()["SpawnY"])),
                 int(str(self.getLevelInfo()["SpawnZ"])))
 
     def getTime(self):
-        """ Returns the time of the world in ticks. """
+        """
+
+        Returns: Returns the time of the world in ticks.
+
+        """
         return int(str(self.getLevelInfo()["Time"]))
 
     def getServer(self):
-        """ Returns the server context. """
+        """
+
+        Returns: Returns the server context.
+
+        """
         return self.wrapper.javaserver
 
     def getWorld(self):
-        """ Returns the world context. """
+        """
+
+        Returns: Returns the world context.
+
+        """
         return self.getServer().world
 
     def getWorldName(self):
-        """ Returns the world's name. """
+        """
+
+        Returns: Returns the world's name.
+
+        """
         return self.getServer().worldName
+
+    def ban(self, playertoban, reason="by wrapper api.", expires=False, banningplayer=None):
+        """
+        Ban a player using the wrapper proxy system. Messages generated by process can be directed to
+        a particular player's client or to the Console (default). The name passed is looked up in
+        wrapper's cache or polled from mojang and converted to a uuid ban.  The ban will fail if it cannot
+        lookup the specified user's UUID.  This is an 'online' UUID ban.. Either the server or wrapper's proxy
+        must be online (otherwise the player could login with an offline UUID).
+
+        Args:
+            playertoban: Name of player
+            reason: Optional text reason
+            expires: Optional expiration.  If used, must be in string format 'd:<number of days>' or 'h:<hours>'
+            banningplayer: The player OBJECT (not simply the player name) to receive message output. Defaults to
+                the Console (self.wrapper.xplayer). *This player must be OP level 3 or better (use Console if they
+                are not OP and return the results to their player.message).
+
+        Returns: String or Json Chat describing the operation's outcome.
+        """
+        if banningplayer is None:
+            player = self.wrapper.xplayer  # console
+        else:
+            player = banningplayer
+        if not self.proxy:
+            player.message("Proxy mode is not on - Cannot execute command.")
+        arglist = [playertoban]
+        arglist.extend(reason.split(" "))
+        if expires:
+            arglist.append("%s" % expires)
+        payload = {'player': player, 'command': 'ban', 'args': arglist}
+        return self.wrapper.commands.playercommand(payload)
+
+    def banip(self, ipaddress, reason="by wrapper api.", expires=False, banningplayer=None):
+        """
+        Ban an ip address using the wrapper proxy system. Messages generated by process can be directed to
+        a particular player's client or to the Console (default). Ban will fail if it is not a valid ip4
+        address.
+
+        Args:
+            ipaddress: IP address to ban
+            reason: Optional text reason
+            expires: Optional expiration, in days only.  If used, must be in string format 'd:<number of days>'
+            banningplayer: The player *OBJECT (not simply the player name) to receive message output. Defaults to
+                the Console (self.wrapper.xplayer).  *This player must be OP level 3 or better (use Console if they
+                are not OP and return the results to their player.message).
+
+        Returns: String or Json Chat describing the operation's outcome.
+        """
+        if banningplayer is None:
+            player = self.wrapper.xplayer
+        else:
+            player = banningplayer
+        if not self.proxy:
+            player.message("Proxy mode is not on - Cannot execute command.")
+        arglist = [ipaddress]
+        arglist.extend(reason.split(" "))
+        if expires:
+            arglist.append("%s" % expires)
+        payload = {'player': player, 'command': 'ip-ban', 'args': arglist}
+        return self.wrapper.commands.playercommand(payload)
