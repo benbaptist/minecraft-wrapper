@@ -91,21 +91,52 @@ class Commands:
         if payload["command"] in ("permissions", "perm", "perms", "super"):
             return self.command_perms(player, payload)
 
+        if str(payload["command"]).lower() == "ban":
+            return self.command_banplayer(player, payload)
+
         if str(payload["command"]).lower() == "ban-ip":
             return self.command_banip(player, payload)
 
         if str(payload["command"]).lower() == "pardon-ip":
             return self.command_pardonip(player, payload)
-        return True
 
-    def command_banip(self, player, payload):
+        return True  # These returns allow or prevent the text from passing to the server. TODO - find out...
+
+    def command_banplayer(self, player, payload):
         if player.isOp() > 2:  # specify and op level for the command.
             commargs = payload["args"]
-            if not self.wrapper.isipv4address(getargs(commargs, 0)):
-                player.message("&cInvalid IP address format: %s" % getargs(payload["args"], 0))
+            playername = getargs(commargs, 0)
+            banexpires = False
+            reason = "the Ban Hammer has Spoken"
+            timeunit = 86400  # days is default
+            lookupuuid = self.wrapper.getuuidbyusername(playername)
+            if not lookupuuid:
+                player.message({"text": "Not a valid Username!", "color": "red"})
                 return False
+            if len(commargs) > 1:
+                # check last argument for "d:<days>
+                unitsare = commargs[len(commargs) - 1][0:2].lower()
+                if unitsare in ("d:", "h:"):
+                    if unitsare == "h:":
+                        timeunit /= 24
+                    units = int(float(commargs[len(commargs) - 1][2:]))
+                    if units > 0:
+                        banexpires = time.time() + (units * timeunit)
+                reason = getargsafter(commargs, 1)
+
+            returnmessage = self.wrapper.proxy.banuuid(lookupuuid, reason, player.username, banexpires)
+            if returnmessage[:6] == "Banned":
+                player.message({"text": "%s" % returnmessage, "color": "yellow"})
+            else:
+                player.message({"text": "UUID ban failed!", "color": "red"})
+                player.message(returnmessage)
+            return returnmessage
+
+    def command_banip(self, player, payload):
+        if player.isOp() > 2:
+            commargs = payload["args"]
             ipaddress = getargs(commargs, 0)
-            banexpires = "forever"
+            banexpires = False
             reason = "the Ban Hammer has Spoken"
             if len(commargs) > 1:
                 # check last argument for "d:<days>
@@ -113,7 +144,6 @@ class Commands:
                     days = int(float(commargs[len(commargs)-1][2:]))
                     if days > 0:
                         banexpires = time.time() + (days * 86400)
-                        pass
                 reason = getargsafter(commargs, 1)
 
             returnmessage = self.wrapper.proxy.banip(ipaddress, reason, player.username, banexpires)
@@ -122,14 +152,11 @@ class Commands:
             else:
                 player.message({"text": "IP ban failed!", "color": "red"})
                 player.message(returnmessage)
-            return False
+            return returnmessage
 
     def command_pardonip(self, player, payload):
         if player.isOp() > 2:  # see http://minecraft.gamepedia.com/Server.properties#Minecraft_server_properties
             commargs = payload["args"]
-            if not self.wrapper.isipv4address(getargs(commargs, 0)):
-                player.message("&cInvalid IP address format: %s" % getargs(payload["args"], 0))
-                return False
             ipaddress = getargs(commargs, 0)
 
             returnmessage = self.wrapper.proxy.pardonip(ipaddress)
@@ -138,7 +165,7 @@ class Commands:
             else:
                 player.message({"text": "IP unban %s failed!" % ipaddress, "color": "red"})
             player.message(returnmessage)
-            return False
+            return returnmessage
 
     def command_wrapper(self, player, payload):
         if not player.isOp():
