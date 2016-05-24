@@ -78,6 +78,7 @@ class Wrapper:
         self.permission = {}
         self.help = {}
         self.config = {}
+        self.xplayer = ConsolePlayer(self)  # future plan to expose this to api
 
         if not readline:
             self.log.warning("'readline' not imported.")
@@ -166,17 +167,24 @@ class Wrapper:
 
     def parseconsoleinput(self):
         while not self.halt:
+
+            # Obtain a line of console input
             try:
                 consoleinput = rawinput("")
             except Exception as e:
                 print("[continue] variable 'consoleinput' in 'console()' did not evaluate \n%s" % e)
                 continue
 
+            # No command (perhaps just a line feed or spaces?)
             if len(consoleinput) < 1:
                 continue
 
-            command = getargs(consoleinput[0:].split(" "), 0)
+            # for use with runwrapperconsolecommand() command
+            wholecommandline = consoleinput[0:].split(" ")
+            command = getargs(wholecommandline, 0)
+            allargs = wholecommandline[1:]  # this can be passed to runwrapperconsolecommand() command for args
 
+            # Most of these are too small to use the runwrapperconsolecommand command (or work better here)
             if command in ("/halt", "halt"):
                 self.javaserver.stop("Halting server...", save=False)
                 self.halt = True
@@ -187,11 +195,8 @@ class Wrapper:
                 self.javaserver.start()
             elif command == "/restart":
                 self.javaserver.restart("Server restarting, be right back!")
-            elif command == "/reload":
-                self.plugins.reloadplugins()
-                if self.javaserver.getservertype() != "vanilla":
-                    self.log.info("Note: If you meant to reload the server's plugins instead of the Wrapper's "
-                                  "plugins, try running 'reload' without any slash OR '/raw /reload'.")
+            elif command == "/reload":  # This /reload was a 'proof of concept' for runwrapperconsolecommand()
+                self.runwrapperconsolecommand("reload", [])
             elif command in ("/update-wrapper", "update-wrapper"):
                 self.checkforupdate(False)
             elif command in ("/plugins", "plugins"):
@@ -231,6 +236,22 @@ class Wrapper:
                     self.log.exception("Something went wrong when trying to unfreeze the server! (%s)", exc)
             elif command == "/version":
                 readout("/version", self.getbuildstring())
+
+            # TODO Start adding more commands below here, below the original items:
+            # TODO VVVV_____________
+
+            elif command == "/ban":
+                self.runwrapperconsolecommand("ban", allargs)
+
+            elif command == "/ban-ip":
+                self.runwrapperconsolecommand("ban-ip", allargs)
+
+            elif command == "/pardon-ip":
+                self.runwrapperconsolecommand("pardon-ip", allargs)
+
+            # TODO ^^^^^_____________
+            # TODO Start adding more commands above here, above the help-related items:
+
             elif command == "help":
                 readout("/help", "Get wrapper.py help.", separator=" (with a slash) - ")
                 self.javaserver.console(consoleinput)
@@ -280,9 +301,6 @@ class Wrapper:
                     break
                 continue
 
-    def _registerwrapperscommands(self):
-        self.api.registerCommand(command="", callback="", permission="")
-
     def _registerwrappershelp(self):
         # All commands listed herein are accessible in-game
         # Also require player.isOp()
@@ -307,6 +325,10 @@ class Wrapper:
             ("/banlist [players|ips] [searchtext]",
              "search and display the banlist (warning - displays on single page!)", "mc1.7.6")
         ])
+
+    def runwrapperconsolecommand(self, wrappercommand, argslist):
+        xpayload = {'player': self.xplayer, 'command': wrappercommand, 'args': argslist}
+        self.commands.playercommand(xpayload)
 
     def isonlinemode(self):
         """

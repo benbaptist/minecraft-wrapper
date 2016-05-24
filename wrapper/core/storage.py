@@ -8,7 +8,6 @@ import threading
 import time
 import copy
 import logging
-import sys
 
 try:
     str2 = unicode

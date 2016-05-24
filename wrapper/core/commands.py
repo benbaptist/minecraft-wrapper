@@ -5,6 +5,7 @@
 
 import ast
 import random
+import time
 
 from utils.helpers import getargs, getargsafter, secondstohuman, showpage
 
@@ -98,29 +99,44 @@ class Commands:
         return True
 
     def command_banip(self, player, payload):
-        if player.isOp():
-            if not self.wrapper.isipv4address(getargs(payload["args"], 0)):
+        if player.isOp() > 2:  # specify and op level for the command.
+            commargs = payload["args"]
+            if not self.wrapper.isipv4address(getargs(commargs, 0)):
                 player.message("&cInvalid IP address format: %s" % getargs(payload["args"], 0))
                 return False
-            returnmessage = self.wrapper.proxy.banip(getargs(payload["args"], 0))
+            ipaddress = getargs(commargs, 0)
+            banexpires = "forever"
+            reason = "the Ban Hammer has Spoken"
+            if len(commargs) > 1:
+                # check last argument for "d:<days>
+                if commargs[len(commargs)-1][0:2].lower() == "d:":
+                    days = int(float(commargs[len(commargs)-1][2:]))
+                    if days > 0:
+                        banexpires = time.time() + (days * 86400)
+                        pass
+                reason = getargsafter(commargs, 1)
+
+            returnmessage = self.wrapper.proxy.banip(ipaddress, reason, player.username, banexpires)
             if returnmessage[:6] == "Banned":
                 player.message({"text": "%s" % returnmessage, "color": "yellow"})
             else:
-                player.message({"text": "IP unban failed!", "color": "red"})
+                player.message({"text": "IP ban failed!", "color": "red"})
                 player.message(returnmessage)
             return False
 
     def command_pardonip(self, player, payload):
-        if player.isOp():
-            if not self.wrapper.isipv4address(getargs(payload["args"], 0)):
+        if player.isOp() > 2:  # see http://minecraft.gamepedia.com/Server.properties#Minecraft_server_properties
+            commargs = payload["args"]
+            if not self.wrapper.isipv4address(getargs(commargs, 0)):
                 player.message("&cInvalid IP address format: %s" % getargs(payload["args"], 0))
                 return False
-            returnmessage = self.wrapper.proxy.pardonip(getargs(payload["args"], 0))
+            ipaddress = getargs(commargs, 0)
+
+            returnmessage = self.wrapper.proxy.pardonip(ipaddress)
             if returnmessage[:8] == "pardoned":
-                player.message({"text": "IP address unbanned!", "color": "yellow"} %
-                               str((getargs(payload["args"], 0))))
+                player.message({"text": "IP address %s unbanned!" % ipaddress, "color": "yellow"})
             else:
-                player.message({"text": "IP unban failed!", "color": "red"})
+                player.message({"text": "IP unban %s failed!" % ipaddress, "color": "red"})
             player.message(returnmessage)
             return False
 
@@ -173,7 +189,9 @@ class Commands:
                 player.message({"text": "Plugins reloaded.", "color": "green"})
                 if self.wrapper.javaserver.getservertype() != "vanilla":
                     player.message({"text": "Note: If you meant to reload the server's plugins and not "
-                                            "Wrapper.py's plugins, run `/reload server`.", "color": "gold"})
+                                            "Wrapper.py's plugins, run `/reload server` or "
+                                            "from the console, use `/raw /reload` or `reload` (with no "
+                                            "slash).", "color": "gold"})
             except Exception as e:
                 self.log.exception("Failure to reload plugins:")
                 player.message({"text": "An error occurred while reloading plugins. Please check the console "
