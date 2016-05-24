@@ -62,22 +62,26 @@ class Minecraft:
         players = {}
         for uuidf in os.listdir("wrapper-data/players"):
             puuid = uuidf.rsplit(".", 1)[0]
+
+            username = self.wrapper.getusernamebyuuid(puuid)
+            if type(username) != str:
+                puuid = "None"
+
+            # remove any old bad objects
             if puuid in ("None", "False"):
-                # remove any old bad objects
                 os.remove("wrapper-data/players/" + uuidf)
                 continue
-            username = self.wrapper.getusername(puuid)
-            if type(username) != str:
-                continue
+
+            offinelineuuid = self.wrapper.getuuidfromname("OfflinePlayer:%s" % username)
             if online:
-                if str(self.wrapper.getuuidfromname(username)) == puuid:
+                if offinelineuuid == puuid:
                     continue
             with open("wrapper-data/players/" + uuidf) as f:
                 data = f.read()
             try:
                 players[puuid] = json.loads(data, self._encoding)
             except Exception as e:
-                self.log.exception("Failed to load player data '%s':\n%s", puuid, e)
+                self.log.error("Failed to load player data '%s':\n%s", puuid, e)
                 os.remove("wrapper-data/players/" + uuidf)
         return players
 

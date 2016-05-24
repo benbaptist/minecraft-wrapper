@@ -280,6 +280,9 @@ class Wrapper:
                     break
                 continue
 
+    def _registerwrapperscommands(self):
+        self.api.registerCommand(command="", callback="", permission="")
+
     def _registerwrappershelp(self):
         # All commands listed herein are accessible in-game
         # Also require player.isOp()
@@ -428,7 +431,12 @@ class Wrapper:
         if forcepoll:
             frequency = 600  # 10 minute limit
         names = self._pollmojanguuid(useruuid)
+
+        if not names or names is None:  # mojang service failed or UUID not found
+            return False
         numbofnames = len(names)
+        if numbofnames == 0:
+            return False
         if self.usercache.key(useruuid):  # if user is in the cache...
             # and was recently polled...
             if int((time.time() - self.usercache.key(useruuid)["time"])) < frequency:
@@ -439,8 +447,6 @@ class Wrapper:
                     return self.usercache.key(useruuid)["name"]
                 # continue on and poll... because user is not in cache or is old record that needs re-polled
         # else:  # user is not in cache
-        if not names or names is None or numbofnames == 0:  # mojang service failed or UUID not found
-            return False
         pastnames = []
         if useruuid not in self.usercache:
             self.usercache[useruuid] = {
@@ -493,6 +499,8 @@ class Wrapper:
         r = requests.get("https://api.mojang.com/user/profiles/%s/names" % useruuid.replace("-", ""))
         if r.status_code == 200:
             return r.json()
+        if r.status_code == 204:
+            return False
         else:
             rx = requests.get("https://status.mojang.com/check")
             if rx.status_code == 200:
@@ -514,8 +522,11 @@ class Wrapper:
                         return False
                     else:
                         self.log.warning("Mojang Status not found - no internet connection, perhaps? "
-                                         "(status code %s)", rx.status_code)
-                        return self.usercache[useruuid]["name"]
+                                         "(status code may not exist)")
+                        try:
+                            return self.usercache[useruuid]["name"]
+                        except TypeError:
+                            return None
 
     def listplugins(self):
         readout("", "List of Wrapper.py plugins installed:", separator="", pad=4)
@@ -666,3 +677,52 @@ class Wrapper:
                 t = time.time()
             time.sleep(0.05)
             # self.events.callevent("timer.tick", None)  # don't really advise the use of this timer
+
+
+class ConsolePlayer:
+    """
+    This class represents the console as a player.
+    """
+
+    def __init__(self, wrapper):
+        self.username = "*Console*"
+        self.loggedIn = time.time()
+        self.wrapper = wrapper
+        self.javaserver = wrapper.javaserver
+        self.permissions = wrapper.permissions
+        self.log = wrapper.log
+        self.abort = False
+
+        self.mojangUuid = "00000000-0000-0000-0000-000000000000"
+        self.clientUuid = self.mojangUuid
+        self.offlineUuid = "00000000-0000-0000-0000-000000000000"
+        self.serverUuid = self.offlineUuid
+
+        self.ipaddress = "127.0.0.1"
+
+        self.client = None
+        self.clientboundPackets = None
+        self.serverboundPackets = None
+
+        self.field_of_view = float(1)
+        self.godmode = 0x00
+        self.creative = 0x00
+        self.fly_speed = float(1)
+
+    @staticmethod
+    def isOp():
+        return 4
+
+    @staticmethod
+    def isOp_fast():
+        return 4
+
+    @staticmethod
+    def message(message):
+        display = str(message)
+        readout(display, "", "")
+        pass
+
+    @staticmethod
+    def hasPermission(**kwargs):
+        return True
