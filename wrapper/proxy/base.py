@@ -273,6 +273,25 @@ class Proxy:
         else:
             return "Banlist not found on disk"  # error text
 
+    @staticmethod
+    def pardonname(username):
+        banlist = getjsonfile("banned-players")
+        if banlist is not False:  # file and directory exist.
+            if banlist is None:  # file was empty or not valid
+                return "No bans have ever been recorded..?"
+            banrecord = find_in_json(banlist, "name", str(username))
+            if banrecord:
+                for x in banlist:
+                    if x == banrecord:
+                        banlist.remove(x)
+                if putjsonfile(banlist, "banned-players"):
+                    return "pardoned %s" % username
+                return "Could not write banlist to disk"
+            else:
+                return "That person was never banned"  # error text
+        else:
+            return "Banlist not found on disk"  # error text
+
     def isuuidbanned(self, uuid):  # Check if the UUID of the user is banned
         banlist = getjsonfile("banned-players")
         if banlist:  # in this case we just care if banlist exits in any fashion
