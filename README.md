@@ -15,7 +15,7 @@ Wrapper.py doesn't require any special modules for most of the basic features to
 
 You will also need `tar` installed if you need backups. Most Linux distros have this pre-installed, but you may need to install it manually on Windows: http://gnuwin32.sourceforge.net/packages/gtar.htm
 
-You only need to download Wrapper.py, the src folder is just the extracted version of Wrapper.py.</br>  
+You only need to download Wrapper.py, the src folder is just the extracted version of Wrapper.py.</br>
 
 
 **LINUX Installation**
@@ -72,9 +72,9 @@ Run `python Wrapper.py` to start. On first start, it'll create a wrapper.propert
 
 Wrapper.py is a Python-executable zipped-up folder, rather than a plain text file. If you want to view the source code, open it
 with a zip file viewer OR download the src folder.</br>
-On first run, it'll create the configuration file 'wrapper.properties' and exit. Tune this file to your needs, and then run `python Wrapper.py` again.</br>  
+On first run, it'll create the configuration file 'wrapper.properties' and exit. Tune this file to your needs, and then run `python Wrapper.py` again.</br>
 Any console command beginning with a slash (/) will be interpreted as a Wrapper.py command.
-Type /help to see a list of Wrapper.py commands. To completely shutdown the wrapper, type /halt.</br>  
+Type /help to see a list of Wrapper.py commands. To completely shutdown the wrapper, type /halt.</br>
 If you run into any bugs, please report them!
 
 Wrapper.py is made to work with 1.7.10 and later, but it will work on 1.7.4 and earlier if you don't use proxy mode. If you're using 1.6 and earlier, please turn on pre-1.7-mode in wrapper.properties.
