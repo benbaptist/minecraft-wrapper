@@ -107,7 +107,7 @@ class Commands:
         return True  # These returns allow or prevent the text from passing to the server. TODO - find out...
 
     def command_banplayer(self, player, payload):
-        if player.isOp() > 2:  # specify and op level for the command.
+        if player.isOp() > 2:  # specify an op level for the command.
             commargs = payload["args"]
             playername = getargs(commargs, 0)
             banexpires = False

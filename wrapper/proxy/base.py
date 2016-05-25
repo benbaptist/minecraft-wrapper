@@ -126,7 +126,7 @@ class Proxy:
 
     def banplayer(self, playername, reason="Banned by an operator", source="Wrapper", expires="forever"):
         """
-        * placeholder code for future feature*
+        * placeholder code for future feature* - This will be the pre-1.7.6 ban method (name only).
         This is not used by code yet... for banning by username only for pre-uuid servers
         :param playername:
         :param reason:
@@ -150,7 +150,7 @@ class Proxy:
 
     def banuuid(self, uuid, reason="The Ban Hammer has spoken!", source="Wrapper", expires=False):
         """
-        Ban someone by UUID
+        Ban someone by UUID  This is the 1.7.6 way to ban..
         :param uuid - uuid to ban (MCUUID)
         :param reason - text reason for ban
         :param source - source (author/op) of ban.
@@ -184,6 +184,46 @@ class Proxy:
                 if putjsonfile(banlist, "banned-players"):
                     self.wrapper.javaserver.console("kick %s Banned: %s" % (name, reason))
                     return "Banned %s: %s" % (name, reason)
+                return "Could not write banlist to disk"
+        else:
+            return "Banlist not found on disk"
+
+    def banuuidraw(self, uuid, username, reason="The Ban Hammer has spoken!", source="Wrapper", expires=False):
+        """
+        Ban a raw uuid/name combination with no mojang error checks
+        :param uuid - uuid to ban (MCUUID)
+        :param username - Name of player to ban
+        :param reason - text reason for ban
+        :param source - source (author/op) of ban.
+        :param expires - expiration in seconds from epoch time.  Field exits but not used by the vanilla server
+        - implement it for tempbans in future?  Gets converted to string representation in the ban file.
+
+        This probably only works on 1.7.10 servers or later
+        """
+        banlist = getjsonfile("banned-players")
+        if banlist is not False:  # file and directory exist.
+            if banlist is None:  # file was empty or not valid
+                banlist = dict()  # ensure valid dict before operating on it
+            if find_in_json(banlist, "uuid", str(uuid)):
+                return "player already banned"  # error text
+            else:
+                if expires:
+                    try:
+                        expiration = epoch_to_timestr(expires)
+                    except Exception as e:
+                        print(e)
+                        return "expiration date invalid"  # error text
+                else:
+                    expiration = "forever"
+                banlist.append({"uuid": uuid.string,
+                                "name": username,
+                                "created": epoch_to_timestr(time.time()),
+                                "source": source,
+                                "expires": expiration,
+                                "reason": reason})
+                if putjsonfile(banlist, "banned-players"):
+                    self.wrapper.javaserver.console("kick %s Banned: %s" % (username, reason))
+                    return "Banned %s: %s - %s" % (username, uuid, reason)
                 return "Could not write banlist to disk"
         else:
             return "Banlist not found on disk"
