@@ -222,6 +222,7 @@ class Proxy:
                                 "expires": expiration,
                                 "reason": reason})
                 if putjsonfile(banlist, "banned-players"):
+                    self.log.info("kicking %s... %s", username, reason)
                     self.wrapper.javaserver.console("kick %s Banned: %s" % (username, reason))
                     return "Banned %s: %s - %s" % (username, uuid, reason)
                 return "Could not write banlist to disk"

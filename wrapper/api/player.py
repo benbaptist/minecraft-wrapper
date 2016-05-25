@@ -117,18 +117,21 @@ class Player:
 
     def execute(self, string):
         """
-        Sends a command directly to the server console. To be clear, this
+        Run a command as this player. If proxy mode is not enabled,
+        it simply falls back to using the 1.8 'execute' command. To be clear, this
         does NOT work with any Wrapper.py or plugin commands.  The command
         does not pass through the wrapper.
 
         Args:
-            string: full command string to execute as the player from his current
-            position.
+            string: full command string send on player's behalf to server.
 
-        Returns: Nothing; passes the command to console as and "execute" command.
+        Returns: Nothing; passes the server or the console as an "execute" command.
 
         """
-        self.wrapper.javaserver.console("execute %s ~ ~ ~ %s" % (self.name, string))
+        try:
+            self.client.message("/%s" % string)
+        except AttributeError:
+            self.wrapper.javaserver.console("execute %s ~ ~ ~ %s" % (self.username, string))
 
     def sendCommand(self, command, args):
         """
