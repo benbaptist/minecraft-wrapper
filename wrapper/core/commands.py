@@ -44,34 +44,44 @@ class Commands:
 
         # We should get of this by creating a wrapper command registering set
         if str(payload["command"]).lower in ("plugins", "pl"):
-            return self.command_plugins(player)
+            self.command_plugins(player)
 
+        # make sure any command returns a Truish item, or the chat packet will continue to the server
         if payload["command"] == "wrapper":
-            return self.command_wrapper(player, payload)
+            self.command_wrapper(player, payload)
+            return True
 
         if payload["command"] == "reload":
-            return self.command_reload(player, payload)
+            self.command_reload(player, payload)
+            return True
 
         if payload["command"] in ("help", "?"):
-            return self.command_help(player, payload)
+            self.command_help(player, payload)
+            return
 
         if payload["command"] == "playerstats":
-            return self.command_playerstats(player, payload)
+            self.command_playerstats(player, payload)
+            return True
 
         if payload["command"] in ("permissions", "perm", "perms", "super"):
-            return self.command_perms(player, payload)
+            self.command_perms(player, payload)
+            return True
 
         if str(payload["command"]).lower() == "ban":
-            return self.command_banplayer(player, payload)
+            self.command_banplayer(player, payload)
+            return True
 
         if str(payload["command"]).lower() == "pardon":
-            return self.command_pardon(player, payload)
+            self.command_pardon(player, payload)
+            return True
 
         if str(payload["command"]).lower() == "ban-ip":
-            return self.command_banip(player, payload)
+            self.command_banip(player, payload)
+            return True
 
         if str(payload["command"]).lower() == "pardon-ip":
-            return self.command_pardonip(player, payload)
+            self.command_pardonip(player, payload)
+            return True
 
         # This section calls the commands defined by api.registerCommand()
         for pluginID in self.commands:
@@ -95,16 +105,18 @@ class Commands:
                         command["callback"](payload["player"], payload["args"])
                     else:
                         player.message({"translate": "commands.generic.permission", "color": "red"})
-                    return False
+                    return True
                 except Exception as e:
                     self.log.exception("Plugin '%s' errored out when executing command: '<%s> /%s':",
                                        pluginID, payload["player"], command)
                     payload["player"].message({"text": "An internal error occurred on the server side "
                                                        "while trying to execute this command. Apologies.",
                                                "color": "red"})
-                    return False
+                    return True
 
-        return True  # These returns allow or prevent the text from passing to the server. TODO - find out...
+        # Changed the polarity to make sense and allow commands to have return values
+        # returning False here will mean no plugin or wrapper command was parsed (so it passes to server).
+        return False
 
     def command_banplayer(self, player, payload):
         if player.isOp() > 2:  # specify an op level for the command.
