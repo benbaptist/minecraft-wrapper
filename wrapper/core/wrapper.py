@@ -237,23 +237,27 @@ class Wrapper:
             elif command == "/version":
                 readout("/version", self.getbuildstring())
 
-            # TODO Start adding more commands below here, below the original items:
-            # TODO VVVV_____________
-
-            elif command == "/ban":
+            # Ban commands MUST over-ride the server version; otherwise, the server will re-write
+            #       Its version from memory, undoing wrapper's changes to the disk file version.
+            elif command in ("/ban", "ban"):
                 self.runwrapperconsolecommand("ban", allargs)
 
-            elif command == "/ban-ip":
+            elif command in ("/ban-ip", "ban-ip"):
                 self.runwrapperconsolecommand("ban-ip", allargs)
 
-            elif command == "/pardon-ip":
+            elif command in ("/pardon-ip", "pardon-ip"):
                 self.runwrapperconsolecommand("pardon-ip", allargs)
 
-            elif command == "/pardon":
+            elif command in ("/pardon", "pardon"):
                 self.runwrapperconsolecommand("pardon", allargs)
 
-            # TODO ^^^^^_____________
-            # TODO Start adding more commands above here, above the help-related items:
+            # TODO Add more commands below here, below the original items:
+            # TODO __________________
+
+            # more commands here...
+
+            # TODO __________________
+            # TODO add more commands above here, above the help-related items:
 
             elif command == "help":
                 readout("/help", "Get wrapper.py help.", separator=" (with a slash) - ")
