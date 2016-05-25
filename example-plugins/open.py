@@ -58,7 +58,7 @@ class Main:
 			args=self.players[payload["player"].name][payload["slot"]]["args"]
 			#payload["player"].message(command)
 			pay={"player":payload["player"],"command":command,"args":args}
-			self.api.wrapper.commands.playerCommand(pay)
+			self.api.callEvent("player.runCommand", pay)
 		#if payload['wid']==self.win[payload['player'].name]: return False
 		return True
 	def addWindow(self,player,args):

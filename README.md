@@ -5,6 +5,11 @@ Wrapper.py is an easy to use Minecraft server wrapper for adding extra functiona
 
 [![Join the chat at https://gitter.im/benbaptist/minecraft-wrapper](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/benbaptist/minecraft-wrapper?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
+NOTICE: Wrapper will Accept the minecraft server EULA on your behalf.  Using wrapper means you also accept the EULA, which
+will be set to true in the eula.txt file in your server folder.
+[Mojang EULA](https://account.mojang.com/documents/minecraft_eula)
+
+
 #Installation#
 Wrapper.py doesn't require any special modules for most of the basic features to work, but web mode and proxy mode require `requests` and `pycrypto`, and `pkg_resources`.
 
@@ -91,14 +96,13 @@ Wrapper.py supports the following features:
 - Web remote for controlling the server and the wrapper through your web browser
 - Shell scripts that are called upon certain events (similar to plugin events, but quicker and easier)
 - Minecraft 1.7 and later support (uses tellraw!)
+- Colorized console output.
 
 #API#
-The doucmentation for Wrapper.py is not complete, but you can find a quick reference on the plugin API here:
-</br><a href="http://wrapper.benbaptist.com/docs/api.html">http://wrapper.benbaptist.com/docs/api.html</a>
+The documentation for Wrapper.py is not complete, but you can find a reference on the plugin API here:
+</br><a href="https://github.com/benbaptist/minecraft-wrapper/wiki/Plugin-API">wrapper wiki</a>
 
-It isn't finished, nor is it pretty, but it should help give you an idea of the methods that can be used. More documentation will be released
-for working with the plugin API, but for now, here's a few things.</br></br>
-
+Wrapper continues to be a work in progress and changes often happen faster than they get documented, but this should help give you an idea of the methods that can be used. below is a list of plugin events that can be registered in your plugins:</br></br>
 <b>List of events</b>: https://docs.google.com/spreadsheet/ccc?key=0AoWx24EFSt80dDRiSGVxcW1xQkVLb2dWTUN4WE5aNmc&usp=sharing</br>
 
 </br></br>Check the 'example-plugins' folder to see some example plugins.
@@ -109,4 +113,20 @@ for working with the plugin API, but for now, here's a few things.</br></br>
 <li>speedboost.py gives everyone a speedboost when someone dies - similar to survival games.</li>
 <li>poll.py allows players to vote for certain things on the server. It isn't very up-to-date at the moment, however. </li>
 </ul>
-</br>Tip: Set debug=True in wrapper.properties if you want to see more error messages and other useful messages while developing plugins.
+</br>Tip:  
+If you want to see more error messages and other useful messages while developing plugins or debugging wrapper,
+look for the logging.json file and make changes to the "console" section:  
+```json
+...
+        "console": {
+            "stream": "ext://sys.stdout",
+            "formatter": "standard",
+            "class": "logging.StreamHandler",
+            "filters": [
+                "plugin"
+            ],
+            "level": "INFO" <-- Set to DEBUG or TRACE
+        },
+...
+```
+  Debug is a normal debugging setting.  TRACE allows detailed information, such as parsing of packets, etc.  If you want TRACE to be logged, find the item "trace" and change it's "level" to "TRACE" (set to "ERROR" by default)
