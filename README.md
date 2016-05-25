@@ -1,14 +1,3 @@
-#About this fork#
-This is a fork of Benbaptist's minecraft wrapper.  Much of this is pretty bleeding edge! If you are looking for something stable, use the development branch.  Experimental (the default branch you are viewing) is the branch where all the changes are actively being made and is constantly changing.
-
-TO use this branches' code, do not use the pre-built wrapper.py file, as it does not get updated.  Run the source code folder `/wrapper` directly from python:
-
-place the /wrapper folder in the same server folder with your server.jar file, set up your server.properties (and wrapper.properties after it gets created) appropriately and simply run the source code:
-
-```python /path to your server/your_server/wrapper```
-
-So far, it is only fully functional in Python 2, but it will start and minimally function in python 3 (but is still full of errors)
-
 #Overview#
 Wrapper.py is an easy to use Minecraft server wrapper for adding extra functionality into the server without modifying the server jar file.
 
@@ -140,4 +129,4 @@ look for the logging.json file and make changes to the "console" section:
         },
 ...
 ```
-  Debug is a normal debugging setting.  TRACE allows detailed information, such as parsing of packets, etc.
+  Debug is a normal debugging setting.  TRACE allows detailed information, such as parsing of packets, etc.  If you want TRACE to be logged, find the item "trace" and change it's "level" to "TRACE" (set to "ERROR" by default)
