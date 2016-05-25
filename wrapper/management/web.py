@@ -392,7 +392,7 @@ class WebClient:
                 return {"error": "Proxy mode not enabled."}
             uuid = get("uuid")
             if uuid in self.wrapper.proxy.skins:
-                skin = self.wrapper.proxy.getSkinTexture(uuid)
+                skin = self.wrapper.proxy.getskintexture(uuid)
                 if skin:
                     return skin
                 else:

@@ -21,7 +21,7 @@ def epoch_to_timestr(epoch_time):
     :param epoch_time: string or integer (in seconds) of epoch time
     :returns: the string version like "2016-04-14 22:05:13 -0400" suitable in ban files
     """
-    tm = int(epoch_time)  # allow argument to be passed as a string or integer
+    tm = int(float(epoch_time))  # allow argument to be passed as a string or integer
     t = datetime.datetime.fromtimestamp(tm)
     pattern = "%Y-%m-%d %H:%M:%S %z"
     return "%s-0100" % t.strftime(pattern)  # the %z does not work below py3.2 - we just create a fake offset.

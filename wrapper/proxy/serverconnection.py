@@ -58,6 +58,8 @@ class ServerConnection:
 
         self.eid = None
 
+        self.headlooks = 0
+
     def _refresh_server_version(self):
         # Get serverversion for mcpacket use
         try:
@@ -77,6 +79,9 @@ class ServerConnection:
         else:  # 1.8 default
             self.pktSB = mcpacket.Server18
             self.pktCB = mcpacket.Client18
+        if self.version > mcpacket.PROTOCOL_1_7:
+            # used by ban code to enable wrapper group help display for ban items.
+            self.wrapper.api.registerPermission("mc1.7.6", value=True)
 
     def send(self, packetid, xpr, payload):  # not supported... no docstring. For backwards compatability purposes only.
         self.log.debug("deprecated server.send() called (by a plugin)")
@@ -218,6 +223,9 @@ class ServerConnection:
                 self.client.dimension = data["dim"]
                 self.client.eid = data["eid"]  # This is the EID of the player on this particular server -
                 # not always the EID that the client is aware of.
+
+                # this is an attempt to clear the gm3 noclip issue on relogging.
+                self.client.packet.send(self.pktCB.CHANGE_GAME_STATE, "ubyte|float", (3, self.client.gamemode))
                 return True
 
             elif pkid == self.pktCB.TIME_UPDATE:
@@ -242,12 +250,23 @@ class ServerConnection:
                 self.log.trace("(PROXY SERVER) -> Parsed RESPAWN packet:\n%s", data)
                 return True
 
+            # this packet is just a server-correct item... it usually does not get from client to our server in time
+            # see note at same client (server-bound) packet in clientconnection.py
+            # Wrapper will handle the response here, just like the keep alives
             elif pkid == self.pktCB.PLAYER_POSLOOK:
-                data = self.packet.read("double:x|double:y|double:z|float:yaw|float:pitch")
-                x, y, z, yaw, pitch = data["x"], data["y"], data["z"], data["yaw"], data["pitch"]
-                self.client.position = (x, y, z)
+                if self.version < mcpacket.Client18.end():
+                    data = self.packet.read("double:x|double:y|double:z|float:yaw|float:pitch")
+                    x, y, z, yaw, pitch = data["x"], data["y"], data["z"], data["yaw"], data["pitch"]
+                    self.packet.send(self.pktSB.PLAYER_POSLOOK, "double|double|double|float|float",
+                                     (x, y, z, yaw, pitch))
+                else:
+                    data = self.packet.read("double:x|double:y|double:z|float:yaw|float:pitch|varint:con")
+                    x, y, z, yaw, pitch, conf = data["x"], data["y"], data["z"], data["yaw"], data["pitch"], data["con"]
+                    self.packet.send(self.pktSB.PLAYER_POSLOOK, "double|double|double|float|float|varint",
+                                     (x, y, z, yaw, pitch, conf))
+                self.client.position = (x, y, z)  # not a bad idea to fill player position
                 self.log.trace("(PROXY SERVER) -> Parsed PLAYER_POSLOOK packet:\n%s", data)
-                return True
+                return True  # it will be sent to the client to keep it honest.
 
             elif pkid == self.pktCB.USE_BED:
                 data = self.packet.read("varint:eid|position:location")
@@ -271,7 +290,7 @@ class ServerConnection:
                         "varint:eid|uuid:uuid|int:x|int:y|int:z|byte:yaw|byte:pitch|short:item|rest:metadata")
                     if data["item"] < 0:  # A negative Current Item crashes clients (just in case)
                         data["item"] = 0
-                    clientserverid = self.proxy.getClientByOfflineServerUUID(data["uuid"])
+                    clientserverid = self.proxy.getclientbyofflineserveruuid(data["uuid"])
                     if clientserverid:
                         self.client.packet.send(self.pktCB.SPAWN_PLAYER, "varint|uuid|int|int|int|byte|byte|short|raw",
                                                 (
@@ -289,7 +308,7 @@ class ServerConnection:
                     return False
                 else:
                     data = self.packet.read("varint:eid|uuid:uuid|int:x|int:y|int:z|byte:yaw|byte:pitch|rest:metadata")
-                    clientserverid = self.proxy.getClientByOfflineServerUUID(data["uuid"])
+                    clientserverid = self.proxy.getclientbyofflineserveruuid(data["uuid"])
                     if clientserverid:
                         self.client.packet.send(self.pktCB.SPAWN_PLAYER, "varint|uuid|int|int|int|byte|byte|raw", (
                             data["eid"],
@@ -372,9 +391,15 @@ class ServerConnection:
                 return True
 
             elif pkid == self.pktCB.ENTITY_HEAD_LOOK:
-                data = self.packet.read("varint:eid|byte:angle")
-                self.log.trace("(PROXY SERVER) -> Parsed ENTITY_HEAD_LOOK packet:\n%s", data)
-                return True
+                # these packets are insanely numerous
+                if self.headlooks > 20:
+                    self.headlooks = 0
+                    return True
+                self.headlooks += 1
+                # reading these often causes disconnection
+                # data = self.packet.read("varint:eid|byte:angle")
+                # self.log.trace("(PROXY SERVER) -> Parsed ENTITY_HEAD_LOOK packet:\n%s", data)
+                return False  # discard 95% of them
 
             elif pkid == self.pktCB.ENTITY_STATUS:
                 if self.version < mcpacket.PROTOCOL_1_8START:
@@ -528,7 +553,7 @@ class ServerConnection:
                     z = 0
                     while z < head["length"]:
                         serveruuid = self.packet.read("uuid:uuid")["uuid"]
-                        playerclient = self.client.proxy.getClientByOfflineServerUUID(serveruuid)
+                        playerclient = self.client.proxy.getclientbyofflineserveruuid(serveruuid)
                         if not playerclient:
                             z += 1
                             continue
