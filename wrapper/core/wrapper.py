@@ -251,6 +251,12 @@ class Wrapper:
             elif command in ("/pardon", "pardon"):
                 self.runwrapperconsolecommand("pardon", allargs)
 
+            elif command in ("/perm", "/perms", "/super", "/permissions"):
+                self.runwrapperconsolecommand("perms", allargs)
+
+            elif command in ("/playerstats", "/stats"):
+                self.runwrapperconsolecommand("playerstats", allargs)
+
             # TODO Add more commands below here, below the original items:
             # TODO __________________
 
