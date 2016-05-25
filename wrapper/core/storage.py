@@ -9,6 +9,11 @@ import time
 import copy
 import logging
 
+try:
+    str2 = unicode
+except NameError:
+    str2 = str
+
 
 class Storage:
 
@@ -32,20 +37,27 @@ class Storage:
         self.save()
 
     def __getitem__(self, index):
-        if not type(index) == str:
+        if not type(index) in (str, str2):
             raise Exception("A string must be passed - got %s" % type(index))
-        return self.data[index]
+        try:
+            return self.data[str(index)]
+        except KeyError:
+            self.log("failed to get key: <%s> out of data:\n%s", str(index), self.data)
 
     def __setitem__(self, index, value):
-        if not type(index) == str:
+        if not type(index) in (str, str2):
             raise Exception("A string must be passed - got %s" % type(index))
+        if str(index)[0:2] == "u'":
+            index = str(index.split("'")[1])
         self.data[index] = value
-        return self.data[index]
+        return self.data[index.decode()]
 
     def __delattr__(self, index):
-        if not type(index) == str:
+        if not type(index) in (str, str2):
             raise Exception("A string must be passed - got %s" % type(index))
-        del self.data[index]
+        if str(index)[0:2] == "u'":
+            index = str(index.split("'")[1])
+        del self.data[index.decode()]
 
     def __iter__(self):
         for i in self.data:

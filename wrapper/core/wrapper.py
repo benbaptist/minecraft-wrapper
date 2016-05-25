@@ -64,7 +64,8 @@ class Wrapper:
         self.irc = None
         self.scripts = None
         self.web = None
-        self.proxy = False
+        self.proxy = None
+        self.proxymode = False
         self.halt = False
         self.update = False
         self.storage = Storage("main", encoding=self.encoding)
@@ -77,6 +78,7 @@ class Wrapper:
         self.permission = {}
         self.help = {}
         self.config = {}
+        self.xplayer = ConsolePlayer(self)  # future plan to expose this to api
 
         if not readline:
             self.log.warning("'readline' not imported.")
@@ -84,6 +86,7 @@ class Wrapper:
         if not requests and self.configManager.config["Proxy"]["proxy-enabled"]:
             self.log.error("You must have the requests module installed to run in proxy mode!")
             return
+        self.proxymode = self.configManager.config["Proxy"]["proxy-enabled"]
 
     def start(self):
         """ wrapper should only start ONCE... old code made it restart over when only a server needed restarting"""
@@ -144,7 +147,7 @@ class Wrapper:
                 self.log.error("Sorry, but shell scripts only work on *NIX-based systems! If you are using a "
                                "*NIX-based system, please file a bug report.")
 
-        if self.config["Proxy"]["proxy-enabled"]:
+        if self.proxymode:
             t = threading.Thread(target=self.startproxy, args=())
             t.daemon = True
             t.start()
@@ -164,17 +167,24 @@ class Wrapper:
 
     def parseconsoleinput(self):
         while not self.halt:
+
+            # Obtain a line of console input
             try:
                 consoleinput = rawinput("")
             except Exception as e:
                 print("[continue] variable 'consoleinput' in 'console()' did not evaluate \n%s" % e)
                 continue
 
+            # No command (perhaps just a line feed or spaces?)
             if len(consoleinput) < 1:
                 continue
 
-            command = getargs(consoleinput[0:].split(" "), 0)
+            # for use with runwrapperconsolecommand() command
+            wholecommandline = consoleinput[0:].split(" ")
+            command = getargs(wholecommandline, 0)
+            allargs = wholecommandline[1:]  # this can be passed to runwrapperconsolecommand() command for args
 
+            # Most of these are too small to use the runwrapperconsolecommand command (or work better here)
             if command in ("/halt", "halt"):
                 self.javaserver.stop("Halting server...", save=False)
                 self.halt = True
@@ -185,11 +195,8 @@ class Wrapper:
                 self.javaserver.start()
             elif command == "/restart":
                 self.javaserver.restart("Server restarting, be right back!")
-            elif command == "/reload":
-                self.plugins.reloadplugins()
-                if self.javaserver.getservertype() != "vanilla":
-                    self.log.info("Note: If you meant to reload the server's plugins instead of the Wrapper's "
-                                  "plugins, try running 'reload' without any slash OR '/raw /reload'.")
+            elif command == "/reload":  # This /reload was a 'proof of concept' for runwrapperconsolecommand()
+                self.runwrapperconsolecommand("reload", [])
             elif command in ("/update-wrapper", "update-wrapper"):
                 self.checkforupdate(False)
             elif command in ("/plugins", "plugins"):
@@ -229,12 +236,41 @@ class Wrapper:
                     self.log.exception("Something went wrong when trying to unfreeze the server! (%s)", exc)
             elif command == "/version":
                 readout("/version", self.getbuildstring())
+
+            # Ban commands MUST over-ride the server version; otherwise, the server will re-write
+            #       Its version from memory, undoing wrapper's changes to the disk file version.
+            elif command in ("/ban", "ban"):
+                self.runwrapperconsolecommand("ban", allargs)
+
+            elif command in ("/ban-ip", "ban-ip"):
+                self.runwrapperconsolecommand("ban-ip", allargs)
+
+            elif command in ("/pardon-ip", "pardon-ip"):
+                self.runwrapperconsolecommand("pardon-ip", allargs)
+
+            elif command in ("/pardon", "pardon"):
+                self.runwrapperconsolecommand("pardon", allargs)
+
+            elif command in ("/perm", "/perms", "/super", "/permissions"):
+                self.runwrapperconsolecommand("perms", allargs)
+
+            elif command in ("/playerstats", "/stats"):
+                self.runwrapperconsolecommand("playerstats", allargs)
+
+            # TODO Add more commands below here, below the original items:
+            # TODO __________________
+
+            # more commands here...
+
+            # TODO __________________
+            # TODO add more commands above here, above the help-related items:
+
             elif command == "help":
                 readout("/help", "Get wrapper.py help.", separator=" (with a slash) - ")
                 self.javaserver.console(consoleinput)
             elif command == "/help":
                 # This is the console help commands.  Below this in _registerwrappershelp is the in-game help
-                readout("", "Get Minecraft help.", separator="help (with no slash) - ")
+                readout("", "Get Minecraft help.", separator="help (no slash) - ", pad=0)
                 readout("/reload", "Reload Wrapper.py plugins.")
                 readout("/plugins", "Lists Wrapper.py plugins.")
                 readout("/update-wrapper", "Checks for new Wrapper.py updates, and will install\n"
@@ -251,6 +287,26 @@ class Wrapper:
                 readout("/raw [command]", "Send command to the Minecraft Server. Useful for Forge\n"
                                           "                  commands like '/fml confirm'.")
                 readout("/version", self.getbuildstring())
+                readout("/bans", "Display the ban help page.")
+            elif command == "/bans":
+                # ban commands help.
+                if self.proxymode:
+                    readout("", "Bans - To use the server's versions, do not type a slash.", separator="", pad=5)
+                    readout("", "", separator="-----1.7.6 and later ban commands-----", pad=10)
+                    readout("/ban", " - Ban a player. Specifying h:<hours> or d:<days> creates a temp ban.",
+                            separator="<name> [reason..] [d:<days>/h:<hours>] ", pad=12)
+                    readout("/ban-ip", " - Ban an IP address. Reason and days (d:) are optional.",
+                            separator="<ip> [<reason..> <d:<number of days>] ", pad=12)
+                    readout("/pardon", " - pardon a player. Default is byuuidonly.  To unban a"
+                                       "specific name (without checking uuid), use `pardon <player> False`",
+                            separator="<player> [byuuidonly(true/false)]", pad=12)
+                    readout("/pardon-ip", " - Pardon an IP address.",
+                            separator="<address> ", pad=12)
+                    readout("/banlist", " - search and display the banlist (warning - displays on single page!)",
+                            separator="[players|ips] [searchtext] ", pad=12)
+                else:
+                    readout("ERROR - ", "Bans are not enabled (proxy mode is not on).",
+                            separator="", pad=10)
             else:
                 try:
                     self.javaserver.console(consoleinput)
@@ -264,36 +320,30 @@ class Wrapper:
         # Also require player.isOp()
         self.api.registerHelp("Wrapper", "Internal Wrapper.py commands ", [
             ("/wrapper [update/memory/halt]",
-             "If no subcommand is provided, it will show the Wrapper version.",
-             None),
+             "If no subcommand is provided, it will show the Wrapper version.", None),
             ("/playerstats [all]",
-             "Show the most active players. If no subcommand is provided, it'll show the top 10 players.",
-             None),
+             "Show the most active players. If no subcommand is provided, it'll show the top 10 players.", None),
             ("/plugins",
-             "Show a list of the installed plugins",
-             None),
-            ("/reload",
-             "Reload all plugins.",
-             None),
+             "Show a list of the installed plugins", None),
+            ("/reload", "Reload all plugins.", None),
             ("/permissions <groups/users/RESET>",
-             "Command used to manage permission groups and users, add permission nodes, etc.",
-             None),
-            ("/ban <name> [reason..] [time <h/d>]",
-             "Using a time creates a temp ban - (h)ours or (d)ays. Default is days(d)",
-             "mc1.7.6"),  # Minimum server version for commands to appear (register default perm later in code)
-            ("/ban-ip <address|name> [reason..] [time <h/d> (hours or days)",
-             "Reason and time optional. Default unit is days",
-             "mc1.7.6"),
-            ("/pardon <name>",
-             "pardon player 'name'. ",
-             "mc1.7.6"),
-            ("/banlist [players|ips|search] [args]",
-             "search/display banlist",
-             "mc1.7.6"),
-            ("/pardon-ip <address>",
-             "Pardon address",
-             "mc1.7.6")
+             "Command used to manage permission groups and users, add permission nodes, etc.", None),
+            # Minimum server version for commands to appear is 1.7.6 (registers perm later in serverconnection.py)
+            # These won't appear is proxy mode not on (since serverconnection is part of proxy).
+            ("/ban <name> [reason..] [d:<days>/h:<hours>]",
+             "Ban a player. Specifying h:<hours> or d:<days> creates a temp ban.", "mc1.7.6"),
+            ("/ban-ip <ip> [<reason..> <d:<number of days>]",
+             "- Ban an IP address. Reason and days (d:) are optional.", "mc1.7.6"),
+            ("/pardon <player> [False]", " - pardon a player. Default is byuuidonly.  To unban a specific "
+                                         "name (without checking uuid), use `pardon <player> False`", "mc1.7.6"),
+            ("/pardon-ip <address>", "Pardon an IP address.", "mc1.7.6"),
+            ("/banlist [players|ips] [searchtext]",
+             "search and display the banlist (warning - displays on single page!)", "mc1.7.6")
         ])
+
+    def runwrapperconsolecommand(self, wrappercommand, argslist):
+        xpayload = {'player': self.xplayer, 'command': wrappercommand, 'args': argslist}
+        self.commands.playercommand(xpayload)
 
     def isonlinemode(self):
         """
@@ -301,7 +351,7 @@ class Wrapper:
         This should normally 'always' render True, unless you want hackers coming on :(
         not sure what circumstances you would want a different confguration...
         """
-        if self.config["Proxy"]["proxy-enabled"]:
+        if self.proxymode:
             # if wrapper is using proxy mode (which should be set to online)
             return self.config["Proxy"]["online-mode"]
         if self.javaserver is not None:
@@ -418,7 +468,12 @@ class Wrapper:
         if forcepoll:
             frequency = 600  # 10 minute limit
         names = self._pollmojanguuid(useruuid)
+
+        if not names or names is None:  # mojang service failed or UUID not found
+            return False
         numbofnames = len(names)
+        if numbofnames == 0:
+            return False
         if self.usercache.key(useruuid):  # if user is in the cache...
             # and was recently polled...
             if int((time.time() - self.usercache.key(useruuid)["time"])) < frequency:
@@ -429,8 +484,6 @@ class Wrapper:
                     return self.usercache.key(useruuid)["name"]
                 # continue on and poll... because user is not in cache or is old record that needs re-polled
         # else:  # user is not in cache
-        if not names or names is None or numbofnames == 0:  # mojang service failed or UUID not found
-            return False
         pastnames = []
         if useruuid not in self.usercache:
             self.usercache[useruuid] = {
@@ -483,6 +536,8 @@ class Wrapper:
         r = requests.get("https://api.mojang.com/user/profiles/%s/names" % useruuid.replace("-", ""))
         if r.status_code == 200:
             return r.json()
+        if r.status_code == 204:
+            return False
         else:
             rx = requests.get("https://status.mojang.com/check")
             if rx.status_code == 200:
@@ -504,8 +559,11 @@ class Wrapper:
                         return False
                     else:
                         self.log.warning("Mojang Status not found - no internet connection, perhaps? "
-                                         "(status code %s)", rx.status_code)
-                        return self.usercache[useruuid]["name"]
+                                         "(status code may not exist)")
+                        try:
+                            return self.usercache[useruuid]["name"]
+                        except TypeError:
+                            return None
 
     def listplugins(self):
         readout("", "List of Wrapper.py plugins installed:", separator="", pad=4)
@@ -530,6 +588,7 @@ class Wrapper:
             proxythread.daemon = True
             proxythread.start()
         else:
+            self.proxymode = False
             self.log.error("Proxy mode could not be started because you do not have one or more of the following "
                            "modules installed: pycrypto and requests")
 
@@ -655,3 +714,52 @@ class Wrapper:
                 t = time.time()
             time.sleep(0.05)
             # self.events.callevent("timer.tick", None)  # don't really advise the use of this timer
+
+
+class ConsolePlayer:
+    """
+    This class represents the console as a player.
+    """
+
+    def __init__(self, wrapper):
+        self.username = "*Console*"
+        self.loggedIn = time.time()
+        self.wrapper = wrapper
+        self.javaserver = wrapper.javaserver
+        self.permissions = wrapper.permissions
+        self.log = wrapper.log
+        self.abort = False
+
+        self.mojangUuid = "00000000-0000-0000-0000-000000000000"
+        self.clientUuid = self.mojangUuid
+        self.offlineUuid = "00000000-0000-0000-0000-000000000000"
+        self.serverUuid = self.offlineUuid
+
+        self.ipaddress = "127.0.0.1"
+
+        self.client = None
+        self.clientboundPackets = None
+        self.serverboundPackets = None
+
+        self.field_of_view = float(1)
+        self.godmode = 0x00
+        self.creative = 0x00
+        self.fly_speed = float(1)
+
+    @staticmethod
+    def isOp():
+        return 4
+
+    @staticmethod
+    def isOp_fast():
+        return 4
+
+    @staticmethod
+    def message(message):
+        display = str(message)
+        readout(display, "", "")
+        pass
+
+    @staticmethod
+    def hasPermission(*args):
+        return True

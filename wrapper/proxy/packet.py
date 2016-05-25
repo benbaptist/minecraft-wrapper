@@ -143,7 +143,10 @@ class Packet:
         if not self.abort:
             self.queue.append((self.compressThreshold, payload))
 
-    def read(self, expression):
+    def read(self, expression):  # TODO id like to change this to a system where all this parsing is not needed
+        # how about just have a tuple of strings passed, or even just numbers using constants?
+        #  .... eliminate the split() operations.. .this consumes a lot of cycles in the tight parsing of the
+        # data stream
         result = {}
         for exp in expression.split("|"):
             type_ = exp.split(":")[0]
@@ -188,7 +191,7 @@ class Packet:
                 result[name] = self.read_rest()
         return result
 
-    def send(self, pkid, expression, payload):
+    def send(self, pkid, expression, payload):  # TODO "ditto" here.. this code is way too complex for what it is doing
         result = b""
         result += self.send_varInt(pkid)
         if len(expression) > 0:
@@ -304,12 +307,9 @@ class Packet:
                 b += self.send_float(value)
             elif type_ == 4:
                 b += self.send_string(value)
-            elif type_ == 5:
-                print("WIP 5")
-            elif type_ == 6:
-                print("WIP 6")
-            elif type_ == 6:
-                print("WIP 7")
+            else:
+                print("Unsupported data type '%d' for send_metadata()  (Class Packet)" % type_)
+                raise ValueError
         b += self.send_ubyte(0x7f)
         return b
 
@@ -377,7 +377,7 @@ class Packet:
 
     def recv(self, length):
         if length > 200:
-            d = bytearray  # TODO  PY2-3 COMPAT MODEL!!  Will use <str> for PY2 and <bytes> for PY3 !!!!.
+            d = bytearray  # TODO  This is a PY2-3 COMPAT MODEL!  Will use <str> for PY2 and <bytes> for PY3...
             d = b""        # TODO
             while len(d) < length:
                 m = length - len(d)
@@ -510,8 +510,9 @@ class Packet:
                 data[index] = (type_, self.read_slot())
             elif type_ == 6:
                 data[index] = (type_, (self.read_int(), self.read_int(), self.read_int()))
-            # elif type_ == 7:
-            #   data[index] = ("float", (self.read_int(), self.read_int(), self.read_int()))
+            else:
+                print("Unsupported data type '%d' for read_metadata()  (Class Packet)", type_)
+                raise ValueError
         return data
 
     def read_short_string(self):

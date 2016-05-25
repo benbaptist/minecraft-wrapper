@@ -117,18 +117,21 @@ class Player:
 
     def execute(self, string):
         """
-        Sends a command directly to the server console. To be clear, this
+        Run a command as this player. If proxy mode is not enabled,
+        it simply falls back to using the 1.8 'execute' command. To be clear, this
         does NOT work with any Wrapper.py or plugin commands.  The command
         does not pass through the wrapper.
 
         Args:
-            string: full command string to execute as the player from his current
-            position.
+            string: full command string send on player's behalf to server.
 
-        Returns: Nothing; passes the command to console as and "execute" command.
+        Returns: Nothing; passes the server or the console as an "execute" command.
 
         """
-        self.wrapper.javaserver.console("execute %s ~ ~ ~ %s" % (self.name, string))
+        try:
+            self.client.message("/%s" % string)
+        except AttributeError:
+            self.wrapper.javaserver.console("execute %s ~ ~ ~ %s" % (self.username, string))
 
     def sendCommand(self, command, args):
         """
@@ -231,9 +234,15 @@ class Player:
             self.client.packet.send(self.clientboundPackets.RESOURCE_PACK_SEND,
                                     "string|string", (url, hashrp))
 
-    def isOp(self):
+    def isOp(self, strict=False):
         """
-        :returns: whether or not the player is currently a server operator.
+        Args:
+            strict: True - use ONLY the UUID as verification
+
+        returns:  A 1-4 op level if the player is currently a server operator.
+                can be treated, as before, like a boolean - `if player.isOp():`, but now
+                also adds ability to granularize with the OP level
+
         Accepts player as OP based on either the username OR server UUID.
         This should NOT be used in a recursive loop (like a protection plugin, etc)
         or a very frequently run function because it accesses the disk file
@@ -242,20 +251,30 @@ class Player:
 
         operators = self._read_ops_file()
         for ops in operators:
-            if ops["uuid"] == self.serverUuid.string or ops["name"] == self.username:
-                return True
+            if ops["uuid"] == self.serverUuid.string:
+                return ops["level"]
+            if ops["name"] == self.username and not strict:
+                return ops["level"]
         return False
 
-    def isOp_fast(self):
+    def isOp_fast(self, strict=False):
         """
-        :returns: whether or not the player is currently a server operator.
+        Args:
+            strict: True - use ONLY the UUID as verification
+
+        returns:  A 1-4 op level if the player is currently a server operator.
+                can be treated, as before, like a boolean - `if player.isOp():`, but now
+                also adds ability to granularize with the OP level
+
         Works like isOp(), but uses an oplist cached from the __init__ of the player.py api for this player.
         Suitable for quick fast lookup without accessing disk, but someone who is deopped after the
         player logs in will still show as OP.
         """
         for ops in self.operatordict:
-            if ops["uuid"] == self.serverUuid.string or ops["name"] == self.username:
-                return True
+            if ops["uuid"] == self.serverUuid.string:
+                return ops["level"]
+            if ops["name"] == self.username and not strict:
+                return ops["level"]
         return False
 
     def refreshOps(self):

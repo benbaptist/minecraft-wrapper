@@ -291,40 +291,49 @@ class Client:
             elif pkid == self.pktSB.CHAT_MESSAGE:
                 data = self.packet.read("string:message")
                 self.log.trace("(PROXY CLIENT) -> Parsed CHAT_MESSAGE packet with client state PLAY:\n%s", data)
+
+                # two conditions for dropping packet or not continuing
+                if not self.isLocal:
+                    return True
                 if data is None:
                     return False
-                try:  # TODO - OMG A huge try-except!
+
+                # Get the packet chat message contents
+                chatmsg = ""
+                if "message" in data:
                     chatmsg = data["message"]
-                    if not self.isLocal and chatmsg == "/lobby":
-                        self.server.close(reason="Lobbification", kill_client=False)
-                        self.address = None
-                        self.connect_to_server()
-                        self.isLocal = True
-                        return False
-                    if not self.isLocal:
-                        return True
-                    payload = self.wrapper.events.callevent("player.rawMessage", {
-                        "player": self.getPlayerObject(),
-                        "message": data["message"]
-                    })
-                    if not payload:
-                        return False
-                    if type(payload) == str:
-                        chatmsg = payload
-                    if chatmsg[0] == "/":
-                        if self.wrapper.events.callevent("player.runCommand", {
+
+                # This was probably what that huge try-except was for.....  # TODO this should prob go away anyway
+                # if not self.isLocal and chatmsg == "/lobby":  TODO playerConnect() broken anyway, so no lobbies
+                #    self.server.close(reason="Lobbification", kill_client=False)
+                #    self.address = None
+                #    self.connect_to_server()
+                #    self.isLocal = True
+                #    return False
+
+                payload = self.wrapper.events.callevent("player.rawMessage", {
+                    "player": self.getPlayerObject(),
+                    "message": data["message"]
+                })
+
+                # This part allows the player plugin event "player.rawMessage" to...
+                if not payload:
+                    return False  # ..reject the packet (by returning False)
+
+                if type(payload) == str:  # or, if it can return a substitute payload
+                    chatmsg = payload
+
+                # determine if this is a command. act appropriately
+                if chatmsg[0] == "/":  # it IS a command of some kind
+                    if self.wrapper.events.callevent("player.runCommand", {
                             "player": self.getPlayerObject(),
                             "command": chatmsg.split(" ")[0][1:].lower(),
-                            "args": chatmsg.split(" ")[1:]
-                        }):
-                            self.message(chatmsg)
-                            return False
-                        return
-                    self.message(chatmsg)
-                    return False
-                except Exception as e:
-                    self.log.exception("Formulating CHAT_MESSAGE failed (%s)", e)
-                return True
+                            "args": chatmsg.split(" ")[1:]}):
+                        return False  # wrapper processed this command.. it goes no further
+
+                # NOW we can send it (possibly modded)  on to server...
+                self.message(chatmsg)
+                return False  # and cancel this original packet
 
             elif pkid == self.pktSB.PLAYER_POSITION:  # player position
                 data = self.packet.read("double:x|double:y|double:z|bool:on_ground")
@@ -680,13 +689,13 @@ class Client:
                 # player ban code!  Uses vanilla json files - In wrapper proxy mode, supports
                 #       temp-bans (the "expires" field of the ban record is used!)
 
-                if self.proxy.isIPBanned(self.addr[0]):  # TODO make sure ban code is not using player objects
+                if self.proxy.isipbanned(self.addr[0]):  # TODO make sure ban code is not using player objects
                     self.disconnect("Your address is IP-banned from this server!.")
                     return False
-                testforban = self.proxy.isUUIDBanned(uuidwas)
+                testforban = self.proxy.isuuidbanned(uuidwas)
                 self.log.debug("Value - testforban: %s", testforban)
-                if self.proxy.isUUIDBanned(uuidwas):  # TODO ...HERE, the player stuff becomes "None" (was self.uuid)
-                    banreason = self.wrapper.proxy.getUUIDBanReason(uuidwas)  # TODO- which is why I archived the name
+                if self.proxy.isuuidbanned(uuidwas):  # TODO ...HERE, the player stuff becomes "None" (was self.uuid)
+                    banreason = self.wrapper.proxy.getuuidbanreason(uuidwas)  # TODO- which is why I archived the name
                     # and UUID strings
                     # maybe because I got these two lines reversed? disc and then log.info?
                     self.disconnect("Banned: %s" % banreason)

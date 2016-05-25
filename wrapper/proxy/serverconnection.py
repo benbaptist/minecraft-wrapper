@@ -79,6 +79,9 @@ class ServerConnection:
         else:  # 1.8 default
             self.pktSB = mcpacket.Server18
             self.pktCB = mcpacket.Client18
+        if self.version > mcpacket.PROTOCOL_1_7:
+            # used by ban code to enable wrapper group help display for ban items.
+            self.wrapper.api.registerPermission("mc1.7.6", value=True)
 
     def send(self, packetid, xpr, payload):  # not supported... no docstring. For backwards compatability purposes only.
         self.log.debug("deprecated server.send() called (by a plugin)")
@@ -261,7 +264,7 @@ class ServerConnection:
                     x, y, z, yaw, pitch, conf = data["x"], data["y"], data["z"], data["yaw"], data["pitch"], data["con"]
                     self.packet.send(self.pktSB.PLAYER_POSLOOK, "double|double|double|float|float|varint",
                                      (x, y, z, yaw, pitch, conf))
-                # self.client.position = (x, y, z)  # we don't actaully get position from this
+                self.client.position = (x, y, z)  # not a bad idea to fill player position
                 self.log.trace("(PROXY SERVER) -> Parsed PLAYER_POSLOOK packet:\n%s", data)
                 return True  # it will be sent to the client to keep it honest.
 
@@ -287,7 +290,7 @@ class ServerConnection:
                         "varint:eid|uuid:uuid|int:x|int:y|int:z|byte:yaw|byte:pitch|short:item|rest:metadata")
                     if data["item"] < 0:  # A negative Current Item crashes clients (just in case)
                         data["item"] = 0
-                    clientserverid = self.proxy.getClientByOfflineServerUUID(data["uuid"])
+                    clientserverid = self.proxy.getclientbyofflineserveruuid(data["uuid"])
                     if clientserverid:
                         self.client.packet.send(self.pktCB.SPAWN_PLAYER, "varint|uuid|int|int|int|byte|byte|short|raw",
                                                 (
@@ -305,7 +308,7 @@ class ServerConnection:
                     return False
                 else:
                     data = self.packet.read("varint:eid|uuid:uuid|int:x|int:y|int:z|byte:yaw|byte:pitch|rest:metadata")
-                    clientserverid = self.proxy.getClientByOfflineServerUUID(data["uuid"])
+                    clientserverid = self.proxy.getclientbyofflineserveruuid(data["uuid"])
                     if clientserverid:
                         self.client.packet.send(self.pktCB.SPAWN_PLAYER, "varint|uuid|int|int|int|byte|byte|raw", (
                             data["eid"],
@@ -550,7 +553,7 @@ class ServerConnection:
                     z = 0
                     while z < head["length"]:
                         serveruuid = self.packet.read("uuid:uuid")["uuid"]
-                        playerclient = self.client.proxy.getClientByOfflineServerUUID(serveruuid)
+                        playerclient = self.client.proxy.getclientbyofflineserveruuid(serveruuid)
                         if not playerclient:
                             z += 1
                             continue

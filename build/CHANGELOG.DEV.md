@@ -1,36 +1,82 @@
-Build #113 [0.8.0]:
-- A completely new rewrite.  Fully compatible with x.7.x version plugins _if_ they do not dip into
-wrapper's internal methods and stick strictly to the documented API..
-- Methods in the client/server (like sending packets) are different.  Plugins doing this will need
- to be modified. Using the wrapper permissions or other wrapper compoents directly
- (self.wrapper.permissions, etc) by plugins will be broken with this version.
+Build #114 [0.8.1]:
+- A completely new rewrite.  Fully compatible with x.7.x version plugins _if_ they do not dip into wrapper's internal methods and stick strictly to the previously documented API:
+http://wrapper.benbaptist.com/docs/api.html
+- Methods in the client/server (like sending packets) are different.  Plugins doing this will need to be modified. Using the wrapper permissions or other wrapper components directly (self.wrapper.permissions, etc) by plugins will be broken with this version.
 
-- a few new methods were added to the API:
-- [api.minecraft] lookupName (uuid) Get name of player with UUID "uuid"
-- [api.minecraft] lookupUUID (name) Get UUID of player "name" - both will poll Mojang or the
-wrapper cache and return _online_ versions
-- [api.player]:
-- "name" and "uuid" are deprecated properties that reference "username" and "mojangUuid"
-respectively.
-- added player offlineUuid (offline server UUID) and ipaddress (the actual IP from proxy)
-self variables.
-- quicker isOp_fast() - similar to .isOP(), but does not read ops.json file each time.  For use in
-iterative loops where re-reading a file is a performance issue.  Refreshes at each player login.
+API changes Summary:
+
+[Minecraft]
+
+- lookupName (uuid) Get name of player with UUID "uuid"
+- lookupUUID (name) Get UUID of player "name" - both will poll Mojang or the wrapper cache and return _online_ versions
+- ban code methods added (bannUUID, banName, banIp, pardonName, pardonUUID, pardonIp, isUUIDBanned, isIpBanned)
+
+[Player]
+
+- ".name" and ".uuid" are deprecated properties that reference ".username" and ".mojangUuid" respectively.
+- added player .offlineUuid (offline server UUID) and .ipaddress (the actual IP from proxy) self variables.
+- quicker isOp_fast() - similar to .isOP(), but does not read ops.json file each time.  For use initerative loops where re-reading a file is a performance issue.  Refreshes at each player login.
 - refreshOps() - refresh isOp_fast dictionary.
-- sendCommand(self, command, args) -Sends a command to the wrapper interface as the player
-instance. example: `player.sendCommand("perms", ("users", "SurestTexas00", "info"))`
-- self.clientboundPackets / serverboundPackets - contain the packet class constants being used
-by wrapper.  Usage example: `player.getClient().packet.send(player.clientboundPackets.PLAYER_ABILITIES,
-"byte|float|float", (bitfield, self.fly_speed, self.field_of_view))` renaming these in the plugin
-code is fine:
+- sendCommand(self, command, args) -Sends a command to the wrapper interface as the player.  Similar to execute, but will execute wrapper commands.  Example: `player.sendCommand("perms", ("users", "SurestTexas00", "info"))`
+- self.clientboundPackets / serverboundPackets - contain the packet class constants being used by wrapper.  Usage example: `player.getClient().packet.send(player.clientboundPackets.PLAYER_ABILITIES,
+"byte|float|float", (bitfield, self.fly_speed, self.field_of_view))` renaming these in the plugin code is fine:
 ```
 pktcb = player.clientboundPackets
 player.getClient().packet.send(pktcb.PLAYER_ABILITIES ...)
 ```
 - setPlayerAbilities(self, fly) - pass True to set player in flying mode.
-- added event "player.Spawn" - occurs after player.login; when the player actually
-spawns (i.e., when the player actaully sees something other than the "login, building terrain..")
+- added event "player.Spawn" - occurs after "player.login"; when the player actually spawns (i.e., when the player actaully sees something other than the "login, building terrain..").  This is a good place for plugins to start gathering information like player.position and such because it gives the proxy time to bather those items.  The "player.login" happens too soon for proxy to gather information on many player variables...
 
+Broad-spectrum summary of changes:
+
+[Re-vamped console interface]
+
+- added ban commands (ban-ip, ban, pardon, pardon-ip)
+- colorized the menus/helps (does not use log statements for display)
+- minimal console player class added to wrapper.  Console has a fake "player" class that mimicks player methods and variables.  Presently, this allows the in-game wrapper menus and the console commands to share common methods, so that separate code is not needed to do things like... 
+- Add /perms to console commands!  Add /playerstats also.. (the player.message() components of the in-game commands are passed to the console as colored print statements).
+
+[wrapper structure in general]
+
+- proxy split into submodules
+ -- base.py - General functions, including various ban methods.
+ -- mcpacket.py - contains general packet abstraction classes.  Defines critical-change version-to-protocol number references, start and stop points to define a given packet set, etc. Contains packet sets for all wrapper-supported minecraft versions.
+ -- packet.py - old packet class; send/receive packets.
+ -- clientconnection.py - old Client class.
+ -- serverconnection.py - old proxy Server class (not the console server.py!)
+- Utilities (/utils) submodule package set added as a place for generic high use or univeral code.
+- Creation of /core group where most core wrapper items reside.  Base wrapper source folder just has `__init__.py` and `__main__.py`.
+- log.py removed in favor of wrapper built-in loggin module
+- trace level logging of packet parsing is available
+
+features/other changes:
+
+- wrapper handles all it's own ban code for the server.
+- temporary bans are available (uses the "expires" field in the ban files!)
+- logging defaults and configuration moved out of wrapper.properties to it's own loggin.json file.
+- wrapper fully handles keepalives between client and server. technically, we are moving towards the separation of client and server that could allow future functions like server restarts that don't kick players, cleaner transfers to other server instances, and a "pre-login" lobby where player can interact with wrapper before wrapper logs the player onto the server...
+
+ISSUES ADDRESSED:
+
+Progresses towards:
+- [Refactor Wrapper Version and Release Pipeline #299](https://github.com/benbaptist/minecraft-wrapper/issues/299)
+
+Addresses in part:
+- [Performance Updates #295](https://github.com/benbaptist/minecraft-wrapper/issues/295)
+- [Python 3 #301](https://github.com/benbaptist/minecraft-wrapper/issues/301)
+- [Python CPU usage creeps up over time #276](https://github.com/benbaptist/minecraft-wrapper/issues/276)
+
+Fixes:
+- [Fresh install of Wrapper.py in certain conditions does this thing #262](https://github.com/benbaptist/minecraft-wrapper/issues/262)
+- [Proxy.py Rewrite #244](https://github.com/benbaptist/minecraft-wrapper/issues/244)
+- [UUID set to False #227](https://github.com/benbaptist/minecraft-wrapper/issues/227)
+- [Strange client.properties issue that disconnected all people #190](https://github.com/benbaptist/minecraft-wrapper/issues/190)
+- [Web.py Client.runaction Action=Admin_stats dictionary problem #188](https://github.com/benbaptist/minecraft-wrapper/issues/188)
+- [UUID-related error in console. #133](https://github.com/benbaptist/minecraft-wrapper/issues/133)
+
+ 
+Builds - 112 - 113:
+- experimental pre-releases of build #114
 
 Build #111:
 - Added dashboard.py - beginning work on Dashboard rewrite using Flask + SocketIO
