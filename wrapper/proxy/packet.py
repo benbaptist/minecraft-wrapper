@@ -33,6 +33,7 @@ class Packet:
 
         self.queue = []
 
+        # encode/decode for NBT operations
         self._ENCODERS = {
             1: self.send_byte,
             2: self.send_short,
@@ -143,10 +144,18 @@ class Packet:
         if not self.abort:
             self.queue.append((self.compressThreshold, payload))
 
+    # typical read operation: data = (...)packet.read("double:x|double:y|double:z|bool:on_ground")
     def read(self, expression):  # TODO id like to change this to a system where all this parsing is not needed
         # how about just have a tuple of strings passed, or even just numbers using constants?
         #  .... eliminate the split() operations.. .this consumes a lot of cycles in the tight parsing of the
         # data stream
+
+        # current: packet.read("double:x|double:y|double:z|bool:on_ground")
+        # propose: data = packet.read(DOUBLE, DOUBLE, DOUBLE, BOOL)
+        #           somewhere, define:  DOUBLE = 1
+        #                               BOOL = 2
+        #          x, y, z, on_ground = data
+
         result = {}
         for exp in expression.split("|"):
             type_ = exp.split(":")[0]
