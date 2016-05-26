@@ -2,6 +2,7 @@ Build #114 [0.8.1]:
 - A completely new rewrite.  Fully compatible with x.7.x version plugins _if_ they do not dip into wrapper's internal methods and stick strictly to the previously documented API:
 http://wrapper.benbaptist.com/docs/api.html
 - Methods in the client/server (like sending packets) are different.  Plugins doing this will need to be modified. Using the wrapper permissions or other wrapper components directly (self.wrapper.permissions, etc) by plugins will be broken with this version.
+- I take that back about packet sending... there is a wrapper that will still allow client.send() (instead of the new client.packet.send(); However, if you have debug set to true, expect the console to get spammed with 'deprecated server.send() called (by a plugin)'!
 
 API changes Summary:
 
