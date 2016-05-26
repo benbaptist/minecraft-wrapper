@@ -182,11 +182,11 @@ class Packet:
     def read(self, expression):
         """
         This is deprecated and only there for old plugin support and while I debug the readpkt(). It
-        functions as a newpkt() wrapper.  This is not as fast as calling readpkt(), but makes a nice abstraction
+        functions as a readpkt() wrapper.  This is not as fast as calling readpkt(), but makes a nice abstraction
         and is back-wards compatible.
 
         Args:
-            expression: Something like "double:x|double:y|double:z|bool:on_ground"
+            expression: Something like "double:xposition|double:yposition|double:zposition|bool:on_ground"
 
         Returns:
             the original-style dict of returned values - {"x": double, "y": double, "z": double, "on_ground": bool}
@@ -197,7 +197,7 @@ class Packet:
         args = []
         results = {}
 
-        # create a list of variable names and a list of constants representing datatypes to pass to newread().
+        # create a list of variable names and a list of constants representing datatypes to pass to readpkt().
         for combo in expression.split("|"):
             type_ = combo.split(":")[0]
             name = combo.split(":")[1]
@@ -215,7 +215,7 @@ class Packet:
     def readpkt(self, args):
         """
         Usage like:
-            `data = packet.newread(_DOUBLE, _DOUBLE, _DOUBLE, _BOOL)`  # abstracts of integers
+            `data = packet.readpkt(_DOUBLE, _DOUBLE, _DOUBLE, _BOOL)`  # abstracts of integers
             `x, y, z, on_ground = data`
 
         proposed as an alternative to all the string operations used by the old (and nee wrapper form of..)
@@ -281,7 +281,7 @@ class Packet:
         Args:
             pkid: packet id (int or hex - usually as an abstracted constant)
             expression: Something like "double|double|double|float|float"
-            payload: Something like (x, y, z, yaw, pitch,)  # appears to be a tuple
+            payload: Something like (x, y, z, yaw, pitch,) - a tuple
 
         Returns:
             returns the result that was sendraw()'ed.
@@ -290,8 +290,7 @@ class Packet:
 
         # we are not going to change the payload argument any.. just the expression values.
         args = []
-
-        # create a list of variable names and a list of constants representing datatypes to pass to newread().
+        # create a list of variable names and a list of constants representing datatypes to pass to sendpkt().
         if len(payload) > 0:
             for type_ in expression.split("|"):
                 args.append(_CODERS[type_])  # goal: create list of integers to pass as arguments/"constants"
