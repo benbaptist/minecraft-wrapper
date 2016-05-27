@@ -245,12 +245,17 @@ class MCServer:
                 total += handlechunk(extra)
         return total.encode("utf8")
 
-    def login(self, username):
+    def login(self, username, eid, location):
         """
         Called when a player logs in
         """
         if username not in self.players:
             self.players[username] = Player(username, self.wrapper)
+        if self.wrapper.proxy:
+            playerclient = self.getplayer(username).getClient()
+            playerclient.servereid = eid
+            playerclient.position = location
+
         self.wrapper.events.callevent("player.login", {"player": self.getplayer(username)})
 
     def logout(self, username):
@@ -432,9 +437,7 @@ class MCServer:
                 eid = int(getargs(line.split(" "), 6))
                 locationtext = getargs(line.split(" ("), 1)[:-1].split(", ")
                 location = int(float(locationtext[0])), int(float(locationtext[1])), int(float(locationtext[2]))
-                if self.wrapper.proxy:  # this should be functional even without a proxy
-                    pass  # future population of data to proxy
-                self.login(name)
+                self.login(name, eid, location)
             elif getargs(line.split(" "), 1) == "lost":  # Player Logout
                 name = getargs(line.split(" "), 0)
                 self.logout(name)
@@ -492,7 +495,7 @@ class MCServer:
                 })
             elif getargs(line.split(" "), 4) == "logged":  # Player Login
                 name = self.stripspecial(getargs(line.split(" "), 3)[0:getargs(line.split(" "), 3).find("[")])
-                self.login(name)
+                self.login(name, None, (0, 0, 0))
             elif getargs(line.split(" "), 4) == "lost":  # Player Logout
                 name = getargs(line.split(" "), 3)
                 self.logout(name)
