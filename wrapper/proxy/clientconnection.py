@@ -105,6 +105,8 @@ class Client:
         self.clientSettings = False
         self.clientSettingsSent = False
         self.skinBlob = {}
+        self.servereid = None
+        self.bedposition = None
 
         for i in xxrange(45):
             self.inventory[i] = None

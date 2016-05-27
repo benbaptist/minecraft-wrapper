@@ -1,3 +1,42 @@
+Build #115 [0.8.1]:
+
+##### [Capturing bed sleeping / right click #146](https://github.com/benbaptist/minecraft-wrapper/issues/146) #####
+_____________________________________
+- Added "player.usebed" event.  It has no payload other than the player object.  Functions purely to notify plugins that... 
+- new player method getBedPostion() can get the location where the player slept.  Wrapper does not store this between client restarts!
+
+##### update Packet read and send methods: #####
+_____________________________________
+read and send are now abstraction wrappers for readpkt and sendpkt.
+
+readpkt and sendpkt are lower-level methods that eliminate the use of
+string arguments like "double:xposition|double:yposition|double:zposition|bool:on_ground".
+
+Arguments for read (like the example cited) are reduced simply to number codes (constants)
+for the desired data types to be returned (i.e., 8 for "double").  Instead, in the example
+cited, the readpkt argument would simply be '[8, 8, 8, 10]'.  Of course, the numbers can be
+abstracted with constants for readability.  readpkt() returns a __list__ of the results in the
+same order as the numbers/constants were passed.  The reading function can decide what variable names
+to assign based on their list position:
+
+```
+# as used in the server or client: 
+data = ["server.."].packet.readpkt([_DOUBLE, _DOUBLE, _DOUBLE, _BOOL])  # even for single arguments the [] take care of typing it as list
+x, y, z, on_ground = data
+# or
+x = data[0]  # even if this were a single element, you must still use the index because a list gets returned.
+```
+
+similarly, packet.sendpkt() is a bit like the original send()/packet.send(), except that the
+field types are abstracted numbers too and don't need the slicing operations to get the
+arguments (the payload portion does not change).
+
+The primary aim of these changes is to remove un-needed string operations while preserving
+readability in the code.  This code is run in high frequency on a packet stream.. The
+unneeded string parsing operations and the overly fancy use of slower dictionary methods
+needs to be limited in this high-use code to improve wrapper's speed.
+
+
 Build #114 [0.8.1]:
 - A completely new rewrite.  Fully compatible with x.7.x version plugins _if_ they do not dip into wrapper's internal methods and stick strictly to the previously documented API:
 http://wrapper.benbaptist.com/docs/api.html
@@ -11,7 +50,7 @@ API changes Summary:
 - lookupName (uuid) Get name of player with UUID "uuid"
 - lookupUUID (name) Get UUID of player "name" - both will poll Mojang or the wrapper cache and return _online_ versions
 - ban code methods added (bannUUID, banName, banIp, pardonName, pardonUUID, pardonIp, isUUIDBanned, isIpBanned)
-
+- when using the proxy mode banning system, be aware that the server has it's own version in memory that was loaded on startup... if you run a minecarft ban or pardon, it will overwrite the dish with _its_ version!  Once the server restarts, the wrapper proxy changes on disk are safe and permanent.
 [Player]
 
 - ".name" and ".uuid" are deprecated properties that reference ".username" and ".mojangUuid" respectively.
@@ -39,22 +78,31 @@ Broad-spectrum summary of changes:
 
 [wrapper structure in general]
 
-- proxy split into submodules
+- Wrapper was split into 5 modules and is prepped for packaging.
+- Dashboard files were placed in a Management module.
+- New utility classes were added (/utils): 
+ -- encryption.py
+ -- log.py
+ -- termcolors.py (colored console logging!)
+ -- six.py (PY3 <=> PY2 compatibility code)
+ -- helpers.py (centralized high use code snippets).
+ 
+- The logging system utilized in wrapper was overhauled and is now thread safe and features an additional level TRACE for packet tracing and other low level information. With this overhaul, the logging configuration settings were stripped out of wrapper.properties and an extended version now resides in logging.json.
+- The proxy was split into individual modules instead of one large one.
  -- base.py - General functions, including various ban methods.
  -- mcpacket.py - contains general packet abstraction classes.  Defines critical-change version-to-protocol number references, start and stop points to define a given packet set, etc. Contains packet sets for all wrapper-supported minecraft versions.
  -- packet.py - old packet class; send/receive packets.
  -- clientconnection.py - old Client class.
  -- serverconnection.py - old proxy Server class (not the console server.py!)
-- Utilities (/utils) submodule package set added as a place for generic high use or univeral code.
+ 
 - Creation of /core group where most core wrapper items reside.  Base wrapper source folder just has `__init__.py` and `__main__.py`.
-- log.py removed in favor of wrapper built-in loggin module
+- Old log.py removed in favor of newer one using the built-in loggin module
 - trace level logging of packet parsing is available
 
 features/other changes:
 
 - wrapper handles all it's own ban code for the server.
 - temporary bans are available (uses the "expires" field in the ban files!)
-- logging defaults and configuration moved out of wrapper.properties to it's own loggin.json file.
 - wrapper fully handles keepalives between client and server. technically, we are moving towards the separation of client and server that could allow future functions like server restarts that don't kick players, cleaner transfers to other server instances, and a "pre-login" lobby where player can interact with wrapper before wrapper logs the player onto the server...
 
 ISSUES ADDRESSED:
