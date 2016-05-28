@@ -89,7 +89,7 @@ class ServerConnection:
         self.username = self.client.username
 
         # we are going to centralize this to client.servereid
-        # self.eid = None  # WTF IS THIS - code seemed to use it in entity and player id code sections !?
+        # self.eid = None  # WHAT IS THIS - code seemed to use it in entity and player id code sections !?
         # self.playereid = None
 
         self.headlooks = 0
@@ -321,18 +321,6 @@ class ServerConnection:
                     #                            (self.client.eid, data[1]))
                 return True
 
-            elif pkid == self.pktCB.ANIMATION:
-                return True
-                # pointless parsing?
-                # data = self.packet.readpkt([_VARINT, _UBYTE])
-                # "varint:eid|ubyte:animation")
-                # self.log.trace("(PROXY SERVER) -> Parsed ANIMATION packet:\n%s", data)
-                # if data[0] == self.playereid:
-                #    self.client.packet.sendpkt(self.pktCB.ANIMATION, [_VARINT, _UBYTE],
-                #                                (self.client.eid, data[1]))
-                #    return False
-                # return True
-
             elif pkid == self.pktCB.SPAWN_PLAYER:
                 # This packet  is used to spawn other players into a player client's world.
                 # is this packet does not arrive, the other player(s) will nto be visible to the client
@@ -342,7 +330,6 @@ class ServerConnection:
                 # We dont need to read the whole thing.
                 clientserverid = self.proxy.getclientbyofflineserveruuid(dt[1])
                 if clientserverid.uuid:
-                    print(clientserverid.uuid)
                     self.client.packet.sendpkt(self.pktCB.SPAWN_PLAYER,
                                                [_VARINT, _UUID, _RAW], (dt[0], clientserverid.uuid, dt[2]))
                     return False
@@ -384,7 +371,7 @@ class ServerConnection:
 
             elif pkid == self.pktCB.SPAWN_MOB:
                 # we are not going to do all the parsing work unless we are storing the entity data
-                # Storing this entity data has other issues; likle removing stale items or "dead" items.
+                # Storing this entity data has other issues; like removing stale items or "dead" items.
                 if not self.wrapper.javaserver.world:
                     self.log.trace("(PROXY SERVER) -> did not parse SPAWN_MOB packet.")
                     return True
@@ -446,31 +433,6 @@ class ServerConnection:
                     self.wrapper.javaserver.world.getEntityByEID(data[0]).teleport((data[1], data[2], data[3]))
                 return True
 
-            elif pkid == self.pktCB.ENTITY_HEAD_LOOK:
-                # these packets are insanely numerous... getting rid of many of them is a good idea to ease load
-                if self.headlooks > 20:
-                    self.headlooks = 0
-                    # read here ...
-                    return True
-                self.headlooks += 1
-                # ... or read here, depending on how frequent you want updates
-                # TODO reading these often causes disconnection
-                # data = self.packet.readpkt([_VARINT, _BYTE])
-                # ("varint:eid|byte:angle")  - the angle is the facing direcction (n,s,e,w in 1/256 increments)
-                # self.log.trace("(PROXY SERVER) -> Parsed ENTITY_HEAD_LOOK packet:\n%s", data)
-                return False  # discard 95% of them.. let just enough through to not look too weird
-
-            elif pkid == self.pktCB.ENTITY_STATUS:
-                # code is not doing anything with this.. the packet is not that numerous
-                self.log.trace("(PROXY SERVER) -> Did not Parse ENTITY_STATUS packet")
-                return True
-                # if self.version < mcpacket.PROTOCOL_1_8START:
-                #   NOTE: These packets need to be filtered for cross-server stuff.
-                #    return True
-                # data = self.packet.readpkt([_INT, _BYTE])
-                #    ("int:eid|byte:status")
-                # self.log.trace("(PROXY SERVER) -> Parsed ENTITY_STATUS packet:\n%s", data)
-
             elif pkid == self.pktCB.ATTACH_ENTITY:
                 data = []
                 leash = True  # False to detach
@@ -510,85 +472,6 @@ class ServerConnection:
                         self.client.riding = self.wrapper.javaserver.world.getEntityByEID(vehormobeid)
                         self.wrapper.javaserver.world.getEntityByEID(vehormobeid).rodeBy = self.client
                 return True
-
-            elif pkid == self.pktCB.ENTITY_METADATA:
-                self.log.trace("(PROXY SERVER) -> Did not Parse ENTITY_METADATA packet")
-                return True
-                # if self.version < mcpacket.PROTOCOL_1_8START:
-                #     # NOTE: These packets need to be filtered for cross-server stuff.
-                #     return True
-                # data = self.packet.read([_VARINT, _REST])
-                #  ("varint:eid|rest:metadata")
-                # self.log.trace("(PROXY SERVER) -> Parsed ENTITY_METADATA packet:\n%s", data)
-                # if data["eid"] == self.eid:  #if the entity is the player??
-                #     No such property as "client.eid"
-                #     self.client.packet.sendpkt(self.pktCB.ENTITY_METADATA, [_VARINT, _RAW],
-                #                               (self.client.eid, data[1]))
-                #     return False
-                # return True
-
-            elif pkid == self.pktCB.ENTITY_EFFECT:
-                self.log.trace("(PROXY SERVER) -> Did not Parse ENTITY_EFFECT packet")
-                return True
-                # if self.version < mcpacket.PROTOCOL_1_8START:
-                #     # NOTE: These packets need to be filtered for cross-server stuff.
-                #     return True
-                # more pointless parse because there is no "client.eid"
-
-                # TODO these types of instances probably resulted in a many a random disconnect when an eid matched
-                #     self.eid and sent the client a bad/wrong eid... got to figure this out.
-
-                # data = self.packet.read("varint:eid|byte:effect_id|byte:amplifier|varint:duration|bool:hide")
-                # self.log.trace("(PROXY SERVER) -> Parsed ENTITY_EFFECT packet:\n%s", data)
-                # if data["eid"] == self.eid:
-                #     self.client.packet.sendpkt(self.pktCB.ENTITY_EFFECT, [_VARINT, _BYTE, _BYTE, _VARINT, _BOOL],
-                #                               (self.client.eid, data["effect_id"], data["amplifier"],
-                #                                data["duration"], data["hide"]))
-                #     return False
-                # return True
-
-            elif pkid == self.pktCB.REMOVE_ENTITY_EFFECT:
-                self.log.trace("(PROXY SERVER) -> Did not Parse ENTITY_EFFECT packet")
-                return True
-                # if self.version < mcpacket.PROTOCOL_1_8START:
-                #     # NOTE: These packets need to be filtered for cross-server stuff.
-                #     return True
-                # data = self.packet.read("varint:eid|byte:effect_id")
-                # self.log.trace("(PROXY SERVER) -> Parsed REMOVE_ENTITY_EFFECT packet:\n%s", data)
-                # if data["eid"] == self.eid:
-                #     self.client.packet.sendpkt(self.pktCB.REMOVE_ENTITY_EFFECT, [_VARINT, _BYTE],
-                #                                (self.client.eid, data["effect_id"]))
-                #     return False
-                # return True
-
-            elif pkid == self.pktCB.ENTITY_PROPERTIES:
-                self.log.trace("(PROXY SERVER) -> Did not Parse ENTITY_PROPERTIES packet")
-                return True
-                # if self.version < mcpacket.PROTOCOL_1_8START:
-                #     # NOTE: These packets need to be filtered for cross-server stuff.
-                #     return True
-                # data = self.packet.read("varint:eid|rest:properties")
-                # elf.log.trace("(PROXY SERVER) -> Parsed ENTITY_PROPERTIES packet:\n%s", data)
-                # if data["eid"] == self.eid:
-                #     self.client.packet.sendpkt(self.pktCB.ENTITY_PROPERTIES, [_VARINT, _RAW],
-                #                                (self.client.eid, data["properties"]))
-                #     return False
-                # return True
-
-            # elif pkid == self.pktCB.CHUNK_DATA:
-            #     if self.client.packet.compressThreshold == -1:
-            #         self.log.debug("Client compression enabled, setting to 256")
-            #         self.client.packet.setCompression(256)
-            #     self.log.trace("(PROXY SERVER) -> Parsed CHUNK_DATA packet")
-            #    return True
-
-            # elif self.pktCB.BLOCK_CHANGE:  # disabled - not doing anything at this point
-            #     if self.version < mcpacket.PROTOCOL_1_8START:
-            #         # NOTE: These packets need to be filtered for cross-server stuff.
-            #         return True
-            #     data = self.packet.read("position:location|varint:pkid")
-            #     self.log.trace("(PROXY SERVER) -> Parsed BLOCK_CHANGE packet:\n%s", data)
-            #    return True
 
             elif pkid == self.pktCB.MAP_CHUNK_BULK:  # (packet no longer exists in 1.9)
                 # no idea why this is parsed.. we are not doing anything with the data...
@@ -637,6 +520,7 @@ class ServerConnection:
                 return True
 
             # if pkid == 0x30: # Window Items
+            # I kept this one because we may want to re-implement this
             #   data = self.packet.read("byte:wid|short:count")
             #   if data["wid"] == 0:
             #       for slot in range(1, data["count"]):
@@ -720,7 +604,8 @@ class ServerConnection:
                             self.client.packet.sendpkt(self.pktCB.PLAYER_LIST_ITEM,
                                                        [_VARINT, _VARINT, _UUID], (4, 1, uuid))
                         return False
-                return True
+                else:  # version < 1.7.9 needs no processing
+                    return True
 
             elif pkid == self.pktCB.DISCONNECT:
                 message = self.packet.readpkt([_JSON])["json"]

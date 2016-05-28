@@ -4,6 +4,8 @@ Build #115 [0.8.1]:
 _____________________________________
 - Added "player.usebed" event.  It has no payload other than the player object.  Functions purely to notify plugins that... 
 - new player method getBedPostion() can get the location where the player slept.  Wrapper does not store this between client restarts!
+- Eliminate some unneeded packet parsing.
+- Add entity destroy packet to mcpacket (for future entity work)
 
 ##### update Packet read and send methods: #####
 _____________________________________
@@ -96,7 +98,7 @@ Broad-spectrum summary of changes:
  -- serverconnection.py - old proxy Server class (not the console server.py!)
  
 - Creation of /core group where most core wrapper items reside.  Base wrapper source folder just has `__init__.py` and `__main__.py`.
-- Old log.py removed in favor of newer one using the built-in loggin module
+- Old log.py removed in favor of newer one using the built-in logging module
 - trace level logging of packet parsing is available
 
 features/other changes:
