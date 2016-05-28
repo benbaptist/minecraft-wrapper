@@ -530,7 +530,7 @@ class ServerConnection:
             #    return True
 
             elif pkid == self.pktCB.PLAYER_LIST_ITEM:
-                if self.version > mcpacket.PROTOCOL_1_8START:
+                if self.version >= mcpacket.PROTOCOL_1_8START:
                     head = self.packet.readpkt([_VARINT, _VARINT])
                     # ("varint:action|varint:length")
                     lenhead = head[1]
