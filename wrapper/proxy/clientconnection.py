@@ -388,10 +388,10 @@ class Client:
                 # such a construct should probably be done at the gamestate level.
                 #     return True
 
-                if self.clientversion < mcpacket.PROTOCOL_1_7_9:
+                if self.clientversion < mcpacket.PROTOCOL_1_7:
                     data = None
                     position = data
-                elif mcpacket.PROTOCOL_1_7 < self.clientversion < mcpacket.PROTOCOL_1_8START:
+                elif mcpacket.PROTOCOL_1_7 <= self.clientversion < mcpacket.PROTOCOL_1_8START:
                     data = self.packet.read("byte:status|int:x|ubyte:y|int:z|byte:face")
                     position = (data["x"], data["y"], data["z"])
                     self.log.trace("(PROXY CLIENT) -> Parsed PLAYER_DIGGING packet:\n%s", data)
@@ -446,11 +446,11 @@ class Client:
                 hand = 0  # main hand
                 helditem = player.getHeldItem()
 
-                if self.clientversion < mcpacket.PROTOCOL_1_7_9:
+                if self.clientversion < mcpacket.PROTOCOL_1_7:
                     data = None
                     position = data
 
-                elif mcpacket.PROTOCOL_1_7 < self.clientversion < mcpacket.PROTOCOL_1_8START:
+                elif mcpacket.PROTOCOL_1_7 <= self.clientversion < mcpacket.PROTOCOL_1_8START:
                     data = self.packet.read("int:x|ubyte:y|int:z|byte:face|slot:item")
                     position = (data["x"], data["y"], data["z"])
 
@@ -536,7 +536,7 @@ class Client:
                 return True
 
             elif pkid == self.pktSB.PLAYER_UPDATE_SIGN:  # player update sign
-                if self.clientversion < mcpacket.PROTOCOL_1_7_9:
+                if self.clientversion < mcpacket.PROTOCOL_1_8START:
                     data = self.packet.read("int:x|short:y|int:z|string:line1|string:line2|"
                                             "string:line3|string:line4")
                     position = (data["x"], data["y"], data["z"])
@@ -599,7 +599,7 @@ class Client:
                     data = self.packet.read("byte:wid|short:slot|byte:button|short:action|byte:mode|slot:clicked")
                 elif mcpacket.PROTOCOL_1_8START < self.clientversion < mcpacket.PROTOCOL_1_9START:
                     data = self.packet.read("ubyte:wid|short:slot|byte:button|short:action|byte:mode|slot:clicked")
-                elif mcpacket.PROTOCOL_1_8START < self.clientversion < mcpacket.PROTOCOL_1_9START:
+                elif mcpacket.PROTOCOL_1_9START <= self.clientversion < mcpacket.PROTOCOL_MAX:
                     data = self.packet.read("ubyte:wid|short:slot|byte:button|short:action|varint:mode|slot:clicked")
                 else:
                     data = {}
