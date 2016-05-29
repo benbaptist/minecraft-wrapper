@@ -118,7 +118,7 @@ class ServerConnection:
             # used by ban code to enable wrapper group help display for ban items.
             self.wrapper.api.registerPermission("mc1.7.6", value=True)
 
-    def send(self, packetid, xpr, payload):  # not supported... no docstring. For backwards compatability purposes only.
+    def send(self, packetid, xpr, payload):  # not supported. no docstring. For old code compatability purposes only.
         self.log.debug("deprecated server.send() called.  Use server.packet.sendpkt for best performance.")
         self.packet.send(packetid, xpr, payload)
         pass
@@ -291,25 +291,19 @@ class ServerConnection:
                 self.log.trace("(PROXY SERVER) -> Parsed RESPAWN packet:\n%s", data)
                 return True
 
-            # this packet is just a server-correct item... it usually does not get from client to our server in time
-            # see note at same client (server-bound) packet in clientconnection.py
-            # Wrapper will handle the response here, just like the keep alives
             elif pkid == self.pktCB.PLAYER_POSLOOK:
-                if self.version < mcpacket.Client18.end():
-                    data = self.packet.readpkt([_DOUBLE, _DOUBLE, _DOUBLE, _FLOAT, _FLOAT])
-                    # "double:x|double:y|double:z|float:yaw|float:pitch")
-                    x, y, z, yaw, pitch = data
-                    self.packet.sendpkt(self.pktSB.PLAYER_POSLOOK, [_DOUBLE, _DOUBLE, _DOUBLE, _FLOAT, _FLOAT],
-                                        (x, y, z, yaw, pitch))
+                # CAVEAT - The client and server bound packet formats are different!
+                if self.version < mcpacket.PROTOCOL_1_8START:
+                    data = self.packet.readpkt([_DOUBLE, _DOUBLE, _DOUBLE, _FLOAT, _FLOAT, _BOOL])
+                elif mcpacket.PROTOCOL_1_7_9 < self.version < mcpacket.PROTOCOL_1_9START:
+                    data = self.packet.readpkt([_DOUBLE, _DOUBLE, _DOUBLE, _FLOAT, _FLOAT, _BYTE])
+                elif self.version > mcpacket.PROTOCOL_1_8END:
+                    data = self.packet.readpkt([_DOUBLE, _DOUBLE, _DOUBLE, _FLOAT, _FLOAT, _BYTE, _VARINT])
                 else:
-                    data = self.packet.readpkt([_DOUBLE, _DOUBLE, _DOUBLE, _FLOAT, _FLOAT, _VARINT])
-                    # "double:x|double:y|double:z|float:yaw|float:pitch|varint:con")
-                    x, y, z, yaw, pitch, conf = data
-                    self.packet.sendpkt(self.pktSB.PLAYER_POSLOOK, [_DOUBLE, _DOUBLE, _DOUBLE, _FLOAT, _FLOAT, _VARINT],
-                                        (x, y, z, yaw, pitch, conf))
-                self.client.position = (x, y, z)  # not a bad idea to fill player position
+                    data = self.packet.readpkt([_DOUBLE, _DOUBLE, _DOUBLE, _REST])
+                self.client.position = (data[0], data[1], data[2])  # not a bad idea to fill player position
                 self.log.trace("(PROXY SERVER) -> Parsed PLAYER_POSLOOK packet:\n%s", data)
-                return True  # it will be sent to the client to keep it honest.
+                return True
 
             elif pkid == self.pktCB.USE_BED:
                 data = self.packet.readpkt([_VARINT, _POSITION])
@@ -594,7 +588,8 @@ class ServerConnection:
                     return True
 
             elif pkid == self.pktCB.DISCONNECT:
-                message = self.packet.readpkt([_JSON])["json"]
+                message = self.packet.readpkt([_JSON])  # [0]["json"]
+                print(message)
                 # ("json:json")["json"]
                 self.log.info("Disconnected from server: %s", message)
                 if not self.client.isLocal:  # TODO - multi server code

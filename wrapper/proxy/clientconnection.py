@@ -143,8 +143,8 @@ class Client:
     def version(self):
         return self.clientversion
 
-    def send(self, packetid, xpr, payload):  # not supported... no docstring. For backwards compatability purposes only.
-        self.log.debug("deprecated client.send() called (by a plugin)")
+    def send(self, packetid, xpr, payload):  # not supported. no docstring. For old code compatability purposes only.
+        self.log.debug("deprecated client.send() called.  Use client.packet.sendpkt for best performance.")
         self.packet.send(packetid, xpr, payload)
         pass
 
@@ -311,36 +311,36 @@ class Client:
                 if self.clientSettings and not self.clientSettingsSent:
                     if self.clientversion < mcpacket.PROTOCOL_1_8START:
                         self.server.packet.sendpkt(self.pktSB.CLIENT_SETTINGS,
-                                                [_STRING, _BYTE, _BYTE, _BOOL, _BYTE, _BOOL],
-                                                (
-                                                 self.clientSettings["locale"],
-                                                 self.clientSettings["view_distance"],
-                                                 self.clientSettings["chatflags"],
-                                                 self.clientSettings["chat_colors"],
-                                                 self.clientSettings["difficulty"],
-                                                 self.clientSettings["show_cape"]
-                                                ))
+                                                   [_STRING, _BYTE, _BYTE, _BOOL, _BYTE, _BOOL],
+                                                   (
+                                                    self.clientSettings["locale"],
+                                                    self.clientSettings["view_distance"],
+                                                    self.clientSettings["chatflags"],
+                                                    self.clientSettings["chat_colors"],
+                                                    self.clientSettings["difficulty"],
+                                                    self.clientSettings["show_cape"]
+                                                    ))
                     elif mcpacket.PROTOCOL_1_7_9 < self.clientversion < mcpacket.PROTOCOL_1_9START:
                         self.server.packet.sendpkt(self.pktSB.CLIENT_SETTINGS,
-                                                [_STRING, _BYTE, _BYTE, _BOOL, _UBYTE],
-                                                (
-                                                 self.clientSettings["locale"],
-                                                 self.clientSettings["view_distance"],
-                                                 self.clientSettings["chat_mode"],
-                                                 self.clientSettings["chat_colors"],
-                                                 self.clientSettings["displayed_skin_parts"]
-                                                ))
+                                                   [_STRING, _BYTE, _BYTE, _BOOL, _UBYTE],
+                                                   (
+                                                    self.clientSettings["locale"],
+                                                    self.clientSettings["view_distance"],
+                                                    self.clientSettings["chat_mode"],
+                                                    self.clientSettings["chat_colors"],
+                                                    self.clientSettings["displayed_skin_parts"]
+                                                    ))
                     else:
                         self.server.packet.sendpkt(self.pktSB.CLIENT_SETTINGS,
-                                                [_STRING, _BYTE, _VARINT, _BOOL, _UBYTE, _VARINT],
-                                                (
-                                                 self.clientSettings["locale"],
-                                                 self.clientSettings["view_distance"],
-                                                 self.clientSettings["chat_mode"],
-                                                 self.clientSettings["chat_colors"],
-                                                 self.clientSettings["displayed_skin_parts"],
-                                                 self.clientSettings["main_hand"]
-                                                ))
+                                                   [_STRING, _BYTE, _VARINT, _BOOL, _UBYTE, _VARINT],
+                                                   (
+                                                    self.clientSettings["locale"],
+                                                    self.clientSettings["view_distance"],
+                                                    self.clientSettings["chat_mode"],
+                                                    self.clientSettings["chat_colors"],
+                                                    self.clientSettings["displayed_skin_parts"],
+                                                    self.clientSettings["main_hand"]
+                                                    ))
                     self.clientSettingsSent = True
                 return False
 
@@ -397,23 +397,27 @@ class Client:
                     data = [0, 0, 0, 0]
                 self.position = (data[0], data[1], data[3])  # skip 1.7.10 and lower protocol yhead args
                 self.log.trace("(PROXY CLIENT) -> Parsed PLAYER_POSITION packet:\n%s", data)
-                return True
 
-            # this packet is sent in response to the corresponding server packet.
-            # since we already handled the response back in serverconnection, we can silently discard the response
             elif pkid == self.pktSB.PLAYER_POSLOOK:  # player position and look
+                if self.clientversion < mcpacket.PROTOCOL_1_8START:
+                    data = self.packet.readpkt([_DOUBLE, _DOUBLE, _DOUBLE, _DOUBLE, _FLOAT, _FLOAT, _BOOL])
+                else:
+                    data = self.packet.readpkt([_DOUBLE, _DOUBLE, _DOUBLE, _FLOAT, _FLOAT, _BOOL])
                 # data = self.packet.read("double:x|double:y|double:z|float:yaw|float:pitch|bool:on_ground")
-                # self.position = (data["x"], data["y"], data["z"])
-                # self.head = (data["yaw"], data["pitch"])
-                # self.log.trace("(PROXY CLIENT) -> Parsed PLAYER_POSLOOK packet:\n%s", data)
-                return False
+                self.position = (data[0], data[1], data[4])
+                self.head = (data[4], data[5])
+                self.log.trace("(PROXY CLIENT) -> Parsed PLAYER_POSLOOK packet:\n%s", data)
+
+            elif pkid == self.pktSB.TELEPORT_CONFIRM:
+                # don't interfere with this and self.pktSB.PLAYER_POSLOOK... doing so will glitch the client
+                data = self.packet.readpkt([_VARINT])
+                self.log.info("(SERVER-BOUND) -> Client sent TELEPORT_CONFIRM packet:\n%s", data)
 
             elif pkid == self.pktSB.PLAYER_LOOK:  # Player Look
                 data = self.packet.read("float:yaw|float:pitch|bool:on_ground")
                 yaw, pitch = data["yaw"], data["pitch"]
                 self.head = (yaw, pitch)
                 self.log.trace("(PROXY CLIENT) -> Parsed PLAYER_LOOK packet:\n%s", data)
-                return True
 
             elif pkid == self.pktSB.PLAYER_DIGGING:  # Player Block Dig
                 # if not self.isLocal: disable these for now and come back to it later - I think these are for lobbies.
@@ -471,7 +475,6 @@ class Client:
                             "action": "finish_using"
                         }):
                             return False
-                return True
 
             elif pkid == self.pktSB.PLAYER_BLOCK_PLACEMENT:  # Player Block Placement
                 player = self.getPlayerObject()
@@ -537,8 +540,6 @@ class Client:
                                                                       "item": helditem}):
                     return False
 
-                return True
-
             elif pkid == self.pktSB.USE_ITEM:  # no 1.8 or prior packet
                 data = self.packet.read("rest:pack")
                 self.log.trace("(PROXY CLIENT) -> Parsed USE_ITEM packet:\n%s", data)
@@ -556,7 +557,6 @@ class Client:
                             "action": "useitem"
                         }):
                             return False
-                return True
 
             elif pkid == self.pktSB.HELD_ITEM_CHANGE:
                 slot = self.packet.read("short:short")["short"]
@@ -565,7 +565,6 @@ class Client:
                     self.slot = slot
                 else:
                     return False
-                return True
 
             elif pkid == self.pktSB.PLAYER_UPDATE_SIGN:  # player update sign
                 if self.clientversion < mcpacket.PROTOCOL_1_8START:
@@ -639,7 +638,6 @@ class Client:
                 self.log.trace("(PROXY CLIENT) -> Parsed CLICK_WINDOW packet:\n%s", data)
                 if not self.wrapper.events.callevent("player.slotClick", data):
                     return False
-                return True
 
             elif pkid == self.pktSB.SPECTATE:  # Spectate - convert packet to local server UUID
                 # !? WHAT!?
@@ -657,9 +655,8 @@ class Client:
                         self.server.packet.sendpkt(self.pktSB.SPECTATE, [_UUID], [client.serverUuid])
                         return False
             else:
-                # no packet parsed - just pass to server...
-                return True
-
+                return True  # no packet parsed in wrapper
+            return True  # packet parsed, no rejects or changes
         elif self.state == ClientState.LOGIN:
             if pkid == 0x00:  # login start packet
                 data = self.packet.read("string:username")
@@ -667,7 +664,7 @@ class Client:
                 if self.config["Proxy"]["online-mode"]:
                     if self.wrapper.javaserver.protocolVersion < 6:  # 1.7.x versions
                         self.packet.sendpkt(0x01, [_STRING, _BYTEARRAY_SHORT, _BYTEARRAY_SHORT],
-                                         (self.serverID, self.publicKey, self.verifyToken))
+                                            (self.serverID, self.publicKey, self.verifyToken))
                     else:
                         self.packet.sendpkt(0x01, [_STRING, _BYTEARRAY, _BYTEARRAY],
                                             (self.serverID, self.publicKey, self.verifyToken))
