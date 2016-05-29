@@ -47,6 +47,7 @@ _UUID = 16
 _METADATA = 17
 _REST = 90
 _RAW = 90
+_NULL = 100
 # endregion
 
 
@@ -204,8 +205,9 @@ class ServerConnection:
             # handle keep alive packets from server... nothing special here; we will just keep the server connected.
             if pkid == self.pktCB.KEEP_ALIVE:
                 if self.version < mcpacket.PROTOCOL_1_8START:
+                    # readpkt returns this as [123..] (a list with a single integer)
                     data = self.packet.readpkt([_INT])
-                    self.packet.sendpkt(self.pktSB.KEEP_ALIVE, [_INT], data)
+                    self.packet.sendpkt(self.pktSB.KEEP_ALIVE, [_INT], data)  # which is why no need to [data] as a list
                 else:  # self.version >= mcpacket.PROTOCOL_1_8START: - future elif in case protocol changes again.
                     data = self.packet.readpkt([_VARINT])
                     self.log.trace("keelalivedata %s ", data)
@@ -342,30 +344,17 @@ class ServerConnection:
                 if not self.wrapper.javaserver.world:  # that is what this prevents...
                     self.log.trace("(PROXY SERVER) -> did not parse SPAWN_OBJECT packet.")
                     return True  # return now.. why parse something we are no going to use?
-                entityuuid = None
-                ost = 0
                 if self.version < mcpacket.PROTOCOL_1_9START:
-                    dt = self.packet.readpkt([_VARINT, _BYTE, _INT, _INT, _INT, _BYTE, _BYTE])
+                    dt = self.packet.readpkt([_VARINT, _NULL, _BYTE, _INT, _INT, _INT, _BYTE, _BYTE])
                     # "varint:eid|byte:type_|int:x|int:y|int:z|byte:pitch|byte:yaw")
                 else:
-                    dt = self.packet.readpkt([_VARINT, _UUID, _BYTE, _INT, _INT, _INT, _BYTE, _BYTE, _REST])
+                    dt = self.packet.readpkt([_VARINT, _UUID, _BYTE, _INT, _INT, _INT, _BYTE, _BYTE])
                     # "varint:eid|uuid:objectUUID|byte:type_|int:x|int:y|int:z|byte:pitch|byte:yaw|int:info|
                     # short:velocityX|short:velocityY|short:velocityZ")
-                    entityuuid = dt[1]
-                    ost = 1
-                # according to https://wiki.python.org/moin/PythonSpeed :
-                # "Multiple [...] slower than individual assignment. For example "x,y=a,b" is slower than "x=a; y=b"
-                # eid = dt[0]
-                # type_ = dt[1 + ost]
-                # x = dt[2 + ost]
-                # y = dt[3 + ost]
-                # z = dt[4 + ost]
-                # pitch = dt[5 + ost]
-                # yaw = dt[6 + ost]
-                # However; why do that at all?
-                self.wrapper.javaserver.world.entities[dt[0]] = Entity(dt[0], entityuuid, dt[1 + ost],
-                                                                       (dt[2 + ost], dt[3 + ost], dt[4 + ost]),
-                                                                       (dt[5 + ost], dt[6 + ost]), True)
+                entityuuid = dt[1]
+                self.wrapper.javaserver.world.entities[dt[0]] = Entity(dt[0], entityuuid, dt[2],
+                                                                       (dt[3], dt[4], dt[5]),
+                                                                       (dt[6], dt[7]), True)
                 self.log.trace("(PROXY SERVER) -> Parsed SPAWN_OBJECT packet:\n%s", dt)
                 return True
 
@@ -375,10 +364,8 @@ class ServerConnection:
                 if not self.wrapper.javaserver.world:
                     self.log.trace("(PROXY SERVER) -> did not parse SPAWN_MOB packet.")
                     return True
-                entityuuid = None
-                ost = 0
                 if self.version < mcpacket.PROTOCOL_1_9START:
-                    dt = self.packet.readpkt([_VARINT, _UBYTE, _INT, _INT, _INT, _BYTE, _BYTE, _BYTE, _REST])
+                    dt = self.packet.readpkt([_VARINT, _NULL, _UBYTE, _INT, _INT, _INT, _BYTE, _BYTE, _BYTE, _REST])
 
                     # "varint:eid|ubyte:type_|int:x|int:y|int:z|byte:pitch|byte:yaw|"
                     # "byte:head_pitch|...
@@ -388,17 +375,16 @@ class ServerConnection:
                     # ("varint:eid|uuid:entityUUID|ubyte:type_|int:x|int:y|int:z|"
                     # "byte:pitch|byte:yaw|byte:head_pitch|
                     # STOP PARSING HERE: short:velocityX|short:velocityY|short:velocityZ|rest:metadata")
-                    entityuuid = dt[1]
-                    ost = 1  # offset
+                entityuuid = dt[1]
 
                 # eid, type_, x, y, z, pitch, yaw, head_pitch = \
                 #     dt["eid"], dt["type_"], dt["x"], dt["y"], dt["z"], dt["pitch"], dt["yaw"], \
                 #     dt["head_pitch"]
                 self.log.trace("(PROXY SERVER) -> Parsed SPAWN_MOB packet:\n%s", dt)
 
-                self.wrapper.javaserver.world.entities[dt[0]] = Entity(dt[0], entityuuid, dt[1 + ost],
-                                                                       (dt[2 + ost], dt[3 + ost], dt[4 + ost], ),
-                                                                       (dt[5 + ost], dt[6 + ost], dt[7 + ost]),
+                self.wrapper.javaserver.world.entities[dt[0]] = Entity(dt[0], entityuuid, dt[2],
+                                                                       (dt[3], dt[4], dt[5], ),
+                                                                       (dt[6], dt[7], dt[8]),
                                                                        False)
                 return True
 
