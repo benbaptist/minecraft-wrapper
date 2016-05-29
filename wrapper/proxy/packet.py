@@ -222,7 +222,9 @@ class Packet:
         read().
 
         Args:
-            args: a list of integers representing the type of read operation
+            args: a list of integers representing the type of read operation.  Special _NULL (100) type
+                    argument allows and extra "padding" argument to be appended.  To see how this is useful,
+                    look at serverconnection.py parsing of packet 'self.pktCB.SPAWN_OBJECT'
 
         Returns:  A list of those read results (not a dictionary) in the same order the args
                     were passed.
@@ -232,7 +234,9 @@ class Packet:
 
         argcount = len(args)
         for index in xxrange(argcount):
-            if args[index] == 0:
+            if args[index] == 100:
+                result.append(None)  # pad with special _NULL spacer type
+            elif args[index] == 0:
                 result.append(self.read_string())
             elif args[index] == 1:
                 result.append(self.read_json())
@@ -313,7 +317,9 @@ class Packet:
             return result
         for index in xxrange(argcount):
             pay = payload[index]
-            if args[index] == 0:
+            if args[index] == 100:
+                continue  # ignore special _NULL spacer type
+            elif args[index] == 0:
                 result += self.send_string(pay)
             elif args[index] == 1:
                 result += self.send_json(pay)
