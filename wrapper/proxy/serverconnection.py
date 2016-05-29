@@ -56,8 +56,8 @@ class ServerConnection:
     def __init__(self, client, wrapper, ip=None, port=None):
         """
         Server receives "CLIENT BOUND" packets from server.  These are what get parsed (CLIENT BOUND format).
-        'client.packet.send' - sends a packet to the client (use CLIENT BOUND packet format)
-        'self.packet.send' - sends a packet back to the server (use SERVER BOUND packet format)
+        'client.packet.sendpkt' - sends a packet to the client (use CLIENT BOUND packet format)
+        'self.packet.sendpkt' - sends a packet back to the server (use SERVER BOUND packet format)
         This part of proxy 'pretends' to be the client interacting with the server.
 
 

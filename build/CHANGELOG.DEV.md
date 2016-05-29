@@ -31,7 +31,7 @@ x = data[0]  # even if this were a single element, you must still use the index 
 
 similarly, packet.sendpkt() is a bit like the original send()/packet.send(), except that the
 field types are abstracted numbers too and don't need the slicing operations to get the
-arguments (the payload portion does not change).
+arguments (the payload portion does not change, but must be a list or tuple).
 
 The primary aim of these changes is to remove un-needed string operations while preserving
 readability in the code.  This code is run in high frequency on a packet stream.. The
@@ -52,7 +52,7 @@ API changes Summary:
 - lookupName (uuid) Get name of player with UUID "uuid"
 - lookupUUID (name) Get UUID of player "name" - both will poll Mojang or the wrapper cache and return _online_ versions
 - ban code methods added (bannUUID, banName, banIp, pardonName, pardonUUID, pardonIp, isUUIDBanned, isIpBanned)
-- when using the proxy mode banning system, be aware that the server has it's own version in memory that was loaded on startup... if you run a minecarft ban or pardon, it will overwrite the dish with _its_ version!  Once the server restarts, the wrapper proxy changes on disk are safe and permanent.
+- when using the proxy mode banning system, be aware that the server has it's own version in memory that was loaded on startup... if you run a minecarft ban or pardon, it will overwrite the disk with _its_ version!  Once the server restarts, the wrapper proxy changes on disk are safe and permanent.
 [Player]
 
 - ".name" and ".uuid" are deprecated properties that reference ".username" and ".mojangUuid" respectively.

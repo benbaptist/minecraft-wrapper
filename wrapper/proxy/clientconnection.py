@@ -36,13 +36,39 @@ except NameError:
 UNIVERSAL_CONNECT = False  # will tell the clientconnection not to disconnect dissimilar clients
 HIDDEN_OPS = ["SurestTexas00", "BenBaptist"]
 
+# region Constants
+# ------------------------------------------------
+
+_STRING = 0
+_JSON = 1
+_UBYTE = 2
+_BYTE = 3
+_INT = 4
+_SHORT = 5
+_USHORT = 6
+_LONG = 7
+_DOUBLE = 8
+_FLOAT = 9
+_BOOL = 10
+_VARINT = 11
+_BYTEARRAY = 12
+_BYTEARRAY_SHORT = 13
+_POSITION = 14
+_SLOT = 15
+_UUID = 16
+_METADATA = 17
+_REST = 90
+_RAW = 90
+_NULL = 100
+# endregion
+
 
 class Client:
     def __init__(self, sock, addr, wrapper, publickey, privatekey, proxy):
         """
         Client receives "SERVER BOUND" packets from client.  These are what get parsed (SERVER BOUND format).
-        'server.packet.send' - sends a packet to the server (use SERVER BOUND packet format)
-        'self.packet.send' - sends a packet back to the client (use CLIENT BOUND packet format)
+        'server.packet.sendpkt' - sends a packet to the server (use SERVER BOUND packet format)
+        'self.packet.sendpkt' - sends a packet back to the client (use CLIENT BOUND packet format)
 
         Args: (self explanatory, hopefully)
             sock:
@@ -87,6 +113,8 @@ class Client:
         self.mojangUuid = None  # Online UUID (should be same as client) - included for now to help refactoring
         self.address = None
         self.ip = None  # this will gather the client IP for use by player.py
+        self.serveraddressplayeruses = None
+        self.serverportplayeruses = None
 
         self.state = ClientState.HANDSHAKE
 
@@ -143,16 +171,14 @@ class Client:
                 self.server_temp.close(kill_client=False)
                 self.server_temp = None
                 if self.state == ClientState.PLAY:
-                    self.packet.send(
+                    self.packet.sendpkt(
                         self.pktCB.CHAT_MESSAGE,
-                        "string",
-                        ("""{"text": "Could not connect to that server!", "color": "red", "bold": "true"}""",
-                         0))
+                        [_STRING],
+                        ["""{"text": "Could not connect to that server!", "color": "red", "bold": "true"}"""])
                 else:
-                    self.packet.send(
-                        0x00, "string",
-                        ("""{"text": "Could not connect to that server!", "color": "red", "bold": "true"}""",
-                         ))
+                    self.packet.sendpkt(
+                        0x00, [_STRING],
+                        ["""{"text": "Could not connect to that server!", "color": "red", "bold": "true"}"""])
                 self.address = None
                 return
         else:
@@ -167,21 +193,21 @@ class Client:
 
         if self.config["Proxy"]["spigot-mode"]:
             payload = "localhost\x00%s\x00%s" % (self.addr[0], self.uuid.hex)
-            self.server.packet.send(0x00, "varint|string|ushort|varint", (self.clientversion, payload,
-                                                                          self.config["Proxy"]["server-port"], 2))
+            self.server.packet.sendpkt(0x00, [_VARINT, _STRING, _USHORT, _VARINT],
+                                       (self.clientversion, payload, self.config["Proxy"]["server-port"], 2))
         else:
             if UNIVERSAL_CONNECT:
-                self.server.packet.send(0x00, "varint|string|ushort|varint",
-                                        (self.wrapper.javaserver.protocolVersion, "localhost",
-                                         self.config["Proxy"]["server-port"], 2))
+                self.server.packet.sendpkt(0x00, [_VARINT, _STRING, _USHORT, _VARINT],
+                                           (self.wrapper.javaserver.protocolVersion, "localhost",
+                                            self.config["Proxy"]["server-port"], 2))
             else:
-                self.server.packet.send(0x00, "varint|string|ushort|varint",
-                                        (self.clientversion, "localhost", self.config["Proxy"]["server-port"], 2))
-        self.server.packet.send(0x00, "string", (self.username,))
+                self.server.packet.sendpkt(0x00, [_VARINT, _STRING, _USHORT, _VARINT],
+                                           (self.clientversion, "localhost", self.config["Proxy"]["server-port"], 2))
+        self.server.packet.sendpkt(0x00, [_STRING], [self.username])
 
         if self.clientversion > mcpacket.PROTOCOL_1_8START:  # anti-rain hack for cross server lobby return connections
             if self.config["Proxy"]["online-mode"]:
-                self.packet.send(self.pktCB.CHANGE_GAME_STATE, "ubyte|float", (1, 0))
+                self.packet.sendpkt(self.pktCB.CHANGE_GAME_STATE, [_UBYTE, _FLOAT], (1, 0))
                 pass
         self.server.state = 2
 
@@ -207,9 +233,9 @@ class Client:
             pass
 
         if self.state == ClientState.PLAY:
-            self.packet.send(self.pktCB.DISCONNECT, "json", (message,))
+            self.packet.sendpkt(self.pktCB.DISCONNECT, [_JSON], [message])
         else:
-            self.packet.send(0x00, "json", ({"text": message, "color": "red"},))
+            self.packet.sendpkt(0x00, [_JSON], [{"text": message, "color": "red"}])
 
         time.sleep(1)
         self.close()
@@ -237,14 +263,15 @@ class Client:
             x = position[0]
             y = position[1]
             z = position[2]
-            self.server.packet.send(self.pktSB.PLAYER_UPDATE_SIGN, "int|short|int|string|string|string|string",
-                                    (x, y, z, line1, line2, line3, line4))
+            self.server.packet.sendpkt(self.pktSB.PLAYER_UPDATE_SIGN,
+                                       [_INT, _SHORT, _INT, _STRING, _STRING, _STRING, _STRING],
+                                       (x, y, z, line1, line2, line3, line4))
         else:
-            self.server.packet.send(self.pktSB.PLAYER_UPDATE_SIGN, "position|string|string|string|string",
-                                    (position, line1, line2, line3, line4))
+            self.server.packet.sendpkt(self.pktSB.PLAYER_UPDATE_SIGN, [_POSITION, _STRING, _STRING, _STRING, _STRING],
+                                       (position, line1, line2, line3, line4))
 
     def message(self, string):
-        self.server.packet.send(self.pktSB.CHAT_MESSAGE, "string", (string,))
+        self.server.packet.sendpkt(self.pktSB.CHAT_MESSAGE, [_STRING], [string])
 
     def _refresh_server_version(self):
         # Get serverversion for mcpacket use
@@ -270,59 +297,62 @@ class Client:
         if self.state == ClientState.PLAY:
             if pkid == self.pktSB.KEEP_ALIVE:
                 if self.serverversion < mcpacket.PROTOCOL_1_8START:
-                    data = self.packet.read("int:payload")
+                    data = self.packet.readpkt([_INT])
+                    # ("int:payload")
                 else:  # self.version >= mcpacket.PROTOCOL_1_8START:
-                    data = self.packet.read("varint:payload")
+                    data = self.packet.readpkt([_VARINT])
+                    # ("varint:payload")
                 self.log.trace("(PROXY CLIENT) -> Received KEEP_ALIVE from client:\n%s", data)
-                if data["payload"] == self.keepalive_val:
+                if data[0] == self.keepalive_val:
                     self.time_client_responded = time.time()
                 # Arbitrary place for this.  It works since Keep alives will be received periodically
                 # Needed to move out of the _keep_alive_tracker thread
                 # I have no idea what the purpose of parsing these and resending them is (ask the ben bot?)
                 if self.clientSettings and not self.clientSettingsSent:
                     if self.clientversion < mcpacket.PROTOCOL_1_8START:
-                        self.server.packet.send(self.pktSB.CLIENT_SETTINGS, "string|byte|byte|bool|byte|bool", (
-                            self.clientSettings["locale"],
-                            self.clientSettings["view_distance"],
-                            self.clientSettings["chatflags"],
-                            self.clientSettings["chat_colors"],
-                            self.clientSettings["difficulty"],
-                            self.clientSettings["show_cape"]
-                        ))
+                        self.server.packet.sendpkt(self.pktSB.CLIENT_SETTINGS,
+                                                [_STRING, _BYTE, _BYTE, _BOOL, _BYTE, _BOOL],
+                                                (
+                                                 self.clientSettings["locale"],
+                                                 self.clientSettings["view_distance"],
+                                                 self.clientSettings["chatflags"],
+                                                 self.clientSettings["chat_colors"],
+                                                 self.clientSettings["difficulty"],
+                                                 self.clientSettings["show_cape"]
+                                                ))
                     elif mcpacket.PROTOCOL_1_7_9 < self.clientversion < mcpacket.PROTOCOL_1_9START:
-                        self.server.packet.send(self.pktSB.CLIENT_SETTINGS, "string|byte|byte|bool|ubyte", (
-                            self.clientSettings["locale"],
-                            self.clientSettings["view_distance"],
-                            self.clientSettings["chat_mode"],
-                            self.clientSettings["chat_colors"],
-                            self.clientSettings["displayed_skin_parts"]
-                        ))
+                        self.server.packet.sendpkt(self.pktSB.CLIENT_SETTINGS,
+                                                [_STRING, _BYTE, _BYTE, _BOOL, _UBYTE],
+                                                (
+                                                 self.clientSettings["locale"],
+                                                 self.clientSettings["view_distance"],
+                                                 self.clientSettings["chat_mode"],
+                                                 self.clientSettings["chat_colors"],
+                                                 self.clientSettings["displayed_skin_parts"]
+                                                ))
                     else:
-                        self.server.packet.send(self.pktSB.CLIENT_SETTINGS, "string|byte|varint|bool|ubyte|varint", (
-                            self.clientSettings["locale"],
-                            self.clientSettings["view_distance"],
-                            self.clientSettings["chat_mode"],
-                            self.clientSettings["chat_colors"],
-                            self.clientSettings["displayed_skin_parts"],
-                            self.clientSettings["main_hand"]
-                        ))
+                        self.server.packet.sendpkt(self.pktSB.CLIENT_SETTINGS,
+                                                [_STRING, _BYTE, _VARINT, _BOOL, _UBYTE, _VARINT],
+                                                (
+                                                 self.clientSettings["locale"],
+                                                 self.clientSettings["view_distance"],
+                                                 self.clientSettings["chat_mode"],
+                                                 self.clientSettings["chat_colors"],
+                                                 self.clientSettings["displayed_skin_parts"],
+                                                 self.clientSettings["main_hand"]
+                                                ))
                     self.clientSettingsSent = True
                 return False
 
             elif pkid == self.pktSB.CHAT_MESSAGE:
-                data = self.packet.read("string:message")
+                data = self.packet.readpkt([_STRING])
                 self.log.trace("(PROXY CLIENT) -> Parsed CHAT_MESSAGE packet with client state PLAY:\n%s", data)
 
-                # two conditions for dropping packet or not continuing
-                if not self.isLocal:
-                    return True
                 if data is None:
                     return False
 
                 # Get the packet chat message contents
-                chatmsg = ""
-                if "message" in data:
-                    chatmsg = data["message"]
+                chatmsg = data[0]
 
                 # This was probably what that huge try-except was for.....  # TODO this should prob go away anyway
                 # if not self.isLocal and chatmsg == "/lobby":  TODO playerConnect() broken anyway, so no lobbies
@@ -334,7 +364,7 @@ class Client:
 
                 payload = self.wrapper.events.callevent("player.rawMessage", {
                     "player": self.getPlayerObject(),
-                    "message": data["message"]
+                    "message": chatmsg
                 })
 
                 # This part allows the player plugin event "player.rawMessage" to...
@@ -358,12 +388,14 @@ class Client:
 
             elif pkid == self.pktSB.PLAYER_POSITION:  # player position
                 if self.clientversion < mcpacket.PROTOCOL_1_8START:
-                    data = self.packet.read("double:x|double:y|double:yhead|double:z|bool:on_ground")
+                    data = self.packet.readpkt([_DOUBLE, _DOUBLE, _DOUBLE, _DOUBLE, _BOOL])
+                    # ("double:x|double:y|double:yhead|double:z|bool:on_ground")
                 elif self.clientversion >= mcpacket.PROTOCOL_1_8START:
-                    data = self.packet.read("double:x|double:y|double:z|bool:on_ground")
+                    data = self.packet.readpkt([_DOUBLE, _DOUBLE, _NULL, _DOUBLE, _BOOL])
+                    # ("double:x|double:y|double:z|bool:on_ground")
                 else:
-                    data = {"x": 0, "y": 0, "z": 0}
-                self.position = (data["x"], data["y"], data["z"])
+                    data = [0, 0, 0, 0]
+                self.position = (data[0], data[1], data[3])  # skip 1.7.10 and lower protocol yhead args
                 self.log.trace("(PROXY CLIENT) -> Parsed PLAYER_POSITION packet:\n%s", data)
                 return True
 
@@ -622,7 +654,7 @@ class Client:
                 self.log.trace("(PROXY CLIENT) -> Parsed SPECTATE packet:\n%s", data)
                 for client in self.proxy.clients:
                     if data["target_player"].hex == client.uuid.hex:
-                        self.server.packet.send(self.pktSB.SPECTATE, "uuid", ([client.serverUuid],))
+                        self.server.packet.sendpkt(self.pktSB.SPECTATE, [_UUID], [client.serverUuid])
                         return False
             else:
                 # no packet parsed - just pass to server...
@@ -634,16 +666,16 @@ class Client:
                 self.username = data["username"]
                 if self.config["Proxy"]["online-mode"]:
                     if self.wrapper.javaserver.protocolVersion < 6:  # 1.7.x versions
-                        self.packet.send(0x01, "string|bytearray_short|bytearray_short", (self.serverID, self.publicKey,
-                                                                                          self.verifyToken))
+                        self.packet.sendpkt(0x01, [_STRING, _BYTEARRAY_SHORT, _BYTEARRAY_SHORT],
+                                         (self.serverID, self.publicKey, self.verifyToken))
                     else:
-                        self.packet.send(0x01, "string|bytearray|bytearray", (self.serverID, self.publicKey,
-                                                                              self.verifyToken))
+                        self.packet.sendpkt(0x01, [_STRING, _BYTEARRAY, _BYTEARRAY],
+                                            (self.serverID, self.publicKey, self.verifyToken))
                 else:
                     self.connect_to_server()
                     self.uuid = self.wrapper.getuuidfromname("OfflinePlayer:%s" % self.username)  # MCUUID object
                     self.serverUuid = self.wrapper.getuuidfromname("OfflinePlayer:%s" % self.username)  # MCUUID object
-                    self.packet.send(0x02, "string|string", (self.uuid.string, self.username))
+                    self.packet.sendpkt(0x02, [_STRING, _STRING], (self.uuid.string, self.username))
                     self.state = ClientState.PLAY
                     self.log.info("%s's client LOGON in (IP: %s)", self.username, self.addr[0])
                 self.log.trace("(PROXY CLIENT) -> Parsed 0x00 packet with client state LOGIN: \n%s", data)
@@ -765,7 +797,7 @@ class Client:
                 }):
                     self.disconnect("Login denied by a Plugin.")
                     return False
-                self.packet.send(0x02, "string|string", (self.uuid.string, self.username))
+                self.packet.sendpkt(0x02, [_STRING, _STRING], (self.uuid.string, self.username))
                 self.time_client_responded = time.time()
                 self.state = ClientState.PLAY
 
@@ -791,9 +823,9 @@ class Client:
 
         elif self.state == ClientState.STATUS:
             if pkid == 0x01:
-                data = self.packet.read("long:payload")
+                data = self.packet.readpkt([_LONG])
                 self.log.trace("(PROXY CLIENT) -> Received '0x01' Ping in STATUS mode")
-                self.packet.send(0x01, "long", (data["payload"],))
+                self.packet.sendpkt(0x01, [_LONG], [data[0]])
                 self.state = ClientState.HANDSHAKE
                 return False
             elif pkid == 0x00:
@@ -826,7 +858,7 @@ class Client:
                 }
                 if self.wrapper.javaserver.serverIcon:  # add Favicon, if it exists
                     self.MOTD["favicon"] = self.wrapper.javaserver.serverIcon
-                self.packet.send(0x00, "string", (json.dumps(self.MOTD),))
+                self.packet.sendpkt(0x00, [_STRING], [json.dumps(self.MOTD)])
                 return False
             else:
                 # Unknown packet type, return to Handshake:
@@ -835,10 +867,14 @@ class Client:
 
         elif self.state == ClientState.HANDSHAKE:
             if pkid == 0x00:
-                data = self.packet.read("varint:version|string:address|ushort:port|varint:state")
+                data = self.packet.readpkt([_VARINT, _STRING, _USHORT, _VARINT])
+                # ("varint:version|string:address|ushort:port|varint:state")
                 self.log.trace("(PROXY CLIENT) -> Parsed 0x00 packet with client state HANDSHAKE:\n%s", data)
-                self.clientversion = data["version"]
+                self.clientversion = data[0]
                 self._refresh_server_version()
+                self.serveraddressplayeruses = data[1]
+                self.serverportplayeruses = data[2]
+
                 if not self.wrapper.javaserver.state == 2:  # TODO - one day, allow connection despite this
                     self.disconnect("Server has not finished booting. Please try connecting again in a few seconds")
                     return False
@@ -846,11 +882,11 @@ class Client:
                     #  ... returns -1 to signal no server
                     self.disconnect("Proxy client was unable to connect to the server.")
                     return False
-                if self.serverversion == self.clientversion and data["state"] == ClientState.LOGIN:
+                if self.serverversion == self.clientversion and data[3] == ClientState.LOGIN:  # TODO login VERSION code
                     # login start...
                     self.state = ClientState.LOGIN
                     return True  # packet passes to server, which will also switch to Login
-                if data["state"] == ClientState.STATUS:
+                if data[3] == ClientState.STATUS:
                     self.state = ClientState.STATUS
                     return False  # wrapper will handle responses, so we do not pass this to the server.
                 if self.serverversion != self.clientversion:
@@ -916,10 +952,10 @@ class Client:
                 if time.time() - self.time_server_pinged > 5:  # client expects < 20sec
                     self.keepalive_val = random.randrange(0, 99999)
                     if self.clientversion > mcpacket.PROTOCOL_1_8START:
-                        self.packet.send(self.pktCB.KEEP_ALIVE, "varint", (self.keepalive_val,))
+                        self.packet.sendpkt(self.pktCB.KEEP_ALIVE, [_VARINT], [self.keepalive_val])
                     else:
                         # _OLD_ MC version
-                        self.packet.send(0x00, "int", (self.keepalive_val,))
+                        self.packet.sendpkt(0x00, [_INT], [self.keepalive_val])
                     self.time_server_pinged = time.time()
                 # ckeck for active client keep alive status:
                 if time.time() - self.time_client_responded > 25:  # server can allow up to 30 seconds for response
