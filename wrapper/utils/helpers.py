@@ -15,6 +15,37 @@ except NameError:
     xxrange = range
 
 
+# private static int DataSlotToNetworkSlot(int index)
+def dataslottonetworkslot(index):
+    """
+
+    Args:
+        index: window slot number?
+
+    Returns: "network slot" - not sure what that is.. player.dat file ?
+
+    """
+
+    # // / < summary >
+    # https://gist.github.com/SirCmpwn/459a1691c3dd751db160
+    # // / Thanks to some idiot at Mojang
+    # // / < / summary >
+
+    if index <= 8:
+        index += 36
+    elif index == 100:
+        index = 8
+    elif index == 101:
+        index = 7
+    elif index == 102:
+        index = 6
+    elif index == 103:
+        index = 5
+    elif 83 >= index >= 80:
+        index -= 79
+    return index
+
+
 def epoch_to_timestr(epoch_time):
     """
     takes a time represented as integer/string which you supply and converts it to a formatted string.
