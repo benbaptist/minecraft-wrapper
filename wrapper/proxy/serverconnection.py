@@ -94,6 +94,9 @@ class ServerConnection:
         # self.playereid = None
 
         self.headlooks = 0
+        self.currentwindowid = -1
+        self.windowitemcollection = []
+        self.noninventoryslotcount = 0
 
     def _refresh_server_version(self):
         # Get serverversion for mcpacket use
@@ -378,7 +381,7 @@ class ServerConnection:
                     self.log.trace("(PROXY SERVER) -> did not parse ENTITY_RELATIVE_MOVE packet.")
                     return True
                 if self.version < mcpacket.PROTOCOL_1_8START:
-                    # NOTE: These packets need to be filtered for cross-server stuff.
+                    # TODO  These packets need to be filtered for cross-server stuff.
                     return True
                 data = self.packet.readpkt([_VARINT, _BYTE, _BYTE, _BYTE])
                 # ("varint:eid|byte:dx|byte:dy|byte:dz")
@@ -393,7 +396,7 @@ class ServerConnection:
                     self.log.trace("(PROXY SERVER) -> did not parse ENTITY_TELEPORT packet.")
                     return True
                 if self.version < mcpacket.PROTOCOL_1_8START:
-                    # NOTE: These packets need to be filtered for cross-server stuff.
+                    # TODO  These packets need to be filtered for cross-server stuff.
                     return True
                 data = self.packet.readpkt([_VARINT, _INT, _INT, _INT, _REST])
                 # ("varint:eid|int:x|int:y|int:z|byte:yaw|byte:pitch")
@@ -406,7 +409,7 @@ class ServerConnection:
                 data = []
                 leash = True  # False to detach
                 if self.version < mcpacket.PROTOCOL_1_8START:
-                    # NOTE: These packets need to be filtered for cross-server stuff.
+                    # TODO  These packets need to be filtered for cross-server stuff.
                     return True
                 # this changed somewhere in the pre - 1.9 snapshots
                 # indeed, the packet meaning may have changed too (1.8 is leashing, 1.9 is attaching to minecarts, etc)
@@ -474,15 +477,53 @@ class ServerConnection:
                     self.client.gamemode = data[1]
                 self.log.trace("(PROXY SERVER) -> Parsed CHANGE_GAME_STATE packet:\n%s", data)
 
-            elif pkid == self.pktCB.SET_SLOT:
+            elif pkid == self.pktCB.OPEN_WINDOW:
+                # This works together with SET_SLOT to maintain accurate inventory in wrapper
+                data = self.packet.readpkt([_UBYTE, _STRING, _JSON, _UBYTE])
+                self.currentwindowid = data[0]
+                self.noninventoryslotcount = data[3]
+                self.log.trace("(PROXY SERVER) -> Parsed OPEN_WINDOW packet:\n%s", data)
+
+            elif pkid == self.pktCB.SET_SLOT:  # TODO working here
                 if self.version < mcpacket.PROTOCOL_1_8START:
-                    # NOTE: These packets need to be filtered for cross-server stuff.
+                    # TODO  These packets need to be filtered for cross-server stuff.
                     return True
-                data = self.packet.readpkt([_BYTE, _SHORT, _SLOT])
-                # ("byte:wid|short:slot|slot:data")
+                elif self.version > mcpacket.PROTOCOL_1_8END:
+                    data = self.packet.readpkt([_BYTE, _SHORT, _SLOT])
+                    # ("byte:wid|short:slot|slot:data")
+                    inventoryslots = 36  # 1.9 minecraft with shield / other hand
+                else:
+                    data = [-12, -12, None]
+                    inventoryslots = 35
+
+                # this only works on startup when server sends WID = 0 with 45/46 items and when an item is moved into
+                # players inventory from outside (like a chest or picking something up)
+                # after this, these are sent on chest opens and so forth, each WID incrementing by +1 per object opened.
+                # the slot numbers that correspond to player hotbar will depend on what window is opened...
+                # the last 10 (for 1.9) or last 9 (for 1.8 and earlier) will be the player hotbar ALWAYS.
+                # to know how many packets and slots total to expect, we have to parse server-bound pktCB.OPEN_WINDOW.
                 if data[0] == 0:
                     self.client.inventory[data[1]] = data[2]
-                self.log.trace("(PROXY SERVER) -> Parsed SET_SLOT packet:\n%s", data)
+
+                # Sure.. as though we are done ;)
+                self.log.info("(PROXY SERVER) -> Parsed SET_SLOT packet:\n%s", data)
+
+                # self.windowitemcollection = []
+                if data[0] < 0:
+                    return True
+
+                self.log.info("SET_SLOT current window is :%s \n data is: %s ", self.currentwindowid, data[0])
+                # This part updates our inventory from additional windows the player may open
+                if data[0] == self.currentwindowid:
+                    currentslot = data[1]
+                    slotdata = data[2]
+                    if currentslot >= self.noninventoryslotcount:  # any number of slot above the
+                        # pktCB.OPEN_WINDOW declared self.(..)slotcount is an inventory slot for up to update.
+                        self.client.inventory[currentslot - self.noninventoryslotcount + 9] = data[2]
+                        self.log.info("_______ 0-45 inventory slot number is:%s",
+                                      currentslot - self.noninventoryslotcount + 9)
+
+                # TODO the only loophole left seems to be client-side; switching items in self slots
 
             # if pkid == 0x30: # Window Items
             # I kept this one because we may want to re-implement this
