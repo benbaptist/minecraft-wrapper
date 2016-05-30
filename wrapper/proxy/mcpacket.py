@@ -281,6 +281,7 @@ class Client17:
     CHANGE_GAME_STATE = 0x2b
     OPEN_WINDOW = 0x2d
     SET_SLOT = 0x2f
+    WINDOW_ITEMS = 0x30
     PLAYER_LIST_ITEM = 0x38
     PLAYER_ABILITIES = 0x39
     DISCONNECT = 0x40
@@ -330,6 +331,7 @@ class Client179:
     CHANGE_GAME_STATE = 0x2b
     OPEN_WINDOW = 0x2d
     SET_SLOT = 0x2f
+    WINDOW_ITEMS = 0x30
     PLAYER_LIST_ITEM = 0x38
     PLAYER_ABILITIES = 0x39
     DISCONNECT = 0x40
@@ -383,6 +385,7 @@ class Client18:
     MAP_CHUNK_BULK = 0x26
     SET_SLOT = 0x2f
     OPEN_WINDOW = 0x2d
+    WINDOW_ITEMS = 0x30
     USE_BED = 0x0a
     TIME_UPDATE = 0x03
     ANIMATION = 0x0b
@@ -435,6 +438,7 @@ class Client19:  # Updated To Protocol 108 1.9 Minecraft
     MAP_CHUNK_BULK = 0xEE  # Deprecated And Not Used In 1.9
     SET_SLOT = 0x16
     OPEN_WINDOW = 0x13
+    WINDOW_ITEMS = 0x14
     USE_BED = 0x2f
     TIME_UPDATE = 0x44
     ANIMATION = 0x06
@@ -487,6 +491,7 @@ class Client194:
     MAP_CHUNK_BULK = 0xEE  # Deprecated And Not Used In 1.9
     SET_SLOT = 0x16
     OPEN_WINDOW = 0x13
+    WINDOW_ITEMS = 0x14
     USE_BED = 0x2f
     TIME_UPDATE = 0x44
     ANIMATION = 0x06

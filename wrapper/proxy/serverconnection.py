@@ -379,10 +379,10 @@ class ServerConnection:
                 if not self.wrapper.javaserver.world:  # hereout, no further explanation.. See prior packet.
                     self.log.trace("(PROXY SERVER) -> did not parse ENTITY_RELATIVE_MOVE packet.")
                     return True
-                if self.version < mcpacket.PROTOCOL_1_8START:
-                    # TODO  These packets need to be filtered for cross-server stuff.
-                    return True
-                data = self.packet.readpkt([_VARINT, _BYTE, _BYTE, _BYTE])
+                if self.version < mcpacket.PROTOCOL_1_8START:  # 1.7.10 - 1.7.2
+                    data = self.packet.readpkt([_INT, _BYTE, _BYTE, _BYTE])
+                else:  # FutureVersion > elif self.version > mcpacket.PROTOCOL_1_7_9:  1.8 ++
+                    data = self.packet.readpkt([_VARINT, _BYTE, _BYTE, _BYTE])
                 # ("varint:eid|byte:dx|byte:dy|byte:dz")
                 self.log.trace("(PROXY SERVER) -> Parsed ENTITY_RELATIVE_MOVE packet:\n%s", data)
 
@@ -394,24 +394,23 @@ class ServerConnection:
                 if not self.wrapper.javaserver.world:
                     self.log.trace("(PROXY SERVER) -> did not parse ENTITY_TELEPORT packet.")
                     return True
-                if self.version < mcpacket.PROTOCOL_1_8START:
-                    # TODO  These packets need to be filtered for cross-server stuff.
-                    return True
-                data = self.packet.readpkt([_VARINT, _INT, _INT, _INT, _REST])
+                if self.version < mcpacket.PROTOCOL_1_8START:  # 1.7.10 and prior
+                    data = self.packet.readpkt([_INT, _INT, _INT, _INT, _REST])
+                else:
+                    data = self.packet.readpkt([_VARINT, _INT, _INT, _INT, _REST])
                 # ("varint:eid|int:x|int:y|int:z|byte:yaw|byte:pitch")
 
                 self.log.trace("(PROXY SERVER) -> Parsed ENTITY_TELEPORT packet:\n%s", data)
                 if self.wrapper.javaserver.world.getEntityByEID(data[0]) is not None:
+                    # TODO I think this should simply record the entity position, not TP them...
                     self.wrapper.javaserver.world.getEntityByEID(data[0]).teleport((data[1], data[2], data[3]))
 
             elif pkid == self.pktCB.ATTACH_ENTITY:
                 data = []
                 leash = True  # False to detach
                 if self.version < mcpacket.PROTOCOL_1_8START:
-                    # TODO  These packets need to be filtered for cross-server stuff.
-                    return True
-                # this changed somewhere in the pre - 1.9 snapshots
-                # indeed, the packet meaning may have changed too (1.8 is leashing, 1.9 is attaching to minecarts, etc)
+                    data = self.packet.readpkt([_INT, _INT, _BOOL])
+                    leash = data[2]
                 if mcpacket.PROTOCOL_1_8START <= self.version < mcpacket.PROTOCOL_1_9START:
                     data = self.packet.readpkt([_VARINT, _VARINT, _BOOL])
                     leash = data[2]
@@ -419,9 +418,8 @@ class ServerConnection:
                     data = self.packet.readpkt([_VARINT, _VARINT])
                     if data[1] == -1:
                         leash = False
-                # ("varint:eid|varint:vid|bool:leash")
-                entityeid = data[0]  # not sure.. these might be reversed for 1.9!!!!
-                vehormobeid = data[1]
+                entityeid = data[0]  # rider, leash holder, etc
+                vehormobeid = data[1]  # vehicle, leashed entity, etc
                 player = self.getPlayerByEID(entityeid)
                 self.log.trace("(PROXY SERVER) -> Parsed ATTACH_ENTITY packet:\n%s", data)
 
@@ -443,31 +441,31 @@ class ServerConnection:
                         self.client.riding = self.wrapper.javaserver.world.getEntityByEID(vehormobeid)
                         self.wrapper.javaserver.world.getEntityByEID(vehormobeid).rodeBy = self.client
 
-            elif pkid == self.pktCB.MAP_CHUNK_BULK:  # (packet no longer exists in 1.9)
-                # no idea why this is parsed.. we are not doing anything with the data...
-                if mcpacket.PROTOCOL_1_9START > self.version > mcpacket.PROTOCOL_1_8START:
-                    data = self.packet.readpkt([_BOOL, _VARINT])
-                    chunks = data[1]
-                    skylightbool = data[0]
-                    # ("bool:skylight|varint:chunks")
-                    for chunk in xxrange(chunks):
-                        meta = self.packet.readpkt([_INT, _INT, _USHORT])
-                        # ("int:x|int:z|ushort:primary")
-                        primary = meta[2]
-                        bitmask = bin(primary)[2:].zfill(16)
-                        chunkcolumn = bytearray()
-                        for bit in bitmask:
-                            if bit == "1":
-                                # packetanisc
-                                chunkcolumn += bytearray(self.packet.read_data(16 * 16 * 16 * 2))
-                                if self.client.dimension == 0:
-                                    metalight = bytearray(self.packet.read_data(16 * 16 * 16))
-                                if skylightbool:
-                                    skylight = bytearray(self.packet.read_data(16 * 16 * 16))
-                            else:
-                                # Null Chunk
-                                chunkcolumn += bytearray(16 * 16 * 16 * 2)
-                    self.log.trace("(PROXY SERVER) -> Parsed MAP_CHUNK_BULK packet:\n%s", data)
+            # elif pkid == self.pktCB.MAP_CHUNK_BULK:  # (packet no longer exists in 1.9)
+                #  no idea why this is parsed.. we are not doing anything with the data...
+                # if mcpacket.PROTOCOL_1_9START > self.version > mcpacket.PROTOCOL_1_8START:
+                #     data = self.packet.readpkt([_BOOL, _VARINT])
+                #     chunks = data[1]
+                #     skylightbool = data[0]
+                #     # ("bool:skylight|varint:chunks")
+                #     for chunk in xxrange(chunks):
+                #         meta = self.packet.readpkt([_INT, _INT, _USHORT])
+                #         # ("int:x|int:z|ushort:primary")
+                #         primary = meta[2]
+                #         bitmask = bin(primary)[2:].zfill(16)
+                #         chunkcolumn = bytearray()
+                #         for bit in bitmask:
+                #             if bit == "1":
+                #                 # packetanisc
+                #                 chunkcolumn += bytearray(self.packet.read_data(16 * 16 * 16 * 2))
+                #                 if self.client.dimension == 0:
+                #                     metalight = bytearray(self.packet.read_data(16 * 16 * 16))
+                #                 if skylightbool:
+                #                     skylight = bytearray(self.packet.read_data(16 * 16 * 16))
+                #             else:
+                #                 # Null Chunk
+                #                 chunkcolumn += bytearray(16 * 16 * 16 * 2)
+                #     self.log.trace("(PROXY SERVER) -> Parsed MAP_CHUNK_BULK packet:\n%s", data)
 
             elif pkid == self.pktCB.CHANGE_GAME_STATE:
                 data = self.packet.readpkt([_UBYTE, _FLOAT])
@@ -483,13 +481,12 @@ class ServerConnection:
                 self.noninventoryslotcount = data[3]
                 self.log.trace("(PROXY SERVER) -> Parsed OPEN_WINDOW packet:\n%s", data)
 
-            elif pkid == self.pktCB.SET_SLOT:  # TODO working here
-                if self.version < mcpacket.PROTOCOL_1_8START:
-                    # TODO  These packets need to be filtered for cross-server stuff.
-                    return True
+            elif pkid == self.pktCB.SET_SLOT:
+                data = self.packet.readpkt([_BYTE, _SHORT, _SLOT])
+                # ("byte:wid|short:slot|slot:data")
+                if self.version < mcpacket.PROTOCOL_1_9START:
+                    inventoryslots = 35
                 elif self.version > mcpacket.PROTOCOL_1_8END:
-                    data = self.packet.readpkt([_BYTE, _SHORT, _SLOT])
-                    # ("byte:wid|short:slot|slot:data")
                     inventoryslots = 36  # 1.9 minecraft with shield / other hand
                 else:
                     data = [-12, -12, None]
@@ -518,17 +515,26 @@ class ServerConnection:
                         # pktCB.OPEN_WINDOW declared self.(..)slotcount is an inventory slot for up to update.
                         self.client.inventory[currentslot - self.noninventoryslotcount + 9] = data[2]
 
-                # TODO the only loophole left seems to be client-side; switching items in self slots
-
-            # if pkid == 0x30: # Window Items
-            # I kept this one because we may want to re-implement this
-            #   data = self.packet.read("byte:wid|short:count")
-            #   if data["wid"] == 0:
-            #       for slot in range(1, data["count"]):
-            #           data = self.packet.readpkt("slot:data")
-            #           self.client.inventory[slot] = data["data"]
-            #   self.log.trace("(PROXY SERVER) -> Parsed 0x30 packet:\n%s", data)
-            #    return True
+            elif pkid == self.pktCB.WINDOW_ITEMS:  # Window Items
+                # I am interested to see when this is used and in what versions.  It appears to be superfluous, as
+                # SET_SLOT seems to do the purported job nicely.
+                data = self.packet.readpkt([_UBYTE, _SHORT])
+                windowid = data[0]
+                elementcount = data[1]
+                # data = self.packet.read("byte:wid|short:count")
+                # if data["wid"] == 0:
+                #     for slot in range(1, data["count"]):
+                #         data = self.packet.readpkt("slot:data")
+                #         self.client.inventory[slot] = data["data"]
+                elements = []
+                for _ in xxrange(elementcount):
+                    elements.append(self.packet.read_slot())
+                jsondata = {
+                    "windowid": windowid,
+                    "elementcount": elementcount,
+                    "elements": elements
+                }
+                self.log.trace("(PROXY SERVER) -> Parsed 0x30 packet:\n%s", jsondata)
 
             elif pkid == self.pktCB.PLAYER_LIST_ITEM:
                 if self.version >= mcpacket.PROTOCOL_1_8START:
@@ -633,9 +639,10 @@ class ServerConnection:
                 self.log.trace("(PROXY SERVER) -> Parsed 0x01 packet with server state 2 (LOGIN)")
                 return False
 
-            if pkid == 0x02:  # Login Success - UUID & Username are sent in this packet
+            if pkid == 0x02:  # Login Success - UUID & Username are sent in this packet as strings
                 self.state = ProxServState.PLAY
-                self.log.trace("(PROXY SERVER) -> Parsed 0x02 packet with server state 2 (LOGIN)")
+                data = self.packet.readpkt([_STRING, _STRING])
+                self.log.trace("(PROXY SERVER) -> Parsed 0x02 LOGIN SUCCESS - server state 2 (LOGIN): %s", data)
                 return False
 
             if pkid == 0x03 and self.state == ProxServState.LOGIN:  # Set Compression
