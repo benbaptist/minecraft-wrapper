@@ -95,7 +95,6 @@ class ServerConnection:
 
         self.headlooks = 0
         self.currentwindowid = -1
-        self.windowitemcollection = []
         self.noninventoryslotcount = 0
 
     def _refresh_server_version(self):
@@ -506,13 +505,11 @@ class ServerConnection:
                     self.client.inventory[data[1]] = data[2]
 
                 # Sure.. as though we are done ;)
-                self.log.info("(PROXY SERVER) -> Parsed SET_SLOT packet:\n%s", data)
+                self.log.trace("(PROXY SERVER) -> Parsed SET_SLOT packet:\n%s", data)
 
-                # self.windowitemcollection = []
                 if data[0] < 0:
                     return True
 
-                self.log.info("SET_SLOT current window is :%s \n data is: %s ", self.currentwindowid, data[0])
                 # This part updates our inventory from additional windows the player may open
                 if data[0] == self.currentwindowid:
                     currentslot = data[1]
@@ -520,8 +517,6 @@ class ServerConnection:
                     if currentslot >= self.noninventoryslotcount:  # any number of slot above the
                         # pktCB.OPEN_WINDOW declared self.(..)slotcount is an inventory slot for up to update.
                         self.client.inventory[currentslot - self.noninventoryslotcount + 9] = data[2]
-                        self.log.info("_______ 0-45 inventory slot number is:%s",
-                                      currentslot - self.noninventoryslotcount + 9)
 
                 # TODO the only loophole left seems to be client-side; switching items in self slots
 

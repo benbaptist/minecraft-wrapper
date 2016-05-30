@@ -128,7 +128,6 @@ class Client:
         self.slot = 0
         self.riding = None
         self.lastplacecoords = (0, 0, 0)  # last placement (for use in cases of bucket use)
-        self.windowCounter = 2
         self.properties = {}
         self.clientSettings = False
         self.clientSettingsSent = False
@@ -138,6 +137,7 @@ class Client:
 
         for i in xxrange(46):  # there are 46 items 0-45 in 1.9 (shield) versus 45 (0-44) in 1.8 and below.
             self.inventory[i] = None
+        self.lastitem = None
 
     @property
     def version(self):
@@ -659,17 +659,39 @@ class Client:
 
                 datadict = {
                             "player": self.getPlayerObject(),
-                            "wid": data[0],
-                            "slot": 0,
-                            "button": 0,
-                            "action": 0,
-                            "mode": 0,
-                            "clicked": 0
+                            "wid": data[0],  # window id ... always 0 for inventory
+                            "slot": data[1],  # slot number
+                            "button": data[2],  # mouse / key button
+                            "action": data[3],  # unique action id - incementing counter
+                            "mode": data[4],
+                            "clicked": data[5]  # item data
                             }
 
-                self.log.trace("(PROXY CLIENT) -> Parsed CLICK_WINDOW packet:\n%s", datadict)
                 if not self.wrapper.events.callevent("player.slotClick", datadict):
                     return False
+
+                # for inventory control, the most straightforward way to update wrapper's inventory is
+                # to use the data from each click.  The server will make other updates and corrections
+                # via SET_SLOT
+                self.log.trace("(PROXY CLIENT) -> Parsed CLICK_WINDOW packet:\n%s", datadict)
+
+                if data[0] == 0 and data[2] in (0, 1):  # window 0 (inventory) and right or left click
+                    if self.lastitem is None and data[5] is None:
+                        self.inventory[data[1]] = None
+                    if self.lastitem is None:  # ... and there IS some data..
+                        # having clicked on it puts the slot into NONE status (since it can be moved)
+                        self.inventory[data[1]] = None
+                        self.lastitem = data[5]  # ..and we cached the data to see where it goes
+                        return True
+                    if self.lastitem is not None and data[5] is None:  # up to this point, there was not previous item
+                        self.inventory[data[1]] = self.lastitem
+                        self.lastitem = None
+                        return True
+                    if self.lastitem is not None and data[5] is not None:
+                        # our last item now occupies the space clicked and hte new item becomes the cached item.
+                        self.inventory[data[1]] = self.lastitem
+                        self.lastitem = data[5]
+                        return True
 
             elif pkid == self.pktSB.SPECTATE:  # Spectate - convert packet to local server UUID
                 # !? WHAT!?
