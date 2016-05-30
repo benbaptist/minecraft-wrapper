@@ -662,7 +662,7 @@ class Client:
                             "wid": data[0],  # window id ... always 0 for inventory
                             "slot": data[1],  # slot number
                             "button": data[2],  # mouse / key button
-                            "action": data[3],  # unique action id - incementing counter
+                            "action": data[3],  # unique action id - incrementing counter
                             "mode": data[4],
                             "clicked": data[5]  # item data
                             }
@@ -670,27 +670,37 @@ class Client:
                 if not self.wrapper.events.callevent("player.slotClick", datadict):
                     return False
 
+                self.log.trace("(PROXY CLIENT) -> Parsed CLICK_WINDOW packet:\n%s", datadict)
+
                 # for inventory control, the most straightforward way to update wrapper's inventory is
                 # to use the data from each click.  The server will make other updates and corrections
                 # via SET_SLOT
-                self.log.trace("(PROXY CLIENT) -> Parsed CLICK_WINDOW packet:\n%s", datadict)
+
+                # yes, this probably breaks for double clicks that send the item to who-can-guess what slot
+                # we can fix that in a future update... this gets us 98% fixed (versus 50% before)
+                # another source of breakage is if lagging causes server to deny the changes.  Our code
+                # is not checking if the server accepted these changes with a CONFIRM_TRANSACTION.
 
                 if data[0] == 0 and data[2] in (0, 1):  # window 0 (inventory) and right or left click
-                    if self.lastitem is None and data[5] is None:
+                    if self.lastitem is None and data[5] is None:  # player first clicks on an empty slot - mark empty.
                         self.inventory[data[1]] = None
-                    if self.lastitem is None:  # ... and there IS some data..
-                        # having clicked on it puts the slot into NONE status (since it can be moved)
-                        self.inventory[data[1]] = None
-                        self.lastitem = data[5]  # ..and we cached the data to see where it goes
+
+                    if self.lastitem is None:  # player first clicks on a slot where there IS some data..
+                        # having clicked on it puts the slot into NONE status (since it can now be moved)
+                        self.inventory[data[1]] = None  # we set the current slot to empty/none
+                        self.lastitem = data[5]  # ..and we cache the new slot data to see where it goes
                         return True
-                    if self.lastitem is not None and data[5] is None:  # up to this point, there was not previous item
-                        self.inventory[data[1]] = self.lastitem
-                        self.lastitem = None
+
+                    # up to this point, there was not previous item
+                    if self.lastitem is not None and data[5] is None:  # now we have a previous item to process
+                        self.inventory[data[1]] = self.lastitem  # that previous item now goes into the new slot.
+                        self.lastitem = None  # since the slot was empty, there is no newer item to cache.
                         return True
+
                     if self.lastitem is not None and data[5] is not None:
-                        # our last item now occupies the space clicked and hte new item becomes the cached item.
-                        self.inventory[data[1]] = self.lastitem
-                        self.lastitem = data[5]
+                        # our last item now occupies the space clicked and the new item becomes the cached item.
+                        self.inventory[data[1]] = self.lastitem  # set the cached item into the clicked slot.
+                        self.lastitem = data[5]  # put the item that was in the clicked slot into the cache now.
                         return True
 
             elif pkid == self.pktSB.SPECTATE:  # Spectate - convert packet to local server UUID
