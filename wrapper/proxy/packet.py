@@ -1,21 +1,56 @@
 # -*- coding: utf-8 -*-
 
+# region Modules
+# ------------------------------------------------
+
+# std
 import io
 import json
 import struct
 import zlib
+import sys
 
+# third party
+# (none)
+
+# local
 from core.mcuuid import MCUUID
 
 # Py3-2
-import sys
-PY3 = sys.version_info > (3,)
-
-
 try:  # Manually define an xrange builtin that works indentically on both (to take advantage of xrange's speed in 2)
     xxrange = xrange
 except NameError:
     xxrange = range
+# endregion
+
+# region Constants
+# ------------------------------------------------
+
+PY3 = sys.version_info > (3,)
+
+_CODERS = {
+    "string": 0,
+    "json": 1,
+    "ubyte": 2,
+    "byte": 3,
+    "int": 4,
+    "short": 5,
+    "ushort": 6,
+    "long": 7,
+    "double": 8,
+    "float": 9,
+    "bool": 10,
+    "varint": 11,
+    "bytearray": 12,
+    "bytearray_short": 13,
+    "position": 14,
+    "slot": 15,
+    "uuid": 16,
+    "metadata": 17,
+    "rest": 90,
+    "raw": 90
+}
+# endregion
 
 
 # noinspection PyMethodMayBeStatic,PyBroadException,PyAugmentAssignment
@@ -33,6 +68,7 @@ class Packet:
 
         self.queue = []
 
+        # encode/decode for NBT operations
         self._ENCODERS = {
             1: self.send_byte,
             2: self.send_short,
@@ -143,98 +179,184 @@ class Packet:
         if not self.abort:
             self.queue.append((self.compressThreshold, payload))
 
-    def read(self, expression):  # TODO id like to change this to a system where all this parsing is not needed
-        # how about just have a tuple of strings passed, or even just numbers using constants?
-        #  .... eliminate the split() operations.. .this consumes a lot of cycles in the tight parsing of the
-        # data stream
-        result = {}
-        for exp in expression.split("|"):
-            type_ = exp.split(":")[0]
-            name = exp.split(":")[1]
-            if type_ == "string":
-                result[name] = self.read_string()
-            elif type_ == "json":
-                result[name] = self.read_json()
-            elif type_ == "ubyte":
-                result[name] = self.read_ubyte()
-            elif type_ == "byte":
-                result[name] = self.read_byte()
-            elif type_ == "int":
-                result[name] = self.read_int()
-            elif type_ == "short":
-                result[name] = self.read_short()
-            elif type_ == "ushort":
-                result[name] = self.read_ushort()
-            elif type_ == "long":
-                result[name] = self.read_long()
-            elif type_ == "double":
-                result[name] = self.read_double()
-            elif type_ == "float":
-                result[name] = self.read_float()
-            elif type_ == "bool":
-                result[name] = self.read_bool()
-            elif type_ == "varint":
-                result[name] = self.read_varInt()
-            elif type_ == "bytearray":
-                result[name] = self.read_bytearray()
-            elif type_ == "bytearray_short":
-                result[name] = self.read_bytearray_short()
-            elif type_ == "position":
-                result[name] = self.read_position()
-            elif type_ == "slot":
-                result[name] = self.read_slot()
-            elif type_ == "uuid":
-                result[name] = self.read_uuid()
-            elif type_ == "metadata":
-                result[name] = self.read_metadata()
-            elif type_ == "rest":
-                result[name] = self.read_rest()
+    def read(self, expression):
+        """
+        This is deprecated and only there for old plugin support and while I debug the readpkt(). It
+        functions as a readpkt() wrapper.  This is not as fast as calling readpkt(), but makes a nice abstraction
+        and is back-wards compatible.
+
+        Args:
+            expression: Something like "double:xposition|double:yposition|double:zposition|bool:on_ground"
+
+        Returns:
+            the original-style dict of returned values - {"x": double, "y": double, "z": double, "on_ground": bool}
+
+        """
+
+        names = []
+        args = []
+        results = {}
+
+        # create a list of variable names and a list of constants representing datatypes to pass to readpkt().
+        for combo in expression.split("|"):
+            type_ = combo.split(":")[0]
+            name = combo.split(":")[1]
+            names.append(name)  # goal - create a list of the user-desired variable names
+            args.append(_CODERS[type_])  # goal: create list of integers to pass as arguments/"constants"
+
+        # obtain a list of returned arguments
+        result = self.readpkt(args)
+
+        # convert the list back to a dictionary using the names list as keys
+        for x in xxrange(len(result)):
+            results[names[x]] = result[x]
+        return results
+
+    def readpkt(self, args):
+        """
+        Usage like:
+            `data = packet.readpkt(_DOUBLE, _DOUBLE, _DOUBLE, _BOOL)`  # abstracts of integers
+            `x, y, z, on_ground = data`
+
+        proposed as an alternative to all the string operations used by the old (and nee wrapper form of..)
+        read().
+
+        Args:
+            args: a list of integers representing the type of read operation.  Special _NULL (100) type
+                    argument allows and extra "padding" argument to be appended.  To see how this is useful,
+                    look at serverconnection.py parsing of packet 'self.pktCB.SPAWN_OBJECT'
+
+        Returns:  A list of those read results (not a dictionary) in the same order the args
+                    were passed.
+
+        """
+        result = []
+
+        argcount = len(args)
+        for index in xxrange(argcount):
+            if args[index] == 100:
+                result.append(None)  # pad with special _NULL spacer type
+            elif args[index] == 0:
+                result.append(self.read_string())
+            elif args[index] == 1:
+                result.append(self.read_json())
+            elif args[index] == 2:
+                result.append(self.read_ubyte())
+            elif args[index] == 3:
+                result.append(self.read_byte())
+            elif args[index] == 4:
+                result.append(self.read_int())
+            elif args[index] == 5:
+                result.append(self.read_short())
+            elif args[index] == 6:
+                result.append(self.read_ushort())
+            elif args[index] == 7:
+                result.append(self.read_long())
+            elif args[index] == 8:
+                result.append(self.read_double())
+            elif args[index] == 9:
+                result.append(self.read_float())
+            elif args[index] == 10:
+                result.append(self.read_bool())
+            elif args[index] == 11:
+                result.append(self.read_varInt())
+            elif args[index] == 12:
+                result.append(self.read_bytearray())
+            elif args[index] == 13:
+                result.append(self.read_bytearray_short())
+            elif args[index] == 14:
+                result.append(self.read_position())
+            elif args[index] == 15:
+                result.append(self.read_slot())
+            elif args[index] == 16:
+                result.append(self.read_uuid())
+            elif args[index] == 17:
+                result.append(self.read_metadata())
+            else:
+                result.append(self.read_rest())
         return result
 
-    def send(self, pkid, expression, payload):  # TODO "ditto" here.. this code is way too complex for what it is doing
-        result = b""
+    def send(self, pkid, expression, payload):
+        """
+        This is deprecated and only there for old plugin support and while I debug the sendpkt(). It
+        functions as a sendpkt() wrapper.  This is not as fast as calling sendpkt(), but makes a nice abstraction
+        and is back-wards compatible.
+
+        Args:
+            pkid: packet id (int or hex - usually as an abstracted constant)
+            expression: Something like "double|double|double|float|float"
+            payload: Something like (x, y, z, yaw, pitch,) - a tuple
+
+        Returns:
+            returns the result that was sendraw()'ed.
+
+        """
+
+        # we are not going to change the payload argument any.. just the expression values.
+        args = []
+        # create a list of variable names and a list of constants representing datatypes to pass to sendpkt().
+        if len(payload) > 0:
+            for type_ in expression.split("|"):
+                args.append(_CODERS[type_])  # goal: create list of integers to pass as arguments/"constants"
+
+        # obtain a list of returned arguments
+        result = self.sendpkt(pkid, args, payload)
+        return result
+
+    def sendpkt(self, pkid, args, payload):
+        result = bytearray  # TODO  This is a PY2-3 compatibility line.  Will use <str> for PY2 and <bytes> for PY3...
+        result = b""  # TODO
+
+        # start with packet id
         result += self.send_varInt(pkid)
-        if len(expression) > 0:
-            for i, type_ in enumerate(expression.split("|")):
-                pay = payload[i]
-                if type_ == "string":
-                    result += self.send_string(pay)
-                elif type_ == "json":
-                    result += self.send_json(pay)
-                elif type_ == "ubyte":
-                    result += self.send_ubyte(pay)
-                elif type_ == "byte":
-                    result += self.send_byte(pay)
-                elif type_ == "int":
-                    result += self.send_int(pay)
-                elif type_ == "short":
-                    result += self.send_short(pay)
-                elif type_ == "ushort":
-                    result += self.send_ushort(pay)
-                elif type_ == "varint":
-                    result += self.send_varInt(pay)
-                elif type_ == "float":
-                    result += self.send_float(pay)
-                elif type_ == "double":
-                    result += self.send_double(pay)
-                elif type_ == "long":
-                    result += self.send_long(pay)
-                elif type_ == "bytearray":
-                    result += self.send_bytearray(pay)
-                elif type_ == "bytearray_short":
-                    result += self.send_bytearray_short(pay)
-                elif type_ == "uuid":
-                    result += self.send_uuid(pay)
-                elif type_ == "metadata":
-                    result += self.send_metadata(pay)
-                elif type_ == "bool":
-                    result += self.send_bool(pay)
-                elif type_ == "position":
-                    result += self.send_position(pay)
-                elif type_ == "slot":
-                    result += self.send_slot(pay)
-                elif type_ == "raw":
-                    result += pay
+
+        # append results to the result packet for each type
+        argcount = len(args)
+        if argcount == 0:
+            self.sendRaw(result)
+            return result
+        for index in xxrange(argcount):
+            pay = payload[index]
+            if args[index] == 100:
+                continue  # ignore special _NULL spacer type
+            elif args[index] == 0:
+                result += self.send_string(pay)
+            elif args[index] == 1:
+                result += self.send_json(pay)
+            elif args[index] == 2:
+                result += self.send_ubyte(pay)
+            elif args[index] == 3:
+                result += self.send_byte(pay)
+            elif args[index] == 4:
+                result += self.send_int(pay)
+            elif args[index] == 5:
+                result += self.send_short(pay)
+            elif args[index] == 6:
+                result += self.send_ushort(pay)
+            elif args[index] == 7:
+                result += self.send_long(pay)
+            elif args[index] == 8:
+                result += self.send_double(pay)
+            elif args[index] == 9:
+                result += self.send_float(pay)
+            elif args[index] == 10:
+                result += self.send_bool(pay)
+            elif args[index] == 11:
+                result += self.send_varInt(pay)
+            elif args[index] == 12:
+                result += self.send_bytearray(pay)
+            elif args[index] == 13:
+                result += self.send_bytearray_short(pay)
+            elif args[index] == 14:
+                result += self.send_position(pay)
+            elif args[index] == 15:
+                result += self.send_slot(pay)
+            elif args[index] == 16:
+                result += self.send_uuid(pay)
+            elif args[index] == 17:
+                result += self.send_metadata(pay)
+            else:
+                result += pay
         self.sendRaw(result)
         return result
 
@@ -297,7 +419,7 @@ class Packet:
             value = payload[index][1]
             header = (type_ << 5) | index
             b += self.send_ubyte(header)
-            if type_ == 0:
+            if index == 0:
                 b += self.send_byte(value)
             elif type_ == 1:
                 b += self.send_short(value)
@@ -377,7 +499,7 @@ class Packet:
 
     def recv(self, length):
         if length > 200:
-            d = bytearray  # TODO  This is a PY2-3 COMPAT MODEL!  Will use <str> for PY2 and <bytes> for PY3...
+            d = bytearray  # TODO  This is a PY2-3 compatibility line.  Will use <str> for PY2 and <bytes> for PY3...
             d = b""        # TODO
             while len(d) < length:
                 m = length - len(d)
