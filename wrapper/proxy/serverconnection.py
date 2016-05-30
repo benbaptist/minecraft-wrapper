@@ -196,7 +196,7 @@ class ServerConnection:
 
     def parse(self, pkid):  # client - bound parse ("Server" class connection)
 
-        if pkid == 0x00 and self.state < ProxServState.PLAY:  # disconnect, I suppose...
+        if pkid == 0x00 and self.state < ProxServState.PLAY:  # disconnect, I suppose.. 
             message = self.packet.readpkt([_STRING])
             self.log.info("Disconnected from server: %s", message)
             self.client.disconnect(message)
@@ -265,7 +265,7 @@ class ServerConnection:
                 # not always the EID that the client is aware of.  $$ ST00 note: Why would the eid be different!!??
 
                 # this is an attempt to clear the gm3 noclip issue on relogging.
-                self.client.packet.sendpkt(self.pktCB.CHANGE_GAME_STATE, [_UBYTE, _FLOAT], (3, self.client.gamemode))
+                # self.client.packet.sendpkt(self.pktCB.CHANGE_GAME_STATE, [_UBYTE, _FLOAT], (3, self.client.gamemode))
 
             elif pkid == self.pktCB.TIME_UPDATE:
                 data = self.packet.readpkt([_LONG, _LONG])
@@ -316,13 +316,23 @@ class ServerConnection:
             elif pkid == self.pktCB.SPAWN_PLAYER:
                 # This packet  is used to spawn other players into a player client's world.
                 # is this packet does not arrive, the other player(s) will nto be visible to the client
-                dt = self.packet.readpkt([_VARINT, _UUID, _REST])
+                if self.version < mcpacket.PROTOCOL_1_8START:
+                    dt = self.packet.readpkt([_VARINT, _STRING, _REST])
+                else:
+                    dt = self.packet.readpkt([_VARINT, _UUID, _REST])
+                # 1.7.6 "varint:eid|string:uuid|rest:metadt")
                 # 1.8 "varint:eid|uuid:uuid|int:x|int:y|int:z|byte:yaw|byte:pitch|short:item|rest:metadt")
                 # 1.9 "varint:eid|uuid:uuid|int:x|int:y|int:z|byte:yaw|byte:pitch|rest:metadt")
+
                 # We dont need to read the whole thing.
                 clientserverid = self.proxy.getclientbyofflineserveruuid(dt[1])
+                self.client.serverUuid = dt[1]
                 if clientserverid.uuid:
-                    self.client.packet.sendpkt(self.pktCB.SPAWN_PLAYER,
+                    if self.version < mcpacket.PROTOCOL_1_8START:
+                        self.client.packet.sendpkt(self.pktCB.SPAWN_PLAYER,
+                                                  [_VARINT, _STRING, _RAW], (dt[0], clientserverid.uuid, dt[2]))
+                    else:
+                        self.client.packet.sendpkt(self.pktCB.SPAWN_PLAYER,
                                                [_VARINT, _UUID, _RAW], (dt[0], clientserverid.uuid, dt[2]))
                     return False
                 self.log.trace("(PROXY SERVER) -> Converted SPAWN_PLAYER packet:\n%s", dt)
