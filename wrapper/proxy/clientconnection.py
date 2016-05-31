@@ -55,6 +55,7 @@ _BYTEARRAY = 12
 _BYTEARRAY_SHORT = 13
 _POSITION = 14
 _SLOT = 15
+_SLOT_NO_NBT = 18
 _UUID = 16
 _METADATA = 17
 _REST = 90
@@ -490,7 +491,7 @@ class Client:
                     position = data
 
                 elif mcpacket.PROTOCOL_1_7 <= self.clientversion < mcpacket.PROTOCOL_1_8START:
-                    data = self.packet.readpkt([_INT, _UBYTE, _INT, _BYTE, _SLOT, _REST])
+                    data = self.packet.readpkt([_INT, _UBYTE, _INT, _BYTE, _SLOT_NO_NBT, _REST])
                     # "int:x|ubyte:y|int:z|byte:face|slot:item")  _REST includes cursor positions x-y-z
                     position = (data[0], data[1], data[2])
 
@@ -646,7 +647,7 @@ class Client:
 
             elif pkid == self.pktSB.CLICK_WINDOW:  # click window
                 if self.clientversion < mcpacket.PROTOCOL_1_8START:
-                    data = self.packet.readpkt([_BYTE, _SHORT, _BYTE, _SHORT, _BYTE, _SLOT])
+                    data = self.packet.readpkt([_BYTE, _SHORT, _BYTE, _SHORT, _BYTE, _SLOT_NO_NBT])
                     # ("byte:wid|short:slot|byte:button|short:action|byte:mode|slot:clicked")
                 elif mcpacket.PROTOCOL_1_8START < self.clientversion < mcpacket.PROTOCOL_1_9START:
                     data = self.packet.readpkt([_UBYTE, _SHORT, _BYTE, _SHORT, _BYTE, _SLOT])

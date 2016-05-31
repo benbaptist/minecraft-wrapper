@@ -45,6 +45,7 @@ _POSITION = 14
 _SLOT = 15
 _UUID = 16
 _METADATA = 17
+_SLOT_NO_NBT = 18
 _REST = 90
 _RAW = 90
 _NULL = 100
@@ -218,8 +219,12 @@ class ServerConnection:
                 return False
 
             elif pkid == self.pktCB.CHAT_MESSAGE:
-                rawstring, position = self.packet.readpkt([_STRING, _BYTE])
+                if self.version < mcpacket.PROTOCOL_1_8START:
+                    parsing = [_STRING, _NULL]
+                else:
+                    parsing = [_STRING, _BYTE]
 
+                rawstring, position = self.packet.readpkt(parsing)
                 try:
                     data = json.loads(rawstring.decode('utf-8'))  # py3
                     self.log.trace("(PROXY SERVER) -> Parsed CHAT_MESSAGE packet with server state 3 (PLAY):\n%s", data)
@@ -238,14 +243,15 @@ class ServerConnection:
                 #   the minecraft protocol is just json-formatted string, but python users find dealing with a
                 # dictionary easier
                 #   when creating complex items like the minecraft chat object.
+
                 elif type(payload) == dict:  # if payload returns a "chat" protocol dictionary http://wiki.vg/Chat
                     chatmsg = json.dumps(payload)
                     # send fake packet with modded payload
-                    self.client.packet.sendpkt(self.pktCB.CHAT_MESSAGE, [_STRING, _BYTE], (chatmsg, position))
+                    self.client.packet.sendpkt(self.pktCB.CHAT_MESSAGE, parsing, (chatmsg, position))
                     return False  # reject the orginal packet (it will not reach the client)
                 elif type(payload) == str:  # if payload (plugin dev) returns a string-only object...
                     self.log.warning("player.Chatbox return payload sent as string")
-                    self.client.packet.sendpkt(self.pktCB.CHAT_MESSAGE, [_STRING, _BYTE], (payload, position))
+                    self.client.packet.sendpkt(self.pktCB.CHAT_MESSAGE, parsing, (payload, position))
                     return False
                 else:  # no payload, nor was the packet rejected.. packet passes to the client (and his chat)
                     return True  # just gathering info with these parses.
@@ -329,11 +335,11 @@ class ServerConnection:
                 self.client.serverUuid = dt[1]
                 if clientserverid.uuid:
                     if self.version < mcpacket.PROTOCOL_1_8START:
-                        self.client.packet.sendpkt(self.pktCB.SPAWN_PLAYER,
-                                                  [_VARINT, _STRING, _RAW], (dt[0], clientserverid.uuid, dt[2]))
+                        self.client.packet.sendpkt(
+                            self.pktCB.SPAWN_PLAYER, [_VARINT, _STRING, _RAW], (dt[0], clientserverid.uuid, dt[2]))
                     else:
-                        self.client.packet.sendpkt(self.pktCB.SPAWN_PLAYER,
-                                               [_VARINT, _UUID, _RAW], (dt[0], clientserverid.uuid, dt[2]))
+                        self.client.packet.sendpkt(
+                            self.pktCB.SPAWN_PLAYER, [_VARINT, _UUID, _RAW], (dt[0], clientserverid.uuid, dt[2]))
                     return False
                 self.log.trace("(PROXY SERVER) -> Converted SPAWN_PLAYER packet:\n%s", dt)
 
@@ -486,17 +492,25 @@ class ServerConnection:
 
             elif pkid == self.pktCB.OPEN_WINDOW:
                 # This works together with SET_SLOT to maintain accurate inventory in wrapper
-                data = self.packet.readpkt([_UBYTE, _STRING, _JSON, _UBYTE])
+                if self.version < mcpacket.PROTOCOL_1_8START:
+                    parsing = [_UBYTE, _UBYTE, _STRING, _UBYTE]
+                else:
+                    parsing = [_UBYTE, _STRING, _JSON, _UBYTE]
+                data = self.packet.readpkt(parsing)
                 self.currentwindowid = data[0]
                 self.noninventoryslotcount = data[3]
                 self.log.trace("(PROXY SERVER) -> Parsed OPEN_WINDOW packet:\n%s", data)
 
             elif pkid == self.pktCB.SET_SLOT:
-                data = self.packet.readpkt([_BYTE, _SHORT, _SLOT])
                 # ("byte:wid|short:slot|slot:data")
-                if self.version < mcpacket.PROTOCOL_1_9START:
+                if self.version < mcpacket.PROTOCOL_1_8START:
+                    data = self.packet.readpkt([_BYTE, _SHORT, _SLOT_NO_NBT])
+                    inventoryslots = 35
+                elif self.version < mcpacket.PROTOCOL_1_9START:
+                    data = self.packet.readpkt([_BYTE, _SHORT, _SLOT])
                     inventoryslots = 35
                 elif self.version > mcpacket.PROTOCOL_1_8END:
+                    data = self.packet.readpkt([_BYTE, _SHORT, _SLOT])
                     inventoryslots = 36  # 1.9 minecraft with shield / other hand
                 else:
                     data = [-12, -12, None]
@@ -537,8 +551,9 @@ class ServerConnection:
                 #         data = self.packet.readpkt("slot:data")
                 #         self.client.inventory[slot] = data["data"]
                 elements = []
-                for _ in xxrange(elementcount):
-                    elements.append(self.packet.read_slot())
+                if self.version > mcpacket.PROTOCOL_1_7_9:  # just parsing for now; not acting on, so OK to skip 1.7.9
+                    for _ in xxrange(elementcount):
+                        elements.append(self.packet.read_slot())
                 jsondata = {
                     "windowid": windowid,
                     "elementcount": elementcount,

@@ -272,6 +272,8 @@ class Packet:
                 result.append(self.read_uuid())
             elif args[index] == 17:
                 result.append(self.read_metadata())
+            elif args[index] == 18:
+                result.append(self.read_slot_nbtless())
             else:
                 result.append(self.read_rest())
         return result
@@ -585,6 +587,17 @@ class Packet:
             # nbtCount = self.read_ubyte()
             # nbt = self.read_data(nbtCount)
             return {"id": sid, "count": count, "damage": damage, "nbt": nbt}
+
+    def read_slot_nbtless(self):
+        """Temporary? solution for parsing pre- 1.8 slots"""
+        sid = self.read_short()
+        if sid != -1:
+            count = self.read_ubyte()
+            damage = self.read_short()
+            # nbt = self.read_tag()
+            # nbtCount = self.read_ubyte()
+            # nbt = self.read_data(nbtCount)
+            return {"id": sid, "count": count, "damage": damage, "nbt": {}}
 
     def read_varInt(self):
         total = 0
