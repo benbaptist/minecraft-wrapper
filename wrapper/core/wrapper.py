@@ -391,20 +391,6 @@ class Wrapper:
         d[8] |= 0x80
         return MCUUID(bytes=str(d))
 
-    def accepteula(self):
-        if os.path.isfile("eula.txt"):
-            self.log.debug("Checking EULA agreement...")
-            with open("eula.txt", "r") as f:
-                eula = f.read()
-
-            if "false" in eula:
-                # if forced, should be at info level since acceptance is a legal matter.
-                self.log.warning("EULA agreement was not accepted, accepting on your behalf...")
-                with open("eula.txt", "w") as f:
-                    f.write(eula.replace("false", "true"))
-
-            self.log.debug("EULA agreement has been accepted.")
-
     def getuuidbyusername(self, username, forcepoll=False):
         """
         Lookup user's UUID using the username. Primarily searches the wrapper usercache.  If record is

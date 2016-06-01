@@ -76,14 +76,17 @@ def getargsafter(arginput, i):
     return " ".join(arginput[i:])
 
 
-def getjsonfile(filename, directory="./"):
+def getjsonfile(filename, directory="."):
     """
-    :param filename: filename without extension
-    :param directory: by default, wrapper script directory.
-    :returns a dictionary if successful. If unsuccessful; None/no data or False (if file/directory not found)
+    Args:
+        filename: filename without extension
+        directory: by default, wrapper script directory.
+
+    Returns: a dictionary if successful. If unsuccessful; None/no data or False (if file/directory not found)
+
     """
-    if os.path.exists("%s%s.json" % (directory, filename)):
-        with open("%s%s.json" % (directory, filename), "r") as f:
+    if os.path.exists("%s/%s.json" % (directory, filename)):
+        with open("%s/%s.json" % (directory, filename), "r") as f:
             try:
                 return json.loads(f.read())
             except ValueError:
@@ -91,6 +94,25 @@ def getjsonfile(filename, directory="./"):
             #  Exit yielding None (no data)
     else:
         return False  # bad directory or filename
+
+
+def getfileaslines(filename, directory="."):
+    """
+    Args:
+        filename: Complete filename
+        directory: by default, wrapper script directory.
+
+    Returns: a list if successful. If unsuccessful; None/no data or False (if file/directory not found)
+
+    """
+    if os.path.exists("%s/%s" % (directory, filename)):
+        with open("%s/%s" % (directory, filename), "r") as f:
+            try:
+                return f.read().splitlines()
+            except:
+                return None
+    else:
+        return False
 
 
 def processcolorcodes(messagestring):

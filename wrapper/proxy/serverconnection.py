@@ -175,7 +175,7 @@ class ServerConnection:
         for client in self.wrapper.proxy.clients:
             if client.servereid == eid:
                 return self.getPlayerContext(client.username, calledby="getPlayerByEID")
-        self.log.error("Failed to get any player by client Eid: %s", eid)
+        self.log.debug("Failed to get any player by client Eid: %s", eid)
         return False
 
     def getPlayerContext(self, username, calledby=None):
