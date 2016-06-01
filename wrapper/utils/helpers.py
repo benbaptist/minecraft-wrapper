@@ -78,9 +78,12 @@ def getargsafter(arginput, i):
 
 def getjsonfile(filename, directory="."):
     """
-    :param filename: complete filename
-    :param directory: by default, wrapper script directory.
-    :returns a dictionary if successful. If unsuccessful; None/no data or False (if file/directory not found)
+    Args:
+        filename: filename without extension
+        directory: by default, wrapper script directory.
+
+    Returns: a dictionary if successful. If unsuccessful; None/no data or False (if file/directory not found)
+
     """
     if os.path.exists("%s/%s.json" % (directory, filename)):
         with open("%s/%s.json" % (directory, filename), "r") as f:
@@ -94,6 +97,14 @@ def getjsonfile(filename, directory="."):
 
 
 def getfileaslines(filename, directory="."):
+    """
+    Args:
+        filename: Complete filename
+        directory: by default, wrapper script directory.
+
+    Returns: a list if successful. If unsuccessful; None/no data or False (if file/directory not found)
+
+    """
     if os.path.exists("%s/%s" % (directory, filename)):
         with open("%s/%s" % (directory, filename), "r") as f:
             try:
