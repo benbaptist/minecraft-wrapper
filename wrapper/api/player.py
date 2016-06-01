@@ -141,7 +141,7 @@ class Player:
         Returns: contents of ops.json as a dict
         """
         ops = False
-        if self.javaserver.protocolVersion > mcpacket.PROTOCOL_1_7_9:
+        if self.javaserver.protocolVersion > mcpacket.PROTOCOL_1_7:  # 1.7.6 or greater use ops.json
             ops = getjsonfile("ops")
         if not ops:
             # try for an old "ops.txt" file instead.
