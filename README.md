@@ -72,7 +72,7 @@ Run `python Wrapper.py` to start. On first start, it'll create a wrapper.propert
 
 Wrapper.py is a Python-executable zipped-up folder, rather than a plain text file. If you want to view the source code, open it with a zip file viewer OR download the src folder.</br>
 
-On first run, it'll create the configuration file 'wrapper.properties' and exit. Tune this file to your needs, and then run `python Wrapper.py` again.  It will also create a logging.json file to configure log handlers (you should not need to modify this file, unless you have a special loggind need).</br>
+On first run, it'll create the configuration file 'wrapper.properties' and exit. Tune this file to your needs, and then run `python Wrapper.py` again.  It will also create a logging.json file to configure log handlers (you should not need to modify this file, unless you have a special logging need).</br>
 
 Type /help to see a list of Wrapper.py commands.  In cases where a Wrapper and minecraft command are identical, precede the command with a '/' to specify Wrapper's command. To completely shutdown the wrapper, type /halt.</br>
 
