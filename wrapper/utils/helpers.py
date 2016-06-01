@@ -15,6 +15,37 @@ except NameError:
     xxrange = range
 
 
+# private static int DataSlotToNetworkSlot(int index)
+def dataslottonetworkslot(index):
+    """
+
+    Args:
+        index: window slot number?
+
+    Returns: "network slot" - not sure what that is.. player.dat file ?
+
+    """
+
+    # // / < summary >
+    # https://gist.github.com/SirCmpwn/459a1691c3dd751db160
+    # // / Thanks to some idiot at Mojang
+    # // / < / summary >
+
+    if index <= 8:
+        index += 36
+    elif index == 100:
+        index = 8
+    elif index == 101:
+        index = 7
+    elif index == 102:
+        index = 6
+    elif index == 103:
+        index = 5
+    elif 83 >= index >= 80:
+        index -= 79
+    return index
+
+
 def epoch_to_timestr(epoch_time):
     """
     takes a time represented as integer/string which you supply and converts it to a formatted string.
@@ -45,14 +76,17 @@ def getargsafter(arginput, i):
     return " ".join(arginput[i:])
 
 
-def getjsonfile(filename, directory="./"):
+def getjsonfile(filename, directory="."):
     """
-    :param filename: filename without extension
-    :param directory: by default, wrapper script directory.
-    :returns a dictionary if successful. If unsuccessful; None/no data or False (if file/directory not found)
+    Args:
+        filename: filename without extension
+        directory: by default, wrapper script directory.
+
+    Returns: a dictionary if successful. If unsuccessful; None/no data or False (if file/directory not found)
+
     """
-    if os.path.exists("%s%s.json" % (directory, filename)):
-        with open("%s%s.json" % (directory, filename), "r") as f:
+    if os.path.exists("%s/%s.json" % (directory, filename)):
+        with open("%s/%s.json" % (directory, filename), "r") as f:
             try:
                 return json.loads(f.read())
             except ValueError:
@@ -60,6 +94,25 @@ def getjsonfile(filename, directory="./"):
             #  Exit yielding None (no data)
     else:
         return False  # bad directory or filename
+
+
+def getfileaslines(filename, directory="."):
+    """
+    Args:
+        filename: Complete filename
+        directory: by default, wrapper script directory.
+
+    Returns: a list if successful. If unsuccessful; None/no data or False (if file/directory not found)
+
+    """
+    if os.path.exists("%s/%s" % (directory, filename)):
+        with open("%s/%s" % (directory, filename), "r") as f:
+            try:
+                return f.read().splitlines()
+            except:
+                return None
+    else:
+        return False
 
 
 def processcolorcodes(messagestring):
