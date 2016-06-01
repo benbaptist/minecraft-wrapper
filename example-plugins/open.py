@@ -19,17 +19,16 @@ class Main:
 		self.win={}
 		self.storage=api.getStorage("CommandWindow",True)
 		self.players={}
-		self.windowCounter = 2
 	def openW(self,player,args):
 		if len(args)!=0:
 			player.openWindow("0",args[0],9)
-			self.win[player.name]=self.windowCounter
+			self.win[player.name]=player.getClient().windowCounter
 			inv=self.storage[args[0]]
 			self.players[player.name]=inv
 			for i in range(len(inv)):
 				element=inv[i]
 				item=element['item']
-				player.getClient().send(0x2f, "byte|short|slot", (self.windowCounter, i,item))
+				player.getClient().send(0x2f, "byte|short|slot", (player.getClient().windowCounter, i,item))
 		else: # {tag:{display:{Name:"ASD"}}}
 			player.message("Usage: /open <WNAME>")
 	def onEnable(self):
@@ -50,7 +49,7 @@ class Main:
 		self.storage.save()
 	def setSlot(self,payload):
 		#payload['player'].message(str(payload))
-		if payload["wid"]==self.windowCounter:
+		if payload["wid"]==payload["player"].getClient().windowCounter:
 		
 			payload['player'].getClient().send(0x2f, "byte|short|raw", (-1, -1,"\xff\xff"))
 			command=self.players[payload["player"].name]

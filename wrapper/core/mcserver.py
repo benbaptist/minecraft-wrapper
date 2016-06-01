@@ -108,7 +108,7 @@ class MCServer:
             self.proc = subprocess.Popen(self.args, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                          stdin=subprocess.PIPE, universal_newlines=True)
             self.players = {}
-            self.wrapper.accepteula()  # Auto accept eula
+            self.accepteula()  # Auto accept eula
 
             # The server loop
             while True:
@@ -143,6 +143,20 @@ class MCServer:
         for player in self.players:
             self.console("kick %s %s" % (player, reason))
         self.console("stop")
+
+    def accepteula(self):
+        if os.path.isfile("eula.txt"):
+            self.log.debug("Checking EULA agreement...")
+            with open("eula.txt", "r") as f:
+                eula = f.read()
+
+            if "false" in eula:
+                # if forced, should be at info level since acceptance is a legal matter.
+                self.log.warning("EULA agreement was not accepted, accepting on your behalf...")
+                with open("eula.txt", "w") as f:
+                    f.write(eula.replace("false", "true"))
+
+            self.log.debug("EULA agreement has been accepted.")
 
     def stop(self, reason="Stopping Server", save=True):
         """

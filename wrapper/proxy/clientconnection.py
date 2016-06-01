@@ -133,6 +133,7 @@ class Client:
         self.clientSettings = False
         self.clientSettingsSent = False
         self.skinBlob = {}
+        self.windowCounter = 2  # restored this
         self.servereid = None
         self.bedposition = None
 
@@ -911,8 +912,12 @@ class Client:
                 else:
                     reported_version = self.wrapper.javaserver.protocolVersion
                     reported_name = self.wrapper.javaserver.version
+                if self.clientversion < mcpacket.PROTOCOL_1_8START:
+                    motdtext = self.wrapper.javaserver.motd
+                else:
+                    motdtext = json.loads(processcolorcodes(self.wrapper.javaserver.motd.replace("\\", "")))
                 self.MOTD = {
-                    "description": json.loads(processcolorcodes(self.wrapper.javaserver.motd.replace("\\", ""))),
+                    "description": motdtext,
                     "players": {
                         "max": int(self.wrapper.javaserver.maxPlayers),
                         "online": len(self.wrapper.javaserver.players),
