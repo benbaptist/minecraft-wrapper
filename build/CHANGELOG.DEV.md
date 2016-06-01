@@ -8,7 +8,7 @@ ______________________________________
 - Eliminate some unneeded packet parsing.
 - Add entity destroy packet to mcpacket (for future entity work)
 - Proxy mode will now work with all (unmodded) minecraft versions from 1.7.2 - 1.9.4
-- Fixed isOp to function in pre-1.8 (reads ops.json or ops.txt, depending on server version).
+- Fixed isOp to function in pre-1.7.6 (reads ops.json or ops.txt, depending on server version).
 - Fix wrapper inventory by parsing client CLICK_WINDOW packets
 - Immediately populate a logged on players EID and location (for proxy client) from the mcserver.py console parse.
 - Fix lots of packet parsing problems, most of which were due to not parsing correctly for a given version.   This fixes a __lot__ of random disconnect issues.
