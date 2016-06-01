@@ -70,10 +70,12 @@ Download the wrapper.py file and place it in your minecraft folder, then create 
 
 Run `python Wrapper.py` to start. On first start, it'll create a wrapper.properties file for you to configure and exit. Set it to boot the jar file of your choice, and then start Wrapper.py again.
 
-Wrapper.py is a Python-executable zipped-up folder, rather than a plain text file. If you want to view the source code, open it
-with a zip file viewer OR download the src folder.</br>
+Wrapper.py is a Python-executable zipped-up folder, rather than a plain text file. If you want to view the source code, open it with a zip file viewer OR download the src folder.</br>
+
 On first run, it'll create the configuration file 'wrapper.properties' and exit. Tune this file to your needs, and then run `python Wrapper.py` again.  It will also create a logging.json file to configure log handlers (you should not need to modify this file, unless you have a special loggind need).</br>
+
 Type /help to see a list of Wrapper.py commands.  In cases where a Wrapper and minecraft command are identical, precede the command with a '/' to specify Wrapper's command. To completely shutdown the wrapper, type /halt.</br>
+
 If you run into any bugs, please report them!
 
 Wrapper.py is made to work with 1.7.2 and later, but it will work on 1.6.4 and earlier if you don't use proxy mode and you turn on pre-1.7-mode in wrapper.properties.
