@@ -1,11 +1,15 @@
 Build #115 [0.8.1]:
 
-##### [Capturing bed sleeping / right click #146](https://github.com/benbaptist/minecraft-wrapper/issues/146) #####
+- [Capturing bed sleeping / right click #146](https://github.com/benbaptist/minecraft-wrapper/issues/146)
 _____________________________________
 - Added "player.usebed" event.  It has no payload other than the player object.  Functions purely to notify plugins that... 
 - new player method getBedPostion() can get the location where the player slept.  Wrapper does not store this between client restarts!
+______________________________________
 - Eliminate some unneeded packet parsing.
 - Add entity destroy packet to mcpacket (for future entity work)
+- Proxy mode will now work with all (unmodded) minecraft versions from 1.7.2 - 1.9.4
+- Fixed isOp to function in pre-1.8 (reads ops.json or ops.txt, depending on server version).
+
 
 ##### update Packet read and send methods: #####
 _____________________________________
