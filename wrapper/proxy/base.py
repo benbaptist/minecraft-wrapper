@@ -103,7 +103,7 @@ class Proxy:
                                                           self.wrapper.config["Proxy"]["server-port"], 1))
         packet.send(0x00, "", ())
         packet.flush()
-
+        self.wrapper.javaserver.protocolVersion = -1
         while True:
             pkid, original = packet.grabPacket()
             if pkid == 0x00:

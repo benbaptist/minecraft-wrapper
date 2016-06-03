@@ -103,9 +103,8 @@ class ServerConnection:
         try:
             self.version = self.wrapper.javaserver.protocolVersion
         except AttributeError:
-            # Default to 1.8 if no server is running
-            # This can be modified to any version
-            self.version = 47
+            # -1 to signal no server is running
+            self.version = -1
 
         # Determine packet types - currently 1.8 is the lowest version supported.
         if mcpacket.Server194.end() >= self.version >= mcpacket.Server194.start():  # 1.9.4
@@ -213,7 +212,6 @@ class ServerConnection:
                     self.packet.sendpkt(self.pktSB.KEEP_ALIVE, [_INT], data)  # which is why no need to [data] as a list
                 else:  # self.version >= mcpacket.PROTOCOL_1_8START: - future elif in case protocol changes again.
                     data = self.packet.readpkt([_VARINT])
-                    self.log.trace("keelalivedata %s ", data)
                     self.packet.sendpkt(self.pktSB.KEEP_ALIVE, [_VARINT], data)
                 self.log.trace("(PROXY SERVER) -> Parsed KEEP_ALIVE packet with server state 3 (PLAY)")
                 return False
