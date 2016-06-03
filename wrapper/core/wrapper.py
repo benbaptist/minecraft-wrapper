@@ -453,23 +453,28 @@ class Wrapper:
         frequency = 2592000  # if called directly, can update cache daily (refresh names list, etc)
         if forcepoll:
             frequency = 600  # 10 minute limit
-        names = self._pollmojanguuid(useruuid)
 
-        if not names or names is None:  # mojang service failed or UUID not found
-            return False
-        numbofnames = len(names)
-        if numbofnames == 0:
-            return False
+        theirname = None
         if self.usercache.key(useruuid):  # if user is in the cache...
             # and was recently polled...
-            if int((time.time() - self.usercache.key(useruuid)["time"])) < frequency:
-                return self.usercache.key(useruuid)["name"]  # dont re-poll if same time frame (daily = 86400).
-            else:
-                if not names or names is None:  # service might be down.. not a huge deal, we'll re-poll another time
-                    self.usercache.key(useruuid)["time"] = time.time() - frequency + 7200  # may try again in 2 hours
-                    return self.usercache.key(useruuid)["name"]
-                # continue on and poll... because user is not in cache or is old record that needs re-polled
+            theirname = self.usercache.key(useruuid)["localname"]
+
+        if int((time.time() - self.usercache.key(useruuid)["time"])) < frequency:
+            return theirname  # dont re-poll if same time frame (daily = 86400).
+
+        # continue on and poll... because user is not in cache or is old record that needs re-polled
         # else:  # user is not in cache
+        names = self._pollmojanguuid(useruuid)
+        numbofnames = 0
+        if names is not False:  # service returned data
+            numbofnames = len(names)
+
+        if numbofnames == 0:
+            if theirname is not None:
+                self.usercache.key(useruuid)["time"] = time.time() - frequency + 7200  # may try again in 2 hours
+                return theirname
+            return False  # total FAIL
+
         pastnames = []
         if useruuid not in self.usercache:
             self.usercache[useruuid] = {
@@ -481,7 +486,8 @@ class Wrapper:
                 "IP": None,
                 "names": []
             }
-        for i in xxrange(0, numbofnames):
+
+        for i in range(numbofnames):
             if "changedToAt" not in names[i]:  # find the original name
                 self.usercache[useruuid]["original"] = names[i]["name"]
                 self.usercache[useruuid]["online"] = True
@@ -514,8 +520,7 @@ class Wrapper:
         attempts to poll Mojang with the UUID
         :param useruuid: string uuid with dashes
         :returns:
-                None - Most likely a bad UUID
-                False - Mojang down or operating in limited fashion
+                False - could not resolve the uuid
                 - otherwise, a list of names...
         """
 
@@ -535,7 +540,7 @@ class Wrapper:
                                              "over-polled (large busy server) or supplied an incorrect UUID??")
                             self.log.warning("uuid: %s", useruuid)
                             self.log.warning("response: \n%s", str(rx))
-                            return None
+                            return False
                         elif rx[i]["account.mojang.com"] in ("yellow", "red"):
                             self.log.warning("Mojang accounts is experiencing issues (%s).",
                                              rx[i]["account.mojang.com"])
@@ -549,7 +554,7 @@ class Wrapper:
                         try:
                             return self.usercache[useruuid]["name"]
                         except TypeError:
-                            return None
+                            return False
 
     def listplugins(self):
         readout("", "List of Wrapper.py plugins installed:", separator="", pad=4)
