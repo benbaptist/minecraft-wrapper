@@ -1,3 +1,10 @@
+Next build:
+
+- Added a "lastLoggedIn" item to player data.
+- Implemented sendBlock (the unfinished function "setBlock") to place phantom client side only blocks.
+- Removed the threaded periodicsave from Storage.  Plugin periodic saves (if desired) should be run on "ontimer".  Every plugin should already be using save() somewhere in the code anyway (like during "onDisable"). 
+- Add error checking to alert for player object that cannot get a client in proxy mode.
+
 Build #115 [0.8.2]:
 
 - [Capturing bed sleeping / right click #146](https://github.com/benbaptist/minecraft-wrapper/issues/146)
@@ -53,7 +60,7 @@ Build #114 [0.8.1]:
 - A completely new rewrite.  Fully compatible with x.7.x version plugins _if_ they do not dip into wrapper's internal methods and stick strictly to the previously documented API:
 http://wrapper.benbaptist.com/docs/api.html
 - Methods in the client/server (like sending packets) are different.  Plugins doing this will need to be modified. Using the wrapper permissions or other wrapper components directly (self.wrapper.permissions, etc) by plugins will be broken with this version.
-- I take that back about packet sending... there is a wrapper that will still allow client.send() (instead of the new client.packet.send(); However, if you have debug set to true, expect the console to get spammed with 'deprecated server.send() called (by a plugin)'!
+- I take that back about packet sending... there is a wrapper that will still allow client.send() (instead of the new client.packet.sendpkt(); However, if you have debug set to true, expect the console to get spammed with 'deprecated server.send()...' messages!
 
 API changes Summary:
 
@@ -67,7 +74,7 @@ API changes Summary:
 
 - ".name" and ".uuid" are deprecated properties that reference ".username" and ".mojangUuid" respectively.
 - added player .offlineUuid (offline server UUID) and .ipaddress (the actual IP from proxy) self variables.
-- quicker isOp_fast() - similar to .isOP(), but does not read ops.json file each time.  For use initerative loops where re-reading a file is a performance issue.  Refreshes at each player login.
+- quicker isOp_fast() - similar to .isOP(), but does not read ops.json file each time.  For use in iterative loops where re-reading a file is a performance issue.  Refreshes at each player login.
 - refreshOps() - refresh isOp_fast dictionary.
 - sendCommand(self, command, args) -Sends a command to the wrapper interface as the player.  Similar to execute, but will execute wrapper commands.  Example: `player.sendCommand("perms", ("users", "SurestTexas00", "info"))`
 - self.clientboundPackets / serverboundPackets - contain the packet class constants being used by wrapper.  Usage example: `player.getClient().packet.send(player.clientboundPackets.PLAYER_ABILITIES,

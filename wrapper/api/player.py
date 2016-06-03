@@ -81,6 +81,7 @@ class Player:
         self.client = None
         self.clientboundPackets = mcpacket.Client18
         self.serverboundPackets = mcpacket.Server18
+        self.clientgameversion = self.javaserver.protocolVersion
         self.playereid = None
 
         # some player properties associated with abilities
@@ -90,6 +91,7 @@ class Player:
         self.fly_speed = float(1)  # default is 1
 
         if self.wrapper.proxy:
+            gotclient = False
             for client in self.wrapper.proxy.clients:
                 if client.username == self.username:
                     self.client = client
@@ -98,8 +100,11 @@ class Player:
                     self.ipaddress = client.ip
                     self.clientboundPackets = self.client.pktCB
                     self.serverboundPackets = self.client.pktSB
+                    self.clientgameversion = self.client.clientversion
+                    gotclient = True
                     break
-
+            if not gotclient:
+                self.log.error("Proxy is on, but this client is not listed in wrapper.proxy.clients!")
         self.data = Storage(self.clientUuid.string, root="wrapper-data/players")
 
         if "users" not in self.permissions:  # top -level dict item should be just checked once here (not over and over)
@@ -110,6 +115,7 @@ class Player:
             self.data["firstLoggedIn"] = (time.time(), time.tzname)
         if "logins" not in self.data:
             self.data["logins"] = {}
+        self.data["lastLoggedIn"] = (self.loggedIn, time.tzname)
 
         t = threading.Thread(target=self._track, args=())
         t.daemon = True
@@ -128,7 +134,8 @@ class Player:
 
     def _track(self):
         """
-        internal tracking that updates a players last login time. Not intended as a part of the public player object API
+        internal tracking that updates a player's server play time. Not intended as a part of the public
+        player object API
         """
         self.data["logins"][int(self.loggedIn)] = time.time()
         while not self.abort:
@@ -454,10 +461,49 @@ class Player:
         self.getClient().server.packet.sendpkt(self.serverboundPackets.PLAYER_ABILITIES, [_BYTE, _FLOAT, _FLOAT],
                                                (bitfield, self.fly_speed, self.field_of_view))
 
-    # Unfinished function, will be used to make phantom blocks visible ONLY to the client
-    def setBlock(self, position):
-        pass
-    # endregion
+    def sendBlock(self, position, blockid, blockdata, sendblock=True, numparticles=1, partdata=1):
+        """
+            Used to make phantom blocks visible ONLY to the client.  Sends either a particle or a block to
+            the minecraft player's client. for blocks iddata is just block id - No need to bitwise the
+            blockdata; just pass the additional block data.  The particle sender is only a basic version
+            and is not intended to do anything more than send something like a barrier particle to
+            temporarily highlight something for the player.  Fancy particle operations should be custom
+            done by the plugin or someone can write a nicer particle-renderer.
+
+        :param position - players position as tuple.  The coordinates must be in the player's render distance
+            or the block will appear at odd places.
+        :param blockid - usually block id, but could be particle id too.  If sending pre-1.8 particles this is a
+            string not a number... the valid values are found here:
+                        ->http://wayback.archive.org/web/20151023030926/https://gist.github.com/thinkofdeath/5110835
+        :param blockdata - additional block meta (a number specifying a subtype).
+        :param sendblock - True for sending a block.
+        :param numparticles - if particles, their numeric count.
+        :param partdata - if particles; particle data.  Particles with additional ID cannot be used ("Ironcrack").
+
+        """
+
+        pkt_particle = self.clientboundPackets.PARTICLE
+        pkt_blockchange = self.clientboundPackets.BLOCK_CHANGE
+
+        x = (position[0])
+        y = (position[1])
+        z = (position[2])
+        if self.clientgameversion > mcpacket.PROTOCOL_1_7_9:
+            if sendblock:
+                iddata = blockid << 4 | blockdata
+                self.getClient().packet.sendpkt(pkt_blockchange, [_POSITION, _VARINT], (position, iddata))
+            else:
+                self.getClient().packet.sendpkt(
+                    pkt_particle, [_INT, _BOOL, _FLOAT, _FLOAT, _FLOAT, _FLOAT, _FLOAT, _FLOAT, _FLOAT, _INT],
+                    (blockid, True, x + .5, y + .5, z + .5, 0, 0, 0, partdata, numparticles))
+        if self.clientgameversion < mcpacket.PROTOCOL_1_8START:
+            if sendblock:
+                self.getClient().packet.sendpkt(pkt_blockchange, [_INT, _UBYTE, _INT, _VARINT, _UBYTE],
+                                                (x, y, x, blockid, blockdata))
+            else:
+                self.getClient().packet.sendpkt(
+                    pkt_particle, [_STRING, _FLOAT, _FLOAT, _FLOAT, _FLOAT, _FLOAT, _FLOAT, _FLOAT, _INT],
+                    (blockid, x + .5, y + .5, z + .5, 0, 0, 0, partdata, numparticles))
 
     # Inventory-related actions. These will probably be split into a specific
     # Inventory class.
