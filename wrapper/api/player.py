@@ -116,6 +116,7 @@ class Player:
         if "logins" not in self.data:
             self.data["logins"] = {}
         self.data["lastLoggedIn"] = (self.loggedIn, time.tzname)
+        self.data.save()
 
         t = threading.Thread(target=self._track, args=())
         t.daemon = True
@@ -123,6 +124,9 @@ class Player:
 
     def __str__(self):
         return self.username
+
+    def __del__(self):
+        self.data.save()
 
     @property
     def name(self):
@@ -141,6 +145,7 @@ class Player:
         while not self.abort:
             self.data["logins"][int(self.loggedIn)] = int(time.time())
             time.sleep(60)
+        self.data.save()
 
     def _read_ops_file(self):
         """

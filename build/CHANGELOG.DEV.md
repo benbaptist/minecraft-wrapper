@@ -3,7 +3,13 @@ Next build:
 - Added a "lastLoggedIn" item to player data.
 - Implemented sendBlock (the unfinished function "setBlock") to place phantom client side only blocks.
 - Removed the threaded periodicsave from Storage.  Plugin periodic saves (if desired) should be run on "ontimer".  Every plugin should already be using save() somewhere in the code anyway (like during "onDisable"). 
+- added \_\_Del__ saves to various modules to implement Storage object save()'s.
+- Removed deprecated proxy-storage.  Bans are stored in the server files and wrapper uses usercache for username caches.
 - Add error checking to alert for player object that cannot get a client in proxy mode.
+- Entities dynamically updated from http://minecraft-ids.grahamedgecombe.com on a monthly basis, if available.
+
+- Destroyed entities are parsed and removed from world entities collection to await garbage collection.
+
 
 Build #115 [0.8.2]:
 

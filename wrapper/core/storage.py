@@ -34,10 +34,9 @@ class Storage:
         # t.daemon = True
         # t.start()
 
-    # def __del__(self):
-        # self.abort = True
-        # self.save()
-        # pass
+    def __del__(self):
+        self.abort = True
+        self.save()
 
     def __getitem__(self, index):
         if not type(index) in (str, str2):

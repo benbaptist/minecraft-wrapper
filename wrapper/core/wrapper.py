@@ -88,6 +88,11 @@ class Wrapper:
             return
         self.proxymode = self.configManager.config["Proxy"]["proxy-enabled"]
 
+    def __del__(self):
+        self.storage.save()
+        self.permissions.save()
+        self.usercache.save()
+
     def start(self):
         """ wrapper should only start ONCE... old code made it restart over when only a server needed restarting"""
         # Reload configuration each time wrapper starts in order to detect changes
@@ -314,6 +319,9 @@ class Wrapper:
                     print("[BREAK] Console input exception (nothing passed to server) \n%s" % e)
                     break
                 continue
+        self.storage.save()
+        self.permissions.save()
+        self.usercache.save()
 
     def _registerwrappershelp(self):
         # All commands listed herein are accessible in-game
@@ -588,6 +596,9 @@ class Wrapper:
         self.shutdown()
 
     def shutdown(self, status=0):
+        self.storage.save()
+        self.permissions.save()
+        self.usercache.save()
         self.halt = True
         self.javaserver.stop(reason="Wrapper.py Shutting Down", save=False)
         time.sleep(1)

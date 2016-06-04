@@ -812,6 +812,7 @@ class Client:
                             self.log.info("%s's client performed LOGON in with new name, falling back to %s",
                                           self.username, currentname)
                             self.username = currentname
+                    self.serverUuid = self.wrapper.getuuidfromname("OfflinePlayer:%s" % self.username)
                 else:
                     # TODO: See if this can be accomplished via MCUUID
                     self.uuid = uuid.uuid3(uuid.NAMESPACE_OID, "OfflinePlayer:%s" % self.username)  # no space in name
@@ -852,8 +853,6 @@ class Client:
                 #                         with open("%s/.wrapper-proxy-whitelist-migrate" % worldname, "a") as f:
                 #                             f.write("%s %s\n" % (self.uuid.string, self.serverUuid.string))
 
-                # set offline serveruuid
-                self.serverUuid = self.wrapper.getuuidfromname("OfflinePlayer:%s" % self.username)
                 self.ip = self.addr[0]
 
                 # no idea what is special about version 26
