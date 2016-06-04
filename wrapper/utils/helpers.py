@@ -5,7 +5,32 @@ import sys
 import json
 import time
 import datetime
-from api.base import API
+
+COLORCODES = {
+    "0": "black",
+    "1": "dark_blue",
+    "2": "dark_green",
+    "3": "dark_aqua",
+    "4": "dark_red",
+    "5": "dark_purple",
+    "6": "gold",
+    "7": "gray",
+    "8": "dark_gray",
+    "9": "blue",
+    "a": "green",
+    "b": "aqua",
+    "c": "red",
+    "d": "light_purple",
+    "e": "yellow",
+    "f": "white",
+    "r": "\xc2\xa7r",
+    "k": "\xc2\xa7k",  # obfuscated
+    "l": "\xc2\xa7l",  # bold
+    "m": "\xc2\xa7m",  # strikethrough
+    "n": "\xc2\xa7n",  # underline
+    "o": "\xc2\xa7o",  # italic,
+}
+
 
 import utils.termcolors as termcolors
 
@@ -171,7 +196,7 @@ def processcolorcodes(messagestring):
 
             if code in "abcdef0123456789":
                 try:
-                    color = API.colorcodes[code]
+                    color = COLORCODES[code]
                 except KeyError:
                     color = "white"
 
@@ -218,7 +243,7 @@ def processoldcolorcodes(message):
      message: message text containing '&' to represent the chat formatting codes
     :return: mofified text containing the section sign (§) and the formatting code.
     """
-    for i in API.colorcodes:
+    for i in COLORCODES:
         message = message.replace("&" + i, "\xc2\xa7" + i)
     return message
 

@@ -7,8 +7,9 @@ Next build:
 - Removed deprecated proxy-storage.  Bans are stored in the server files and wrapper uses usercache for username caches.
 - Add error checking to alert for player object that cannot get a client in proxy mode.
 - Entities dynamically updated from http://minecraft-ids.grahamedgecombe.com on a monthly basis, if available.
-
+- block tiles for minecraft.py are also fetched from grahamedgecombe.com.
 - Destroyed entities are parsed and removed from world entities collection to await garbage collection.
+- new file core.entities.py replaces items from api.entity and core.items.
 
 
 Build #115 [0.8.2]:

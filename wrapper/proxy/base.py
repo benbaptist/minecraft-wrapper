@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 
-# p2 and py3 compliant
-
 import socket
 import threading
 import time
