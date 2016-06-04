@@ -52,6 +52,9 @@ class Web:
         t.daemon = True
         t.start()
 
+    def __del__(self):
+        self.data.save()
+
     # Authorization methods
     def checkLogin(self, password):
         if time.time() - self.disableLogins < 60:

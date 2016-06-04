@@ -103,9 +103,8 @@ class ServerConnection:
         try:
             self.version = self.wrapper.javaserver.protocolVersion
         except AttributeError:
-            # Default to 1.8 if no server is running
-            # This can be modified to any version
-            self.version = 47
+            # -1 to signal no server is running
+            self.version = -1
 
         # Determine packet types - currently 1.8 is the lowest version supported.
         if mcpacket.Server194.end() >= self.version >= mcpacket.Server194.start():  # 1.9.4
@@ -213,7 +212,6 @@ class ServerConnection:
                     self.packet.sendpkt(self.pktSB.KEEP_ALIVE, [_INT], data)  # which is why no need to [data] as a list
                 else:  # self.version >= mcpacket.PROTOCOL_1_8START: - future elif in case protocol changes again.
                     data = self.packet.readpkt([_VARINT])
-                    self.log.trace("keelalivedata %s ", data)
                     self.packet.sendpkt(self.pktSB.KEEP_ALIVE, [_VARINT], data)
                 self.log.trace("(PROXY SERVER) -> Parsed KEEP_ALIVE packet with server state 3 (PLAY)")
                 return False
@@ -402,7 +400,6 @@ class ServerConnection:
                 # ("varint:eid|byte:dx|byte:dy|byte:dz")
                 self.log.trace("(PROXY SERVER) -> Parsed ENTITY_RELATIVE_MOVE packet:\n%s", data)
 
-                # TODO just FYI, this is unfinshed code.. there is no 'world' instance in current code for javaserver
                 if self.wrapper.javaserver.world.getEntityByEID(data[0]) is not None:
                     self.wrapper.javaserver.world.getEntityByEID(data[0]).moveRelative((data[1], data[2], data[3]))
 
@@ -418,7 +415,6 @@ class ServerConnection:
 
                 self.log.trace("(PROXY SERVER) -> Parsed ENTITY_TELEPORT packet:\n%s", data)
                 if self.wrapper.javaserver.world.getEntityByEID(data[0]) is not None:
-                    # TODO I think this should simply record the entity position, not TP them...
                     self.wrapper.javaserver.world.getEntityByEID(data[0]).teleport((data[1], data[2], data[3]))
 
             elif pkid == self.pktCB.ATTACH_ENTITY:
@@ -456,6 +452,25 @@ class ServerConnection:
                             return
                         self.client.riding = self.wrapper.javaserver.world.getEntityByEID(vehormobeid)
                         self.wrapper.javaserver.world.getEntityByEID(vehormobeid).rodeBy = self.client
+            elif pkid == self.pktCB.DESTROY_ENTITIES:
+                # Get rid of dead entities so that python can GC them.
+                if not self.wrapper.javaserver.world:
+                    self.log.trace("(PROXY SERVER) -> did not parse DESTROY_ENTITIES packet.")
+                    return True
+                eids = []
+                if self.version < mcpacket.PROTOCOL_1_8START:
+                    entitycount = bytearray(self.packet.readpkt([_BYTE])[0])[0]  # make sure we get interable integer
+                    parser = [_INT]
+                else:
+                    entitycount = bytearray(self.packet.readpkt([_VARINT]))[0]
+                    parser = [_VARINT]
+                for _ in range(entitycount):
+                    eid = self.packet.readpkt(parser)[0]
+                    eidobj = self.wrapper.javaserver.world.getEntityByEID(eid)
+                    if eid in self.wrapper.javaserver.world.entities:
+                        del self.wrapper.javaserver.world.entities[eid]
+                    pass
+                self.log.trace("(PROXY SERVER) -> Parsed DESTROY_ENTITIES packet:\n%s destroyed", entitycount)
 
             # elif pkid == self.pktCB.MAP_CHUNK_BULK:  # (packet no longer exists in 1.9)
                 #  no idea why this is parsed.. we are not doing anything with the data...

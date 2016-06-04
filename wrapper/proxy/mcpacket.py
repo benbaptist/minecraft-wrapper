@@ -278,6 +278,7 @@ class Client17:
     BLOCK_CHANGE = 0x23
     MAP_CHUNK_BULK = 0x26
     NAMED_SOUND_EFFECT = 0x29  # 1.7 - 1.8 protocol just calls it "sound effect"
+    PARTICLE = 0x2a
     CHANGE_GAME_STATE = 0x2b
     OPEN_WINDOW = 0x2d
     SET_SLOT = 0x2f
@@ -328,6 +329,7 @@ class Client179:
     BLOCK_CHANGE = 0x23
     MAP_CHUNK_BULK = 0x26
     NAMED_SOUND_EFFECT = 0x29  # 1.7 - 1.8 protocol just calls it "sound effect"
+    PARTICLE = 0x2a
     CHANGE_GAME_STATE = 0x2b
     OPEN_WINDOW = 0x2d
     SET_SLOT = 0x2f
@@ -360,6 +362,7 @@ class Client18:
     PLAYER_LIST_ITEM = 0x38
     PLAYER_ABILITIES = 0x39  # corrected/added/verified wiki.vg/Protocol_History#16w07b see 15w43a clientbound
     JOIN_GAME = 0x01
+    PARTICLE = 0x2a
     DISCONNECT = 0x40
     RESPAWN = 0x07
     SPAWN_POSITION = 0x05
@@ -413,6 +416,7 @@ class Client19:  # Updated To Protocol 108 1.9 Minecraft
     PLAYER_LIST_ITEM = 0x2d
     PLAYER_ABILITIES = 0x2b  # corrected/added/verified wiki.vg/Protocol_History#16w07b see 15w43a clientbound
     JOIN_GAME = 0x23
+    PARTICLE = 0x22
     DISCONNECT = 0x1a
     RESPAWN = 0x33
     SPAWN_POSITION = 0x43
@@ -434,7 +438,7 @@ class Client19:  # Updated To Protocol 108 1.9 Minecraft
     NAMED_SOUND_EFFECT = 0x19
     RESOURCE_PACK_SEND = 0x32
     CHUNK_DATA = 0x20
-    BLOCK_CHANGE = 0xEE  # -0x0b  disabled: wrapper code prior to build 109 does nothing
+    BLOCK_CHANGE = 0x0b
     MAP_CHUNK_BULK = 0xEE  # Deprecated And Not Used In 1.9
     SET_SLOT = 0x16
     OPEN_WINDOW = 0x13
@@ -466,6 +470,7 @@ class Client194:
     PLAYER_LIST_ITEM = 0x2d
     PLAYER_ABILITIES = 0x2b  # corrected/added/verified wiki.vg/Protocol_History#16w07b see 15w43a clientbound
     JOIN_GAME = 0x23
+    PARTICLE = 0x22
     DISCONNECT = 0x1a
     RESPAWN = 0x33
     SPAWN_POSITION = 0x43
@@ -487,7 +492,7 @@ class Client194:
     NAMED_SOUND_EFFECT = 0x19
     RESOURCE_PACK_SEND = 0x32
     CHUNK_DATA = 0x20
-    BLOCK_CHANGE = 0xEE  # -0x0b  disabled: wrapper code prior to build 109 does nothing
+    BLOCK_CHANGE = 0x0b
     MAP_CHUNK_BULK = 0xEE  # Deprecated And Not Used In 1.9
     SET_SLOT = 0x16
     OPEN_WINDOW = 0x13
