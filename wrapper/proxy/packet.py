@@ -45,6 +45,7 @@ _CODERS = {
     "bytearray_short": 13,
     "position": 14,
     "slot": 15,
+    "slot_noNBT": 18,
     "uuid": 16,
     "metadata": 17,
     "rest": 90,
@@ -181,12 +182,11 @@ class Packet:
 
     def read(self, expression):
         """
-        This is deprecated and only there for old plugin support and while I debug the readpkt(). It
-        functions as a readpkt() wrapper.  This is not as fast as calling readpkt(), but makes a nice abstraction
-        and is back-wards compatible.
+        This is deprecated. It functions as a readpkt() wrapper.  This is not as fast as calling readpkt(), but
+        makes a nice abstraction and is back-wards compatible.
 
         Args:
-            expression: Something like "double:xposition|double:yposition|double:zposition|bool:on_ground"
+            expression: Something like "double:x|double:y|double:z|bool:on_ground"
 
         Returns:
             the original-style dict of returned values - {"x": double, "y": double, "z": double, "on_ground": bool}
@@ -280,9 +280,8 @@ class Packet:
 
     def send(self, pkid, expression, payload):
         """
-        This is deprecated and only there for old plugin support and while I debug the sendpkt(). It
-        functions as a sendpkt() wrapper.  This is not as fast as calling sendpkt(), but makes a nice abstraction
-        and is back-wards compatible.
+        This is deprecated. It functions as a sendpkt() wrapper.  This is not as fast as calling sendpkt(), but
+         makes a nice abstraction and is back-wards compatible.
 
         Args:
             pkid: packet id (int or hex - usually as an abstracted constant)

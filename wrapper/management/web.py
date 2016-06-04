@@ -64,6 +64,10 @@ class Web:
         # t = threading.Thread(target=self.updateGraph, args=())
         # t.daemon = True
         # t.start()
+
+    def __del__(self):
+            self.data.save()
+
     def onServerConsole(self, payload):
         while len(self.consoleScrollback) > 1000:
             try:

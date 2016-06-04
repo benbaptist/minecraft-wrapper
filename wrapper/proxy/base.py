@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 
-# p2 and py3 compliant
-
 import socket
 import threading
 import time
@@ -10,7 +8,6 @@ import json
 import utils.encryption as encryption
 from utils.helpers import getjsonfile, putjsonfile, find_in_json, epoch_to_timestr, read_timestr
 
-from core.storage import Storage
 from proxy.clientconnection import Client
 from proxy.packet import Packet
 
@@ -39,7 +36,7 @@ class Proxy:
         self.skins = {}
         self.skinTextures = {}
         self.uuidTranslate = {}
-        self.storage = Storage("proxy-data")
+        # removed deprecated proxy-data.json
 
         self.privateKey = encryption.generate_key_pair()
         self.publicKey = encryption.encode_public_key(self.privateKey)
@@ -103,7 +100,7 @@ class Proxy:
                                                           self.wrapper.config["Proxy"]["server-port"], 1))
         packet.send(0x00, "", ())
         packet.flush()
-
+        self.wrapper.javaserver.protocolVersion = -1
         while True:
             pkid, original = packet.grabPacket()
             if pkid == 0x00:

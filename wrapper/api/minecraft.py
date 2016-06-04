@@ -8,7 +8,7 @@ import json
 import os
 
 from core.nbt import NBTFile
-from core.items import Blocks
+from core.entities import Items
 
 
 # noinspection PyBroadException
@@ -21,7 +21,9 @@ class Minecraft:
         self.proxy = wrapper.proxy
         self.log = wrapper.log
         self._encoding = wrapper.config["General"]["encoding"]
-        self.blocks = Blocks
+
+        blockdata = Items()
+        self.blocks = blockdata.itemslist
 
     def isServerStarted(self):
         """

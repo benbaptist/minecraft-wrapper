@@ -32,6 +32,12 @@ class World:
         if eid in self.entities:
             return self.entities[eid]
 
+    def killEntityByEID(self, eid, dropitems=False, finishstateof_domobloot=True):
+        pass
+        if not dropitems:
+            self.javaserver.console("gamerule doMobLoot false")
+        self.javaserver.console("kill @e[type=%s,x=%d,y=%d,z=%d,c=1]")
+
     def setBlock(self, x, y, z, tilename, damage=0, mode="replace", data=None):
         if not data:
             data = {}

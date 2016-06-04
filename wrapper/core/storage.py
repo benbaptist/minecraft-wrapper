@@ -1,15 +1,16 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import unicode_literals
+# from __future__ import unicode_literals
 
 import json
 import os
-import threading
 import time
-import copy
 import logging
+# import threading
+# import copy
 
 try:
+    # noinspection PyUnresolvedReferences
     str2 = unicode
 except NameError:
     str2 = str
@@ -21,16 +22,17 @@ class Storage:
         self.name = name
         self.root = root
         self.encoding = encoding
-        self.data = {}
-        self.dataOld = {}
-        self.load()
-        self.abort = False
-        self.time = time.time()
         self.log = logging.getLogger('Wrapper.py')
 
-        t = threading.Thread(target=self.periodicsave, args=())
-        t.daemon = True
-        t.start()
+        self.data = {}
+        self.load()
+        self.time = time.time()
+        # self.dataOld = {}
+        # self.abort = False
+
+        # t = threading.Thread(target=self.periodicsave, args=())
+        # t.daemon = True
+        # t.start()
 
     def __del__(self):
         self.abort = True
@@ -40,39 +42,35 @@ class Storage:
         if not type(index) in (str, str2):
             raise Exception("A string must be passed - got %s" % type(index))
         try:
-            return self.data[str(index)]
+            return self.data[index]
         except KeyError:
-            self.log("failed to get key: <%s> out of data:\n%s", str(index), self.data)
+            self.log.debug("failed to get key: <%s> out of data:\n%s", index, self.data)
 
     def __setitem__(self, index, value):
         if not type(index) in (str, str2):
             raise Exception("A string must be passed - got %s" % type(index))
-        if str(index)[0:2] == "u'":
-            index = str(index.split("'")[1])
         self.data[index] = value
-        return self.data[index.decode()]
+        return self.data[index]
 
     def __delattr__(self, index):
         if not type(index) in (str, str2):
             raise Exception("A string must be passed - got %s" % type(index))
-        if str(index)[0:2] == "u'":
-            index = str(index.split("'")[1])
-        del self.data[index.decode()]
+        del self.data[index]
 
     def __iter__(self):
         for i in self.data:
             yield i
 
-    def periodicsave(self):
-        while not self.abort:
-            if time.time() - self.time > 60:
-                if not self.data == self.dataOld:
-                    try:
-                        self.save()
-                    except Exception as e:
-                        self.log.warning("Could not periodicsave data \n(%s)", e)
-                    self.time = time.time()
-            time.sleep(1)
+    # def periodicsave(self):
+    #     while not self.abort:
+    #         if time.time() - self.time > 60:
+    #             if not self.data == self.dataOld:
+    #                 try:
+    #                     self.save()
+    #                 except Exception as e:
+    #                     self.log.warning("Could not periodicsave data \n(%s)", e)
+    #                 self.time = time.time()
+    #         time.sleep(1)
 
     def mkdir(self, dirpath):
         if not os.path.exists(dirpath):
@@ -87,19 +85,19 @@ class Storage:
             self.save()
         with open("%s/%s.json" % (self.root, self.name), "r") as f:
             try:
-                self.data = json.loads(f.read(), self.encoding)
+                self.data = json.loads(f.read(), encoding=self.encoding)
             except Exception as e:
                 self.log.exception("Failed to load '%s/%s.json' (%s)", self.root, self.name, e)
                 return
-        self.dataOld = copy.deepcopy(self.data)
+        # self.dataOld = copy.deepcopy(self.data)
 
     def save(self):
+        if not os.path.exists(self.root):
+            self.mkdir(self.root)
         try:
-            if not os.path.exists(self.root):
-                self.mkdir(self.root)
             with open("%s/%s.json" % (self.root, self.name), "w") as f:
-                f.write(json.dumps(self.data, ensure_ascii=False))
-            self.flush = False
+                f.write(json.dumps(self.data, ensure_ascii=False, encoding=self.encoding, indent=2))
+                # self.flush = False  # where is this self variable used?  Why is it not defined in __init__?
         except Exception as e:
             self.log.exception(e)
 
@@ -121,4 +119,4 @@ class Storage:
                 del self.data[key]
         else:
             self.data[key] = value
-        self.flush = True
+        # self.flush = True
