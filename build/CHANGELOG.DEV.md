@@ -1,17 +1,3 @@
-Next build:
-
-- Added a "lastLoggedIn" item to player data.
-- Implemented sendBlock (the unfinished function "setBlock") to place phantom client side only blocks.
-- Removed the threaded periodicsave from Storage.  Plugin periodic saves (if desired) should be run on "ontimer".  Every plugin should already be using save() somewhere in the code anyway (like during "onDisable"). 
-- added \_\_Del__ saves to various modules to implement Storage object save()'s.
-- Removed deprecated proxy-storage.  Bans are stored in the server files and wrapper uses usercache for username caches.
-- Add error checking to alert for player object that cannot get a client in proxy mode.
-- Entities dynamically updated from http://minecraft-ids.grahamedgecombe.com on a monthly basis, if available.
-- block tiles for minecraft.py are also fetched from grahamedgecombe.com.
-- Destroyed entities are parsed and removed from world entities collection to await garbage collection.
-- new file core.entities.py replaces items from api.entity and core.items.
-
-
 Build #115 [0.8.2]:
 
 - [Capturing bed sleeping / right click #146](https://github.com/benbaptist/minecraft-wrapper/issues/146)
@@ -28,7 +14,16 @@ ______________________________________
 - Fix lots of packet parsing problems, most of which were due to not parsing correctly for a given version.   This fixes a __lot__ of random disconnect issues.
 - Implemented packet sets for mcpacket.py for ALL versions 1.7 to 1.9
 - Added a (maybe temporary) slot parsing read_slot_nbtless() for cases where our parsing of the nbt slot data is not working (1.7 minecrafts).
-
+- Added a "lastLoggedIn" item to player data.
+- Implemented sendBlock (the unfinished function "setBlock") to place phantom client side only blocks.
+- Removed the threaded periodicsave from Storage.  Plugin periodic saves (if desired) should be run on "ontimer".  Every plugin should already be using save() somewhere in the code anyway (like during "onDisable"). 
+- added \_\_Del__ saves to various modules to implement Storage object save()'s.
+- Removed deprecated proxy-storage.  Bans are stored in the server files and wrapper uses usercache for username caches.
+- Add error checking to alert for player object that cannot get a client in proxy mode.
+- Entities dynamically updated from http://minecraft-ids.grahamedgecombe.com on a monthly basis, if available.
+- block tiles for minecraft.py are also fetched from grahamedgecombe.com.
+- Destroyed entities are parsed and removed from world entities collection to await garbage collection.
+- new file core.entities.py replaces items from api.entity and core.items.
 
 
 ##### update Packet read and send methods: #####
