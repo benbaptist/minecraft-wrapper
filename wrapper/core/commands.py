@@ -234,8 +234,13 @@ class Commands:
                 return
             elif commargs[0].lower() in ("k", "kill"):
                 return
-            player.message("&cUsage: /entity <count>")
-            player.message("&c       /entity <kill> <EIDofEntity> [count]")
+            elif commargs[0].lower() in ("l", "list", "sh", "show" "all"):
+                player.message("Entities: \n%s" % worldloaded.entities)
+                return
+
+            player.message("&cUsage: /entity count")
+            player.message("&c       /entity list")
+            player.message("&c       /entity kill <EIDofEntity> [count]")
 
     def command_wrapper(self, player, payload):
         if not player.isOp():

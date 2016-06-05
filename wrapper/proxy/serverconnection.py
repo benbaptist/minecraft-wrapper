@@ -354,9 +354,9 @@ class ServerConnection:
                     # "varint:eid|uuid:objectUUID|byte:type_|int:x|int:y|int:z|byte:pitch|byte:yaw|int:info|
                     # short:velocityX|short:velocityY|short:velocityZ")
                 entityuuid = dt[1]
-                objectname = self.wrapper.javaserver.world.entitytypes[dt[2]]["name"]
+                objectname = self.wrapper.javaserver.world.objecttypes[dt[2]]
                 newobject = {dt[0]: Entity(dt[0], entityuuid, dt[2], objectname,
-                                           (dt[3], dt[4], dt[5],), (dt[6], dt[7]), True)}
+                                           (dt[3], dt[4], dt[5],), (dt[6], dt[7]), True, self.username)}
 
                 self.wrapper.javaserver.world.addEntity(newobject)
                 self.log.trace("(PROXY SERVER) -> Parsed SPAWN_OBJECT packet:\n%s", dt)
@@ -387,7 +387,7 @@ class ServerConnection:
 
                 mobname = self.wrapper.javaserver.world.entitytypes[dt[2]]["name"]
                 newmob = {dt[0]: Entity(dt[0], entityuuid, dt[2], mobname,
-                                        (dt[3], dt[4], dt[5],), (dt[6], dt[7], dt[8]), False)}
+                                        (dt[3], dt[4], dt[5],), (dt[6], dt[7], dt[8]), False, self.username)}
 
                 self.wrapper.javaserver.world.addEntity(newmob)
                 # self.wrapper.javaserver.world.entities[dt[0]] = Entity(dt[0], entityuuid, dt[2],
@@ -671,8 +671,6 @@ class ServerConnection:
 
             elif pkid == self.pktCB.DISCONNECT:
                 message = self.packet.readpkt([_JSON])  # [0]["json"]
-                print(message)
-                # ("json:json")["json"]
                 self.log.info("Disconnected from server: %s", message)
                 if not self.client.isLocal:  # TODO - multi server code
                     self.close()

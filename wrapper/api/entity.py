@@ -8,7 +8,7 @@ except ImportError:
 
 
 class Entity:
-    def __init__(self, eid, uuid, entitytype, entityname, position, look, isobject):
+    def __init__(self, eid, uuid, entitytype, entityname, position, look, isobject, playerclient):
         self.eid = eid  # Entity ID
         self.uuid = uuid  # Entity UUID
         self.entitytype = entitytype  # Type of Entity
@@ -19,6 +19,7 @@ class Entity:
         self.isObject = isobject  # Boat/Minecart/other non-living Entities are objects
         self.entityname = entityname
         self.active = currtime()
+        self.clientname = playerclient
 
     def __str__(self):
         return str(self.entitytype)

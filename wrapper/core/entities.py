@@ -197,6 +197,38 @@ BLOCKS = {
   }
 }
 
+OBJECTS = {
+    1: "Boat",
+    2: "Item Stack",
+    3: "Area Effect Cloud",
+    10: "Minecart",
+    11: "Minecart (storage), 0.98, 0.7",
+    12: "(unused since 1.6.x), Minecart (powered), 0.98,0.7",
+    50: "Activated TNT",
+    51: "EnderCrystal",
+    60: "Arrow (projectile)",
+    61: "Snowball (projectile)",
+    62: "Egg (projectile)",
+    63: "FireBall (ghast projectile)",
+    64: "FireCharge (blaze projectile)",
+    65: "Thrown Enderpearl",
+    66: "Wither Skull (projectile)",
+    67: "Shulker Bullet",
+    70: "Falling Objects",
+    71: "Item frames",
+    72: "Eye of Ender",
+    73: "Thrown Potion",
+    74: "Falling Dragon Egg",
+    75: "Thrown Exp Bottle",
+    76: "Firework Rocket",
+    77: "Leash Knot",
+    78: "ArmorStand",
+    90: "Fishing Float",
+    91: "Spectral Arrow",
+    92: "Tipped Arrow",
+    93: "Dragon Fireball"
+}
+
 
 class Entities:
     def __init__(self):
@@ -285,3 +317,9 @@ class Items:
                 else:
                     blocks[item["type"]] = {"tilename": item["text_type"], "meta": {item["meta"]: item["name"]}}
             self.itemslist = blocks
+
+
+class Objects:
+    def __init__(self):
+        self.objectlist = OBJECTS
+

@@ -109,7 +109,7 @@ class Proxy:
 
     def getclientbyofflineserveruuid(self, uuid):
         """
-        :param uuid: - MCUUID .. I believe.
+        :param uuid: - MCUUID
         :return: the matching client
         """
         attempts = ["Search: %s" % str(uuid)]

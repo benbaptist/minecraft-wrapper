@@ -6,7 +6,7 @@ from copy import deepcopy
 from time import sleep
 import threading
 from core.entities import Entities as Entitytypes
-
+from core.entities import Objects as Objecttypes
 
 class World:
     """
@@ -20,8 +20,14 @@ class World:
         self.name = name
         self.javaserver = mcserver
         self.log = mcserver.log
+
+        # Entities - living beings (includes XP orbs!)
         entitylistobject = Entitytypes()
         self.entitytypes = entitylistobject.entitylist
+
+        # objects.. non living entities, minecarts, falling sand, primed TNT. armorstands, projectiles..
+        objectlistobject = Objecttypes()
+        self.objecttypes = objectlistobject.objectlist
 
         self.entities = {}
         self.addentities = {}  # dictionary of entity data
@@ -42,7 +48,7 @@ class World:
         self.abortep = True
 
     def _entityprocessor(self, updatefrequency=5):
-        self.log.trace("_entityprocessor thread started.")
+        self.log.debug("_entityprocessor thread started.")
         while self.javaserver.state in (1, 2, 4) and not self.abortep:  # server is running
 
             self.log.trace("_entityprocessor looping.")
@@ -56,13 +62,25 @@ class World:
             entriestoremove = self.delentities
             self.delentities = []
 
+            # deletions and additions
             self.entities.update(newadditions)
             for k in entriestoremove:
                 self.entities.pop(k, None)
 
+            # start looking for stale client entities
+            players = self.javaserver.players
+            playerlist = []
+            for player in players:
+                playerlist.append(player)
+            for eid in self.entities:
+                if self.getEntityByEID(eid).clientname not in playerlist:
+                    self.delentities.append(eid)
+
+            # free up block - block is not currently respected by any method
+            # we are just making sure this is the one doing any additions and deletions
             self.entity_blockaccess = False
             self.log.trace("_entityprocessor updates done.")
-        self.log.trace("_entityprocessor thread closed.")
+        self.log.debug("_entityprocessor thread closed.")
 
     def getBlock(self, pos):
         x, y, z = pos
