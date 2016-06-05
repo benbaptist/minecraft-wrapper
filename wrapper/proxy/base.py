@@ -118,7 +118,6 @@ class Proxy:
                             (client, client.uuid.string, client.serveruuid.string, client.username))
             if client.serveruuid.string == str(uuid):
                 self.uuidTranslate[uuid] = client.uuid.string
-                self.log.trace("getclientbyofflineserveruuid succeeded")
                 return client
         self.log.debug("getclientbyofflineserveruuid failed: \n %s" % attempts)
         self.log.debug("POSSIBLE CLIENTS: \n %s" % self.clients)

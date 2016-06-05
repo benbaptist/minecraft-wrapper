@@ -9,7 +9,6 @@ import time
 import os
 import logging
 import socket
-import uuid
 import sys  # used to pass sys.argv to server
 
 import core.buildinfo as version_info
@@ -393,7 +392,7 @@ class Wrapper:
     def getuuidfromname(name):
         """
         :param name: should be passed as "OfflinePlayer:<playername>" to get the correct (offline) vanilla server uuid
-        :return: a uuid object based on the name
+        :return: a MCUUID object based on the name
         """
         playername = "OfflinePlayer:%s" % name
         m = hashlib.md5()
