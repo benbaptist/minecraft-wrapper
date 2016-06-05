@@ -355,9 +355,11 @@ class ServerConnection:
                     # "varint:eid|uuid:objectUUID|byte:type_|int:x|int:y|int:z|byte:pitch|byte:yaw|int:info|
                     # short:velocityX|short:velocityY|short:velocityZ")
                 entityuuid = dt[1]
-                self.wrapper.javaserver.world.entities[dt[0]] = Entity(dt[0], entityuuid, dt[2],
-                                                                       (dt[3], dt[4], dt[5]),
-                                                                       (dt[6], dt[7]), True)
+                objectname = self.wrapper.javaserver.world.entitytypes[dt[2]]["name"]
+                newobject = {dt[0]: Entity(dt[0], entityuuid, dt[2], objectname,
+                                           (dt[3], dt[4], dt[5],), (dt[6], dt[7]), True)}
+
+                self.wrapper.javaserver.world.addEntity(newobject)
                 self.log.trace("(PROXY SERVER) -> Parsed SPAWN_OBJECT packet:\n%s", dt)
 
             elif pkid == self.pktCB.SPAWN_MOB:
@@ -384,10 +386,15 @@ class ServerConnection:
                 #     dt["head_pitch"]
                 self.log.trace("(PROXY SERVER) -> Parsed SPAWN_MOB packet:\n%s", dt)
 
-                self.wrapper.javaserver.world.entities[dt[0]] = Entity(dt[0], entityuuid, dt[2],
-                                                                       (dt[3], dt[4], dt[5], ),
-                                                                       (dt[6], dt[7], dt[8]),
-                                                                       False)
+                mobname = self.wrapper.javaserver.world.entitytypes[dt[2]]["name"]
+                newmob = {dt[0]: Entity(dt[0], entityuuid, dt[2], mobname,
+                                        (dt[3], dt[4], dt[5],), (dt[6], dt[7], dt[8]), False)}
+
+                self.wrapper.javaserver.world.addEntity(newmob)
+                # self.wrapper.javaserver.world.entities[dt[0]] = Entity(dt[0], entityuuid, dt[2],
+                #                                                        (dt[3], dt[4], dt[5], ),
+                #                                                        (dt[6], dt[7], dt[8]),
+                #                                                        False)
 
             elif pkid == self.pktCB.ENTITY_RELATIVE_MOVE:
                 if not self.wrapper.javaserver.world:  # hereout, no further explanation.. See prior packet.
@@ -417,6 +424,16 @@ class ServerConnection:
                 if self.wrapper.javaserver.world.getEntityByEID(data[0]) is not None:
                     self.wrapper.javaserver.world.getEntityByEID(data[0]).teleport((data[1], data[2], data[3]))
 
+            elif pkid == self.pktCB.ENTITY_HEAD_LOOK:
+                if not self.wrapper.javaserver.world:  # TODO is this needed?
+                    self.log.trace("(PROXY SERVER) -> did not parse ENTITY_HEAD_LOOK packet.")
+                if self.version < mcpacket.PROTOCOL_1_8START:  # 1.7.10 and prior
+                    data = self.packet.readpkt([_INT])[0]
+                else:
+                    data = self.packet.readpkt([_VARINT])[0]
+                if self.wrapper.javaserver.world.getEntityByEID(data):
+                    self.wrapper.javaserver.world.getEntityByEID(data).keepactive()
+                self.log.trace("(PROXY SERVER) -> Parsed ENTITY_HEAD_LOOK packet EID: %s", data)
             elif pkid == self.pktCB.ATTACH_ENTITY:
                 data = []
                 leash = True  # False to detach
@@ -464,13 +481,12 @@ class ServerConnection:
                 else:
                     entitycount = bytearray(self.packet.readpkt([_VARINT]))[0]
                     parser = [_VARINT]
+
                 for _ in range(entitycount):
                     eid = self.packet.readpkt(parser)[0]
-                    eidobj = self.wrapper.javaserver.world.getEntityByEID(eid)
-                    if eid in self.wrapper.javaserver.world.entities:
-                        del self.wrapper.javaserver.world.entities[eid]
-                    pass
-                self.log.trace("(PROXY SERVER) -> Parsed DESTROY_ENTITIES packet:\n%s destroyed", entitycount)
+                    self.wrapper.javaserver.world.delentities.append(eid)
+
+                self.log.trace("(PROXY SERVER) -> Parsed DESTROY_ENTITIES packet:\n%s entities destroyed", entitycount)
 
             # elif pkid == self.pktCB.MAP_CHUNK_BULK:  # (packet no longer exists in 1.9)
                 #  no idea why this is parsed.. we are not doing anything with the data...

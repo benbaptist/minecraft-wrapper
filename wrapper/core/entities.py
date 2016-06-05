@@ -8,6 +8,7 @@ try:
 except ImportError:
     requests = False
 
+# mobname = Entity.entitylist[type]["name"]
 ENTITIES = {  # partial list of entities - Those sizes dont exist on the Grahams version.
     48: {"Name": "Mob"},
     49: {"Name": "Monster"},
@@ -26,6 +27,7 @@ ENTITIES = {  # partial list of entities - Those sizes dont exist on the Grahams
     93: {"Name": "Chicken"},
     94: {"Name": "Squid"}
 }
+
 
 #  Just a sample (incomplete list) - The real one should be loaded from web/local disk.
 BLOCKS = {
