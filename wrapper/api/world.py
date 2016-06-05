@@ -88,6 +88,10 @@ class World:
         if eid in self.entities:
             return self.entities[eid]
 
+    def countActiveEntities(self):
+        """ return a count of all entities (does not include pending added or pending deletion. """
+        return len(self.entities)
+
     def copyEntityByEID(self, eid):
         """ Returns a copy or None if the specified entity ID doesn't exist.
 

@@ -103,7 +103,7 @@ class Client:
 
         # UUIDs - all should use MCUUID unless otherwise specified
         self.uuid = None  # this is the client UUID authenticated by connection to session server.
-        self.serverUuid = None  # Server UUID - which Could be the local offline UUID.
+        self.serveruuid = None  # Server UUID - which Could be the local offline UUID.
 
         # information gathered during login or socket connection processes
         self.address = None
@@ -247,6 +247,7 @@ class Client:
             except socket.error:
                 self.log.debug("clientconnection socket closed (bad file descriptor), closing flush..")
                 self.abort = True
+                self.close()
                 break
             time.sleep(0.03)
 
@@ -748,12 +749,13 @@ class Client:
                         # send to client 1.8 +
                         self.packet.sendpkt(0x01, [_STRING, _BYTEARRAY, _BYTEARRAY],
                                             (self.serverID, self.publicKey, self.verifyToken))
+                    self.serveruuid = self.wrapper.getuuidfromname(self.username)  # MCUUID object
 
                 # probably not a good idea to be below here ;)
                 else:
                     self.connect_to_server()
-                    self.uuid = self.wrapper.getuuidfromname("OfflinePlayer:%s" % self.username)  # MCUUID object
-                    self.serverUuid = self.wrapper.getuuidfromname("OfflinePlayer:%s" % self.username)  # MCUUID object
+                    self.uuid = self.wrapper.getuuidfromname(self.username)  # MCUUID object
+                    self.serveruuid = self.wrapper.getuuidfromname(self.username)  # MCUUID object
                     self.packet.sendpkt(0x02, [_STRING, _STRING], (self.uuid.string, self.username))
                     self.state = ClientState.PLAY
                     self.log.info("%s's client (insecure) LOGON from (IP: %s)", self.username, self.addr[0])
@@ -812,46 +814,40 @@ class Client:
                             self.log.info("%s's client performed LOGON in with new name, falling back to %s",
                                           self.username, currentname)
                             self.username = currentname
-                    self.serverUuid = self.wrapper.getuuidfromname("OfflinePlayer:%s" % self.username)
+                    self.serveruuid = self.wrapper.getuuidfromname(self.username)
                 else:
                     # TODO: See if this can be accomplished via MCUUID
                     self.uuid = uuid.uuid3(uuid.NAMESPACE_OID, "OfflinePlayer:%s" % self.username)  # no space in name
+                    self.log.debug("Client login with no proxymode - 'self.uuid = uuid.uuid3...'")
 
                 #  This needs re-worked.
                 # if self.config["Proxy"]["convert-player-files"]:  # Rename UUIDs accordingly
                 #     if self.config["Proxy"]["online-mode"]:
                 #         # Check player files, and rename them accordingly to offline-mode UUID
                 #         worldname = self.wrapper.javaserver.worldName
-                #         if not os.path.exists("%s/playerdata/%s.dat" % (worldname, self.serverUuid.string)):
+                #         if not os.path.exists("%s/playerdata/%s.dat" % (worldname, self.serveruuid.string)):
                 #             if os.path.exists("%s/playerdata/%s.dat" % (worldname, self.uuid.string)):
                 #                 self.log.info("Migrating %s's playerdata file to proxy mode", self.username)
                 #                 shutil.move("%s/playerdata/%s.dat" % (worldname, self.uuid.string),
-                #                             "%s/playerdata/%s.dat" % (worldname, self.serverUuid.string))
+                #                             "%s/playerdata/%s.dat" % (worldname, self.serveruuid.string))
                 #                 with open("%s/.wrapper-proxy-playerdata-migrate" % worldname, "a") as f:
-                #                     f.write("%s %s\n" % (self.uuid.string, self.serverUuid.string))
+                #                     f.write("%s %s\n" % (self.uuid.string, self.serveruuid.string))
                 #         # Change whitelist entries to offline mode versions
                 #         if os.path.exists("whitelist.json"):
                 #             with open("whitelist.json", "r") as f:
                 #                 jsonwhitelistdata = json.loads(f.read())
                 #             if jsonwhitelistdata:
                 #                 for player in jsonwhitelistdata:
-                #                     if not player["uuid"] == self.serverUuid.string and \
+                #                     if not player["uuid"] == self.serveruuid.string and \
                 #                                     player["uuid"] == self.uuid.string:
                 #                         self.log.info("Migrating %s's whitelist entry to proxy mode", self.username)
-                #                         jsonwhitelistdata.append({"uuid": self.serverUuid.string,
+                #                         jsonwhitelistdata.append({"uuid": self.serveruuid.string,
                 #                                                   "name": self.username})
-                #                         # TODO I think the indent on this is wrong. looks like it will overwrite with
-                #                         # each record. either that, or
-                #                         # it is making an insane number of re-writes (each time a record
-                #                         #  is processed)
-                #                         # since you can't append a json file like this, I assume the whole file should
-                #                         # be written at once,
-                #                         # after all the records are appended
                 #                         with open("whitelist.json", "w") as f:
                 #                             f.write(json.dumps(jsonwhitelistdata))
                 #                         self.wrapper.javaserver.console("whitelist reload")
                 #                         with open("%s/.wrapper-proxy-whitelist-migrate" % worldname, "a") as f:
-                #                             f.write("%s %s\n" % (self.uuid.string, self.serverUuid.string))
+                #                             f.write("%s %s\n" % (self.uuid.string, self.serveruuid.string))
 
                 self.ip = self.addr[0]
 
@@ -883,7 +879,7 @@ class Client:
                                                      {
                                                       "player": self.username,
                                                       "online_uuid": self.uuid.string,
-                                                      "offline_uuid": self.serverUuid.string,
+                                                      "offline_uuid": self.serveruuid.string,
                                                       "ip": self.addr[0]
                                                      }):
                     self.state = ClientState.HANDSHAKE
@@ -1088,6 +1084,7 @@ class Client:
                 # ckeck for active client keep alive status:
                 if time.time() - self.time_client_responded > 25:  # server can allow up to 30 seconds for response
                     self.state = ClientState.HANDSHAKE
+                    self.disconnect("Client closed due to lack of keepalive response")
                     self.log.debug("Closing %s's client thread due to lack of keepalive response", playername)
                     self.close()
 

@@ -330,7 +330,6 @@ class ServerConnection:
 
                 # We dont need to read the whole thing.
                 clientserverid = self.proxy.getclientbyofflineserveruuid(dt[1])
-                self.client.serverUuid = dt[1]
                 if clientserverid.uuid:
                     if self.version < mcpacket.PROTOCOL_1_8START:
                         self.client.packet.sendpkt(

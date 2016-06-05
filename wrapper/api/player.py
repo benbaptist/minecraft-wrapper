@@ -72,7 +72,7 @@ class Player:
         # IF False error carries forward, this is not a valid player, for whatever reason...
         self.clientUuid = self.mojangUuid
         # These two are offline by default.
-        self.offlineUuid = self.wrapper.getuuidfromname("OfflinePlayer:%s" % self.username)
+        self.offlineUuid = self.wrapper.getuuidfromname(self.username)
         self.serverUuid = self.offlineUuid  # Start out as the Offline - change it to Mojang if local server is Online
 
         self.ipaddress = "127.0.0.0"
@@ -96,7 +96,7 @@ class Player:
                 if client.username == self.username:
                     self.client = client
                     self.clientUuid = client.uuid  # Both MCUUID objects
-                    self.serverUuid = client.serverUuid
+                    self.serverUuid = client.serveruuid
                     self.ipaddress = client.ip
                     self.clientboundPackets = self.client.pktCB
                     self.serverboundPackets = self.client.pktSB

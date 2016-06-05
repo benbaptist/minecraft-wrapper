@@ -121,7 +121,7 @@ class Minecraft:
                 os.remove("wrapper-data/players/" + uuidf)
                 continue
 
-            offinelineuuid = self.wrapper.getuuidfromname("OfflinePlayer:%s" % username)
+            offinelineuuid = self.wrapper.getuuidfromname(username)
             if online:
                 if offinelineuuid == puuid:
                     continue
