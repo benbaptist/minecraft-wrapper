@@ -93,6 +93,9 @@ class MCServer:
         capturethread.daemon = True
         capturethread.start()
 
+    def __del__(self):
+        self.state = 0  # MCSState.OFF use hard-coded number in case Class MCSState is GC'ed
+
     def __handle_server__(self):
         """
         Internally-used function that handles booting the server, parsing console output, and etc.

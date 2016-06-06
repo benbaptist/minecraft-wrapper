@@ -262,6 +262,9 @@ class Wrapper:
             elif command in ("/playerstats", "/stats"):
                 self.runwrapperconsolecommand("playerstats", allargs)
 
+            elif command in ("/ent", "/entity", "/entities", "ent", "entity", "entities"):
+                self.runwrapperconsolecommand("ent", allargs)
+
             # TODO Add more commands below here, below the original items:
             # TODO __________________
 
@@ -292,6 +295,7 @@ class Wrapper:
                 readout("/raw [command]", "Send command to the Minecraft Server. Useful for Forge\n"
                                           "                  commands like '/fml confirm'.")
                 readout("/version", self.getbuildstring())
+                readout("/entity", "Work with entities (run /entity for more...)")
                 readout("/bans", "Display the ban help page.")
             elif command == "/bans":
                 # ban commands help.
@@ -310,8 +314,7 @@ class Wrapper:
                     readout("/banlist", " - search and display the banlist (warning - displays on single page!)",
                             separator="[players|ips] [searchtext] ", pad=12)
                 else:
-                    readout("ERROR - ", "Bans are not enabled (proxy mode is not on).",
-                            separator="", pad=10)
+                    readout("ERROR - ", "Bans are not enabled (proxy mode is not on).", separator="", pad=10)
             else:
                 try:
                     self.javaserver.console(consoleinput)
@@ -338,6 +341,7 @@ class Wrapper:
              "Command used to manage permission groups and users, add permission nodes, etc.", None),
             # Minimum server version for commands to appear is 1.7.6 (registers perm later in serverconnection.py)
             # These won't appear is proxy mode not on (since serverconnection is part of proxy).
+            ("/Entity <count/kill> [eid] [count]", "/entity help/? for more help.. ", None),
             ("/ban <name> [reason..] [d:<days>/h:<hours>]",
              "Ban a player. Specifying h:<hours> or d:<days> creates a temp ban.", "mc1.7.6"),
             ("/ban-ip <ip> [<reason..> <d:<number of days>]",
@@ -390,8 +394,9 @@ class Wrapper:
         :param name: should be passed as "OfflinePlayer:<playername>" to get the correct (offline) vanilla server uuid
         :return: a MCUUID object based on the name
         """
+        playername = "OfflinePlayer:%s" % name
         m = hashlib.md5()
-        m.update(name)
+        m.update(playername)
         d = bytearray(m.digest())
         d[6] &= 0x0f
         d[6] |= 0x30

@@ -121,7 +121,7 @@ class Minecraft:
                 os.remove("wrapper-data/players/" + uuidf)
                 continue
 
-            offinelineuuid = self.wrapper.getuuidfromname("OfflinePlayer:%s" % username)
+            offinelineuuid = self.wrapper.getuuidfromname(username)
             if online:
                 if offinelineuuid == puuid:
                     continue
@@ -159,6 +159,7 @@ class Minecraft:
 
     def getPlayerDat(self, name):
         pass
+        # TODO a good idea
 
     def lookupName(self, uuid):  # This function is just part of the API for plugin devs/users.
         """
