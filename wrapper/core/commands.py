@@ -216,7 +216,7 @@ class Commands:
             if not worldloaded:
                 # only console could be the source:
                 readout("ERROR - ", "There is no world instance (no server started).", separator="",
-                                     pad=10)
+                        pad=10)
                 return
             commargs = payload["args"]
             if len(commargs) < 1:
@@ -233,6 +233,13 @@ class Commands:
                         separator=" : ", pad=20)
                 return
             elif commargs[0].lower() in ("k", "kill"):
+                lock = worldloaded.applylock()
+                eid = getargs(commargs, 1)
+                count = getargs(commargs, 2)
+                if count < 1:
+                    count = 1
+                worldloaded.killEntityByEID(eid, dropitems=False, finishstateof_domobloot=True, count=count)
+                lock = worldloaded.removelock()
                 return
             elif commargs[0].lower() in ("l", "list", "sh", "show" "all"):
                 player.message("Entities: \n%s" % worldloaded.entities)

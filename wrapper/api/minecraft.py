@@ -159,6 +159,7 @@ class Minecraft:
 
     def getPlayerDat(self, name):
         pass
+        # TODO a good idea
 
     def lookupName(self, uuid):  # This function is just part of the API for plugin devs/users.
         """

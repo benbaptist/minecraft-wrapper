@@ -5,8 +5,10 @@ import json
 from copy import deepcopy
 from time import sleep
 import threading
+from time import time as currtime
 from core.entities import Entities as Entitytypes
 from core.entities import Objects as Objecttypes
+
 
 class World:
     """
@@ -34,8 +36,9 @@ class World:
         self.delentities = []  # list of eids
 
         self.abortep = False
-        self.entity_blockprocessor = False
-        self.entity_blockaccess = False
+        self.lockprocessor = 0
+        self.timeoverride = currtime()
+        self.lock = False
 
         t = threading.Thread(target=self._entityprocessor, name="entProc", args=())
         t.daemon = True
@@ -47,13 +50,30 @@ class World:
     def __del__(self):
         self.abortep = True
 
+    def applylock(self, blockforlock=True):
+        while self.lock and blockforlock:
+            pass
+        self.lockprocessor += 1
+        self.timeoverride = currtime()
+        return self.lockprocessor
+
+    def removelock(self):
+        self.lockprocessor -= 1
+        if self.lockprocessor < 0:
+            self.lockprocessor = 0
+        return self.lockprocessor
+
     def _entityprocessor(self, updatefrequency=5):
         self.log.debug("_entityprocessor thread started.")
         while self.javaserver.state in (1, 2, 4) and not self.abortep:  # server is running
 
             self.log.trace("_entityprocessor looping.")
             sleep(updatefrequency)  # timer for adding entities
-            self.entity_blockaccess = True
+            while self.lockprocessor:
+                self.lock = True
+                # seconds from last lock to release all locking (timeout error)
+                if (currtime() - self.timeoverride) > 30:
+                    self.lockprocessor = 0
             self.log.trace("_entityprocessor starting updates.")
             # the next 4 steps are not atomic.. we could lose a record between them.. ah well!
             # the only way to avoid that is to have routines block even for updates to addentities
@@ -78,7 +98,7 @@ class World:
 
             # free up block - block is not currently respected by any method
             # we are just making sure this is the one doing any additions and deletions
-            self.entity_blockaccess = False
+            self.lock = False
             self.log.trace("_entityprocessor updates done.")
         self.log.debug("_entityprocessor thread closed.")
 
@@ -105,19 +125,12 @@ class World:
         """
         if eid in self.entities:
             return self.entities[eid]
+        else:
+            return False
 
-    def countActiveEntities(self):
+    def countActiveEntities(self, playername=False):
         """ return a count of all entities (does not include pending added or pending deletion. """
         return len(self.entities)
-
-    def copyEntityByEID(self, eid):
-        """ Returns a copy or None if the specified entity ID doesn't exist.
-
-        used to get a copy of the eid record
-
-        """
-        if eid in self.entities:
-            return deepcopy(self.entities[eid])
 
     def addEntity(self, copyof_entity):
         """
@@ -137,6 +150,8 @@ class World:
         """ A way to test whether the specified eid is still valid """
         if eid in self.entities:
             return True
+        else:
+            return False
 
     def killEntityByEID(self, eid, dropitems=False, finishstateof_domobloot=True, count=1):
         """ takes the entity by eid and kills the first entity of that type centered
@@ -149,17 +164,23 @@ class World:
             count - used to specify more than one entity; again, centers on the specified eid location.
 
         """
+        eid = int(float(eid))
+        count = int(float(count))
+
         if dropitems:
             self.javaserver.console("gamerule doMobLoot true")
         else:
             self.javaserver.console("gamerule doMobLoot false")
-        entity = self.copyEntityByEID(eid)
-        pos = entity.position
-        entitydesc = entity.entityname
-        self.javaserver.console("kill @e[type=%s,x=%d,y=%d,z=%d,c=%d]" %
-                                (entitydesc, pos[0], pos[1], pos[2], count))
+        lock = self.applylock()
+        entity = self.getEntityByEID(eid, debug=True)
+        if self.ExistsEntityByEID(eid):
+            pos = entity.position
+            entitydesc = entity.entityname
+            self.javaserver.console("kill @e[type=%s,x=%d,y=%d,z=%d,c=%d]" %
+                                    (entitydesc, pos[0], pos[1], pos[2], count))
+        lock = self.removelock()
         if finishstateof_domobloot:
-            self.javaserver.console("gamerule doMobLoot True")
+            self.javaserver.console("gamerule doMobLoot true")
 
     def setBlock(self, x, y, z, tilename, damage=0, mode="replace", data=None):
         if not data:

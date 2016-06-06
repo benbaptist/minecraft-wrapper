@@ -40,17 +40,10 @@ class Entity:
         self.position = (oldposition[0], oldposition[1], oldposition[2])
         if self.rodeBy:
             self.rodeBy.position = self.position
-        self.keepactive()
 
     def teleport(self, position):
         """ Track entity teleports to a specific location. """
         self.position = (position[0] / 32, position[1] / 32, position[2] / 32)  # Fixed point numbers...
         if self.rodeBy:
             self.rodeBy.position = self.position
-        self.keepactive()
 
-    def keepactive(self):
-        """ used to mark that the server has sent a packet about this entity (it is still active)
-            Entities which do not maintain a current time are likely gone unloaded chunks
-            or were part of a logged off players field of view."""
-        self.active = currtime()

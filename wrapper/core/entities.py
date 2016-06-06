@@ -322,4 +322,3 @@ class Items:
 class Objects:
     def __init__(self):
         self.objectlist = OBJECTS
-

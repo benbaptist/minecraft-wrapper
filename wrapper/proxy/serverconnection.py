@@ -406,8 +406,11 @@ class ServerConnection:
                 # ("varint:eid|byte:dx|byte:dy|byte:dz")
                 self.log.trace("(PROXY SERVER) -> Parsed ENTITY_RELATIVE_MOVE packet:\n%s", data)
 
-                if self.wrapper.javaserver.world.getEntityByEID(data[0]) is not None:
-                    self.wrapper.javaserver.world.getEntityByEID(data[0]).moveRelative((data[1], data[2], data[3]))
+                lock = self.wrapper.javaserver.world.applylock()
+                entityupdate = self.wrapper.javaserver.world.getEntityByEID(data[0])
+                if entityupdate:
+                    entityupdate.moveRelative((data[1], data[2], data[3]))
+                lock = self.wrapper.javaserver.world.removelock()
 
             elif pkid == self.pktCB.ENTITY_TELEPORT:
                 if not self.wrapper.javaserver.world:
@@ -420,19 +423,12 @@ class ServerConnection:
                 # ("varint:eid|int:x|int:y|int:z|byte:yaw|byte:pitch")
 
                 self.log.trace("(PROXY SERVER) -> Parsed ENTITY_TELEPORT packet:\n%s", data)
-                if self.wrapper.javaserver.world.getEntityByEID(data[0]) is not None:
-                    self.wrapper.javaserver.world.getEntityByEID(data[0]).teleport((data[1], data[2], data[3]))
+                lock = self.wrapper.javaserver.world.applylock()
+                entityupdate = self.wrapper.javaserver.world.getEntityByEID(data[0])
+                if entityupdate:
+                    entityupdate.teleport((data[1], data[2], data[3]))
+                lock = self.wrapper.javaserver.world.removelock()
 
-            elif pkid == self.pktCB.ENTITY_HEAD_LOOK:
-                if not self.wrapper.javaserver.world:  # TODO is this needed?
-                    self.log.trace("(PROXY SERVER) -> did not parse ENTITY_HEAD_LOOK packet.")
-                if self.version < mcpacket.PROTOCOL_1_8START:  # 1.7.10 and prior
-                    data = self.packet.readpkt([_INT])[0]
-                else:
-                    data = self.packet.readpkt([_VARINT])[0]
-                if self.wrapper.javaserver.world.getEntityByEID(data):
-                    self.wrapper.javaserver.world.getEntityByEID(data).keepactive()
-                self.log.trace("(PROXY SERVER) -> Parsed ENTITY_HEAD_LOOK packet EID: %s", data)
             elif pkid == self.pktCB.ATTACH_ENTITY:
                 data = []
                 leash = True  # False to detach
@@ -466,8 +462,13 @@ class ServerConnection:
                         self.log.debug("player mount called for %s on eid %s", player.username, vehormobeid)
                         if not self.wrapper.javaserver.world:
                             return
-                        self.client.riding = self.wrapper.javaserver.world.getEntityByEID(vehormobeid)
-                        self.wrapper.javaserver.world.getEntityByEID(vehormobeid).rodeBy = self.client
+                        lock = self.wrapper.javaserver.world.applylock()
+                        entityupdate = self.wrapper.javaserver.world.getEntityByEID(vehormobeid)
+                        if entityupdate:
+                            self.client.riding = entityupdate
+                            entityupdate.rodeBy = self.client
+                        lock = self.wrapper.javaserver.world.removelock()
+
             elif pkid == self.pktCB.DESTROY_ENTITIES:
                 # Get rid of dead entities so that python can GC them.
                 if not self.wrapper.javaserver.world:
