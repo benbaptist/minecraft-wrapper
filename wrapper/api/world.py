@@ -96,8 +96,6 @@ class World:
                 if self.getEntityByEID(eid).clientname not in playerlist:
                     self.delentities.append(eid)
 
-            # free up block - block is not currently respected by any method
-            # we are just making sure this is the one doing any additions and deletions
             self.lock = False
             self.log.trace("_entityprocessor updates done.")
         self.log.debug("_entityprocessor thread closed.")
@@ -172,7 +170,7 @@ class World:
         else:
             self.javaserver.console("gamerule doMobLoot false")
         lock = self.applylock()
-        entity = self.getEntityByEID(eid, debug=True)
+        entity = self.getEntityByEID(eid)
         if self.ExistsEntityByEID(eid):
             pos = entity.position
             entitydesc = entity.entityname
