@@ -26,6 +26,15 @@ ______________________________________
 - new file core.entities.py replaces items from api.entity and core.items.
 
 
+Implemented a full Entity manager with blocking locks.
+Completed kill entity by eid methods
+added the /entity command to the console/ wrapper in game.
+minor refactoring here and there
+added Objects class (non-living entities that behave as blocks too). No dynamic source (yet), but primed to do so.
+fixed problems with getuuidfromname usage/implementations
+
+
+
 ##### update Packet read and send methods: #####
 _____________________________________
 read and send are now abstraction wrappers for readpkt and sendpkt.
