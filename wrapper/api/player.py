@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 
-# p2 and py3 compliant (no PyCharm IDE-flagged warnings or errors)
-
 import time
 import fnmatch
 import json
