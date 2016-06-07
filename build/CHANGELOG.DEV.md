@@ -24,7 +24,7 @@ ______________________________________
 - block tiles for minecraft.py are also fetched from grahamedgecombe.com.
 - Destroyed entities are parsed and removed from world entities collection to await garbage collection.
 - new file core.entities.py replaces items from api.entity and core.items.
-
+- Add getOfflineUUID to player api to get an offline (local server) uuid.
 
 Implemented a full Entity manager with blocking locks.
 Completed kill entity by eid methods

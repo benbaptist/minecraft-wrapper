@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import time
-from proxy.base import getjsonfile, putjsonfile
-
+from utils.helpers import getjsonfile, putjsonfile, read_timestr, epoch_to_timestr
 try:
     import requests
 except ImportError:
