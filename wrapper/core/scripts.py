@@ -6,6 +6,7 @@ import os
 import stat
 
 from api.base import API
+from utils.helpers import mkdir_p
 
 scripts = {
     "server-start.sh":  """ # This script is called just before the server starts. 
@@ -41,9 +42,9 @@ class Scripts:
 
     def createdefaultscripts(self):
         if not os.path.exists("wrapper-data"):
-            os.makedirs("wrapper-data")
+            mkdir_p("wrapper-data")
         if not os.path.exists("wrapper-data/scripts"):
-            os.makedirs("wrapper-data/scripts")
+            mkdir_p("wrapper-data/scripts")
         for script in scripts:
             path = "wrapper-data/scripts/%s" % script
             if not os.path.exists(path):

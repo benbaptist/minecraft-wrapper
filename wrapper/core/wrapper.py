@@ -56,6 +56,7 @@ class Wrapper:
 
     def __init__(self):
         self.log = logging.getLogger('Wrapper.py')
+        self.storage = False
         self.configManager = Config()
         self.configManager.loadconfig()  # Load initially for storage object
         self.encoding = self.configManager.config["General"]["encoding"]  # This was to allow alternate encodings
@@ -89,9 +90,11 @@ class Wrapper:
         self.proxymode = self.configManager.config["Proxy"]["proxy-enabled"]
 
     def __del__(self):
-        self.storage.save()
-        self.permissions.save()
-        self.usercache.save()
+        if self.storage:  # prevent error message on very first wrapper starts when wrapper exits after creating
+            # new wrapper.properties file.
+            self.storage.save()
+            self.permissions.save()
+            self.usercache.save()
 
     def start(self):
         """ wrapper should only start ONCE... old code made it restart over when only a server needed restarting"""
