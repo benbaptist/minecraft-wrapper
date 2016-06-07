@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+import errno
 import sys
 import json
 import time
@@ -138,6 +139,17 @@ def getfileaslines(filename, directory="."):
                 return None
     else:
         return False
+
+
+def mkdir_p(path):
+    try:
+        os.makedirs(path, exist_ok=True)  # Python > 3.2
+    except TypeError:
+        try:
+            os.makedirs(path)  # Python > 2.5
+        except OSError as exc:  # Guard against race condition
+            if exc.errno != errno.EEXIST:
+                raise
 
 
 def processcolorcodes(messagestring):
