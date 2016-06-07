@@ -6,7 +6,6 @@ from __future__ import unicode_literals
 
 import json
 import os
-
 from core.nbt import NBTFile
 from core.entities import Items
 
@@ -121,7 +120,7 @@ class Minecraft:
                 os.remove("wrapper-data/players/" + uuidf)
                 continue
 
-            offinelineuuid = self.wrapper.getuuidfromname("OfflinePlayer:%s" % username)
+            offinelineuuid = self.wrapper.getuuidfromname(username)
             if online:
                 if offinelineuuid == puuid:
                     continue
@@ -159,6 +158,14 @@ class Minecraft:
 
     def getPlayerDat(self, name):
         pass
+        # TODO a good idea
+
+    def getOfflineUUID(self,name):
+        """
+        :param name: gets UUID object based on "OfflinePlayer:<playername>"
+        :return: a MCUUID object based on the name
+        """
+        return self.wrapper.getuuidfromname(name)
 
     def lookupName(self, uuid):  # This function is just part of the API for plugin devs/users.
         """

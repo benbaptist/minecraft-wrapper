@@ -84,12 +84,9 @@ class Proxy:
             self.removestaleclients()
 
     def removestaleclients(self):
-        try:
-            for i, client in enumerate(self.wrapper.proxy.clients):
-                if client.abort:
-                    del self.wrapper.proxy.clients[i]
-        except Exception as e:
-            raise e  # rethrow exception
+        for i, client in enumerate(self.wrapper.proxy.clients):
+            if client.abort:
+                del self.wrapper.proxy.clients[i]
 
     def pollserver(self):
         server_sock = socket.socket()
@@ -112,13 +109,18 @@ class Proxy:
 
     def getclientbyofflineserveruuid(self, uuid):
         """
-        :param uuid: - MCUUID .. I believe.
+        :param uuid: - MCUUID
         :return: the matching client
         """
+        attempts = ["Search: %s" % str(uuid)]
         for client in self.clients:
-            if client.serverUuid.string == str(uuid):
+            attempts.append("try: client-%s uuid-%s serveruuid-%s name-%s" %
+                            (client, client.uuid.string, client.serveruuid.string, client.username))
+            if client.serveruuid.string == str(uuid):
                 self.uuidTranslate[uuid] = client.uuid.string
                 return client
+        self.log.debug("getclientbyofflineserveruuid failed: \n %s" % attempts)
+        self.log.debug("POSSIBLE CLIENTS: \n %s" % self.clients)
         return False  # no client
 
     def banplayer(self, playername, reason="Banned by an operator", source="Wrapper", expires="forever"):
