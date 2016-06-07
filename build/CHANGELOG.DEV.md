@@ -1,4 +1,4 @@
-Build #115 [0.8.2]:
+Build #116 [0.8.3]:
 
 - [Capturing bed sleeping / right click #146](https://github.com/benbaptist/minecraft-wrapper/issues/146)
 _____________________________________
@@ -25,13 +25,12 @@ ______________________________________
 - Destroyed entities are parsed and removed from world entities collection to await garbage collection.
 - new file core.entities.py replaces items from api.entity and core.items.
 - Add getOfflineUUID to player api to get an offline (local server) uuid.
-
-Implemented a full Entity manager with blocking locks.
-Completed kill entity by eid methods
-added the /entity command to the console/ wrapper in game.
-minor refactoring here and there
-added Objects class (non-living entities that behave as blocks too). No dynamic source (yet), but primed to do so.
-fixed problems with getuuidfromname usage/implementations
+- Implemented a full Entity manager with blocking locks.
+- Completed kill entity by eid methods
+- added the /entity command to the console and wrapper in-game commands.
+- added Objects class (non-living entities that behave as blocks too). No dynamic source (yet), but primed to do so.
+- fixed problems with getuuidfromname usage/implementations
+- added and improved several Entity-related api.Minecraft and api.world methods.
 
 
 
