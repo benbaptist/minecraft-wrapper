@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 
-# p2 and py3 compliant (no PyCharm IDE-flagged warnings or errors)
-
 import time
 import fnmatch
 import json
@@ -9,7 +7,35 @@ import threading
 
 import proxy.mcpacket as mcpacket
 from core.storage import Storage
-from utils.helpers import processoldcolorcodes, processcolorcodes
+from utils.helpers import processoldcolorcodes, processcolorcodes, getjsonfile, getfileaslines
+
+
+# region Constants
+# ------------------------------------------------
+
+_STRING = 0
+_JSON = 1
+_UBYTE = 2
+_BYTE = 3
+_INT = 4
+_SHORT = 5
+_USHORT = 6
+_LONG = 7
+_DOUBLE = 8
+_FLOAT = 9
+_BOOL = 10
+_VARINT = 11
+_BYTEARRAY = 12
+_BYTEARRAY_SHORT = 13
+_POSITION = 14
+_SLOT = 15
+_SLOT_NO_NBT = 18
+_UUID = 16
+_METADATA = 17
+_REST = 90
+_RAW = 90
+_NULL = 100
+# endregion
 
 
 # noinspection PyPep8Naming
@@ -44,7 +70,7 @@ class Player:
         # IF False error carries forward, this is not a valid player, for whatever reason...
         self.clientUuid = self.mojangUuid
         # These two are offline by default.
-        self.offlineUuid = self.wrapper.getuuidfromname("OfflinePlayer:%s" % self.username)
+        self.offlineUuid = self.wrapper.getuuidfromname(self.username)
         self.serverUuid = self.offlineUuid  # Start out as the Offline - change it to Mojang if local server is Online
 
         self.ipaddress = "127.0.0.0"
@@ -53,6 +79,8 @@ class Player:
         self.client = None
         self.clientboundPackets = mcpacket.Client18
         self.serverboundPackets = mcpacket.Server18
+        self.clientgameversion = self.javaserver.protocolVersion
+        self.playereid = None
 
         # some player properties associated with abilities
         self.field_of_view = float(1)  # default is 1.  Should normally be congruent with speed.
@@ -61,16 +89,20 @@ class Player:
         self.fly_speed = float(1)  # default is 1
 
         if self.wrapper.proxy:
+            gotclient = False
             for client in self.wrapper.proxy.clients:
                 if client.username == self.username:
                     self.client = client
                     self.clientUuid = client.uuid  # Both MCUUID objects
-                    self.serverUuid = client.serverUuid
+                    self.serverUuid = client.serveruuid
                     self.ipaddress = client.ip
                     self.clientboundPackets = self.client.pktCB
                     self.serverboundPackets = self.client.pktSB
+                    self.clientgameversion = self.client.clientversion
+                    gotclient = True
                     break
-
+            if not gotclient:
+                self.log.error("Proxy is on, but this client is not listed in wrapper.proxy.clients!")
         self.data = Storage(self.clientUuid.string, root="wrapper-data/players")
 
         if "users" not in self.permissions:  # top -level dict item should be just checked once here (not over and over)
@@ -81,12 +113,18 @@ class Player:
             self.data["firstLoggedIn"] = (time.time(), time.tzname)
         if "logins" not in self.data:
             self.data["logins"] = {}
+        self.data["lastLoggedIn"] = (self.loggedIn, time.tzname)
+        self.data.save()
+
         t = threading.Thread(target=self._track, args=())
         t.daemon = True
         t.start()
 
     def __str__(self):
         return self.username
+
+    def __del__(self):
+        self.data.save()
 
     @property
     def name(self):
@@ -98,21 +136,38 @@ class Player:
 
     def _track(self):
         """
-        internal tracking that updates a players last login time. Not intended as a part of the public player object API
+        internal tracking that updates a player's server play time. Not intended as a part of the public
+        player object API
         """
         self.data["logins"][int(self.loggedIn)] = time.time()
         while not self.abort:
             self.data["logins"][int(self.loggedIn)] = int(time.time())
             time.sleep(60)
+        self.data.save()
 
-    @staticmethod
-    def _read_ops_file():
+    def _read_ops_file(self):
         """
         Internal private method - Not intended as a part of the public player object API
         Returns: contents of ops.json as a dict
         """
-        with open("ops.json", "r") as f:
-            ops = json.loads(f.read())
+        ops = False
+        if self.javaserver.protocolVersion > mcpacket.PROTOCOL_1_7:  # 1.7.6 or greater use ops.json
+            ops = getjsonfile("ops")
+        if not ops:
+            # try for an old "ops.txt" file instead.
+            ops = {}
+            opstext = getfileaslines("ops.txt")
+            if not opstext:
+                return False
+            for x in range(len(opstext)):
+                # create a 'fake' ops dictionary from the old pre-1.8 text line name list
+                # notice that the level (an option not the old list) is set to 1
+                #   This will pass as true, but if the plugin is also checking op-levels, it
+                #   may not pass truth.
+                ops[opstext[x]] = {"uuid": opstext[x],
+                                   "name": opstext[x],
+                                   "level": 1}
+
         return ops
 
     def execute(self, string):
@@ -131,7 +186,11 @@ class Player:
         try:
             self.client.message("/%s" % string)
         except AttributeError:
-            self.wrapper.javaserver.console("execute %s ~ ~ ~ %s" % (self.username, string))
+            if self.javaserver.protocolVersion > mcpacket.PROTOCOL_1_7_9:
+                self.wrapper.javaserver.console("execute %s ~ ~ ~ %s" % (self.username, string))
+            else:
+                self.log.warning("could not run player.execute - wrapper not in proxy mode and minecraft version "
+                                 "is less than 1.8 (when /execute was implemented).")
 
     def sendCommand(self, command, args):
         """
@@ -158,11 +217,14 @@ class Player:
         :param string: message/command sent to the server as the player.
         Send a message as a player.
 
-        Beware: the message string is sent directly to the server
+        Beware: in proxy mode, the message string is sent directly to the server
         without wrapper filtering,so it could be used to execute minecraft
         commands as the player if the string is prefixed with a slash.
-        * Only works in proxy mode. """
-        self.client.message(string)
+        """
+        try:
+            self.client.message(string)
+        except AttributeError:  # pre-1.8
+            self.wrapper.javaserver.console("say @a <%s> %s" % (self.username, string))
 
     def getClient(self):
         """
@@ -180,6 +242,15 @@ class Player:
         else:
             return self.client
 
+    def getBedPostion(self):
+        """
+        Returns: returns a tuple of the player's last sleeping place (position x, y, z)
+
+        IMPORTANT: wrapper does not store this permanently. It is up to the plugin to record a
+            "player.usebed" event and then store the data in their own Storage objects!
+        """
+        return self.getClient().bedposition
+
     def getPosition(self):
         """:returns: a tuple of the player's current position x, y, z, and yaw, pitch of head.
         Notes:
@@ -187,7 +258,6 @@ class Player:
         client logs in to the server.  Allow some time after server login to verify the wrapper has had
         the oppportunity to parse a suitable packet to get the information!
         """
-        # TODO these need a better solution; perhaps reading the player.dat file to populate the defaults
         return self.getClient().position + self.getClient().head
 
     def getGamemode(self):
@@ -229,10 +299,10 @@ class Player:
         Probably broken right now.
         """
         if self.getClient().version < mcpacket.PROTOCOL_1_8START:
-            self.client.packet.send(0x3f, "string|bytearray", ("MC|RPack", url))
+            self.client.packet.sendpkt(0x3f, [_STRING, _BYTEARRAY], ("MC|RPack", url))  # "string|bytearray"
         else:
-            self.client.packet.send(self.clientboundPackets.RESOURCE_PACK_SEND,
-                                    "string|string", (url, hashrp))
+            self.client.packet.sendpkt(self.clientboundPackets.RESOURCE_PACK_SEND,
+                                       [_STRING, _STRING], (url, hashrp))
 
     def isOp(self, strict=False):
         """
@@ -288,9 +358,14 @@ class Player:
             self.wrapper.javaserver.console("tellraw %s %s" % (self.username, processcolorcodes(message)))
 
     def actionMessage(self, message=""):
-        if self.getClient().version > mcpacket.PROTOCOL_1_8START:
-            self.getClient().packet.send(self.clientboundPackets.CHAT_MESSAGE, "string|byte",
-                                         (json.dumps({"text": processoldcolorcodes(message)}), 2))
+        if self.getClient().version < mcpacket.PROTOCOL_1_8START:
+            parsing = [_STRING, _NULL]  # "string|null (nothing sent)"
+            data = [message]
+        else:
+            parsing = [_STRING, _BYTE]  # "string|byte"
+            data = (json.dumps({"text": processoldcolorcodes(message)}), 2)
+        self.getClient().packet.sendpkt(self.clientboundPackets.CHAT_MESSAGE, parsing,  # "string|byte"
+                                        data)
 
     def setVisualXP(self, progress, level, total):
         """
@@ -305,16 +380,16 @@ class Player:
 
         """
         if self.getClient().version > mcpacket.PROTOCOL_1_8START:
-            self.getClient().packet.send(self.clientboundPackets.SET_EXPERIENCE, "float|varint|varint",
-                                         (progress, level, total))
+            self.getClient().packet.sendpkt(self.clientboundPackets.SET_EXPERIENCE, [_FLOAT, _VARINT, _VARINT],
+                                            (progress, level, total))
         else:
-            self.getClient().packet.send(self.clientboundPackets.SET_EXPERIENCE, "float|short|short",
-                                         (progress, level, total))
+            self.getClient().packet.sendpkt(self.clientboundPackets.SET_EXPERIENCE, [_FLOAT, _SHORT, _SHORT],
+                                            (progress, level, total))
 
     def openWindow(self, windowtype, title, slots):
         """
         Opens an inventory window on the client side.  EntityHorse is not supported due to further
-        EID requirement.
+        EID requirement.  1.8 experimental only.
 
         Args:
             windowtype:  Window Type (text string). See below or applicable wiki entry
@@ -347,7 +422,7 @@ class Player:
         # TODO Test what kind of field title is (json or text)
         if self.getClient().version > mcpacket.PROTOCOL_1_8START:
             self.getClient().packet.send(
-                self.clientboundPackets.OPEN_WINDOW, "ubyte|string|json|ubyte", (
+                self.clientboundPackets.OPEN_WINDOW, [_UBYTE, _STRING, _JSON, _UBYTE], (
                     self.getClient().windowCounter, windowtype, {"text": title}, slots))
         return None  # return a Window object soon
     # endregion Visual notifications
@@ -384,15 +459,54 @@ class Player:
         bitfield = self.godmode | self.creative | setfly
         # Note in versions before 1.8, field of view is the walking speed for client (still a float)
         #   Server field of view is still walking speed
-        self.getClient().packet.send(self.clientboundPackets.PLAYER_ABILITIES, "byte|float|float",
-                                     (bitfield, self.fly_speed, self.field_of_view))
-        self.getClient().server.packet.send(self.serverboundPackets.PLAYER_ABILITIES, "byte|float|float",
-                                            (bitfield, self.fly_speed, self.field_of_view))
+        self.getClient().packet.sendpkt(self.clientboundPackets.PLAYER_ABILITIES, [_BYTE, _FLOAT, _FLOAT],
+                                        (bitfield, self.fly_speed, self.field_of_view))
+        self.getClient().server.packet.sendpkt(self.serverboundPackets.PLAYER_ABILITIES, [_BYTE, _FLOAT, _FLOAT],
+                                               (bitfield, self.fly_speed, self.field_of_view))
 
-    # Unfinished function, will be used to make phantom blocks visible ONLY to the client
-    def setBlock(self, position):
-        pass
-    # endregion
+    def sendBlock(self, position, blockid, blockdata, sendblock=True, numparticles=1, partdata=1):
+        """
+            Used to make phantom blocks visible ONLY to the client.  Sends either a particle or a block to
+            the minecraft player's client. for blocks iddata is just block id - No need to bitwise the
+            blockdata; just pass the additional block data.  The particle sender is only a basic version
+            and is not intended to do anything more than send something like a barrier particle to
+            temporarily highlight something for the player.  Fancy particle operations should be custom
+            done by the plugin or someone can write a nicer particle-renderer.
+
+        :param position - players position as tuple.  The coordinates must be in the player's render distance
+            or the block will appear at odd places.
+        :param blockid - usually block id, but could be particle id too.  If sending pre-1.8 particles this is a
+            string not a number... the valid values are found here:
+                        ->http://wayback.archive.org/web/20151023030926/https://gist.github.com/thinkofdeath/5110835
+        :param blockdata - additional block meta (a number specifying a subtype).
+        :param sendblock - True for sending a block.
+        :param numparticles - if particles, their numeric count.
+        :param partdata - if particles; particle data.  Particles with additional ID cannot be used ("Ironcrack").
+
+        """
+
+        pkt_particle = self.clientboundPackets.PARTICLE
+        pkt_blockchange = self.clientboundPackets.BLOCK_CHANGE
+
+        x = (position[0])
+        y = (position[1])
+        z = (position[2])
+        if self.clientgameversion > mcpacket.PROTOCOL_1_7_9:
+            if sendblock:
+                iddata = blockid << 4 | blockdata
+                self.getClient().packet.sendpkt(pkt_blockchange, [_POSITION, _VARINT], (position, iddata))
+            else:
+                self.getClient().packet.sendpkt(
+                    pkt_particle, [_INT, _BOOL, _FLOAT, _FLOAT, _FLOAT, _FLOAT, _FLOAT, _FLOAT, _FLOAT, _INT],
+                    (blockid, True, x + .5, y + .5, z + .5, 0, 0, 0, partdata, numparticles))
+        if self.clientgameversion < mcpacket.PROTOCOL_1_8START:
+            if sendblock:
+                self.getClient().packet.sendpkt(pkt_blockchange, [_INT, _UBYTE, _INT, _VARINT, _UBYTE],
+                                                (x, y, x, blockid, blockdata))
+            else:
+                self.getClient().packet.sendpkt(
+                    pkt_particle, [_STRING, _FLOAT, _FLOAT, _FLOAT, _FLOAT, _FLOAT, _FLOAT, _FLOAT, _INT],
+                    (blockid, x + .5, y + .5, z + .5, 0, 0, 0, partdata, numparticles))
 
     # Inventory-related actions. These will probably be split into a specific
     # Inventory class.

@@ -88,6 +88,11 @@ class Wrapper:
             return
         self.proxymode = self.configManager.config["Proxy"]["proxy-enabled"]
 
+    def __del__(self):
+        self.storage.save()
+        self.permissions.save()
+        self.usercache.save()
+
     def start(self):
         """ wrapper should only start ONCE... old code made it restart over when only a server needed restarting"""
         # Reload configuration each time wrapper starts in order to detect changes
@@ -257,6 +262,9 @@ class Wrapper:
             elif command in ("/playerstats", "/stats"):
                 self.runwrapperconsolecommand("playerstats", allargs)
 
+            elif command in ("/ent", "/entity", "/entities", "ent", "entity", "entities"):
+                self.runwrapperconsolecommand("ent", allargs)
+
             # TODO Add more commands below here, below the original items:
             # TODO __________________
 
@@ -287,6 +295,7 @@ class Wrapper:
                 readout("/raw [command]", "Send command to the Minecraft Server. Useful for Forge\n"
                                           "                  commands like '/fml confirm'.")
                 readout("/version", self.getbuildstring())
+                readout("/entity", "Work with entities (run /entity for more...)")
                 readout("/bans", "Display the ban help page.")
             elif command == "/bans":
                 # ban commands help.
@@ -305,8 +314,7 @@ class Wrapper:
                     readout("/banlist", " - search and display the banlist (warning - displays on single page!)",
                             separator="[players|ips] [searchtext] ", pad=12)
                 else:
-                    readout("ERROR - ", "Bans are not enabled (proxy mode is not on).",
-                            separator="", pad=10)
+                    readout("ERROR - ", "Bans are not enabled (proxy mode is not on).", separator="", pad=10)
             else:
                 try:
                     self.javaserver.console(consoleinput)
@@ -314,6 +322,9 @@ class Wrapper:
                     print("[BREAK] Console input exception (nothing passed to server) \n%s" % e)
                     break
                 continue
+        self.storage.save()
+        self.permissions.save()
+        self.usercache.save()
 
     def _registerwrappershelp(self):
         # All commands listed herein are accessible in-game
@@ -330,6 +341,7 @@ class Wrapper:
              "Command used to manage permission groups and users, add permission nodes, etc.", None),
             # Minimum server version for commands to appear is 1.7.6 (registers perm later in serverconnection.py)
             # These won't appear is proxy mode not on (since serverconnection is part of proxy).
+            ("/Entity <count/kill> [eid] [count]", "/entity help/? for more help.. ", None),
             ("/ban <name> [reason..] [d:<days>/h:<hours>]",
              "Ban a player. Specifying h:<hours> or d:<days> creates a temp ban.", "mc1.7.6"),
             ("/ban-ip <ip> [<reason..> <d:<number of days>]",
@@ -382,28 +394,15 @@ class Wrapper:
         :param name: should be passed as "OfflinePlayer:<playername>" to get the correct (offline) vanilla server uuid
         :return: a MCUUID object based on the name
         """
+        playername = "OfflinePlayer:%s" % name
         m = hashlib.md5()
-        m.update(name)
+        m.update(playername)
         d = bytearray(m.digest())
         d[6] &= 0x0f
         d[6] |= 0x30
         d[8] &= 0x3f
         d[8] |= 0x80
         return MCUUID(bytes=str(d))
-
-    def accepteula(self):
-        if os.path.isfile("eula.txt"):
-            self.log.debug("Checking EULA agreement...")
-            with open("eula.txt", "r") as f:
-                eula = f.read()
-
-            if "false" in eula:
-                # if forced, should be at info level since acceptance is a legal matter.
-                self.log.warning("EULA agreement was not accepted, accepting on your behalf...")
-                with open("eula.txt", "w") as f:
-                    f.write(eula.replace("false", "true"))
-
-            self.log.debug("EULA agreement has been accepted.")
 
     def getuuidbyusername(self, username, forcepoll=False):
         """
@@ -467,23 +466,28 @@ class Wrapper:
         frequency = 2592000  # if called directly, can update cache daily (refresh names list, etc)
         if forcepoll:
             frequency = 600  # 10 minute limit
-        names = self._pollmojanguuid(useruuid)
 
-        if not names or names is None:  # mojang service failed or UUID not found
-            return False
-        numbofnames = len(names)
-        if numbofnames == 0:
-            return False
+        theirname = None
         if self.usercache.key(useruuid):  # if user is in the cache...
             # and was recently polled...
-            if int((time.time() - self.usercache.key(useruuid)["time"])) < frequency:
-                return self.usercache.key(useruuid)["name"]  # dont re-poll if same time frame (daily = 86400).
-            else:
-                if not names or names is None:  # service might be down.. not a huge deal, we'll re-poll another time
-                    self.usercache.key(useruuid)["time"] = time.time() - frequency + 7200  # may try again in 2 hours
-                    return self.usercache.key(useruuid)["name"]
-                # continue on and poll... because user is not in cache or is old record that needs re-polled
+            theirname = self.usercache.key(useruuid)["localname"]
+
+        if int((time.time() - self.usercache.key(useruuid)["time"])) < frequency:
+            return theirname  # dont re-poll if same time frame (daily = 86400).
+
+        # continue on and poll... because user is not in cache or is old record that needs re-polled
         # else:  # user is not in cache
+        names = self._pollmojanguuid(useruuid)
+        numbofnames = 0
+        if names is not False:  # service returned data
+            numbofnames = len(names)
+
+        if numbofnames == 0:
+            if theirname is not None:
+                self.usercache.key(useruuid)["time"] = time.time() - frequency + 7200  # may try again in 2 hours
+                return theirname
+            return False  # total FAIL
+
         pastnames = []
         if useruuid not in self.usercache:
             self.usercache[useruuid] = {
@@ -495,7 +499,8 @@ class Wrapper:
                 "IP": None,
                 "names": []
             }
-        for i in xxrange(0, numbofnames):
+
+        for i in range(numbofnames):
             if "changedToAt" not in names[i]:  # find the original name
                 self.usercache[useruuid]["original"] = names[i]["name"]
                 self.usercache[useruuid]["online"] = True
@@ -528,8 +533,7 @@ class Wrapper:
         attempts to poll Mojang with the UUID
         :param useruuid: string uuid with dashes
         :returns:
-                None - Most likely a bad UUID
-                False - Mojang down or operating in limited fashion
+                False - could not resolve the uuid
                 - otherwise, a list of names...
         """
 
@@ -549,7 +553,7 @@ class Wrapper:
                                              "over-polled (large busy server) or supplied an incorrect UUID??")
                             self.log.warning("uuid: %s", useruuid)
                             self.log.warning("response: \n%s", str(rx))
-                            return None
+                            return False
                         elif rx[i]["account.mojang.com"] in ("yellow", "red"):
                             self.log.warning("Mojang accounts is experiencing issues (%s).",
                                              rx[i]["account.mojang.com"])
@@ -563,7 +567,7 @@ class Wrapper:
                         try:
                             return self.usercache[useruuid]["name"]
                         except TypeError:
-                            return None
+                            return False
 
     def listplugins(self):
         readout("", "List of Wrapper.py plugins installed:", separator="", pad=4)
@@ -597,6 +601,9 @@ class Wrapper:
         self.shutdown()
 
     def shutdown(self, status=0):
+        self.storage.save()
+        self.permissions.save()
+        self.usercache.save()
         self.halt = True
         self.javaserver.stop(reason="Wrapper.py Shutting Down", save=False)
         time.sleep(1)

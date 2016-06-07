@@ -6,9 +6,8 @@ from __future__ import unicode_literals
 
 import json
 import os
-
 from core.nbt import NBTFile
-from core.items import Blocks
+from core.entities import Items
 
 
 # noinspection PyBroadException
@@ -21,7 +20,9 @@ class Minecraft:
         self.proxy = wrapper.proxy
         self.log = wrapper.log
         self._encoding = wrapper.config["General"]["encoding"]
-        self.blocks = Blocks
+
+        blockdata = Items()
+        self.blocks = blockdata.itemslist
 
     def isServerStarted(self):
         """
@@ -119,7 +120,7 @@ class Minecraft:
                 os.remove("wrapper-data/players/" + uuidf)
                 continue
 
-            offinelineuuid = self.wrapper.getuuidfromname("OfflinePlayer:%s" % username)
+            offinelineuuid = self.wrapper.getuuidfromname(username)
             if online:
                 if offinelineuuid == puuid:
                     continue
@@ -157,6 +158,14 @@ class Minecraft:
 
     def getPlayerDat(self, name):
         pass
+        # TODO a good idea
+
+    def getOfflineUUID(self,name):
+        """
+        :param name: gets UUID object based on "OfflinePlayer:<playername>"
+        :return: a MCUUID object based on the name
+        """
+        return self.wrapper.getuuidfromname(name)
 
     def lookupName(self, uuid):  # This function is just part of the API for plugin devs/users.
         """

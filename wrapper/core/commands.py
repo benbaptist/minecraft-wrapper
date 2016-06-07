@@ -7,7 +7,7 @@ import ast
 import random
 import time
 
-from utils.helpers import getargs, getargsafter, secondstohuman, showpage
+from utils.helpers import getargs, getargsafter, secondstohuman, showpage, readout
 
 
 class Commands:
@@ -65,6 +65,10 @@ class Commands:
 
         if payload["command"] in ("permissions", "perm", "perms", "super"):
             self.command_perms(player, payload)
+            return True
+
+        if str(payload["command"]).lower() in ("ent", "entity", "entities"):
+            self.command_entities(player, payload)
             return True
 
         if str(payload["command"]).lower() == "ban":
@@ -205,6 +209,45 @@ class Commands:
                 player.message({"text": "IP unban %s failed!" % ipaddress, "color": "red"})
             player.message(returnmessage)
             return returnmessage
+
+    def command_entities(self, player, payload):
+        if player.isOp() > 2:
+            worldloaded = self.wrapper.api.minecraft.getWorld()
+            if not worldloaded:
+                # only console could be the source:
+                readout("ERROR - ", "There is no world instance (no server started).", separator="",
+                        pad=10)
+                return
+            commargs = payload["args"]
+            if len(commargs) < 1:
+                pass
+            elif commargs[0].lower() in ("c", "count", "s", "sum", "summ", "summary"):
+                player.message("Entities loaded: %d" % worldloaded.countActiveEntities())
+                # Additional console output:
+                readout("Pending deletion",
+                        "%d" % len(worldloaded.delentities),
+                        separator=" : ", pad=20)
+
+                readout("Pending additions",
+                        "%d" % len(worldloaded.addentities),
+                        separator=" : ", pad=20)
+                return
+            elif commargs[0].lower() in ("k", "kill"):
+                lock = worldloaded.applylock()
+                eid = getargs(commargs, 1)
+                count = getargs(commargs, 2)
+                if count < 1:
+                    count = 1
+                worldloaded.killEntityByEID(eid, dropitems=False, finishstateof_domobloot=True, count=count)
+                lock = worldloaded.removelock()
+                return
+            elif commargs[0].lower() in ("l", "list", "sh", "show" "all"):
+                player.message("Entities: \n%s" % worldloaded.entities)
+                return
+
+            player.message("&cUsage: /entity count")
+            player.message("&c       /entity list")
+            player.message("&c       /entity kill <EIDofEntity> [count]")
 
     def command_wrapper(self, player, payload):
         if not player.isOp():

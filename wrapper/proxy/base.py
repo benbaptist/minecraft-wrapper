@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 
-# p2 and py3 compliant
-
 import socket
 import threading
 import time
@@ -10,7 +8,6 @@ import json
 import utils.encryption as encryption
 from utils.helpers import getjsonfile, putjsonfile, find_in_json, epoch_to_timestr, read_timestr
 
-from core.storage import Storage
 from proxy.clientconnection import Client
 from proxy.packet import Packet
 
@@ -39,7 +36,7 @@ class Proxy:
         self.skins = {}
         self.skinTextures = {}
         self.uuidTranslate = {}
-        self.storage = Storage("proxy-data")
+        # removed deprecated proxy-data.json
 
         self.privateKey = encryption.generate_key_pair()
         self.publicKey = encryption.encode_public_key(self.privateKey)
@@ -87,12 +84,9 @@ class Proxy:
             self.removestaleclients()
 
     def removestaleclients(self):
-        try:
-            for i, client in enumerate(self.wrapper.proxy.clients):
-                if client.abort:
-                    del self.wrapper.proxy.clients[i]
-        except Exception as e:
-            raise e  # rethrow exception
+        for i, client in enumerate(self.wrapper.proxy.clients):
+            if client.abort:
+                del self.wrapper.proxy.clients[i]
 
     def pollserver(self):
         server_sock = socket.socket()
@@ -103,7 +97,7 @@ class Proxy:
                                                           self.wrapper.config["Proxy"]["server-port"], 1))
         packet.send(0x00, "", ())
         packet.flush()
-
+        self.wrapper.javaserver.protocolVersion = -1
         while True:
             pkid, original = packet.grabPacket()
             if pkid == 0x00:
@@ -115,13 +109,18 @@ class Proxy:
 
     def getclientbyofflineserveruuid(self, uuid):
         """
-        :param uuid: - MCUUID .. I believe.
+        :param uuid: - MCUUID
         :return: the matching client
         """
+        attempts = ["Search: %s" % str(uuid)]
         for client in self.clients:
-            if client.serverUuid.string == str(uuid):
+            attempts.append("try: client-%s uuid-%s serveruuid-%s name-%s" %
+                            (client, client.uuid.string, client.serveruuid.string, client.username))
+            if client.serveruuid.string == str(uuid):
                 self.uuidTranslate[uuid] = client.uuid.string
                 return client
+        self.log.debug("getclientbyofflineserveruuid failed: \n %s" % attempts)
+        self.log.debug("POSSIBLE CLIENTS: \n %s" % self.clients)
         return False  # no client
 
     def banplayer(self, playername, reason="Banned by an operator", source="Wrapper", expires="forever"):
