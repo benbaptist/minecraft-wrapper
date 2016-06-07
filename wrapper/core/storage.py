@@ -6,6 +6,7 @@ import json
 import os
 import time
 import logging
+from utils.helpers import mkdir_p
 # import threading
 # import copy
 
@@ -72,15 +73,8 @@ class Storage:
     #                 self.time = time.time()
     #         time.sleep(1)
 
-    def mkdir(self, dirpath):
-        if not os.path.exists(dirpath):
-            try:
-                os.makedirs(dirpath, exist_ok=True)
-            except Exception as e:
-                self.log.warning("Could not create directory '%s' \n(%s)", dirpath, e)
-
     def load(self):
-        self.mkdir(self.root)
+        mkdir_p(self.root)
         if not os.path.exists("%s/%s.json" % (self.root, self.name)):
             self.save()
         with open("%s/%s.json" % (self.root, self.name), "r") as f:
@@ -93,7 +87,7 @@ class Storage:
 
     def save(self):
         if not os.path.exists(self.root):
-            self.mkdir(self.root)
+            mkdir_p(self.root)
         try:
             with open("%s/%s.json" % (self.root, self.name), "w") as f:
                 f.write(json.dumps(self.data, ensure_ascii=False, encoding=self.encoding, indent=2))

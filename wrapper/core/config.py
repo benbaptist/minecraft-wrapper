@@ -190,7 +190,7 @@ class Config:
         self.save()
 
         if self.exit:
-            self.log.info("Updated wrapper.properties file - check and edit configuration if needed and start again.")
+            self.log.warning("Updated wrapper.properties file - check and edit configuration if needed and start again.")
             sys.exit()
 
     def save(self):

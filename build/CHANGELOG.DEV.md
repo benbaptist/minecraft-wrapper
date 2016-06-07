@@ -1,3 +1,10 @@
+Build #117 [0.8.3.1]
+- bug fix # [SurestTexas00 #183 - 'Unable to launch'](https://github.com/suresttexas00/minecraft-wrapper/issues/183) caused by invalid PY2 argument 'exist_ok=' for os.makedirs().
+- centralize the mkdir_p function to utils.helpers.
+- make wrapper a little more verbose about why it can't start.
+- prevent infinite loop server re-starts when wrapper cannot start a server.
+- allow a few restarts to try setting EULA and server.properties
+
 Build #116 [0.8.3]:
 
 - [Capturing bed sleeping / right click #146](https://github.com/benbaptist/minecraft-wrapper/issues/146)

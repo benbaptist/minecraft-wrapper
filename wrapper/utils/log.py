@@ -2,11 +2,11 @@
 
 import json
 import os
-import errno
 import logging
 from logging.config import dictConfig
 
 import utils.termcolors as termcolors
+from utils.helpers import mkdir_p
 
 DEFAULT_CONFIG = dict({
     "wrapperversion": 1.1,
@@ -111,18 +111,6 @@ def loadconfig(configfile="logging.json"):
             logging.warning("Unable to locate %s -- Creating default logging configuration", configfile)
     except Exception as e:
         logging.exception("Unable to load or create %s! (%s)", configfile, e)
-
-
-def mkdir_p(path):
-    try:
-        os.makedirs(path, exist_ok=True)  # Python > 3.2
-    except TypeError:
-        try:
-            os.makedirs(path)  # Python > 2.5
-        except OSError as exc:  # Guard against race condition
-            if exc.errno != errno.EEXIST:
-                raise
-
 
 class ColorFormatter(logging.Formatter):
     """

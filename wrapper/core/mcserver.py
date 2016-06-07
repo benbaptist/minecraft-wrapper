@@ -72,7 +72,7 @@ class MCServer:
         self.serverIcon = None
 
         self.properties = {}
-        self.reloadproperties()
+        # self.reloadproperties()  This will be done on server start
 
         self.api.registerEvent("irc.message", self.onchannelmessage)
         self.api.registerEvent("irc.action", self.onchannelaction)
@@ -100,7 +100,9 @@ class MCServer:
         """
         Internally-used function that handles booting the server, parsing console output, and etc.
         """
+        trystart = 0
         while not self.wrapper.halt:
+            trystart += 1
             self.proc = None
             if not self.boot:
                 time.sleep(0.1)
@@ -112,11 +114,15 @@ class MCServer:
                                          stdin=subprocess.PIPE, universal_newlines=True)
             self.players = {}
             self.accepteula()  # Auto accept eula
+            if self.proc.poll() is None and trystart > 3:
+                self.log.error("could not start server.  check your server.properties, wrapper.properties and this"
+                               " startup 'command' from wrapper.properties:\n'%s'", " ".join(self.args))
+                self.wrapper.halt = True
 
             # The server loop
             while True:
                 time.sleep(0.1)
-                if self.proc.poll() is not None:  # TODO isn't this the same as `if self.proc.poll():`?
+                if self.proc.poll() is not None:
                     self.changestate(MCSState.OFF)
                     if not self.config["General"]["auto-restart"]:
                         self.wrapper.halt = True
@@ -160,6 +166,9 @@ class MCServer:
                     f.write(eula.replace("false", "true"))
 
             self.log.debug("EULA agreement has been accepted.")
+            return True
+        else:
+            return False
 
     def stop(self, reason="Stopping Server", save=True):
         """
@@ -170,7 +179,7 @@ class MCServer:
         self.boot = False
         if save:
             self.wrapper.storage["serverState"] = False
-        for player in self.players:  # TODO place that kicks players when server stops
+        for player in self.players:
             self.console("kick %s %s" % (player, reason))
         self.console("stop")
 
@@ -307,14 +316,26 @@ class MCServer:
         if os.path.exists("server.properties"):
             with open("server.properties", "r") as f:
                 configfile = f.read()
-            self.worldName = configfile.split("level-name=")[1].split("\n")[0]
+            detect = configfile.split("level-name=")
+            if len(detect) < 2:
+                self.log.warning("No 'level-name=(worldname)' was found in the server.properties.")
+                return False
+            self.worldName = detect[1].split("\n")[0]
             self.motd = configfile.split("motd=")[1].split("\n")[0]
-            self.maxPlayers = configfile.split("max-players=")[1].split("\n")[0]
+            playerentry = configfile.split("max-players=")
+            if len(playerentry) < 2:
+                self.log.warning("No 'max-players=(count)' was found in the server.properties."
+                                 "The default of '20' will be used.")
+            else:
+                self.maxPlayers = playerentry[1].split("\n")[0]
             self.onlineMode = configfile.split("online-mode=")[1].split("\n")[0]
             if self.onlineMode == "false":
                 self.onlineMode = False
             else:
                 self.onlineMode = True
+            return True
+        self.log.warning("File 'server.properties' not found.")
+        return False
 
     def console(self, command):
         """
