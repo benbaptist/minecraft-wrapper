@@ -2,16 +2,16 @@
 
 import os
 import sys
+from core.wrapper import Wrapper
+from utils.log import configure_logger
 
 PY3 = sys.version_info[0] > 2
 SUBVER = sys.version_info[1:1]
 
-
-from core.wrapper import Wrapper
-from utils.log import configure_logger
-
 if __name__ == "__main__":
     configure_logger()
+
+    # check python version compatibilities
     if PY3:
         print("Sorry, but Wrapper is only working for Python 2")
     wrapper = Wrapper()
@@ -23,6 +23,8 @@ if __name__ == "__main__":
     if PY3 and SUBVER < 4:
         log.warning("You are using python 3.%s.  wrapper only supports 3.4 and later."
                     "  You may encounter errors", SUBVER)
+
+    # start wrapper
     try:
         wrapper.start()
     except SystemExit as e:
@@ -37,7 +39,8 @@ if __name__ == "__main__":
         wrapper.halt = True
         wrapper.plugins.disableplugins()
         try:
-            wrapper.javaserver.stop("Wrapper.py crashed - please contact the server host as soon as possible", save=False)
+            wrapper.javaserver.stop("Wrapper.py crashed - please contact the server host as soon as possible",
+                                    save=False)
         except AttributeError as exc:
             log.critical("Wrapper has no server instance. Server is likely killed but could still be running, or it "
                          "might be corrupted! (%s)", exc, exc_info=True)

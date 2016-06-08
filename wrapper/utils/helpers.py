@@ -7,6 +7,14 @@ import json
 import time
 import datetime
 
+
+import utils.termcolors as termcolors
+
+try:  # Manually define an xrange builtin that works indentically on both (to take advantage of xrange's speed in 2)
+    xxrange = xrange
+except NameError:
+    xxrange = range
+
 COLORCODES = {
     "0": "black",
     "1": "dark_blue",
@@ -31,14 +39,6 @@ COLORCODES = {
     "n": "\xc2\xa7n",  # underline
     "o": "\xc2\xa7o",  # italic,
 }
-
-
-import utils.termcolors as termcolors
-
-try:  # Manually define an xrange builtin that works indentically on both (to take advantage of xrange's speed in 2)
-    xxrange = xrange
-except NameError:
-    xxrange = range
 
 
 # private static int DataSlotToNetworkSlot(int index)
@@ -274,7 +274,7 @@ def putjsonfile(data, filename, directory="./", indent_spaces=2):
     if os.path.exists(directory):
         with open("%s%s.json" % (directory, filename), "w") as f:
             try:
-                f.write(json.dumps(data, indent=indent_spaces))
+                f.write(json.dumps(data, indent=indent_spaces, sort_keys=True))
             except TypeError:
                 return None
             return True
