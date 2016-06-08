@@ -51,6 +51,8 @@ class Player:
         self.javaserver = wrapper.javaserver
         self.permissions = wrapper.permissions
         self.log = wrapper.log
+        self._encoding = wrapper.config["General"]["encoding"]
+        self.serverpath = wrapper.config["General"]["server-directory"]
 
         self.username = username
         self.loggedIn = time.time()
@@ -152,11 +154,11 @@ class Player:
         """
         ops = False
         if self.javaserver.protocolVersion > mcpacket.PROTOCOL_1_7:  # 1.7.6 or greater use ops.json
-            ops = getjsonfile("ops")
+            ops = getjsonfile("ops", self.serverpath, encodedas=self._encoding)
         if not ops:
             # try for an old "ops.txt" file instead.
             ops = {}
-            opstext = getfileaslines("ops.txt")
+            opstext = getfileaslines("ops.txt", self.serverpath)
             if not opstext:
                 return False
             for x in range(len(opstext)):

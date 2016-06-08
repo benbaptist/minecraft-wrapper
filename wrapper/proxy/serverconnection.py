@@ -3,7 +3,7 @@
 # region Modules
 # ------------------------------------------------
 
-# std
+# standard
 import socket
 import threading
 import time

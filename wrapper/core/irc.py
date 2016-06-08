@@ -22,11 +22,12 @@ except NameError:
 
 class IRC:
 
-    def __init__(self, mcserver, config, log, wrapper):
+    def __init__(self, mcserver, log, wrapper):
         self.socket = False
         self.state = False
         self.javaserver = mcserver
-        self.config = config
+        self.config = wrapper.config
+        self.configmgr = wrapper.configManager
         self.wrapper = wrapper
         self.address = self.config["IRC"]["server"]
         self.port = self.config["IRC"]["port"]
@@ -42,6 +43,13 @@ class IRC:
         self.line = ""
 
         self.api = API(self.wrapper, "IRC", internal=True)
+
+        self.api.registerEvent("irc.message", self.onchannelmessage)
+        self.api.registerEvent("irc.action", self.onchannelaction)
+        self.api.registerEvent("irc.join", self.onchanneljoin)
+        self.api.registerEvent("irc.part", self.onchannelpart)
+        self.api.registerEvent("irc.quit", self.onchannelquit)
+
         self.api.registerEvent("server.starting", self.onServerStarting)
         self.api.registerEvent("server.started", self.onServerStarted)
         self.api.registerEvent("server.stopping", self.onServerStopping)
@@ -99,6 +107,51 @@ class IRC:
             self.socket.send("%s\n" % payload)
         else:
             return False
+
+    # Event Handlers
+
+    def messagefromchannel(self, channel, message):
+        if self.config["IRC"]["show-channel-server"]:
+            self.javaserver.broadcast("&6[%s] %s" % (channel, message))
+        else:
+            self.javaserver.broadcast(message)
+
+    def onchanneljoin(self, payload):
+        channel, nick = payload["channel"], payload["nick"]
+        if not self.config["IRC"]["show-irc-join-part"]:
+            return
+        self.messagefromchannel(channel, "&a%s &rjoined the channel" % nick)
+
+    def onchannelpart(self, payload):
+        channel, nick = payload["channel"], payload["nick"]
+        if not self.config["IRC"]["show-irc-join-part"]:
+            return
+        self.messagefromchannel(channel, "&a%s &rparted the channel" % nick)
+
+    def onchannelmessage(self, payload):
+        channel, nick, message = payload["channel"], payload["nick"], payload["message"]
+        final = ""
+        for i, chunk in enumerate(message.split(" ")):
+            if not i == 0:
+                final += " "
+            try:
+                if chunk[0:7] in ("http://", "https://"):
+                    final += "&b&n&@%s&@&r" % chunk
+                else:
+                    final += chunk
+            except Exception as e:
+                final += chunk
+        self.messagefromchannel(channel, "&a<%s> &r%s" % (nick, final))
+
+    def onchannelaction(self, payload):
+        channel, nick, action = payload["channel"], payload["nick"], payload["action"]
+        self.messagefromchannel(channel, "&a* %s &r%s" % (nick, action))
+
+    def onchannelquit(self, payload):
+        channel, nick, message = payload["channel"], payload["nick"], payload["message"]
+        if not self.config["IRC"]["show-irc-join-part"]:
+            return
+        self.messagefromchannel(channel, "&a%s &rquit: %s" % (nick, message))
 
     def onPlayerLogin(self, payload):
         player = self.filterName(payload["player"])
@@ -333,7 +386,7 @@ class IRC:
                                 msg('Backups are now on.')
                             else:
                                 msg('Backups are now off.')
-                            self.config.save()
+                            self.configmgr.save()  # 'config' is just the json dictionary of items, not the Config class
                         elif getargs(message.split(" "), 0) == 'run':
                             if getargs(message.split(" "), 1) == '':
                                 msg('Usage: run [command]')
@@ -360,7 +413,7 @@ class IRC:
                         elif getargs(message.split(" "), 0) == 'status':
                             if self.javaserver.state == 2:
                                 msg("Server is running.")
-                            elif self.server.state == 1:
+                            elif self.javaserver.state == 1:
                                 msg("Server is currently starting/frozen.")
                             elif self.javaserver.state == 0:
                                 msg("Server is stopped. Type 'start' to fire it back up.")

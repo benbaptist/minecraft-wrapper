@@ -20,6 +20,7 @@ class Minecraft:
         self.proxy = wrapper.proxy
         self.log = wrapper.log
         self._encoding = wrapper.config["General"]["encoding"]
+        self.serverpath = wrapper.config["General"]["server-directory"]
 
         blockdata = Items()
         self.blocks = blockdata.itemslist
@@ -100,7 +101,8 @@ class Minecraft:
     def getAllPlayers(self):
         """
 
-        Returns: Returns a dict containing all players ever connected to the server
+        Returns: Returns a dict containing the uuids and associated login data of all
+        players ever connected to the server.
 
         """
         if self.wrapper.isonlinemode():
@@ -160,7 +162,7 @@ class Minecraft:
         pass
         # TODO a good idea
 
-    def getOfflineUUID(self,name):
+    def getOfflineUUID(self, name):
         """
         :param name: gets UUID object based on "OfflinePlayer:<playername>"
         :return: a MCUUID object based on the name
@@ -317,7 +319,7 @@ class Minecraft:
             worldname = self.wrapper.javaserver.worldName
         if not worldname:
             raise Exception("Server Uninitiated")
-        f = NBTFile("%s/level.dat" % worldname, "rb")
+        f = NBTFile("%s/%s/level.dat" % (self.serverpath, worldname), "rb")
         return f["Data"]
 
     def getSpawnPoint(self):

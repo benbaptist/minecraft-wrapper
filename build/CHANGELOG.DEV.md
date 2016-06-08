@@ -1,3 +1,9 @@
+
+- Separate path for server supported.  Wrapper folder remains unchanged and by default, the server uses the wrapper folder too, as it always has.
+    - there is no need to modify the start command in wrapper.properties.json; wrapper automatically prefixes the server path.
+    - getStorage() method still takes the second (world=True) argument to put a storage object in the world (server) folder, so data can stay server-specific.
+    - This also means you should not attempt to run a server as wrapper startup arguments (like `python /home/surest/MyServer/wrapper java -jar minecraft_server.1.9.2.jar nogui`).  Wrapper needs to parse the server command from wrapper.properties.json.
+
 Build #118 [0.8.4]
 - Fixed serious bug fix for wrapper.getusernamebyuuid() that will prevent new players from joining.
 - Refactored config.py to use pure json (updates wrapper.properties to wrapper.properties.json).

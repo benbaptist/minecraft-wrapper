@@ -76,6 +76,8 @@ class API:
         self.name = name
         self.minecraft = Minecraft(wrapper)
         self.javaserver = wrapper.javaserver
+        self.config = wrapper.config
+        self.serverpath = self.config["General"]["server-directory"]
         self.internal = internal
         if someid is None:
             self.id = name
@@ -178,7 +180,8 @@ class API:
         plugin will need to remember across reboots.
         Setting world=True will store the data inside the current world folder, for world-specific data.  
         """
-        if not world:
-            return Storage(name, root=".wrapper-data/plugins/%s" % self.id)
+        if world:
+            return Storage(name, root="%s/%s/plugins/%s" %
+                                      (self.serverpath, self.minecraft.getWorldName(), self.id))
         else:
-            return Storage(name, root="%s/plugins/%s" % (self.minecraft.getWorldName(), self.id))
+            return Storage(name, root="wrapper-data/plugins/%s" % self.id)
