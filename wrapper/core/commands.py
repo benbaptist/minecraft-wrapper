@@ -15,6 +15,7 @@ class Commands:
     def __init__(self, wrapper):
         self.wrapper = wrapper
         self.log = wrapper.log
+        self.config = wrapper.config
 
         self.commands = {}
 

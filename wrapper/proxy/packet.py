@@ -3,7 +3,7 @@
 # region Modules
 # ------------------------------------------------
 
-# std
+# standard
 import io
 import json
 import struct

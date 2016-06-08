@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 
-# p2 and py3 compliant
-#  (has warnings due to the manner of import)
 
 import time
 import threading
@@ -12,19 +10,31 @@ import logging
 from core.storage import Storage
 
 try:
-    from flask import Flask, g, redirect, url_for, render_template, request, make_response, Response, Markup
-    from flask_socketio import SocketIO, send, emit, join_room, leave_room
-
-    IMPORT_SUCCESS = True
+    from flask import Flask
+    from flask_socketio import SocketIO
 except ImportError:
-    IMPORT_SUCCESS = False
+    Flask = False
+    flask_socketio = False
+
+if Flask:
+    from flask import g, redirect, url_for, render_template, request, make_response, Response, Markup
+    from flask_socketio import send, emit, join_room, leave_room
 
 
 class Web:
 
     def __init__(self, wrapper):
         self.wrapper = wrapper
+        self.config = wrapper.config  # Remember if you need to save use 'wrapper.configManager.save()' not config.save
         self.log = logging.getLogger('Web')
+
+        if not Flask:
+            self.config["Web"]["web-enabled"] = False
+            self.wrapper.configManager.save()
+            self.log.critical("You don't have the 'flask/flask_socketio' dashboard dependencies installed "
+                              "on your system. You can now restart, but Web mode is disabled.")
+            self.wrapper.halt = True
+
         self.app = Flask(__name__)
         self.app.config['SECRET_KEY'] = "".join([chr(random.randrange(48, 90)) for i in range(32)])  # LOL
         self.socketio = SocketIO(self.app)
@@ -39,7 +49,8 @@ class Web:
         self.add_decorators()
 
         # Storage
-        self.data = Storage("web", self.log)
+        # self.data = Storage("web", self.log)  # Eeek! You can't pass a logger instance into a storage object!
+        self.data = Storage("dash")
         if "keys" not in self.data:
             self.data["keys"] = []
 
@@ -59,7 +70,7 @@ class Web:
     def checkLogin(self, password):
         if time.time() - self.disableLogins < 60:
             return False  # Threshold for logins
-        if password == self.wrapper.config["Web"]["web-password"]:
+        if password == self.config["Web"]["web-password"]:
             return True
         self.loginAttempts += 1
         if self.loginAttempts > 10 and time.time() - self.lastAttempt < 60:
@@ -130,5 +141,5 @@ class Web:
             pass
 
     def run(self):
-        self.socketio.run(self.app, host=self.wrapper.config["Web"]["web-bind"],
-                          port=self.wrapper.config["Web"]["web-port"])
+        self.socketio.run(self.app, host=self.config["Web"]["web-bind"],
+                          port=self.config["Web"]["web-port"])
