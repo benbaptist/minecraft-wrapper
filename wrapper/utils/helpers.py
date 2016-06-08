@@ -260,7 +260,7 @@ def processoldcolorcodes(message):
     return message
 
 
-def putjsonfile(data, filename, directory="./", indent_spaces=2):
+def putjsonfile(data, filename, directory="./", indent_spaces=2, sort=False):
     """
     writes entire data to a json file.
     This is not for appending items to an existing file!
@@ -269,12 +269,13 @@ def putjsonfile(data, filename, directory="./", indent_spaces=2):
     :param filename: filename without extension
     :param directory: by default, wrapper script directory.
     :param indent_spaces - indentation level. Pass None for no indents. 2 is the default.
+    :param sort - whether or not to sort the records for readability
     :returns True if successful. If unsuccessful; None = TypeError, False = file/directory not found/accessible
     """
     if os.path.exists(directory):
         with open("%s%s.json" % (directory, filename), "w") as f:
             try:
-                f.write(json.dumps(data, indent=indent_spaces, sort_keys=True))
+                f.write(json.dumps(data, indent=indent_spaces, sort_keys=sort))
             except TypeError:
                 return None
             return True

@@ -156,7 +156,7 @@ class Config:
             os.remove("wrapper.properties")
 
         if not os.path.exists("wrapper.properties.json"):
-            putjsonfile(NEWCONFIG, "wrapper.properties")
+            putjsonfile(NEWCONFIG, "wrapper.properties", sort=True)
             self.exit = True
 
         self.config = getjsonfile("wrapper.properties")
@@ -182,4 +182,4 @@ class Config:
             sys.exit()
 
     def save(self):
-        putjsonfile(self.config, "wrapper.properties")
+        putjsonfile(self.config, "wrapper.properties", sort=True)
