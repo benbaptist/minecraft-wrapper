@@ -475,8 +475,9 @@ class Wrapper:
             # and was recently polled...
             theirname = self.usercache.key(useruuid)["localname"]
 
-        if int((time.time() - self.usercache.key(useruuid)["time"])) < frequency:
-            return theirname  # dont re-poll if same time frame (daily = 86400).
+        if self.usercache.key(useruuid):
+            if int((time.time() - self.usercache.key(useruuid)["time"])) < frequency:
+                return theirname  # dont re-poll if same time frame (daily = 86400).
 
         # continue on and poll... because user is not in cache or is old record that needs re-polled
         # else:  # user is not in cache
