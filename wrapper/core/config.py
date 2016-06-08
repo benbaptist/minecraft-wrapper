@@ -160,7 +160,13 @@ class Config:
             putjsonfile(NEWCONFIG, "wrapper.properties", sort=True, encodedas="UTF-8")
             self.exit = True
 
-        self.config = getjsonfile("wrapper.properties", encodedas="UTF-8")  # the only data file that must be UTF-8
+        self.config = getjsonfile("wrapper.properties")  # the only data file that must be UTF-8
+        if self.config is None:
+            self.log.error("I think you messed up the Json formatting of your "
+                           "wrapper.properties.json file. "
+                           "Take your file and have it checked at: \n"
+                           "http://jsonlint.com/")
+            self.exit = True
 
         changesmade = False
         for section in NEWCONFIG:

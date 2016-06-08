@@ -39,16 +39,15 @@ class MCServer:
         self.encoding = self.config["General"]["encoding"]
         self.serverpath = self.config["General"]["server-directory"]
         self.wrapper = wrapper
-        self.args = self.config["General"]["command"].split(" ")
+        commargs = self.config["General"]["command"].split(" ")
+        self.args = []
 
-        index = 0
-        if self.args[-1] == "nogui":
-            index = -1
-        if self.args[-4:][-4:] == ".jar":
-            self.args[-4:] = "%s/%s" % (self.args[-4:], self.serverpath)
-        else:
-            self.log.error("Could not locate server jar name in command (should be the last argument "
-                           "or just before a last argument of 'nogui')")
+        for x in range(len(commargs)):
+            if commargs[x][-4:] == ".jar":
+                self.args.append("%s/%s" % (self.serverpath, commargs[x]))
+            else:
+                self.args.append(commargs[x])
+
         self.api = API(wrapper, "Server", internal=True)
         self.backups = Backups(wrapper)
 
@@ -116,10 +115,11 @@ class MCServer:
             self.changestate(MCSState.STARTING)
             self.log.info("Starting server...")
             self.reloadproperties()
-            self.proc = subprocess.Popen(self.args, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            self.proc = subprocess.Popen(self.args, cwd=self.serverpath, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                          stdin=subprocess.PIPE, universal_newlines=True)
             self.players = {}
             self.accepteula()  # Auto accept eula
+            print(self.args)
             if self.proc.poll() is None and trystart > 3:
                 self.log.error("could not start server.  check your server.properties, wrapper.properties and this"
                                " startup 'command' from wrapper.properties:\n'%s'", " ".join(self.args))
@@ -602,7 +602,8 @@ class MCServer:
                     return True
                 self.lastsizepoll = time.time()
                 size = 0
-                for i in os.walk(self.worldName):  # os.scandir not in standard library even on early py2.7.x systems
+                # os.scandir not in standard library even on early py2.7.x systems
+                for i in os.walk("%s/%s" % (self.serverpath, self.worldName)):
                     for f in os.listdir(i[0]):
                         size += os.path.getsize(os.path.join(i[0], f))
                 self.worldSize = size

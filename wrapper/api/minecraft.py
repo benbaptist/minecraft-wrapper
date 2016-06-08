@@ -20,6 +20,7 @@ class Minecraft:
         self.proxy = wrapper.proxy
         self.log = wrapper.log
         self._encoding = wrapper.config["General"]["encoding"]
+        self.serverpath = wrapper.config["General"]["server-directory"]
 
         blockdata = Items()
         self.blocks = blockdata.itemslist
@@ -318,7 +319,7 @@ class Minecraft:
             worldname = self.wrapper.javaserver.worldName
         if not worldname:
             raise Exception("Server Uninitiated")
-        f = NBTFile("%s/level.dat" % worldname, "rb")
+        f = NBTFile("%s/%s/level.dat" % (self.serverpath, worldname), "rb")
         return f["Data"]
 
     def getSpawnPoint(self):
