@@ -1,3 +1,7 @@
+Build #118 [0.8.4]
+- Fixed serious bug fix for wrapper.getusernamebyuuid() that will prevent new players from joining.
+- Refactored config.py to use pure json (updates wrapper.properties to wrapper.properties.json).
+
 Build #117 [0.8.3.1]
 - bug fix # [SurestTexas00 #183 - 'Unable to launch'](https://github.com/suresttexas00/minecraft-wrapper/issues/183) caused by invalid PY2 argument 'exist_ok=' for os.makedirs().
 - centralize the mkdir_p function to utils.helpers.

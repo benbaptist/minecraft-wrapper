@@ -807,7 +807,8 @@ class Client:
                     else:
                         self.disconnect("Proxy Client Session Error (HTTP Status Code %d)" % r.status_code)
                         return False
-
+                    print(self.uuid.string)
+                    print(self.username)
                     currentname = self.wrapper.getusernamebyuuid(self.uuid.string)
                     if currentname:
                         if currentname != self.username:
