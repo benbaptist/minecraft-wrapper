@@ -8,10 +8,10 @@ import time
 
 import subprocess
 import os
-import json
 import platform
 
 from api.base import API
+from utils.helpers import putjsonfile, getjsonfile, mkdir_p
 
 # Plans for this: separate backup code into its own method, allow for plugins to control backups more freely.
 # I also should probably not use irc=True when broadcasting, and instead should just rely on events and having
@@ -25,6 +25,7 @@ class Backups:
     def __init__(self, wrapper):
         self.wrapper = wrapper
         self.config = wrapper.config
+        self.encoding = self.config["General"]["encoding"]
         self.log = wrapper.log
         self.api = API(wrapper, "Backups", internal=True)
 
@@ -42,20 +43,21 @@ class Backups:
             if not os.path.exists(self.config["Backups"]["backup-location"]):
                 self.log.warning("Backup location %s does not exist -- creating target location...",
                                  self.config["Backups"]["backup-location"])
-                os.mkdir(self.config["Backups"]["backup-location"])
+                mkdir_p(self.config["Backups"]["backup-location"])
+                
             if len(self.backups) == 0 and os.path.exists(self.config["Backups"]["backup-location"] + "/backups.json"):
-                with open(self.config["Backups"]["backup-location"] + "/backups.json", "r") as f:
-                    try:
-                        self.backups = json.loads(f.read())
-                    except Exception as e:
-                        self.log.error("NOTE - backups.json was unreadable. It might be corrupted. Backups will no "
-                                       "longer be automatically pruned.")
-                        self.wrapper.events.callevent("wrapper.backupFailure", {
-                            "reasonCode": 4, 
-                            "reasonText": "backups.json is corrupted. Please contact an administer instantly, as this "
-                                          "may be critical."
-                        })
-                        self.backups = []
+                loadcode = getjsonfile("backups", self.config["Backups"]["backup-location"],
+                                       encodedas=self.encoding)
+                if not loadcode:
+                    self.log.error("NOTE - backups.json was unreadable. It might be corrupted. Backups will no "
+                                   "longer be automatically pruned.")
+                    self.wrapper.events.callevent("wrapper.backupFailure", {
+                        "reasonCode": 4,
+                        "reasonText": "backups.json is corrupted. Please contact an administer instantly, as this "
+                                      "may be critical."
+                    })
+                    self.backups = []
+
             else:
                 if len(os.listdir(self.config["Backups"]["backup-location"])) > 0:
                     # import old backups from previous versions of Wrapper.py
@@ -133,8 +135,7 @@ class Backups:
                                   datetime.datetime.fromtimestamp(int(backup[0])).strftime('%Y-%m-%d_%H:%M:%S'))
                     # hink = self.backups[0][1][:]  # not used...
                     del self.backups[0]
-            with open(self.config["Backups"]["backup-location"] + "/backups.json", "w") as f:
-                f.write(json.dumps(self.backups))
+            putjsonfile(self.backups, "backups", self.config["Backups"]["backup-location"], encodedas=self.encoding)
 
             if not os.path.exists(self.config["Backups"]["backup-location"] + "/" + filename):
                 self.wrapper.events.callevent("wrapper.backupFailure",

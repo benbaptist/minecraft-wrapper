@@ -7,6 +7,7 @@ from utils.helpers import getjsonfile, putjsonfile
 
 """[General]
 server-name = Minecraft Server
+server-directory = "."
 command = java -jar minecraft_server.1.9.2.jar nogui
 auto-restart = True
 auto-update-wrapper = False
@@ -156,10 +157,10 @@ class Config:
             os.remove("wrapper.properties")
 
         if not os.path.exists("wrapper.properties.json"):
-            putjsonfile(NEWCONFIG, "wrapper.properties", sort=True)
+            putjsonfile(NEWCONFIG, "wrapper.properties", sort=True, encodedas="UTF-8")
             self.exit = True
 
-        self.config = getjsonfile("wrapper.properties")
+        self.config = getjsonfile("wrapper.properties", encodedas="UTF-8")  # the only data file that must be UTF-8
 
         changesmade = False
         for section in NEWCONFIG:
@@ -182,4 +183,4 @@ class Config:
             sys.exit()
 
     def save(self):
-        putjsonfile(self.config, "wrapper.properties", sort=True)
+        putjsonfile(self.config, "wrapper.properties", sort=True, encodedas="UTF-8")

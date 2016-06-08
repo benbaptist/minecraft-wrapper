@@ -13,7 +13,6 @@ from core.exceptions import UnsupportedOSException, InvalidServerStateError
 
 import time
 import threading
-import random
 import subprocess
 import os
 import json
@@ -34,11 +33,22 @@ except ImportError:
 # noinspection PyBroadException,PyUnusedLocal
 class MCServer:
 
-    def __init__(self, args, log, config, wrapper):
-        self.log = log
-        self.config = config
+    def __init__(self, wrapper):
+        self.log = wrapper.log
+        self.config = wrapper.config
+        self.encoding = self.config["General"]["encoding"]
+        self.serverpath = self.config["General"]["server-directory"]
         self.wrapper = wrapper
-        self.args = args
+        self.args = self.config["General"]["command"].split(" ")
+
+        index = 0
+        if self.args[-1] == "nogui":
+            index = -1
+        if self.args[-4:][-4:] == ".jar":
+            self.args[-4:] = "%s/%s" % (self.args[-4:], self.serverpath)
+        else:
+            self.log.error("Could not locate server jar name in command (should be the last argument "
+                           "or just before a last argument of 'nogui')")
         self.api = API(wrapper, "Server", internal=True)
         self.backups = Backups(wrapper)
 
@@ -74,12 +84,8 @@ class MCServer:
         self.properties = {}
         # self.reloadproperties()  This will be done on server start
 
-        self.api.registerEvent("irc.message", self.onchannelmessage)
-        self.api.registerEvent("irc.action", self.onchannelaction)
-        self.api.registerEvent("irc.join", self.onchanneljoin)
-        self.api.registerEvent("irc.part", self.onchannelpart)
-        self.api.registerEvent("irc.quit", self.onchannelquit)
-        self.api.registerEvent("timer.second", self.eachsecond)
+        if self.config["General"]["timed-reboot"] or self.config["Web"]["web-enabled"]:  # don't reg. an unused event
+            self.api.registerEvent("timer.second", self.eachsecond)
 
     def init(self):
         """
@@ -154,15 +160,15 @@ class MCServer:
         self.console("stop")
 
     def accepteula(self):
-        if os.path.isfile("eula.txt"):
+        if os.path.isfile("%s/eula.txt" % self.serverpath):
             self.log.debug("Checking EULA agreement...")
-            with open("eula.txt", "r") as f:
+            with open("%s/eula.txt" % self.serverpath, "r") as f:
                 eula = f.read()
 
             if "false" in eula:
                 # if forced, should be at info level since acceptance is a legal matter.
                 self.log.warning("EULA agreement was not accepted, accepting on your behalf...")
-                with open("eula.txt", "w") as f:
+                with open("%s/eula.txt" % self.serverpath, "w") as f:
                     f.write(eula.replace("false", "true"))
 
             self.log.debug("EULA agreement has been accepted.")
@@ -238,16 +244,15 @@ class MCServer:
             if self.config["General"]["pre-1.7-mode"]:
                 self.console("say %s" % self.chattocolorcodes(message))
             else:
-                self.console("tellraw @a %s" % json.dumps(message))
+                self.console("tellraw @a %s" % json.dumps(message, encoding=self.encoding, ensure_ascii=False))
         else:
             if self.config["General"]["pre-1.7-mode"]:
                 self.console("say %s" %
-                             self.chattocolorcodes(json.loads(processcolorcodes(message)).decode('utf-8')))
+                             self.chattocolorcodes(json.loads(processcolorcodes(message)).decode(self.encoding)))
             else:
                 self.console("tellraw @a %s" % processcolorcodes(message))
 
-    @staticmethod
-    def chattocolorcodes(jsondata):
+    def chattocolorcodes(self, jsondata):
         def getcolorcode(color):
             for code in API.colorcodes:
                 if API.colorcodes[code] == color:
@@ -269,7 +274,7 @@ class MCServer:
         if "extra" in jsondata:
             for extra in jsondata["extra"]:
                 total += handlechunk(extra)
-        return total.encode("utf8")
+        return total.encode(self.encoding)
 
     def login(self, username, eid, location):
         """
@@ -306,15 +311,15 @@ class MCServer:
 
     def reloadproperties(self):
         # Load server icon
-        if os.path.exists("server-icon.png"):
-            with open("server-icon.png", "rb") as f:
+        if os.path.exists("%s/server-icon.png" % self.serverpath):
+            with open("%s/server-icon.png" % self.serverpath, "rb") as f:
                 theicon = f.read()
                 iconencoded = base64.standard_b64encode(theicon)
                 self.serverIcon = b"data:image/png;base64," + iconencoded
         # Read server.properties and extract some information out of it
         # the PY3.5 ConfigParser seems broken.  This way was much more straightforward and works in both PY2 and PY3
-        if os.path.exists("server.properties"):
-            with open("server.properties", "r") as f:
+        if os.path.exists("%s/server.properties" % self.serverpath):
+            with open("%s/server.properties" % self.serverpath, "r") as f:
                 configfile = f.read()
             detect = configfile.split("level-name=")
             if len(detect) < 2:
@@ -511,7 +516,7 @@ class MCServer:
                     "player": self.getplayer(name), 
                     "death": getargsafter(line.split(" "), 4)
                 })
-        else:
+        else:  # pre 1.7 mode
             if len(getargs(line.split(" "), 3)) < 1:
                 return
             if getargs(line.split(" "), 3) == "Done":  # Confirmation that the server finished booting
@@ -563,66 +568,20 @@ class MCServer:
                     "player": name, 
                     "achievement": achievement
                 })
-            elif getargs(line.split(" "), 4) in deathprefixes:  # Player Death
+            elif getargs(line.split(" "), 4) in deathprefixes:  # Pre- 1.7 Player Death
                 name = self.stripspecial(getargs(line.split(" "), 3))
-                deathmessage = self.config["Death"]["death-kick-messages"][random.randrange(
-                    0, len(self.config["Death"]["death-kick-messages"]))]
-                if self.config["Death"]["kick-on-death"] and name in self.config["Death"]["users-to-kick"]:
-                    self.console("kick %s %s" % (name, deathmessage))
+                # No such config items!
+                # deathmessage = self.config["Death"]["death-kick-messages"][random.randrange(
+                #     0, len(self.config["Death"]["death-kick-messages"]))]
+                # if self.config["Death"]["kick-on-death"] and name in self.config["Death"]["users-to-kick"]:
+                #     self.console("kick %s %s" % (name, deathmessage))
                 self.wrapper.events.callevent("player.death", {
                     "player": self.getplayer(name), 
                     "death": getargsafter(line.split(" "), 4)
                 })
 
-    # Event Handlers
-
-    def messagefromchannel(self, channel, message):
-        if self.config["IRC"]["show-channel-server"]:
-            self.broadcast("&6[%s] %s" % (channel, message))
-        else:
-            self.broadcast(message)
-
-    def onchanneljoin(self, payload):
-        channel, nick = payload["channel"], payload["nick"]
-        if not self.config["IRC"]["show-irc-join-part"]:
-            return
-        self.messagefromchannel(channel, "&a%s &rjoined the channel" % nick)
-
-    def onchannelpart(self, payload):
-        channel, nick = payload["channel"], payload["nick"]
-        if not self.config["IRC"]["show-irc-join-part"]:
-            return
-        self.messagefromchannel(channel, "&a%s &rparted the channel" % nick)
-
-    def onchannelmessage(self, payload):
-        channel, nick, message = payload["channel"], payload["nick"], payload["message"]
-        final = ""
-        for i, chunk in enumerate(message.split(" ")):
-            if not i == 0:
-                final += " "
-            try:
-                if chunk[0:7] in ("http://", "https://"):
-                    final += "&b&n&@%s&@&r" % chunk
-                else:
-                    final += chunk
-            except Exception as e:
-                final += chunk
-        self.messagefromchannel(channel, "&a<%s> &r%s" % (nick, final))
-
-    def onchannelaction(self, payload):
-        channel, nick, action = payload["channel"], payload["nick"], payload["action"]
-        self.messagefromchannel(channel, "&a* %s &r%s" % (nick, action))
-
-    def onchannelquit(self, payload):
-        channel, nick, message = payload["channel"], payload["nick"], payload["message"]
-        if not self.config["IRC"]["show-irc-join-part"]:
-            return
-        self.messagefromchannel(channel, "&a%s &rquit: %s" % (nick, message))
-
+    # mcserver.py onsecond Event Handler
     def eachsecond(self, payload):
-        """
-        Called every second, and used for handling cron-like jobs
-        """
         if self.config["General"]["timed-reboot"]:
             if time.time() - self.bootTime > self.config["General"]["timed-reboot-seconds"]:
                 if self.config["General"]["timed-reboot-warning-minutes"] > 0:
@@ -643,7 +602,7 @@ class MCServer:
                     return True
                 self.lastsizepoll = time.time()
                 size = 0
-                for i in os.walk(self.worldName):
+                for i in os.walk(self.worldName):  # os.scandir not in standard library even on early py2.7.x systems
                     for f in os.listdir(i[0]):
                         size += os.path.getsize(os.path.join(i[0], f))
                 self.worldSize = size

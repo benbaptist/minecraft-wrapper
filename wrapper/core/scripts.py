@@ -31,6 +31,7 @@ class Scripts:
     def __init__(self, wrapper):
         self.api = API(wrapper, "Scripts", internal=True)
         self.wrapper = wrapper
+        self.config = wrapper.config
 
         # Register the events
         self.api.registerEvent("server.start", self._startserver)

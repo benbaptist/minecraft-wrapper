@@ -7,6 +7,7 @@ class Permissions:
 
     def __init__(self, wrapper):
         self.wrapper = wrapper
+        self.config = wrapper.config
         # self.permissions = storage.Storage("permissions")
 
     def creategroup(self, groupname):

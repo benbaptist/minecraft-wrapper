@@ -17,6 +17,7 @@ class Plugins:
     def __init__(self, wrapper):
         self.wrapper = wrapper
         self.log = wrapper.log
+        self.config = wrapper.config
         self.plugins = {}
 
     def __getitem__(self, index):

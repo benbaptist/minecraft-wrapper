@@ -863,7 +863,7 @@ class Client:
                     self.disconnect("Your address is IP-banned from this server!.")
                     return False
                 if self.proxy.isuuidbanned(self.uuid.__str__()):
-                    banreason = self.wrapper.proxy.getuuidbanreason(self.uuid.__str__())
+                    banreason = self.proxy.getuuidbanreason(self.uuid.__str__())  # was self.wrapper.proxy... ?
                     self.log.info("Banned player %s tried to connect:\n %s" % (self.username, banreason))
                     self.state = ClientState.HANDSHAKE
                     self.disconnect("Banned: %s" % banreason)

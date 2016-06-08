@@ -2,11 +2,11 @@
 
 # from __future__ import unicode_literals
 
-import json
 import os
 import time
 import logging
-from utils.helpers import mkdir_p
+from utils.helpers import mkdir_p, putjsonfile, getjsonfile
+from core.config import Config
 # import threading
 # import copy
 
@@ -19,10 +19,17 @@ except NameError:
 
 class Storage:
 
-    def __init__(self, name, root="wrapper-data/json", encoding="UTF-8"):
+    def __init__(self, name, root="wrapper-data/json", encoding="default"):
         self.name = name
         self.root = root
-        self.encoding = encoding
+        self.configManager = Config()
+        self.configManager.loadconfig()
+
+        if encoding == "default":
+            self.encoding = self.configManager.config["General"]["encoding"]
+        else:
+            self.encoding = encoding
+
         self.log = logging.getLogger('Wrapper.py')
 
         self.data = {}
@@ -77,23 +84,17 @@ class Storage:
         mkdir_p(self.root)
         if not os.path.exists("%s/%s.json" % (self.root, self.name)):
             self.save()
-        with open("%s/%s.json" % (self.root, self.name), "r") as f:
-            try:
-                self.data = json.loads(f.read(), encoding=self.encoding)
-            except Exception as e:
-                self.log.exception("Failed to load '%s/%s.json' (%s)", self.root, self.name, e)
-                return
-        # self.dataOld = copy.deepcopy(self.data)
+        self.data = getjsonfile(self.name, self.root, encodedas=self.encoding)
+        if self.data is False:
+            self.log.exception("bad directory or filename '%s/%s.json'", self.root, self.name,)
 
     def save(self):
         if not os.path.exists(self.root):
             mkdir_p(self.root)
-        try:
-            with open("%s/%s.json" % (self.root, self.name), "w") as f:
-                f.write(json.dumps(self.data, ensure_ascii=False, encoding=self.encoding, indent=2))
-                # self.flush = False  # where is this self variable used?  Why is it not defined in __init__?
-        except Exception as e:
-            self.log.exception(e)
+        putcode = putjsonfile(self.data, self.name, self.root, encodedas=self.encoding)
+        if not putcode:
+            self.log.exception("TypeError or non-existent path: '%s/%s.json'\nData Dump:\n%s",
+                               self.root, self.name, self.data)
 
     def key(self, key, value=None):
         if value is None:
@@ -113,4 +114,3 @@ class Storage:
                 del self.data[key]
         else:
             self.data[key] = value
-        # self.flush = True

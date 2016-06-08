@@ -39,7 +39,9 @@ class Web:
         self.log = logging.getLogger('Web')
         self.config = wrapper.config
         self.socket = False
-        self.data = Storage("web", self.log)
+        # self.data = Storage("web", self.log)  # Eeek! You can't pass a logger instance into a storage object!
+        self.data = Storage("web")
+
         if "keys" not in self.data:
             self.data["keys"] = []
         # if not self.config["Web"]["web-password"] == None:
