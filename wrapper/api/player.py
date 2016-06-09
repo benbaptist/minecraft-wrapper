@@ -106,7 +106,10 @@ class Player:
             if not gotclient:
                 self.log.error("Proxy is on, but this client is not listed in wrapper.proxy.clients!")
         self.data = Storage(self.clientUuid.string, root="wrapper-data/players")
-
+        if "groups" not in self.permissions:
+            self.permissions["groups"] = {}
+            self.permissions["groups"]["Default"] = {}
+            self.permissions["groups"]["Default"]["permissions"] = {}
         if "users" not in self.permissions:  # top -level dict item should be just checked once here (not over and over)
             self.permissions["users"] = {}
         if self.mojangUuid.string not in self.permissions["users"]:  # no reason not to do this here too

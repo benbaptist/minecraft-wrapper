@@ -281,9 +281,8 @@ class ServerConnection:
                 data = self.packet.readpkt([_POSITION])
                 #  javaserver.spawnPoint doesn't exist.. this is player spawnpoint anyway... ?
                 # self.wrapper.javaserver.spawnPoint = data[0]
-                if self.client.position == (0, 0, 0):  # this is the actual point of a players "login: to the "server"
-                    self.client.position = data[0]
-                    self.wrapper.events.callevent("player.spawned", {"player": self.client.getPlayerObject()})
+                self.client.position = data[0]
+                self.wrapper.events.callevent("player.spawned", {"player": self.client.getPlayerObject()})
                 self.log.trace("(PROXY SERVER) -> Parsed SPAWN_POSITION packet:\n%s", data[0])
 
             elif pkid == self.pktCB.RESPAWN:
