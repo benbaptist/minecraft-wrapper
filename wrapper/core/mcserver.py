@@ -69,7 +69,7 @@ class MCServer:
             time.sleep(5)
 
         # Server Information
-        self.worldName = None
+        self.worldname = None
         self.worldSize = 0
         self.maxPlayers = 20
         self.protocolVersion = -1  # -1 until proxy mode checks the server's MOTD on boot
@@ -81,7 +81,9 @@ class MCServer:
         self.serverIcon = None
 
         self.properties = {}
-        # self.reloadproperties()  This will be done on server start
+
+        # has to be done immediately to get worldname; otherwise a "None" folder gets created in the server folder.
+        self.reloadproperties()  # This will be redone on server start
 
         if self.config["General"]["timed-reboot"] or self.config["Web"]["web-enabled"]:  # don't reg. an unused event
             self.api.registerEvent("timer.second", self.eachsecond)
@@ -119,7 +121,6 @@ class MCServer:
                                          stdin=subprocess.PIPE, universal_newlines=True)
             self.players = {}
             self.accepteula()  # Auto accept eula
-            print(self.args)
             if self.proc.poll() is None and trystart > 3:
                 self.log.error("could not start server.  check your server.properties, wrapper.properties and this"
                                " startup 'command' from wrapper.properties:\n'%s'", " ".join(self.args))
@@ -325,7 +326,7 @@ class MCServer:
             if len(detect) < 2:
                 self.log.warning("No 'level-name=(worldname)' was found in the server.properties.")
                 return False
-            self.worldName = detect[1].split("\n")[0]
+            self.worldname = detect[1].split("\n")[0]
             self.motd = configfile.split("motd=")[1].split("\n")[0]
             playerentry = configfile.split("max-players=")
             if len(playerentry) < 2:
@@ -464,8 +465,8 @@ class MCServer:
                 self.bootTime = time.time()
             # Getting world name
             elif getargs(line.split(" "), 0) == "Preparing" and getargs(line.split(" "), 1) == "level":
-                self.worldName = getargs(line.split(" "), 2).replace('"', "")
-                self.world = World(self.worldName, self)
+                self.worldname = getargs(line.split(" "), 2).replace('"', "")
+                self.world = World(self.worldname, self)
             elif getargs(line.split(" "), 0)[0] == "<":  # Player Message
                 name = self.stripspecial(getargs(line.split(" "), 0)[1:-1])
                 message = self.stripspecial(getargsafter(line.split(" "), 1))
@@ -525,8 +526,8 @@ class MCServer:
                 self.bootTime = time.time()
             elif getargs(line.split(" "), 3) == "Preparing" and getargs(line.split(" "), 4) == "level":
                 # Getting world name
-                self.worldName = getargs(line.split(" "), 5).replace('"', "")
-                self.world = World(self.worldName, self)
+                self.worldname = getargs(line.split(" "), 5).replace('"', "")
+                self.world = World(self.worldname, self)
             elif getargs(line.split(" "), 3)[0] == "<":  # Player Message
                 name = self.stripspecial(getargs(line.split(" "), 3)[1:-1])
                 message = self.stripspecial(getargsafter(line.split(" "), 4))
@@ -598,12 +599,12 @@ class MCServer:
                 self.rebootWarnings = 0
         if self.config["Web"]["web-enabled"]:  # only used by web management module
             if time.time() - self.lastsizepoll > 120:
-                if self.worldName is None:
+                if self.worldname is None:
                     return True
                 self.lastsizepoll = time.time()
                 size = 0
                 # os.scandir not in standard library even on early py2.7.x systems
-                for i in os.walk("%s/%s" % (self.serverpath, self.worldName)):
+                for i in os.walk("%s/%s" % (self.serverpath, self.worldname)):
                     for f in os.listdir(i[0]):
                         size += os.path.getsize(os.path.join(i[0], f))
                 self.worldSize = size

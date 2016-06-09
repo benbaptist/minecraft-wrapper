@@ -310,13 +310,13 @@ class Minecraft:
         """
 
         Args:
-            worldname: optional world name.  If not specified, Wrapper looks up the server worldName.
+            worldname: optional world name.  If not specified, Wrapper looks up the server worldname.
 
         Returns: Return an NBT object of the world's level.dat.
 
         """
         if not worldname:
-            worldname = self.wrapper.javaserver.worldName
+            worldname = self.wrapper.javaserver.worldname
         if not worldname:
             raise Exception("Server Uninitiated")
         f = NBTFile("%s/%s/level.dat" % (self.serverpath, worldname), "rb")
@@ -361,7 +361,8 @@ class Minecraft:
         Returns: Returns the world's name.
 
         """
-        return self.getServer().worldName
+        print("getworldname = %s" % self.getServer().worldname)
+        return self.getServer().worldname
 
     # Ban related items - These simply wrap the proxy base methods
     def banUUID(self, playeruuid, reason="by wrapper api.", source="minecraft.api", expires=False):
