@@ -823,7 +823,7 @@ class Client:
                 # if self.config["Proxy"]["convert-player-files"]:  # Rename UUIDs accordingly
                 #     if self.config["Proxy"]["online-mode"]:
                 #         # Check player files, and rename them accordingly to offline-mode UUID
-                #         worldname = self.wrapper.javaserver.worldName
+                #         worldname = self.wrapper.javaserver.worldname
                 #         if not os.path.exists("%s/playerdata/%s.dat" % (worldname, self.serveruuid.string)):
                 #             if os.path.exists("%s/playerdata/%s.dat" % (worldname, self.uuid.string)):
                 #                 self.log.info("Migrating %s's playerdata file to proxy mode", self.username)

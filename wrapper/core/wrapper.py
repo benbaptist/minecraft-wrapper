@@ -157,12 +157,17 @@ class Wrapper:
             t.start()
 
         self.bootserver()
+        # wrapper execution ends here.
 
     def bootserver(self):
         # This boots the server and loops in it
         self.javaserver.__handle_server__()
         # until it stops
         self.plugins.disableplugins()
+        self.storage.save()
+        self.permissions.save()
+        self.usercache.save()
+        self.log.info("Server handle stopped.  Storages saved. Plugins disabled")
 
     def parseconsoleinput(self):
         while not self.halt:
@@ -316,9 +321,6 @@ class Wrapper:
                     print("[BREAK] Console input exception (nothing passed to server) \n%s" % e)
                     break
                 continue
-        self.storage.save()
-        self.permissions.save()
-        self.usercache.save()
 
     def _registerwrappershelp(self):
         # All commands listed herein are accessible in-game

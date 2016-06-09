@@ -488,7 +488,7 @@ class WebClient:
                 "wrapper_build": self.wrapper.getbuildstring(),
                 "console": consolescrollback,
                 "chat": chatscrollback,
-                "level_name": self.wrapper.javaserver.worldName,
+                "level_name": self.wrapper.javaserver.worldname,
                 "server_version": self.wrapper.javaserver.version,
                 "motd": self.wrapper.javaserver.motd,
                 "refresh_time": time.time(),
