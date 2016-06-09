@@ -20,6 +20,7 @@ class Minecraft:
         self.proxy = wrapper.proxy
         self.log = wrapper.log
         self._encoding = wrapper.config["General"]["encoding"]
+        self.serverpath = wrapper.config["General"]["server-directory"]
 
         blockdata = Items()
         self.blocks = blockdata.itemslist
@@ -100,7 +101,8 @@ class Minecraft:
     def getAllPlayers(self):
         """
 
-        Returns: Returns a dict containing all players ever connected to the server
+        Returns: Returns a dict containing the uuids and associated login data of all
+        players ever connected to the server.
 
         """
         if self.wrapper.isonlinemode():
@@ -160,7 +162,7 @@ class Minecraft:
         pass
         # TODO a good idea
 
-    def getOfflineUUID(self,name):
+    def getOfflineUUID(self, name):
         """
         :param name: gets UUID object based on "OfflinePlayer:<playername>"
         :return: a MCUUID object based on the name
@@ -308,16 +310,16 @@ class Minecraft:
         """
 
         Args:
-            worldname: optional world name.  If not specified, Wrapper looks up the server worldName.
+            worldname: optional world name.  If not specified, Wrapper looks up the server worldname.
 
         Returns: Return an NBT object of the world's level.dat.
 
         """
         if not worldname:
-            worldname = self.wrapper.javaserver.worldName
+            worldname = self.wrapper.javaserver.worldname
         if not worldname:
             raise Exception("Server Uninitiated")
-        f = NBTFile("%s/level.dat" % worldname, "rb")
+        f = NBTFile("%s/%s/level.dat" % (self.serverpath, worldname), "rb")
         return f["Data"]
 
     def getSpawnPoint(self):
@@ -359,7 +361,8 @@ class Minecraft:
         Returns: Returns the world's name.
 
         """
-        return self.getServer().worldName
+        print("getworldname = %s" % self.getServer().worldname)
+        return self.getServer().worldname
 
     # Ban related items - These simply wrap the proxy base methods
     def banUUID(self, playeruuid, reason="by wrapper api.", source="minecraft.api", expires=False):

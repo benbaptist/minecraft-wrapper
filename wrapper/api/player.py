@@ -51,6 +51,8 @@ class Player:
         self.javaserver = wrapper.javaserver
         self.permissions = wrapper.permissions
         self.log = wrapper.log
+        self._encoding = wrapper.config["General"]["encoding"]
+        self.serverpath = wrapper.config["General"]["server-directory"]
 
         self.username = username
         self.loggedIn = time.time()
@@ -104,7 +106,10 @@ class Player:
             if not gotclient:
                 self.log.error("Proxy is on, but this client is not listed in wrapper.proxy.clients!")
         self.data = Storage(self.clientUuid.string, root="wrapper-data/players")
-
+        if "groups" not in self.permissions:
+            self.permissions["groups"] = {}
+            self.permissions["groups"]["Default"] = {}
+            self.permissions["groups"]["Default"]["permissions"] = {}
         if "users" not in self.permissions:  # top -level dict item should be just checked once here (not over and over)
             self.permissions["users"] = {}
         if self.mojangUuid.string not in self.permissions["users"]:  # no reason not to do this here too
@@ -152,11 +157,11 @@ class Player:
         """
         ops = False
         if self.javaserver.protocolVersion > mcpacket.PROTOCOL_1_7:  # 1.7.6 or greater use ops.json
-            ops = getjsonfile("ops")
+            ops = getjsonfile("ops", self.serverpath, encodedas=self._encoding)
         if not ops:
             # try for an old "ops.txt" file instead.
             ops = {}
-            opstext = getfileaslines("ops.txt")
+            opstext = getfileaslines("ops.txt", self.serverpath)
             if not opstext:
                 return False
             for x in range(len(opstext)):

@@ -38,8 +38,11 @@ class Web:
         self.api = API(wrapper, "Web", internal=True)
         self.log = logging.getLogger('Web')
         self.config = wrapper.config
+        self.serverpath = self.config["General"]["server-directory"]
         self.socket = False
-        self.data = Storage("web", self.log)
+        # self.data = Storage("web", self.log)  # Eeek! You can't pass a logger instance into a storage object!
+        self.data = Storage("web")
+
         if "keys" not in self.data:
             self.data["keys"] = []
         # if not self.config["Web"]["web-password"] == None:
@@ -214,6 +217,9 @@ class WebClient:
 
     def __init__(self, wrapper, sock, addr, web):
         self.wrapper = wrapper
+        self.config = wrapper.config
+        self.serverpath = self.config["General"]["server-directory"]
+
         self.socket = sock
         self.addr = addr
         self.web = web
@@ -313,7 +319,7 @@ class WebClient:
         if action == "read_server_props":
             if not self.web.validateKey(get("key")):
                 return EOFError
-            return open("server.properties", "r").read()
+            return open("%s/server.properties" % self.serverpath, "r").read()
         if action == "save_server_props":
             if not self.web.validateKey(get("key")):
                 return EOFError
@@ -322,7 +328,7 @@ class WebClient:
                 return False
             if len(props) < 10:
                 return False
-            with open("server.properties", "w") as f:
+            with open("%s/server.properties" % self.serverpath, "w") as f:
                 f.write(props)
             return "ok"
         if action == "listdir":
@@ -482,7 +488,7 @@ class WebClient:
                 "wrapper_build": self.wrapper.getbuildstring(),
                 "console": consolescrollback,
                 "chat": chatscrollback,
-                "level_name": self.wrapper.javaserver.worldName,
+                "level_name": self.wrapper.javaserver.worldname,
                 "server_version": self.wrapper.javaserver.version,
                 "motd": self.wrapper.javaserver.motd,
                 "refresh_time": time.time(),

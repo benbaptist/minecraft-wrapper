@@ -58,8 +58,9 @@ class Wrapper:
         self.log = logging.getLogger('Wrapper.py')
         self.storage = False
         self.configManager = Config()
-        self.configManager.loadconfig()  # Load initially for storage object
-        self.encoding = self.configManager.config["General"]["encoding"]  # This was to allow alternate encodings
+        self.configManager.loadconfig()
+        self.config = self.configManager.config  # set up config
+        self.encoding = self.config["General"]["encoding"]  # This was to allow alternate encodings
         self.javaserver = None
         self.api = None
         self.irc = None
@@ -78,16 +79,15 @@ class Wrapper:
         self.events = Events(self)
         self.permission = {}
         self.help = {}
-        self.config = {}
         self.xplayer = ConsolePlayer(self)  # future plan to expose this to api
 
         if not readline:
             self.log.warning("'readline' not imported.")
 
-        if not requests and self.configManager.config["Proxy"]["proxy-enabled"]:
+        if not requests and self.config["Proxy"]["proxy-enabled"]:
             self.log.error("You must have the requests module installed to run in proxy mode!")
             return
-        self.proxymode = self.configManager.config["Proxy"]["proxy-enabled"]
+        self.proxymode = self.config["Proxy"]["proxy-enabled"]
 
     def __del__(self):
         if self.storage:  # prevent error message on very first wrapper starts when wrapper exits after creating
@@ -98,9 +98,7 @@ class Wrapper:
 
     def start(self):
         """ wrapper should only start ONCE... old code made it restart over when only a server needed restarting"""
-        # Reload configuration each time wrapper starts in order to detect changes
-        self.configManager.loadconfig()
-        self.config = self.configManager.config
+        # Configuration is loaded on __init__ each time wrapper starts in order to detect changes
 
         signal.signal(signal.SIGINT, self.sigint)
         signal.signal(signal.SIGTERM, self.sigint)
@@ -109,13 +107,13 @@ class Wrapper:
         self._registerwrappershelp()
 
         # This is not the actual server... the MCServer class is a console wherein the server is started
-        self.javaserver = MCServer(sys.argv, self.log, self.configManager.config, self)
+        self.javaserver = MCServer(self)
         self.javaserver.init()
 
         self.plugins.loadplugins()
 
         if self.config["IRC"]["irc-enabled"]:  # this should be a plugin
-            self.irc = IRC(self.javaserver, self.config, self.log, self)
+            self.irc = IRC(self.javaserver, self.log, self)
             t = threading.Thread(target=self.irc.init, args=())
             t.daemon = True
             t.start()
@@ -130,13 +128,6 @@ class Wrapper:
                 self.log.error("Web remote could not be started because you do not have the required modules "
                                "installed: pkg_resources")
                 self.log.error("Hint: http://stackoverflow.com/questions/7446187")
-
-        # This is passed to MCserver console....
-        if len(sys.argv) < 2:
-            self.javaserver.args = self.configManager.config["General"]["command"].split(" ")
-        else:
-            # I think this allows you to run the server java command directly from the python prompt
-            self.javaserver.args = sys.argv[1:]
 
         # Console Daemon runs while not wrapper.halt (here; self.halt)
         consoledaemon = threading.Thread(target=self.parseconsoleinput, args=())
@@ -166,12 +157,17 @@ class Wrapper:
             t.start()
 
         self.bootserver()
+        # wrapper execution ends here.
 
     def bootserver(self):
         # This boots the server and loops in it
         self.javaserver.__handle_server__()
         # until it stops
         self.plugins.disableplugins()
+        self.storage.save()
+        self.permissions.save()
+        self.usercache.save()
+        self.log.info("Server handle stopped.  Storages saved. Plugins disabled")
 
     def parseconsoleinput(self):
         while not self.halt:
@@ -325,9 +321,6 @@ class Wrapper:
                     print("[BREAK] Console input exception (nothing passed to server) \n%s" % e)
                     break
                 continue
-        self.storage.save()
-        self.permissions.save()
-        self.usercache.save()
 
     def _registerwrappershelp(self):
         # All commands listed herein are accessible in-game
@@ -434,6 +427,7 @@ class Wrapper:
                 user_uuid_matched = useruuid  # cache for later in case multiple name changes require a uuid lookup.
 
         # try mojang  (a new player or player changed names.)
+        # requests seems to =have a builtin json() method
         r = requests.get("https://api.mojang.com/users/profiles/minecraft/%s" % username)
         if r.status_code == 200:
             useruuid = self.formatuuid(r.json()["id"])  # returns a string uuid with dashes

@@ -807,8 +807,6 @@ class Client:
                     else:
                         self.disconnect("Proxy Client Session Error (HTTP Status Code %d)" % r.status_code)
                         return False
-                    print(self.uuid.string)
-                    print(self.username)
                     currentname = self.wrapper.getusernamebyuuid(self.uuid.string)
                     if currentname:
                         if currentname != self.username:
@@ -825,7 +823,7 @@ class Client:
                 # if self.config["Proxy"]["convert-player-files"]:  # Rename UUIDs accordingly
                 #     if self.config["Proxy"]["online-mode"]:
                 #         # Check player files, and rename them accordingly to offline-mode UUID
-                #         worldname = self.wrapper.javaserver.worldName
+                #         worldname = self.wrapper.javaserver.worldname
                 #         if not os.path.exists("%s/playerdata/%s.dat" % (worldname, self.serveruuid.string)):
                 #             if os.path.exists("%s/playerdata/%s.dat" % (worldname, self.uuid.string)):
                 #                 self.log.info("Migrating %s's playerdata file to proxy mode", self.username)
@@ -865,7 +863,7 @@ class Client:
                     self.disconnect("Your address is IP-banned from this server!.")
                     return False
                 if self.proxy.isuuidbanned(self.uuid.__str__()):
-                    banreason = self.wrapper.proxy.getuuidbanreason(self.uuid.__str__())
+                    banreason = self.proxy.getuuidbanreason(self.uuid.__str__())  # was self.wrapper.proxy... ?
                     self.log.info("Banned player %s tried to connect:\n %s" % (self.username, banreason))
                     self.state = ClientState.HANDSHAKE
                     self.disconnect("Banned: %s" % banreason)

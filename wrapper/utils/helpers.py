@@ -102,19 +102,22 @@ def getargsafter(arginput, i):
     return " ".join(arginput[i:])
 
 
-def getjsonfile(filename, directory="."):
+def getjsonfile(filename, directory=".", encodedas="UTF-8"):
     """
     Args:
         filename: filename without extension
         directory: by default, wrapper script directory.
+        encodedas: the encoding
 
     Returns: a dictionary if successful. If unsuccessful; None/no data or False (if file/directory not found)
 
     """
+    if not os.path.exists(directory):
+        mkdir_p(directory)
     if os.path.exists("%s/%s.json" % (directory, filename)):
         with open("%s/%s.json" % (directory, filename), "r") as f:
             try:
-                return json.loads(f.read())
+                return json.loads(f.read(), encoding=encodedas)
             except ValueError:
                 return None
             #  Exit yielding None (no data)
@@ -131,6 +134,8 @@ def getfileaslines(filename, directory="."):
     Returns: a list if successful. If unsuccessful; None/no data or False (if file/directory not found)
 
     """
+    if not os.path.exists(directory):
+        mkdir_p(directory)
     if os.path.exists("%s/%s" % (directory, filename)):
         with open("%s/%s" % (directory, filename), "r") as f:
             try:
@@ -260,7 +265,7 @@ def processoldcolorcodes(message):
     return message
 
 
-def putjsonfile(data, filename, directory="./", indent_spaces=2, sort=False):
+def putjsonfile(data, filename, directory=".", indent_spaces=2, sort=False, encodedas="UTF-8"):
     """
     writes entire data to a json file.
     This is not for appending items to an existing file!
@@ -270,12 +275,15 @@ def putjsonfile(data, filename, directory="./", indent_spaces=2, sort=False):
     :param directory: by default, wrapper script directory.
     :param indent_spaces - indentation level. Pass None for no indents. 2 is the default.
     :param sort - whether or not to sort the records for readability
+    :param encodedas - encoding
     :returns True if successful. If unsuccessful; None = TypeError, False = file/directory not found/accessible
     """
+    if not os.path.exists(directory):
+        mkdir_p(directory)
     if os.path.exists(directory):
-        with open("%s%s.json" % (directory, filename), "w") as f:
+        with open("%s/%s.json" % (directory, filename), "w") as f:
             try:
-                f.write(json.dumps(data, indent=indent_spaces, sort_keys=sort))
+                f.write(json.dumps(data, ensure_ascii=False, indent=indent_spaces, sort_keys=sort, encoding=encodedas))
             except TypeError:
                 return None
             return True
