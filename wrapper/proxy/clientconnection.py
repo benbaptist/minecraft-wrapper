@@ -313,7 +313,7 @@ class Client:
                 else:  # self.version >= mcpacket.PROTOCOL_1_8START:
                     data = self.packet.readpkt([_VARINT])
                     # ("varint:payload")
-                self.log.trace("(PROXY CLIENT) -> Received KEEP_ALIVE from client:\n%s", data)
+                # self.log.trace("(PROXY CLIENT) -> Received KEEP_ALIVE from client:\n%s", data)
                 if data[0] == self.keepalive_val:
                     self.time_client_responded = time.time()
 
@@ -359,7 +359,7 @@ class Client:
 
             elif pkid == self.pktSB.CHAT_MESSAGE:
                 data = self.packet.readpkt([_STRING])
-                self.log.trace("(PROXY CLIENT) -> Parsed CHAT_MESSAGE packet with client state PLAY:\n%s", data)
+                # self.log.trace("(PROXY CLIENT) -> Parsed CHAT_MESSAGE packet with client state PLAY:\n%s", data)
 
                 if data is None:
                     return False
@@ -409,7 +409,7 @@ class Client:
                 else:
                     data = [0, 0, 0, 0]
                 self.position = (data[0], data[1], data[3])  # skip 1.7.10 and lower protocol yhead args
-                self.log.trace("(PROXY CLIENT) -> Parsed PLAYER_POSITION packet:\n%s", data)
+                # self.log.trace("(PROXY CLIENT) -> Parsed PLAYER_POSITION packet:\n%s", data)
 
             elif pkid == self.pktSB.PLAYER_POSLOOK:  # player position and look
                 if self.clientversion < mcpacket.PROTOCOL_1_8START:
@@ -419,18 +419,18 @@ class Client:
                 # ("double:x|double:y|double:z|float:yaw|float:pitch|bool:on_ground")
                 self.position = (data[0], data[1], data[4])
                 self.head = (data[4], data[5])
-                self.log.trace("(PROXY CLIENT) -> Parsed PLAYER_POSLOOK packet:\n%s", data)
+                # self.log.trace("(PROXY CLIENT) -> Parsed PLAYER_POSLOOK packet:\n%s", data)
 
             elif pkid == self.pktSB.TELEPORT_CONFIRM:
                 # don't interfere with this and self.pktSB.PLAYER_POSLOOK... doing so will glitch the client
                 data = self.packet.readpkt([_VARINT])
-                self.log.trace("(SERVER-BOUND) -> Client sent TELEPORT_CONFIRM packet:\n%s", data)
+                # self.log.trace("(SERVER-BOUND) -> Client sent TELEPORT_CONFIRM packet:\n%s", data)
 
             elif pkid == self.pktSB.PLAYER_LOOK:  # Player Look
                 data = self.packet.readpkt([_FLOAT, _FLOAT, _BOOL])
                 # ("float:yaw|float:pitch|bool:on_ground")
                 self.head = (data[0], data[1])
-                self.log.trace("(PROXY CLIENT) -> Parsed PLAYER_LOOK packet:\n%s", data)
+                # self.log.trace("(PROXY CLIENT) -> Parsed PLAYER_LOOK packet:\n%s", data)
 
             elif pkid == self.pktSB.PLAYER_DIGGING:  # Player Block Dig
                 # if not self.isLocal: disable these for now and come back to it later - I think these are for lobbies.
@@ -444,12 +444,12 @@ class Client:
                     data = self.packet.readpkt([_BYTE, _INT, _UBYTE, _INT, _BYTE])
                     # "byte:status|int:x|ubyte:y|int:z|byte:face")
                     position = (data[1], data[2], data[3])
-                    self.log.trace("(PROXY CLIENT) -> Parsed PLAYER_DIGGING packet:\n%s", data)
+                    # self.log.trace("(PROXY CLIENT) -> Parsed PLAYER_DIGGING packet:\n%s", data)
                 else:
                     data = self.packet.readpkt([_BYTE, _POSITION, _NULL, _NULL, _BYTE])
                     # "byte:status|position:position|byte:face")
                     position = data[1]
-                    self.log.trace("(PROXY CLIENT) -> Parsed PLAYER_DIGGING packet:\n%s", data)
+                    # self.log.trace("(PROXY CLIENT) -> Parsed PLAYER_DIGGING packet:\n%s", data)
                 if data is None:
                     return True
 
@@ -526,7 +526,7 @@ class Client:
                 clickposition = position
                 face = data[3]
 
-                self.log.trace("(PROXY CLIENT) -> Parsed PLAYER_BLOCK_PLACEMENT packet:\n%s", data)
+                # self.log.trace("(PROXY CLIENT) -> Parsed PLAYER_BLOCK_PLACEMENT packet:\n%s", data)
 
                 if face == 0:  # Compensate for block placement coordinates
                     position = (position[0], position[1] - 1, position[2])
@@ -564,7 +564,7 @@ class Client:
             elif pkid == self.pktSB.USE_ITEM:  # no 1.8 or prior packet
                 data = self.packet.readpkt([_REST])
                 # "rest:pack")
-                self.log.trace("(PROXY CLIENT) -> Parsed USE_ITEM packet:\n%s", data)
+                # self.log.trace("(PROXY CLIENT) -> Parsed USE_ITEM packet:\n%s", data)
                 player = self.getPlayerObject()
                 position = self.lastplacecoords
                 if "pack" in data:
@@ -580,7 +580,7 @@ class Client:
             elif pkid == self.pktSB.HELD_ITEM_CHANGE:
                 slot = self.packet.readpkt([_SHORT])
                 # "short:short")  # ["short"]
-                self.log.trace("(PROXY CLIENT) -> Parsed HELD_ITEM_CHANGE packet:\n%s", slot)
+                # self.log.trace("(PROXY CLIENT) -> Parsed HELD_ITEM_CHANGE packet:\n%s", slot)
                 if 9 > slot[0] > -1:
                     self.slot = slot[0]
                 else:
@@ -610,7 +610,7 @@ class Client:
                     "line3": l3,
                     "line4": l4
                 })
-                self.log.trace("(PROXY CLIENT) -> Parsed PLAYER_UPDATE_SIGN packet:\n%s", data)
+                # self.log.trace("(PROXY CLIENT) -> Parsed PLAYER_UPDATE_SIGN packet:\n%s", data)
                 if not payload:  # plugin can reject sign entirely
                     return False
 
@@ -653,7 +653,7 @@ class Client:
                                 }
                 self.clientSettings = settingsdict
                 self.clientSettingsSent = True  # the packet is not stopped, sooo...
-                self.log.trace("(PROXY CLIENT) -> Parsed CLIENT_SETTINGS packet:\n%s", settingsdict)
+                # self.log.trace("(PROXY CLIENT) -> Parsed CLIENT_SETTINGS packet:\n%s", settingsdict)
 
             elif pkid == self.pktSB.CLICK_WINDOW:  # click window
                 if self.clientversion < mcpacket.PROTOCOL_1_8START:
@@ -681,7 +681,7 @@ class Client:
                 if not self.wrapper.events.callevent("player.slotClick", datadict):
                     return False
 
-                self.log.trace("(PROXY CLIENT) -> Parsed CLICK_WINDOW packet:\n%s", datadict)
+                # self.log.trace("(PROXY CLIENT) -> Parsed CLICK_WINDOW packet:\n%s", datadict)
 
                 # for inventory control, the most straightforward way to update wrapper's inventory is
                 # to use the data from each click.  The server will make other updates and corrections
@@ -725,7 +725,7 @@ class Client:
 
                 data = self.packet.readpkt([_UUID, _NULL])  # solves the uncertainty of dealing with what gets returned.
                 # ("uuid:target_player")
-                self.log.trace("(PROXY CLIENT) -> Parsed SPECTATE packet:\n%s", data)
+                # self.log.trace("(PROXY CLIENT) -> Parsed SPECTATE packet:\n%s", data)
                 for client in self.proxy.clients:
                     if data[0].hex == client.uuid.hex:
                         self.server.packet.sendpkt(self.pktSB.SPECTATE, [_UUID], [client.serverUuid])
@@ -759,7 +759,7 @@ class Client:
                     self.packet.sendpkt(0x02, [_STRING, _STRING], (self.uuid.string, self.username))
                     self.state = ClientState.PLAY
                     self.log.info("%s's client (insecure) LOGON from (IP: %s)", self.username, self.addr[0])
-                self.log.trace("(PROXY CLIENT) -> Parsed 0x00 packet with client state LOGIN: \n%s", data)
+                # self.log.trace("(PROXY CLIENT) -> Parsed 0x00 packet with client state LOGIN: \n%s", data)
                 return False
 
             elif pkid == 0x01:
@@ -769,8 +769,7 @@ class Client:
                 else:
                     data = self.packet.readpkt([_BYTEARRAY, _BYTEARRAY])
                     # "bytearray:shared_secret|bytearray:verify_token")
-                self.log.trace("(PROXY CLIENT) -> Parsed 0x01 ENCRYPTION RESPONSE packet with client state LOGIN:\n%s",
-                               data)
+                # self.log.trace("(PROXY CLIENT) -> Parsed 0x01 ENCRYP RESP packet with client state LOGIN:\n%s", data)
 
                 sharedsecret = encryption.decrypt_shared_secret(data[0], self.privateKey)
                 verifytoken = encryption.decrypt_shared_secret(data[1], self.privateKey)
@@ -909,12 +908,12 @@ class Client:
         elif self.state == ClientState.STATUS:
             if pkid == 0x01:
                 data = self.packet.readpkt([_LONG])
-                self.log.trace("(PROXY CLIENT) -> Received '0x01' Ping in STATUS mode")
+                # self.log.trace("(PROXY CLIENT) -> Received '0x01' Ping in STATUS mode")
                 self.packet.sendpkt(0x01, [_LONG], [data[0]])
                 self.state = ClientState.HANDSHAKE
                 return False
             elif pkid == 0x00:
-                self.log.trace("(PROXY CLIENT) -> Received '0x00' request (no payload) for list packet in STATUS mode")
+                # self.log.trace("(PROXY CLIENT) -> Received '0x00' request (no payload) for list packet in STATUS mode")
                 sample = []
                 for i in self.wrapper.javaserver.players:
                     player = self.wrapper.javaserver.players[i]
@@ -954,7 +953,7 @@ class Client:
         elif self.state == ClientState.HANDSHAKE:
             if pkid == 0x00:
                 data = self.packet.readpkt([_VARINT, _STRING, _USHORT, _VARINT])  # "version|address|port|state"
-                self.log.trace("(PROXY CLIENT) -> Parsed 0x00 packet with client state HANDSHAKE:\n%s", data)
+                # self.log.trace("(PROXY CLIENT) -> Parsed 0x00 packet with client state HANDSHAKE:\n%s", data)
                 self.clientversion = data[0]
                 self.serveraddressplayeruses = data[1]
                 self.serverportplayeruses = data[2]
@@ -1010,7 +1009,7 @@ class Client:
                     data = self.packet.readpkt([_INT])
                 else:  # self.version >= mcpacket.PROTOCOL_1_8START:
                     data = self.packet.readpkt([_VARINT])
-                self.log.trace("(PROXY CLIENT) -> Received LOBBY KEEP_ALIVE from client:\n%s", data)
+                # self.log.trace("(PROXY CLIENT) -> Received LOBBY KEEP_ALIVE from client:\n%s", data)
                 if data[0] == self.keepalive_val:
                     self.time_client_responded = time.time()
                 return False
