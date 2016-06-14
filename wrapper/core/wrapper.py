@@ -411,14 +411,14 @@ class Wrapper:
             frequency = 3600  # do not allow more than hourly
         user_uuid_matched = None
         for useruuid in self.usercache:  # try wrapper cache first
-            if username == self.usercache.key(useruuid)["localname"]:
+            if username == self.usercache[useruuid]["localname"]:
                 # This search need only be done by 'localname', which is always populated and is always
                 # the same as the 'name', unless a localname has been assigned on the server (such as
                 # when "falling back' on an old name).'''
-                if (time.time() - self.usercache.key(useruuid)["time"]) < frequency:
+                if (time.time() - self.usercache[useruuid]["time"]) < frequency:
                     return MCUUID(useruuid)
                 # if over the time frequency, it needs to be updated by using actual last polled name.
-                username = self.usercache.key(useruuid)["name"]
+                username = self.usercache[useruuid]["name"]
                 user_uuid_matched = useruuid  # cache for later in case multiple name changes require a uuid lookup.
 
         # try mojang  (a new player or player changed names.)
@@ -460,14 +460,10 @@ class Wrapper:
             frequency = 600  # 10 minute limit
 
         theirname = None
-        if self.usercache.key(useruuid):  # if user is in the cache...
-            # and was recently polled...
-            theirname = self.usercache.key(useruuid)["localname"]
-
-        if self.usercache.key(useruuid):
-            if int((time.time() - self.usercache.key(useruuid)["time"])) < frequency:
+        if useruuid in self.usercache:  # if user is in the cache...
+            theirname = self.usercache[useruuid]["localname"]
+            if int((time.time() - self.usercache[useruuid]["time"])) < frequency:
                 return theirname  # dont re-poll if same time frame (daily = 86400).
-
         # continue on and poll... because user is not in cache or is old record that needs re-polled
         # else:  # user is not in cache
         names = self._pollmojanguuid(useruuid)
@@ -477,7 +473,7 @@ class Wrapper:
 
         if numbofnames == 0:
             if theirname is not None:
-                self.usercache.key(useruuid)["time"] = time.time() - frequency + 7200  # may try again in 2 hours
+                self.usercache[useruuid]["time"] = time.time() - frequency + 7200  # may try again in 2 hours
                 return theirname
             return False  # total FAIL
 

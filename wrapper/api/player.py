@@ -326,6 +326,8 @@ class Player:
         """
 
         operators = self._read_ops_file()
+        if operators in (False, None):
+            return False  # no ops in file
         for ops in operators:
             if ops["uuid"] == self.serverUuid.string:
                 return ops["level"]
@@ -346,6 +348,8 @@ class Player:
         Suitable for quick fast lookup without accessing disk, but someone who is deopped after the
         player logs in will still show as OP.
         """
+        if self.operatordict in (False, None):
+            return False  # no ops in file
         for ops in self.operatordict:
             if ops["uuid"] == self.serverUuid.string:
                 return ops["level"]
