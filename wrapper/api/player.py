@@ -5,7 +5,7 @@ import fnmatch
 import json
 import threading
 
-import proxy.mcpacket as mcpacket
+import proxy.mcpackets as mcpackets
 from core.storage import Storage
 from utils.helpers import processoldcolorcodes, processcolorcodes, getjsonfile, getfileaslines
 
@@ -79,9 +79,10 @@ class Player:
         self.operatordict = self._read_ops_file()
 
         self.client = None
-        self.clientboundPackets = mcpacket.Client18
-        self.serverboundPackets = mcpacket.Server18
+        self.clientboundPackets = mcpackets.ClientBound(self.javaserver.protocolVersion)
+        self.serverboundPackets = mcpackets.ServerBound(self.javaserver.protocolVersion)
         self.clientgameversion = self.javaserver.protocolVersion
+
         self.playereid = None
 
         # some player properties associated with abilities
@@ -98,8 +99,7 @@ class Player:
                     self.clientUuid = client.uuid  # Both MCUUID objects
                     self.serverUuid = client.serveruuid
                     self.ipaddress = client.ip
-                    self.clientboundPackets = self.client.pktCB
-                    self.serverboundPackets = self.client.pktSB
+                    self.clientboundPackets = self.client.pktCB  # pktSB already set to javaserver.protocolVerion
                     self.clientgameversion = self.client.clientversion
                     gotclient = True
                     break
@@ -156,22 +156,23 @@ class Player:
         Returns: contents of ops.json as a dict
         """
         ops = False
-        if self.javaserver.protocolVersion > mcpacket.PROTOCOL_1_7:  # 1.7.6 or greater use ops.json
+        if self.javaserver.protocolVersion > mcpackets.PROTOCOL_1_7:  # 1.7.6 or greater use ops.json
             ops = getjsonfile("ops", self.serverpath, encodedas=self._encoding)
         if not ops:
             # try for an old "ops.txt" file instead.
-            ops = {}
+            ops = []
             opstext = getfileaslines("ops.txt", self.serverpath)
             if not opstext:
                 return False
-            for x in range(len(opstext)):
-                # create a 'fake' ops dictionary from the old pre-1.8 text line name list
+            for op in opstext:  # range(len(opstext)):
+                # create a 'fake' ops list from the old pre-1.8 text line name list
                 # notice that the level (an option not the old list) is set to 1
                 #   This will pass as true, but if the plugin is also checking op-levels, it
                 #   may not pass truth.
-                ops[opstext[x]] = {"uuid": opstext[x],
-                                   "name": opstext[x],
-                                   "level": 1}
+                indivop = {"uuid": op,
+                           "name": op,
+                           "level": 1}
+                ops.append(indivop)
 
         return ops
 
@@ -191,7 +192,7 @@ class Player:
         try:
             self.client.message("/%s" % string)
         except AttributeError:
-            if self.javaserver.protocolVersion > mcpacket.PROTOCOL_1_7_9:
+            if self.javaserver.protocolVersion > mcpackets.PROTOCOL_1_7_9:
                 self.wrapper.javaserver.console("execute %s ~ ~ ~ %s" % (self.username, string))
             else:
                 self.log.warning("could not run player.execute - wrapper not in proxy mode and minecraft version "
@@ -303,7 +304,7 @@ class Player:
         resource packs, the user will be prompted to change to the specified resource pack.
         Probably broken right now.
         """
-        if self.getClient().version < mcpacket.PROTOCOL_1_8START:
+        if self.getClient().version < mcpackets.PROTOCOL_1_8START:
             self.client.packet.sendpkt(0x3f, [_STRING, _BYTEARRAY], ("MC|RPack", url))  # "string|bytearray"
         else:
             self.client.packet.sendpkt(self.clientboundPackets.RESOURCE_PACK_SEND,
@@ -325,6 +326,8 @@ class Player:
         """
 
         operators = self._read_ops_file()
+        if operators in (False, None):
+            return False  # no ops in file
         for ops in operators:
             if ops["uuid"] == self.serverUuid.string:
                 return ops["level"]
@@ -345,6 +348,8 @@ class Player:
         Suitable for quick fast lookup without accessing disk, but someone who is deopped after the
         player logs in will still show as OP.
         """
+        if self.operatordict in (False, None):
+            return False  # no ops in file
         for ops in self.operatordict:
             if ops["uuid"] == self.serverUuid.string:
                 return ops["level"]
@@ -363,7 +368,7 @@ class Player:
             self.wrapper.javaserver.console("tellraw %s %s" % (self.username, processcolorcodes(message)))
 
     def actionMessage(self, message=""):
-        if self.getClient().version < mcpacket.PROTOCOL_1_8START:
+        if self.getClient().version < mcpackets.PROTOCOL_1_8START:
             parsing = [_STRING, _NULL]  # "string|null (nothing sent)"
             data = [message]
         else:
@@ -384,7 +389,7 @@ class Player:
         Returns:
 
         """
-        if self.getClient().version > mcpacket.PROTOCOL_1_8START:
+        if self.getClient().version > mcpackets.PROTOCOL_1_8START:
             self.getClient().packet.sendpkt(self.clientboundPackets.SET_EXPERIENCE, [_FLOAT, _VARINT, _VARINT],
                                             (progress, level, total))
         else:
@@ -425,7 +430,7 @@ class Player:
         if self.getClient().windowCounter > 200:
             self.getClient().windowCounter = 2
         # TODO Test what kind of field title is (json or text)
-        if self.getClient().version > mcpacket.PROTOCOL_1_8START:
+        if self.getClient().version > mcpackets.PROTOCOL_1_8START:
             self.getClient().packet.send(
                 self.clientboundPackets.OPEN_WINDOW, [_UBYTE, _STRING, _JSON, _UBYTE], (
                     self.getClient().windowCounter, windowtype, {"text": title}, slots))
@@ -496,7 +501,7 @@ class Player:
         x = (position[0])
         y = (position[1])
         z = (position[2])
-        if self.clientgameversion > mcpacket.PROTOCOL_1_7_9:
+        if self.clientgameversion > mcpackets.PROTOCOL_1_7_9:
             if sendblock:
                 iddata = blockid << 4 | blockdata
                 self.getClient().packet.sendpkt(pkt_blockchange, [_POSITION, _VARINT], (position, iddata))
@@ -504,7 +509,7 @@ class Player:
                 self.getClient().packet.sendpkt(
                     pkt_particle, [_INT, _BOOL, _FLOAT, _FLOAT, _FLOAT, _FLOAT, _FLOAT, _FLOAT, _FLOAT, _INT],
                     (blockid, True, x + .5, y + .5, z + .5, 0, 0, 0, partdata, numparticles))
-        if self.clientgameversion < mcpacket.PROTOCOL_1_8START:
+        if self.clientgameversion < mcpackets.PROTOCOL_1_8START:
             if sendblock:
                 self.getClient().packet.sendpkt(pkt_blockchange, [_INT, _UBYTE, _INT, _VARINT, _UBYTE],
                                                 (x, y, x, blockid, blockdata))
@@ -578,9 +583,9 @@ class Player:
         for perm in self.permissions["groups"]["Default"]["permissions"]:
             if node in fnmatch.filter([node], perm):
                 return self.permissions["groups"]["Default"]["permissions"][perm]
-        for pid in self.wrapper.permission:
-            if node in self.wrapper.permission[pid]:
-                return self.wrapper.permission[pid][node]
+        for pid in self.wrapper.registered_permissions:
+            if node in self.wrapper.registered_permissions[pid]:
+                return self.wrapper.registered_permissions[pid][node]
         return False
 
     def setPermission(self, node, value=True):
