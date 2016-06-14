@@ -7,68 +7,50 @@ Ways to reference packets by names and not hard-coded numbers.
 
 This attempts to follow the wiki as much as possible.
 
-It is up to wrapper to know what the actual connection versions are.
-Once it knows the version, it can do something like:
-    `from mcpkt import server18 as ClPkt` (remember wrappers "server" process parses client-bound packets).
-the remainder of the wrapper/plugin code can simply reference
-    `ClPkt.playerlook`
+the ServerBound and ClientBound classes take a protocol argument to determine the packet values.
 
 Protocol constants are named as follows:
     first two digits are major version, third digit in minor version.
     example: PROTOCOL_1_8_9 means - version 1.8.9.
     Explanatory text (pre, start, etc) may be last.
 
-packet classes are named as follows:
-    First word is the bound direction (as found in the protocol Wiki), followed by two digit major version.
-    example: Server189 means - "Server" bound packets (en-route to server),
-    major version 1.8, minor version 9 (i.e., 1.8.9). Explanatory text (pre, start, etc) are last and
-    are discouraged... Keeping packet classes to an actual major release is the ideal (although some
-    minor releases may be needed).
-
 set something False/unimplemented using 0xEE
 
 """
 
 # Version Constants
-# use these constants to select which packet set to use.
-
-PROTOCOL_MAX = 1000  # used for lastest protocol end version.
+# use these constants decide how a packet should be parsed.
+PROTOCOL_1_10 = 205
 #
-# Use Server194/Client194
 PROTOCOL_1_9_4 = 110      # post- 1.9.3 "pre" releases (1.9.3 pre-2 -)
-# Still in development at versions 201-203 (5/27/16)
+# Still in development at versions 201-210(6/14/16)
 
-# Use Server19/Client19
-PROTOCOL_1_9_3PRE3 = 109  # post- 1.9 "pre" releases (1.9.2 - 1.9.3 pre-1)
 # PAGE: http://wiki.vg/index.php?title=Protocol&oldid=7817
+PROTOCOL_1_9_3PRE3 = 109  # post- 1.9 "pre" releases (1.9.2 - 1.9.3 pre-1)
 
+# PAGE: http://wiki.vg/index.php?title=Protocol&oldid=7617
 PROTOCOL_1_9_1PRE = 108   # post- 1.9 "pre" releases (1.9.1 pre-3 through 1.9.1)
 PROTOCOL_1_9REL1 = 107    # first stable 1.9 release
-# PAGE: http://wiki.vg/index.php?title=Protocol&oldid=7617
 
-# Between 49-106, the protocol is incredibly unstable.  Packet numbers changed almost weekly. Recommend
-#   you not have a client or server running in these protocol versions
-
-# Up to this point (<48), 18 is appropriate, but
+# Between 49-106, the protocol is incredibly unstable.  Packet numbers changed almost weekly.
+# using a version in this range will raise as UnsupportedMinecraftProtocol Exception
 PROTOCOL_1_9START = 48    # start of 1.9 snapshots
-# Use Server18/Client18
-PROTOCOL_1_8END = 47      # 1.8.9
+
 # PAGE: http://wiki.vg/index.php?title=Protocol&oldid=7368
+PROTOCOL_1_8END = 47      # 1.8.9
 PROTOCOL_1_8START = 6     # 1.8 snapshots start- #
 
-# for reference:
-PROTOCOL_1_7_9 = 5       # 1.7.6 - 1.7.10
 # PAGE: http://wiki.vg/index.php?title=Protocol&oldid=6003
+PROTOCOL_1_7_9 = 5       # 1.7.6 - 1.7.10
 
-
-PROTOCOL_1_7 = 4          # 1.7.1-pre to 1.7.5
 # PAGE: http://wiki.vg/index.php?title=Protocol&oldid=5486
+PROTOCOL_1_7 = 4          # 1.7.1-pre to 1.7.5
 
 """Minecraft version 1.6.4 and older used a protocol versioning scheme separate from the current one.
  Accordingly, an old protocol version number may ambiguously refer to an one of those old versions and
  from the list above.  Do not run a 1.6.4 server with proxy mode."""
 
-# region Constants
+# region Constants # unused at present. intended to be used so a calling module does not need to define them.
 # ------------------------------------------------
 
 _STRING = 0
