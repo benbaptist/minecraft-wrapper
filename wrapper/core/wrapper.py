@@ -46,11 +46,6 @@ try:  # Manually define a raw input builtin shadow that works indentically on PY
 except NameError:
     rawinput = input
 
-try:  # Manually define an xrange builtin that works indentically on both (to take advantage of xrange's speed in 2)
-    xxrange = xrange
-except NameError:
-    xxrange = range
-
 
 class Wrapper:
 
@@ -77,7 +72,7 @@ class Wrapper:
         self.plugins = Plugins(self)
         self.commands = Commands(self)
         self.events = Events(self)
-        self.permission = {}
+        self.registered_permissions = {}
         self.help = {}
         self.xplayer = ConsolePlayer(self)  # future plan to expose this to api
 
@@ -416,14 +411,14 @@ class Wrapper:
             frequency = 3600  # do not allow more than hourly
         user_uuid_matched = None
         for useruuid in self.usercache:  # try wrapper cache first
-            if username == self.usercache.key(useruuid)["localname"]:
+            if username == self.usercache[useruuid]["localname"]:
                 # This search need only be done by 'localname', which is always populated and is always
                 # the same as the 'name', unless a localname has been assigned on the server (such as
                 # when "falling back' on an old name).'''
-                if (time.time() - self.usercache.key(useruuid)["time"]) < frequency:
+                if (time.time() - self.usercache[useruuid]["time"]) < frequency:
                     return MCUUID(useruuid)
                 # if over the time frequency, it needs to be updated by using actual last polled name.
-                username = self.usercache.key(useruuid)["name"]
+                username = self.usercache[useruuid]["name"]
                 user_uuid_matched = useruuid  # cache for later in case multiple name changes require a uuid lookup.
 
         # try mojang  (a new player or player changed names.)
@@ -465,14 +460,10 @@ class Wrapper:
             frequency = 600  # 10 minute limit
 
         theirname = None
-        if self.usercache.key(useruuid):  # if user is in the cache...
-            # and was recently polled...
-            theirname = self.usercache.key(useruuid)["localname"]
-
-        if self.usercache.key(useruuid):
-            if int((time.time() - self.usercache.key(useruuid)["time"])) < frequency:
+        if useruuid in self.usercache:  # if user is in the cache...
+            theirname = self.usercache[useruuid]["localname"]
+            if int((time.time() - self.usercache[useruuid]["time"])) < frequency:
                 return theirname  # dont re-poll if same time frame (daily = 86400).
-
         # continue on and poll... because user is not in cache or is old record that needs re-polled
         # else:  # user is not in cache
         names = self._pollmojanguuid(useruuid)
@@ -482,7 +473,7 @@ class Wrapper:
 
         if numbofnames == 0:
             if theirname is not None:
-                self.usercache.key(useruuid)["time"] = time.time() - frequency + 7200  # may try again in 2 hours
+                self.usercache[useruuid]["time"] = time.time() - frequency + 7200  # may try again in 2 hours
                 return theirname
             return False  # total FAIL
 
@@ -498,20 +489,20 @@ class Wrapper:
                 "names": []
             }
 
-        for i in range(numbofnames):
-            if "changedToAt" not in names[i]:  # find the original name
-                self.usercache[useruuid]["original"] = names[i]["name"]
+        for nameitem in names:
+            if "changedToAt" not in nameitem:  # find the original name
+                self.usercache[useruuid]["original"] = nameitem["name"]
                 self.usercache[useruuid]["online"] = True
                 self.usercache[useruuid]["time"] = time.time()
                 if numbofnames == 1:  # The user has never changed their name
-                    self.usercache[useruuid]["name"] = names[i]["name"]
+                    self.usercache[useruuid]["name"] = nameitem["name"]
                     if self.usercache[useruuid]["localname"] is None:
-                        self.usercache[useruuid]["localname"] = names[i]["name"]
+                        self.usercache[useruuid]["localname"] = nameitem["name"]
                     break
             else:
                 # Convert java milleseconds to time.time seconds
-                changetime = names[i]["changedToAt"] / 1000
-                oldname = names[i]["name"]
+                changetime = nameitem["changedToAt"] / 1000
+                oldname = nameitem["name"]
                 if len(pastnames) == 0:
                     pastnames.append({"name": oldname, "date": changetime})
                     continue
@@ -544,17 +535,17 @@ class Wrapper:
             rx = requests.get("https://status.mojang.com/check")
             if rx.status_code == 200:
                 rx = rx.json()
-                for i in xxrange(0, len(rx)):
-                    if "account.mojang.com" in rx[i]:
-                        if rx[i]["account.mojang.com"] == "green":
+                for entry in rx:
+                    if "account.mojang.com" in entry:
+                        if entry["account.mojang.com"] == "green":
                             self.log.warning("Mojang accounts is green, but request failed - have you "
                                              "over-polled (large busy server) or supplied an incorrect UUID??")
                             self.log.warning("uuid: %s", useruuid)
                             self.log.warning("response: \n%s", str(rx))
                             return False
-                        elif rx[i]["account.mojang.com"] in ("yellow", "red"):
+                        elif entry["account.mojang.com"] in ("yellow", "red"):
                             self.log.warning("Mojang accounts is experiencing issues (%s).",
-                                             rx[i]["account.mojang.com"])
+                                             entry["account.mojang.com"])
                             return False
                         self.log.warning("Mojang Status found, but corrupted or in an unexpected format (status "
                                          "code %s)", r.status_code)
@@ -591,7 +582,10 @@ class Wrapper:
             proxythread.start()
         else:
             self.proxymode = False
-            self.log.error("Proxy mode could not be started because you do not have one or more of the following "
+            self.configManager.config["Proxy"]["proxy-enabled"] = False
+            self.configManager.save()
+            self.config = self.configManager.config
+            self.log.error("Proxy mode is disabled because you do not have one or more of the following "
                            "modules installed: pycrypto and requests")
 
     def sigint(*args):  # doing this allows the calling function to pass extra args without defining/using them here
@@ -723,7 +717,7 @@ class Wrapper:
 
 class ConsolePlayer:
     """
-    This class represents the console as a player.
+    This class minimally represents the console as a player so that console and use wrapper/plugin commands.
     """
 
     def __init__(self, wrapper):
@@ -767,4 +761,5 @@ class ConsolePlayer:
 
     @staticmethod
     def hasPermission(*args):
-        return True
+        if args:
+            return True

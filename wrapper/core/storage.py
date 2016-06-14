@@ -65,6 +65,11 @@ class Storage:
             raise Exception("A string must be passed - got %s" % type(index))
         del self.data[index]
 
+    def __delitem__(self, index):
+        if not type(index) in (str, str2):
+            raise Exception("A string must be passed - got %s" % type(index))
+        del self.data[index]
+
     def __iter__(self):
         for i in self.data:
             yield i

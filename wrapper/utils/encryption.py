@@ -20,10 +20,8 @@ from hashlib import md5
 import sys
 PY3 = sys.version_info > (3,)
 
-try:  # Manually define an xrange builtin that works identically on both (to take advantage of xrange's speed in 2)
-    xxrange = xrange
-except NameError:
-    xxrange = range
+if PY3:
+    xrange = range
 
 
 def decode_public_key(thebytes):
@@ -86,7 +84,7 @@ class RC4(object):
         self.key = key
         x = 0
         self.box = box = range(256)
-        for i in xxrange(256):
+        for i in xrange(256):
             x = (x + box[i] + ord(key[i % len(key)])) % 256
             box[i], box[x] = box[x], box[i]
         self.x = self.y = 0
@@ -150,6 +148,6 @@ class PBEWithMD5AndDES(object):
 
     def _generate_key(self, key, salt, count, length):
         key = key + salt
-        for _ in xxrange(count):
+        for _ in xrange(count):
             key = md5(key).digest()
         return key[:length]

@@ -124,9 +124,9 @@ class API:
         if not self.internal:
             self.wrapper.log.debug("[%s] Registered permission '%s' with default value: %s",
                                    self.name, permission, value)
-        if self.id not in self.wrapper.permission:
-            self.wrapper.permission[self.id] = {}
-        self.wrapper.permission[self.id][permission] = value
+        if self.id not in self.wrapper.registered_permissions:
+            self.wrapper.registered_permissions[self.id] = {}
+        self.wrapper.registered_permissions[self.id][permission] = value
 
     def registerHelp(self, groupname, summary, commands):
         """
