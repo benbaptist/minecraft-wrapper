@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*-
 
-# p2 and py3 compliant (no PyCharm IDE-flagged errors)
-# (has warnings in both versions due to the manner of import)
-
 from utils.helpers import getargs, getargsafter, processcolorcodes
 from api.base import API
 from api.player import Player
@@ -42,11 +39,11 @@ class MCServer:
         commargs = self.config["General"]["command"].split(" ")
         self.args = []
 
-        for x in range(len(commargs)):
-            if commargs[x][-4:] == ".jar":
-                self.args.append("%s/%s" % (self.serverpath, commargs[x]))
+        for part in commargs:
+            if part[-4:] == ".jar":
+                self.args.append("%s/%s" % (self.serverpath, part))
             else:
-                self.args.append(commargs[x])
+                self.args.append(part)
 
         self.api = API(wrapper, "Server", internal=True)
         self.backups = Backups(wrapper)
@@ -482,7 +479,7 @@ class MCServer:
                 locationtext = getargs(line.split(" ("), 1)[:-1].split(", ")
                 location = int(float(locationtext[0])), int(float(locationtext[1])), int(float(locationtext[2]))
                 self.login(name, eid, location)
-            elif getargs(line.split(" "), 1) == "lost":  # Player Logout
+            elif getargs(line.split(" "), 1) == "left":  # Player Logout
                 name = getargs(line.split(" "), 0)
                 self.logout(name)
             elif getargs(line.split(" "), 0) == "*":

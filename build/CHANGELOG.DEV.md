@@ -1,3 +1,7 @@
+Build #120 
+
+- all internal refactoring.  No API or feature changes.
+
 Build #119 [0.8.5]
 
 - Separate path for server outside the wrapper folder supported.  Wrapper folder remains unchanged and by default, the server uses the wrapper folder too, as it always has.

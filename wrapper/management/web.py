@@ -22,11 +22,6 @@ except ImportError:
     requests = False
 
 
-try:  # Manually define an xrange builtin that works indentically on both (to take advantage of xrange's speed in 2)
-    xxrange = xrange
-except NameError:
-    xxrange = range
-
 # Yeah, I know. The code is awful. Probably not even a HTTP-compliant web
 # server anyways. I just wrote it at like 3AM in like an hour.
 
@@ -151,7 +146,7 @@ class Web:
     def makeKey(self, rememberme):
         a = ""
         z = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@-_"
-        for i in xxrange(64):
+        for i in range(64):  # not enough performance issue to justify xrange
             a += z[random.randrange(0, len(z))]
             # a += chr(random.randrange(97, 122))
         if rememberme:

@@ -17,10 +17,14 @@ import sys
 from core.mcuuid import MCUUID
 
 # Py3-2
-try:  # Manually define an xrange builtin that works indentically on both (to take advantage of xrange's speed in 2)
-    xxrange = xrange
-except NameError:
-    xxrange = range
+PY3 = sys.version_info > (3,)
+
+if PY3:
+    # noinspection PyShadowingBuiltins
+    xrange = range
+    # noinspection PyShadowingBuiltins
+    long = int
+
 # endregion
 
 # region Constants
@@ -102,11 +106,7 @@ class Packet:
         self.abort = True
 
     def hexdigest(self, sh):
-        if PY3:
-            d = int(sh.hexdigest(), 16)
-        else:
-            d = long(sh.hexdigest(), 16)
-
+        d = long(sh.hexdigest(), 16)
         if d >> 39 * 4 & 0x8:
             return "-%x" % ((-d) & (2 ** (40 * 4) - 1))
         return "%x" % d
@@ -208,7 +208,7 @@ class Packet:
         result = self.readpkt(args)
 
         # convert the list back to a dictionary using the names list as keys
-        for x in xxrange(len(result)):
+        for x in xrange(len(result)):
             results[names[x]] = result[x]
         return results
 
@@ -233,7 +233,7 @@ class Packet:
         result = []
 
         argcount = len(args)
-        for index in xxrange(argcount):
+        for index in xrange(argcount):
             if args[index] == 100:
                 result.append(None)  # pad with special _NULL spacer type
             elif args[index] == 0:
@@ -316,7 +316,7 @@ class Packet:
         if argcount == 0:
             self.sendRaw(result)
             return result
-        for index in xxrange(argcount):
+        for index in xrange(argcount):
             pay = payload[index]
             if args[index] == 100:
                 continue  # ignore special _NULL spacer type
@@ -674,7 +674,7 @@ class Packet:
         r = []
         btype = self.read_byte()
         length = self.read_int()
-        for _ in xxrange(length):  # _ signifies throwaway variable whose values is not used
+        for _ in xrange(length):  # _ signifies throwaway variable whose values is not used
             b = {"type": btype,
                  "name": "",
                  "value": self._DECODERS[btype]()}

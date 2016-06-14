@@ -79,7 +79,7 @@ class Plugins:
         self.plugins[pid]["filename"] = i
         self.wrapper.commands[pid] = {}
         self.wrapper.events[pid] = {}
-        self.wrapper.permission[pid] = {}
+        self.wrapper.registered_permissions[pid] = {}
         self.wrapper.help[pid] = {}
         main.onEnable()
         self.log.info("Plugin %s loaded...", i)

@@ -130,7 +130,7 @@ class Backups:
                     try:
                         os.remove('%s/%s' % (self.config["Backups"]["backup-location"], backup[1]))
                     except Exception as e:
-                        print("Failed to delete backup (%s)" % e)
+                        self.log.error("Failed to delete backup (%s)", e)
                     self.log.info("Deleting old backup: %s",
                                   datetime.datetime.fromtimestamp(int(backup[0])).strftime('%Y-%m-%d_%H:%M:%S'))
                     # hink = self.backups[0][1][:]  # not used...

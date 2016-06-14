@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 """
 termcolors.py
 """
@@ -30,7 +32,16 @@ termcolors.py
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import six
+import sys
+PY3 = sys.version_info > (3,)
+
+if PY3:
+    def iteritems(d, **kw):
+        return iter(d.items(**kw))
+else:
+    def iteritems(d, **kw):
+        return d.iteritems(**kw)
+
 
 color_names = ('black', 'red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white')
 foreground = {color_names[x]: '3%s' % x for x in range(8)}
@@ -67,7 +78,7 @@ def colorize(text='', opts=(), **kwargs):
     code_list = []
     if text == '' and len(opts) == 1 and opts[0] == 'reset':
         return '\x1b[%sm' % RESET
-    for k, v in six.iteritems(kwargs):
+    for k, v in iteritems(kwargs):
         if k == 'fg':
             code_list.append(foreground[v])
         elif k == 'bg':

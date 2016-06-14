@@ -87,7 +87,7 @@ class Proxy:
             self.clients.append(client)
             self.removestaleclients()
 
-    def removestaleclients(self):
+    def removestaleclients(self):  # TODO This should not happen
         for i, client in enumerate(self.wrapper.proxy.clients):
             if client.abort:
                 del self.wrapper.proxy.clients[i]

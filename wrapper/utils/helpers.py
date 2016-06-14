@@ -7,13 +7,7 @@ import json
 import time
 import datetime
 
-
 import utils.termcolors as termcolors
-
-try:  # Manually define an xrange builtin that works indentically on both (to take advantage of xrange's speed in 2)
-    xxrange = xrange
-except NameError:
-    xxrange = range
 
 COLORCODES = {
     "0": "black",

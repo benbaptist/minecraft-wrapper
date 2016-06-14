@@ -361,7 +361,6 @@ class Minecraft:
         Returns: Returns the world's name.
 
         """
-        print("getworldname = %s" % self.getServer().worldname)
         return self.getServer().worldname
 
     # Ban related items - These simply wrap the proxy base methods

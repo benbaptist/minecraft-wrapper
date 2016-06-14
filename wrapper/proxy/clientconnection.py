@@ -12,7 +12,7 @@ import uuid
 import random
 
 import utils.encryption as encryption
-import proxy.mcpacket as mcpacket
+import proxy.mcpackets as mcpackets
 
 from proxy.serverconnection import ServerConnection
 from proxy.packet import Packet
@@ -28,7 +28,7 @@ try:
 except ImportError:
     requests = False
 
-HIDDEN_OPS = ["SurestTexas00", "BenBaptist"]
+HIDDEN_OPS = ["xSurestTexas00", "BenBaptist"]
 
 # region Constants
 # ------------------------------------------------
@@ -92,6 +92,9 @@ class Client:
         self.serverversion = self.wrapper.javaserver.protocolVersion
         self.clientversion = self.serverversion  # client will reset this later, if need be..
 
+        self.pktSB = mcpackets.ServerBound(self.clientversion)
+        self.pktCB = mcpackets.ClientBound(self.clientversion)
+
         self.abort = False
         self.time_server_pinged = 0
         self.time_client_responded = 0
@@ -143,6 +146,7 @@ class Client:
         pass
 
     def inittheplayer(self):
+        # so few items and so infrequently run that fussing with xrange/range PY3 difference is not needed.
         for i in range(46):  # there are 46 items 0-45 in 1.9 (shield) versus 45 (0-44) in 1.8 and below.
             self.inventory[i] = None
         self.time_server_pinged = time.time()
@@ -204,7 +208,7 @@ class Client:
 
         # Turn this off for now.  This seems like it would also stop legit rain too.  I think the proper way to
         #   do this is to keep track of the rain state of the server and send that instead.
-        # if self.clientversion > mcpacket.PROTOCOL_1_8START:  # anti-rain hack for lobby return connections
+        # if self.clientversion > mcpackets.PROTOCOL_1_8START:  # anti-rain hack for lobby return connections
         #    if self.config["Proxy"]["online-mode"]:
         #        self.packet.sendpkt(self.pktCB.CHANGE_GAME_STATE, [_UBYTE, _FLOAT], (1, 0))
         #        pass
@@ -225,18 +229,13 @@ class Client:
                 del self.wrapper.proxy.clients[i]
 
     def disconnect(self, message):
-        try:
-            message = json.loads(message["string"])
-        except TypeError:  # optionally use json
-            pass
-        except ValueError:
-            pass
-
+        """
+        disconnect message can be a string containing valid json.  Sends disconnection packet to client.
+        """
         if self.state == ClientState.PLAY:
-            self.packet.sendpkt(self.pktCB.DISCONNECT, [_JSON], [message])
+            self.packet.sendpkt(self.pktCB.DISCONNECT, [_STRING], [message])
         else:
-            self.packet.sendpkt(0x00, [_JSON], [{"text": message, "color": "red"}])
-
+            self.packet.sendpkt(0x00, [_STRING], [message])
         time.sleep(1)
         self.close()
 
@@ -275,7 +274,7 @@ class Client:
         self.server.packet.sendpkt(self.pktSB.CHAT_MESSAGE, [_STRING], [string])
 
     def _refresh_server_version(self):
-        # Get serverversion for mcpacket use
+        # Get serverversion for mcpackets use
         try:
             self.serverversion = self.wrapper.javaserver.protocolVersion
         except AttributeError:
@@ -287,30 +286,16 @@ class Client:
         # packets sent to the server connection from here are hard coded login items only
         self._refresh_server_version()
 
-        # TODO true server-client universal connection would require separate send/read packet sets
-        if mcpacket.Server194.end() >= self.clientversion >= mcpacket.Server194.start():  # 1.9.4
-            self.pktSB = mcpacket.Server194
-            self.pktCB = mcpacket.Client194
-        elif mcpacket.Server19.end() >= self.clientversion >= mcpacket.Server19.start():  # 1.9 - 1.9.3 Pre 3 - 1.9.2
-            self.pktSB = mcpacket.Server19
-            self.pktCB = mcpacket.Client19
-        elif self.clientversion == mcpacket.PROTOCOL_1_7_9:
-            self.pktSB = mcpacket.Server179
-            self.pktCB = mcpacket.Client179
-        elif self.clientversion == mcpacket.PROTOCOL_1_7:
-            self.pktSB = mcpacket.Server17
-            self.pktCB = mcpacket.Client17
-        else:  # 1.8 default
-            self.pktSB = mcpacket.Server18
-            self.pktCB = mcpacket.Client18
+        self.pktSB = mcpackets.ServerBound(self.clientversion)
+        self.pktCB = mcpackets.ClientBound(self.clientversion)
 
     def parse(self, pkid):  # server - bound parse ("Client" class connection)
         if self.state == ClientState.PLAY:
             if pkid == self.pktSB.KEEP_ALIVE:
-                if self.serverversion < mcpacket.PROTOCOL_1_8START:
+                if self.serverversion < mcpackets.PROTOCOL_1_8START:
                     data = self.packet.readpkt([_INT])
                     # ("int:payload")
-                else:  # self.version >= mcpacket.PROTOCOL_1_8START:
+                else:  # self.version >= mcpackets.PROTOCOL_1_8START:
                     data = self.packet.readpkt([_VARINT])
                     # ("varint:payload")
                 # self.log.trace("(PROXY CLIENT) -> Received KEEP_ALIVE from client:\n%s", data)
@@ -322,7 +307,7 @@ class Client:
 
                 # I have no idea what the purpose of parsing these and resending them is (ask the ben bot?)
                 if self.clientSettings and not self.clientSettingsSent:
-                    if self.clientversion < mcpacket.PROTOCOL_1_8START:
+                    if self.clientversion < mcpackets.PROTOCOL_1_8START:
                         self.server.packet.sendpkt(self.pktSB.CLIENT_SETTINGS,
                                                    [_STRING, _BYTE, _BYTE, _BOOL, _BYTE, _BOOL],
                                                    (
@@ -333,7 +318,7 @@ class Client:
                                                     self.clientSettings["difficulty"],
                                                     self.clientSettings["show_cape"]
                                                     ))
-                    elif mcpacket.PROTOCOL_1_7_9 < self.clientversion < mcpacket.PROTOCOL_1_9START:
+                    elif mcpackets.PROTOCOL_1_7_9 < self.clientversion < mcpackets.PROTOCOL_1_9START:
                         self.server.packet.sendpkt(self.pktSB.CLIENT_SETTINGS,
                                                    [_STRING, _BYTE, _BYTE, _BOOL, _UBYTE],
                                                    (
@@ -400,10 +385,10 @@ class Client:
                 return False  # and cancel this original packet
 
             elif pkid == self.pktSB.PLAYER_POSITION:  # player position
-                if self.clientversion < mcpacket.PROTOCOL_1_8START:
+                if self.clientversion < mcpackets.PROTOCOL_1_8START:
                     data = self.packet.readpkt([_DOUBLE, _DOUBLE, _DOUBLE, _DOUBLE, _BOOL])
                     # ("double:x|double:y|double:yhead|double:z|bool:on_ground")
-                elif self.clientversion >= mcpacket.PROTOCOL_1_8START:
+                elif self.clientversion >= mcpackets.PROTOCOL_1_8START:
                     data = self.packet.readpkt([_DOUBLE, _DOUBLE, _NULL, _DOUBLE, _BOOL])
                     # ("double:x|double:y|double:z|bool:on_ground")
                 else:
@@ -412,7 +397,7 @@ class Client:
                 # self.log.trace("(PROXY CLIENT) -> Parsed PLAYER_POSITION packet:\n%s", data)
 
             elif pkid == self.pktSB.PLAYER_POSLOOK:  # player position and look
-                if self.clientversion < mcpacket.PROTOCOL_1_8START:
+                if self.clientversion < mcpackets.PROTOCOL_1_8START:
                     data = self.packet.readpkt([_DOUBLE, _DOUBLE, _DOUBLE, _DOUBLE, _FLOAT, _FLOAT, _BOOL])
                 else:
                     data = self.packet.readpkt([_DOUBLE, _DOUBLE, _DOUBLE, _FLOAT, _FLOAT, _BOOL])
@@ -437,10 +422,10 @@ class Client:
                 # such a construct should probably be done at the gamestate level.
                 #     return True
 
-                if self.clientversion < mcpacket.PROTOCOL_1_7:
+                if self.clientversion < mcpackets.PROTOCOL_1_7:
                     data = None
                     position = data
-                elif mcpacket.PROTOCOL_1_7 <= self.clientversion < mcpacket.PROTOCOL_1_8START:
+                elif mcpackets.PROTOCOL_1_7 <= self.clientversion < mcpackets.PROTOCOL_1_8START:
                     data = self.packet.readpkt([_BYTE, _INT, _UBYTE, _INT, _BYTE])
                     # "byte:status|int:x|ubyte:y|int:z|byte:face")
                     position = (data[1], data[2], data[3])
@@ -496,11 +481,11 @@ class Client:
                 hand = 0  # main hand
                 helditem = player.getHeldItem()
 
-                if self.clientversion < mcpacket.PROTOCOL_1_7:
+                if self.clientversion < mcpackets.PROTOCOL_1_7:
                     data = None
                     position = data
 
-                elif mcpacket.PROTOCOL_1_7 <= self.clientversion < mcpacket.PROTOCOL_1_8START:
+                elif mcpackets.PROTOCOL_1_7 <= self.clientversion < mcpackets.PROTOCOL_1_8START:
                     data = self.packet.readpkt([_INT, _UBYTE, _INT, _BYTE, _SLOT_NO_NBT, _REST])
                     # "int:x|ubyte:y|int:z|byte:face|slot:item")  _REST includes cursor positions x-y-z
                     position = (data[0], data[1], data[2])
@@ -509,14 +494,14 @@ class Client:
                     # for a long time, using server inventory instead.
                     helditem = data[4]  # "item" - _SLOT
 
-                elif mcpacket.PROTOCOL_1_8START <= self.clientversion < mcpacket.PROTOCOL_1_9REL1:
+                elif mcpackets.PROTOCOL_1_8START <= self.clientversion < mcpackets.PROTOCOL_1_9REL1:
                     data = self.packet.readpkt([_POSITION, _NULL, _NULL, _BYTE, _SLOT, _REST])
                     # "position:Location|byte:face|slot:item|byte:CurPosX|byte:CurPosY|byte:CurPosZ")
                     # helditem = data["item"]  -available in packet, but server ignores it (we should too)!
                     # starting with 1.8, the server maintains inventory also.
                     position = data[0]
 
-                else:  # self.clientversion >= mcpacket.PROTOCOL_1_9REL1:
+                else:  # self.clientversion >= mcpackets.PROTOCOL_1_9REL1:
                     data = self.packet.readpkt([_POSITION, _NULL, _NULL, _VARINT, _VARINT, _BYTE, _BYTE, _BYTE])
                     # "position:Location|varint:face|varint:hand|byte:CurPosX|byte:CurPosY|byte:CurPosZ")
                     hand = data[4]  # used to be the spot occupied by "slot"
@@ -587,7 +572,7 @@ class Client:
                     return False
 
             elif pkid == self.pktSB.PLAYER_UPDATE_SIGN:  # player update sign
-                if self.clientversion < mcpacket.PROTOCOL_1_8START:
+                if self.clientversion < mcpackets.PROTOCOL_1_8START:
                     data = self.packet.readpkt([_INT, _SHORT, _INT, _STRING, _STRING, _STRING, _STRING])
                     # "int:x|short:y|int:z|string:line1|string:line2|string:line3|string:line4")
                     position = (data[0], data[1], data[2])
@@ -628,11 +613,11 @@ class Client:
                 return False
 
             elif pkid == self.pktSB.CLIENT_SETTINGS:  # read Client Settings
-                if self.clientversion <= mcpacket.PROTOCOL_1_7_9:
+                if self.clientversion <= mcpackets.PROTOCOL_1_7_9:
                     data = self.packet.readpkt([_STRING, _BYTE, _BYTE, _BOOL, _BYTE, _BOOL, _NULL, _NULL])
                     # "string:locale|byte:view_distance|byte:chat_flags|bool:chat_colors|
                     # byte:difficulty|bool:show_cape")
-                elif mcpacket.PROTOCOL_1_7_9 < self.clientversion < mcpacket.PROTOCOL_1_9START:  # "1.8"
+                elif mcpackets.PROTOCOL_1_7_9 < self.clientversion < mcpackets.PROTOCOL_1_9START:  # "1.8"
                     data = self.packet.readpkt([_STRING, _BYTE, _BYTE, _BOOL, _NULL, _NULL, _UBYTE, _NULL])
                     # "string:locale|byte:view_distance|byte:chat_mode|bool:chat_colors|
                     # ubyte:displayed_skin_parts")
@@ -656,13 +641,13 @@ class Client:
                 # self.log.trace("(PROXY CLIENT) -> Parsed CLIENT_SETTINGS packet:\n%s", settingsdict)
 
             elif pkid == self.pktSB.CLICK_WINDOW:  # click window
-                if self.clientversion < mcpacket.PROTOCOL_1_8START:
+                if self.clientversion < mcpackets.PROTOCOL_1_8START:
                     data = self.packet.readpkt([_BYTE, _SHORT, _BYTE, _SHORT, _BYTE, _SLOT_NO_NBT])
                     # ("byte:wid|short:slot|byte:button|short:action|byte:mode|slot:clicked")
-                elif mcpacket.PROTOCOL_1_8START < self.clientversion < mcpacket.PROTOCOL_1_9START:
+                elif mcpackets.PROTOCOL_1_8START < self.clientversion < mcpackets.PROTOCOL_1_9START:
                     data = self.packet.readpkt([_UBYTE, _SHORT, _BYTE, _SHORT, _BYTE, _SLOT])
                     # ("ubyte:wid|short:slot|byte:button|short:action|byte:mode|slot:clicked")
-                elif mcpacket.PROTOCOL_1_9START <= self.clientversion < mcpacket.PROTOCOL_MAX:
+                elif mcpackets.PROTOCOL_1_9START <= self.clientversion < mcpackets.PROTOCOL_MAX:
                     data = self.packet.readpkt([_UBYTE, _SHORT, _BYTE, _SHORT, _VARINT, _SLOT])
                     # ("ubyte:wid|short:slot|byte:button|short:action|varint:mode|slot:clicked")
                 else:
@@ -913,18 +898,18 @@ class Client:
                 self.state = ClientState.HANDSHAKE
                 return False
             elif pkid == 0x00:
-                # self.log.trace("(PROXY CLIENT) -> Received '0x00' request (no payload) for list packet in STATUS mode")
+                # self.log.trace("(PROXY CLIENT) -> Received '0x00' request (no payload) for list pckt in STATUS mode")
                 sample = []
-                for i in self.wrapper.javaserver.players:
-                    player = self.wrapper.javaserver.players[i]
-                    if player.username not in HIDDEN_OPS:
-                        sample.append({"name": player.username, "id": str(player.mojangUuid)})
+                for player in self.wrapper.javaserver.players:
+                    playerobj = self.wrapper.javaserver.players[player]
+                    if playerobj.username not in HIDDEN_OPS:
+                        sample.append({"name": playerobj.username, "id": str(playerobj.mojangUuid)})
                     if len(sample) > 5:
                         break
                 reported_version = self.serverversion
                 reported_name = self.wrapper.javaserver.version
 
-                if self.clientversion < mcpacket.PROTOCOL_1_8START:
+                if self.clientversion < mcpackets.PROTOCOL_1_8START:
                     motdtext = self.wrapper.javaserver.motd
                 else:
                     motdtext = json.loads(processcolorcodes(self.wrapper.javaserver.motd.replace("\\", "")))
@@ -975,7 +960,7 @@ class Client:
                     if not self.wrapper.javaserver.state == 2:
                         self.disconnect("Server has not finished booting. Please try connecting again in a few seconds")
                         return False
-                    if mcpacket.PROTOCOL_1_9START < self.clientversion < mcpacket.PROTOCOL_1_9REL1:
+                    if mcpackets.PROTOCOL_1_9START < self.clientversion < mcpackets.PROTOCOL_1_9REL1:
                         self.disconnect("You're running an unsupported snapshot (protocol: %s)!" % self.clientversion)
                         return False
 
@@ -1005,9 +990,9 @@ class Client:
 
         elif self.state == ClientState.LOBBY:
             if pkid == self.pktSB.KEEP_ALIVE:
-                if self.serverversion < mcpacket.PROTOCOL_1_8START:
+                if self.serverversion < mcpackets.PROTOCOL_1_8START:
                     data = self.packet.readpkt([_INT])
-                else:  # self.version >= mcpacket.PROTOCOL_1_8START:
+                else:  # self.version >= mcpackets.PROTOCOL_1_8START:
                     data = self.packet.readpkt([_VARINT])
                 # self.log.trace("(PROXY CLIENT) -> Received LOBBY KEEP_ALIVE from client:\n%s", data)
                 if data[0] == self.keepalive_val:
@@ -1073,7 +1058,7 @@ class Client:
             while self.state in (ClientState.PLAY, ClientState.LOBBY):
                 if time.time() - self.time_server_pinged > 5:  # client expects < 20sec
                     self.keepalive_val = random.randrange(0, 99999)
-                    if self.clientversion > mcpacket.PROTOCOL_1_8START:
+                    if self.clientversion > mcpackets.PROTOCOL_1_8START:
                         self.packet.sendpkt(self.pktCB.KEEP_ALIVE, [_VARINT], [self.keepalive_val])
                     else:
                         # _OLD_ MC version
