@@ -1,3 +1,10 @@
+Build #120 
+
+- lots of  internal refactoring.
+- Fix smallbrother.py plugin #284 and #240
+- restore api.minecraft.lookupUUID(uuid) to it's former 0.7.x behavior that returns a dictionary of the "uuid": and "name":.
+- renamed the newer lookupUUID(name) and lookupName(uuid) to lookupbyName(name) and lookupbyUUID(uuid) respectively.
+
 Build #119 [0.8.5]
 
 - Separate path for server outside the wrapper folder supported.  Wrapper folder remains unchanged and by default, the server uses the wrapper folder too, as it always has.

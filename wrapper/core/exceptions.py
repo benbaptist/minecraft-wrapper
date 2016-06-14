@@ -28,3 +28,8 @@ class MalformedFileError(WrapperException):
 class InvalidServerStateError(WrapperException):
     """ Exception raised when the MCServer is not in the correct state """
     pass
+
+
+class UnsupportedMinecraftProtocol(WrapperException):
+    """ Exception raised when a non-supported protocol is passed to mcpacket.py """
+    pass

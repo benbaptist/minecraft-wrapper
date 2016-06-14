@@ -169,7 +169,24 @@ class Minecraft:
         """
         return self.wrapper.getuuidfromname(name)
 
-    def lookupName(self, uuid):  # This function is just part of the API for plugin devs/users.
+    def lookupUUID(self, uuid):
+        """
+        Returns a dictionary of {"uuid: the-uuid-of-the-player, "name": playername}.
+        legacy function from the old 0.7.7 API
+        lookupbyUUID() is a better and more direct way to get the name from a uuid.
+
+        Args:
+            uuid:  player uuid
+
+        Returns: a dictionary of hte two items, uuid and name.
+
+        """
+        name = self.lookupbyUUID(uuid)
+        uuid = str(self.lookupbyName(name))
+        dictitem = {"uuid": uuid, "name": name}
+        return dictitem
+
+    def lookupbyUUID(self, uuid):  # This function is just part of the API for plugin devs/users.
         """
         Returns the username from the specified UUID.
         If the player has never logged in before and isn't in the user cache, it will poll Mojang's API.
@@ -183,7 +200,7 @@ class Minecraft:
         """
         return self.wrapper.getusernamebyuuid(uuid)
 
-    def lookupUUID(self, name):  # This function is just part of the API for plugin devs/users.
+    def lookupbyName(self, name):  # This function is just part of the API for plugin devs/users.
         """
         Returns the UUID from the specified username.
         If the player has never logged in before and isn't in the user cache, it will poll Mojang's API.
@@ -361,7 +378,6 @@ class Minecraft:
         Returns: Returns the world's name.
 
         """
-        print("getworldname = %s" % self.getServer().worldname)
         return self.getServer().worldname
 
     # Ban related items - These simply wrap the proxy base methods
