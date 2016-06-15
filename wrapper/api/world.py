@@ -144,7 +144,12 @@ class World:
         """
         self.addentities.update(copyof_entity)
 
-    def ExistsEntityByEID(self, eid):
+    def countEntitiesInPlayer(self, playername):
+        """__init__(self, eid, uuid, entitytype, entityname, position, look, isobject, playerclientname):"""
+        ents = []
+
+
+    def existsEntityByEID(self, eid):
         """ A way to test whether the specified eid is still valid """
         if eid in self.entities:
             return True
