@@ -35,4 +35,4 @@ class Main:
 		
 		
 	def onDisable(self):  # onEnable and onDisable are required methods
-		self.data.save()  # save Storage to disk
+		self.data.close()  # save Storage to disk and close periodicsave() thread.

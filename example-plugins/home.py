@@ -25,7 +25,7 @@ class Main:
 		self.api.registerCommand("home", self.home)
 
 	def onDisable(self):
-		self.data.save()
+		self.data.close()
 
 	def sethome(self, player, args):
 		if not player.getDimension() == 0:

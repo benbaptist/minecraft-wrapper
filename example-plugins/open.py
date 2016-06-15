@@ -17,7 +17,6 @@ class Main:
 		self.log = log
 		self.players={}
 		self.win={}
-		self.storage=api.getStorage("CommandWindow",True)
 		self.players={}
 	def openW(self,player,args):
 		if len(args)!=0:
@@ -32,6 +31,7 @@ class Main:
 		else: # {tag:{display:{Name:"ASD"}}}
 			player.message("Usage: /open <WNAME>")
 	def onEnable(self):
+		self.storage=self.api.getStorage("CommandWindow",True)
 		self.api.registerCommand("open",self.openW,"s.open")
 		self.api.registerEvent("player.slotClick",self.setSlot)
 		self.api.registerPermission("s.open",True)
@@ -46,7 +46,7 @@ class Main:
 		("/remw <WNAME>","Removes the menu named WNAME","s.wop"),
 		("/remc <WNAME>", "Removes the command with the icon of the held item from the menu named WNAME")])
 	def onDisable(self):
-		self.storage.save()
+		self.storage.close()
 	def setSlot(self,payload):
 		#payload['player'].message(str(payload))
 		if payload["wid"]==payload["player"].getClient().windowCounter:
