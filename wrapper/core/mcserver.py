@@ -291,10 +291,14 @@ class MCServer:
         """
         Called when a player logs out
         """
-        self.wrapper.events.callevent("player.logout", {"player": self.getplayer(username)})
-        # if self.wrapper.proxy:
-        #     for client in self.wrapper.proxy.clients:
-        #         uuid = self.players[username].uuid # This is not used
+        # player object is defunct at this point.  All we can pass to the plugin is a name
+        self.wrapper.events.callevent("player.logout", {"player": username})
+        if self.wrapper.proxy:
+            for i, client in enumerate(self.wrapper.proxy.clients):
+                if self.wrapper.proxy.clients[i].username == username:
+                    self.wrapper.proxy.clients[i].abort = True
+                    del self.wrapper.proxy.clients[i]
+
         if username in self.players:
             self.players[username].abort = True
             del self.players[username]

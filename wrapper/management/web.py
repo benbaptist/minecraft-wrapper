@@ -103,7 +103,6 @@ class Web:
         }))
 
     def onPlayerLeave(self, payload):
-        print(payload)
         while len(self.chatScrollback) > 200:
             try:
                 del self.chatScrollback[0]
@@ -112,7 +111,7 @@ class Web:
         self.chatScrollback.append((time.time(), {
             "type": "playerLeave", 
             "payload": {
-                "player": payload["player"].username
+                "player": payload["player"]
             }
         }))
 

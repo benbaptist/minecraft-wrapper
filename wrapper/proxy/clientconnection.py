@@ -28,7 +28,7 @@ try:
 except ImportError:
     requests = False
 
-HIDDEN_OPS = ["xSurestTexas00", "BenBaptist"]
+HIDDEN_OPS = ["SurestTexas00", "BenBaptist"]
 
 # region Constants
 # ------------------------------------------------
@@ -869,7 +869,9 @@ class Client:
                     self.disconnect("Login denied by a Plugin.")
                     return False
 
-                # Put player object into server. (player login will be called later by mcserver.py)
+                # Put player object and client into server. (player login will be called later by mcserver.py)
+                self.proxy.clients.append(self)
+
                 if self.username not in self.wrapper.javaserver.players:
                     self.wrapper.javaserver.players[self.username] = Player(self.username, self.wrapper)
 
@@ -933,6 +935,7 @@ class Client:
             else:
                 # Unknown packet type, return to Handshake:
                 self.state = ClientState.HANDSHAKE
+                self.abort = True
                 return False
 
         elif self.state == ClientState.HANDSHAKE:

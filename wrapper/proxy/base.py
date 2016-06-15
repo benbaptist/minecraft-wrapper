@@ -20,10 +20,6 @@ if not encryption:
     requests = False
 
 
-UNIVERSAL_CONNECT = False  # tells the client "same version as you" or does not disconnect dissimilar clients
-HIDDEN_OPS = ["SurestTexas00", "BenBaptist"]
-
-
 class Proxy:
     def __init__(self, wrapper):
         self.wrapper = wrapper
@@ -83,14 +79,6 @@ class Proxy:
             t = threading.Thread(target=client.handle, args=())
             t.daemon = True
             t.start()
-
-            self.clients.append(client)
-            self.removestaleclients()
-
-    def removestaleclients(self):  # TODO This should not happen
-        for i, client in enumerate(self.wrapper.proxy.clients):
-            if client.abort:
-                del self.wrapper.proxy.clients[i]
 
     def pollserver(self):
         server_sock = socket.socket()
