@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import sys
 import struct
 import json
 from time import sleep
@@ -62,9 +61,20 @@ class World:
             self.log.debug("getEntityByEID returned False: %s", e)
             return None
 
-    def countActiveEntities(self, playername=False):
+    def countActiveEntities(self):
         """ return a count of all entities (does not include pending added or pending deletion. """
         return len(self.entities)
+
+    def countEntitiesInPlayer(self, playername):
+        """returns a list of entity info dictionaries"""
+        ents = []
+        entities = self.entities
+        for v in iter(entities.values()):
+            if v.clientname == playername:
+                about = v.aboutEntity
+                if about:
+                    ents.append(about)
+        return ents
 
     def addEntity(self, copyof_entity):
         """
@@ -86,17 +96,6 @@ class World:
             return self.getEntityByEID(eid).aboutEntity()
         except AttributeError:
             return None
-
-    def countEntitiesInPlayer(self, playername):
-        """__init__(self, eid, uuid, entitytype, entityname, position, look, isobject, playerclientname):"""
-        ents = []
-        entities = self.entities
-        for v in iter(entities.values()):
-            if v.clientname == playername:
-                about = v.aboutEntity
-                if about:
-                    ents.append(about)
-        return ents
 
     def existsEntityByEID(self, eid):
         """ A way to test whether the specified eid is valid """

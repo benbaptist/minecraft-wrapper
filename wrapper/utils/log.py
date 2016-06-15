@@ -111,6 +111,7 @@ def loadconfig(configfile="logging.json"):
     except Exception as e:
         logging.exception("Unable to load or create %s! (%s)", configfile, e)
 
+
 class ColorFormatter(logging.Formatter):
     """
     This custom formatter will format console color/option (bold, italic, etc) output based on logging level
