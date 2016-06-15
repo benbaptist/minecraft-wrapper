@@ -5,8 +5,7 @@ import os
 import logging
 from logging.config import dictConfig
 
-import utils.termcolors as termcolors
-from utils.helpers import mkdir_p
+from utils.helpers import mkdir_p, use_style
 
 DEFAULT_CONFIG = dict({
     "wrapperversion": 1.1,
@@ -114,7 +113,7 @@ def loadconfig(configfile="logging.json"):
 
 class ColorFormatter(logging.Formatter):
     """
-    This custom formatter will colorize console output based on logging level
+    This custom formatter will format console color/option (bold, italic, etc) output based on logging level
     """
     def __init__(self, *args, **kwargs):
         super(ColorFormatter, self).__init__(*args, **kwargs)
@@ -125,22 +124,22 @@ class ColorFormatter(logging.Formatter):
 
         if os.name in ("posix", "mac"):  # Only style on *nix since windows doesn't support ANSI
             if record.levelno == logging.INFO:
-                info_style = termcolors.make_style(fg="green")
+                info_style = use_style(foreground="green")
                 msg = info_style(msg)
             elif record.levelno == logging.DEBUG:
-                debug_style = termcolors.make_style(fg="cyan")
+                debug_style = use_style(foreground="cyan")
                 msg = debug_style(msg)
             elif record.levelno == logging.WARNING:
-                warn_style = termcolors.make_style(fg="yellow", opts=("bold",))
+                warn_style = use_style(foreground="yellow", options=("bold",))
                 msg = warn_style(msg)
             elif record.levelno == logging.ERROR:
-                error_style = termcolors.make_style(fg="red", opts=("bold",))
+                error_style = use_style(foreground="red", options=("bold",))
                 msg = error_style(msg)
             elif record.levelno == logging.CRITICAL:
-                crit_style = termcolors.make_style(fg="black", bg="red", opts=("bold",))
+                crit_style = use_style(foreground="black", background="red", options=("bold",))
                 msg = crit_style(msg)
             elif record.levelno == logging.TRACE:
-                trace_style = termcolors.make_style(fg="black", bg="white")
+                trace_style = use_style(foreground="white", background="black", options=("italic",))
                 msg = trace_style(msg)
 
         record.msg = msg

@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 
+import sys
 import struct
 import json
-from copy import deepcopy
 from time import sleep
 import threading
-from time import time as currtime
 from core.entities import Entities as Entitytypes
 from core.entities import Objects as Objecttypes
 
@@ -36,9 +35,6 @@ class World:
         self.delentities = []  # list of eids
 
         self.abortep = False
-        self.lockprocessor = 0
-        self.timeoverride = currtime()
-        self.lock = False
 
         t = threading.Thread(target=self._entityprocessor, name="entProc", args=())
         t.daemon = True
@@ -50,68 +46,7 @@ class World:
     def __del__(self):
         self.abortep = True
 
-    def applylock(self, blockforlock=True):
-        while self.lock and blockforlock:
-            pass
-        self.lockprocessor += 1
-        self.timeoverride = currtime()
-        return self.lockprocessor
-
-    def removelock(self):
-        self.lockprocessor -= 1
-        if self.lockprocessor < 0:
-            self.lockprocessor = 0
-        return self.lockprocessor
-
-    def _entityprocessor(self, updatefrequency=5):
-        self.log.debug("_entityprocessor thread started.")
-        while self.javaserver.state in (1, 2, 4) and not self.abortep:  # server is running
-
-            self.log.trace("_entityprocessor looping.")
-            sleep(updatefrequency)  # timer for adding entities
-            while self.lockprocessor:
-                self.lock = True
-                # seconds from last lock to release all locking (timeout error)
-                if (currtime() - self.timeoverride) > 30:
-                    self.lockprocessor = 0
-            self.log.trace("_entityprocessor starting updates.")
-            # the next 4 steps are not atomic.. we could lose a record between them.. ah well!
-            # the only way to avoid that is to have routines block even for updates to addentities
-            newadditions = deepcopy(self.addentities)
-            self.addentities = {}
-            entriestoremove = self.delentities
-            self.delentities = []
-
-            # deletions and additions
-            self.entities.update(newadditions)
-            for k in entriestoremove:
-                self.entities.pop(k, None)
-
-            # start looking for stale client entities
-            players = self.javaserver.players
-            playerlist = []
-            for player in players:
-                playerlist.append(player)
-            for eid in self.entities:
-                if self.getEntityByEID(eid).clientname not in playerlist:
-                    self.delentities.append(eid)
-
-            self.lock = False
-            self.log.trace("_entityprocessor updates done.")
-        self.log.debug("_entityprocessor thread closed.")
-
-    def getBlock(self, pos):
-        x, y, z = pos
-        chunkx, chunkz = int(x / 16), int(z / 16)
-        localx, localz = (x / 16.0 - x / 16) * 16, (z / 16.0 - z / 16) * 16
-        # print chunkx, chunkz, localx, y, localz
-        return self.chunks[chunkx][chunkz].getBlock(localx, y, localz)
-
-    def setChunk(self, x, z, chunk):
-        if x not in self.chunks:
-            self.chunks[x] = {}
-        self.chunks[x][z] = chunk
-
+    # region Entity Methods
     def getEntityByEID(self, eid):
         """ Returns the entity context or None if the specified entity ID doesn't exist.
 
@@ -121,10 +56,11 @@ class World:
         writing back to it (or expect possible errors).
 
         """
-        if eid in self.entities:
+        try:
             return self.entities[eid]
-        else:
-            return False
+        except Exception as e:
+            self.log.debug("getEntityByEID returned False: %s", e)
+            return None
 
     def countActiveEntities(self, playername=False):
         """ return a count of all entities (does not include pending added or pending deletion. """
@@ -144,13 +80,26 @@ class World:
         """
         self.addentities.update(copyof_entity)
 
+    def getEntityInfo(self, eid):
+        """ get dictionary of info on the specified EID.  Returns None if fails"""
+        try:
+            return self.getEntityByEID(eid).aboutEntity()
+        except AttributeError:
+            return None
+
     def countEntitiesInPlayer(self, playername):
         """__init__(self, eid, uuid, entitytype, entityname, position, look, isobject, playerclientname):"""
         ents = []
-
+        entities = self.entities
+        for v in iter(entities.values()):
+            if v.clientname == playername:
+                about = v.aboutEntity
+                if about:
+                    ents.append(about)
+        return ents
 
     def existsEntityByEID(self, eid):
-        """ A way to test whether the specified eid is still valid """
+        """ A way to test whether the specified eid is valid """
         if eid in self.entities:
             return True
         else:
@@ -167,23 +116,34 @@ class World:
             count - used to specify more than one entity; again, centers on the specified eid location.
 
         """
-        eid = int(float(eid))
-        count = int(float(count))
-
+        entityinfo = self.getEntityInfo(eid)
+        if not entityinfo:
+            return
         if dropitems:
             self.javaserver.console("gamerule doMobLoot true")
         else:
             self.javaserver.console("gamerule doMobLoot false")
-        lock = self.applylock()
-        entity = self.getEntityByEID(eid)
-        if self.ExistsEntityByEID(eid):
-            pos = entity.position
-            entitydesc = entity.entityname
-            self.javaserver.console("kill @e[type=%s,x=%d,y=%d,z=%d,c=%d]" %
-                                    (entitydesc, pos[0], pos[1], pos[2], count))
-        lock = self.removelock()
+        pos = entityinfo["position"]
+        entitydesc = entityinfo["name"]
+        self.javaserver.console("kill @e[type=%s,x=%d,y=%d,z=%d,c=%s]" %
+                                (entitydesc, pos[0], pos[1], pos[2], count))
         if finishstateof_domobloot:
             self.javaserver.console("gamerule doMobLoot true")
+
+    # endregion
+
+    # region block/world methods
+    def getBlock(self, pos):
+        x, y, z = pos
+        chunkx, chunkz = int(x / 16), int(z / 16)
+        localx, localz = (x / 16.0 - x / 16) * 16, (z / 16.0 - z / 16) * 16
+        # print chunkx, chunkz, localx, y, localz
+        return self.chunks[chunkx][chunkz].getBlock(localx, y, localz)
+
+    def setChunk(self, x, z, chunk):
+        if x not in self.chunks:
+            self.chunks[x] = {}
+        self.chunks[x][z] = chunk
 
     def setBlock(self, x, y, z, tilename, damage=0, mode="replace", data=None):
         if not data:
@@ -217,7 +177,36 @@ class World:
         else:
             self.javaserver.console("fill %d %d %d %d %d %d %s %d replace %s %d" % (
                 x1, y1, z1, x2, y2, z2, tilename2, damage2, tilename1, damage1))
+        return
+    # endregion
 
+    def _entityprocessor(self, updatefrequency=5):
+        self.log.debug("_entityprocessor thread started.")
+        while self.javaserver.state in (1, 2, 4) and not self.abortep:  # server is running
+
+            self.log.trace("_entityprocessor looping.")
+            sleep(updatefrequency)  # timer for adding entities
+            self.log.debug("_entityprocessor starting updates.")
+
+            # deletions and additions
+            entriestoremove = self.delentities
+            self.delentities = []
+            self.entities.update(self.addentities)
+            self.addentities = {}
+            for k in entriestoremove:
+                self.entities.pop(k, None)
+
+            # start looking for stale client entities
+            players = self.javaserver.players
+            playerlist = []
+            for player in players:
+                playerlist.append(player)
+            for eid in self.entities:
+                if self.getEntityByEID(eid).clientname not in playerlist:
+                    self.delentities.append(eid)
+
+            self.log.debug("_entityprocessor updates done.")
+        self.log.debug("_entityprocessor thread closed.")
 
 class Chunk:
 

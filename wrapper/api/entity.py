@@ -47,3 +47,17 @@ class Entity:
         if self.rodeBy:
             self.rodeBy.position = self.position
 
+    def aboutEntity(self):
+        info = {
+            "eid": self.eid,
+            "uuid": self.uuid,
+            "type": self.entitytype,
+            "position": self.position,
+            "look": self.look,
+            "rodeBy": self.rodeBy,
+            "Riding": self.riding,
+            "isObject": self.isObject,
+            "name": self.entityname,
+            "player": self.clientname
+        }
+        return info

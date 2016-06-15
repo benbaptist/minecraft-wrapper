@@ -392,11 +392,9 @@ class ServerConnection:
                 # ("varint:eid|byte:dx|byte:dy|byte:dz")
                 # self.log.trace("(PROXY SERVER) -> Parsed ENTITY_RELATIVE_MOVE packet:\n%s", data)
 
-                lock = self.wrapper.javaserver.world.applylock()
                 entityupdate = self.wrapper.javaserver.world.getEntityByEID(data[0])
                 if entityupdate:
                     entityupdate.moveRelative((data[1], data[2], data[3]))
-                lock = self.wrapper.javaserver.world.removelock()
 
             elif pkid == self.pktCB.ENTITY_TELEPORT:
                 if not self.wrapper.javaserver.world:
@@ -409,11 +407,9 @@ class ServerConnection:
                 # ("varint:eid|int:x|int:y|int:z|byte:yaw|byte:pitch")
 
                 # self.log.trace("(PROXY SERVER) -> Parsed ENTITY_TELEPORT packet:\n%s", data)
-                lock = self.wrapper.javaserver.world.applylock()
                 entityupdate = self.wrapper.javaserver.world.getEntityByEID(data[0])
                 if entityupdate:
                     entityupdate.teleport((data[1], data[2], data[3]))
-                lock = self.wrapper.javaserver.world.removelock()
 
             elif pkid == self.pktCB.ATTACH_ENTITY:
                 data = []
@@ -448,12 +444,10 @@ class ServerConnection:
                         self.log.debug("player mount called for %s on eid %s", player.username, vehormobeid)
                         if not self.wrapper.javaserver.world:
                             return
-                        lock = self.wrapper.javaserver.world.applylock()
                         entityupdate = self.wrapper.javaserver.world.getEntityByEID(vehormobeid)
                         if entityupdate:
                             self.client.riding = entityupdate
                             entityupdate.rodeBy = self.client
-                        lock = self.wrapper.javaserver.world.removelock()
 
             elif pkid == self.pktCB.DESTROY_ENTITIES:
                 # Get rid of dead entities so that python can GC them.
