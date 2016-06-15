@@ -87,9 +87,9 @@ class Wrapper:
     def __del__(self):
         if self.storage:  # prevent error message on very first wrapper starts when wrapper exits after creating
             # new wrapper.properties file.
-            self.storage.save()
-            self.permissions.save()
-            self.usercache.save()
+            self.storage.close()
+            self.permissions.close()
+            self.usercache.close()
 
     def start(self):
         """ wrapper should only start ONCE... old code made it restart over when only a server needed restarting"""
@@ -159,9 +159,9 @@ class Wrapper:
         self.javaserver.__handle_server__()
         # until it stops
         self.plugins.disableplugins()
-        self.storage.save()
-        self.permissions.save()
-        self.usercache.save()
+        self.storage.close()
+        self.permissions.close()
+        self.usercache.close()
         self.log.info("Server handle stopped.  Storages saved. Plugins disabled")
 
     def parseconsoleinput(self):
@@ -593,9 +593,9 @@ class Wrapper:
         self.shutdown()
 
     def shutdown(self, status=0):
-        self.storage.save()
-        self.permissions.save()
-        self.usercache.save()
+        self.storage.close()
+        self.permissions.close()
+        self.usercache.close()
         self.halt = True
         self.javaserver.stop(reason="Wrapper.py Shutting Down", save=False)
         time.sleep(1)

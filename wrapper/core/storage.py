@@ -7,7 +7,7 @@ import time
 import logging
 from utils.helpers import mkdir_p, putjsonfile, getjsonfile
 from core.config import Config
-# import threading
+import threading
 # import copy
 
 try:
@@ -35,15 +35,15 @@ class Storage:
         self.data = {}
         self.load()
         self.time = time.time()
-        # self.dataOld = {}
-        # self.abort = False
+        self.abort = False
 
-        # t = threading.Thread(target=self.periodicsave, args=())
-        # t.daemon = True
-        # t.start()
+        t = threading.Thread(target=self.periodicsave, args=())
+        t.daemon = True
+        t.start()
 
     def __del__(self):
         self.abort = True
+        print("Storage '%s' aborting" % self.name)
         self.save()
 
     def __getitem__(self, index):
@@ -74,16 +74,12 @@ class Storage:
         for i in self.data:
             yield i
 
-    # def periodicsave(self):
-    #     while not self.abort:
-    #         if time.time() - self.time > 60:
-    #             if not self.data == self.dataOld:
-    #                 try:
-    #                     self.save()
-    #                 except Exception as e:
-    #                     self.log.warning("Could not periodicsave data \n(%s)", e)
-    #                 self.time = time.time()
-    #         time.sleep(1)
+    def periodicsave(self):  # EAFTP
+        while not self.abort:
+            if time.time() - self.time > 60:
+                self.save()
+                self.time = time.time()
+            time.sleep(5)
 
     def load(self):
         mkdir_p(self.root)
@@ -100,6 +96,10 @@ class Storage:
         if not putcode:
             self.log.exception("TypeError or non-existent path: '%s/%s.json'\nData Dump:\n%s",
                                self.root, self.name, self.data)
+
+    def close(self):
+        self.save()
+        self.abort = True
 
     def key(self, key, value=None):
         if value is None:

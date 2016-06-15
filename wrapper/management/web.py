@@ -64,7 +64,7 @@ class Web:
         # t.start()
 
     def __del__(self):
-            self.data.save()
+            self.data.close()
 
     def onServerConsole(self, payload):
         while len(self.consoleScrollback) > 1000:

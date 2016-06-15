@@ -129,7 +129,7 @@ class Player:
         return self.username
 
     def __del__(self):
-        self.data.save()
+        self.data.close()
 
     @property
     def name(self):
@@ -148,7 +148,7 @@ class Player:
         while not self.abort:
             self.data["logins"][int(self.loggedIn)] = int(time.time())
             time.sleep(60)
-        self.data.save()
+        self.data.close()
 
     def _read_ops_file(self):
         """
