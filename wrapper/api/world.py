@@ -30,8 +30,6 @@ class World:
         self.objecttypes = objectlistobject.objectlist
 
         self.entities = {}
-        self.addentities = {}  # dictionary of entity data
-        self.delentities = []  # list of eids
 
         self.abortep = False
 
@@ -58,7 +56,7 @@ class World:
         try:
             return self.entities[eid]
         except Exception as e:
-            self.log.debug("getEntityByEID returned False: %s", e)
+            self.log.trace("getEntityByEID returned False: %s", e)
             return None
 
     def countActiveEntities(self):
@@ -72,8 +70,9 @@ class World:
         for v in iter(entities.values()):
             if v.clientname == playername:
                 about = v.aboutEntity
+                print about
                 if about:
-                    ents.append(about)
+                    ents.append(about())
         return ents
 
     def addEntity(self, copyof_entity):
@@ -88,7 +87,7 @@ class World:
 
 
         """
-        self.addentities.update(copyof_entity)
+        self.entities.update(copyof_entity)
 
     def getEntityInfo(self, eid):
         """ get dictionary of info on the specified EID.  Returns None if fails"""
@@ -179,21 +178,12 @@ class World:
         return
     # endregion
 
-    def _entityprocessor(self, updatefrequency=5):
+    def _entityprocessor(self, updatefrequency=10):
         self.log.debug("_entityprocessor thread started.")
         while self.javaserver.state in (1, 2, 4) and not self.abortep:  # server is running
 
             self.log.trace("_entityprocessor looping.")
             sleep(updatefrequency)  # timer for adding entities
-            self.log.debug("_entityprocessor starting updates.")
-
-            # deletions and additions
-            entriestoremove = self.delentities
-            self.delentities = []
-            self.entities.update(self.addentities)
-            self.addentities = {}
-            for k in entriestoremove:
-                self.entities.pop(k, None)
 
             # start looking for stale client entities
             players = self.javaserver.players
@@ -202,10 +192,14 @@ class World:
                 playerlist.append(player)
             for eid in self.entities:
                 if self.getEntityByEID(eid).clientname not in playerlist:
-                    self.delentities.append(eid)
+                    try:
+                        self.entities.pop(eid, None)
+                    except:
+                        pass
 
-            self.log.debug("_entityprocessor updates done.")
+            self.log.trace("_entityprocessor updates done.")
         self.log.debug("_entityprocessor thread closed.")
+
 
 class Chunk:
 

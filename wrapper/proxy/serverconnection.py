@@ -146,10 +146,13 @@ class ServerConnection:
 
         if not self.client.isLocal and kill_client:  # Ben's cross-server hack
             self.client.isLocal = True
+            message = {
+                "text": "Disconnected from server.",
+                "color": "red"
+            }
             self.client.packet.sendpkt(self.pktCB.CHANGE_GAME_STATE, [_UBYTE, _FLOAT], (1, 0))  # "end raining"
-            self.client.packet.sendpkt(self.pktCB.CHAT_MESSAGE, [_STRING, _BYTE],
-                                       ("{text:'Disconnected from server: %s', color:red}" %
-                                       reason.replace("'", "\\'"), 0))
+            self.client.packet.sendpkt(self.pktCB.CHAT_MESSAGE, [_STRING, _BYTE], (json.dumps(message)
+                                       , 0))
             self.client.connect()
             return
 
@@ -334,9 +337,10 @@ class ServerConnection:
                     return True  # return now.. why parse something we are no going to use?
                 if self.version < mcpackets.PROTOCOL_1_9START:
                     dt = self.packet.readpkt([_VARINT, _NULL, _BYTE, _INT, _INT, _INT, _BYTE, _BYTE])
+                    dt[3], dt[4], dt[5] = dt[3] / 32, dt[4] / 32, dt[5] / 32
                     # "varint:eid|byte:type_|int:x|int:y|int:z|byte:pitch|byte:yaw")
                 else:
-                    dt = self.packet.readpkt([_VARINT, _UUID, _BYTE, _INT, _INT, _INT, _BYTE, _BYTE])
+                    dt = self.packet.readpkt([_VARINT, _UUID, _BYTE, _DOUBLE, _DOUBLE, _DOUBLE, _BYTE, _BYTE])
                     # "varint:eid|uuid:objectUUID|byte:type_|int:x|int:y|int:z|byte:pitch|byte:yaw|int:info|
                     # short:velocityX|short:velocityY|short:velocityZ")
                 entityuuid = dt[1]
@@ -355,12 +359,12 @@ class ServerConnection:
                     return True
                 if self.version < mcpackets.PROTOCOL_1_9START:
                     dt = self.packet.readpkt([_VARINT, _NULL, _UBYTE, _INT, _INT, _INT, _BYTE, _BYTE, _BYTE, _REST])
-
+                    dt[3], dt[4], dt[5] = dt[3] / 32, dt[4] / 32, dt[5] / 32
                     # "varint:eid|ubyte:type_|int:x|int:y|int:z|byte:pitch|byte:yaw|"
                     # "byte:head_pitch|...
                     # STOP PARSING HERE: short:velocityX|short:velocityY|short:velocityZ|rest:metadata")
                 else:
-                    dt = self.packet.readpkt([_VARINT, _UUID, _UBYTE, _INT, _INT, _INT, _BYTE, _BYTE, _BYTE, _REST])
+                    dt = self.packet.readpkt([_VARINT, _UUID, _UBYTE, _DOUBLE, _DOUBLE, _DOUBLE, _BYTE, _BYTE, _BYTE, _REST])
                     # ("varint:eid|uuid:entityUUID|ubyte:type_|int:x|int:y|int:z|"
                     # "byte:pitch|byte:yaw|byte:head_pitch|
                     # STOP PARSING HERE: short:velocityX|short:velocityY|short:velocityZ|rest:metadata")
@@ -402,8 +406,11 @@ class ServerConnection:
                     return True
                 if self.version < mcpackets.PROTOCOL_1_8START:  # 1.7.10 and prior
                     data = self.packet.readpkt([_INT, _INT, _INT, _INT, _REST])
-                else:
+                elif mcpackets.PROTOCOL_1_8START <= self.version < mcpackets.PROTOCOL_1_9START:
                     data = self.packet.readpkt([_VARINT, _INT, _INT, _INT, _REST])
+                else:
+                    data = self.packet.readpkt([_VARINT, _DOUBLE, _DOUBLE, _DOUBLE, _REST])
+                    data[1], data[2], data[3] = data[1] * 32, data[2] * 32, data[3] * 32
                 # ("varint:eid|int:x|int:y|int:z|byte:yaw|byte:pitch")
 
                 # self.log.trace("(PROXY SERVER) -> Parsed ENTITY_TELEPORT packet:\n%s", data)
@@ -464,7 +471,10 @@ class ServerConnection:
 
                 for _ in range(entitycount):
                     eid = self.packet.readpkt(parser)[0]
-                    self.wrapper.javaserver.world.delentities.append(eid)
+                    try:
+                        self.wrapper.javaserver.world.entities.pop(eid, None)
+                    except:
+                        pass
 
                 # self.log.trace("(PROXY SERVER) -> Parsed DESTROY_ENTITIES pckt:\n%s entities destroyed", entitycount)
 
@@ -653,10 +663,12 @@ class ServerConnection:
             elif pkid == self.pktCB.DISCONNECT:
                 message = self.packet.readpkt([_JSON])  # [0]["json"]
                 self.log.info("Disconnected from server: %s", message)
+                print("PKT DISCONNECT")
                 if not self.client.isLocal:  # TODO - multi server code
                     self.close()
                 else:
                     self.client.disconnect(message)
+                    print("PKT DISCONNECT NOT LOCAL ELSE: clause")
                 # self.log.trace("(PROXY SERVER) -> Parsed DISCONNECT packet")
                 return False
 

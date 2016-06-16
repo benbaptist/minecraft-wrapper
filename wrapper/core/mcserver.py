@@ -176,16 +176,14 @@ class MCServer:
 
     def stop(self, reason="Stopping Server", save=True):
         """
-        Stop the Minecraft server, prevent it from auto-restarting and kick people with the specified reason
+        Stop the Minecraft server, prevent it from auto-restarting.
         """
         self.log.info("Stopping Minecraft server with reason: %s", reason)
         self.changestate(MCSState.STOPPING, reason)
         self.boot = False
         if save:
             self.wrapper.storage["serverState"] = False
-        for player in self.players:
-            self.console("kick %s %s" % (player, reason))
-        self.console("stop")
+        self.console("stop")  # really no reason to kick the players.  Stop will do it
 
     def kill(self, reason="Killing Server"):
         """ 
