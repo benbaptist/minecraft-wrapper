@@ -198,7 +198,7 @@ class World:
             playerlist = []
             for player in players:
                 playerlist.append(player)
-            for eid in self.entities:
+            for eid in self.entities.keys():
                 if self.getEntityByEID(eid).clientname not in playerlist:
                     try:
                         self.entities.pop(eid, None)

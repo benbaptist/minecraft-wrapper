@@ -308,7 +308,7 @@ class ServerConnection:
 
             elif pkid == self.pktCB.SPAWN_PLAYER:
                 # This packet  is used to spawn other players into a player client's world.
-                # is this packet does not arrive, the other player(s) will nto be visible to the client
+                # is this packet does not arrive, the other player(s) will not be visible to the client
                 if self.version < mcpackets.PROTOCOL_1_8START:
                     dt = self.packet.readpkt([_VARINT, _STRING, _REST])
                 else:
@@ -322,7 +322,7 @@ class ServerConnection:
                 if clientserverid.uuid:
                     if self.version < mcpackets.PROTOCOL_1_8START:
                         self.client.packet.sendpkt(
-                            self.pktCB.SPAWN_PLAYER, [_VARINT, _STRING, _RAW], (dt[0], clientserverid.uuid, dt[2]))
+                            self.pktCB.SPAWN_PLAYER, [_VARINT, _STRING, _RAW], (dt[0], str(clientserverid.uuid), dt[2]))
                     else:
                         self.client.packet.sendpkt(
                             self.pktCB.SPAWN_PLAYER, [_VARINT, _UUID, _RAW], (dt[0], clientserverid.uuid, dt[2]))
@@ -630,6 +630,7 @@ class ServerConnection:
                             self.client.packet.sendpkt(self.pktCB.PLAYER_LIST_ITEM,
                                                        [_VARINT, _VARINT, _UUID, _VARINT],
                                                        (1, 1, uuid, gamemode))
+                            print(1, 1, uuid, gamemode)
                         elif action == 2:
                             data = self.packet.readpkt([_VARINT])
                             ping = data[0]
@@ -663,12 +664,10 @@ class ServerConnection:
             elif pkid == self.pktCB.DISCONNECT:
                 message = self.packet.readpkt([_JSON])  # [0]["json"]
                 self.log.info("Disconnected from server: %s", message)
-                print("PKT DISCONNECT")
                 if not self.client.isLocal:  # TODO - multi server code
                     self.close()
                 else:
-                    self.client.disconnect(message)
-                    print("PKT DISCONNECT NOT LOCAL ELSE: clause")
+                    self.client.disconnect(message, fromserver=True)
                 # self.log.trace("(PROXY SERVER) -> Parsed DISCONNECT packet")
                 return False
 
@@ -685,10 +684,8 @@ class ServerConnection:
                 return False
 
             if pkid == 0x01:
-                message = {"text": "Server is in online mode. Please turn it off in server.properties and "
-                                   "allow wrapper to handle the authetication.",
-                           "color": "red"}
-                self.client.disconnect(json.dumps(message))
+                self.client.disconnect("Server is in online mode. Please turn it off in server.properties and "
+                                       "allow wrapper to handle the authetication.", color="red")
                 # self.log.trace("(PROXY SERVER) -> Parsed 0x01 packet with server state 2 (LOGIN)")
                 return False
 

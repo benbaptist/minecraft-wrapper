@@ -228,14 +228,22 @@ class Client:
             if client.username == self.username:
                 del self.wrapper.proxy.clients[i]
 
-    def disconnect(self, message):
+    def disconnect(self, message, color="white", bold=False, fromserver=False):
         """
-        disconnect message can be a string containing valid json.  Sends disconnection packet to client.
+        text only message
         """
-        if self.state == ClientState.PLAY:
-            self.packet.sendpkt(self.pktCB.DISCONNECT, [_STRING], [message])
+        if not fromserver:
+            jsonmessage = {"text": message,
+                           "color": color,
+                           "bold": bold
+                           }
         else:
-            self.packet.sendpkt(0x00, [_STRING], [message])
+            jsonmessage = message  # server packets are read as json
+
+        if self.state == ClientState.PLAY:
+            self.packet.sendpkt(self.pktCB.DISCONNECT, [_JSON], [jsonmessage])
+        else:
+            self.packet.sendpkt(0x00, [_JSON], [message])
         time.sleep(1)
         self.close()
 
@@ -714,6 +722,7 @@ class Client:
                 for client in self.proxy.clients:
                     if data[0].hex == client.uuid.hex:
                         self.server.packet.sendpkt(self.pktSB.SPECTATE, [_UUID], [client.serverUuid])
+                        print("sent new Spectate packet")
                         return False
             else:
                 return True  # no packet parsed in wrapper
@@ -1058,7 +1067,7 @@ class Client:
                 self.close()
                 break
             time.sleep(1)
-            while self.state in (ClientState.PLAY, ClientState.LOBBY):
+            while self.state in (ClientState.PLAY, ClientState.LOBBY) and not self.abort:
                 if time.time() - self.time_server_pinged > 5:  # client expects < 20sec
                     self.keepalive_val = random.randrange(0, 99999)
                     if self.clientversion > mcpackets.PROTOCOL_1_8START:
@@ -1068,11 +1077,14 @@ class Client:
                         self.packet.sendpkt(0x00, [_INT], [self.keepalive_val])
                     self.time_server_pinged = time.time()
                 # ckeck for active client keep alive status:
-                if time.time() - self.time_client_responded > 25:  # server can allow up to 30 seconds for response
+                if time.time() - self.time_client_responded > 25 and not self.abort:  # server can allow up to 30 seconds for response
                     self.state = ClientState.HANDSHAKE
                     self.disconnect("Client closed due to lack of keepalive response")
                     self.log.debug("Closing %s's client thread due to lack of keepalive response", playername)
                     self.close()
+        self.state = ClientState.HANDSHAKE
+        self.log.debug("Received abort signal - Closing %s's client thread", playername)
+        self.close()
 
 
 class ClientState:

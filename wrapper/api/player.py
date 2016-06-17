@@ -146,8 +146,10 @@ class Player:
         """
         self.data["logins"][int(self.loggedIn)] = time.time()
         while not self.abort:
-            self.data["logins"][int(self.loggedIn)] = int(time.time())
-            time.sleep(60)
+            timeupdate = time.time()
+            if timeupdate % 60:  # Just update every 60 seconds
+                self.data["logins"][int(self.loggedIn)] = int(time.time())
+            time.sleep(.5)  # this needs a fast response to ensure the storage closes immediately on player logoff
         self.data.close()
 
     def _read_ops_file(self):
