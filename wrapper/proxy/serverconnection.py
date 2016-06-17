@@ -348,7 +348,7 @@ class ServerConnection:
                 newobject = {dt[0]: Entity(dt[0], entityuuid, dt[2], objectname,
                                            (dt[3], dt[4], dt[5],), (dt[6], dt[7]), True, self.username)}
 
-                self.wrapper.javaserver.world.addEntity(newobject)
+                self.wrapper.javaserver.world.entities.update(newobject)
                 # self.log.trace("(PROXY SERVER) -> Parsed SPAWN_OBJECT packet:\n%s", dt)
 
             elif pkid == self.pktCB.SPAWN_MOB:
@@ -379,7 +379,7 @@ class ServerConnection:
                 newmob = {dt[0]: Entity(dt[0], entityuuid, dt[2], mobname,
                                         (dt[3], dt[4], dt[5],), (dt[6], dt[7], dt[8]), False, self.username)}
 
-                self.wrapper.javaserver.world.addEntity(newmob)
+                self.wrapper.javaserver.world.entities.update(newmob)
                 # self.wrapper.javaserver.world.entities[dt[0]] = Entity(dt[0], entityuuid, dt[2],
                 #                                                        (dt[3], dt[4], dt[5], ),
                 #                                                        (dt[6], dt[7], dt[8]),

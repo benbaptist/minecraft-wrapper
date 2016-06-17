@@ -45,52 +45,60 @@ class World:
 
     # region Entity Methods
     def getEntityByEID(self, eid):
-        """ Returns the entity context or None if the specified entity ID doesn't exist.
+        """ Returns the entity context or False if the specified entity ID doesn't exist.
 
         WARNING! understand that entities are very DYNAMIC.  The entity object you get
-        could be modified or even deleted at any time! it is prudent to copy the entity
-        context if you need some data out of it. check for it's validity before
-        writing back to it (or expect possible errors).
+        could be modified or even deleted at any time!
 
         """
         try:
             return self.entities[eid]
         except Exception as e:
             self.log.trace("getEntityByEID returned False: %s", e)
-            return None
+            return False
 
     def countActiveEntities(self):
-        """ return a count of all entities (does not include pending added or pending deletion. """
+        """ return a count of all entities. """
         return len(self.entities)
 
     def countEntitiesInPlayer(self, playername):
-        """returns a list of entity info dictionaries"""
+        """returns a list of entity info dictionaries
+            [
+            {getEntityInfo(eid#1)},  # see getEntityInfo(self, eid)
+            {getEntityInfo(eid#2)},
+            {getEntityInfo(eid#3)},
+            {getEntityInfo(...)}
+            ]
+        """
         ents = []
         entities = self.entities
         for v in iter(entities.values()):
             if v.clientname == playername:
                 about = v.aboutEntity
-                print about
                 if about:
                     ents.append(about())
         return ents
 
-    def addEntity(self, copyof_entity):
-        """
-        Args:
-            copyof_entity = copy of entity obtained with copyEntityByEID.  Also used internally by
-            wrapper.proxy.serverconnection.py to add the entity objects it creates.
-
-        used in conjuction with copyEntityByEid.  Takes the copy you made and overwrites the existing
-            entity (or -recreates it).  The actual update may happen several seconds later when the
-            _entityprocessor runs the updates.
-
-
-        """
-        self.entities.update(copyof_entity)
-
     def getEntityInfo(self, eid):
-        """ get dictionary of info on the specified EID.  Returns None if fails"""
+        """ get dictionary of info on the specified EID.  Returns None if fails
+
+        Sameple item:
+          {
+            "player": "SapperLeader2",  # the player in whose world the entity exists
+            "rodeBy": false,
+            "eid": 126,                 # eid of entity - if two or more players share chunks, the same creeper
+            "name": "Creeper",          #   could be in the other player's client under other eids
+            "Riding": false,
+            "position": [
+              3333,
+              29,
+              2847
+            ],
+            "type": 50,                 # the type code for Creeper
+            "isObject": false,
+            "uuid": "fae14015-dde6-4e07-b5e5-f27536937a79"  # uuids are only on 1.9+ , but should be unique to object
+          }
+        """
         try:
             return self.getEntityByEID(eid).aboutEntity()
         except AttributeError:
