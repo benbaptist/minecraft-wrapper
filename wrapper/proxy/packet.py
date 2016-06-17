@@ -160,7 +160,7 @@ class Packet:
     def flush(self):
         for p in self.queue:
             packet = p[1]
-            pkid = struct.unpack("B", packet[0:1])[0]  # py3
+            # pkid = struct.unpack("B", packet[0:1])[0]  # no idea what the point of this was
             if p[0] > -1:
                 if len(packet) > self.compressThreshold:
                     packetcompressed = self.pack_varInt(len(packet)) + zlib.compress(packet)
@@ -305,7 +305,7 @@ class Packet:
         return result
 
     def sendpkt(self, pkid, args, payload):
-        result = bytearray  # TODO  This is a PY2-3 compatibility line.  Will use <str> for PY2 and <bytes> for PY3...
+        # result = bytearray  # TODO  This is a PY2-3 compatibility line.  Will use <str> for PY2 and <bytes> for PY3...
         result = b""  # TODO
 
         # start with packet id
@@ -500,7 +500,7 @@ class Packet:
 
     def recv(self, length):
         if length > 200:
-            d = bytearray  # TODO  This is a PY2-3 compatibility line.  Will use <str> for PY2 and <bytes> for PY3...
+            # d = bytearray  # TODO  This is a PY2-3 compatibility line.  Will use <str> for PY2 and <bytes> for PY3...
             d = b""        # TODO
             while len(d) < length:
                 m = length - len(d)

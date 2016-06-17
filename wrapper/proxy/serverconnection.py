@@ -151,8 +151,7 @@ class ServerConnection:
                 "color": "red"
             }
             self.client.packet.sendpkt(self.pktCB.CHANGE_GAME_STATE, [_UBYTE, _FLOAT], (1, 0))  # "end raining"
-            self.client.packet.sendpkt(self.pktCB.CHAT_MESSAGE, [_STRING, _BYTE], (json.dumps(message)
-                                       , 0))
+            self.client.packet.sendpkt(self.pktCB.CHAT_MESSAGE, [_STRING, _BYTE], (json.dumps(message), 0))
             self.client.connect()
             return
 
@@ -364,7 +363,8 @@ class ServerConnection:
                     # "byte:head_pitch|...
                     # STOP PARSING HERE: short:velocityX|short:velocityY|short:velocityZ|rest:metadata")
                 else:
-                    dt = self.packet.readpkt([_VARINT, _UUID, _UBYTE, _DOUBLE, _DOUBLE, _DOUBLE, _BYTE, _BYTE, _BYTE, _REST])
+                    dt = self.packet.readpkt(
+                        [_VARINT, _UUID, _UBYTE, _DOUBLE, _DOUBLE, _DOUBLE, _BYTE, _BYTE, _BYTE, _REST])
                     # ("varint:eid|uuid:entityUUID|ubyte:type_|int:x|int:y|int:z|"
                     # "byte:pitch|byte:yaw|byte:head_pitch|
                     # STOP PARSING HERE: short:velocityX|short:velocityY|short:velocityZ|rest:metadata")
