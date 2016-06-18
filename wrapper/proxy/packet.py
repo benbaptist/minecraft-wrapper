@@ -4,11 +4,12 @@
 # ------------------------------------------------
 
 # standard
-import io
+# import io
 import json
 import struct
 import zlib
 import sys
+import StringIO
 
 # third party
 # (none)
@@ -69,7 +70,8 @@ class Packet:
         self.version = 5
         self.bonk = False
         self.abort = False
-        self.buffer = io.BytesIO()
+        # self.buffer = io.BytesIO()
+        self.buffer = StringIO.StringIO()
 
         self.queue = []
 
@@ -123,7 +125,7 @@ class Packet:
         if datalength > 0:  # it is compressed, unpack it
             payload = zlib.decompress(payload)
 
-        self.buffer = io.BytesIO(payload)
+        self.buffer = StringIO.StringIO(payload)
         pkid = self.read_varInt()
         return pkid, payload
 
