@@ -7,8 +7,6 @@ import json
 import time
 import datetime
 
-import utils.termcolors as termcolors
-
 COLORCODES = {
     "0": "black",
     "1": "dark_blue",
@@ -33,6 +31,46 @@ COLORCODES = {
     "n": "\xc2\xa7n",  # underline
     "o": "\xc2\xa7o",  # italic,
 }
+
+
+def _addgraphics(text='', foreground='white', background='black', options=()):
+    """
+    encodes text with ANSI graphics codes.
+    https://en.wikipedia.org/wiki/ANSI_escape_code#Non-CSI_codes
+    options - a tuple of options.
+        valid options:
+            'bold'
+            'italic'
+            'underscore'
+            'blink'
+            'reverse'
+            'conceal'
+            'reset' - return reset code only
+            'no-reset' - don't terminate string with a RESET code
+
+    """
+    resetcode = '0'
+    fore = {'blue': '34', 'yellow': '33', 'green': '32', 'cyan': '36', 'black': '30',
+            'magenta': '35', 'white': '37', 'red': '31'}
+    back = {'blue': '44', 'yellow': '43', 'green': '42', 'cyan': '46', 'black': '40',
+            'magenta': '45', 'white': '47', 'red': '41'}
+    optioncodes = {'bold': '1', 'italic': '3', 'underscore': '4', 'blink': '5', 'reverse': '7', 'conceal': '8'}
+
+    codes = []
+    if text == '' and len(options) == 1 and options[0] == 'reset':
+        return '\x1b[%sm' % resetcode
+
+    if foreground:
+        codes.append(fore[foreground])
+    if background:
+        codes.append(back[background])
+
+    for option in options:
+        if option in optioncodes:
+            codes.append(optioncodes[option])
+    if 'no-reset' not in options:
+        text = '%s\x1b[%sm' % (text, resetcode)
+    return '%s%s' % (('\x1b[%sm' % ';'.join(codes)), text)
 
 
 # private static int DataSlotToNetworkSlot(int index)
@@ -134,7 +172,8 @@ def getfileaslines(filename, directory="."):
         with open("%s/%s" % (directory, filename), "r") as f:
             try:
                 return f.read().splitlines()
-            except:
+            except Exception as e:
+                print(_addgraphics("Exception occured while running 'getfileaslines': \n", foreground="red"), e)
                 return None
     else:
         return False
@@ -313,8 +352,8 @@ def readout(commandtext, description, separator=" - ", pad=15):
 
     Returns: Just prints to stdout/console
     """
-    commstyle = termcolors.make_style(fg="magenta", opts=("bold",))
-    descstyle = termcolors.make_style(fg="yellow")
+    commstyle = use_style(foreground="magenta", options=("bold",))
+    descstyle = use_style(foreground="yellow")
     x = '{0: <%d}' % pad
     commandtextpadded = x.format(commandtext)
     print("%s%s%s" % (commstyle(commandtextpadded), separator, descstyle(description)))
@@ -385,3 +424,21 @@ def showpage(player, page, items, command, perpage):
                            "text": "--- ", "color": "dark_green", "extra": [prevbutton, {"text": " | "},
                                                                             nextbutton, {"text": " ---"}]
                            })
+
+
+def use_style(foreground='white', background='black', options=()):
+    """
+    Returns a function with default parameters for addgraphics()
+    options - a tuple of options.
+        valid options:
+            'bold'
+            'italic'
+            'underscore'
+            'blink'
+            'reverse'
+            'conceal'
+            'reset' - return reset code only
+            'no-reset' - don't terminate string with a RESET code
+
+    """
+    return lambda text: _addgraphics(text, foreground, background, options)

@@ -1,37 +1,54 @@
 # -*- coding: utf-8 -*-
 
-# py3 compliant syntax
+# region Imports
 
+# Std Library imports
 import threading
 import time
 import json
 import hashlib
 import uuid
+import random
+from socket import error as socket_error
+
 # import shutil  # these are part of commented out code below for whitelist and name processing
 # import os
-import random
 
+# Local imports
 import utils.encryption as encryption
-import proxy.mcpackets as mcpackets
 
 from proxy.serverconnection import ServerConnection
 from proxy.packet import Packet
-from core.mcuuid import MCUUID
-from utils.helpers import processcolorcodes
+from proxy import mcpackets
 from api.player import Player
+from core.mcuuid import MCUUID
 
-import socket  # not explicitly reference in this module, but this import is used by error handling
+from utils.helpers import processcolorcodes
 
-# wrapper.py will check for requests to run proxy mode
+# Dependency imports
 try:
     import requests
 except ImportError:
     requests = False
-
-HIDDEN_OPS = ["xSurestTexas00", "BenBaptist"]
+# endregion
 
 # region Constants
 # ------------------------------------------------
+
+HIDDEN_OPS = ["SurestTexas00", "BenBaptist"]  # These names never appear in the ping list
+
+HANDSHAKE = 0  # this is the default mode of a server awaiting packets from a client out in the ether..
+# client will send a handshake (a 0x00 packet WITH payload) asking for STATUS or LOGIN mode
+STATUS = 1
+# Status mode will await either a ping (0x01) containing a unique long int and will respond with same integer.
+#     ... OR if it receives a 0x00 packet (with no payload), that signals server (client.py) to send
+#         the MOTD json response packet.
+#         The ping will follow the 0x00 request for json response.  The ping will set wrapper/server
+#         back to HANDSHAKE mode (to await next handshake).
+LOGIN = 2
+PLAY = 3
+LOBBY = 4  # in lobby state, client is connected to clientconnection, but nothing is passed to the server.
+#            the actual client will be in play mode.
 
 _STRING = 0
 _JSON = 1
@@ -61,7 +78,8 @@ _NULL = 100
 class Client:
     def __init__(self, sock, addr, wrapper, publickey, privatekey, proxy):
         """
-        Client receives "SERVER BOUND" packets from client.  These are what get parsed (SERVER BOUND format).
+        Handle the client connection.
+        It parses "SERVER BOUND" packets from client.
         'server.packet.sendpkt' - sends a packet to the server (use SERVER BOUND packet format)
         'self.packet.sendpkt' - sends a packet back to the client (use CLIENT BOUND packet format)
 
@@ -110,12 +128,12 @@ class Client:
 
         # information gathered during login or socket connection processes
         self.address = None
-        self.ip = None  # this will gather the client IP for use by player.py
+        self.ip = None  # this will store the client IP for use by player.py
         self.serveraddressplayeruses = None
         self.serverportplayeruses = None
         self.lobbified = False
 
-        self.state = ClientState.HANDSHAKE
+        self.state = HANDSHAKE
 
         # Items gathered for player info for player api
         self.username = ""
@@ -135,6 +153,52 @@ class Client:
         self.servereid = None
         self.bedposition = None
         self.lastitem = None
+
+    def handle(self):
+        t = threading.Thread(target=self.flush_loop, args=())
+        t.daemon = True
+        t.start()
+
+        while not self.abort:
+            try:
+                pkid, original = self.packet.grabPacket()
+            except EOFError:
+                # This is not really an error.. It means the client is not sending packet stream anymore
+                self.log.debug("Client Packet stream ended [EOF] (%s)", self.username)
+                break
+            except socket_error:  # occurs anytime a socket is closed.
+                self.log.debug("client proxy Failed to grab packet [socket_error] (%s)", self.username)
+                break
+            except Exception as e:
+                # anything that gets here is a bona-fide error we need to become aware of
+                self.log.error("Exception: Failed to grab packet [CLIENT (%s)] (%s):", self.username, e)
+                break
+
+            # send packet if server available and parsing passed.
+            # already tested - Python will not attempt eval of self.server.state if self.server is False
+            if self.parse(pkid) and self.server and self.server.state == 3:
+                self.server.packet.sendRaw(original)
+        self.close()
+
+    def flush_loop(self):
+        while not self.abort:
+            try:
+                self.packet.flush()
+            except socket_error:
+                self.log.debug("client socket closed (socket_error).")
+                break
+            time.sleep(0.01)
+        self.log.debug("client connection flush_loop thread ended")
+
+    def close(self):
+        self.abort = True
+        try:
+            self.socket.close()
+        except OSError:
+            self.log.debug("Client socket for %s already closed!", self.username)
+        if self.server:
+            self.server.abort = True
+            self.server.close("Client Disconnected", kill_client=False)
 
     @property
     def version(self):
@@ -176,7 +240,7 @@ class Client:
             except OSError:
                 self.server_temp.close(kill_client=False)
                 self.server_temp = None
-                if self.state == ClientState.PLAY:
+                if self.state == PLAY:
                     self.packet.sendpkt(
                         self.pktCB.CHAT_MESSAGE,
                         [_STRING],
@@ -215,40 +279,24 @@ class Client:
 
         self.server.state = 2
 
-    def close(self):
-        self.abort = True
-        try:
-            self.socket.close()
-        except OSError:
-            self.log.debug("Client socket for %s already closed!", self.username)
-        if self.server:
-            self.server.abort = True
-            self.server.close()
-        for i, client in enumerate(self.wrapper.proxy.clients):
-            if client.username == self.username:
-                del self.wrapper.proxy.clients[i]
-
-    def disconnect(self, message):
+    def disconnect(self, message, color="white", bold=False, fromserver=False):
         """
-        disconnect message can be a string containing valid json.  Sends disconnection packet to client.
+        text only message
         """
-        if self.state == ClientState.PLAY:
-            self.packet.sendpkt(self.pktCB.DISCONNECT, [_STRING], [message])
+        if not fromserver:
+            jsonmessage = {"text": message,
+                           "color": color,
+                           "bold": bold
+                           }
         else:
-            self.packet.sendpkt(0x00, [_STRING], [message])
+            jsonmessage = message  # server packets are read as json
+
+        if self.state == PLAY:
+            self.packet.sendpkt(self.pktCB.DISCONNECT, [_JSON], [jsonmessage])
+        else:
+            self.packet.sendpkt(0x00, [_JSON], [message])
         time.sleep(1)
         self.close()
-
-    def flush(self):
-        while not self.abort:
-            try:
-                self.packet.flush()
-            except socket.error:
-                self.log.debug("clientconnection socket closed (bad file descriptor), closing flush..")
-                self.abort = True
-                self.close()
-                break
-            time.sleep(0.03)
 
     def getPlayerObject(self):
         if self.username in self.wrapper.javaserver.players:
@@ -290,7 +338,7 @@ class Client:
         self.pktCB = mcpackets.ClientBound(self.clientversion)
 
     def parse(self, pkid):  # server - bound parse ("Client" class connection)
-        if self.state == ClientState.PLAY:
+        if self.state == PLAY:
             if pkid == self.pktSB.KEEP_ALIVE:
                 if self.serverversion < mcpackets.PROTOCOL_1_8START:
                     data = self.packet.readpkt([_INT])
@@ -408,8 +456,9 @@ class Client:
 
             elif pkid == self.pktSB.TELEPORT_CONFIRM:
                 # don't interfere with this and self.pktSB.PLAYER_POSLOOK... doing so will glitch the client
-                data = self.packet.readpkt([_VARINT])
+                # data = self.packet.readpkt([_VARINT])
                 # self.log.trace("(SERVER-BOUND) -> Client sent TELEPORT_CONFIRM packet:\n%s", data)
+                return True
 
             elif pkid == self.pktSB.PLAYER_LOOK:  # Player Look
                 data = self.packet.readpkt([_FLOAT, _FLOAT, _BOOL])
@@ -718,7 +767,7 @@ class Client:
             else:
                 return True  # no packet parsed in wrapper
             return True  # packet parsed, no rejects or changes
-        elif self.state == ClientState.LOGIN:
+        elif self.state == LOGIN:
             if pkid == 0x00:  # login start packet
                 data = self.packet.readpkt([_STRING, _NULL])
                 # "username"
@@ -742,7 +791,7 @@ class Client:
                     self.uuid = self.wrapper.getuuidfromname(self.username)  # MCUUID object
                     self.serveruuid = self.wrapper.getuuidfromname(self.username)  # MCUUID object
                     self.packet.sendpkt(0x02, [_STRING, _STRING], (self.uuid.string, self.username))
-                    self.state = ClientState.PLAY
+                    self.state = PLAY
                     self.log.info("%s's client (insecure) LOGON from (IP: %s)", self.username, self.addr[0])
                 # self.log.trace("(PROXY CLIENT) -> Parsed 0x00 packet with client state LOGIN: \n%s", data)
                 return False
@@ -843,13 +892,13 @@ class Client:
                 #       Actaully, the vanilla server does too... there is just no command to fill it in.
                 if self.proxy.isipbanned(self.ip):
                     self.log.info("Player %s tried to connect from banned ip: %s", self.username, self.ip)
-                    self.state = ClientState.HANDSHAKE
+                    self.state = HANDSHAKE
                     self.disconnect("Your address is IP-banned from this server!.")
                     return False
                 if self.proxy.isuuidbanned(self.uuid.__str__()):
                     banreason = self.proxy.getuuidbanreason(self.uuid.__str__())  # was self.wrapper.proxy... ?
                     self.log.info("Banned player %s tried to connect:\n %s" % (self.username, banreason))
-                    self.state = ClientState.HANDSHAKE
+                    self.state = HANDSHAKE
                     self.disconnect("Banned: %s" % banreason)
                     return False
 
@@ -865,18 +914,20 @@ class Client:
                                                       "offline_uuid": self.serveruuid.string,
                                                       "ip": self.addr[0]
                                                      }):
-                    self.state = ClientState.HANDSHAKE
+                    self.state = HANDSHAKE
                     self.disconnect("Login denied by a Plugin.")
                     return False
 
-                # Put player object into server. (player login will be called later by mcserver.py)
+                # Put player object and client into server. (player login will be called later by mcserver.py)
+                self.proxy.clients.append(self)
+
                 if self.username not in self.wrapper.javaserver.players:
                     self.wrapper.javaserver.players[self.username] = Player(self.username, self.wrapper)
 
                 # send login success to client
                 self.packet.sendpkt(0x02, [_STRING, _STRING], (self.uuid.string, self.username))
                 self.time_client_responded = time.time()
-                self.state = ClientState.PLAY
+                self.state = PLAY
 
                 t_keepalives = threading.Thread(target=self._keep_alive_tracker, kwargs={'playername': self.username})
                 t_keepalives.daemon = True
@@ -887,15 +938,15 @@ class Client:
                 return False
             else:
                 # Unknown packet for login; return to Handshake:
-                self.state = ClientState.HANDSHAKE
+                self.state = HANDSHAKE
                 return False
 
-        elif self.state == ClientState.STATUS:
+        elif self.state == STATUS:
             if pkid == 0x01:
                 data = self.packet.readpkt([_LONG])
                 # self.log.trace("(PROXY CLIENT) -> Received '0x01' Ping in STATUS mode")
                 self.packet.sendpkt(0x01, [_LONG], [data[0]])
-                self.state = ClientState.HANDSHAKE
+                self.state = HANDSHAKE
                 return False
             elif pkid == 0x00:
                 # self.log.trace("(PROXY CLIENT) -> Received '0x00' request (no payload) for list pckt in STATUS mode")
@@ -932,10 +983,11 @@ class Client:
                 return False
             else:
                 # Unknown packet type, return to Handshake:
-                self.state = ClientState.HANDSHAKE
+                self.state = HANDSHAKE
+                self.abort = True
                 return False
 
-        elif self.state == ClientState.HANDSHAKE:
+        elif self.state == HANDSHAKE:
             if pkid == 0x00:
                 data = self.packet.readpkt([_VARINT, _STRING, _USHORT, _VARINT])  # "version|address|port|state"
                 # self.log.trace("(PROXY CLIENT) -> Parsed 0x00 packet with client state HANDSHAKE:\n%s", data)
@@ -944,11 +996,11 @@ class Client:
                 self.serverportplayeruses = data[2]
                 requestedstate = data[3]
 
-                if requestedstate == ClientState.STATUS:
-                    self.state = ClientState.STATUS
+                if requestedstate == STATUS:
+                    self.state = STATUS
                     return False  # wrapper will handle responses, so we do not pass this to the server.
 
-                if requestedstate == ClientState.LOGIN:
+                if requestedstate == LOGIN:
                     self._getclientpacketset()
                     # packetset needs defined before you can correctly administer a disconnect()
 
@@ -964,9 +1016,9 @@ class Client:
                         self.disconnect("You're running an unsupported snapshot (protocol: %s)!" % self.clientversion)
                         return False
 
-                    if self.serverversion == self.clientversion and requestedstate == ClientState.LOGIN:
+                    if self.serverversion == self.clientversion and requestedstate == LOGIN:
                         # login start...
-                        self.state = ClientState.LOGIN
+                        self.state = LOGIN
                         self.lobbified = False
                         return True  # packet passes to server, which will also switch to Login
 
@@ -974,7 +1026,7 @@ class Client:
 
                         # lobbified state does not interact with server
                         self.lobbified = True
-                        self.state = ClientState.LOGIN
+                        self.state = LOGIN
                         return False
 
                     if self.serverversion != self.clientversion:
@@ -988,7 +1040,8 @@ class Client:
                 self.disconnect("Invalid client state request for handshake: '%d'" % data["state"])
                 return False
 
-        elif self.state == ClientState.LOBBY:
+        # This is a work in progress; not used presently
+        elif self.state == LOBBY:
             if pkid == self.pktSB.KEEP_ALIVE:
                 if self.serverversion < mcpackets.PROTOCOL_1_8START:
                     data = self.packet.readpkt([_INT])
@@ -1001,7 +1054,7 @@ class Client:
             elif pkid == self.pktSB.CLICK_WINDOW:  # click window
                 self.packet.sendpkt(0x33, [_INT, _UBYTE, _UBYTE, _STRING], [1, 3, 0, 'default'])
                 self.packet.sendpkt(0x33, [_INT, _UBYTE, _UBYTE, _STRING], [0, 3, 0, 'default'])
-                self.state = ClientState.PLAY
+                self.state = PLAY
                 self.connect_to_server()
 
             else:
@@ -1011,86 +1064,31 @@ class Client:
             self.log.error("(PROXY CLIENT) Unknown gamestate encountered: %s", self.state)
             return False
 
-    def handle(self):
-        t = threading.Thread(target=self.flush, args=())
-        t.daemon = True
-        t.start()
-        try:
-            while not self.abort:
-                if self.abort:
-                    self.close()
-                    break
-                try:
-                    pkid, original = self.packet.grabPacket()
-                except EOFError:
-                    # This is not an error.. It means the client disconnected and is not sending packet stream anymore
-                    self.log.debug("Client Packet stream ended (EOF)")
-                    self.abort = True
-                    self.close()
-                    break
-                except socket.error:  # Bad file descriptor occurs anytime a socket is closed.
-                    self.log.debug("Failed to grab packet [CLIENT] socket closed; bad file descriptor")
-                    self.abort = True
-                    self.close()
-                    break
-                except Exception as e:
-                    # anything that gets here is a bona-fide error we need to become aware of
-                    self.log.error("Failed to grab packet [CLIENT] (%s):", e)
-                    self.abort = True
-                    self.close()
-                    break
-
-                # send packet if server available and parsing passed.
-                if self.parse(pkid) and self.server:
-                    if self.server.state == 3:  # 3 is also serverconnection.py's PLAY state
-                        self.server.packet.sendRaw(original)
-        except Exception as ex:
-            self.log.exception("Error in the [PROXY] <- [CLIENT] handle (%s):", ex)
-
     def _keep_alive_tracker(self, playername):
         # send keep alives to client and send client settings to server.
         while not self.abort:
             if self.abort is True:
                 self.log.debug("Closing Keep alive tracker thread for %s's client.", playername)
-                self.close()
                 break
             time.sleep(1)
-            while self.state in (ClientState.PLAY, ClientState.LOBBY):
-                if time.time() - self.time_server_pinged > 5:  # client expects < 20sec
+            while self.state in (PLAY, LOBBY) and not self.abort:
+
+                # client expects < 20sec
+                if time.time() - self.time_server_pinged > 5:
                     self.keepalive_val = random.randrange(0, 99999)
                     if self.clientversion > mcpackets.PROTOCOL_1_8START:
                         self.packet.sendpkt(self.pktCB.KEEP_ALIVE, [_VARINT], [self.keepalive_val])
                     else:
-                        # _OLD_ MC version
+                        # pre- 1.8
                         self.packet.sendpkt(0x00, [_INT], [self.keepalive_val])
                     self.time_server_pinged = time.time()
-                # ckeck for active client keep alive status:
-                if time.time() - self.time_client_responded > 25:  # server can allow up to 30 seconds for response
-                    self.state = ClientState.HANDSHAKE
+
+                # check for active client keep alive status:
+                # server can allow up to 30 seconds for response
+                if time.time() - self.time_client_responded > 25 and not self.abort:
+                    self.state = HANDSHAKE
                     self.disconnect("Client closed due to lack of keepalive response")
-                    self.log.debug("Closing %s's client thread due to lack of keepalive response", playername)
-                    self.close()
-
-
-class ClientState:
-    """
-    This class represents proxy Client states
-    """
-
-    HANDSHAKE = 0  # this is the default mode of a server awaiting packets from a client out in the ether..
-    # client will send a handshake (a 0x00 packet WITH payload) asking for STATUS or LOGIN mode
-    STATUS = 1
-    # Status mode will await either a ping (0x01) containing a unique long int and will respond with same integer.
-    #     ... OR if it receives a 0x00 packet (with no payload), that signals server (client.py) to send
-    #         the MOTD json response packet.  This aspect was badly handled in pervious wrapper versions,
-    #         resulting in the dreaded "zero length packet" errors.
-    #         The ping will follow the 0x00 request for json response.  The ping will set wrapper/server
-    #         back to HANDSHAKE mode (to await next handshake).
-    LOGIN = 2
-    #
-    PLAY = 3
-    LOBBY = 4  # in lobby state, client is connected to clientconnection, but nothing is passed to the server.
-    #            the actual client will be in play mode.
-
-    def __init__(self):
-        pass
+                    self.log.debug("Closed %s's client thread due to lack of keepalive response", playername)
+                    return
+        self.state = HANDSHAKE
+        self.log.debug("Client keepalive tracker aborted (%s's client thread)", playername)

@@ -8,7 +8,7 @@ except ImportError:
 
 
 class Entity:
-    def __init__(self, eid, uuid, entitytype, entityname, position, look, isobject, playerclient):
+    def __init__(self, eid, uuid, entitytype, entityname, position, look, isobject, playerclientname):
         self.eid = eid  # Entity ID
         self.uuid = uuid  # Entity UUID
         self.entitytype = entitytype  # Type of Entity
@@ -19,7 +19,7 @@ class Entity:
         self.isObject = isobject  # Boat/Minecart/other non-living Entities are objects
         self.entityname = entityname
         self.active = currtime()
-        self.clientname = playerclient
+        self.clientname = playerclientname
 
     def __str__(self):
         return str(self.entitytype)
@@ -34,9 +34,9 @@ class Entity:
         """
         x, y, z = position
         oldposition = [self.position[0], self.position[1], self.position[2]]
-        oldposition[0] += x / 32.0
-        oldposition[1] += y / 32.0
-        oldposition[2] += z / 32.0
+        oldposition[0] += x / (128 * 32.0)
+        oldposition[1] += y / (128 * 32.0)
+        oldposition[2] += z / (128 * 32.0)
         self.position = (oldposition[0], oldposition[1], oldposition[2])
         if self.rodeBy:
             self.rodeBy.position = self.position
@@ -47,3 +47,16 @@ class Entity:
         if self.rodeBy:
             self.rodeBy.position = self.position
 
+    def aboutEntity(self):
+        info = {
+            "eid": self.eid,
+            "uuid": str(self.uuid),
+            "type": self.entitytype,
+            "position": [int(self.position[0]), int(self.position[1]), int(self.position[2])],
+            "rodeBy": self.rodeBy,
+            "Riding": self.riding,
+            "isObject": self.isObject,
+            "name": self.entityname,
+            "player": self.clientname
+        }
+        return info

@@ -13,8 +13,8 @@ import json
 # (none)
 
 # local
-import proxy.mcpackets as mcpackets
 from proxy.packet import Packet
+from proxy import mcpackets
 from api.entity import Entity
 
 # Py3-2
@@ -29,6 +29,16 @@ if PY3:
 
 # region Constants
 # ------------------------------------------------
+
+HANDSHAKE = 0  # actually unused here because, as a fake "client", we are not listening for connections
+# So we don't have to listen for a handshake.  We simply send a handshake to the server
+# followed by a login start packet and go straight to LOGIN mode.  HANDSHAKE in this
+# context might mean a server that is not started?? (proposed idea).
+
+# MOTD = 1  # not used. clientconnection.py handles PING/MOTD functions
+
+LOGIN = 2  # login state
+PLAY = 3  # play state
 
 _STRING = 0
 _JSON = 1
@@ -85,9 +95,9 @@ class ServerConnection:
         self.isServer = True
         self.server_socket = socket.socket()
 
-        self.state = ProxServState.HANDSHAKE
+        self.state = HANDSHAKE
         self.packet = None
-        self.lastPacketIDs = []
+        # self.lastPacketIDs = []
 
         self.version = self.wrapper.javaserver.protocolVersion
         self._refresh_server_version()
@@ -130,15 +140,14 @@ class ServerConnection:
         self.packet = Packet(self.server_socket, self)
         self.packet.version = self.client.clientversion
 
-        t = threading.Thread(target=self.flush, args=())
+        t = threading.Thread(target=self.flush_loop, args=())
         t.daemon = True
         t.start()
 
     def close(self, reason="Disconnected", kill_client=True):
-        self.log.debug("Last packet IDs (Server -> Client) of player %s before disconnection: \n%s", self.username,
-                       self.lastPacketIDs)
         self.abort = True
         self.packet = None
+        self.log.debug("Disconnected proxy server connection. (%s)", self.username)
         try:
             self.server_socket.close()
         except OSError:
@@ -146,10 +155,12 @@ class ServerConnection:
 
         if not self.client.isLocal and kill_client:  # Ben's cross-server hack
             self.client.isLocal = True
+            message = {
+                "text": "Disconnected from server.",
+                "color": "red"
+            }
             self.client.packet.sendpkt(self.pktCB.CHANGE_GAME_STATE, [_UBYTE, _FLOAT], (1, 0))  # "end raining"
-            self.client.packet.sendpkt(self.pktCB.CHAT_MESSAGE, [_STRING, _BYTE],
-                                       ("{text:'Disconnected from server: %s', color:red}" %
-                                       reason.replace("'", "\\'"), 0))
+            self.client.packet.sendpkt(self.pktCB.CHAT_MESSAGE, [_STRING, _BYTE], (json.dumps(message), 0))
             self.client.connect()
             return
 
@@ -163,7 +174,7 @@ class ServerConnection:
         if kill_client:
             self.client.abort = True
             self.client.server = None
-            self.client.close()
+            self.proxy.removestaleclients()
 
     def getPlayerByEID(self, eid):
         for client in self.wrapper.proxy.clients:
@@ -179,18 +190,18 @@ class ServerConnection:
             self.log.error("getPlayerContext (called by: %s) failed to get player %s: \n%s", calledby, username, e)
             return False
 
-    def flush(self):
+    def flush_loop(self):
         while not self.abort:
             try:
                 self.packet.flush()
             except socket.error:
-                self.log.debug("serverconnection socket closed (bad file descriptor), closing flush..")
-                self.abort = True
+                self.log.debug("Server socket closed (socket_error).")
                 break
-            time.sleep(0.03)
+            time.sleep(0.01)
+        self.log.debug("server connection flush_loop thread ended")
 
     def parse(self, pkid):  # client - bound parse ("Server" class connection)
-        if self.state == ProxServState.PLAY:
+        if self.state == PLAY:
             # handle keep alive packets from server... nothing special here; we will just keep the server connected.
             if pkid == self.pktCB.KEEP_ALIVE:
                 if self.version < mcpackets.PROTOCOL_1_8START:
@@ -305,7 +316,7 @@ class ServerConnection:
 
             elif pkid == self.pktCB.SPAWN_PLAYER:
                 # This packet  is used to spawn other players into a player client's world.
-                # is this packet does not arrive, the other player(s) will nto be visible to the client
+                # is this packet does not arrive, the other player(s) will not be visible to the client
                 if self.version < mcpackets.PROTOCOL_1_8START:
                     dt = self.packet.readpkt([_VARINT, _STRING, _REST])
                 else:
@@ -319,7 +330,7 @@ class ServerConnection:
                 if clientserverid.uuid:
                     if self.version < mcpackets.PROTOCOL_1_8START:
                         self.client.packet.sendpkt(
-                            self.pktCB.SPAWN_PLAYER, [_VARINT, _STRING, _RAW], (dt[0], clientserverid.uuid, dt[2]))
+                            self.pktCB.SPAWN_PLAYER, [_VARINT, _STRING, _RAW], (dt[0], str(clientserverid.uuid), dt[2]))
                     else:
                         self.client.packet.sendpkt(
                             self.pktCB.SPAWN_PLAYER, [_VARINT, _UUID, _RAW], (dt[0], clientserverid.uuid, dt[2]))
@@ -334,9 +345,10 @@ class ServerConnection:
                     return True  # return now.. why parse something we are no going to use?
                 if self.version < mcpackets.PROTOCOL_1_9START:
                     dt = self.packet.readpkt([_VARINT, _NULL, _BYTE, _INT, _INT, _INT, _BYTE, _BYTE])
+                    dt[3], dt[4], dt[5] = dt[3] / 32, dt[4] / 32, dt[5] / 32
                     # "varint:eid|byte:type_|int:x|int:y|int:z|byte:pitch|byte:yaw")
                 else:
-                    dt = self.packet.readpkt([_VARINT, _UUID, _BYTE, _INT, _INT, _INT, _BYTE, _BYTE])
+                    dt = self.packet.readpkt([_VARINT, _UUID, _BYTE, _DOUBLE, _DOUBLE, _DOUBLE, _BYTE, _BYTE])
                     # "varint:eid|uuid:objectUUID|byte:type_|int:x|int:y|int:z|byte:pitch|byte:yaw|int:info|
                     # short:velocityX|short:velocityY|short:velocityZ")
                 entityuuid = dt[1]
@@ -344,7 +356,7 @@ class ServerConnection:
                 newobject = {dt[0]: Entity(dt[0], entityuuid, dt[2], objectname,
                                            (dt[3], dt[4], dt[5],), (dt[6], dt[7]), True, self.username)}
 
-                self.wrapper.javaserver.world.addEntity(newobject)
+                self.wrapper.javaserver.world.entities.update(newobject)
                 # self.log.trace("(PROXY SERVER) -> Parsed SPAWN_OBJECT packet:\n%s", dt)
 
             elif pkid == self.pktCB.SPAWN_MOB:
@@ -355,12 +367,13 @@ class ServerConnection:
                     return True
                 if self.version < mcpackets.PROTOCOL_1_9START:
                     dt = self.packet.readpkt([_VARINT, _NULL, _UBYTE, _INT, _INT, _INT, _BYTE, _BYTE, _BYTE, _REST])
-
+                    dt[3], dt[4], dt[5] = dt[3] / 32, dt[4] / 32, dt[5] / 32
                     # "varint:eid|ubyte:type_|int:x|int:y|int:z|byte:pitch|byte:yaw|"
                     # "byte:head_pitch|...
                     # STOP PARSING HERE: short:velocityX|short:velocityY|short:velocityZ|rest:metadata")
                 else:
-                    dt = self.packet.readpkt([_VARINT, _UUID, _UBYTE, _INT, _INT, _INT, _BYTE, _BYTE, _BYTE, _REST])
+                    dt = self.packet.readpkt(
+                        [_VARINT, _UUID, _UBYTE, _DOUBLE, _DOUBLE, _DOUBLE, _BYTE, _BYTE, _BYTE, _REST])
                     # ("varint:eid|uuid:entityUUID|ubyte:type_|int:x|int:y|int:z|"
                     # "byte:pitch|byte:yaw|byte:head_pitch|
                     # STOP PARSING HERE: short:velocityX|short:velocityY|short:velocityZ|rest:metadata")
@@ -375,7 +388,7 @@ class ServerConnection:
                 newmob = {dt[0]: Entity(dt[0], entityuuid, dt[2], mobname,
                                         (dt[3], dt[4], dt[5],), (dt[6], dt[7], dt[8]), False, self.username)}
 
-                self.wrapper.javaserver.world.addEntity(newmob)
+                self.wrapper.javaserver.world.entities.update(newmob)
                 # self.wrapper.javaserver.world.entities[dt[0]] = Entity(dt[0], entityuuid, dt[2],
                 #                                                        (dt[3], dt[4], dt[5], ),
                 #                                                        (dt[6], dt[7], dt[8]),
@@ -392,11 +405,9 @@ class ServerConnection:
                 # ("varint:eid|byte:dx|byte:dy|byte:dz")
                 # self.log.trace("(PROXY SERVER) -> Parsed ENTITY_RELATIVE_MOVE packet:\n%s", data)
 
-                lock = self.wrapper.javaserver.world.applylock()
                 entityupdate = self.wrapper.javaserver.world.getEntityByEID(data[0])
                 if entityupdate:
                     entityupdate.moveRelative((data[1], data[2], data[3]))
-                lock = self.wrapper.javaserver.world.removelock()
 
             elif pkid == self.pktCB.ENTITY_TELEPORT:
                 if not self.wrapper.javaserver.world:
@@ -404,16 +415,17 @@ class ServerConnection:
                     return True
                 if self.version < mcpackets.PROTOCOL_1_8START:  # 1.7.10 and prior
                     data = self.packet.readpkt([_INT, _INT, _INT, _INT, _REST])
-                else:
+                elif mcpackets.PROTOCOL_1_8START <= self.version < mcpackets.PROTOCOL_1_9START:
                     data = self.packet.readpkt([_VARINT, _INT, _INT, _INT, _REST])
+                else:
+                    data = self.packet.readpkt([_VARINT, _DOUBLE, _DOUBLE, _DOUBLE, _REST])
+                    data[1], data[2], data[3] = data[1] * 32, data[2] * 32, data[3] * 32
                 # ("varint:eid|int:x|int:y|int:z|byte:yaw|byte:pitch")
 
                 # self.log.trace("(PROXY SERVER) -> Parsed ENTITY_TELEPORT packet:\n%s", data)
-                lock = self.wrapper.javaserver.world.applylock()
                 entityupdate = self.wrapper.javaserver.world.getEntityByEID(data[0])
                 if entityupdate:
                     entityupdate.teleport((data[1], data[2], data[3]))
-                lock = self.wrapper.javaserver.world.removelock()
 
             elif pkid == self.pktCB.ATTACH_ENTITY:
                 data = []
@@ -448,12 +460,10 @@ class ServerConnection:
                         self.log.debug("player mount called for %s on eid %s", player.username, vehormobeid)
                         if not self.wrapper.javaserver.world:
                             return
-                        lock = self.wrapper.javaserver.world.applylock()
                         entityupdate = self.wrapper.javaserver.world.getEntityByEID(vehormobeid)
                         if entityupdate:
                             self.client.riding = entityupdate
                             entityupdate.rodeBy = self.client
-                        lock = self.wrapper.javaserver.world.removelock()
 
             elif pkid == self.pktCB.DESTROY_ENTITIES:
                 # Get rid of dead entities so that python can GC them.
@@ -470,7 +480,10 @@ class ServerConnection:
 
                 for _ in range(entitycount):
                     eid = self.packet.readpkt(parser)[0]
-                    self.wrapper.javaserver.world.delentities.append(eid)
+                    try:
+                        self.wrapper.javaserver.world.entities.pop(eid, None)
+                    except:
+                        pass
 
                 # self.log.trace("(PROXY SERVER) -> Parsed DESTROY_ENTITIES pckt:\n%s entities destroyed", entitycount)
 
@@ -626,6 +639,7 @@ class ServerConnection:
                             self.client.packet.sendpkt(self.pktCB.PLAYER_LIST_ITEM,
                                                        [_VARINT, _VARINT, _UUID, _VARINT],
                                                        (1, 1, uuid, gamemode))
+                            # print(1, 1, uuid, gamemode)
                         elif action == 2:
                             data = self.packet.readpkt([_VARINT])
                             ping = data[0]
@@ -660,9 +674,9 @@ class ServerConnection:
                 message = self.packet.readpkt([_JSON])  # [0]["json"]
                 self.log.info("Disconnected from server: %s", message)
                 if not self.client.isLocal:  # TODO - multi server code
-                    self.close()
+                    self.close("Disconnected", kill_client=False)
                 else:
-                    self.client.disconnect(message)
+                    self.client.disconnect(message, fromserver=True)
                 # self.log.trace("(PROXY SERVER) -> Parsed DISCONNECT packet")
                 return False
 
@@ -670,7 +684,7 @@ class ServerConnection:
                 return True  # no packets parsed - passing to client
             return True  # parsed packet passed on to client
 
-        if self.state == ProxServState.LOGIN:
+        if self.state == LOGIN:
             if pkid == 0x00:
                 message = self.packet.readpkt([_STRING])
                 self.log.info("Disconnected from server: %s", message)
@@ -679,15 +693,13 @@ class ServerConnection:
                 return False
 
             if pkid == 0x01:
-                message = {"text": "Server is in online mode. Please turn it off in server.properties and "
-                                   "allow wrapper to handle the authetication.",
-                           "color": "red"}
-                self.client.disconnect(json.dumps(message))
+                self.client.disconnect("Server is in online mode. Please turn it off in server.properties and "
+                                       "allow wrapper to handle the authetication.", color="red")
                 # self.log.trace("(PROXY SERVER) -> Parsed 0x01 packet with server state 2 (LOGIN)")
                 return False
 
             if pkid == 0x02:  # Login Success - UUID & Username are sent in this packet as strings
-                self.state = ProxServState.PLAY
+                self.state = PLAY
                 data = self.packet.readpkt([_STRING, _STRING])
                 # self.log.trace("(PROXY SERVER) -> Parsed 0x02 LOGIN SUCCESS - server state 2 (LOGIN): %s", data)
                 return False
@@ -706,53 +718,32 @@ class ServerConnection:
                 return  # False
 
     def handle(self):
-        try:
-            while not self.abort:
-                if self.abort:
-                    self.close()
-                    break
-                try:
-                    pkid, original = self.packet.grabPacket()
-                    self.lastPacketIDs.append((hex(pkid), len(original)))
-                    if len(self.lastPacketIDs) > 10:
-                        for i, v in enumerate(self.lastPacketIDs):
-                            del self.lastPacketIDs[i]
-                            break
-                except EOFError as eof:
-                    # This error is often erroneous, see https://github.com/suresttexas00/minecraft-wrapper/issues/30
-                    self.log.debug("Packet EOF (%s)", eof)
-                    self.abort = True
-                    self.close()
-                    break
-                except socket.error:  # Bad file descriptor occurs anytime a socket is closed.
-                    self.log.debug("Failed to grab packet [SERVER] socket closed; bad file descriptor")
-                    self.abort = True
-                    self.close()
-                    break
-                except Exception as e1:
-                    # anything that gets here is a bona-fide error we need to become aware of
-                    self.log.debug("Failed to grab packet [SERVER] (%s):", e1)
-                    return
+        while not self.abort:
+            if self.abort:
+                break
+            try:
+                pkid, original = self.packet.grabPacket()
+                self.log.trace("Server.grabPacket: %s %s", (hex(pkid), len(original)))
+                # self.lastPacketIDs.append((hex(pkid), len(original)))
+                # if len(self.lastPacketIDs) > 10:
+                #     for i, v in enumerate(self.lastPacketIDs):
+                #         del self.lastPacketIDs[i]
+                #         break
+            except EOFError as eof:
+                # This error is often erroneous, see https://github.com/suresttexas00/minecraft-wrapper/issues/30
+                self.log.debug("Packet EOF (%s)", eof)
+                break
+            except socket.error:  # Bad file descriptor occurs anytime a socket is closed.
+                self.log.debug("Failed to grab packet [SERVER] socket closed; bad file descriptor")
+                break
+            except Exception as e:
+                # anything that gets here is a bona-fide error we need to become aware of
+                self.log.debug("Failed to grab packet [SERVER] (%s):", e)
+                break
+            try:
                 if self.parse(pkid) and self.client:
                     self.client.packet.sendRaw(original)
-        except Exception as e2:
-            self.log.exception("Error in the [SERVER] -> [PROXY] handle (%s):", e2)
-            self.close()
-
-
-class ProxServState:
-    """
-    This class represents proxy Server states
-    """
-    HANDSHAKE = 0  # actually unused here because, as a fake "client", we are not listening for connections
-    # So we don't have to listen for a handshake.  We simply send a handshake to the server
-    # followed by a login start packet and go straight to LOGIN mode.  HANDSHAKE in this
-    # context might mean a server that is not started?? (proposed idea).
-
-    # MOTD = 1  # not used. clientconnection.py handles PING/MOTD functions
-
-    LOGIN = 2  # login state
-    PLAY = 3  # play state
-
-    def __init__(self):
-        pass
+            except Exception as e:
+                self.log.debug("[SERVER] Could not send packet (%s): (%s)", pkid, e)
+                break
+        self.close("Disconnected", kill_client=False)

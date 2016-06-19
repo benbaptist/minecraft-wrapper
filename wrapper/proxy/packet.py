@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
 
-# region Modules
+# region Imports
 # ------------------------------------------------
 
 # standard
-import io
+import io  # PY3
 import json
 import struct
 import zlib
 import sys
+# import StringIO
 
 # third party
 # (none)
@@ -67,9 +68,9 @@ class Packet:
         self.sendCipher = None
         self.compressThreshold = -1
         self.version = 5
-        self.bonk = False
         self.abort = False
-        self.buffer = io.BytesIO()
+        self.buffer = io.BytesIO()  # Py3
+        # self.buffer = StringIO.StringIO()
 
         self.queue = []
 
@@ -112,7 +113,7 @@ class Packet:
         return "%x" % d
 
     def grabPacket(self):
-        length = self.unpack_varInt()  # first field - entire raw Packet Length
+        length = self.unpack_varInt()  # first field - entire raw packet Length
         datalength = 0  # if 0, an uncompressed packet
         if self.compressThreshold != -1:  # if compressed:
             datalength = self.unpack_varInt()  # length of the uncompressed (Packet ID + Data)
@@ -125,6 +126,8 @@ class Packet:
 
         self.buffer = io.BytesIO(payload)
         pkid = self.read_varInt()
+
+        # payload is untouchd entire packet, containing the prefixed pkid
         return pkid, payload
 
     def pack_varInt(self, val):
@@ -152,16 +155,14 @@ class Packet:
         return total
 
     def setCompression(self, threshold):
-        # self.sendRaw("\x03\x80\x02")
         self.send(0x03, "varint", (threshold,))
         self.compressThreshold = threshold
-        # time.sleep(1.5)
 
     def flush(self):
-        for p in self.queue:
-            packet = p[1]
-            pkid = struct.unpack("B", packet[0:1])[0]  # py3
-            if p[0] > -1:
+        while len(self.queue) > 0:
+            packet_tuple = self.queue.pop(0)
+            packet = packet_tuple[1]
+            if packet_tuple[0] > -1:
                 if len(packet) > self.compressThreshold:
                     packetcompressed = self.pack_varInt(len(packet)) + zlib.compress(packet)
                     packet = self.pack_varInt(len(packetcompressed)) + packetcompressed
@@ -174,11 +175,10 @@ class Packet:
                 self.socket.send(packet)
             else:
                 self.socket.send(self.sendCipher.encrypt(packet))
-        self.queue = []
 
     def sendRaw(self, payload):
         if not self.abort:
-            self.queue.append((self.compressThreshold, payload))
+            self.queue.append((self.compressThreshold, payload))  # [(-1, "payload"), ..., ... ]
 
     def read(self, expression):
         """
@@ -215,7 +215,7 @@ class Packet:
     def readpkt(self, args):
         """
         Usage like:
-            `data = packet.readpkt(_DOUBLE, _DOUBLE, _DOUBLE, _BOOL)`  # abstracts of integers
+            `data = packet.readpkt(_DOUBLE, _DOUBLE, _DOUBLE, _BOOL)`  # abstracts of integer constants
             `x, y, z, on_ground = data`
 
         proposed as an alternative to all the string operations used by the old (and nee wrapper form of..)
@@ -289,7 +289,7 @@ class Packet:
             payload: Something like (x, y, z, yaw, pitch,) - a tuple
 
         Returns:
-            returns the result that was sendraw()'ed.
+            returns the result that was sendRaw()'ed.
 
         """
 
@@ -305,7 +305,7 @@ class Packet:
         return result
 
     def sendpkt(self, pkid, args, payload):
-        result = bytearray  # TODO  This is a PY2-3 compatibility line.  Will use <str> for PY2 and <bytes> for PY3...
+        # result = bytearray  # TODO  This is a PY2-3 compatibility line.  Will use <str> for PY2 and <bytes> for PY3...
         result = b""  # TODO
 
         # start with packet id
@@ -500,7 +500,7 @@ class Packet:
 
     def recv(self, length):
         if length > 200:
-            d = bytearray  # TODO  This is a PY2-3 compatibility line.  Will use <str> for PY2 and <bytes> for PY3...
+            # d = bytearray  # TODO  This is a PY2-3 compatibility line.  Will use <str> for PY2 and <bytes> for PY3...
             d = b""        # TODO
             while len(d) < length:
                 m = length - len(d)
