@@ -4,7 +4,6 @@ import time
 import fnmatch
 import json
 import threading
-
 import proxy.mcpackets as mcpackets
 from core.storage import Storage
 from utils.helpers import processoldcolorcodes, processcolorcodes, getjsonfile, getfileaslines
@@ -129,7 +128,7 @@ class Player:
         return self.username
 
     def __del__(self):
-        self.data.save()
+        self.data.close()
 
     @property
     def name(self):
@@ -146,9 +145,11 @@ class Player:
         """
         self.data["logins"][int(self.loggedIn)] = time.time()
         while not self.abort:
-            self.data["logins"][int(self.loggedIn)] = int(time.time())
-            time.sleep(60)
-        self.data.save()
+            timeupdate = time.time()
+            if timeupdate % 60:  # Just update every 60 seconds
+                self.data["logins"][int(self.loggedIn)] = int(time.time())
+            time.sleep(.5)  # this needs a fast response to ensure the storage closes immediately on player logoff
+        self.data.close()
 
     def _read_ops_file(self):
         """

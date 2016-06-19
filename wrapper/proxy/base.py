@@ -20,10 +20,6 @@ if not encryption:
     requests = False
 
 
-UNIVERSAL_CONNECT = False  # tells the client "same version as you" or does not disconnect dissimilar clients
-HIDDEN_OPS = ["SurestTexas00", "BenBaptist"]
-
-
 class Proxy:
     def __init__(self, wrapper):
         self.wrapper = wrapper
@@ -33,7 +29,7 @@ class Proxy:
         self.encoding = self.config["General"]["encoding"]
         self.serverpath = self.config["General"]["server-directory"]
 
-        self.proxy_socket = socket.socket()
+        self.proxy_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.usingSocket = False
         self.isServer = False
         self.clients = []
@@ -58,19 +54,20 @@ class Proxy:
             self.log.exception("Proxy could not poll the Minecraft server - are you sure that the ports are "
                                "configured properly? (%s)", e)
 
-        # bind server socket
+        # open proxy port to accept client connections
         while not self.usingSocket:
+            self.proxy_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             try:
-                self.proxy_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 self.proxy_socket.bind((self.wrapper.config["Proxy"]["proxy-bind"],
                                         self.wrapper.config["Proxy"]["proxy-port"]))
-                self.usingSocket = True
-                self.proxy_socket.listen(5)
             except Exception as e:
                 self.log.exception("Proxy mode could not bind - retrying in ten seconds (%s)", e)
                 self.usingSocket = False
-            time.sleep(10)
+                time.sleep(10)
+            self.usingSocket = True
+            self.proxy_socket.listen(5)
 
+        # accept clients and start their threads
         while not self.wrapper.halt:
             try:
                 sock, addr = self.proxy_socket.accept()
@@ -78,22 +75,25 @@ class Proxy:
                 self.log.exception("An error has occured while trying to accept a socket connection \n(%s)", e)
                 continue
 
+            # spur off client thread
             client = Client(sock, addr, self.wrapper, self.publicKey, self.privateKey, self)
-
             t = threading.Thread(target=client.handle, args=())
             t.daemon = True
             t.start()
-
-            self.clients.append(client)
+            # self.clients.append(client)  # append later (login)
             self.removestaleclients()
 
-    def removestaleclients(self):  # TODO This should not happen
-        for i, client in enumerate(self.wrapper.proxy.clients):
-            if client.abort:
-                del self.wrapper.proxy.clients[i]
+    def removestaleclients(self):
+        for i, client in enumerate(self.clients):
+            if self.clients[i].abort:
+                self.wrapper.javaserver.players[str(client.username)].abort = True
+                self.clients.pop(i)
+                del self.wrapper.javaserver.players[str(client.username)]
 
     def pollserver(self):
-        server_sock = socket.socket()
+        server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # server_sock = socket.socket()
+        server_sock.settimeout(5)
         server_sock.connect(("localhost", self.wrapper.config["Proxy"]["server-port"]))
         packet = Packet(server_sock, self)
 
