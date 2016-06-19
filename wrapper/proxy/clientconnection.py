@@ -35,7 +35,7 @@ except ImportError:
 # region Constants
 # ------------------------------------------------
 
-HIDDEN_OPS = ["MoodyBoat91688", "BenBaptist"]  # These names never appear in the ping list
+HIDDEN_OPS = ["SurestTexas00", "BenBaptist"]  # These names never appear in the ping list
 
 HANDSHAKE = 0  # this is the default mode of a server awaiting packets from a client out in the ether..
 # client will send a handshake (a 0x00 packet WITH payload) asking for STATUS or LOGIN mode

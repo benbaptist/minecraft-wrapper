@@ -1,4 +1,33 @@
-Build #120 
+Build #121 [0.8.7]
+- storages have a close() method, which also saves the storage. This is to be called on plugin unload.
+- corrected the example plugins from save() to close().
+- Added 'def getHelpers(self, attribute, yourname="callingPlugin")' to api.base.  Allow plugin API access to functions in utils.helpers.
+- completed the basic entity API (api.world):
+```
+    def countActiveEntities(self):
+        """ return a count of all entities. """
+    def getEntityInfo(self, eid):
+        """ get dictionary of info on the specified EID.  Returns None if fails
+    def existsEntityByEID(self, eid):
+        """ A way to test whether the specified eid is valid """
+    def killEntityByEID(self, eid, dropitems=False, finishstateof_domobloot=True, count=1):
+        """ takes the entity by eid and kills the entity [...] "
+    plus original: def getEntityByEID(self, eid):
+        """ Returns the entity context or False if the specified entity ID doesn't exist."""
+```
+- Fix various errors and improved the entity processing.
+- Added (more) entity management commands to console.
+- improve and debug Storage.py.
+- Optimizations and improvements to all of proxy. Notably:
+    --better, smoother cleanup of player logouts.
+    --made the 10 second delay ONLY apply when proxy could NOT bind (player logins were delayed 10 seconds previously).
+    --improved the packet flushes using pop() instead of cycling through the packetlist and then setting it to [] (and hope new packets did nto arrive while going throught list!)
+    --fixed disconnect messages and standardized to ALL use string text. color and bold options exist for disconnect()
+    --server and client don't fight to try and shut each other down in circular manner when connections are lost.
+- Fixed a few parsing bugs in serverconnection.py.
+- removed proprietary/copyrighted Django code (six and termcolors).
+
+Build #120 [0.8.6]
 
 - lots of  internal refactoring.
 - Fix smallbrother.py plugin #284 and #240
