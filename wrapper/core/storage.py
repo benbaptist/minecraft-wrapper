@@ -8,7 +8,6 @@ import logging
 from utils.helpers import mkdir_p, putjsonfile, getjsonfile
 from core.config import Config
 import threading
-# import copy
 
 try:
     # noinspection PyUnresolvedReferences
@@ -43,7 +42,6 @@ class Storage:
 
     def __del__(self):
         self.abort = True
-        print("Storage '%s' aborting" % self.name)
         self.save()
 
     def __getitem__(self, index):
@@ -79,7 +77,7 @@ class Storage:
             if time.time() - self.time > 60:
                 self.save()
                 self.time = time.time()
-            time.sleep(5)
+            time.sleep(1)
 
     def load(self):
         mkdir_p(self.root)

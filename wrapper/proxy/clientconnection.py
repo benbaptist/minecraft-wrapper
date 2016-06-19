@@ -1,37 +1,41 @@
 # -*- coding: utf-8 -*-
 
-# py3 compliant syntax
+# region Imports
 
+# Std Library imports
 import threading
 import time
 import json
 import hashlib
 import uuid
+import random
+from socket import error as socket_error
+
 # import shutil  # these are part of commented out code below for whitelist and name processing
 # import os
-import random
 
+# Local imports
 import utils.encryption as encryption
-import proxy.mcpackets as mcpackets
 
 from proxy.serverconnection import ServerConnection
 from proxy.packet import Packet
-from core.mcuuid import MCUUID
-from utils.helpers import processcolorcodes
+from proxy import mcpackets
 from api.player import Player
+from core.mcuuid import MCUUID
 
-import socket  # not explicitly reference in this module, but this import is used by error handling
+from utils.helpers import processcolorcodes
 
-# wrapper.py will check for requests to run proxy mode
+# Dependency imports
 try:
     import requests
 except ImportError:
     requests = False
+# endregion
 
 # region Constants
 # ------------------------------------------------
 
-HIDDEN_OPS = ["SurestTexas00", "BenBaptist"]  # These names never appear in the ping list
+HIDDEN_OPS = ["MoodyBoat91688", "BenBaptist"]  # These names never appear in the ping list
 
 HANDSHAKE = 0  # this is the default mode of a server awaiting packets from a client out in the ether..
 # client will send a handshake (a 0x00 packet WITH payload) asking for STATUS or LOGIN mode
@@ -74,7 +78,8 @@ _NULL = 100
 class Client:
     def __init__(self, sock, addr, wrapper, publickey, privatekey, proxy):
         """
-        Client receives "SERVER BOUND" packets from client.  These are what get parsed (SERVER BOUND format).
+        Handle the client connection.
+        It parses "SERVER BOUND" packets from client.
         'server.packet.sendpkt' - sends a packet to the server (use SERVER BOUND packet format)
         'self.packet.sendpkt' - sends a packet back to the client (use CLIENT BOUND packet format)
 
@@ -123,7 +128,7 @@ class Client:
 
         # information gathered during login or socket connection processes
         self.address = None
-        self.ip = None  # this will gather the client IP for use by player.py
+        self.ip = None  # this will store the client IP for use by player.py
         self.serveraddressplayeruses = None
         self.serverportplayeruses = None
         self.lobbified = False
@@ -148,6 +153,52 @@ class Client:
         self.servereid = None
         self.bedposition = None
         self.lastitem = None
+
+    def handle(self):
+        t = threading.Thread(target=self.flush_loop, args=())
+        t.daemon = True
+        t.start()
+
+        while not self.abort:
+            try:
+                pkid, original = self.packet.grabPacket()
+            except EOFError:
+                # This is not really an error.. It means the client is not sending packet stream anymore
+                self.log.debug("Client Packet stream ended [EOF] (%s)", self.username)
+                break
+            except socket_error:  # occurs anytime a socket is closed.
+                self.log.debug("client proxy Failed to grab packet [socket_error] (%s)", self.username)
+                break
+            except Exception as e:
+                # anything that gets here is a bona-fide error we need to become aware of
+                self.log.error("Exception: Failed to grab packet [CLIENT (%s)] (%s):", self.username, e)
+                break
+
+            # send packet if server available and parsing passed.
+            # already tested - Python will not attempt eval of self.server.state if self.server is False
+            if self.parse(pkid) and self.server and self.server.state == 3:
+                self.server.packet.sendRaw(original)
+        self.close()
+
+    def flush_loop(self):
+        while not self.abort:
+            try:
+                self.packet.flush()
+            except socket_error:
+                self.log.debug("client socket closed (socket_error).")
+                break
+            time.sleep(0.01)
+        self.log.debug("client connection flush_loop thread ended")
+
+    def close(self):
+        self.abort = True
+        try:
+            self.socket.close()
+        except OSError:
+            self.log.debug("Client socket for %s already closed!", self.username)
+        if self.server:
+            self.server.abort = True
+            self.server.close("Client Disconnected", kill_client=False)
 
     @property
     def version(self):
@@ -228,19 +279,6 @@ class Client:
 
         self.server.state = 2
 
-    def close(self):
-        self.abort = True
-        try:
-            self.socket.close()
-        except OSError:
-            self.log.debug("Client socket for %s already closed!", self.username)
-        if self.server:
-            self.server.abort = True
-            self.server.close()
-        for i, client in enumerate(self.wrapper.proxy.clients):
-            if client.username == self.username:
-                del self.wrapper.proxy.clients[i]
-
     def disconnect(self, message, color="white", bold=False, fromserver=False):
         """
         text only message
@@ -259,17 +297,6 @@ class Client:
             self.packet.sendpkt(0x00, [_JSON], [message])
         time.sleep(1)
         self.close()
-
-    def flush(self):
-        while not self.abort:
-            try:
-                self.packet.flush()
-            except socket.error:
-                self.log.debug("clientconnection socket closed (bad file descriptor), closing flush..")
-                self.abort = True
-                self.close()
-                break
-            time.sleep(0.03)
 
     def getPlayerObject(self):
         if self.username in self.wrapper.javaserver.players:
@@ -736,7 +763,6 @@ class Client:
                 for client in self.proxy.clients:
                     if data[0].hex == client.uuid.hex:
                         self.server.packet.sendpkt(self.pktSB.SPECTATE, [_UUID], [client.serverUuid])
-                        print("sent new Spectate packet")
                         return False
             else:
                 return True  # no packet parsed in wrapper
@@ -1038,47 +1064,11 @@ class Client:
             self.log.error("(PROXY CLIENT) Unknown gamestate encountered: %s", self.state)
             return False
 
-    def handle(self):
-        t = threading.Thread(target=self.flush, args=())
-        t.daemon = True
-        t.start()
-
-        while not self.abort:
-            if self.abort:
-                self.close()
-                break
-
-            try:
-                pkid, original = self.packet.grabPacket()
-            except EOFError:
-                # This is not an error.. It means the client disconnected and is not sending packet stream anymore
-                self.log.debug("Client Packet stream ended (EOF)")
-                self.abort = True
-                self.close()
-                break
-            except socket.error:  # Bad file descriptor occurs anytime a socket is closed.
-                self.log.debug("Failed to grab packet [CLIENT] socket closed; bad file descriptor")
-                self.abort = True
-                self.close()
-                break
-            except Exception as e:
-                # anything that gets here is a bona-fide error we need to become aware of
-                self.log.error("Failed to grab packet [CLIENT] (%s):", e)
-                self.abort = True
-                self.close()
-                break
-
-            # send packet if server available and parsing passed.
-            # already tested - Python will not attempt eval of self.server.state if self.server is False
-            if self.parse(pkid) and self.server and self.server.state == 3:
-                self.server.packet.sendRaw(original)
-
     def _keep_alive_tracker(self, playername):
         # send keep alives to client and send client settings to server.
         while not self.abort:
             if self.abort is True:
                 self.log.debug("Closing Keep alive tracker thread for %s's client.", playername)
-                self.close()
                 break
             time.sleep(1)
             while self.state in (PLAY, LOBBY) and not self.abort:
@@ -1093,13 +1083,12 @@ class Client:
                         self.packet.sendpkt(0x00, [_INT], [self.keepalive_val])
                     self.time_server_pinged = time.time()
 
-                # ckeck for active client keep alive status:
+                # check for active client keep alive status:
                 # server can allow up to 30 seconds for response
                 if time.time() - self.time_client_responded > 25 and not self.abort:
                     self.state = HANDSHAKE
                     self.disconnect("Client closed due to lack of keepalive response")
-                    self.log.debug("Closing %s's client thread due to lack of keepalive response", playername)
-                    self.close()
+                    self.log.debug("Closed %s's client thread due to lack of keepalive response", playername)
+                    return
         self.state = HANDSHAKE
-        self.log.debug("Received abort signal - Closing %s's client thread", playername)
-        self.close()
+        self.log.debug("Client keepalive tracker aborted (%s's client thread)", playername)
