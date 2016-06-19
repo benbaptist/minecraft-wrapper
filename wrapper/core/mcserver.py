@@ -26,6 +26,12 @@ try:
 except ImportError:
     resource = False
 
+OFF = 0  # this is the start mode.
+STARTING = 1
+STARTED = 2
+STOPPING = 3
+FROZEN = 4
+
 
 # noinspection PyBroadException,PyUnusedLocal
 class MCServer:
@@ -52,7 +58,7 @@ class MCServer:
             self.wrapper.storage["serverState"] = True
 
         self.players = {}
-        self.state = MCSState.OFF
+        self.state = OFF
         self.bootTime = time.time()
         self.boot = self.wrapper.storage["serverState"]
         self.proc = None
@@ -98,12 +104,13 @@ class MCServer:
         capturethread.start()
 
     def __del__(self):
-        self.state = 0  # MCSState.OFF use hard-coded number in case Class MCSState is GC'ed
+        self.state = 0  # OFF use hard-coded number in case Class MCSState is GC'ed
 
     def __handle_server__(self):
         """
         Internally-used function that handles booting the server, parsing console output, and etc.
         """
+
         trystart = 0
         while not self.wrapper.halt:
             trystart += 1
@@ -111,7 +118,7 @@ class MCServer:
             if not self.boot:
                 time.sleep(0.1)
                 continue
-            self.changestate(MCSState.STARTING)
+            self.changestate(STARTING)
             self.log.info("Starting server...")
             self.reloadproperties()
             self.proc = subprocess.Popen(self.args, cwd=self.serverpath, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -127,7 +134,7 @@ class MCServer:
             while True:
                 time.sleep(0.1)
                 if self.proc.poll() is not None:
-                    self.changestate(MCSState.OFF)
+                    self.changestate(OFF)
                     if not self.config["General"]["auto-restart"]:
                         self.wrapper.halt = True
                     self.log.info("Server stopped")
@@ -152,7 +159,7 @@ class MCServer:
         Restart the Minecraft server, and kick people with the specified reason
         """
         self.log.info("Restarting Minecraft server with reason: %s", reason)
-        self.changestate(MCSState.STOPPING, reason)
+        self.changestate(STOPPING, reason)
         for player in self.players:
             self.console("kick %s %s" % (player, reason))
         self.console("stop")
@@ -176,23 +183,21 @@ class MCServer:
 
     def stop(self, reason="Stopping Server", save=True):
         """
-        Stop the Minecraft server, prevent it from auto-restarting and kick people with the specified reason
+        Stop the Minecraft server, prevent it from auto-restarting.
         """
         self.log.info("Stopping Minecraft server with reason: %s", reason)
-        self.changestate(MCSState.STOPPING, reason)
+        self.changestate(STOPPING, reason)
         self.boot = False
         if save:
             self.wrapper.storage["serverState"] = False
-        for player in self.players:
-            self.console("kick %s %s" % (player, reason))
-        self.console("stop")
+        self.console("stop")  # really no reason to kick the players.  Stop will do it
 
     def kill(self, reason="Killing Server"):
         """ 
         Forcefully kill the server. It will auto-restart if set in the configuration file
         """
         self.log.info("Killing Minecraft server with reason: %s", reason)
-        self.changestate(MCSState.OFF, reason)
+        self.changestate(OFF, reason)
         self.proc.kill()
 
     def freeze(self, reason="Server is now frozen. You may disconnect momentarily."):
@@ -203,12 +208,12 @@ class MCServer:
         'reason' argument is printed in the chat for all currently-connected players, unless you specify None.
         This command currently only works for *NIX based systems
         """
-        if self.state != MCSState.OFF:
+        if self.state != OFF:
             if os.name == "posix":
                 self.log.info("Freezing server with reason: %s", reason)
                 self.broadcast("&c%s" % reason)
                 time.sleep(0.5)
-                self.changestate(MCSState.FROZEN)
+                self.changestate(FROZEN)
                 os.system("kill -STOP %d" % self.proc.pid)
             else:
                 raise UnsupportedOSException("Your current OS (%s) does not support this command at this time."
@@ -221,11 +226,11 @@ class MCServer:
         Unfreeze the server with `kill -CONT`. Counterpart to .freeze(reason)
         This command currently only works for *NIX based systems
         """
-        if self.state != MCSState.OFF:
+        if self.state != OFF:
             if os.name == "posix":
                 self.log.info("Unfreezing server...")
                 self.broadcast("&aServer unfrozen.")
-                self.changestate(MCSState.STARTED)
+                self.changestate(STARTED)
                 os.system("kill -CONT %d" % self.proc.pid)
             else:
                 raise UnsupportedOSException("Your current OS (%s) does not support this command at this time."
@@ -291,10 +296,11 @@ class MCServer:
         """
         Called when a player logs out
         """
-        self.wrapper.events.callevent("player.logout", {"player": self.getplayer(username)})
-        # if self.wrapper.proxy:
-        #     for client in self.wrapper.proxy.clients:
-        #         uuid = self.players[username].uuid # This is not used
+        # player object is defunct at this point.  All we can pass to the plugin is a name
+        self.wrapper.events.callevent("player.logout", {"player": username})
+        if self.wrapper.proxy:
+            self.wrapper.proxy.removestaleclients()
+
         if username in self.players:
             self.players[username].abort = True
             del self.players[username]
@@ -344,7 +350,7 @@ class MCServer:
         """
         Execute a console command on the server
         """
-        if self.state in (MCSState.STARTING, MCSState.STARTED, MCSState.STOPPING):
+        if self.state in (STARTING, STARTED, STOPPING):
             self.proc.stdin.write("%s\n" % command)
         else:
             raise InvalidServerStateError("Server is not started. Please run '/start' to boot it up.")
@@ -354,13 +360,13 @@ class MCServer:
         Change the boot state of the server, with a reason message
         """
         self.state = state
-        if self.state == MCSState.OFF:
+        if self.state == OFF:
             self.wrapper.events.callevent("server.stopped", {"reason": reason})
-        elif self.state == MCSState.STARTING:
+        elif self.state == STARTING:
             self.wrapper.events.callevent("server.starting", {"reason": reason})
-        elif self.state == MCSState.STARTED:
+        elif self.state == STARTED:
             self.wrapper.events.callevent("server.started", {"reason": reason})
-        elif self.state == MCSState.STOPPING:
+        elif self.state == STOPPING:
             self.wrapper.events.callevent("server.stopping", {"reason": reason})
         self.wrapper.events.callevent("server.state", {"state": state, "reason": reason})
 
@@ -457,7 +463,7 @@ class MCServer:
             if len(getargs(line.split(" "), 0)) < 1:
                 return
             if getargs(line.split(" "), 0) == "Done":  # Confirmation that the server finished booting
-                self.changestate(MCSState.STARTED)
+                self.changestate(STARTED)
                 self.log.info("Server started")
                 self.bootTime = time.time()
             # Getting world name
@@ -518,7 +524,7 @@ class MCServer:
             if len(getargs(line.split(" "), 3)) < 1:
                 return
             if getargs(line.split(" "), 3) == "Done":  # Confirmation that the server finished booting
-                self.changestate(MCSState.STARTED)
+                self.changestate(STARTED)
                 self.log.info("Server started")
                 self.bootTime = time.time()
             elif getargs(line.split(" "), 3) == "Preparing" and getargs(line.split(" "), 4) == "level":
@@ -605,18 +611,3 @@ class MCServer:
                     for f in os.listdir(i[0]):
                         size += os.path.getsize(os.path.join(i[0], f))
                 self.worldSize = size
-
-
-class MCSState:
-    """
-    This class represents Minecraft Console Server states
-    """
-
-    OFF = 0  # this is the start mode.
-    STARTING = 1
-    STARTED = 2
-    STOPPING = 3
-    FROZEN = 4
-
-    def __init__(self):
-        pass

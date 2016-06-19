@@ -48,8 +48,6 @@ class Web:
         # Register handlers
         self.add_decorators()
 
-        # Storage
-        # self.data = Storage("web", self.log)  # Eeek! You can't pass a logger instance into a storage object!
         self.data = Storage("dash")
         if "keys" not in self.data:
             self.data["keys"] = []
@@ -64,7 +62,7 @@ class Web:
         t.start()
 
     def __del__(self):
-        self.data.save()
+        self.data.close()
 
     # Authorization methods
     def checkLogin(self, password):
@@ -141,5 +139,7 @@ class Web:
             pass
 
     def run(self):
+        # Need a method to end this Thread!
+        # the ending code needs a self.data.close() to close the storage object
         self.socketio.run(self.app, host=self.config["Web"]["web-bind"],
                           port=self.config["Web"]["web-port"])

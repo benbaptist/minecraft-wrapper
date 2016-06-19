@@ -20,6 +20,8 @@ set something False/unimplemented using 0xEE
 
 # Version Constants
 # use these constants decide how a packet should be parsed.
+PROTOCOL_MAX = 1000
+
 PROTOCOL_1_10 = 205
 #
 PROTOCOL_1_9_4 = 110      # post- 1.9.3 "pre" releases (1.9.3 pre-2 -)

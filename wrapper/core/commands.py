@@ -6,6 +6,7 @@
 import ast
 import random
 import time
+import json
 
 from utils.helpers import getargs, getargsafter, secondstohuman, showpage, readout
 
@@ -224,30 +225,32 @@ class Commands:
                 pass
             elif commargs[0].lower() in ("c", "count", "s", "sum", "summ", "summary"):
                 player.message("Entities loaded: %d" % worldloaded.countActiveEntities())
-                # Additional console output:
-                readout("Pending deletion",
-                        "%d" % len(worldloaded.delentities),
-                        separator=" : ", pad=20)
-
-                readout("Pending additions",
-                        "%d" % len(worldloaded.addentities),
-                        separator=" : ", pad=20)
                 return
             elif commargs[0].lower() in ("k", "kill"):
-                lock = worldloaded.applylock()
                 eid = getargs(commargs, 1)
                 count = getargs(commargs, 2)
                 if count < 1:
                     count = 1
                 worldloaded.killEntityByEID(eid, dropitems=False, finishstateof_domobloot=True, count=count)
-                lock = worldloaded.removelock()
                 return
             elif commargs[0].lower() in ("l", "list", "sh", "show" "all"):
                 player.message("Entities: \n%s" % worldloaded.entities)
                 return
+            elif commargs[0].lower() in ("p", "player", "name"):
+                if len(commargs) < 3:
+                    player.message("&c/entity player <name> count/list")
+                    return
+                them = worldloaded.countEntitiesInPlayer(commargs[1])
+                if commargs[2].lower() in ("l", "list", "sh", "show" "all"):
+                    player.message("Entities: \n%s" % json.dumps(them, indent=2))
+                else:
+                    player.message("%d entities exist in %s's client." % (len(them), commargs[1]))
+                return
 
             player.message("&cUsage: /entity count")
             player.message("&c       /entity list")
+            player.message("&c       /entity player <name> count")
+            player.message("&c       /entity player <name> list")
             player.message("&c       /entity kill <EIDofEntity> [count]")
 
     def command_wrapper(self, player, payload):

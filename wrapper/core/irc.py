@@ -157,7 +157,7 @@ class IRC:
         self.msgQueue.append("[%s connected]" % player)
 
     def onPlayerLogout(self, payload):
-        player = self.filterName(payload["player"])
+        player = payload["player"]
         self.msgQueue.append("[%s disconnected]" % player)
 
     def onPlayerMessage(self, payload):
