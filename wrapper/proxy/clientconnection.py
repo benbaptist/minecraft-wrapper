@@ -761,8 +761,8 @@ class Client:
                 # ("uuid:target_player")
                 # self.log.trace("(PROXY CLIENT) -> Parsed SPECTATE packet:\n%s", data)
                 for client in self.proxy.clients:
-                    if data[0].hex == client.uuid.hex:
-                        self.server.packet.sendpkt(self.pktSB.SPECTATE, [_UUID], [client.serverUuid])
+                    if data[0] == client.uuid:
+                        self.server.packet.sendpkt(self.pktSB.SPECTATE, [_UUID], [client.serveruuid])
                         return False
             else:
                 return True  # no packet parsed in wrapper

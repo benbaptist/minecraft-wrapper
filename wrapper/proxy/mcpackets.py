@@ -174,7 +174,7 @@ class ClientBound:
             self.USE_BED = 0x2f
             self.WINDOW_ITEMS = 0x14
 
-        # 1.9.4 changes
+        # 1.9.4 changes  http://wiki.vg/index.php?title=Protocol&oldid=7819#Entity_Properties
         if protocol > PROTOCOL_1_9_4:
             self.ENTITY_EFFECT = 0x4b
             self.ENTITY_PROPERTIES = 0x4a
