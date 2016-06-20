@@ -8,6 +8,7 @@ import socket
 import threading
 import time
 import json
+import traceback
 
 # third party
 # (none)
@@ -591,6 +592,57 @@ class ServerConnection:
                 }
                 # self.log.trace("(PROXY SERVER) -> Parsed 0x30 packet:\n%s", jsondata)
 
+            elif pkid == "self.pktCB.ENTITY_PROPERTIES":
+                ''' Not sure why I added this.  Based on the wiki, it looked like this might
+                contain a player uuid buried in the lowdata (wiki - "Modifier Data") area
+                that might need to be parsed and reset to the server local uuid.  Thus far,
+                I have not seen it used.
+                '''
+                parser_three = [_UUID, _DOUBLE, _BYTE]
+                if self.version < mcpackets.PROTOCOL_1_8START:
+                    parser_one = [_INT, _INT]
+                    parser_two = [_STRING, _DOUBLE, _SHORT]
+                    writer_one = self.packet.send_int
+                    writer_two = self.packet.send_short
+                else:
+                    parser_one = [_VARINT, _INT]
+                    parser_two = [_STRING, _DOUBLE, _VARINT]
+                    writer_one = self.packet.send_varInt
+                    writer_two = self.packet.send_varInt
+                raw = b""  # use bytes
+
+                # read first level and repack
+                pass1 = self.packet.readpkt(parser_one)
+                isplayer = self.getPlayerByEID(pass1[0])
+                if not isplayer:
+                    return True
+                raw += writer_one(pass1[0])
+                print(pass1[0], pass1[1])
+                raw += self.packet.send_int(pass1[1])
+
+                # start level 2
+                for _x in range(pass1[1]):
+                    pass2 = self.packet.readpkt(parser_two)
+                    print(pass2[0], pass2[1], pass2[2])
+                    raw += self.packet.send_string(pass2[0])
+                    raw += self.packet.send_double(pass2[1])
+                    raw += writer_two(pass2[2])
+                    print(pass2[2])
+                    for _y in range(pass2[2]):
+                        lowdata = self.packet.readpkt(parser_three)
+                        print(lowdata)
+                        packetuuid = lowdata[0]
+                        playerclient = self.client.proxy.getclientbyofflineserveruuid(packetuuid)
+                        if playerclient:
+                            raw += self.packet.send_uuid(playerclient.uuid.hex)
+                        else:
+                            raw += self.packet.send_uuid(lowdata[0])
+                        raw += self.packet.send_double(lowdata[1])
+                        raw += self.packet.send_byte(lowdata[2])
+                        print("Low data: ", lowdata)
+                # self.packet.sendpkt(self.pktCB.ENTITY_PROPERTIES, [_RAW], (raw,))
+                return True
+
             elif pkid == self.pktCB.PLAYER_LIST_ITEM:
                 if self.version >= mcpackets.PROTOCOL_1_8START:
                     head = self.packet.readpkt([_VARINT, _VARINT])
@@ -615,7 +667,7 @@ class ServerConnection:
                         z += 1
                         if action == 0:
                             properties = playerclient.properties
-                            raw = ""
+                            raw = b""
                             for prop in properties:
                                 raw += self.client.packet.send_string(prop["name"])
                                 raw += self.client.packet.send_string(prop["value"])
@@ -638,7 +690,7 @@ class ServerConnection:
                             # self.log.trace("(PROXY SERVER) -> Parsed PLAYER_LIST_ITEM packet:\n%s", data)
                             self.client.packet.sendpkt(self.pktCB.PLAYER_LIST_ITEM,
                                                        [_VARINT, _VARINT, _UUID, _VARINT],
-                                                       (1, 1, uuid, gamemode))
+                                                       (1, 1, uuid, data[0]))
                             # print(1, 1, uuid, gamemode)
                         elif action == 2:
                             data = self.packet.readpkt([_VARINT])
@@ -740,10 +792,10 @@ class ServerConnection:
                 # anything that gets here is a bona-fide error we need to become aware of
                 self.log.debug("Failed to grab packet [SERVER] (%s):", e)
                 break
-            try:
-                if self.parse(pkid) and self.client:
+            if self.parse(pkid) and self.client:
+                try:
                     self.client.packet.sendRaw(original)
-            except Exception as e:
-                self.log.debug("[SERVER] Could not send packet (%s): (%s)", pkid, e)
-                break
+                except Exception as e:
+                    self.log.debug("[SERVER] Could not send packet (%s): (%s): \n%s", pkid, e, traceback)
+                    break
         self.close("Disconnected", kill_client=False)
