@@ -61,8 +61,8 @@ On first start, it'll create a wrapper.properties file  (wrapper.properties.json
 Open the file, set the 'command' item to boot the jar file and java start options of your choice.<br>
 Tune the file to your remaining preferences, and then run wrapper again.
 
-_An alternative method of running wrapper is to run the source package directly.  To do this, clone the repo, copy the folder 'wrapper' to the desired location (usually in your server folder), and run it thusly:_<br>
-`python /path/to/server/wrapper`
+_An alternative method of running wrapper is to run the source package directly.  To do this, clone the repo, copy the folder 'src' to the desired location (usually in your server folder), and run it thusly:_<br>
+`python /path/to/server/src`
 
 
 Wrapper.py is a Python-executable zipped-up folder, rather than a plain text file.
