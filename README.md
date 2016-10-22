@@ -76,7 +76,9 @@ Wrapper.py is a Python-executable zipped-up folder, rather than a plain text fil
 Any console command beginning with a slash (/) will be interpreted as a Wrapper.py command.<br>
 Type /help to see a list of Wrapper.py commands.<br>
 To completely shutdown the wrapper, type /halt.</br>
-If you run into any bugs, please report them!
+
+Please read our [wiki](https://github.com/benbaptist/minecraft-wrapper/wiki) for additional information and review the issues page before submitting bug reports.<br>
+If you run into any bugs, please _do_ report them!
 
 If you want to use proxy mode in 1.9 or later versions and experience excessive lag, try using the 'stable-formc1.9-1.10' branch (again, only for vanilla type unmodded servers!)
 
