@@ -12,36 +12,33 @@ will be set to true in the eula.txt file in your server folder.
 #Installation#
 Wrapper.py doesn't require any special modules for most of the basic features to work, but web mode and proxy mode require `requests` and `pycrypto`, and `pkg_resources`.
 
-You will also need `tar` installed if you need backups. Most Linux distros have this pre-installed, but you may need to install it manually on Windows: http://gnuwin32.sourceforge.net/packages/gtar.htm
+You will also need "tar" installed if you need backups. Most Linux distros have this pre-installed, but you may need to install it manually on Windows: http://gnuwin32.sourceforge.net/packages/gtar.htm
 
-You only need to download Wrapper.py, the src folder is just the extracted version of Wrapper.py.</br>
+You only need to download Wrapper.py, the 'wrapper' folder is just the extracted version of Wrapper.py.</br>
 
+*Wrapper is presently written for Python 2.7, but we are progressing towards python 3.  Afterwards, only python 3.4+ and 2.6+ will be supported.*
 
 **LINUX Installation**
-You can run the following command to download the stable Wrapper.py (if you have wget installed):
 
-```wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master/Wrapper.py```
+if you have wget installed, You can run the following command to download the stable Wrapper.py (0.7.6):
 
-or the following to download the unstable, development version of Wrapper.py:
+`wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master/Wrapper.py`
 
-```wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/Wrapper.py```
+or the following to download the unstable, development version (0.8.x) of Wrapper.py:
 
-To install dependencies, use pip (note: you may need to use sudo in some cases):
+`wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/Wrapper.py`
 
-```pip install requests pycrypto```
+To install dependencies, use pip:
 
-Make sure Python's setuptools is also installed. On Debian-based systems, run the following:
-
-```sudo apt-get install python-setuptools```
+`pip install requests pkg_resources pycrypto`
 
 Place the wrapper.py file in your minecraft folder and then run `python Wrapper.py` to start.
 
 
 **Windows Installation**
 
-
-You may need to get [python 2.7.x](https://www.python.org/downloads/) as it does not come with Windows.
-for best results, ensure the add python.exe to path is installed during the setup
+You may need to get [python](https://www.python.org/downloads/) as it does not normally come with Windows.<br>
+For best results, make sure the location of the python.exe file is in your system 'path' variable.
 
 
 Python 2.7 should already have pip and setuptools installed, however they will be old versions.  You should manually remove them and install the updated versions from the command prompt (need to be administrator to do this):
@@ -59,25 +56,29 @@ pip install requests
 pip install pycrypto
 ```
 
-Download the wrapper.py file and place it in your minecraft folder, then create a batch file to run the wrapper, or start it from the command prompt:
-`python wrapper.py`
-
+Download the wrapper.py file and place it in your minecraft folder, then create a batch file to run the wrapper, or start it from the command prompt.
 
 
 **Start Up**
 
+Run `python Wrapper.py` to start.<br>
+On first start, it'll create a wrapper.properties file  (wrapper.properties.json in wrapper 0.8.x) for you to configure and exit.<br>
+Open the file, set the 'command' item to boot the jar file and java start options of your choice.<br>
+Tune the file to your remaining preferences, and then run wrapper again.
 
-Run `python Wrapper.py` to start. On first start, it'll create a wrapper.properties file for you to configure and exit. Set it to boot the jar file of your choice, and then start Wrapper.py again.
+_An alternative method of running wrapper is to run the source package directly.  To do this, clone the repo, copy the folder 'wrapper' to the desired location (usually in your server folder), and run it thusly:_<br>
+`python /path/to/server/wrapper`
 
-Wrapper.py is a Python-executable zipped-up folder, rather than a plain text file. If you want to view the source code, open it with a zip file viewer OR download the src folder.</br>
 
-On first run, it'll create the configuration file 'wrapper.properties' and exit. Tune this file to your needs, and then run `python Wrapper.py` again.  It will also create a logging.json file to configure log handlers (you should not need to modify this file, unless you have a special logging need).</br>
+Wrapper.py is a Python-executable zipped-up folder, rather than a plain text file.
 
-Type /help to see a list of Wrapper.py commands.  In cases where a Wrapper and minecraft command are identical, precede the command with a '/' to specify Wrapper's command. To completely shutdown the wrapper, type /halt.</br>
 
+Any console command beginning with a slash (/) will be interpreted as a Wrapper.py command.<br>
+Type /help to see a list of Wrapper.py commands.<br>
+To completely shutdown the wrapper, type /halt.</br>
 If you run into any bugs, please report them!
 
-Wrapper.py is made to work with 1.7.2 and later, but it will work on 1.6.4 and earlier if you don't use proxy mode and you turn on pre-1.7-mode in wrapper.properties.
+The master branch will run all versions of minecraft if you don't use proxy mode. If you're using 1.6 and earlier, please turn on pre-1.7-mode in wrapper.properties.  If you want to use proxy mode in 1.9 or later versions, you must switch to the 'development' branch or 'stable-formc1.9-1.10' branch (again, only for vanilla type unmodded servers!)
 
 #Features#
 Wrapper.py supports the following features:
