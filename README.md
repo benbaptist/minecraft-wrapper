@@ -9,7 +9,7 @@ You will also need `tar` installed if you need backups. Most Linux distros have 
 
 You only need to download Wrapper.py, the 'wrapper' folder is just the extracted version of Wrapper.py.</br>
 
-*Wrapper is presently written for Python 2.7, but we are progressing towards python 3.  Only python 3.4 and later will be supported*
+*Wrapper is presently written for Python 2.7, but we are progressing towards python 3.  Only python 3.4/2.6 and later will be supported*
 
 **LINUX Installation**
 
