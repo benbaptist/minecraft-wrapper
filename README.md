@@ -5,7 +5,7 @@ Wrapper.py is an easy to use Minecraft server wrapper for adding extra functiona
 #Installation#
 Wrapper.py doesn't require any special modules for most of the basic features to work, but web mode and proxy mode require `requests` and `pycrypto`, and `pkg_resources`.
 
-You will also need `tar` installed if you need backups. Most Linux distros have this pre-installed, but you may need to install it manually on Windows: http://gnuwin32.sourceforge.net/packages/gtar.htm
+You will also need "tar" installed if you need backups. Most Linux distros have this pre-installed, but you may need to install it manually on Windows: http://gnuwin32.sourceforge.net/packages/gtar.htm
 
 You only need to download Wrapper.py, the 'wrapper' folder is just the extracted version of Wrapper.py.</br>
 
