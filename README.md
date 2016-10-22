@@ -60,20 +60,25 @@ _An alternative method of running wrapper is to run the source package directly.
 `python /path/to/server/wrapper`
 
 
-Wrapper.py is a Python-executable zipped-up folder, rather than a plain text file. If you want to view the source code, open it with a zip file viewer OR download the src folder.</br>
-On first run, it'll create the configuration file 'wrapper.properties' and exit. Tune this file to your needs, and then run `python Wrapper.py` again.</br>
-Any console command beginning with a slash (/) will be interpreted as a Wrapper.py command.
-Type /help to see a list of Wrapper.py commands. To completely shutdown the wrapper, type /halt.</br>
+Wrapper.py is a Python-executable zipped-up folder, rather than a plain text file.
+
+
+On first run, it'll create the configuration file 'wrapper.properties' and exit. Tune this file to your needs, and then run `python Wrapper.py` again.
+
+
+Any console command beginning with a slash (/) will be interpreted as a Wrapper.py command.<br>
+Type /help to see a list of Wrapper.py commands.<br>
+To completely shutdown the wrapper, type /halt.</br>
 If you run into any bugs, please report them!
 
-Wrapper.py is made to work with 1.7.10 and later, but it will work on 1.7.4 and earlier if you don't use proxy mode. If you're using 1.6 and earlier, please turn on pre-1.7-mode in wrapper.properties.
+The master branch will run all versions of minecraft if you don't use proxy mode. If you're using 1.6 and earlier, please turn on pre-1.7-mode in wrapper.properties.  If you want to use proxy mode in 1.9 or later versions, you must switch to the development branch (again, only for vanilla type unmodded servers!)
 
 #Features#
 Wrapper.py supports the following features:
 - Plugin system for adding Bukkit-like features to a vanilla server
   - Proxy mode allows you to add extra functionality to plugins, such as real /commands
   - Permissions system with group support
-  - Jump to different servers without reconnecting (extremely experimental, can be used by calling api.minecraft.connect(ip, port) )
+  - Jump to different servers without reconnecting (extremely experimental, possibly broken on the development branch)
 - Automatic Backups
   - Automatically delete the oldest backups once you reach amount of backups
   - Specify which folders and files get backed up
