@@ -9,15 +9,15 @@ You will also need "tar" installed if you need backups. Most Linux distros have 
 
 You only need to download Wrapper.py, the 'wrapper' folder is just the extracted version of Wrapper.py.</br>
 
-*Wrapper is presently written for Python 2.7, but we are progressing towards python 3.  Only python 3.4/2.6 and later will be supported*
+*Wrapper is presently written for Python 2.7, but we are progressing towards python 3.  Only python 3.4/2.6 and later will be supported.*
 
 **LINUX Installation**
 
-You can run the following command to download the stable Wrapper.py (if you have wget installed):
+if you have wget installed, You can run the following command to download the stable Wrapper.py (0.7.6):
 
 `wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master/Wrapper.py`
 
-or the following to download the unstable, development version of Wrapper.py:
+or the following to download the unstable, development version (0.8.x) of Wrapper.py:
 
 `wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/Wrapper.py`
 
