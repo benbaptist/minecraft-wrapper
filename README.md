@@ -78,7 +78,7 @@ Type /help to see a list of Wrapper.py commands.<br>
 To completely shutdown the wrapper, type /halt.</br>
 If you run into any bugs, please report them!
 
-The master branch will run all versions of minecraft if you don't use proxy mode. If you're using 1.6 and earlier, please turn on pre-1.7-mode in wrapper.properties.  If you want to use proxy mode in 1.9 or later versions, you must switch to the 'development' branch or 'stable-formc1.9-1.10' branch (again, only for vanilla type unmodded servers!)
+If you want to use proxy mode in 1.9 or later versions and experience excessive lag, try using the 'stable-formc1.9-1.10' branch (again, only for vanilla type unmodded servers!)
 
 #Features#
 Wrapper.py supports the following features:
