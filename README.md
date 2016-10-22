@@ -54,16 +54,16 @@ Download the wrapper.py file and place it in your minecraft folder, then create 
 
 **Start Up**
 
-Run `python Wrapper.py` to start. On first start, it'll create a wrapper.properties file for you to configure and exit. Set it to boot the jar file of your choice, and then start Wrapper.py again.
+Run `python Wrapper.py` to start.<br>
+On first start, it'll create a wrapper.properties file  (wrapper.properties.json in wrapper 0.8.x) for you to configure and exit.<br>
+Open the file, set the 'command' item to boot the jar file and java start options of your choice.<br>
+Tune the file to your remaining preferences, and then run wrapper again.
 
 _An alternative method of running wrapper is to run the source package directly.  To do this, clone the repo, copy the folder 'wrapper' to the desired location (usually in your server folder), and run it thusly:_<br>
 `python /path/to/server/wrapper`
 
 
 Wrapper.py is a Python-executable zipped-up folder, rather than a plain text file.
-
-
-On first run, it'll create the configuration file 'wrapper.properties' and exit. Tune this file to your needs, and then run `python Wrapper.py` again.
 
 
 Any console command beginning with a slash (/) will be interpreted as a Wrapper.py command.<br>
