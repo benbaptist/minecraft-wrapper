@@ -7,7 +7,7 @@ Wrapper.py doesn't require any special modules for most of the basic features to
 
 You will also need `tar` installed if you need backups. Most Linux distros have this pre-installed, but you may need to install it manually on Windows: http://gnuwin32.sourceforge.net/packages/gtar.htm
 
-You only need to download Wrapper.py, the src folder is just the extracted version of Wrapper.py.</br>
+You only need to download Wrapper.py, the 'wrapper' folder is just the extracted version of Wrapper.py.</br>
 
 *Wrapper is presently written for Python 2.7, but we are progressing towards python 3.  Only python 3.4 and later will be supported*
 
