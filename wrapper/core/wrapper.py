@@ -192,13 +192,13 @@ class Wrapper:
                 self.javaserver.stop("Stopping server...")
             elif command in ("/start", "start"):
                 self.javaserver.start()
-            elif command == "/restart":
+            elif command in ("/restart", "restart"):
                 self.javaserver.restart("Server restarting, be right back!")
-            elif command == "/reload":  # This /reload was a 'proof of concept' for runwrapperconsolecommand()
+            elif command == "/reload":  # "reload" (with no slash) may be used by bukkit servers
                 self.runwrapperconsolecommand("reload", [])
             elif command in ("/update-wrapper", "update-wrapper"):
                 self.checkforupdate(False)
-            elif command in ("/plugins", "plugins"):
+            elif command == "/plugins":  # "plugins" command (with no slash) reserved for possible server commands
                 self.listplugins()
             elif command in ("/mem", "/memory", "mem", "memory"):
                 try:
@@ -236,24 +236,24 @@ class Wrapper:
             elif command == "/version":
                 readout("/version", self.getbuildstring())
 
-            # Ban commands MUST over-ride the server version; otherwise, the server will re-write
+            # Ban commands MUST over-ride the server version in proxy mode; otherwise, the server will re-write
             #       Its version from memory, undoing wrapper's changes to the disk file version.
-            elif command in ("/ban", "ban"):
+            elif self.proxymode and command in ("/ban", "ban"):
                 self.runwrapperconsolecommand("ban", allargs)
 
-            elif command in ("/ban-ip", "ban-ip"):
+            elif self.proxymode and command in ("/ban-ip", "ban-ip"):
                 self.runwrapperconsolecommand("ban-ip", allargs)
 
-            elif command in ("/pardon-ip", "pardon-ip"):
+            elif self.proxymode and command in ("/pardon-ip", "pardon-ip"):
                 self.runwrapperconsolecommand("pardon-ip", allargs)
 
-            elif command in ("/pardon", "pardon"):
+            elif self.proxymode and command in ("/pardon", "pardon"):
                 self.runwrapperconsolecommand("pardon", allargs)
 
-            elif command in ("/perm", "/perms", "/super", "/permissions"):
+            elif command in ("/perm", "/perms", "/super", "/permissions", "perm", "perms", "super", "permissions"):
                 self.runwrapperconsolecommand("perms", allargs)
 
-            elif command in ("/playerstats", "/stats"):
+            elif command in ("/playerstats", "/stats", "playerstats", "stats"):
                 self.runwrapperconsolecommand("playerstats", allargs)
 
             elif command in ("/ent", "/entity", "/entities", "ent", "entity", "entities"):
@@ -330,9 +330,9 @@ class Wrapper:
             ("/reload", "Reload all plugins.", None),
             ("/permissions <groups/users/RESET>",
              "Command used to manage permission groups and users, add permission nodes, etc.", None),
-            # Minimum server version for commands to appear is 1.7.6 (registers perm later in serverconnection.py)
-            # These won't appear is proxy mode not on (since serverconnection is part of proxy).
             ("/Entity <count/kill> [eid] [count]", "/entity help/? for more help.. ", None),
+            # Minimum server version for commands to appear is 1.7.6 (registers perm later in serverconnection.py)
+            # These won't appear if proxy mode is not on (since serverconnection is part of proxy).
             ("/ban <name> [reason..] [d:<days>/h:<hours>]",
              "Ban a player. Specifying h:<hours> or d:<days> creates a temp ban.", "mc1.7.6"),
             ("/ban-ip <ip> [<reason..> <d:<number of days>]",
@@ -382,7 +382,9 @@ class Wrapper:
     @staticmethod
     def getuuidfromname(name):
         """
-        :param name: should be passed as "OfflinePlayer:<playername>" to get the correct (offline) vanilla server uuid
+        Get the offline vanilla server UUID
+
+        :param name: The playername  (gets hashed as "OfflinePlayer:<playername>")
         :return: a MCUUID object based on the name
         """
         playername = "OfflinePlayer:%s" % name
@@ -589,7 +591,7 @@ class Wrapper:
                            "modules installed: pycrypto and requests")
 
     def sigint(*args):  # doing this allows the calling function to pass extra args without defining/using them here
-        self = args[0]  # .. as we are onnly interested in the self component
+        self = args[0]  # .. as we are only interested in the self component
         self.shutdown()
 
     def shutdown(self, status=0):
