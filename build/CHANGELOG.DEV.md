@@ -1,3 +1,7 @@
+Build #125 [0.8.9]
+- Ensure ban commands are only handled by wrapper in proxy mode.
+- Fix broken build script that was not zipping the files properly.
+
 Build #121 [0.8.7]
 - storages have a close() method, which also saves the storage. This is to be called on plugin unload.
 - corrected the example plugins from save() to close().
