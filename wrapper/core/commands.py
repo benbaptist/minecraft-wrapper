@@ -48,7 +48,7 @@ class Commands:
         if str(payload["command"]).lower in ("plugins", "pl"):
             self.command_plugins(player)
 
-        # make sure any command returns a Truish item, or the chat packet will continue to the server
+        # make sure any command returns a True-ish item, or the chat packet will continue to the server
         if payload["command"] == "wrapper":
             self.command_wrapper(player, payload)
             return True
