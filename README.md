@@ -10,7 +10,7 @@ will be set to true in the eula.txt file in your server folder.
 
 
 #Installation#
-Wrapper.py doesn't require any special modules for most of the basic features to work, but web mode and proxy mode require `requests` and `pycrypto`, and `pkg_resources`.
+Wrapper.py doesn't require any special modules for most of the basic features to work, but web mode and proxy mode require `requests` and `pycrypto`, and `pkg_resources`.  Some systems may also need `readline` (which is usually standard).
 
 You will also need "tar" installed if you need backups. Most Linux distros have this pre-installed, but you may need to install it manually on Windows: http://gnuwin32.sourceforge.net/packages/gtar.htm
 
