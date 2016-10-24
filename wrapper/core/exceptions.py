@@ -25,7 +25,7 @@ class MalformedFileError(WrapperException):
     pass
 
 
-class InvalidServerStateError(WrapperException):
+class InvalidServerStartedError(WrapperException):
     """ Exception raised when the MCServer is not in the correct state """
     pass
 
