@@ -6,7 +6,7 @@ from api.player import Player
 from api.world import World
 
 from core.backups import Backups
-from core.exceptions import UnsupportedOSException, InvalidServerStateError
+from core.exceptions import UnsupportedOSException, InvalidServerStartedError
 
 import time
 import threading
@@ -54,19 +54,21 @@ class MCServer:
         self.api = API(wrapper, "Server", internal=True)
         self.backups = Backups(wrapper)
 
-        if "serverState" not in self.wrapper.storage:
-            self.wrapper.storage["serverState"] = True
+        if "ServerStarted" not in self.wrapper.storage:
+            self.wrapper.storage["ServerStarted"] = True
+            self.wrapper.storage.save()
 
         self.players = {}
         self.state = OFF
         self.bootTime = time.time()
-        self.boot = self.wrapper.storage["serverState"]
+        self.serverbooted = self.wrapper.storage["ServerStarted"]
+        self.server_handle_on = False
         self.proc = None
         self.rebootWarnings = 0
         self.lastsizepoll = 0
         self.data = []
 
-        if not self.wrapper.storage["serverState"]:
+        if not self.wrapper.storage["ServerStarted"]:
             self.log.warning("NOTE: Server was in 'STOP' state last time Wrapper.py was running. "
                              "To start the server, run /start.")
             time.sleep(5)
@@ -106,17 +108,21 @@ class MCServer:
     def __del__(self):
         self.state = 0  # OFF use hard-coded number in case Class MCSState is GC'ed
 
-    def __handle_server__(self):
+    def handle_server(self):
         """
-        Internally-used function that handles booting the server, parsing console output, and etc.
+        Function that handles booting the server, parsing console output, and such.
         """
 
         trystart = 0
+        if self.server_handle_on:
+            return
         while not self.wrapper.halt:
             trystart += 1
             self.proc = None
-            if not self.boot:
+            self.server_handle_on = True
+            if not self.serverbooted:
                 time.sleep(0.1)
+                trystart = 0
                 continue
             self.changestate(STARTING)
             self.log.info("Starting server...")
@@ -126,9 +132,11 @@ class MCServer:
             self.players = {}
             self.accepteula()  # Auto accept eula
             if self.proc.poll() is None and trystart > 3:
-                self.log.error("could not start server.  check your server.properties, wrapper.properties and this"
+                self.log.error("Could not start server.  check your server.properties, wrapper.properties and this"
                                " startup 'command' from wrapper.properties:\n'%s'", " ".join(self.args))
-                self.wrapper.halt = True
+                self.changestate(OFF)
+                self.server_handle_on = False
+                break
 
             # The server loop
             while True:
@@ -137,27 +145,40 @@ class MCServer:
                     self.changestate(OFF)
                     if not self.config["General"]["auto-restart"]:
                         self.wrapper.halt = True
-                    self.log.info("Server stopped")
                     break
+
+                # This level runs continously once server console starts
+
                 for line in self.data:
                     try:
                         self.readconsole(line.replace("\r", ""))
                     except Exception as e:
                         self.log.exception(e)
                 self.data = []
+            self.server_handle_on = False
 
     def start(self, save=True):
         """
         Start the Minecraft server
         """
-        self.boot = True
+        if self.state in (STARTED, STARTING):
+            self.log.warning("The server is already running!")
+            return
+        if not self.serverbooted:
+            self.serverbooted = True
+        else:
+            self.handle_server()
         if save:
-            self.wrapper.storage["serverState"] = True
+            self.wrapper.storage["ServerStarted"] = True
+            self.wrapper.storage.save()
 
     def restart(self, reason="Restarting Server"):
         """
         Restart the Minecraft server, and kick people with the specified reason
         """
+        if self.state in (STOPPING, OFF):
+            self.log.warning("The server is not already running... Just use '/start'.")
+            return
         self.log.info("Restarting Minecraft server with reason: %s", reason)
         self.changestate(STOPPING, reason)
         for player in self.players:
@@ -185,17 +206,24 @@ class MCServer:
         """
         Stop the Minecraft server, prevent it from auto-restarting.
         """
+        if self.state in (STOPPING, OFF):
+            self.log.warning("The server is not running... :?")
+            return
         self.log.info("Stopping Minecraft server with reason: %s", reason)
         self.changestate(STOPPING, reason)
-        self.boot = False
+        self.serverbooted = False
         if save:
-            self.wrapper.storage["serverState"] = False
+            self.wrapper.storage["ServerStarted"] = False
+            self.wrapper.storage.save()
         self.console("stop")  # really no reason to kick the players.  Stop will do it
 
     def kill(self, reason="Killing Server"):
         """ 
         Forcefully kill the server. It will auto-restart if set in the configuration file
         """
+        if self.state in (STOPPING, OFF):
+            self.log.warning("The server is already dead, my friend...")
+            return
         self.log.info("Killing Minecraft server with reason: %s", reason)
         self.changestate(OFF, reason)
         self.proc.kill()
@@ -219,7 +247,7 @@ class MCServer:
                 raise UnsupportedOSException("Your current OS (%s) does not support this command at this time."
                                              % os.name)
         else:
-            raise InvalidServerStateError("Server is not started. You may run '/start' to boot it up.")
+            raise InvalidServerStartedError("Server is not started. You may run '/start' to boot it up.")
 
     def unfreeze(self):
         """
@@ -228,7 +256,7 @@ class MCServer:
         """
         if self.state != OFF:
             if os.name == "posix":
-                self.log.info("Unfreezing server...")
+                self.log.info("Unfreezing server (ignore any messages to type /start)...")
                 self.broadcast("&aServer unfrozen.")
                 self.changestate(STARTED)
                 os.system("kill -CONT %d" % self.proc.pid)
@@ -236,7 +264,7 @@ class MCServer:
                 raise UnsupportedOSException("Your current OS (%s) does not support this command at this time."
                                              % os.name)
         else:
-            raise InvalidServerStateError("Server is not started. Please run '/start' to boot it up.")
+            raise InvalidServerStartedError("Server is not started. Please run '/start' to boot it up.")
 
     def broadcast(self, message=""):
         """
@@ -353,7 +381,7 @@ class MCServer:
         if self.state in (STARTING, STARTED, STOPPING):
             self.proc.stdin.write("%s\n" % command)
         else:
-            raise InvalidServerStateError("Server is not started. Please run '/start' to boot it up.")
+            self.log.info("Server is not started. Please run '/start' to boot it up.")
 
     def changestate(self, state, reason=None):
         """

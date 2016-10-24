@@ -26,7 +26,7 @@ from core.plugins import Plugins
 from core.commands import Commands
 from core.events import Events
 from core.storage import Storage
-from core.exceptions import UnsupportedOSException, InvalidServerStateError
+from core.exceptions import UnsupportedOSException, InvalidServerStartedError
 
 # from management.dashboard import Web as Managedashboard  # presently unused
 
@@ -65,7 +65,7 @@ class Wrapper:
         self.proxymode = False
         self.halt = False
         self.update = False
-        self.storage = Storage("main", encoding=self.encoding)
+        self.storage = Storage("wrapper", encoding=self.encoding)
         self.permissions = Storage("permissions", encoding=self.encoding)
         self.usercache = Storage("usercache", encoding=self.encoding)
 
@@ -151,18 +151,17 @@ class Wrapper:
             t.daemon = True
             t.start()
 
-        self.bootserver()
-        # wrapper execution ends here.
+        self.javaserver.handle_server()
+        # handle_server always runs, even if the server is not started
 
-    def bootserver(self):
-        # This boots the server and loops in it
-        self.javaserver.__handle_server__()
-        # until it stops
         self.plugins.disableplugins()
+        self.log.info("Plugins disabled")
         self.storage.close()
         self.permissions.close()
         self.usercache.close()
-        self.log.info("Server handle stopped.  Storages saved. Plugins disabled")
+        self.log.info("Wrapper Storages closed and saved.")
+
+        # wrapper execution ends here.
 
     def parseconsoleinput(self):
         while not self.halt:
@@ -213,12 +212,12 @@ class Wrapper:
                         self.javaserver.console(getargsafter(consoleinput[1:].split(" "), 1))
                     else:
                         self.log.info("Usage: /raw [command]")
-                except InvalidServerStateError as e:
+                except InvalidServerStartedError as e:
                     self.log.warning(e)
             elif command in ("/freeze", "freeze"):
                 try:
                     self.javaserver.freeze()
-                except InvalidServerStateError as e:
+                except InvalidServerStartedError as e:
                     self.log.warning(e)
                 except UnsupportedOSException as ex:
                     self.log.error(ex)
@@ -227,7 +226,7 @@ class Wrapper:
             elif command in ("/unfreeze", "unfreeze"):
                 try:
                     self.javaserver.unfreeze()
-                except InvalidServerStateError as e:
+                except InvalidServerStartedError as e:
                     self.log.warning(e)
                 except UnsupportedOSException as ex:
                     self.log.error(ex)
@@ -257,7 +256,11 @@ class Wrapper:
                 self.runwrapperconsolecommand("playerstats", allargs)
 
             elif command in ("/ent", "/entity", "/entities", "ent", "entity", "entities"):
-                self.runwrapperconsolecommand("ent", allargs)
+                if self.proxymode:
+                    self.runwrapperconsolecommand("ent", allargs)
+                else:
+                    readout("ERROR - ", "Entity tracking requires proxy mode. "
+                                        "(proxy mode is not on).", separator="", pad=10)
 
             # TODO Add more commands below here, below the original items:
             # TODO __________________
@@ -308,7 +311,9 @@ class Wrapper:
                     readout("/banlist", " - search and display the banlist (warning - displays on single page!)",
                             separator="[players|ips] [searchtext] ", pad=12)
                 else:
-                    readout("ERROR - ", "Bans are not enabled (proxy mode is not on).", separator="", pad=10)
+                    readout("ERROR - ", "Wrapper proxy-mode bans are not enabled "
+                                        "(proxy mode is not on).", separator="", pad=10)
+
             else:
                 try:
                     self.javaserver.console(consoleinput)
