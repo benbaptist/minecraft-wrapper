@@ -1,3 +1,45 @@
+Build #128 [0.8.11]
+- Refactor core.plugins.py, modularizing the various portions of the 'eachsecond' method for external use.
+- create api.backups.py as a publicly accessible `self.api.backups` backup interface for plugins:
+```
+    def verifyTarInstalled(self):
+        """checks for tar on users system."""
+    def performBackup(self):
+        """Perform an immediate backup"""
+    def pruneBackups(self):
+        """prune backups according to wrapper properties settings."""
+    def disableBackups(self):
+        """Allow plugin to temporarily shut off backups (only during this wrapper session)."""
+    def enableBackups(self):
+        """Allow plugin to re-enable disabled backups or enable backups during this wrapper session."""
+    def adjustBackupInterval(self, desired_interval):
+        """Adjust the backup interval for automatic backups."""
+    def adjustBackupsKept(self, desired_number):
+        """Adjust the number of backups kept."""
+```
+
+Build #127 [0.8.10]
+- This was a previous snake_case build of build 128.
+```
+Wrapper's orginal convention throughtout the codebase has been camelCase from the begining.  The internal code
+should be converted (going forward) to snake_case per PEP-8.
+However, PEP-8 also acknowledges that:
+
+'mixedCase is allowed only in contexts where that's already the prevailing style (e.g. threading.py), to retain
+backwards compatibility.'
+
+This is certainly the case with the wrapper plugin API.  Converting the entire plugin API to snake_case will
+break all existing plugins.  Creating this API with snake_case will create an inconsitent `look 'n feel` within
+the API.  The only other alternative would be to create excessive wrappers between oldFunctions and new_functions
+(and does not serve to remove the oldFunctions anyway!)
+```
+
+Build #126 [0.8.9]
+- Fixed problems with last serverState not being saved properly.
+- Renamed serverState to ServerStarted for clarity with regards to its boolean values.
+- Fixed lots of other bugs in the start/stop functions, especially an error that could start the server twice.
+- Added error checks to prevent /start/stop/restart where not appropriate (starting an already running server, etc).
+
 Build #125 [0.8.9]
 - Ensure ban commands are only handled by wrapper in proxy mode.
 - Fix broken build script that was not zipping the files properly.

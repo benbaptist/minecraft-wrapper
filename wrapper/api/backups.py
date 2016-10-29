@@ -1,6 +1,22 @@
 # -*- coding: utf-8 -*-
 
 
+# noinspection PyPep8Naming
+
+"""
+Wrapper's orginal convention throughtout the codebase has been camelCase from the begining.  The internal code
+should be converted (going forward) to snake_case per PEP-8.
+However, PEP-8 also acknowledges that:
+
+'mixedCase is allowed only in contexts where that's already the prevailing style (e.g. threading.py), to retain
+backwards compatibility.'
+
+This is certainly the case with the wrapper plugin API.  Converting the entire plugin API to snake_case will
+break all existing plugins.  Creating this API with snake_case will create an inconsitent `look 'n feel` within
+the API.  The only other alternative would be to create excessive wrappers between oldFunctions and new_functions
+(and does not serve to remove the oldFunctions anyway!)
+"""
+
 class Backups:
     """ This class wraps the wrapper.javaserver backups functions.  Wrapper starts javaserver(McServer class)
      and javaserver starts core.backups.py class Backups (as .backups).  This API class manipulates backups within
@@ -10,35 +26,35 @@ class Backups:
         self.wrapper = wrapper
         self.log = wrapper.log
 
-    def verify_tar_installed(self):
+    def verifyTarInstalled(self):
         """
         checks for tar on users system.
         :return: True if installed, False if not (along with error logs and console messages).
         """
         return self.wrapper.javaserver.backups.dotarchecks()
 
-    def perform_backup(self):
+    def performBackup(self):
         """
         Perform an immediate backup
         :return: check console for messages (or wrapper backup Events)
         """
         self.wrapper.javaserver.backups.dobackup()
 
-    def prune_backups(self):
+    def pruneBackups(self):
         """
         prune backups according to wrapper properties settings.
         :return: Output to console and logs
         """
         self.wrapper.javaserver.backups.pruneoldbackups()
 
-    def disable_backups(self):
+    def disableBackups(self):
         """
         Allow plugin to temporarily shut off backups (only during this wrapper session).
         :return: None
         """
         self.wrapper.javaserver.backups.enabled = False
 
-    def enable_backups(self):
+    def enableBackups(self):
         """
         Allow plugin to re-enable disabled backups or enable backups during this wrapper session.
         :return: True.  returns False if tar is not installed
@@ -50,7 +66,7 @@ class Backups:
             self.wrapper.javaserver.backups.timerstarted = True
             self.wrapper.javaserver.backups.api.registerEvent("timer.second", self.wrapper.javaserver.backups.eachsecond)
 
-    def adjust_backup_interval(self, desired_interval):
+    def adjustBackupInterval(self, desired_interval):
         """
         Adjust the backup interval for automatic backups.
         :param desired_interval: interval in seconds for regular backups
@@ -60,7 +76,7 @@ class Backups:
         self.wrapper.javaserver.backups.config["Backups"]["backup-interval"] = interval
         self.wrapper.configManager.save()
 
-    def adjust_backups_kept(self, desired_number):
+    def adjustBackupsKept(self, desired_number):
         """
         Adjust the number of backups kept.
         :param desired_number: number of desired backups
