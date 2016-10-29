@@ -8,6 +8,7 @@ import time
 import core.exceptions as exceptions
 
 from api.minecraft import Minecraft
+from api.backups import Backups
 from core.storage import Storage
 import utils.helpers as helpercode
 
@@ -77,6 +78,7 @@ class API:
         self.log = wrapper.log
         self.name = name
         self.minecraft = Minecraft(wrapper)
+        self.backups = Backups(wrapper)
         self.javaserver = wrapper.javaserver
         self.config = wrapper.config
         self.serverpath = self.config["General"]["server-directory"]

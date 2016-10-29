@@ -93,6 +93,8 @@ class MCServer:
         if self.config["General"]["timed-reboot"] or self.config["Web"]["web-enabled"]:  # don't reg. an unused event
             self.api.registerEvent("timer.second", self.eachsecond)
 
+        # self.api.backups.init_backups()
+
     def init(self):
         """
         Start up the listen threads for reading server console output
