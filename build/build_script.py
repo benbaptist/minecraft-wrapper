@@ -9,7 +9,7 @@ import time
 import json
 import hashlib
 import argparse
-import zipfile
+# import zipfile
 import subprocess
 
 parser = argparse.ArgumentParser(

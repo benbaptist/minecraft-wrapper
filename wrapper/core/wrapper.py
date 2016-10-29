@@ -77,7 +77,7 @@ class Wrapper:
         self.xplayer = ConsolePlayer(self)  # future plan to expose this to api
 
         if not readline:
-            self.log.warning("'readline' not imported.")
+            self.log.warning("'readline' not imported.  This is needed for proper console functioning")
 
         if not requests and self.config["Proxy"]["proxy-enabled"]:
             self.log.error("You must have the requests module installed to run in proxy mode!")
@@ -152,7 +152,7 @@ class Wrapper:
             t.start()
 
         self.javaserver.handle_server()
-        # handle_server always runs, even if the server is not started
+        # handle_server always runs, even if the actual server is not started
 
         self.plugins.disableplugins()
         self.log.info("Plugins disabled")
