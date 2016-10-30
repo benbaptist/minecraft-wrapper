@@ -1,3 +1,14 @@
+Build #130 [0.8.12]
+- Added /kill command to console and improved error checking some more.
+- Added api.minecraft function "configWrapper" to allow plugin control of wrapper configuration
+- Added /config command to console (and in-game OPs) to modify the wrapper properties configuration.
+- improved the readout display for console operators on some help items that use the console player.message function.
+- made helpers.format_bytes more generic for future use in other modules (like web or IRC).
+
+Build #129 [0.8.11]
+- Added feature to display memory in both raw bytes and a shortened, more readable, version using appropriate
+ units (KiB, MiB, GiB).
+
 Build #128 [0.8.11]
 - Refactor core.plugins.py, modularizing the various portions of the 'eachsecond' method for external use.
 - create api.backups.py as a publicly accessible `self.api.backups` backup interface for plugins:
@@ -19,7 +30,7 @@ Build #128 [0.8.11]
 ```
 
 Build #127 [0.8.10]
-- This was a previous snake_case build of build 128.
+- This was a previous snake_case build of build 128's Backups API.
 ```
 Wrapper's orginal convention throughtout the codebase has been camelCase from the begining.  The internal code
 should be converted (going forward) to snake_case per PEP-8.
@@ -29,7 +40,7 @@ However, PEP-8 also acknowledges that:
 backwards compatibility.'
 
 This is certainly the case with the wrapper plugin API.  Converting the entire plugin API to snake_case will
-break all existing plugins.  Creating this API with snake_case will create an inconsitent `look 'n feel` within
+break all existing plugins.  Creating the backups API with snake_case will create an inconsitent `look 'n feel` within
 the API.  The only other alternative would be to create excessive wrappers between oldFunctions and new_functions
 (and does not serve to remove the oldFunctions anyway!)
 ```
