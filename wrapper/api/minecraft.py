@@ -10,6 +10,7 @@ from core.nbt import NBTFile
 from core.entities import Items
 
 
+# noinspection PyPep8Naming
 # noinspection PyBroadException
 class Minecraft:
     """ This class contains functions related to in-game features directly. These methods are
@@ -21,9 +22,46 @@ class Minecraft:
         self.log = wrapper.log
         self._encoding = wrapper.config["General"]["encoding"]
         self.serverpath = wrapper.config["General"]["server-directory"]
+        self.interfacecfg = self.wrapper.configManager
 
         blockdata = Items()
         self.blocks = blockdata.itemslist
+
+    def configWrapper(self, section, config_item, new_value, reload_file=False):
+        """  **New feature version 0.8.12**
+        Edits the Wrapper.Properties.json file
+        :param section:
+        :param config_item:
+        :param new_value:
+        :param reload_file:
+        :return: True or False, indicating Success or Failure
+        """
+
+        # detect and correct lists
+        try:
+            if len(new_value.split(',')) > 1:
+                new_value = new_value.split(",")  # may need additional quote stripping?
+        except:
+            pass
+        # detect and correct string booleans
+        if new_value in ("true", "True"):
+            new_value = True
+        if new_value in ("false", "False"):
+            new_value = False
+        # detect and correct string integers
+        try:
+            if str(int(new_value)) == new_value:
+                new_value = int(new_value)
+        except:
+            pass
+
+        if self.interfacecfg.change_item(section, config_item, new_value):
+            self.interfacecfg.save()
+            if reload_file:
+                self.interfacecfg.loadconfig()
+            return True
+        self.log.error("API.Minecraft configWrapper failed.")
+        return False
 
     def isServerStarted(self):
         """

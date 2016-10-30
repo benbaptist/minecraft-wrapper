@@ -73,6 +73,10 @@ class Commands:
             self.command_entities(player, payload)
             return True
 
+        if str(payload["command"]).lower() in ("config", "con", "prop", "property", "properties"):
+            self.command_setconfig(player, payload)
+            return True
+
         if str(payload["command"]).lower() == "ban":
             self.command_banplayer(player, payload)
             return True
@@ -123,6 +127,44 @@ class Commands:
         # Changed the polarity to make sense and allow commands to have return values
         # returning False here will mean no plugin or wrapper command was parsed (so it passes to server).
         return False
+
+    def command_setconfig(self, player, payload):
+        if player.isOp() < 4:  # only allowed for console and high level OP
+            player.message({"text": "Unknown command. Try /help for a list of commands", "color": "red"})
+            return
+        commargs = payload["args"]
+        section = getargs(commargs, 0)
+        item = getargs(commargs, 1)
+        if section.lower() in ("sections", "section", "header", "headers"):
+            sections = ""
+            for headers in self.config:
+                sections += "%s\n" % headers
+            player.message("&6Config sections")
+            player.message("&6_______________")
+            player.message("&9%s" % sections)
+            return
+        if section in self.config and item.lower() in ("item", "items", "list", "show"):
+            items = ""
+            for item in self.config[section]:
+                items += "%s: %s\n" % (item, self.config[section][item])
+            player.message("&6Items in section %s:" % section)
+            player.message("&6__________________________________________________")
+            player.message("&9%s" % items)
+            return
+        if section.lower() == "help" or len(commargs) < 3:
+            # readout("Usage:", "/config <section> <item> <desired value> [reload?(T/F)]")
+            player.message("&cUsage: /config <section> <item> <desired value> [reload?(T/F)]")
+            player.message("&c - Config headers and items are case-sensative!")
+            player.message("&c       /config sections - view section headers")
+            player.message("&c       /config <section> items - view section items")
+            return
+        newvalue = getargs(commargs, 2)
+        reloadfile = False
+        if len(commargs) > 3:
+            optionalreload = getargs(commargs, 3)
+            if optionalreload.lower() in ("t", "true", "y", "yes"):
+                reloadfile = True
+        self.wrapper.api.minecraft.configWrapper(section, item, newvalue, reloadfile)
 
     def command_banplayer(self, player, payload):
         if player.isOp() > 2:  # specify an op level for the command.
@@ -285,7 +327,8 @@ class Commands:
             elif subcommand in ("mem", "memory"):
                 server_bytes = self.wrapper.javaserver.getmemoryusage()
                 if server_bytes:
-                    player.message("&cServer Memory: %s)" % format_bytes(server_bytes))
+                    amount, units = format_bytes(server_bytes)
+                    player.message("&cServer Memory: %s %s (%s bytes)" % (amount, units, server_bytes))
                 else:
                     player.message("&cError: Couldn't retrieve memory usage for an unknown reason")
             elif subcommand == "random":

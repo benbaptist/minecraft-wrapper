@@ -46,6 +46,13 @@ try:  # Manually define a raw input builtin shadow that works indentically on PY
 except NameError:
     rawinput = input
 
+# javaserver constants
+OFF = 0  # this is the start mode.
+STARTING = 1
+STARTED = 2
+STOPPING = 3
+FROZEN = 4
+
 
 class Wrapper:
 
@@ -189,6 +196,8 @@ class Wrapper:
                 sys.exit()
             elif command in ("/stop", "stop"):
                 self.javaserver.stop("Stopping server...")
+            elif command in ("/kill", "kill"):
+                self.javaserver.kill("Server killed at Console...")
             elif command in ("/start", "start"):
                 self.javaserver.start()
             elif command in ("/restart", "restart"):
@@ -207,7 +216,8 @@ class Wrapper:
                 except Exception as ex:
                     self.log.exception("Something went wrong when trying to fetch memory usage! (%s)", ex)
                 else:
-                    self.log.info("Server Memory Usage: %s)" % format_bytes(get_bytes))
+                    amount, units = format_bytes(get_bytes)
+                    self.log.info("Server Memory Usage: %s %s (%s bytes)" % (amount, units, get_bytes))
             elif command in ("/raw", "raw"):
                 try:
                     if len(getargsafter(consoleinput[1:].split(" "), 1)) > 0:
@@ -263,6 +273,8 @@ class Wrapper:
                 else:
                     readout("ERROR - ", "Entity tracking requires proxy mode. "
                                         "(proxy mode is not on).", separator="", pad=10)
+            elif command.lower() in ("/config", "/con", "/prop", "/property", "/properties"):
+                self.runwrapperconsolecommand("config", allargs)
 
             # TODO Add more commands below here, below the original items:
             # TODO __________________
@@ -287,12 +299,14 @@ class Wrapper:
                 readout("/start", "Start the minecraft server.")
                 readout("/restart", "Restarts the minecraft server.")
                 readout("/halt", "Shutdown Wrapper.py completely.")
+                readout("/kill", "Force kill the server without saving.")
                 readout("/freeze", "Temporarily locks the server up until /unfreeze is executed\n"
                                    "                  (Only works on *NIX servers).")
                 readout("/unfreeze", "Unlocks a frozen state server (Only works on *NIX servers).")
                 readout("/mem", "Get memory usage of the server (Only works on *NIX servers).")
                 readout("/raw [command]", "Send command to the Minecraft Server. Useful for Forge\n"
                                           "                  commands like '/fml confirm'.")
+                readout("/config (/properties)", "Change wrapper.properties (type /config help for more..)")
                 readout("/version", self.getbuildstring())
                 readout("/entity", "Work with entities (run /entity for more...)")
                 readout("/bans", "Display the ban help page.")
@@ -726,7 +740,7 @@ class Wrapper:
 
 class ConsolePlayer:
     """
-    This class minimally represents the console as a player so that console and use wrapper/plugin commands.
+    This class minimally represents the console as a player so that the console can use wrapper/plugin commands.
     """
 
     def __init__(self, wrapper):
@@ -765,6 +779,9 @@ class ConsolePlayer:
     @staticmethod
     def message(message):
         display = str(message)
+        # remove "&c" type color formatters from console player message
+        if display[0:1] == "&":
+            display = display[2:]
         readout(display, "", "")
         pass
 

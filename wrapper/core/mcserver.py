@@ -211,6 +211,10 @@ class MCServer:
         if self.state in (STOPPING, OFF):
             self.log.warning("The server is not running... :?")
             return
+        if self.state == FROZEN:
+            self.log.warning("The server is currently frozen.\n"
+                             "To stop it, you must /unfreeze it first")
+            return
         self.log.info("Stopping Minecraft server with reason: %s", reason)
         self.changestate(STOPPING, reason)
         self.serverbooted = False

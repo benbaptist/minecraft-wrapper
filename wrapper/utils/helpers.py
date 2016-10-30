@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import division
+
 import os
 import errno
 import sys
@@ -124,7 +126,8 @@ def find_in_json(jsonlist, keyname, searchvalue):
 
 
 def format_bytes(number_raw_bytes):
-    large_bytes = float(number_raw_bytes) / 1073741824
+    """ takes a raw bytes number and returns an appropriate 4 place digit number > 1.0 and the corresponding units"""
+    large_bytes = number_raw_bytes / 1073741824
     units = "GiB"
     if large_bytes < 1.0:
         large_bytes *= 1024
@@ -132,7 +135,8 @@ def format_bytes(number_raw_bytes):
     if large_bytes < 1.0:
         large_bytes *= 1024
         units = "KiB"
-    return "%.4g %s (%d bytes)" % (large_bytes, units, number_raw_bytes)
+    # return string tuple (number, units)
+    return ("%.4g" % large_bytes), ("%s" % units)
 
 
 def getargs(arginput, i):

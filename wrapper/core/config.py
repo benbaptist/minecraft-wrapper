@@ -188,5 +188,17 @@ class Config:
                 "Updated wrapper.properties.json file - check and edit configuration if needed and start again.")
             sys.exit()
 
+    def change_item(self, section, item, desired_value):
+        if section in self.config:
+            if item in self.config[section]:
+                self.config[section][item] = desired_value
+                return True
+            else:
+                self.log.error("Item '%s' not found in section '%s' of the wrapper.properties.json" % (item, section))
+                return False
+        else:
+            self.log.error("Section '%s' does not exist in the wrapper.properties.json" % section)
+            return False
+
     def save(self):
         putjsonfile(self.config, "wrapper.properties", sort=True, encodedas="UTF-8")
