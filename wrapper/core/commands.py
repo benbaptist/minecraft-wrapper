@@ -8,7 +8,7 @@ import random
 import time
 import json
 
-from utils.helpers import getargs, getargsafter, secondstohuman, showpage, readout
+from utils.helpers import format_bytes, getargs, getargsafter, secondstohuman, showpage, readout
 
 
 class Commands:
@@ -283,8 +283,9 @@ class Commands:
                 player.message("&cHalting Wrapper.py... goodbye!")
                 self.wrapper.shutdown()
             elif subcommand in ("mem", "memory"):
-                if self.wrapper.javaserver.getmemoryusage():
-                    player.message("&cServer Memory: %d bytes" % self.wrapper.javaserver.getmemoryusage())
+                server_bytes = self.wrapper.javaserver.getmemoryusage()
+                if server_bytes:
+                    player.message("&cServer Memory: %s)" % format_bytes(server_bytes))
                 else:
                     player.message("&cError: Couldn't retrieve memory usage for an unknown reason")
             elif subcommand == "random":
