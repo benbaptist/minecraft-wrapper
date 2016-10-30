@@ -15,7 +15,7 @@ import core.buildinfo as version_info
 import proxy.base as proxy
 import management.web as manageweb
 
-from utils.helpers import getargs, getargsafter, readout
+from utils.helpers import format_bytes, getargs, getargsafter, readout
 from api.base import API
 from core.mcuuid import MCUUID
 from core.config import Config
@@ -201,11 +201,13 @@ class Wrapper:
                 self.listplugins()
             elif command in ("/mem", "/memory", "mem", "memory"):
                 try:
-                    self.log.info("Server Memory Usage: %d bytes", self.javaserver.getmemoryusage())
+                    get_bytes = self.javaserver.getmemoryusage()
                 except UnsupportedOSException as e:
                     self.log.error(e)
                 except Exception as ex:
                     self.log.exception("Something went wrong when trying to fetch memory usage! (%s)", ex)
+                else:
+                    self.log.info("Server Memory Usage: %s)" % format_bytes(get_bytes))
             elif command in ("/raw", "raw"):
                 try:
                     if len(getargsafter(consoleinput[1:].split(" "), 1)) > 0:

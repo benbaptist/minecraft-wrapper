@@ -123,6 +123,18 @@ def find_in_json(jsonlist, keyname, searchvalue):
     return None
 
 
+def format_bytes(number_raw_bytes):
+    large_bytes = float(number_raw_bytes) / 1073741824
+    units = "GiB"
+    if large_bytes < 1.0:
+        large_bytes *= 1024
+        units = "MiB"
+    if large_bytes < 1.0:
+        large_bytes *= 1024
+        units = "KiB"
+    return "%.4g %s (%d bytes)" % (large_bytes, units, number_raw_bytes)
+
+
 def getargs(arginput, i):
     if not i >= len(arginput):
         return arginput[i]
