@@ -770,7 +770,7 @@ class ConsolePlayer:
 
     @staticmethod
     def isOp():
-        return 3
+        return 4
 
     @staticmethod
     def isOp_fast():
