@@ -196,7 +196,7 @@ class Wrapper:
                 sys.exit()
             elif command in ("/stop", "stop"):
                 self.javaserver.stop("Stopping server...")
-            elif command in ("/kill", "kill"):
+            elif command == "/kill":  # "kill" (with no slash) is a server command.
                 self.javaserver.kill("Server killed at Console...")
             elif command in ("/start", "start"):
                 self.javaserver.start()
@@ -351,7 +351,8 @@ class Wrapper:
             ("/reload", "Reload all plugins.", None),
             ("/permissions <groups/users/RESET>",
              "Command used to manage permission groups and users, add permission nodes, etc.", None),
-            ("/Entity <count/kill> [eid] [count]", "/entity help/? for more help.. ", None),
+            ("/entity <count/kill> [eid] [count]", "/entity help/? for more help.. ", None),
+            ("/config", "Change wrapper.properties (type /config help for more..)", None),
             # Minimum server version for commands to appear is 1.7.6 (registers perm later in serverconnection.py)
             # These won't appear if proxy mode is not on (since serverconnection is part of proxy).
             ("/ban <name> [reason..] [d:<days>/h:<hours>]",
