@@ -43,11 +43,10 @@ class Commands:
     def playercommand(self, payload):
         player = payload["player"]
         self.log.info("%s executed: /%s %s", payload["player"], payload["command"], " ".join(payload["args"]))
-
         # We should get of this by creating a wrapper command registering set
-        if str(payload["command"]).lower in ("plugins", "pl"):
+        if str(payload["command"]).lower() in ("plugins", "pl"):
             self.command_plugins(player)
-
+            return True
         # make sure any command returns a True-ish item, or the chat packet will continue to the server
         if payload["command"] == "wrapper":
             self.command_wrapper(player, payload)
@@ -59,7 +58,7 @@ class Commands:
 
         if payload["command"] in ("help", "?"):
             self.command_help(player, payload)
-            return
+            return True
 
         if payload["command"] == "playerstats":
             self.command_playerstats(player, payload)
@@ -362,27 +361,44 @@ class Commands:
             for helpitem in plugin:
                 helpgroups.append({"name": helpitem, "description": plugin[helpitem][0]})
         if len(getargs(payload["args"], 1)) > 0:
-            group = getargs(payload["args"], 0).lower()
+            group = getargs(payload["args"], 0)
             page = getargs(payload["args"], 1)
         else:
             group = ""
             page = getargs(payload["args"], 0)
         try:
             page = int(page) - 1
-        except:  # We cant assume an error type here at this point
+        except:
             if len(page) > 0:
-                group = page.lower()
+                group = page
             page = 0
 
+        # This controls cases where user typed '/help <plugin>'
         if len(group) > 0:
-            if group == "minecraft":
+            if group == "Minecraft":  # if player typed (or clicked) '/help Minecraft [page]'
                 player.execute("help %d" % (page + 1))
+                time.sleep(.1)
+                player.message({
+                    "text": "",
+                    "extra": [{
+                        "text": "Page %s" % (page + 2),
+                        "color": "blue",
+                        "underlined": True,
+                        "clickEvent": {
+                            "action": "run_command",
+                            "value": "/help Minecraft %d" % (page + 2)
+                        }
+                    }, {
+                        "text": " "
+                    }]
+                })
             else:
                 # Padding, for the sake of making it look a bit nicer
                 player.message(" ")
                 for hid in self.wrapper.help:
                     for groupName in self.wrapper.help[hid]:
-                        if groupName.lower() == group:
+                        #  if groupName.lower() == group:
+                        if groupName == group:
                             group = self.wrapper.help[hid][groupName][1]
                             items = []
                             for i in group:
@@ -418,14 +434,19 @@ class Commands:
                             showpage(player, page, items, "/help %s" % groupName, 4)
                             return
                 player.message("&cThe help group '%s' does not exist." % group)
+
+        # Plain old /help - print list of help groups
         else:
             items = []
             for v in helpgroups:
                 items.append({
                     "text": "",
                     "extra": [{
-                        "text": v["name"],
+                        "text": "%s\n" % v["name"],
                         "color": "gold",
+                    }, {
+                        "text": "/help %s 1" % v["name"],
+                        "color": "blue",
                         "clickEvent": {
                             "action": "run_command",
                             "value": "/help " + v["name"]
@@ -434,7 +455,7 @@ class Commands:
                         "text": " - " + v["description"]
                     }]
                 })
-            showpage(player, page, items, "/help", 8)
+            showpage(player, page, items, "/help", 4)
         return False
 
     def command_playerstats(self, player, payload):

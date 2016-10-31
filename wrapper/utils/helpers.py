@@ -396,8 +396,8 @@ def secondstohuman(seconds):
 
 
 def showpage(player, page, items, command, perpage):
-    pagecount = len(items) / perpage
-    if (int(len(items) / perpage)) != (float(len(items)) / perpage):
+    pagecount = len(items) // perpage
+    if (int(len(items) // perpage)) != (float(len(items)) / perpage):
         pagecount += 1
     if page >= pagecount or page < 0:
         player.message("&cNo such page '%s'!" % str(page + 1))
@@ -418,7 +418,7 @@ def showpage(player, page, items, command, perpage):
         }]
     })
     for i, v in enumerate(items):
-        if not i / perpage == page:
+        if not i // perpage == page:
             continue
         player.message(v)
     if pagecount > 1:
