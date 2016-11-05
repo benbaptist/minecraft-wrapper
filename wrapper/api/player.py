@@ -154,7 +154,8 @@ class Player:
     def _read_ops_file(self):
         """
         Internal private method - Not intended as a part of the public player object API
-        Returns: contents of ops.json as a dict
+        Returns: contents of ops.json as dictionary
+        :rtype: Dictionary
         """
         ops = False
         if self.javaserver.protocolVersion > mcpackets.PROTOCOL_1_7:  # 1.7.6 or greater use ops.json
@@ -708,4 +709,4 @@ class Player:
 
         Returns: Nothing
         """
-        self.client.connect(address, port)
+        self.client.connect_to_server(address, port)

@@ -7,7 +7,6 @@ import threading
 import time
 import json
 import hashlib
-import uuid
 import random
 from socket import error as socket_error
 
@@ -76,7 +75,7 @@ _NULL = 100
 
 
 class Client:
-    def __init__(self, sock, addr, wrapper, publickey, privatekey, proxy):
+    def __init__(self, sock, addr, wrapper, publickey, privatekey):
         """
         Handle the client connection.
         It parses "SERVER BOUND" packets from client.
@@ -97,7 +96,6 @@ class Client:
         self.wrapper = wrapper
         self.publicKey = publickey
         self.privateKey = privatekey
-        self.proxy = proxy
 
         self.log = wrapper.log
         self.config = wrapper.config
@@ -223,7 +221,7 @@ class Client:
             ip: server IP
             port: server port
 
-        this is the connection to the server.
+        this is the connection to the server/other wrapper instance.
         """
 
         self.clientSettingsSent = False
@@ -298,7 +296,7 @@ class Client:
         time.sleep(1)
         self.close()
 
-    def getPlayerObject(self):
+    def getplayerobject(self):
         if self.username in self.wrapper.javaserver.players:
             return self.wrapper.javaserver.players[self.username]
         self.log.error("In playerlist:\n%s\nI could not locate player: %s\n"
@@ -306,7 +304,7 @@ class Client:
                        self.wrapper.javaserver.players, self.username)
         return False
 
-    def editSign(self, position, line1, line2, line3, line4, pre18=False):
+    def editsign(self, position, line1, line2, line3, line4, pre18=False):
         if pre18:
             x = position[0]
             y = position[1]
@@ -409,7 +407,7 @@ class Client:
                 #    return False
 
                 payload = self.wrapper.events.callevent("player.rawMessage", {
-                    "player": self.getPlayerObject(),
+                    "player": self.getplayerobject(),
                     "message": chatmsg
                 })
 
@@ -423,7 +421,7 @@ class Client:
                 # determine if this is a command. act appropriately
                 if chatmsg[0] == "/":  # it IS a command of some kind
                     if self.wrapper.events.callevent("player.runCommand", {
-                            "player": self.getPlayerObject(),
+                            "player": self.getplayerobject(),
                             "command": chatmsg.split(" ")[0][1:].lower(),
                             "args": chatmsg.split(" ")[1:]}):
                         return False  # wrapper processed this command.. it goes no further
@@ -490,7 +488,7 @@ class Client:
                 # finished digging
                 if data[0] == 2:
                     if not self.wrapper.events.callevent("player.dig", {
-                        "player": self.getPlayerObject(),
+                        "player": self.getplayerobject(),
                         "position": position,
                         "action": "end_break",
                         "face": data[4]
@@ -501,7 +499,7 @@ class Client:
                 if data[0] == 0:
                     if self.gamemode != 1:
                         if not self.wrapper.events.callevent("player.dig", {
-                            "player": self.getPlayerObject(),
+                            "player": self.getplayerobject(),
                             "position": position,
                             "action": "begin_break",
                             "face": data[4]
@@ -509,7 +507,7 @@ class Client:
                             return False
                     else:
                         if not self.wrapper.events.callevent("player.dig", {
-                            "player": self.getPlayerObject(),
+                            "player": self.getplayerobject(),
                             "position": position,
                             "action": "end_break",
                             "face": data[4]
@@ -519,14 +517,14 @@ class Client:
                     if self.position != (0, 0, 0):
                         playerpos = self.position
                         if not self.wrapper.events.callevent("player.interact", {
-                            "player": self.getPlayerObject(),
+                            "player": self.getplayerobject(),
                             "position": playerpos,
                             "action": "finish_using"
                         }):
                             return False
 
             elif pkid == self.pktSB.PLAYER_BLOCK_PLACEMENT:  # Player Block Placement
-                player = self.getPlayerObject()
+                player = self.getplayerobject()
                 hand = 0  # main hand
                 helditem = player.getHeldItem()
 
@@ -599,7 +597,7 @@ class Client:
                 data = self.packet.readpkt([_REST])
                 # "rest:pack")
                 # self.log.trace("(PROXY CLIENT) -> Parsed USE_ITEM packet:\n%s", data)
-                player = self.getPlayerObject()
+                player = self.getplayerobject()
                 position = self.lastplacecoords
                 if "pack" in data:
                     if data[0] == '\x00':
@@ -637,7 +635,7 @@ class Client:
                 l3 = data[5]
                 l4 = data[6]
                 payload = self.wrapper.events.callevent("player.createsign", {
-                    "player": self.getPlayerObject(),
+                    "player": self.getplayerobject(),
                     "position": position,
                     "line1": l1,
                     "line2": l2,
@@ -658,7 +656,7 @@ class Client:
                     if "line4" in payload:
                         l4 = payload["line4"]
 
-                self.editSign(position, l1, l2, l3, l4, pre_18)
+                self.editsign(position, l1, l2, l3, l4, pre_18)
                 return False
 
             elif pkid == self.pktSB.CLIENT_SETTINGS:  # read Client Settings
@@ -703,7 +701,7 @@ class Client:
                     data = [False, 0, 0, 0, 0, 0, 0]
 
                 datadict = {
-                            "player": self.getPlayerObject(),
+                            "player": self.getplayerobject(),
                             "wid": data[0],  # window id ... always 0 for inventory
                             "slot": data[1],  # slot number
                             "button": data[2],  # mouse / key button
@@ -760,7 +758,7 @@ class Client:
                 data = self.packet.readpkt([_UUID, _NULL])  # solves the uncertainty of dealing with what gets returned.
                 # ("uuid:target_player")
                 # self.log.trace("(PROXY CLIENT) -> Parsed SPECTATE packet:\n%s", data)
-                for client in self.proxy.clients:
+                for client in self.wrapper.proxy.clients:
                     if data[0] == client.uuid:
                         self.server.packet.sendpkt(self.pktSB.SPECTATE, [_UUID], [client.serveruuid])
                         return False
@@ -848,9 +846,8 @@ class Client:
                             self.username = currentname
                     self.serveruuid = self.wrapper.getuuidfromname(self.username)
                 else:
-                    # TODO: See if this can be accomplished via MCUUID
-                    self.uuid = uuid.uuid3(uuid.NAMESPACE_OID, "OfflinePlayer:%s" % self.username)  # no space in name
-                    self.log.debug("Client login with no proxymode - 'self.uuid = uuid.uuid3...'")
+                    self.wrapper.getuuidfromname(self.username)
+                    self.log.debug("Client login with no proxymode - 'self.uuid = OfflinePlayer:<name>'")
 
                 #  This needs re-worked.
                 # if self.config["Proxy"]["convert-player-files"]:  # Rename UUIDs accordingly
@@ -890,13 +887,13 @@ class Client:
                 # player ban code.  Uses vanilla json files - In wrapper proxy mode, supports
                 #       temp-bans (the "expires" field of the ban record is used!)
                 #       Actaully, the vanilla server does too... there is just no command to fill it in.
-                if self.proxy.isipbanned(self.ip):
+                if self.wrapper.proxy.isipbanned(self.ip):
                     self.log.info("Player %s tried to connect from banned ip: %s", self.username, self.ip)
                     self.state = HANDSHAKE
                     self.disconnect("Your address is IP-banned from this server!.")
                     return False
-                if self.proxy.isuuidbanned(self.uuid.__str__()):
-                    banreason = self.proxy.getuuidbanreason(self.uuid.__str__())  # was self.wrapper.proxy... ?
+                if self.wrapper.proxy.isuuidbanned(self.uuid.__str__()):
+                    banreason = self.wrapper.proxy.getuuidbanreason(self.uuid.__str__())  # was self.wrapper.proxy... ?
                     self.log.info("Banned player %s tried to connect:\n %s" % (self.username, banreason))
                     self.state = HANDSHAKE
                     self.disconnect("Banned: %s" % banreason)
@@ -919,7 +916,7 @@ class Client:
                     return False
 
                 # Put player object and client into server. (player login will be called later by mcserver.py)
-                self.proxy.clients.append(self)
+                self.wrapper.proxy.clients.append(self)
 
                 if self.username not in self.wrapper.javaserver.players:
                     self.wrapper.javaserver.players[self.username] = Player(self.username, self.wrapper)
