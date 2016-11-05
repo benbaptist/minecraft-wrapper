@@ -177,18 +177,18 @@ class ServerConnection:
             self.client.server = None
             self.proxy.removestaleclients()
 
-    def getPlayerByEID(self, eid):
+    def getplayerby_eid(self, eid):
         for client in self.wrapper.proxy.clients:
             if client.servereid == eid:
-                return self.getPlayerContext(client.username, calledby="getPlayerByEID")
+                return self.get_player_context(client.username, calledby="getplayerby_eid")
         self.log.debug("Failed to get any player by client Eid: %s", eid)
         return False
 
-    def getPlayerContext(self, username, calledby=None):
+    def get_player_context(self, username, calledby=None):
         try:
             return self.wrapper.javaserver.players[username]
         except Exception as e:  # This could be masking an issue and would result in "False" player objects
-            self.log.error("getPlayerContext (called by: %s) failed to get player %s: \n%s", calledby, username, e)
+            self.log.error("get_player_context (called by: %s) failed to get player %s: \n%s", calledby, username, e)
             return False
 
     def flush_loop(self):
@@ -228,7 +228,7 @@ class ServerConnection:
                 except Exception as e:
                     return
 
-                payload = self.wrapper.events.callevent("player.chatbox", {"player": self.client.getPlayerObject(),
+                payload = self.wrapper.events.callevent("player.chatbox", {"player": self.client.getplayerobject(),
                                                                            "json": data})
 
                 if payload is False:  # reject the packet .. no chat gets sent to the client
@@ -281,7 +281,7 @@ class ServerConnection:
                 #  javaserver.spawnPoint doesn't exist.. this is player spawnpoint anyway... ?
                 # self.wrapper.javaserver.spawnPoint = data[0]
                 self.client.position = data[0]
-                self.wrapper.events.callevent("player.spawned", {"player": self.client.getPlayerObject()})
+                self.wrapper.events.callevent("player.spawned", {"player": self.client.getplayerobject()})
                 # self.log.trace("(PROXY SERVER) -> Parsed SPAWN_POSITION packet:\n%s", data[0])
 
             elif pkid == self.pktCB.RESPAWN:
@@ -310,7 +310,7 @@ class ServerConnection:
                 # self.log.trace("(PROXY SERVER) -> Parsed USE_BED packet:\n%s", data)
                 if data[0] == self.client.servereid:
                     self.client.bedposition = data[0]  # get the players beddy-bye location!
-                    self.wrapper.events.callevent("player.usebed", {"player": self.getPlayerByEID(data[0])})
+                    self.wrapper.events.callevent("player.usebed", {"player": self.getplayerby_eid(data[0])})
                     # There is no reason to be fabricating a new packet from a non-existent client.eid
                     # self.client.packet.sendpkt(self.pktCB.USE_BED, [_VARINT, _POSITION],
                     #                            (self.client.eid, data[1]))
@@ -443,7 +443,7 @@ class ServerConnection:
                         leash = False
                 entityeid = data[0]  # rider, leash holder, etc
                 vehormobeid = data[1]  # vehicle, leashed entity, etc
-                player = self.getPlayerByEID(entityeid)
+                player = self.getplayerby_eid(entityeid)
                 # self.log.trace("(PROXY SERVER) -> Parsed ATTACH_ENTITY packet:\n%s", data)
 
                 if player is None:
@@ -613,7 +613,7 @@ class ServerConnection:
 
                 # read first level and repack
                 pass1 = self.packet.readpkt(parser_one)
-                isplayer = self.getPlayerByEID(pass1[0])
+                isplayer = self.getplayerby_eid(pass1[0])
                 if not isplayer:
                     return True
                 raw += writer_one(pass1[0])
@@ -632,7 +632,7 @@ class ServerConnection:
                         lowdata = self.packet.readpkt(parser_three)
                         print(lowdata)
                         packetuuid = lowdata[0]
-                        playerclient = self.client.proxy.getclientbyofflineserveruuid(packetuuid)
+                        playerclient = self.wrapper.proxy.getclientbyofflineserveruuid(packetuuid)
                         if playerclient:
                             raw += self.packet.send_uuid(playerclient.uuid.hex)
                         else:
@@ -652,7 +652,7 @@ class ServerConnection:
                     z = 0
                     while z < lenhead:
                         serveruuid = self.packet.readpkt([_UUID])[0]
-                        playerclient = self.client.proxy.getclientbyofflineserveruuid(serveruuid)
+                        playerclient = self.wrapper.proxy.getclientbyofflineserveruuid(serveruuid)
                         if not playerclient:
                             z += 1
                             continue

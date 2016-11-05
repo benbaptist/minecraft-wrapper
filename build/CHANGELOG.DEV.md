@@ -1,3 +1,10 @@
+Build #132 [0.8.12]
+- Fix circular-referencing Client() class- the final argument to Client() was the client's own instance (from proxy)
+- some minor refractors and edits here and there
+
+Build #131 [0.8.12]
+- Fix some broken help functionality
+
 Build #130 [0.8.12]
 - Added /kill command to console and improved error checking some more.
 - Added api.minecraft function "configWrapper" to allow plugin control of wrapper configuration

@@ -76,7 +76,7 @@ class Proxy:
                 continue
 
             # spur off client thread
-            client = Client(sock, addr, self.wrapper, self.publicKey, self.privateKey, self)
+            client = Client(sock, addr, self.wrapper, self.publicKey, self.privateKey)
             t = threading.Thread(target=client.handle, args=())
             t.daemon = True
             t.start()
