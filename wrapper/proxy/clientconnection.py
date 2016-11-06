@@ -101,6 +101,7 @@ class Client:
         self.config = wrapper.config
         self.packet = Packet(self.socket, self)
 
+        self.warning_about_deprecated_send = True
         self.verifyToken = encryption.generate_challenge_token()
         self.serverID = encryption.generate_server_id()
         self.MOTD = {}
@@ -129,7 +130,7 @@ class Client:
         self.ip = None  # this will store the client IP for use by player.py
         self.serveraddressplayeruses = None
         self.serverportplayeruses = None
-        self.lobbified = False
+        self.hubslave_spawned = False
 
         self.state = HANDSHAKE
 
@@ -203,12 +204,17 @@ class Client:
         return self.clientversion
 
     def send(self, packetid, xpr, payload):  # not supported. no docstring. For old code compatability purposes only.
+        if self.warning_about_deprecated_send:
+            self.warning_about_deprecated_send = False
+            self.log.warning("deprecated client.send() called.  Use client.packet.sendpkt for best performance."
+                             " Check your installed plugins for such usages. (Posix systems with grep use: grep"
+                             " -r 'client.send') ")
         self.log.debug("deprecated client.send() called.  Use client.packet.sendpkt for best performance.")
         self.packet.send(packetid, xpr, payload)
         pass
 
     def inittheplayer(self):
-        # so few items and so infrequently run that fussing with xrange/range PY3 difference is not needed.
+        # so few items and so infrequently run that fussing with xrange/range PY2 difference is not needed.
         for i in range(46):  # there are 46 items 0-45 in 1.9 (shield) versus 45 (0-44) in 1.8 and below.
             self.inventory[i] = None
         self.time_server_pinged = time.time()
@@ -223,7 +229,7 @@ class Client:
 
         this is the connection to the server/other wrapper instance.
         """
-
+        # TODO Between HERE....
         self.clientSettingsSent = False
         if self.server is not None:
             self.address = (ip, port)
@@ -232,6 +238,7 @@ class Client:
             self.server_temp = ServerConnection(self, self.wrapper, ip, port)
             try:
                 self.server_temp.connect()
+                # ..... TODO .........and HERE, client.islocal switched from True to False
                 self.server.close(kill_client=False)
                 self.server.client = None
                 self.server = self.server_temp
@@ -268,8 +275,7 @@ class Client:
                                        (self.clientversion, "localhost", self.config["Proxy"]["server-port"], 2))
         self.server.packet.sendpkt(0x00, [_STRING], [self.username])
 
-        # Turn this off for now.  This seems like it would also stop legit rain too.  I think the proper way to
-        #   do this is to keep track of the rain state of the server and send that instead.
+        # Turn this off for now.
         # if self.clientversion > mcpackets.PROTOCOL_1_8START:  # anti-rain hack for lobby return connections
         #    if self.config["Proxy"]["online-mode"]:
         #        self.packet.sendpkt(self.pktCB.CHANGE_GAME_STATE, [_UBYTE, _FLOAT], (1, 0))
@@ -288,11 +294,13 @@ class Client:
                            }
         else:
             jsonmessage = message  # server packets are read as json
-
+            self.log.debug("Disconnect message was from server.")
         if self.state == PLAY:
             self.packet.sendpkt(self.pktCB.DISCONNECT, [_JSON], [jsonmessage])
+            self.log.debug("upon disconnect, state was PLAY")
         else:
             self.packet.sendpkt(0x00, [_JSON], [message])
+            self.log.debug("upon disconnect, state was 'other' (sent 0x00)")
         time.sleep(1)
         self.close()
 
@@ -338,7 +346,61 @@ class Client:
     def parse(self, pkid):  # server - bound parse ("Client" class connection)
         if self.state == PLAY:
             if not self.isLocal:
+                if not self.hubslave_spawned:
+                    # try to get player to clear "loading terrain screen" so he can play.
+                    # TODO, if needed, make sure server console gathers the login position...
+                    x = self.position
+                    self.packet.sendpkt(self.pktCB.PLAYER_POSLOOK,
+                                        [_DOUBLE, _DOUBLE, _DOUBLE, _FLOAT, _FLOAT, _BYTE, _VARINT],
+                                        (x[0], x[1], x[2], 0, 0, 0, 0))
+                    self.hubslave_spawned = True
+
+            # This is the only packet that will be snooped by a non-local (hub) wrapper instance in play mode.
+            if pkid == self.pktSB.CHAT_MESSAGE:
+                data = self.packet.readpkt([_STRING])
+                # self.log.trace("(PROXY CLIENT) -> Parsed CHAT_MESSAGE packet with client state PLAY:\n%s", data)
+
+                if data is None:
+                    return False
+
+                # Get the packet chat message contents
+                chatmsg = data[0]
+
+                # This was probably what that huge try-except was for.....  # TODO this should prob go away anyway
+                if not self.isLocal and chatmsg in ("/lobby", "/hub"):
+                    self.server.close(reason="Lobbification", kill_client=False)
+                    self.address = None
+                    self.connect_to_server()
+                    self.isLocal = True
+                    return False
+
+                payload = self.wrapper.events.callevent("player.rawMessage", {
+                    "player": self.getplayerobject(),
+                    "message": chatmsg
+                })
+
+                # This part allows the player plugin event "player.rawMessage" to...
+                if not payload:
+                    return False  # ..reject the packet (by returning False)
+
+                if type(payload) == str:  # or, if it can return a substitute payload
+                    chatmsg = payload
+
+                # determine if this is a command. act appropriately
+                if chatmsg[0] == "/":  # it IS a command of some kind
+                    if self.wrapper.events.callevent("player.runCommand", {
+                            "player": self.getplayerobject(),
+                            "command": chatmsg.split(" ")[0][1:].lower(),
+                            "args": chatmsg.split(" ")[1:]}):
+                        return False  # wrapper processed this command.. it goes no further
+
+                # NOW we can send it (possibly modded)  on to server...
+                self.message(chatmsg)
+                return False  # and cancel this original packet
+
+            if not self.isLocal:  # speed up pass-through for lobby hub applications
                 return True
+
             if pkid == self.pktSB.KEEP_ALIVE:
                 if self.serverversion < mcpackets.PROTOCOL_1_8START:
                     data = self.packet.readpkt([_INT])
@@ -390,48 +452,6 @@ class Client:
                     self.clientSettingsSent = True
                 return False
 
-            elif pkid == self.pktSB.CHAT_MESSAGE:
-                data = self.packet.readpkt([_STRING])
-                # self.log.trace("(PROXY CLIENT) -> Parsed CHAT_MESSAGE packet with client state PLAY:\n%s", data)
-
-                if data is None:
-                    return False
-
-                # Get the packet chat message contents
-                chatmsg = data[0]
-
-                # This was probably what that huge try-except was for.....  # TODO this should prob go away anyway
-                # if not self.isLocal and chatmsg == "/lobby":  TODO playerConnect() broken anyway, so no lobbies
-                #    self.server.close(reason="Lobbification", kill_client=False)
-                #    self.address = None
-                #    self.connect_to_server()
-                #    self.isLocal = True
-                #    return False
-
-                payload = self.wrapper.events.callevent("player.rawMessage", {
-                    "player": self.getplayerobject(),
-                    "message": chatmsg
-                })
-
-                # This part allows the player plugin event "player.rawMessage" to...
-                if not payload:
-                    return False  # ..reject the packet (by returning False)
-
-                if type(payload) == str:  # or, if it can return a substitute payload
-                    chatmsg = payload
-
-                # determine if this is a command. act appropriately
-                if chatmsg[0] == "/":  # it IS a command of some kind
-                    if self.wrapper.events.callevent("player.runCommand", {
-                            "player": self.getplayerobject(),
-                            "command": chatmsg.split(" ")[0][1:].lower(),
-                            "args": chatmsg.split(" ")[1:]}):
-                        return False  # wrapper processed this command.. it goes no further
-
-                # NOW we can send it (possibly modded)  on to server...
-                self.message(chatmsg)
-                return False  # and cancel this original packet
-
             elif pkid == self.pktSB.PLAYER_POSITION:  # player position
                 if self.clientversion < mcpackets.PROTOCOL_1_8START:
                     data = self.packet.readpkt([_DOUBLE, _DOUBLE, _DOUBLE, _DOUBLE, _BOOL])
@@ -467,10 +487,6 @@ class Client:
                 # self.log.trace("(PROXY CLIENT) -> Parsed PLAYER_LOOK packet:\n%s", data)
 
             elif pkid == self.pktSB.PLAYER_DIGGING:  # Player Block Dig
-                # if not self.isLocal: disable these for now and come back to it later - I think these are for lobbies.
-                # such a construct should probably be done at the gamestate level.
-                #     return True
-
                 if self.clientversion < mcpackets.PROTOCOL_1_7:
                     data = None
                     position = data
@@ -773,7 +789,7 @@ class Client:
                 # "username"
                 self.username = data[0]
 
-                # just to be clear... this only refers to "proxy"s online mode, not the server.
+                # just to be clear... this only refers to wrapper's online mode, not the server.
                 if self.config["Proxy"]["online-mode"]:
                     if self.serverversion < 6:  # 1.7.x versions
                         # send to client 1.7
@@ -1019,15 +1035,7 @@ class Client:
                     if self.serverversion == self.clientversion and requestedstate == LOGIN:
                         # login start...
                         self.state = LOGIN
-                        self.lobbified = False
                         return True  # packet passes to server, which will also switch to Login
-
-                    if self.clientversion == 94:  # secret lobby login 15w51b
-
-                        # lobbified state does not interact with server
-                        self.lobbified = True
-                        self.state = LOGIN
-                        return False
 
                     if self.serverversion != self.clientversion:
                         self.disconnect("You're not running the same Minecraft version as the server!")
@@ -1071,7 +1079,7 @@ class Client:
                 self.log.debug("Closing Keep alive tracker thread for %s's client.", playername)
                 break
             time.sleep(1)
-            while self.state in (PLAY, LOBBY) and not self.abort:
+            while self.state in (PLAY, LOBBY) and not self.abort and self.isLocal:
 
                 # client expects < 20sec
                 if time.time() - self.time_server_pinged > 5:

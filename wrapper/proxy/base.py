@@ -86,9 +86,10 @@ class Proxy:
     def removestaleclients(self):
         for i, client in enumerate(self.clients):
             if self.clients[i].abort:
-                self.wrapper.javaserver.players[str(client.username)].abort = True
-                self.clients.pop(i)
-                del self.wrapper.javaserver.players[str(client.username)]
+                if str(client.username) in self.wrapper.javaserver.players:  # lobby code (in case player not here)
+                    self.wrapper.javaserver.players[str(client.username)].abort = True
+                    self.clients.pop(i)
+                    del self.wrapper.javaserver.players[str(client.username)]
 
     def pollserver(self):
         server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
