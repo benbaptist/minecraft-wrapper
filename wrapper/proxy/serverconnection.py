@@ -146,6 +146,16 @@ class ServerConnection:
         t.start()
 
     def close(self, reason="Disconnected", kill_client=True):
+        # if not self.client.isLocal and kill_client:  # Ben's cross-server hack
+        #    self.client.isLocal = True
+        #    message = {
+        #       "text": "Disconnected from server.",
+        #        "color": "red"
+        #    }
+        #    self.client.packet.sendpkt(self.pktCB.CHANGE_GAME_STATE, [_UBYTE, _FLOAT], (1, 0))  # "end raining"
+        #    self.client.packet.sendpkt(self.pktCB.CHAT_MESSAGE, [_STRING, _BYTE], (json.dumps(message), 0))
+        #    self.client.connect()
+        #    return
         self.abort = True
         self.packet = None
         self.log.debug("Disconnected proxy server connection. (%s)", self.username)
@@ -153,17 +163,6 @@ class ServerConnection:
             self.server_socket.close()
         except OSError:
             pass
-
-        if not self.client.isLocal and kill_client:  # Ben's cross-server hack
-            self.client.isLocal = True
-            message = {
-                "text": "Disconnected from server.",
-                "color": "red"
-            }
-            self.client.packet.sendpkt(self.pktCB.CHANGE_GAME_STATE, [_UBYTE, _FLOAT], (1, 0))  # "end raining"
-            self.client.packet.sendpkt(self.pktCB.CHAT_MESSAGE, [_STRING, _BYTE], (json.dumps(message), 0))
-            self.client.connect()
-            return
 
         # I may remove this later so the client can remain connected upon server disconnection
         #  - - -- - if re-activating code ;;;; update arguments!!   --- -- --
@@ -202,9 +201,11 @@ class ServerConnection:
         self.log.debug("server connection flush_loop thread ended")
 
     def parse(self, pkid):  # client - bound parse ("Server" class connection)
+        if not self.client.isLocal:
+            return True
         if self.state == PLAY:
             # handle keep alive packets from server... nothing special here; we will just keep the server connected.
-            if pkid == self.pktCB.KEEP_ALIVE:
+            if pkid == self.pktCB.KEEP_ALIVE and self.client.isLocal:
                 if self.version < mcpackets.PROTOCOL_1_8START:
                     # readpkt returns this as [123..] (a list with a single integer)
                     data = self.packet.readpkt([_INT])
@@ -215,7 +216,7 @@ class ServerConnection:
                 # self.log.trace("(PROXY SERVER) -> Parsed KEEP_ALIVE packet with server state 3 (PLAY)")
                 return False
 
-            elif pkid == self.pktCB.CHAT_MESSAGE:
+            elif pkid == self.pktCB.CHAT_MESSAGE and self.client.isLocal:
                 if self.version < mcpackets.PROTOCOL_1_8START:
                     parsing = [_STRING, _NULL]
                 else:
@@ -253,7 +254,7 @@ class ServerConnection:
                 else:  # no payload, nor was the packet rejected.. packet passes to the client (and his chat)
                     return True  # just gathering info with these parses.
 
-            elif pkid == self.pktCB.JOIN_GAME:
+            elif pkid == self.pktCB.JOIN_GAME and self.client.isLocal:
                 if self.version < mcpackets.PROTOCOL_1_9_1PRE:
                     data = self.packet.readpkt([_INT, _UBYTE, _BYTE, _UBYTE, _UBYTE, _STRING])
                     #    "int:eid|ubyte:gm|byte:dim|ubyte:diff|ubyte:max_players|string:level_type")
@@ -264,19 +265,16 @@ class ServerConnection:
                 self.client.gamemode = data[1]
                 self.client.dimension = data[2]
                 self.client.servereid = data[0]
-                # self.client.eid = data[0]  # This is the EID of the player on this particular server -
-                # not always the EID that the client is aware of.  $$ ST00 note: Why would the eid be different!!??
+                # self.client.eid = data[0]  # This is the EID of the player on the point-of-use server -
+                # not always the EID that the client is aware of.
 
-                # this is an attempt to clear the gm3 noclip issue on relogging.
-                # self.client.packet.sendpkt(self.pktCB.CHANGE_GAME_STATE, [_UBYTE, _FLOAT], (3, self.client.gamemode))
-
-            elif pkid == self.pktCB.TIME_UPDATE:
+            elif pkid == self.pktCB.TIME_UPDATE and self.client.isLocal:
                 data = self.packet.readpkt([_LONG, _LONG])
                 # "long:worldage|long:timeofday")
                 self.wrapper.javaserver.timeofday = data[1]
                 # self.log.trace("(PROXY SERVER) -> Parsed TIME_UPDATE packet:\n%s", data)
 
-            elif pkid == self.pktCB.SPAWN_POSITION:
+            elif pkid == self.pktCB.SPAWN_POSITION and self.client.isLocal:
                 data = self.packet.readpkt([_POSITION])
                 #  javaserver.spawnPoint doesn't exist.. this is player spawnpoint anyway... ?
                 # self.wrapper.javaserver.spawnPoint = data[0]
@@ -284,14 +282,14 @@ class ServerConnection:
                 self.wrapper.events.callevent("player.spawned", {"player": self.client.getplayerobject()})
                 # self.log.trace("(PROXY SERVER) -> Parsed SPAWN_POSITION packet:\n%s", data[0])
 
-            elif pkid == self.pktCB.RESPAWN:
+            elif pkid == self.pktCB.RESPAWN and self.client.isLocal:
                 data = self.packet.readpkt([_INT, _UBYTE, _UBYTE, _STRING])
                 # "int:dimension|ubyte:difficulty|ubyte:gamemode|level_type:string")
                 self.client.gamemode = data[2]
                 self.client.dimension = data[0]
                 # self.log.trace("(PROXY SERVER) -> Parsed RESPAWN packet:\n%s", data)
 
-            elif pkid == self.pktCB.PLAYER_POSLOOK:
+            elif pkid == self.pktCB.PLAYER_POSLOOK and self.client.isLocal:
                 # CAVEAT - The client and server bound packet formats are different!
                 if self.version < mcpackets.PROTOCOL_1_8START:
                     data = self.packet.readpkt([_DOUBLE, _DOUBLE, _DOUBLE, _FLOAT, _FLOAT, _BOOL])
@@ -304,7 +302,7 @@ class ServerConnection:
                 self.client.position = (data[0], data[1], data[2])  # not a bad idea to fill player position
                 # self.log.trace("(PROXY SERVER) -> Parsed PLAYER_POSLOOK packet:\n%s", data)
 
-            elif pkid == self.pktCB.USE_BED:
+            elif pkid == self.pktCB.USE_BED and self.client.isLocal:
                 data = self.packet.readpkt([_VARINT, _POSITION])
                 # "varint:eid|position:location")
                 # self.log.trace("(PROXY SERVER) -> Parsed USE_BED packet:\n%s", data)
@@ -315,7 +313,7 @@ class ServerConnection:
                     # self.client.packet.sendpkt(self.pktCB.USE_BED, [_VARINT, _POSITION],
                     #                            (self.client.eid, data[1]))
 
-            elif pkid == self.pktCB.SPAWN_PLAYER:
+            elif pkid == self.pktCB.SPAWN_PLAYER:  # embedded UUID -must parse.
                 # This packet  is used to spawn other players into a player client's world.
                 # is this packet does not arrive, the other player(s) will not be visible to the client
                 if self.version < mcpackets.PROTOCOL_1_8START:
@@ -338,12 +336,9 @@ class ServerConnection:
                     return False
                 # self.log.trace("(PROXY SERVER) -> Converted SPAWN_PLAYER packet:\n%s", dt)
 
-            elif pkid == self.pktCB.SPAWN_OBJECT:
-                # We really do not want to start parsing this unless we have a way to eliminate entities
-                # that get destroyed
-                if not self.wrapper.javaserver.world:  # that is what this prevents...
-                    # self.log.trace("(PROXY SERVER) -> did not parse SPAWN_OBJECT packet.")
-                    return True  # return now.. why parse something we are no going to use?
+            elif pkid == self.pktCB.SPAWN_OBJECT and self.client.isLocal:
+                if not self.wrapper.javaserver.world:
+                    return True  # return now if no object tracking
                 if self.version < mcpackets.PROTOCOL_1_9START:
                     dt = self.packet.readpkt([_VARINT, _NULL, _BYTE, _INT, _INT, _INT, _BYTE, _BYTE])
                     dt[3], dt[4], dt[5] = dt[3] / 32, dt[4] / 32, dt[5] / 32
@@ -360,9 +355,7 @@ class ServerConnection:
                 self.wrapper.javaserver.world.entities.update(newobject)
                 # self.log.trace("(PROXY SERVER) -> Parsed SPAWN_OBJECT packet:\n%s", dt)
 
-            elif pkid == self.pktCB.SPAWN_MOB:
-                # we are not going to do all the parsing work unless we are storing the entity data
-                # Storing this entity data has other issues; like removing stale items or "dead" items.
+            elif pkid == self.pktCB.SPAWN_MOB and self.client.isLocal:
                 if not self.wrapper.javaserver.world:
                     # self.log.trace("(PROXY SERVER) -> did not parse SPAWN_MOB packet.")
                     return True
@@ -395,8 +388,8 @@ class ServerConnection:
                 #                                                        (dt[6], dt[7], dt[8]),
                 #                                                        False)
 
-            elif pkid == self.pktCB.ENTITY_RELATIVE_MOVE:
-                if not self.wrapper.javaserver.world:  # hereout, no further explanation.. See prior packet.
+            elif pkid == self.pktCB.ENTITY_RELATIVE_MOVE and self.client.isLocal:
+                if not self.wrapper.javaserver.world:
                     # self.log.trace("(PROXY SERVER) -> did not parse ENTITY_RELATIVE_MOVE packet.")
                     return True
                 if self.version < mcpackets.PROTOCOL_1_8START:  # 1.7.10 - 1.7.2
@@ -410,7 +403,7 @@ class ServerConnection:
                 if entityupdate:
                     entityupdate.moveRelative((data[1], data[2], data[3]))
 
-            elif pkid == self.pktCB.ENTITY_TELEPORT:
+            elif pkid == self.pktCB.ENTITY_TELEPORT and self.client.isLocal:
                 if not self.wrapper.javaserver.world:
                     # self.log.trace("(PROXY SERVER) -> did not parse ENTITY_TELEPORT packet.")
                     return True
@@ -428,7 +421,7 @@ class ServerConnection:
                 if entityupdate:
                     entityupdate.teleport((data[1], data[2], data[3]))
 
-            elif pkid == self.pktCB.ATTACH_ENTITY:
+            elif pkid == self.pktCB.ATTACH_ENTITY and self.client.isLocal:
                 data = []
                 leash = True  # False to detach
                 if self.version < mcpackets.PROTOCOL_1_8START:
@@ -466,7 +459,7 @@ class ServerConnection:
                             self.client.riding = entityupdate
                             entityupdate.rodeBy = self.client
 
-            elif pkid == self.pktCB.DESTROY_ENTITIES:
+            elif pkid == self.pktCB.DESTROY_ENTITIES and self.client.isLocal:
                 # Get rid of dead entities so that python can GC them.
                 if not self.wrapper.javaserver.world:
                     # self.log.trace("(PROXY SERVER) -> did not parse DESTROY_ENTITIES packet.")
@@ -514,14 +507,14 @@ class ServerConnection:
                 #                 chunkcolumn += bytearray(16 * 16 * 16 * 2)
                 #     # self.log.trace("(PROXY SERVER) -> Parsed MAP_CHUNK_BULK packet:\n%s", data)
 
-            elif pkid == self.pktCB.CHANGE_GAME_STATE:
+            elif pkid == self.pktCB.CHANGE_GAME_STATE and self.client.isLocal:
                 data = self.packet.readpkt([_UBYTE, _FLOAT])
                 # ("ubyte:reason|float:value")
                 if data[0] == 3:
                     self.client.gamemode = data[1]
                 # self.log.trace("(PROXY SERVER) -> Parsed CHANGE_GAME_STATE packet:\n%s", data)
 
-            elif pkid == self.pktCB.OPEN_WINDOW:
+            elif pkid == self.pktCB.OPEN_WINDOW and self.client.isLocal:
                 # This works together with SET_SLOT to maintain accurate inventory in wrapper
                 if self.version < mcpackets.PROTOCOL_1_8START:
                     parsing = [_UBYTE, _UBYTE, _STRING, _UBYTE]
@@ -532,7 +525,7 @@ class ServerConnection:
                 self.noninventoryslotcount = data[3]
                 # self.log.trace("(PROXY SERVER) -> Parsed OPEN_WINDOW packet:\n%s", data)
 
-            elif pkid == self.pktCB.SET_SLOT:
+            elif pkid == self.pktCB.SET_SLOT and self.client.isLocal:
                 # ("byte:wid|short:slot|slot:data")
                 if self.version < mcpackets.PROTOCOL_1_8START:
                     data = self.packet.readpkt([_BYTE, _SHORT, _SLOT_NO_NBT])
@@ -570,7 +563,7 @@ class ServerConnection:
                         # pktCB.OPEN_WINDOW declared self.(..)slotcount is an inventory slot for up to update.
                         self.client.inventory[currentslot - self.noninventoryslotcount + 9] = data[2]
 
-            elif pkid == self.pktCB.WINDOW_ITEMS:  # Window Items
+            elif pkid == self.pktCB.WINDOW_ITEMS and self.client.isLocal:  # Window Items
                 # I am interested to see when this is used and in what versions.  It appears to be superfluous, as
                 # SET_SLOT seems to do the purported job nicely.
                 data = self.packet.readpkt([_UBYTE, _SHORT])
@@ -592,11 +585,13 @@ class ServerConnection:
                 }
                 # self.log.trace("(PROXY SERVER) -> Parsed 0x30 packet:\n%s", jsondata)
 
-            elif pkid == "self.pktCB.ENTITY_PROPERTIES":
+            elif pkid == "self.pktCB.ENTITY_PROPERTIES" and self.client.isLocal:
                 ''' Not sure why I added this.  Based on the wiki, it looked like this might
                 contain a player uuid buried in the lowdata (wiki - "Modifier Data") area
                 that might need to be parsed and reset to the server local uuid.  Thus far,
                 I have not seen it used.
+
+                IF there is a uuid, it needs parsed, even in pass-through mode.
                 '''
                 parser_three = [_UUID, _DOUBLE, _BYTE]
                 if self.version < mcpackets.PROTOCOL_1_8START:
@@ -643,7 +638,7 @@ class ServerConnection:
                 # self.packet.sendpkt(self.pktCB.ENTITY_PROPERTIES, [_RAW], (raw,))
                 return True
 
-            elif pkid == self.pktCB.PLAYER_LIST_ITEM:
+            elif pkid == self.pktCB.PLAYER_LIST_ITEM:  # must parse even when "not self.client.isLocal" (embedded UUID)
                 if self.version >= mcpackets.PROTOCOL_1_8START:
                     head = self.packet.readpkt([_VARINT, _VARINT])
                     # ("varint:action|varint:length")
@@ -722,7 +717,7 @@ class ServerConnection:
                 else:  # version < 1.7.9 needs no processing
                     return True
 
-            elif pkid == self.pktCB.DISCONNECT:
+            elif pkid == self.pktCB.DISCONNECT and self.client.isLocal:
                 message = self.packet.readpkt([_JSON])  # [0]["json"]
                 self.log.info("Disconnected from server: %s", message)
                 if not self.client.isLocal:  # TODO - multi server code
@@ -775,7 +770,7 @@ class ServerConnection:
                 break
             try:
                 pkid, original = self.packet.grabPacket()
-                self.log.trace("Server.grabPacket: %s %s", (hex(pkid), len(original)))
+                # self.log.trace("Server.grabPacket: %s %s", (hex(pkid), len(original)))
                 # self.lastPacketIDs.append((hex(pkid), len(original)))
                 # if len(self.lastPacketIDs) > 10:
                 #     for i, v in enumerate(self.lastPacketIDs):

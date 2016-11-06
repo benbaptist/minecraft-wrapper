@@ -337,6 +337,8 @@ class Client:
 
     def parse(self, pkid):  # server - bound parse ("Client" class connection)
         if self.state == PLAY:
+            if not self.isLocal:
+                return True
             if pkid == self.pktSB.KEEP_ALIVE:
                 if self.serverversion < mcpackets.PROTOCOL_1_8START:
                     data = self.packet.readpkt([_INT])
@@ -455,7 +457,7 @@ class Client:
             elif pkid == self.pktSB.TELEPORT_CONFIRM:
                 # don't interfere with this and self.pktSB.PLAYER_POSLOOK... doing so will glitch the client
                 # data = self.packet.readpkt([_VARINT])
-                # self.log.trace("(SERVER-BOUND) -> Client sent TELEPORT_CONFIRM packet:\n%s", data)
+                # # self.log.trace("(SERVER-BOUND) -> Client sent TELEPORT_CONFIRM packet:\n%s", data)
                 return True
 
             elif pkid == self.pktSB.PLAYER_LOOK:  # Player Look
@@ -887,17 +889,18 @@ class Client:
                 # player ban code.  Uses vanilla json files - In wrapper proxy mode, supports
                 #       temp-bans (the "expires" field of the ban record is used!)
                 #       Actaully, the vanilla server does too... there is just no command to fill it in.
-                if self.wrapper.proxy.isipbanned(self.ip):
-                    self.log.info("Player %s tried to connect from banned ip: %s", self.username, self.ip)
-                    self.state = HANDSHAKE
-                    self.disconnect("Your address is IP-banned from this server!.")
-                    return False
-                if self.wrapper.proxy.isuuidbanned(self.uuid.__str__()):
-                    banreason = self.wrapper.proxy.getuuidbanreason(self.uuid.__str__())  # was self.wrapper.proxy... ?
-                    self.log.info("Banned player %s tried to connect:\n %s" % (self.username, banreason))
-                    self.state = HANDSHAKE
-                    self.disconnect("Banned: %s" % banreason)
-                    return False
+                if self.config["Proxy"]["online-mode"]:
+                    if self.wrapper.proxy.isipbanned(self.ip):
+                        self.log.info("Player %s tried to connect from banned ip: %s", self.username, self.ip)
+                        self.state = HANDSHAKE
+                        self.disconnect("Your address is IP-banned from this server!.")
+                        return False
+                    if self.wrapper.proxy.isuuidbanned(self.uuid.__str__()):
+                        banreason = self.wrapper.proxy.getuuidbanreason(self.uuid.__str__())
+                        self.log.info("Banned player %s tried to connect:\n %s" % (self.username, banreason))
+                        self.state = HANDSHAKE
+                        self.disconnect("Banned: %s" % banreason)
+                        return False
 
                 self.inittheplayer()  # set up inventory and stuff
                 self.log.info("%s's client LOGON occurred: (UUID: %s | IP: %s)",
