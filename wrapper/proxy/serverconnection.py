@@ -103,7 +103,8 @@ class ServerConnection:
         self.version = self.wrapper.javaserver.protocolVersion
         self._refresh_server_version()
         self.username = self.client.username
-
+        self.hubslave_spawned = False
+        self.hub_spawnwaitcount = 0
         # we are going to centralize this to client.servereid
         # self.eid = None  # WHAT IS THIS - code seemed to use it in entity and player id code sections !?
         # self.playereid = None
@@ -112,10 +113,13 @@ class ServerConnection:
         self.currentwindowid = -1
         self.noninventoryslotcount = 0
 
+        self.warning_about_deprecated_send = True
+
     def _refresh_server_version(self):
         # Get serverversion for mcpackets use
         try:
             self.version = self.wrapper.javaserver.protocolVersion
+            self.log.debug("detected server version is %s" % self.version)
         except AttributeError:
             # -1 to signal no server is running
             self.version = -1
@@ -127,6 +131,11 @@ class ServerConnection:
 
     def send(self, packetid, xpr, payload):
         """ not supported. For old code compatability purposes only."""
+        if self.warning_about_deprecated_send:
+            self.warning_about_deprecated_send = False
+            self.log.warning("deprecated server.send() called.  Use server.packet.sendpkt for best performance."
+                             " Check your installed plugins for such usages. (Posix systems with grep use: grep"
+                             " -r 'server.send') ")
         self.log.debug("deprecated server.send() called.  Use server.packet.sendpkt for best performance.")
         self.packet.send(packetid, xpr, payload)
         pass
@@ -146,24 +155,26 @@ class ServerConnection:
         t.start()
 
     def close(self, reason="Disconnected", kill_client=True):
-        self.abort = True
+        # TODO in lobbies, self.client is now None for some reason
+        if self.client:
+            if not self.client.isLocal and kill_client:
+                self.client.isLocal = True
+                message = {"text": "Disconnected from server.", "color": "red"}
+
+                # reconnect client back to lobby/hub server (this wrapper's server).
+                # end raining in case the previous server was raining.
+                self.client.packet.sendpkt(self.pktCB.CHANGE_GAME_STATE, [_UBYTE, _FLOAT], (1, 0))
+                self.client.packet.sendpkt(self.pktCB.CHAT_MESSAGE, [_STRING, _BYTE], (json.dumps(message), 0))
+                self.client.connect()
+                return
+            self.abort = True
+
         self.packet = None
         self.log.debug("Disconnected proxy server connection. (%s)", self.username)
         try:
             self.server_socket.close()
         except OSError:
             pass
-
-        if not self.client.isLocal and kill_client:  # Ben's cross-server hack
-            self.client.isLocal = True
-            message = {
-                "text": "Disconnected from server.",
-                "color": "red"
-            }
-            self.client.packet.sendpkt(self.pktCB.CHANGE_GAME_STATE, [_UBYTE, _FLOAT], (1, 0))  # "end raining"
-            self.client.packet.sendpkt(self.pktCB.CHAT_MESSAGE, [_STRING, _BYTE], (json.dumps(message), 0))
-            self.client.connect()
-            return
 
         # I may remove this later so the client can remain connected upon server disconnection
         #  - - -- - if re-activating code ;;;; update arguments!!   --- -- --
@@ -203,6 +214,10 @@ class ServerConnection:
 
     def parse(self, pkid):  # client - bound parse ("Server" class connection)
         if self.state == PLAY:
+
+            if not self.client.isLocal:
+                return True
+
             # handle keep alive packets from server... nothing special here; we will just keep the server connected.
             if pkid == self.pktCB.KEEP_ALIVE:
                 if self.version < mcpackets.PROTOCOL_1_8START:
@@ -264,11 +279,8 @@ class ServerConnection:
                 self.client.gamemode = data[1]
                 self.client.dimension = data[2]
                 self.client.servereid = data[0]
-                # self.client.eid = data[0]  # This is the EID of the player on this particular server -
-                # not always the EID that the client is aware of.  $$ ST00 note: Why would the eid be different!!??
-
-                # this is an attempt to clear the gm3 noclip issue on relogging.
-                # self.client.packet.sendpkt(self.pktCB.CHANGE_GAME_STATE, [_UBYTE, _FLOAT], (3, self.client.gamemode))
+                # self.client.eid = data[0]  # This is the EID of the player on the point-of-use server -
+                # not always the EID that the client is aware of.
 
             elif pkid == self.pktCB.TIME_UPDATE:
                 data = self.packet.readpkt([_LONG, _LONG])
@@ -315,7 +327,7 @@ class ServerConnection:
                     # self.client.packet.sendpkt(self.pktCB.USE_BED, [_VARINT, _POSITION],
                     #                            (self.client.eid, data[1]))
 
-            elif pkid == self.pktCB.SPAWN_PLAYER:
+            elif pkid == self.pktCB.SPAWN_PLAYER:  # embedded UUID -must parse.
                 # This packet  is used to spawn other players into a player client's world.
                 # is this packet does not arrive, the other player(s) will not be visible to the client
                 if self.version < mcpackets.PROTOCOL_1_8START:
@@ -339,11 +351,8 @@ class ServerConnection:
                 # self.log.trace("(PROXY SERVER) -> Converted SPAWN_PLAYER packet:\n%s", dt)
 
             elif pkid == self.pktCB.SPAWN_OBJECT:
-                # We really do not want to start parsing this unless we have a way to eliminate entities
-                # that get destroyed
-                if not self.wrapper.javaserver.world:  # that is what this prevents...
-                    # self.log.trace("(PROXY SERVER) -> did not parse SPAWN_OBJECT packet.")
-                    return True  # return now.. why parse something we are no going to use?
+                if not self.wrapper.javaserver.world:
+                    return True  # return now if no object tracking
                 if self.version < mcpackets.PROTOCOL_1_9START:
                     dt = self.packet.readpkt([_VARINT, _NULL, _BYTE, _INT, _INT, _INT, _BYTE, _BYTE])
                     dt[3], dt[4], dt[5] = dt[3] / 32, dt[4] / 32, dt[5] / 32
@@ -361,8 +370,6 @@ class ServerConnection:
                 # self.log.trace("(PROXY SERVER) -> Parsed SPAWN_OBJECT packet:\n%s", dt)
 
             elif pkid == self.pktCB.SPAWN_MOB:
-                # we are not going to do all the parsing work unless we are storing the entity data
-                # Storing this entity data has other issues; like removing stale items or "dead" items.
                 if not self.wrapper.javaserver.world:
                     # self.log.trace("(PROXY SERVER) -> did not parse SPAWN_MOB packet.")
                     return True
@@ -396,7 +403,7 @@ class ServerConnection:
                 #                                                        False)
 
             elif pkid == self.pktCB.ENTITY_RELATIVE_MOVE:
-                if not self.wrapper.javaserver.world:  # hereout, no further explanation.. See prior packet.
+                if not self.wrapper.javaserver.world:
                     # self.log.trace("(PROXY SERVER) -> did not parse ENTITY_RELATIVE_MOVE packet.")
                     return True
                 if self.version < mcpackets.PROTOCOL_1_8START:  # 1.7.10 - 1.7.2
@@ -597,6 +604,8 @@ class ServerConnection:
                 contain a player uuid buried in the lowdata (wiki - "Modifier Data") area
                 that might need to be parsed and reset to the server local uuid.  Thus far,
                 I have not seen it used.
+
+                IF there is a uuid, it needs parsed, even in pass-through mode.
                 '''
                 parser_three = [_UUID, _DOUBLE, _BYTE]
                 if self.version < mcpackets.PROTOCOL_1_8START:
@@ -643,7 +652,7 @@ class ServerConnection:
                 # self.packet.sendpkt(self.pktCB.ENTITY_PROPERTIES, [_RAW], (raw,))
                 return True
 
-            elif pkid == self.pktCB.PLAYER_LIST_ITEM:
+            elif pkid == self.pktCB.PLAYER_LIST_ITEM:  # TODO failure to parse might cause two players on playerlist
                 if self.version >= mcpackets.PROTOCOL_1_8START:
                     head = self.packet.readpkt([_VARINT, _VARINT])
                     # ("varint:action|varint:length")
@@ -725,7 +734,7 @@ class ServerConnection:
             elif pkid == self.pktCB.DISCONNECT:
                 message = self.packet.readpkt([_JSON])  # [0]["json"]
                 self.log.info("Disconnected from server: %s", message)
-                if not self.client.isLocal:  # TODO - multi server code
+                if not self.client.isLocal:
                     self.close("Disconnected", kill_client=False)
                 else:
                     self.client.disconnect(message, fromserver=True)
@@ -775,7 +784,7 @@ class ServerConnection:
                 break
             try:
                 pkid, original = self.packet.grabPacket()
-                self.log.trace("Server.grabPacket: %s %s", (hex(pkid), len(original)))
+                # self.log.trace("Server.grabPacket: %s %s", (hex(pkid), len(original)))
                 # self.lastPacketIDs.append((hex(pkid), len(original)))
                 # if len(self.lastPacketIDs) > 10:
                 #     for i, v in enumerate(self.lastPacketIDs):

@@ -201,6 +201,7 @@ class ServerBound:
         self.CHAT_MESSAGE = 0x01
         self.CLICK_WINDOW = 0x0e
         self.CLIENT_SETTINGS = 0x15
+        self.CLIENT_STATUS = 0x16
         self.HELD_ITEM_CHANGE = 0x09
         self.KEEP_ALIVE = 0x00
         self.PLAYER = 0x03
@@ -225,6 +226,7 @@ class ServerBound:
             self.CHAT_MESSAGE = 0x02
             self.CLICK_WINDOW = 0x07
             self.CLIENT_SETTINGS = 0x04
+            self.CLIENT_STATUS = 0x03
             self.HELD_ITEM_CHANGE = 0x17
             self.KEEP_ALIVE = 0x0b
             self.PLAYER = 0x0f
