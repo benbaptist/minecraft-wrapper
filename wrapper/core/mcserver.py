@@ -58,8 +58,6 @@ class MCServer:
             self.wrapper.storage["ServerStarted"] = True
             self.wrapper.storage.save()
 
-        self.players = {}
-        self.player_eids = {}
         self.state = OFF
         self.bootTime = time.time()
         self.serverbooted = self.wrapper.storage["ServerStarted"]
