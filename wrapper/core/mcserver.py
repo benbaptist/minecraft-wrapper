@@ -59,6 +59,7 @@ class MCServer:
             self.wrapper.storage.save()
 
         self.players = {}
+        self.player_eids = {}
         self.state = OFF
         self.bootTime = time.time()
         self.serverbooted = self.wrapper.storage["ServerStarted"]
@@ -74,6 +75,8 @@ class MCServer:
             time.sleep(5)
 
         # Server Information
+        self.players = {}
+        self.player_eids = {}
         self.worldname = None
         self.worldSize = 0
         self.maxPlayers = 20
@@ -321,8 +324,10 @@ class MCServer:
             self.players[username] = Player(username, self.wrapper)
         if self.wrapper.proxy:
             playerclient = self.getplayer(username).getClient()
-            playerclient.servereid = eid
-            playerclient.position = location
+            if playerclient:
+                playerclient.servereid = eid
+                playerclient.position = location
+            self.player_eids[username] = [eid, location]  # palce to store EID if proxy is not fully connected yet.
 
         self.wrapper.events.callevent("player.login", {"player": self.getplayer(username)})
 
@@ -331,7 +336,7 @@ class MCServer:
         Called when a player logs out
         """
         # player object is defunct at this point.  All we can pass to the plugin is a name
-        self.wrapper.events.callevent("player.logout", {"player": username})
+        self.wrapper.events.callevent("player.logout", {"player": {"username": username}})
         if self.wrapper.proxy:
             self.wrapper.proxy.removestaleclients()
 

@@ -103,8 +103,7 @@ class ServerConnection:
         self.version = self.wrapper.javaserver.protocolVersion
         self._refresh_server_version()
         self.username = self.client.username
-        self.hubslave_spawned = False
-        self.hub_spawnwaitcount = 0
+
         # we are going to centralize this to client.servereid
         # self.eid = None  # WHAT IS THIS - code seemed to use it in entity and player id code sections !?
         # self.playereid = None
@@ -215,9 +214,15 @@ class ServerConnection:
     def parse(self, pkid):  # client - bound parse ("Server" class connection)
         if self.state == PLAY:
 
-            if not self.client.isLocal:
-                return True
-
+            if not self.client.hubslave_spawned and self.client.isLocal:
+                self.packet.sendpkt(self.pktSB.CLIENT_STATUS, [_VARINT],
+                                    (0,))  # TODO need to check version (1.8 below use byte)
+                x = self.client.position
+                print(x)
+                if x != (0, 0, 0):
+                    self.client.packet.sendpkt(self.pktCB.PLAYER_POSLOOK,
+                                               [_DOUBLE, _DOUBLE, _DOUBLE, _FLOAT, _FLOAT, _BYTE, _VARINT],
+                                               (x[0], x[1], x[2], 0, 0, 0, 0))
             # handle keep alive packets from server... nothing special here; we will just keep the server connected.
             if pkid == self.pktCB.KEEP_ALIVE:
                 if self.version < mcpackets.PROTOCOL_1_8START:
@@ -229,6 +234,9 @@ class ServerConnection:
                     self.packet.sendpkt(self.pktSB.KEEP_ALIVE, [_VARINT], data)
                 # self.log.trace("(PROXY SERVER) -> Parsed KEEP_ALIVE packet with server state 3 (PLAY)")
                 return False
+
+            if not self.client.isLocal:
+                return True
 
             elif pkid == self.pktCB.CHAT_MESSAGE:
                 if self.version < mcpackets.PROTOCOL_1_8START:
@@ -301,6 +309,8 @@ class ServerConnection:
                 # "int:dimension|ubyte:difficulty|ubyte:gamemode|level_type:string")
                 self.client.gamemode = data[2]
                 self.client.dimension = data[0]
+                if not self.client.hubslave_spawned:
+                    self.client.hubslave_spawned = True
                 # self.log.trace("(PROXY SERVER) -> Parsed RESPAWN packet:\n%s", data)
 
             elif pkid == self.pktCB.PLAYER_POSLOOK:
