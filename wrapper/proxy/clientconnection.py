@@ -131,6 +131,7 @@ class Client:
         self.serveraddressplayeruses = None
         self.serverportplayeruses = None
         self.hubslave_spawned = False
+        self.hubtimer = 0
 
         self.state = HANDSHAKE
 
@@ -343,17 +344,26 @@ class Client:
         self.pktSB = mcpackets.ServerBound(self.clientversion)
         self.pktCB = mcpackets.ClientBound(self.clientversion)
 
+    def joinplayer(self):
+        # Put player object and client into server. (player login will be called later by mcserver.py)
+        self.wrapper.proxy.clients.append(self)
+
+        if self.username not in self.wrapper.javaserver.players:
+            self.wrapper.javaserver.players[self.username] = Player(self.username, self.wrapper)
+        self.inittheplayer()  # set up inventory and stuff
+
     def parse(self, pkid):  # server - bound parse ("Client" class connection)
         if self.state == PLAY:
-            if not self.isLocal:
+            if self.isLocal:
                 if not self.hubslave_spawned:
-                    # try to get player to clear "loading terrain screen" so he can play.
-                    # TODO, if needed, make sure server console gathers the login position...
-                    x = self.position
-                    self.packet.sendpkt(self.pktCB.PLAYER_POSLOOK,
-                                        [_DOUBLE, _DOUBLE, _DOUBLE, _FLOAT, _FLOAT, _BYTE, _VARINT],
-                                        (x[0], x[1], x[2], 0, 0, 0, 0))
-                    self.hubslave_spawned = True
+                    if self.hubtimer < 20:
+                        self.hubtimer += 1
+                    else:  # try populating eid and position data if proxy has not gathered it yet
+                        if self.username in self.wrapper.javaserver.player_eids:
+                            self.servereid = self.wrapper.javaserver.player_eids[self.username][0]
+                            if self.position == (0, 0, 0):
+                                self.position = self.wrapper.javaserver.player_eids[self.username][1]
+                        self.hubtimer = 0
 
             # This is the only packet that will be snooped by a non-local (hub) wrapper instance in play mode.
             if pkid == self.pktSB.CHAT_MESSAGE:
@@ -397,9 +407,6 @@ class Client:
                 # NOW we can send it (possibly modded)  on to server...
                 self.message(chatmsg)
                 return False  # and cancel this original packet
-
-            if not self.isLocal:  # speed up pass-through for lobby hub applications
-                return True
 
             if pkid == self.pktSB.KEEP_ALIVE:
                 if self.serverversion < mcpackets.PROTOCOL_1_8START:
@@ -451,8 +458,10 @@ class Client:
                                                     ))
                     self.clientSettingsSent = True
                 return False
+            if not self.isLocal:  # speed up pass-through for lobby hub applications
+                return True
 
-            elif pkid == self.pktSB.PLAYER_POSITION:  # player position
+            if pkid == self.pktSB.PLAYER_POSITION:  # player position
                 if self.clientversion < mcpackets.PROTOCOL_1_8START:
                     data = self.packet.readpkt([_DOUBLE, _DOUBLE, _DOUBLE, _DOUBLE, _BOOL])
                     # ("double:x|double:y|double:yhead|double:z|bool:on_ground")
@@ -693,7 +702,7 @@ class Client:
                     # varint:main_hand")
                 settingsdict = {"locale": data[0],
                                 "view_distance": data[1],
-                                "chatmode": data[2],
+                                "chat_mode": data[2],
                                 "chatflags": data[2],
                                 "chat_colors": data[3],
                                 "difficulty": data[4],
@@ -809,6 +818,7 @@ class Client:
                     self.packet.sendpkt(0x02, [_STRING, _STRING], (self.uuid.string, self.username))
                     self.state = PLAY
                     self.log.info("%s's client (insecure) LOGON from (IP: %s)", self.username, self.addr[0])
+                    self.joinplayer()
                 # self.log.trace("(PROXY CLIENT) -> Parsed 0x00 packet with client state LOGIN: \n%s", data)
                 return False
 
@@ -918,7 +928,7 @@ class Client:
                         self.disconnect("Banned: %s" % banreason)
                         return False
 
-                self.inittheplayer()  # set up inventory and stuff
+
                 self.log.info("%s's client LOGON occurred: (UUID: %s | IP: %s)",
                               self.username, self.uuid.string, self.addr[0])
 
@@ -934,11 +944,7 @@ class Client:
                     self.disconnect("Login denied by a Plugin.")
                     return False
 
-                # Put player object and client into server. (player login will be called later by mcserver.py)
-                self.wrapper.proxy.clients.append(self)
-
-                if self.username not in self.wrapper.javaserver.players:
-                    self.wrapper.javaserver.players[self.username] = Player(self.username, self.wrapper)
+                self.joinplayer()
 
                 # send login success to client
                 self.packet.sendpkt(0x02, [_STRING, _STRING], (self.uuid.string, self.username))

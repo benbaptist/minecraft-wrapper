@@ -1,14 +1,12 @@
-Build #133
+Build 133 - 134
 - Starting attempts to fix player.connect() and lobby functions.
-    works with these known problems:
-    - wrapper hub can connect player to second server, but:
-    1) Server does not send player packets to position (clear "download terrain") or "respawn".  Sometimes issuing kill command
-        from server kills the player and respawns him. After that, it works great (at least until the player leaves and
-        tries to rejoin (hub joins him to remote server, but displays hub chunks)
-    2) only the hub server is doing any packet parsing.  The remote wrapper-server combo is not parsing data
-The purpose of this build is to have a starting point that connects and then work towards full functionality.
-I think using the CLIENT_STATUS packet, I was able to get the player to clear the "download terrain" screen.. wish I had
-saved a snapshot at that point!
+- 134 build works with these known problems:
+    1) wrapper hub can connect player to second server, but Server does not send player packets to
+    position (clear "download terrain") or "respawn".  The player must die to spawn into the world.
+    2) After that, it works great, until the player leaves and tries to rejoin. The second joining seems to
+    "remember" toom much about the last connection
+The purpose of these builds is to progressively work towards full functionality.  Each build will be better
+than the last until player.connect() is fully functional.
 
 Build #132 [0.8.12]
 - Fix circular-referencing Client() class- the final argument to Client() was the client's own instance (from proxy)
