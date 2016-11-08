@@ -626,8 +626,8 @@ class ServerConnection:
                 else:
                     parser_one = [_VARINT, _INT]
                     parser_two = [_STRING, _DOUBLE, _VARINT]
-                    writer_one = self.packet.send_varInt
-                    writer_two = self.packet.send_varInt
+                    writer_one = self.packet.send_varint
+                    writer_two = self.packet.send_varint
                 raw = b""  # use bytes
 
                 # read first level and repack
@@ -695,8 +695,8 @@ class ServerConnection:
                                     raw += self.client.packet.send_string(prop["signature"])
                                 else:
                                     raw += self.client.packet.send_bool(False)
-                            raw += self.client.packet.send_varInt(0)
-                            raw += self.client.packet.send_varInt(0)
+                            raw += self.client.packet.send_varint(0)
+                            raw += self.client.packet.send_varint(0)
                             raw += self.client.packet.send_bool(False)
                             self.client.packet.sendpkt(self.pktCB.PLAYER_LIST_ITEM,
                                                        [_VARINT, _VARINT, _UUID, _STRING, _VARINT, _RAW],
@@ -793,8 +793,8 @@ class ServerConnection:
             if self.abort:
                 break
             try:
-                pkid, original = self.packet.grabPacket()
-                # self.log.trace("Server.grabPacket: %s %s", (hex(pkid), len(original)))
+                pkid, original = self.packet.grabpacket()
+                # self.log.trace("Server.grabpacket: %s %s", (hex(pkid), len(original)))
                 # self.lastPacketIDs.append((hex(pkid), len(original)))
                 # if len(self.lastPacketIDs) > 10:
                 #     for i, v in enumerate(self.lastPacketIDs):
@@ -813,7 +813,7 @@ class ServerConnection:
                 break
             if self.parse(pkid) and self.client:
                 try:
-                    self.client.packet.sendRaw(original)
+                    self.client.packet.send_raw(original)
                 except Exception as e:
                     self.log.debug("[SERVER] Could not send packet (%s): (%s): \n%s", pkid, e, traceback)
                     break

@@ -2,6 +2,7 @@
 
 # py3 non-compliant at runtime
 
+# system imports
 import signal
 import hashlib
 import threading
@@ -11,25 +12,30 @@ import logging
 import socket
 import sys  # used to pass sys.argv to server
 
-import core.buildinfo as version_info
-import proxy.base as proxy
-import management.web as manageweb
-
+# small feature and helpers
 from utils.helpers import format_bytes, getargs, getargsafter, readout
-from api.base import API
+import core.buildinfo as version_info
 from core.mcuuid import MCUUID
 from core.config import Config
-from core.irc import IRC
+from core.exceptions import UnsupportedOSException, InvalidServerStartedError
+
+# big ticket items
+import proxy.base as proxy
+from api.base import API
 from core.mcserver import MCServer
-from core.scripts import Scripts
+
 from core.plugins import Plugins
 from core.commands import Commands
 from core.events import Events
 from core.storage import Storage
-from core.exceptions import UnsupportedOSException, InvalidServerStartedError
 
+# extra feature imports
+import management.web as manageweb
 # from management.dashboard import Web as Managedashboard  # presently unused
+from core.irc import IRC
+from core.scripts import Scripts
 
+# non standard library imports
 try:
     import readline
 except ImportError:
@@ -57,25 +63,26 @@ FROZEN = 4
 class Wrapper:
 
     def __init__(self):
+        # setup log and config
         self.log = logging.getLogger('Wrapper.py')
-        self.storage = False
         self.configManager = Config()
         self.configManager.loadconfig()
         self.config = self.configManager.config  # set up config
+
+        # Read Config items
+        self.wrapper_ban_system = False
         self.encoding = self.config["General"]["encoding"]  # This was to allow alternate encodings
-        self.javaserver = None
-        self.api = None
-        self.irc = None
-        self.scripts = None
-        self.web = None
-        self.proxy = None
-        self.proxymode = False
-        self.halt = False
-        self.update = False
+        self.proxymode = self.config["Proxy"]["proxy-enabled"]
+        self.wrapper_onlinemode = self.config["Proxy"]["online-mode"]
+        self.wrapper_ban_system = self.proxymode and self.wrapper_ban_system
+
+        # Storages
+        self.storage = False  # needs a false setting on first start
         self.storage = Storage("wrapper", encoding=self.encoding)
         self.permissions = Storage("permissions", encoding=self.encoding)
         self.usercache = Storage("usercache", encoding=self.encoding)
 
+        # core functions and datasets
         self.plugins = Plugins(self)
         self.commands = Commands(self)
         self.events = Events(self)
@@ -83,13 +90,23 @@ class Wrapper:
         self.help = {}
         self.xplayer = ConsolePlayer(self)  # future plan to expose this to api
 
+        # init items that are set up later (or opted out of/ not set up.)
+        self.javaserver = None
+        self.api = None
+        self.irc = None
+        self.scripts = None
+        self.web = None
+        self.proxy = None
+        self.halt = False
+        self.update = False
+
+        # Error messages for non-standard import failures.
         if not readline:
             self.log.warning("'readline' not imported.  This is needed for proper console functioning")
 
-        if not requests and self.config["Proxy"]["proxy-enabled"]:
+        if not requests and self.proxymode:
             self.log.error("You must have the requests module installed to run in proxy mode!")
             return
-        self.proxymode = self.config["Proxy"]["proxy-enabled"]
 
     def __del__(self):
         if self.storage:  # prevent error message on very first wrapper starts when wrapper exits after creating
@@ -739,6 +756,8 @@ class Wrapper:
             # self.events.callevent("timer.tick", None)  # don't really advise the use of this timer
 
 
+# - due to being refrerenced by the external wrapper API that is camelCase
+# noinspection PyUnresolvedReferences,PyPep8Naming,PyBroadException
 class ConsolePlayer:
     """
     This class minimally represents the console as a player so that the console can use wrapper/plugin commands.
@@ -748,7 +767,6 @@ class ConsolePlayer:
         self.username = "*Console*"
         self.loggedIn = time.time()
         self.wrapper = wrapper
-        self.javaserver = wrapper.javaserver
         self.permissions = wrapper.permissions
         self.log = wrapper.log
         self.abort = False
@@ -769,6 +787,24 @@ class ConsolePlayer:
         self.creative = 0x00
         self.fly_speed = float(1)
 
+        self.message_number_coders = {'0': 'black',
+                                      '1': 'blue',
+                                      '2': 'green',
+                                      '3': 'cyan',
+                                      '4': 'red',
+                                      '5': 'magenta',
+                                      '6': 'yellow',
+                                      '7': 'black',
+                                      '8': 'black',
+                                      '9': 'blue',
+                                      'a': 'green',
+                                      'b': 'cyan',
+                                      'c': 'red',
+                                      'd': 'magenta',
+                                      'e': 'yellow',
+                                      'f': 'white'
+                                      }
+
     @staticmethod
     def isOp():
         return 4
@@ -777,14 +813,24 @@ class ConsolePlayer:
     def isOp_fast():
         return 4
 
-    @staticmethod
-    def message(message):
+    def message(self, message):
+        displaycode, displaycolor = "5", "magenta"
         display = str(message)
-        # remove "&c" type color formatters from console player message
-        if display[0:1] == "&":
+        if type(message) is dict:
+            jsondisplay = message
+        else:
+            jsondisplay = False
+        if display[0:1] == "&":  # format "&c" type color (roughly) to console formatters color
+            displaycode = display[1:1]
             display = display[2:]
-        readout(display, "", "")
-        pass
+        if displaycode in self.message_number_coders:
+            displaycolor = self.message_number_coders[displaycode]
+        if jsondisplay:  # or use json formatting, if available
+            if "text" in jsondisplay:
+                display = jsondisplay["text"]
+            if "color" in jsondisplay:
+                displaycolor = jsondisplay["color"]
+        readout(display, "", "", 15, displaycolor)
 
     @staticmethod
     def hasPermission(*args):

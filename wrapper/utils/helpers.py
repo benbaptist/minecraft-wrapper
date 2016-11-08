@@ -357,7 +357,9 @@ def read_timestr(mc_time_string):
     return epoch
 
 
-def readout(commandtext, description, separator=" - ", pad=15):
+def readout(commandtext, description, separator=" - ", pad=15,
+            command_text_fg="magenta", command_text_opts=("bold",),
+            description_text_fg="yellow"):
     """
     display console text only with no logging - useful for displaying pretty console-only messages.
     Args:
@@ -365,11 +367,16 @@ def readout(commandtext, description, separator=" - ", pad=15):
         description: third text field (green)
         separator: second (middle) field (white text)
         pad: minimum number of characters the command text is padded to
+        command_text_fg: Foreground color, magenta by default
+        command_text_opts: Tuple of ptions, '(bold,)' by default)
+        description_text_fg: description area foreground color
 
-    Returns: Just prints to stdout/console
+    Returns: Just prints to stdout/console for console operator readout:
+      DISPLAYS:
+      '[commandtext](padding->)[separator][description]'
     """
-    commstyle = use_style(foreground="magenta", options=("bold",))
-    descstyle = use_style(foreground="yellow")
+    commstyle = use_style(foreground=command_text_fg, options=command_text_opts)
+    descstyle = use_style(foreground=description_text_fg)
     x = '{0: <%d}' % pad
     commandtextpadded = x.format(commandtext)
     print("%s%s%s" % (commstyle(commandtextpadded), separator, descstyle(description)))

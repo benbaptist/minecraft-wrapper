@@ -1,3 +1,9 @@
+Build #135
+- refactor core.wrapper.py.  Reorganize wrapper imports for readability, gouping by fuction.
+- make console display the ConsolePlayer.message() using the passed color codes (&_) or json "color": item.
+- make utils.helpers.readout() even more generic and configurable.
+- refactor to remove various camelCase in various non-API places.
+
 Build 133 - 134
 - Starting attempts to fix player.connect() and lobby functions.
 - 134 build works with these known problems:
