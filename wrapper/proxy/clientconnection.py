@@ -928,7 +928,6 @@ class Client:
                         self.disconnect("Banned: %s" % banreason)
                         return False
 
-
                 self.log.info("%s's client LOGON occurred: (UUID: %s | IP: %s)",
                               self.username, self.uuid.string, self.addr[0])
 

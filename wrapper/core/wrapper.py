@@ -787,6 +787,7 @@ class ConsolePlayer:
         self.creative = 0x00
         self.fly_speed = float(1)
 
+        # these map minecraft color codes to "approximate" ANSI terminal color used by our color formatter.
         self.message_number_coders = {'0': 'black',
                                       '1': 'blue',
                                       '2': 'green',
@@ -794,7 +795,7 @@ class ConsolePlayer:
                                       '4': 'red',
                                       '5': 'magenta',
                                       '6': 'yellow',
-                                      '7': 'black',
+                                      '7': 'white',
                                       '8': 'black',
                                       '9': 'blue',
                                       'a': 'green',
@@ -803,6 +804,19 @@ class ConsolePlayer:
                                       'd': 'magenta',
                                       'e': 'yellow',
                                       'f': 'white'
+                                      }
+
+        # these do the same for color names (things like 'red', 'white', 'yellow, etc, not needing conversion...
+        self.messsage_color_coders = {'dark_blue': 'blue',
+                                      'dark_green': 'green',
+                                      'dark_aqua': 'cyan',
+                                      'dark_red': 'red',
+                                      'dark_purple': 'magenta',
+                                      'gold': 'yellow',
+                                      'gray': 'white',
+                                      'dark_gray': 'black',
+                                      'aqua': 'cyan',
+                                      'light_purple': 'magenta'
                                       }
 
     @staticmethod
@@ -830,6 +844,8 @@ class ConsolePlayer:
                 display = jsondisplay["text"]
             if "color" in jsondisplay:
                 displaycolor = jsondisplay["color"]
+                if displaycolor in self.messsage_color_coders:
+                    displaycolor = self.messsage_color_coders[displaycolor]
         readout(display, "", "", 15, displaycolor)
 
     @staticmethod
