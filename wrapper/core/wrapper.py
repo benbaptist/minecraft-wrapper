@@ -46,12 +46,6 @@ try:
 except ImportError:
     requests = False
 
-# Manually define equivalent builtin functions between Py2 and Py3
-try:  # Manually define a raw input builtin shadow that works indentically on PY2 and PY3
-    rawinput = raw_input
-except NameError:
-    rawinput = input
-
 # javaserver constants
 OFF = 0  # this is the start mode.
 STARTING = 1
@@ -192,7 +186,7 @@ class Wrapper:
 
             # Obtain a line of console input
             try:
-                consoleinput = rawinput("")
+                consoleinput = sys.stdin.readline()
             except Exception as e:
                 print("[continue] variable 'consoleinput' in 'console()' did not evaluate \n%s" % e)
                 continue
