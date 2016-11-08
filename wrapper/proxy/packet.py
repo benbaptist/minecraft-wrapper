@@ -112,25 +112,25 @@ class Packet:
             return "-%x" % ((-d) & (2 ** (40 * 4) - 1))
         return "%x" % d
 
-    def grabPacket(self):
-        length = self.unpack_varInt()  # first field - entire raw packet Length
+    def grabpacket(self):
+        length = self.unpack_varint()  # first field - entire raw packet Length
         datalength = 0  # if 0, an uncompressed packet
         if self.compressThreshold != -1:  # if compressed:
-            datalength = self.unpack_varInt()  # length of the uncompressed (Packet ID + Data)
+            datalength = self.unpack_varint()  # length of the uncompressed (Packet ID + Data)
             # using augmented assignment in the next line will BREAK this
-            length = length - len(self.pack_varInt(datalength))  # find the len of the datalength field and subtract it
+            length = length - len(self.pack_varint(datalength))  # find the len of the datalength field and subtract it
         payload = self.recv(length)
 
         if datalength > 0:  # it is compressed, unpack it
             payload = zlib.decompress(payload)
 
         self.buffer = io.BytesIO(payload)
-        pkid = self.read_varInt()
+        pkid = self.read_varint()
 
-        # payload is untouchd entire packet, containing the prefixed pkid
+        # payload is untouched entire packet, containing the prefixed pkid
         return pkid, payload
 
-    def pack_varInt(self, val):
+    def pack_varint(self, val):
         total = b''
         if val < 0:
             val = (1 << 32) + val
@@ -142,7 +142,7 @@ class Packet:
         total += struct.pack('B', bits)
         return total
 
-    def unpack_varInt(self):
+    def unpack_varint(self):
         total = 0
         shift = 0
         val = 0x80
@@ -154,7 +154,7 @@ class Packet:
             total = total - (1 << 32)
         return total
 
-    def setCompression(self, threshold):
+    def setcompression(self, threshold):
         self.send(0x03, "varint", (threshold,))
         self.compressThreshold = threshold
 
@@ -164,19 +164,19 @@ class Packet:
             packet = packet_tuple[1]
             if packet_tuple[0] > -1:
                 if len(packet) > self.compressThreshold:
-                    packetcompressed = self.pack_varInt(len(packet)) + zlib.compress(packet)
-                    packet = self.pack_varInt(len(packetcompressed)) + packetcompressed
+                    packetcompressed = self.pack_varint(len(packet)) + zlib.compress(packet)
+                    packet = self.pack_varint(len(packetcompressed)) + packetcompressed
                 else:
-                    packet = self.pack_varInt(0) + packet
-                    packet = self.pack_varInt(len(packet)) + packet
+                    packet = self.pack_varint(0) + packet
+                    packet = self.pack_varint(len(packet)) + packet
             else:
-                packet = self.pack_varInt(len(packet)) + packet
+                packet = self.pack_varint(len(packet)) + packet
             if self.sendCipher is None:
                 self.socket.send(packet)
             else:
                 self.socket.send(self.sendCipher.encrypt(packet))
 
-    def sendRaw(self, payload):
+    def send_raw(self, payload):
         if not self.abort:
             self.queue.append((self.compressThreshold, payload))  # [(-1, "payload"), ..., ... ]
 
@@ -259,7 +259,7 @@ class Packet:
             elif args[index] == 10:
                 result.append(self.read_bool())
             elif args[index] == 11:
-                result.append(self.read_varInt())
+                result.append(self.read_varint())
             elif args[index] == 12:
                 result.append(self.read_bytearray())
             elif args[index] == 13:
@@ -289,7 +289,7 @@ class Packet:
             payload: Something like (x, y, z, yaw, pitch,) - a tuple
 
         Returns:
-            returns the result that was sendRaw()'ed.
+            returns the result that was send_raw()'ed.
 
         """
 
@@ -309,12 +309,12 @@ class Packet:
         result = b""  # TODO
 
         # start with packet id
-        result += self.send_varInt(pkid)
+        result += self.send_varint(pkid)
 
         # append results to the result packet for each type
         argcount = len(args)
         if argcount == 0:
-            self.sendRaw(result)
+            self.send_raw(result)
             return result
         for index in xrange(argcount):
             pay = payload[index]
@@ -343,7 +343,7 @@ class Packet:
             elif args[index] == 10:
                 result += self.send_bool(pay)
             elif args[index] == 11:
-                result += self.send_varInt(pay)
+                result += self.send_varint(pay)
             elif args[index] == 12:
                 result += self.send_bytearray(pay)
             elif args[index] == 13:
@@ -358,7 +358,7 @@ class Packet:
                 result += self.send_metadata(pay)
             else:
                 result += pay
-        self.sendRaw(result)
+        self.send_raw(result)
         return result
 
     # -- SENDING DATA TYPES -- #
@@ -374,7 +374,7 @@ class Packet:
             returnitem = payload.encode("utf-8", errors="ignore")
         except:
             returnitem = str(payload)
-        return self.send_varInt(len(returnitem)) + returnitem
+        return self.send_varint(len(returnitem)) + returnitem
 
     def send_json(self, payload):
         return self.send_string(json.dumps(payload))
@@ -397,11 +397,11 @@ class Packet:
     def send_double(self, payload):
         return struct.pack(">d", payload)
 
-    def send_varInt(self, payload):
-        return self.pack_varInt(payload)
+    def send_varint(self, payload):
+        return self.pack_varint(payload)
 
     def send_bytearray(self, payload):
-        return self.send_varInt(len(payload)) + payload
+        return self.send_varint(len(payload)) + payload
 
     def send_bytearray_short(self, payload):
         return self.send_short(len(payload)) + payload
@@ -553,7 +553,7 @@ class Packet:
         return struct.unpack(">H", self.read_data(2))[0]
 
     def read_bytearray(self):
-        return self.read_data(self.read_varInt())
+        return self.read_data(self.read_varint())
 
     def read_int_array(self):
         size = self.read_int()
@@ -598,7 +598,7 @@ class Packet:
             # nbt = self.read_data(nbtCount)
             return {"id": sid, "count": count, "damage": damage, "nbt": {}}
 
-    def read_varInt(self):
+    def read_varint(self):
         total = 0
         shift = 0
         val = 0x80
@@ -614,7 +614,7 @@ class Packet:
         return MCUUID(bytes=self.read_data(16))
 
     def read_string(self):
-        return self.read_data(self.read_varInt())
+        return self.read_data(self.read_varint())
 
     def read_json(self):
         return json.loads(self.read_string().decode('utf-8'))

@@ -161,7 +161,7 @@ class Client:
 
         while not self.abort:
             try:
-                pkid, original = self.packet.grabPacket()
+                pkid, original = self.packet.grabpacket()
             except EOFError:
                 # This is not really an error.. It means the client is not sending packet stream anymore
                 self.log.debug("Client Packet stream ended [EOF] (%s)", self.username)
@@ -177,7 +177,7 @@ class Client:
             # send packet if server available and parsing passed.
             # already tested - Python will not attempt eval of self.server.state if self.server is False
             if self.parse(pkid) and self.server and self.server.state == 3:
-                self.server.packet.sendRaw(original)
+                self.server.packet.send_raw(original)
         self.close()
 
     def flush_loop(self):
@@ -910,7 +910,7 @@ class Client:
 
                 # no idea what is special about version 26
                 if self.clientversion > 26:
-                    self.packet.setCompression(256)
+                    self.packet.setcompression(256)
 
                 # player ban code.  Uses vanilla json files - In wrapper proxy mode, supports
                 #       temp-bans (the "expires" field of the ban record is used!)
@@ -927,7 +927,6 @@ class Client:
                         self.state = HANDSHAKE
                         self.disconnect("Banned: %s" % banreason)
                         return False
-
 
                 self.log.info("%s's client LOGON occurred: (UUID: %s | IP: %s)",
                               self.username, self.uuid.string, self.addr[0])
