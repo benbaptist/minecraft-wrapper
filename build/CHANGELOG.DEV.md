@@ -10,7 +10,7 @@ Build #136
 - restore timer.tick event, but it is only enabled by a new config item in new section "Gameplay".
 
 Build #135
-- refactor core.wrapper.py.  Reorganize wrapper imports for readability, gouping by fuction.
+- refactor core.wrapper.py.  Reorganize wrapper imports for readability, grouping by function.
 - make console display the ConsolePlayer.message() using the passed color codes (&_) or json "color": item.
 - make utils.helpers.readout() even more generic and configurable.
 - refactor to remove various camelCase in various non-API places.

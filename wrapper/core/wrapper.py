@@ -71,7 +71,7 @@ class Wrapper:
         self.wrapper_onlinemode = self.config["Proxy"]["online-mode"]
         self.wrapper_ban_system = self.proxymode and self.wrapper_ban_system
         self.auto_update_wrapper = self.config["General"]["auto-update-wrapper"]
-        self.use_timer_tick_event = self.config["General"]["use-timer-tick-event"]
+        self.use_timer_tick_event = self.config["Gameplay"]["use-timer-tick-event"]
 
         # Storages
         self.storage = Storage("wrapper", encoding=self.encoding)
