@@ -214,14 +214,15 @@ class ServerConnection:
     def parse(self, pkid):  # client - bound parse ("Server" class connection)
         if self.state == PLAY:
 
-            if not self.client.hubslave_spawned and self.client.isLocal:
-                self.packet.sendpkt(self.pktSB.CLIENT_STATUS, [_VARINT],
-                                    (0,))  # TODO need to check version (1.8 below use byte)
-                x = self.client.position
-                if x != (0, 0, 0):
-                    self.client.packet.sendpkt(self.pktCB.PLAYER_POSLOOK,
-                                               [_DOUBLE, _DOUBLE, _DOUBLE, _FLOAT, _FLOAT, _BYTE, _VARINT],
-                                               (x[0], x[1], x[2], 0, 0, 0, 0))
+            # temp disable this .. it is causing server to freeze the player location
+            # if not self.client.hubslave_spawned and self.client.isLocal:
+            #    self.packet.sendpkt(self.pktSB.CLIENT_STATUS, [_VARINT],
+            #                        (0,))  # TODO need to check version (1.8 below use byte)
+            #    x = self.client.position
+            #    if x != (0, 0, 0):
+            #        self.client.packet.sendpkt(self.pktCB.PLAYER_POSLOOK,
+            #                                   [_DOUBLE, _DOUBLE, _DOUBLE, _FLOAT, _FLOAT, _BYTE, _VARINT],
+            #                                   (x[0], x[1], x[2], 0, 0, 0, 0))
             # handle keep alive packets from server... nothing special here; we will just keep the server connected.
             if pkid == self.pktCB.KEEP_ALIVE:
                 if self.version < mcpackets.PROTOCOL_1_8START:

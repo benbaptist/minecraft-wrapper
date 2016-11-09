@@ -354,16 +354,18 @@ class Client:
 
     def parse(self, pkid):  # server - bound parse ("Client" class connection)
         if self.state == PLAY:
-            if self.isLocal:
-                if not self.hubslave_spawned:
-                    if self.hubtimer < 20:
-                        self.hubtimer += 1
-                    else:  # try populating eid and position data if proxy has not gathered it yet
-                        if self.username in self.wrapper.javaserver.player_eids:
-                            self.servereid = self.wrapper.javaserver.player_eids[self.username][0]
-                            if self.position == (0, 0, 0):
-                                self.position = self.wrapper.javaserver.player_eids[self.username][1]
-                        self.hubtimer = 0
+
+            # temp disable this .. it is causing server to freeze the player location
+            # if self.isLocal:
+            #    if not self.hubslave_spawned:
+            #        if self.hubtimer < 20:
+            #            self.hubtimer += 1
+            #        else:  # try populating eid and position data if proxy has not gathered it yet
+            #            if self.username in self.wrapper.javaserver.player_eids:
+            #                self.servereid = self.wrapper.javaserver.player_eids[self.username][0]
+            #                if self.position == (0, 0, 0):
+            #                    self.position = self.wrapper.javaserver.player_eids[self.username][1]
+            #            self.hubtimer = 0
 
             # This is the only packet that will be snooped by a non-local (hub) wrapper instance in play mode.
             if pkid == self.pktSB.CHAT_MESSAGE:
