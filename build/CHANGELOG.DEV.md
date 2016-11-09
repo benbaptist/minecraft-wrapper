@@ -8,6 +8,7 @@ Build #136
 - implement SurestTexas00 #25 by JasonBristol to add wrapper update URLs to wrapper config
 - continuing refactor of core/wrapper.py
 - restore timer.tick event, but it is only enabled by a new config item in new section "Gameplay".
+- Fix gameplay proxy server issues caused by build 133-134
 
 Build #135
 - refactor core.wrapper.py.  Reorganize wrapper imports for readability, grouping by function.
