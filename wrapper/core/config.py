@@ -145,6 +145,7 @@ class Config:
                 for new_sections_items in section:
                     new_entries.append([section,new_sections_items])
                 changesmade = True
+                continue
             for configitem in NEWCONFIG[section]:
                 # mark deprecated items for deletion
                 if configitem in self.config[section]:
