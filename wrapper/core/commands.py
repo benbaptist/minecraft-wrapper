@@ -302,7 +302,7 @@ class Commands:
             subcommand = getargs(payload["args"], 0)
             if subcommand == "update":
                 player.message({"text": "Checking for new Wrapper.py updates...", "color": "yellow"})
-                update = self.wrapper.getwrapperupdate()
+                update = self.wrapper.get_wrapper_update_info()
                 if update:
                     version, build, repotype = update
                     player.message("&bNew Wrapper.py Version %s (Build #%d) available!)" %
