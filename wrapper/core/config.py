@@ -5,93 +5,42 @@ import sys
 import logging
 from utils.helpers import getjsonfile, putjsonfile
 
-"""[General]
-server-name = Minecraft Server
-server-directory = "."
-command = java -jar minecraft_server.1.9.2.jar nogui
-auto-restart = True
-auto-update-wrapper = False
-auto-update-dev-build = False
-pre-1.7-mode = False
-timed-reboot = False
-timed-reboot-seconds = 86400
-timed-reboot-warning-minutes = 5
-shell-scripts = False
-encoding = UTF-8
-
-[Backups]
-;; Automatic backups with automatic backup pruning. Interval is in seconds. ;;
-enabled = False
-backup-folders = ['server.properties', 'world']
-backup-interval = 3600
-backup-notification = True
-backup-location = backup-directory
-backup-compression = False
-backups-keep = 10
-
-[IRC]
-;; This allows your users to communicate to and from the server via IRC and vise versa. ;;
-irc-enabled = False
-server = benbaptist.com
-port = 6667
-nick = MinecraftWrap
-password = None
-channels = ['#wrapper']
-command-character = .
-autorun-irc-commands = ['COMMAND 1', 'COMMAND 2']
-obstruct-nicknames = False
-control-from-irc = False
-control-irc-pass = password
-show-channel-server = True
-show-irc-join-part = True
-
-[Proxy]
-;; This is a man-in-the-middle proxy similar to BungeeCord, which is used for extra plugin functionality. ;;
-;; online-mode must be set to False in server.properties. Make sure that the server is inaccessible directly
-;; from the outside world. ;;
-;; Note: the online-mode option here refers to the proxy only, not to the server's offline mode. ;;
-;; It is recommended that you turn network-compression-threshold to -1 in server.properties for less issues. ;;
-proxy-enabled = False
-proxy-port = 25565
-proxy-bind = 0.0.0.0
-server-port = 25564
-online-mode = True
-max-players = 1024
-spigot-mode = False
-convert-player-files = False
-
-[Web]
-;; This is a web UI. ;;
-web-enabled = False
-web-bind = 0.0.0.0
-web-port = 8070
-web-password = password
-web-allow-file-management = True
-public-stats = True
-"""
 
 # Default Configuration File
 NEWCONFIG = {
     "Backups": {
+        # Automatic backups with automatic backup pruning. Interval is in seconds.
         "backup-compression": False,
+        # Specify files and folders you want backed up.  Items must be in your server folder (see 'General' section)
         "backup-folders": [
             "server.properties",
             "world"
         ],
         "backup-interval": 3600,
-        "backup-location": "backup-directory",
+        "backup-location": "backup-directory",  # this location will be inside wrapper's directory
         "backup-notification": True,
         "backups-keep": 10,
         "enabled": False
     },
+    "Gameplay": {
+        "use-timer-tick-event": False  # not recommended.  1/20th of a second timer option for plugin use. May
+                                       # impact wrapper performance negatively.
+    },
     "General": {
         "auto-restart": True,
-        "auto-update-dev-build": False,
-        "auto-update-wrapper": False,
-        "command": "java -jar minecraft_server.1.9.2.jar nogui",
+        "auto-update-branch": None,  # Point to "dev" or "stable", as desired
+        "auto-update-dev-build": "deprecated",  # no separate item for wrapper/dev-build.
+        "auto-update-wrapper": False,  # If True, an "auto-update-branch" must be specified.
+        # You can point these to another branch, if desired.
+        "stable-branch": "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master/build/version.json",
+        "dev-branch": "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/build/version.json",
+        # You will need to update this to your particular server start command line.
+        "command": "java -jar minecraft_server.jar nogui",
         "encoding": "UTF-8",
+        # Set this to read the console properly for pre-1.7 servers.  DO NOT use proxy mode for pre-1.7 servers!
         "pre-1.7-mode": False,
-        "server-directory": ".",
+        "server-directory": ".",  # Using the default '.' roots the server in the same folder with wrapper. Change
+                                  # this to another folder to keep the wrapper and server folders separate.
         "server-name": "Minecraft Server",
         "shell-scripts": False,
         "timed-reboot": False,
@@ -99,6 +48,8 @@ NEWCONFIG = {
         "timed-reboot-warning-minutes": 5
     },
     "IRC": {
+        # This allows your users to communicate to and from the server via IRC and vise versa.
+        # _________________________________
         "autorun-irc-commands": [
             "COMMAND 1",
             "COMMAND 2"
@@ -119,13 +70,25 @@ NEWCONFIG = {
         "show-irc-join-part": True
     },
     "Proxy": {
+        # This is a man-in-the-middle proxy similar to BungeeCord, which is used for extra plugin functionality.
+        # online-mode must be set to False in server.properties. Make sure that the server is not accessible directly
+        # from the outside world.
+        # _________________________________
+        # Note: the online-mode option here refers to the proxy only, not to the server's offline mode.  Each server's
+        # online mode will depend on its setting in server.properties
+        # _________________________________
+        # It is recommended that you turn network-compression-threshold to -1 (off) in server.properties
+        # for fewer issues.
+        # _________________________________
         "convert-player-files": False,
         "max-players": 1024,
-        "online-mode": True,
+        "online-mode": True,  # the wrapper's online mode, NOT the child server.
         "proxy-bind": "0.0.0.0",
         "proxy-enabled": False,
-        "proxy-port": 25565,
-        "server-port": 25564,
+        "proxy-port": 25565,  # the wrapper's proxy port that accepts client connections from the internet. This
+                              # port is exposed to the internet via your port forwards.
+        "server-port": 25564,  # the minecraft server port (the hub for hub setups) that traffic is directed to. This
+                               # port must not be exposed to outside traffic.
         "spigot-mode": False
     },
     "Web": {
@@ -146,8 +109,7 @@ class Config:
         self.exit = False
 
     def loadconfig(self):
-        # creates new wrapper.properties. The reason I do this is so the
-        # ordering isn't random and is a bit prettier
+        # load older versions of wrapper.properties to preserve prior settings.
         if os.path.exists("wrapper.properties"):
             with open("wrapper.properties", "r") as f:
                 oldconfig = f.read()
@@ -156,10 +118,12 @@ class Config:
                 f.write(oldconfig)
             os.remove("wrapper.properties")
 
+        # Create new config if none exists
         if not os.path.exists("wrapper.properties.json"):
             putjsonfile(NEWCONFIG, "wrapper.properties", sort=True, encodedas="UTF-8")
             self.exit = True
 
+        # Read existing configuration
         self.config = getjsonfile("wrapper.properties")  # the only data file that must be UTF-8
         if self.config is None:
             self.log.error("I think you messed up the Json formatting of your "
@@ -168,18 +132,52 @@ class Config:
                            "http://jsonlint.com/")
             self.exit = True
 
+        # detection and addition must be separated to prevent changing dictionary while iterating over it.
+        # detect changes
         changesmade = False
+        deprecated_entries = []
+        new_sections = []
+        new_entries = []
         for section in NEWCONFIG:
             if section not in self.config:
                 self.log.debug("Adding section [%s] to configuration", section)
-                self.config[section] = {}
+                new_sections.append(section)
+                for new_sections_items in section:
+                    new_entries.append([section,new_sections_items])
                 changesmade = True
             for configitem in NEWCONFIG[section]:
-                if configitem not in self.config[section]:
-                    self.log.debug("Key %s in section %s not in wrapper.properties - adding", configitem, section)
-                    self.config[section][configitem] = NEWCONFIG[section][configitem]
+                # mark deprecated items for deletion
+                if configitem in self.config[section]:
+                    if NEWCONFIG[section][configitem] == "deprecated":
+                        self.log.debug("Found deprecated item '%s' in section '%s'. - removing it from"
+                                       " wrapper properties", configitem, section)
+                        deprecated_entries.append([section, configitem])
+                # mark new items for addition
+                else:
+                    self.log.debug("Item '%s' in section '%s' not in wrapper properties - adding it!",
+                                   configitem, section)
+                    new_entries.append([section, configitem, ])
                     changesmade = True
+
+        # Apply changes and save.
         if changesmade:
+            # add new section
+            if len(new_sections) > 0:
+                for added_section in new_sections:
+                    self.config[added_section] = {}
+
+            # Removed deprecated entries
+            if len(deprecated_entries) > 0:
+                for removed in deprecated_entries:
+                    # del d[key]
+                    del self.config[removed[0]][removed[1]]
+
+            # Add new entries
+            if len(new_entries) > 0:
+                for added in new_entries:
+                    # del d[key]
+                    self.config[added[0]][added[1]] = NEWCONFIG[added[0]][added[1]]
+
             self.save()
             self.exit = True
 

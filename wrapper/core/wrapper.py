@@ -14,7 +14,7 @@ import sys  # used to pass sys.argv to server
 
 # small feature and helpers
 from utils.helpers import format_bytes, getargs, getargsafter, readout
-import core.buildinfo as version_info
+import core.buildinfo as core_buildinfo_version
 from core.mcuuid import MCUUID
 from core.config import Config
 from core.exceptions import UnsupportedOSException, InvalidServerStartedError
@@ -58,6 +58,7 @@ class Wrapper:
 
     def __init__(self):
         # setup log and config
+        self.storage = False    # needs a false setting on first in case config does not load (like after changes).
         self.log = logging.getLogger('Wrapper.py')
         self.configManager = Config()
         self.configManager.loadconfig()
@@ -69,9 +70,10 @@ class Wrapper:
         self.proxymode = self.config["Proxy"]["proxy-enabled"]
         self.wrapper_onlinemode = self.config["Proxy"]["online-mode"]
         self.wrapper_ban_system = self.proxymode and self.wrapper_ban_system
+        self.auto_update_wrapper = self.config["General"]["auto-update-wrapper"]
+        self.use_timer_tick_event = self.config["General"]["use-timer-tick-event"]
 
         # Storages
-        self.storage = False  # needs a false setting on first start
         self.storage = Storage("wrapper", encoding=self.encoding)
         self.permissions = Storage("permissions", encoding=self.encoding)
         self.usercache = Storage("usercache", encoding=self.encoding)
@@ -92,15 +94,19 @@ class Wrapper:
         self.web = None
         self.proxy = None
         self.halt = False
-        self.update = False
+        self.updated = False
 
         # Error messages for non-standard import failures.
         if not readline:
             self.log.warning("'readline' not imported.  This is needed for proper console functioning")
 
-        if not requests and self.proxymode:
-            self.log.error("You must have the requests module installed to run in proxy mode!")
-            return
+        if not requests:
+            if self.auto_update_wrapper:
+                self.log.error("You must have the requests module installed to enable auto-updates for wrapper!")
+                return
+            if self.proxymode:
+                self.log.error("You must have the requests module installed to run in proxy mode!")
+                return
 
     def __del__(self):
         if self.storage:  # prevent error message on very first wrapper starts when wrapper exits after creating
@@ -148,7 +154,7 @@ class Wrapper:
         consoledaemon.start()
 
         # Timer also runs while not wrapper.halt
-        t = threading.Thread(target=self.timer, args=())
+        t = threading.Thread(target=self.event_timer, args=())
         t.daemon = True
         t.start()
 
@@ -164,8 +170,8 @@ class Wrapper:
             t.daemon = True
             t.start()
 
-        if self.config["General"]["auto-update-wrapper"]:
-            t = threading.Thread(target=self.checkfordevupdate, args=())
+        if self.auto_update_wrapper:
+            t = threading.Thread(target=self.auto_update_process, args=())
             t.daemon = True
             t.start()
 
@@ -216,7 +222,7 @@ class Wrapper:
             elif command == "/reload":  # "reload" (with no slash) may be used by bukkit servers
                 self.runwrapperconsolecommand("reload", [])
             elif command in ("/update-wrapper", "update-wrapper"):
-                self.checkforupdate(False)
+                self.checkforupdate(True)
             elif command == "/plugins":  # "plugins" command (with no slash) reserved for possible server commands
                 self.listplugins()
             elif command in ("/mem", "/memory", "mem", "memory"):
@@ -352,30 +358,36 @@ class Wrapper:
     def _registerwrappershelp(self):
         # All commands listed herein are accessible in-game
         # Also require player.isOp()
-        self.api.registerHelp("Wrapper", "Internal Wrapper.py commands ", [
-            ("/wrapper [update/memory/halt]",
-             "If no subcommand is provided, it will show the Wrapper version.", None),
-            ("/playerstats [all]",
-             "Show the most active players. If no subcommand is provided, it'll show the top 10 players.", None),
-            ("/plugins",
-             "Show a list of the installed plugins", None),
-            ("/reload", "Reload all plugins.", None),
-            ("/permissions <groups/users/RESET>",
-             "Command used to manage permission groups and users, add permission nodes, etc.", None),
-            ("/entity <count/kill> [eid] [count]", "/entity help/? for more help.. ", None),
-            ("/config", "Change wrapper.properties (type /config help for more..)", None),
-            # Minimum server version for commands to appear is 1.7.6 (registers perm later in serverconnection.py)
-            # These won't appear if proxy mode is not on (since serverconnection is part of proxy).
-            ("/ban <name> [reason..] [d:<days>/h:<hours>]",
-             "Ban a player. Specifying h:<hours> or d:<days> creates a temp ban.", "mc1.7.6"),
-            ("/ban-ip <ip> [<reason..> <d:<number of days>]",
-             "- Ban an IP address. Reason and days (d:) are optional.", "mc1.7.6"),
-            ("/pardon <player> [False]", " - pardon a player. Default is byuuidonly.  To unban a specific "
-                                         "name (without checking uuid), use `pardon <player> False`", "mc1.7.6"),
-            ("/pardon-ip <address>", "Pardon an IP address.", "mc1.7.6"),
-            ("/banlist [players|ips] [searchtext]",
-             "search and display the banlist (warning - displays on single page!)", "mc1.7.6")
-        ])
+        self.api.registerHelp(
+            "Wrapper", "Internal Wrapper.py commands ",
+            [
+                ("/wrapper [update/memory/halt]",
+                 "If no subcommand is provided, it will show the Wrapper version.", None),
+                ("/playerstats [all]",
+                 "Show the most active players. If no subcommand is provided, it'll show the top 10 players.",
+                 None),
+                ("/plugins",
+                 "Show a list of the installed plugins", None),
+                ("/reload", "Reload all plugins.", None),
+                ("/permissions <groups/users/RESET>",
+                 "Command used to manage permission groups and users, add permission nodes, etc.",
+                 None),
+                ("/entity <count/kill> [eid] [count]", "/entity help/? for more help.. ", None),
+                ("/config", "Change wrapper.properties (type /config help for more..)", None),
+
+                # Minimum server version for commands to appear is 1.7.6 (registers perm later in serverconnection.py)
+                # These won't appear if proxy mode is not on (since serverconnection is part of proxy).
+                ("/ban <name> [reason..] [d:<days>/h:<hours>]",
+                 "Ban a player. Specifying h:<hours> or d:<days> creates a temp ban.", "mc1.7.6"),
+                ("/ban-ip <ip> [<reason..> <d:<number of days>]",
+                 "- Ban an IP address. Reason and days (d:) are optional.", "mc1.7.6"),
+                ("/pardon <player> [False]",
+                 " - pardon a player. Default is byuuidonly.  To unban a specific "
+                 "name (without checking uuid), use `pardon <player> False`", "mc1.7.6"),
+                ("/pardon-ip <address>", "Pardon an IP address.", "mc1.7.6"),
+                ("/banlist [players|ips] [searchtext]",
+                 "search and display the banlist (warning - displays on single page!)", "mc1.7.6")
+            ])
 
     def runwrapperconsolecommand(self, wrappercommand, argslist):
         xpayload = {'player': self.xplayer, 'command': wrappercommand, 'args': argslist}
@@ -642,83 +654,73 @@ class Wrapper:
 
     @staticmethod
     def getbuildstring():
-        if version_info.__branch__ == "dev":
-            return "%s (development build #%d)" % (version_info.__version__, version_info.__build__)
+        if core_buildinfo_version.__branch__ == "dev":
+            return "%s (development build #%d)" % (core_buildinfo_version.__version__, core_buildinfo_version.__build__)
+        elif core_buildinfo_version.__branch__ == "stable":
+            return "%s (stable)" % core_buildinfo_version.__build__
         else:
-            return "%s (stable)" % version_info.__version__
+            return "Version: %s (%s build #%d)" % (core_buildinfo_version.__version__,
+                                                   core_buildinfo_version.__branch__,
+                                                   core_buildinfo_version.__build__)
 
-    def checkfordevupdate(self):
-        if not requests:
-            self.log.error("Can't automatically check for new Wrapper.py versions because you do not have the "
-                           "requests module installed!")
-            return
+    def auto_update_process(self):
         while not self.halt:
             time.sleep(3600)
-            self.checkforupdate(True)
-
-    def checkforupdate(self, auto):
-        self.log.info("Checking for new builds...")
-        update = self.getwrapperupdate()
-        if update:
-            version, build, repotype = update
-            if repotype == "dev":
-                if auto and not self.config["General"]["auto-update-dev-build"]:
-                    self.log.info("New Wrapper.py development build #%d available for download! (currently on #%d)",
-                                  build, version_info.__build__)
-                    self.log.info("Because you are running a development build, you must manually update "
-                                  "Wrapper.py. To update Wrapper.py manually, please type /update-wrapper.")
-                else:
-                    self.log.info("New Wrapper.py development build #%d available! Updating... (currently on #%d)",
-                                  build, version_info.__build__)
-                self.performupdate(version, build, repotype)
+            if self.updated:
+                self.log.info("An update for wrapper has been loaded, Please restart wrapper.")
             else:
-                self.log.info("New Wrapper.py stable %s available! Updating... (currently on %s)",
-                              ".".join([str(_) for _ in version]), version_info.__version__)
-                self.performupdate(version, build, repotype)
+                self.checkforupdate()
+
+    def checkforupdate(self, update_now=False):
+        """ checks for update """
+        self.log.info("Checking for new builds...")
+        update = self.get_wrapper_update_info()
+        if update:
+            version, build, repotype, reponame = update
+            self.log.info("New Wrapper.py %s build #%d is available! (current build is #%d)",
+                          repotype, build, core_buildinfo_version.__build__)
+            if self.auto_update_wrapper or update_now:
+                self.log.info("Updating...")
+                self.performupdate(version, build, reponame)
+            else:
+                self.log.info("Because you have 'auto-update-wrapper' set to False, you must manually update "
+                              "Wrapper.py. To update Wrapper.py manually, please type /update-wrapper.")
         else:
             self.log.info("No new versions available.")
 
-    def getwrapperupdate(self, repotype=None):
+    def get_wrapper_update_info(self, repotype=None):
+        """get the applicable branch wrapper update"""
+        # read the installed branch info
         if repotype is None:
-            repotype = version_info.__branch__
-        if repotype == "dev":
-            r = requests.get("https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/build/"
-                             "version.json")
-            if r.status_code == 200:
-                data = r.json()
-                if self.update:
-                    if self.update > data["build"]:
-                        return False
-                if data["build"] > version_info.__build__ and data["repotype"] == "dev":
-                    return data["version"], data["build"], data["repotype"]
+            repotype = core_buildinfo_version.__branch__
+        branch_key = "%s-branch" % repotype
+        r = requests.get(self.config["General"][branch_key])
+        if r.status_code == 200:
+            data = r.json()
+            if data("__build__") > core_buildinfo_version.__build__:
+                if repotype == "dev":
+                    reponame = "development"
+                elif repotype == "stable":
+                    reponame = "master"
                 else:
-                    return False
-            else:
-                self.log.warning("Failed to check for updates - are you connected to the internet? "
-                                 "(Status Code %d)", r.status_code)
-                
-        else:
-            r = requests.get("https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master/build/"
-                             "version.json")
-            if r.status_code == 200:
-                data = r.json()
-                if self.update:
-                    if self.update > data["build"]:
-                        return False
-                if data["build"] > version_info.__build__ and data["repotype"] == "stable":
-                    return data["version"], data["build"], data["repotype"]
-                else:
-                    return False
-            else:
-                self.log.warning("Failed to check for updates - are you connected to the internet? (Status Code %d)",
-                                 r.status_code)
-        return False
+                    reponame = data["__branch__"]
+                return data["__version__"], data["__build__"], data["__branch__", reponame]
 
-    def performupdate(self, version, build, repotype):
-        if repotype == "dev":
-            repo = "development"
         else:
-            repo = "master"
+            self.log.warning("Failed to check for updates - are you connected to the internet? "
+                             "(Status Code %d)", r.status_code)
+            return False
+
+    def performupdate(self, version, build, reponame):
+        """
+        Perform update; returns True if update succeeds.  User must still restart wrapper manually.
+
+        :param version: first argument from get_wrapper_update_info()
+        :param build: second argument from get_wrapper_update_info()
+        :param reponame: 4th argument from get_wrapper_update_info() - not the '__branch__'!
+        :return: True if update succeeds
+        """
+        repo = reponame
         wrapperhash = requests.get("https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/%s/build"
                                    "/Wrapper.py.md5" % repo)
         wrapperfile = requests.get("https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/%s/Wrapper.py"
@@ -728,10 +730,12 @@ class Wrapper:
             if hashlib.md5(wrapperfile.content).hexdigest() == wrapperhash.text:
                 self.log.info("Update file successfully verified. Installing...")
                 with open(sys.argv[0], "w") as f:
+                    # requests object is the binary/Wrapper.py file.
+                    # noinspection PyTypeChecker
                     f.write(wrapperfile)
                 self.log.info("Wrapper.py %s (#%d) installed. Please reboot Wrapper.py.",
                               ".".join([str(_) for _ in version]), build)
-                self.update = build
+                self.updated = True
                 return True
             else:
                 return False
@@ -740,14 +744,15 @@ class Wrapper:
                            wrapperfile.status_code, exc_info=True)
             return False
 
-    def timer(self):
+    def event_timer(self):
         t = time.time()
         while not self.halt:
             if time.time() - t > 1:
                 self.events.callevent("timer.second", None)
                 t = time.time()
             time.sleep(0.05)
-            # self.events.callevent("timer.tick", None)  # don't really advise the use of this timer
+            if self.use_timer_tick_event:
+                self.events.callevent("timer.tick", None)  # don't really advise the use of this timer
 
 
 # - due to being refrerenced by the external wrapper API that is camelCase
