@@ -142,21 +142,29 @@ class Config:
             if section not in self.config:
                 self.log.debug("Adding section [%s] to configuration", section)
                 new_sections.append(section)
-                for new_sections_items in section:
-                    new_entries.append([section,new_sections_items])
                 changesmade = True
+
             for configitem in NEWCONFIG[section]:
-                # mark deprecated items for deletion
-                if configitem in self.config[section]:
-                    if NEWCONFIG[section][configitem] == "deprecated":
-                        self.log.debug("Found deprecated item '%s' in section '%s'. - removing it from"
-                                       " wrapper properties", configitem, section)
-                        deprecated_entries.append([section, configitem])
-                # mark new items for addition
+                if section in self.config:
+                    # mark deprecated items for deletion
+                    if configitem in self.config[section]:
+                        if NEWCONFIG[section][configitem] == "deprecated":
+                            self.log.debug("Found deprecated item '%s' in section '%s'. - removing it from"
+                                           " wrapper properties", configitem, section)
+                            deprecated_entries.append([section, configitem])
+                    # mark new items for addition
+                    else:
+                        # handle new items in an existing section
+                        if NEWCONFIG[section][configitem] != "deprecated":  # avoid re-adding deprecated items
+                            self.log.debug("Item '%s' in section '%s' not in wrapper properties - adding it!",
+                                           configitem, section)
+                            new_entries.append([section, configitem])
+                            changesmade = True
                 else:
-                    self.log.debug("Item '%s' in section '%s' not in wrapper properties - adding it!",
+                    # handle new items in a (new) section
+                    self.log.debug("Item '%s' in new section '%s' not in wrapper properties - adding it!",
                                    configitem, section)
-                    new_entries.append([section, configitem, ])
+                    new_entries.append([section, configitem])
                     changesmade = True
 
         # Apply changes and save.
@@ -169,13 +177,11 @@ class Config:
             # Removed deprecated entries
             if len(deprecated_entries) > 0:
                 for removed in deprecated_entries:
-                    # del d[key]
                     del self.config[removed[0]][removed[1]]
 
             # Add new entries
             if len(new_entries) > 0:
                 for added in new_entries:
-                    # del d[key]
                     self.config[added[0]][added[1]] = NEWCONFIG[added[0]][added[1]]
 
             self.save()

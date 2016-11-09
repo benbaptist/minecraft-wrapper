@@ -3,14 +3,14 @@ Build #136
     * add config items for updates.
     * correct potential for dictionary changes during iteration while detecting changes.
     * added code to remove deprecated items from the config
+    * added more comments to the new default config dictionary.
 - finish out updates and versioning that was in an intermediate state (switching things like "build" to "__build__")
 - implement SurestTexas00 #25 by JasonBristol to add wrapper update URLs to wrapper config
 - continuing refactor of core/wrapper.py
 - restore timer.tick event, but it is only enabled by a new config item in new section "Gameplay".
-- added more comments to the new default config dictionary.
 
 Build #135
-- refactor core.wrapper.py.  Reorganize wrapper imports for readability, gouping by fuction.
+- refactor core.wrapper.py.  Reorganize wrapper imports for readability, grouping by function.
 - make console display the ConsolePlayer.message() using the passed color codes (&_) or json "color": item.
 - make utils.helpers.readout() even more generic and configurable.
 - refactor to remove various camelCase in various non-API places.
