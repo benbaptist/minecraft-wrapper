@@ -218,7 +218,6 @@ class ServerConnection:
                 self.packet.sendpkt(self.pktSB.CLIENT_STATUS, [_VARINT],
                                     (0,))  # TODO need to check version (1.8 below use byte)
                 x = self.client.position
-                print(x)
                 if x != (0, 0, 0):
                     self.client.packet.sendpkt(self.pktCB.PLAYER_POSLOOK,
                                                [_DOUBLE, _DOUBLE, _DOUBLE, _FLOAT, _FLOAT, _BYTE, _VARINT],
