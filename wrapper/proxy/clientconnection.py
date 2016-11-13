@@ -1040,8 +1040,7 @@ class Client:
                     if mcpackets.PROTOCOL_1_9START < self.clientversion < mcpackets.PROTOCOL_1_9REL1:
                         self.disconnect("You're running an unsupported snapshot (protocol: %s)!" % self.clientversion)
                         return False
-
-                    if self.serverversion == self.clientversion and requestedstate == LOGIN:
+                    if self.serverversion == self.clientversion:
                         # login start...
                         self.state = LOGIN
                         return True  # packet passes to server, which will also switch to Login

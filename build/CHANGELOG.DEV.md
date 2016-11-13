@@ -1,3 +1,6 @@
+Build #138  [0.8.15]
+- "we have to pass the bill so we know what's in it!"
+
 Build #137  [0.8.14]
 - Fix build 135's problem with sys.stdin.readline()... it needs additional .strip() to be equivalent to raw_input.
 - updated the Cougar teleports.py plugin for the new wrapper logic (whichs returns None for non-existing getPlayer()'s.
