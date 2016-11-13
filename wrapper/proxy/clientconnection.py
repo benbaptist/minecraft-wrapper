@@ -386,6 +386,7 @@ class Client:
                     self.isLocal = True
                     return False
 
+                # TODO start here in tracking down what happens to a payload as it is passed through more than 1 event
                 payload = self.wrapper.events.callevent("player.rawMessage", {
                     "player": self.getplayerobject(),
                     "message": chatmsg
@@ -460,7 +461,8 @@ class Client:
                                                     ))
                     self.clientSettingsSent = True
                 return False
-            if not self.isLocal:  # speed up pass-through for lobby hub applications
+
+            if not self.isLocal:  # TODO speed up pass-through for hub applications - Still need to evaluate this logic
                 return True
 
             if pkid == self.pktSB.PLAYER_POSITION:  # player position

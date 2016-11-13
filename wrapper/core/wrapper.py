@@ -205,7 +205,7 @@ class Wrapper:
             wholecommandline = consoleinput[0:].split(" ")
             command = getargs(wholecommandline, 0)
             allargs = wholecommandline[1:]  # this can be passed to runwrapperconsolecommand() command for args
-
+            print(command)  # TODO PRINT statement
             # Most of these are too small to use the runwrapperconsolecommand command (or work better here)
             if command in ("/halt", "halt"):
                 self.javaserver.stop("Halting server...", save=False)

@@ -7,6 +7,7 @@ from utils.helpers import getjsonfile, putjsonfile
 
 
 # Default Configuration File
+# Config items with values of "deprecated" get removed if they exist in an active config file
 NEWCONFIG = {
     "Backups": {
         # Automatic backups with automatic backup pruning. Interval is in seconds.
@@ -35,12 +36,14 @@ NEWCONFIG = {
         "stable-branch": "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master/build/version.json",
         "dev-branch": "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/build/version.json",
         # You will need to update this to your particular server start command line.
-        "command": "java -jar minecraft_server.jar nogui",
+        "command": "java -jar -Xmx2G -Xmx1G minecraft_server.jar nogui",
         "encoding": "UTF-8",
         # Set this to read the console properly for pre-1.7 servers.  DO NOT use proxy mode for pre-1.7 servers!
         "pre-1.7-mode": False,
         "server-directory": ".",  # Using the default '.' roots the server in the same folder with wrapper. Change
                                   # this to another folder to keep the wrapper and server folders separate.
+                                  # Do not use a trailing slash.
+                                  # '/full/pathto/the/server'
         "server-name": "Minecraft Server",
         "shell-scripts": False,
         "timed-reboot": False,
