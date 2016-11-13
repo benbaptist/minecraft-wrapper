@@ -31,9 +31,7 @@ class Main:
         self.api.minecraft.broadcast("&a&lEverybody, introduce %s to the server!" % playername)
 
     def playerLogout(self, payload):
-        print(payload)
         playerObj = payload["player"]
-        print(playerObj)
         playername = str(playerObj.username)
         self.api.minecraft.broadcast("&7&oYou will be dearly missed, %s." % playername)
 
