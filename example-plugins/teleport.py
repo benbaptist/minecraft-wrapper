@@ -185,7 +185,7 @@ class Main:
             return None
         return otherPlayer
 
-    def _permitted(self,player, permission):
+    def _permitted(self, player, permission):
         """check for player permission to run a command.  This routine returns false
         if the player has no permission and prints a vanilla 'unknown command' message
         versus the wrapper's 'permission denied' type message

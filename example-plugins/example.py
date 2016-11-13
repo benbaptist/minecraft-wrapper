@@ -13,27 +13,27 @@ DEPENDENCIES = False  # even if there is only 1 dependency, it must be a 'list' 
 
 
 class Main:
-	def __init__(self, api, log):
-		self.api = api
-		self.log = log
+    def __init__(self, api, log):
+        self.api = api
+        self.log = log
 
-	def onEnable(self):
-		self.log.info("example.py is loaded!")
-		self.log.error("This is an error test.")
-		self.log.debug("This'll only show up if you have debug mode on.")
-		
-		self.api.registerEvent("player.login", self.playerLogin)
-		self.api.registerEvent("player.logout", self.playerLogout)
+    def onEnable(self):
+        self.log.info("example.py is loaded!")
+        self.log.error("This is an error test.")
+        self.log.debug("This'll only show up if you have debug mode on.")
 
-	def playerLogin(self, payload):
-		playerObj = payload["player"]
-		playername = str(playerObj.username)
-		self.api.minecraft.broadcast("&a&lEverybody, introduce %s to the server!" % playername)
+        self.api.registerEvent("player.login", self.playerLogin)
+        self.api.registerEvent("player.logout", self.playerLogout)
 
-	def playerLogout(self, payload):
-		playerObj = payload["player"]
-		playername = str(playerObj.username)
-		self.api.minecraft.broadcast("&7&oYou will be dearly missed, %s." % playername)
+    def playerLogin(self, payload):
+        playerObj = payload["player"]
+        playername = str(playerObj.username)
+        self.api.minecraft.broadcast("&a&lEverybody, introduce %s to the server!" % playername)
 
-	def onDisable(self):
-		pass
+    def playerLogout(self, payload):
+        playerObj = payload["player"]
+        playername = str(playerObj.username)
+        self.api.minecraft.broadcast("&7&oYou will be dearly missed, %s." % playername)
+
+    def onDisable(self):
+        pass
