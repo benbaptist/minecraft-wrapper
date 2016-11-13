@@ -1,3 +1,7 @@
+Build #137  [0.8.14]
+- Fix build 135's problem with sys.stdin.readline()... it needs additional .strip() to be equivalent to raw_input.
+- updated the Cougar teleports.py plugin for the new wrapper logic (whichs returns None for non-existing getPlayer()'s.
+
 Build #136
 - core config.py:
     * add config items for updates.
@@ -28,7 +32,7 @@ Build 133 - 134
 The purpose of these builds is to progressively work towards full functionality.  Each build will be better
 than the last until player.connect() is fully functional.
 
-Build #132 [0.8.12]
+Build #132 [0.8.13]
 - Fix circular-referencing Client() class- the final argument to Client() was the client's own instance (from proxy)
 - some minor refractors and edits here and there
 
