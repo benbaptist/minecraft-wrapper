@@ -1,3 +1,9 @@
+Build #138  [0.8.15]
+- fix the player.logout (def logout in mcserver.py) to pass a player-type object for parsing of the 'player.username'
+upon exiting for the example.py plugin.  No idea what other items from player payload are in use, but they can be added
+later to the MiniPlayer class.  The actual player object becomes defunct before it reaches the plugin event.
+- fixed redundant logic in clientconnection.py.  Verified wrapper still functions in Proxymode for 1.11 pre-1.
+
 Build #137  [0.8.14]
 - Fix build 135's problem with sys.stdin.readline()... it needs additional .strip() to be equivalent to raw_input.
 - updated the Cougar teleports.py plugin for the new wrapper logic (whichs returns None for non-existing getPlayer()'s.

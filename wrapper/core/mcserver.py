@@ -329,18 +329,22 @@ class MCServer:
 
         self.wrapper.events.callevent("player.login", {"player": self.getplayer(username)})
 
-    def logout(self, username):
+    def logout(self, players_name):
         """
         Called when a player logs out
         """
         # player object is defunct at this point.  All we can pass to the plugin is a name
-        self.wrapper.events.callevent("player.logout", {"player": {"username": username}})
+        nameduser = "%s" % players_name
+        x = MiniPlayer(nameduser)
+
+        # self.wrapper.callEvent("player.logout", {"player": self.getPlayer(username)})
+        self.wrapper.events.callevent("player.logout", {"player": x})
         if self.wrapper.proxy:
             self.wrapper.proxy.removestaleclients()
 
-        if username in self.players:
-            self.players[username].abort = True
-            del self.players[username]
+        if players_name in self.players:
+            self.players[players_name].abort = True
+            del self.players[players_name]
 
     def getplayer(self, username):
         """
@@ -648,3 +652,11 @@ class MCServer:
                     for f in os.listdir(i[0]):
                         size += os.path.getsize(os.path.join(i[0], f))
                 self.worldSize = size
+
+
+class MiniPlayer:
+    """ a shell of the original player, who is now logged off and real player object is defunct.
+    Only used to pass some info to the player payload for event player.Logout, mostly for back-wards
+    compatibility to plugins."""
+    def __init__(self, playername):
+        self.username = playername

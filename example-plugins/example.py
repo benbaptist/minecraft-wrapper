@@ -1,8 +1,8 @@
-NAME = "Example Plugin" # the visible name of the plugin, seen in /plugins and whatnot
-AUTHOR = "Ben Baptist" # the creator/developer of the plugin
-ID = "com.benbaptist.plugins.example" # the ID of the plugin, used for identifying the plugin for storage objects and more
+NAME = "Example Plugin"  # the visible name of the plugin, seen in /plugins and whatnot
+AUTHOR = "Ben Baptist"  # the creator/developer of the plugin
+ID = "com.benbaptist.plugins.example"  # the ID of the plugin, used for identifying the plugin for storage objects and more
 VERSION = (1, 1) # the version number, with commas in place of periods. add more commas if needed
-SUMMARY = "This plugin helps demonstrate functions in Wrapper.py. :D" # a quick, short summary of the plugin seen in /plugins
+SUMMARY = "This plugin helps demonstrate functions in Wrapper.py. :D"  # a quick, short summary of the plugin seen in /plugins
 WEBSITE = "http://wrapper.benbaptist.com/" # the developer or plugin's website
 DESCRIPTION = """The longer description of how this plugin helps demonstrate functions in Wrapper.py. :D"""
 
