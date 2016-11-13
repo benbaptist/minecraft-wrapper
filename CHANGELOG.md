@@ -15,7 +15,7 @@ This update contains an important patch regarding username changes. It is import
 - Added log rotation, and logs are now stored in logs/wrapper directory
 - Added support for Minecraft protocol 54/snapshot 15w32c
 - [pull request #247] New Bookmarks plugin by Cougar
-  
+
 **Developer Changes**
 - Events which return a payload other than True/False will be passed onto the event caller
   - e.g. you can read an event such as player.rawMessage, and then `return "Different message!"` to change the message (this includes commands!)

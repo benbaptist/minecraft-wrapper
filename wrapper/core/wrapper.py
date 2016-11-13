@@ -192,7 +192,7 @@ class Wrapper:
 
             # Obtain a line of console input
             try:
-                consoleinput = sys.stdin.readline()
+                consoleinput = sys.stdin.readline().strip()
             except Exception as e:
                 print("[continue] variable 'consoleinput' in 'console()' did not evaluate \n%s" % e)
                 continue
@@ -205,7 +205,6 @@ class Wrapper:
             wholecommandline = consoleinput[0:].split(" ")
             command = getargs(wholecommandline, 0)
             allargs = wholecommandline[1:]  # this can be passed to runwrapperconsolecommand() command for args
-
             # Most of these are too small to use the runwrapperconsolecommand command (or work better here)
             if command in ("/halt", "halt"):
                 self.javaserver.stop("Halting server...", save=False)
