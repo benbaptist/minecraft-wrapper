@@ -179,7 +179,6 @@ class Config:
                     self.config[added_section] = {}
 
             # Removed deprecated entries
-            print(len(deprecated_entries))
             if len(deprecated_entries) > 0:
                 for removed in deprecated_entries:
                     del self.config[removed[0]][removed[1]]
