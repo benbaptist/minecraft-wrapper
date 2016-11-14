@@ -1,3 +1,18 @@
+Build #141  version [0.9.1]
+- added entity controls which are configurable.
+Defaults:
+```
+        "Gameplay": {
+            "enable-entity-controls": False,  # enable entity controls.
+            "thinning-frequency": 10,  # how often thinning of mobs runs, in seconds
+            "thinning-activation-threshhold": 100,  # when TOTAL mobs are below this number, thinning is skipped entirely
+            "thin-any-mob": 50,  # any mob count above this number gets thinned.
+            "thin-Cow": 30,  # Example, keeps Cows < 30.  Name must match exactly.  Overrides 'thin-any-mob'.
+            "thin-Sheep": 30,
+            "thin-Chicken": 30
+        },
+```
+
 Build #140
 - Fix error in serverconnection.py:
 new entities that have been added to MC version 1.11 are not yet listed in the grahamedgecombe resource.  This
