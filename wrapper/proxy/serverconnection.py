@@ -372,11 +372,14 @@ class ServerConnection:
                     # "varint:eid|uuid:objectUUID|byte:type_|int:x|int:y|int:z|byte:pitch|byte:yaw|int:info|
                     # short:velocityX|short:velocityY|short:velocityZ")
                 entityuuid = dt[1]
-                objectname = self.wrapper.javaserver.world.objecttypes[dt[2]]
-                newobject = {dt[0]: Entity(dt[0], entityuuid, dt[2], objectname,
-                                           (dt[3], dt[4], dt[5],), (dt[6], dt[7]), True, self.username)}
 
-                self.wrapper.javaserver.world.entities.update(newobject)
+                # we have to check these first, lest the object type be new and cause an exception.
+                if dt[2] in self.wrapper.javaserver.world.objecttypes:
+                    objectname = self.wrapper.javaserver.world.objecttypes[dt[2]]
+                    newobject = {dt[0]: Entity(dt[0], entityuuid, dt[2], objectname,
+                                               (dt[3], dt[4], dt[5],), (dt[6], dt[7]), True, self.username)}
+
+                    self.wrapper.javaserver.world.entities.update(newobject)
                 # self.log.trace("(PROXY SERVER) -> Parsed SPAWN_OBJECT packet:\n%s", dt)
 
             elif pkid == self.pktCB.SPAWN_MOB:
@@ -397,20 +400,17 @@ class ServerConnection:
                     # STOP PARSING HERE: short:velocityX|short:velocityY|short:velocityZ|rest:metadata")
                 entityuuid = dt[1]
 
-                # eid, type_, x, y, z, pitch, yaw, head_pitch = \
-                #     dt["eid"], dt["type_"], dt["x"], dt["y"], dt["z"], dt["pitch"], dt["yaw"], \
-                #     dt["head_pitch"]
-                # self.log.trace("(PROXY SERVER) -> Parsed SPAWN_MOB packet:\n%s", dt)
+                # This little ditty means that a new mob type will be untracked (but it wont generate exception either!
+                if dt[2] in self.wrapper.javaserver.world.entitytypes:
+                    mobname = self.wrapper.javaserver.world.entitytypes[dt[2]]["name"]
+                    newmob = {dt[0]: Entity(dt[0], entityuuid, dt[2], mobname,
+                                            (dt[3], dt[4], dt[5],), (dt[6], dt[7], dt[8]), False, self.username)}
 
-                mobname = self.wrapper.javaserver.world.entitytypes[dt[2]]["name"]
-                newmob = {dt[0]: Entity(dt[0], entityuuid, dt[2], mobname,
-                                        (dt[3], dt[4], dt[5],), (dt[6], dt[7], dt[8]), False, self.username)}
-
-                self.wrapper.javaserver.world.entities.update(newmob)
-                # self.wrapper.javaserver.world.entities[dt[0]] = Entity(dt[0], entityuuid, dt[2],
-                #                                                        (dt[3], dt[4], dt[5], ),
-                #                                                        (dt[6], dt[7], dt[8]),
-                #                                                        False)
+                    self.wrapper.javaserver.world.entities.update(newmob)
+                    # self.wrapper.javaserver.world.entities[dt[0]] = Entity(dt[0], entityuuid, dt[2],
+                    #                                                        (dt[3], dt[4], dt[5], ),
+                    #                                                        (dt[6], dt[7], dt[8]),
+                    #                                                        False)
 
             elif pkid == self.pktCB.ENTITY_RELATIVE_MOVE:
                 if not self.wrapper.javaserver.world:

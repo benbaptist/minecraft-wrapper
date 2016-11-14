@@ -1,3 +1,9 @@
+Build #140
+- Fix error in serverconnection.py:
+new entities that have been added to MC version 1.11 are not yet listed in the grahamedgecombe resource.  This
+results in the parse referencing an entity type ID number that does not exist in the entity type dictionary. Adjusted
+code to skip such non-conforming entries.
+
 Build #139
 - Fix backups for other-folder servers.
 - correct error in config that was not removing deprecated entries.
