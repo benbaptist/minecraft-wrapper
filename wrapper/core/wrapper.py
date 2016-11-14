@@ -825,6 +825,9 @@ class ConsolePlayer:
     def isOp_fast():
         return 4
 
+    def __str__(self):
+        return "CONSOLE OPERATOR"
+
     def message(self, message):
         displaycode, displaycolor = "5", "magenta"
         display = str(message)

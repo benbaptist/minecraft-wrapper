@@ -17,10 +17,6 @@ import ctypes
 import platform
 import base64
 
-# Py3-2
-import sys
-PY3 = sys.version_info > (3,)
-
 try:
     import resource
 except ImportError:
