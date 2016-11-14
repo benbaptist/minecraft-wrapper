@@ -29,13 +29,25 @@ class World:
         objectlistobject = Objecttypes()
         self.objecttypes = objectlistobject.objectlist
 
-        self.entities = {}
+        # load config settings
+        self.entity_control = self.javaserver.config["Gameplay"]["enable-entity-controls"]
+        self.thining_frequency = self.javaserver.config["Gameplay"]["thinning-frequency"]
+        self.max_mob_limit = self.javaserver.config["Gameplay"]["thin-any-mob"]
+        self.start_thinning = self.javaserver.config["Gameplay"]["thinning-activation-threshhold"]
 
+        self.entities = {}
         self.abortep = False
 
-        t = threading.Thread(target=self._entityprocessor, name="entProc", args=())
+        # entity processor thread
+        t = threading.Thread(target=self._entity_processor, name="entProc", args=())
         t.daemon = True
         t.start()
+
+        # entity killer thread
+        if self.entity_control:
+            ekt = threading.Thread(target=self._entity_thinner, name="entKill", args=())
+            ekt.daemon = True
+            ekt.start()
 
     def __str__(self):
         return self.name
@@ -69,6 +81,7 @@ class World:
             {getEntityInfo(eid#3)},
             {getEntityInfo(...)}
             ]
+                      @:type Dict
         """
         ents = []
         entities = self.entities
@@ -82,7 +95,7 @@ class World:
     def getEntityInfo(self, eid):
         """ get dictionary of info on the specified EID.  Returns None if fails
 
-        Sameple item:
+        Sample item:
           {
             "player": "SapperLeader2",  # the player in whose world the entity exists
             "rodeBy": false,
@@ -98,6 +111,7 @@ class World:
             "isObject": false,
             "uuid": "fae14015-dde6-4e07-b5e5-f27536937a79"  # uuids are only on 1.9+ , but should be unique to object
           }
+
         """
         try:
             return self.getEntityByEID(eid).aboutEntity()
@@ -186,7 +200,7 @@ class World:
         return
     # endregion
 
-    def _entityprocessor(self, updatefrequency=10):
+    def _entity_processor(self, updatefrequency=10):
         self.log.debug("_entityprocessor thread started.")
         while self.javaserver.state in (1, 2, 4) and not self.abortep:  # server is running
 
@@ -207,6 +221,60 @@ class World:
 
             self.log.trace("_entityprocessor updates done.")
         self.log.debug("_entityprocessor thread closed.")
+
+    # each entity IS a dictionary, so...
+    # noinspection PyTypeChecker
+    def _entity_thinner(self):
+        self.log.debug("_entity_thinner thread started.")
+        while self.javaserver.state in (1, 2, 4) and not self.abortep:  # server is running
+
+            self.log.trace("_entity_thinner looping.")
+            sleep(self.thining_frequency)  # timer
+            if self.max_mob_limit > self.countActiveEntities():
+                continue  # don't bother, server load is light.
+
+            # gather player list
+            players = self.javaserver.players
+            playerlist = []
+            for player in players:
+                playerlist.append(player)
+            # loop through playerlist
+            for playerclient in playerlist:
+                players_position = self.javaserver.getplayer(playerclient).getPosition()
+                his_entities = self.countEntitiesInPlayer(playerclient)
+                if len(his_entities) < self.start_thinning:
+                    # don't worry with this player, his load is light.
+                    continue
+
+                # now we need to count each entity type,
+                counts = {}
+                for entity in his_entities:
+                    if entity["name"] in counts:
+                        counts[entity["name"]] += 1
+                    else:
+                        counts[entity["name"]] = 1  # like {"Cow": 1}
+
+                for mobs in counts:
+                    maxofthiskind = self.max_mob_limit
+                    if "thin-%s" % mobs in self.javaserver.config["Gameplay"]:
+                        maxofthiskind = self.javaserver.config["Gameplay"]["thin-%s" % mobs]
+                    if counts[mobs] >= maxofthiskind:
+                        killcount = counts[mobs] - maxofthiskind
+                        self._kill_around_player(players_position, "%s" % mobs, killcount)
+
+            self.log.trace("_entity_thinner done.")
+        self.log.debug("_entity_thinner thread closed.")
+
+    def _kill_around_player(self, position, entity_name, count, dropitems=False, finishstateof_domobloot=True):
+        if dropitems:
+            self.javaserver.console("gamerule doMobLoot true")
+        else:
+            self.javaserver.console("gamerule doMobLoot false")
+        pos = position
+        self.javaserver.console("kill @e[type=%s,x=%d,y=%d,z=%d,c=-%s]" %
+                                (entity_name, pos[0], pos[1], pos[2], count))
+        if finishstateof_domobloot:
+            self.javaserver.console("gamerule doMobLoot true")
 
 
 class Chunk:

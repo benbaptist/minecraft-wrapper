@@ -24,19 +24,26 @@ NEWCONFIG = {
         "enabled": False
     },
     "Gameplay": {
-        "use-timer-tick-event": False  # not recommended.  1/20th of a second timer option for plugin use. May
-                                       # impact wrapper performance negatively.
+        "use-timer-tick-event": False,  # not recommended.  1/20th of a second timer option for plugin use. May
+                                        # impact wrapper performance negatively.
+        "enable-entity-controls": False,  # enable entity controls.
+        "thinning-frequency": 10,  # how often thinning of mobs runs, in seconds
+        "thinning-activation-threshhold": 100,  # when TOTAL mobs are below this number, thinning is skipped entirely
+        "thin-any-mob": 50,  # any mob count above this number gets thinned.
+        "thin-Cow": 30,  # Example, keeps Cows < 30.  Name must match exactly.  Overrides 'thin-any-mob'.
+        "thin-Sheep": 30,
+        "thin-Chicken": 30
     },
     "General": {
         "auto-restart": True,
-        "auto-update-branch": None,  # Point to "dev" or "stable", as desired
+        "auto-update-branch": None,  # Use "dev" or "stable", as desired
         "auto-update-dev-build": "deprecated",  # no separate item for wrapper/dev-build.
         "auto-update-wrapper": False,  # If True, an "auto-update-branch" must be specified.
         # You can point these to another branch, if desired.
         "stable-branch": "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master/build/version.json",
         "dev-branch": "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/build/version.json",
         # You will need to update this to your particular server start command line.
-        "command": "java -jar -Xmx2G -Xmx1G minecraft_server.jar nogui",
+        "command": "java -jar -Xmx2G -Xms1G server.jar nogui",
         "encoding": "UTF-8",
         # Set this to read the console properly for pre-1.7 servers.  DO NOT use proxy mode for pre-1.7 servers!
         "pre-1.7-mode": False,
