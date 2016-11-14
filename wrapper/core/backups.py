@@ -124,14 +124,16 @@ class Backups:
             self.api.minecraft.broadcast("&cBacking up... lag may occur!", irc=False)
 
         # Do backups
+        serverpath = self.config["General"]["server-directory"]
         for backupfile in self.config["Backups"]["backup-folders"]:
-            if os.path.exists(backupfile):
-                arguments.append(backupfile)
+            backup_file_and_path = "%s/%s" % (serverpath, backupfile)
+            if os.path.exists(backup_file_and_path):
+                arguments.append(backup_file_and_path)
             else:
-                self.log.warning("Backup file '%s' does not exist - canceling backup", backupfile)
+                self.log.warning("Backup file '%s' does not exist - canceling backup", backup_file_and_path)
                 self.wrapper.events.callevent("wrapper.backupFailure", {"reasonCode": 3,
                                                                         "reasonText": "Backup file '%s' does not exist."
-                                                                        % backupfile})
+                                                                        % backup_file_and_path})
                 return
         statuscode = os.system(" ".join(arguments))
 

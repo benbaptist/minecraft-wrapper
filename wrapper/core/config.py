@@ -152,9 +152,10 @@ class Config:
                     # mark deprecated items for deletion
                     if configitem in self.config[section]:
                         if NEWCONFIG[section][configitem] == "deprecated":
-                            self.log.debug("Found deprecated item '%s' in section '%s'. - removing it from"
+                            self.log.debug("Deprecated item '%s' in section '%s'. - removing it from"
                                            " wrapper properties", configitem, section)
                             deprecated_entries.append([section, configitem])
+                            changesmade = True
                     # mark new items for addition
                     else:
                         # handle new items in an existing section
@@ -178,6 +179,7 @@ class Config:
                     self.config[added_section] = {}
 
             # Removed deprecated entries
+            print(len(deprecated_entries))
             if len(deprecated_entries) > 0:
                 for removed in deprecated_entries:
                     del self.config[removed[0]][removed[1]]

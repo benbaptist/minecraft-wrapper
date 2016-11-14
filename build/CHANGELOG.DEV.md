@@ -1,3 +1,8 @@
+Build #139
+- Fix backups for other-folder servers.
+- correct error in config that was not removing deprecated entries.
+- Give the console player its own __str__ method to display "CONSOLE OPERATOR" versus <object...> stuff in wrapper.infos
+
 Build #138  [0.8.15]
 - fix the player.logout (def logout in mcserver.py) to pass a player-type object for parsing of the 'player.username'
 upon exiting for the example.py plugin.  No idea what other items from player payload are in use, but they can be added
