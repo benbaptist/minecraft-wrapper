@@ -26,6 +26,8 @@ NEWCONFIG = {
     "Gameplay": {
         "use-timer-tick-event": False,  # not recommended.  1/20th of a second timer option for plugin use. May
                                         # impact wrapper performance negatively.
+    },
+    "Entities": {
         "enable-entity-controls": False,  # enable entity controls.
         "thinning-frequency": 10,  # how often thinning of mobs runs, in seconds
         "thinning-activation-threshhold": 100,  # when TOTAL mobs are below this number, thinning is skipped entirely
