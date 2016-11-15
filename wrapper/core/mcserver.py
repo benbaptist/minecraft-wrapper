@@ -62,6 +62,7 @@ class MCServer:
         self.rebootWarnings = 0
         self.lastsizepoll = 0
         self.data = []
+        self.spammy_stuff = ["found nothing", "vehicle of"]
 
         if not self.wrapper.storage["ServerStarted"]:
             self.log.warning("NOTE: Server was in 'STOP' state last time Wrapper.py was running. "
@@ -493,7 +494,16 @@ class MCServer:
             line = " ".join(buff.split(" ")[2:])
         else:
             line = " ".join(buff.split(" ")[3:])
-        print(buff)
+
+        # check for server console spam before printing to wrapper console
+        server_spaming = False
+        for things in self.spammy_stuff:
+            if things in buff:
+                server_spaming = True
+
+        if not server_spaming:
+            print(buff)
+
         deathprefixes = ["fell", "was", "drowned", "blew", "walked", "went", "burned", "hit", "tried",
                          "died", "got", "starved", "suffocated", "withered"]
         if not self.config["General"]["pre-1.7-mode"]:
