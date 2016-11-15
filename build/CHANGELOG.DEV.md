@@ -1,3 +1,6 @@
+Build #143
+Bugfix: forgot to change api/world references to "Gameplay"/"Entities" section.
+
 Build #142
 - spammy console solution started.
 - quick and dirty build to move Entity config items to it's own group:

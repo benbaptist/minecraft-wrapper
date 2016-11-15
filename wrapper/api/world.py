@@ -30,10 +30,10 @@ class World:
         self.objecttypes = objectlistobject.objectlist
 
         # load config settings
-        self.entity_control = self.javaserver.config["Gameplay"]["enable-entity-controls"]
-        self.thining_frequency = self.javaserver.config["Gameplay"]["thinning-frequency"]
-        self.max_mob_limit = self.javaserver.config["Gameplay"]["thin-any-mob"]
-        self.start_thinning = self.javaserver.config["Gameplay"]["thinning-activation-threshhold"]
+        self.entity_control = self.javaserver.config["Entities"]["enable-entity-controls"]
+        self.thining_frequency = self.javaserver.config["Entities"]["thinning-frequency"]
+        self.max_mob_limit = self.javaserver.config["Entities"]["thin-any-mob"]
+        self.start_thinning = self.javaserver.config["Entities"]["thinning-activation-threshhold"]
 
         self.entities = {}
         self.abortep = False
@@ -256,8 +256,8 @@ class World:
 
                 for mobs in counts:
                     maxofthiskind = self.max_mob_limit
-                    if "thin-%s" % mobs in self.javaserver.config["Gameplay"]:
-                        maxofthiskind = self.javaserver.config["Gameplay"]["thin-%s" % mobs]
+                    if "thin-%s" % mobs in self.javaserver.config["Entities"]:
+                        maxofthiskind = self.javaserver.config["Entities"]["thin-%s" % mobs]
                     if counts[mobs] >= maxofthiskind:
                         killcount = counts[mobs] - maxofthiskind
                         self._kill_around_player(players_position, "%s" % mobs, killcount)
