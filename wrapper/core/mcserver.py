@@ -38,6 +38,10 @@ class MCServer:
         self.config = wrapper.config
         self.encoding = self.config["General"]["encoding"]
         self.serverpath = self.config["General"]["server-directory"]
+        self.stop_message = self.config["Misc"]["stop-message"]
+        self.reboot_message = self.config["Misc"]["reboot-message"]
+        self.restart_message = self.config["Misc"]["default-restart-message"]
+
         self.wrapper = wrapper
         commargs = self.config["General"]["command"].split(" ")
         self.args = []
@@ -174,10 +178,12 @@ class MCServer:
             self.wrapper.storage["ServerStarted"] = True
             self.wrapper.storage.save()
 
-    def restart(self, reason="Restarting Server"):
+    def restart(self, reason=""):
         """
         Restart the Minecraft server, and kick people with the specified reason
         """
+        if reason == "":
+            reason = self.restart_message
         if self.state in (STOPPING, OFF):
             self.log.warning("The server is not already running... Just use '/start'.")
             return
@@ -204,10 +210,12 @@ class MCServer:
         else:
             return False
 
-    def stop(self, reason="Stopping Server", save=True):
+    def stop(self, reason="", save=True):
         """
         Stop the Minecraft server, prevent it from auto-restarting.
         """
+        if reason == "":
+            reason = self.stop_message
         if self.state in (STOPPING, OFF):
             self.log.warning("The server is not running... :?")
             return
@@ -648,7 +656,7 @@ class MCServer:
                                 self.broadcast("&cServer will be rebooting in %d minute(s)!"
                                                % int(self.config["General"]["timed-reboot-warning-minutes"] - l + 1))
                         return
-                self.restart("Server is conducting a scheduled reboot. The server will be back momentarily!")
+                self.restart(self.reboot_message)
                 self.bootTime = time.time()
                 self.rebootWarnings = 0
         if self.config["Web"]["web-enabled"]:  # only used by web management module
