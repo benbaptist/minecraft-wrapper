@@ -419,11 +419,8 @@ class Client:
 
                 if chatmsg[0] == "/" and self.command_prefix_non_standard:
                     chatmsg = chatmsg[1:]  # strip out any leading slash if using a non-slash command  prefix
-                # NOW we can send it (possibly modded) on to server...
-                # if self.command_prefix_non_standard:
-                #     newchat = chatmsg.split(self.command_prefix)
-                #     chatmsg = "%s%s" % (self.command_prefix, newchat.join(""))
 
+                # NOW we can send it (possibly modded) on to server...
                 self.message(chatmsg)
                 return False  # and cancel this original packet
 
