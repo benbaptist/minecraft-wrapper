@@ -331,11 +331,10 @@ def putjsonfile(data, filename, directory=".", indent_spaces=2, sort=False, enco
         mkdir_p(directory)
     if os.path.exists(directory):
         with open("%s/%s.json" % (directory, filename), "w") as f:
-            #try:
-            f.write(json.dumps(data, ensure_ascii=False, indent=indent_spaces, sort_keys=sort, encoding=encodedas))
-            #except TypeError:
-                #print("incorrect Type for putjsonfile()")
-                #return None
+            try:
+                f.write(json.dumps(data, ensure_ascii=False, indent=indent_spaces, sort_keys=sort, encoding=encodedas))
+            except TypeError:
+                return None
             return True
     return False
 

@@ -10,7 +10,7 @@ from core.entities import Objects as Objecttypes
 class EntityControl:
     """
 
-    World is established by console when wrapper reads "preparing ...."
+    Entity controls are established by console when wrapper reads "preparing ...."
 
     """
     def __init__(self, mcserver):
