@@ -44,8 +44,11 @@ NEWCONFIG = {
         "dev-branch": "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/build/version.json",
         # You will need to update this to your particular server start command line.
     },
-    "Misc": {
-        "command-prefix": "/"
+    "Misc": {  # look 'n' feel type customizations
+        "command-prefix": "/",
+        "reboot-message": "Server is conducting a scheduled reboot. The server will be back momentarily!",
+        "default-restart-message": "Server restarting...",
+        "stop-message": "Stopping The Minecraft Server"
     },
     "General": {
         "auto-restart": True,

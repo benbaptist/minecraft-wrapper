@@ -1,3 +1,6 @@
+Build 146
+- custom startup/restart messages (#319)
+
 Build #145 version [0.8.16]
 - Implement 'Solutions for multiple plugins using a single wrapper event' #277
 - Implement "player.rawMessage" payload needs consistency of return values #340
