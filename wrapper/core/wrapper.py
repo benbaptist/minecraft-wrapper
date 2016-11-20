@@ -70,8 +70,10 @@ class Wrapper:
         self.proxymode = self.config["Proxy"]["proxy-enabled"]
         self.wrapper_onlinemode = self.config["Proxy"]["online-mode"]
         self.wrapper_ban_system = self.proxymode and self.wrapper_ban_system
-        self.auto_update_wrapper = self.config["General"]["auto-update-wrapper"]
+        self.auto_update_wrapper = self.config["Updates"]["auto-update-wrapper"]
+        self.auto_update_branch = self.config["Updates"]["auto-update-branch"]
         self.use_timer_tick_event = self.config["Gameplay"]["use-timer-tick-event"]
+        self.command_prefix = self.config["Misc"]["command-prefix"]
 
         # Storages
         self.storage = Storage("wrapper", encoding=self.encoding)
@@ -692,8 +694,11 @@ class Wrapper:
         # read the installed branch info
         if repotype is None:
             repotype = core_buildinfo_version.__branch__
-        branch_key = "%s-branch" % repotype
-        r = requests.get(self.config["General"][branch_key])
+        if self.auto_update_branch:
+            branch_key = self.auto_update_branch
+        else:
+            branch_key = "%s-branch" % repotype
+        r = requests.get(self.config["Updates"][branch_key])
         if r.status_code == 200:
             data = r.json()
             if data("__build__") > core_buildinfo_version.__build__:

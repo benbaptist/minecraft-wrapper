@@ -36,14 +36,19 @@ NEWCONFIG = {
         "thin-Sheep": 30,
         "thin-Chicken": 30
     },
-    "General": {
-        "auto-restart": True,
-        "auto-update-branch": None,  # Use "dev" or "stable", as desired
-        "auto-update-dev-build": "deprecated",  # no separate item for wrapper/dev-build.
+    "Updates": {
+        "auto-update-branch": None,  # Use one of the names listed herein (i.e. 'stable-branch')
         "auto-update-wrapper": False,  # If True, an "auto-update-branch" must be specified.
         # You can point these to another branch, if desired.
         "stable-branch": "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master/build/version.json",
         "dev-branch": "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/build/version.json",
+        # You will need to update this to your particular server start command line.
+    },
+    "Misc": {
+        "command-prefix": "/"
+    },
+    "General": {
+        "auto-restart": True,
         # You will need to update this to your particular server start command line.
         "command": "java -jar -Xmx2G -Xms1G server.jar nogui",
         "encoding": "UTF-8",
@@ -57,7 +62,12 @@ NEWCONFIG = {
         "shell-scripts": False,
         "timed-reboot": False,
         "timed-reboot-seconds": "86400",
-        "timed-reboot-warning-minutes": 5
+        "timed-reboot-warning-minutes": 5,
+        "auto-update-branch": "deprecated",  # moved to group "Updates"
+        "auto-update-dev-build": "deprecated",  # no separate item for wrapper/dev-build.
+        "auto-update-wrapper": "deprecated",  # moved to group "Updates"
+        "stable-branch":  "deprecated",  # moved to group "Updates"
+        "dev-branch":  "deprecated",  # moved to group "Updates"
     },
     "IRC": {
         # This allows your users to communicate to and from the server via IRC and vise versa.

@@ -402,7 +402,8 @@ def secondstohuman(seconds):
     return results
 
 
-def showpage(player, page, items, command, perpage):
+def showpage(player, page, items, command, perpage, command_prefix='/'):
+    fullcommand = "%s%s" % (command_prefix, command)
     pagecount = len(items) // perpage
     if (int(len(items) // perpage)) != (float(len(items)) / perpage):
         pagecount += 1
@@ -418,7 +419,7 @@ def showpage(player, page, items, command, perpage):
             "text": "help",
             "clickEvent": {
                 "action": "run_command",
-                "value": "/help"
+                "value": "%shelp" % command_prefix
             }
         }, {
             "text": " page %d of %d ---" % (page + 1, pagecount)
@@ -432,14 +433,14 @@ def showpage(player, page, items, command, perpage):
         if page > 0:
             prevbutton = {
                 "text": "Prev", "underlined": True, "clickEvent":
-                    {"action": "run_command", "value": "%s %d" % (command, page)}
+                    {"action": "run_command", "value": "%s %d" % (fullcommand, page)}
                 }
         else:
             prevbutton = {"text": "Prev", "italic": True, "color": "gray"}
         if page <= pagecount:
             nextbutton = {
                 "text": "Next", "underlined": True, "clickEvent":
-                    {"action": "run_command", "value": "%s %d" % (command, page + 2)}
+                    {"action": "run_command", "value": "%s %d" % (fullcommand, page + 2)}
                 }
         else:
             nextbutton = {"text": "Next", "italic": True, "color": "gray"}

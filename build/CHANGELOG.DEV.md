@@ -1,4 +1,10 @@
-Build #144  version [0.10.0]
+Build #145 version [0.8.16]
+- Implement 'Solutions for multiple plugins using a single wrapper event' #277
+- Implement "player.rawMessage" payload needs consistency of return values #340
+- Pulled update items out of General config and made them their own group.
+- added config item to change command prefix to something other than a '/' slash (#319)
+
+Build #144 
 - refactor API's world and entity:
     * api.entity (class EntityControl) is now the actual Entity api versus the internal tracking methods, which are now
     moved to the core.entities module.
@@ -30,7 +36,7 @@ Build #142
         "thin-Chicken": 30 },
 ```
 
-Build #141  version [0.9.1]
+Build #141
 - added entity controls which are configurable.
 
 Build #140

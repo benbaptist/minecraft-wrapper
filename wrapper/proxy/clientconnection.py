@@ -154,6 +154,12 @@ class Client:
         self.bedposition = None
         self.lastitem = None
 
+        # constants from config:
+        self.spigot_mode = self.config["Proxy"]["spigot-mode"]
+        self.command_prefix = self.wrapper.command_prefix
+        self.command_prefix_non_standard = self.command_prefix != "/"
+        self.command_prefix_len = len(self.command_prefix)
+
     def handle(self):
         t = threading.Thread(target=self.flush_loop, args=())
         t.daemon = True
@@ -267,7 +273,7 @@ class Client:
         t.daemon = True
         t.start()
 
-        if self.config["Proxy"]["spigot-mode"]:
+        if self.spigot_mode:
             payload = "localhost\x00%s\x00%s" % (self.addr[0], self.uuid.hex)
             self.server.packet.sendpkt(0x00, [_VARINT, _STRING, _USHORT, _VARINT],
                                        (self.clientversion, payload, self.config["Proxy"]["server-port"], 2))
@@ -386,28 +392,35 @@ class Client:
                     self.isLocal = True
                     return False
 
-                # TODO start here in tracking down what happens to a payload as it is passed through more than 1 event
                 payload = self.wrapper.events.callevent("player.rawMessage", {
                     "player": self.getplayerobject(),
                     "message": chatmsg
                 })
 
                 # This part allows the player plugin event "player.rawMessage" to...
-                if not payload:
+                if payload is False:
                     return False  # ..reject the packet (by returning False)
 
+                # This is here for compatibility.  older plugins may attempt to send a string back
                 if type(payload) == str:  # or, if it can return a substitute payload
                     chatmsg = payload
 
+                # Newer plugins return a modified version of the original payload (i.e., a dictionary).
+                if type(payload) == dict and "message" in payload:  # or, if it can return a substitute payload
+                    chatmsg = payload["message"]
+
                 # determine if this is a command. act appropriately
-                if chatmsg[0] == "/":  # it IS a command of some kind
+                if chatmsg[0:self.command_prefix_len] == self.command_prefix:  # it IS a command of some kind
                     if self.wrapper.events.callevent("player.runCommand", {
                             "player": self.getplayerobject(),
                             "command": chatmsg.split(" ")[0][1:].lower(),
                             "args": chatmsg.split(" ")[1:]}):
                         return False  # wrapper processed this command.. it goes no further
 
-                # NOW we can send it (possibly modded)  on to server...
+                if chatmsg[0] == "/" and self.command_prefix_non_standard:
+                    chatmsg = chatmsg[1:]  # strip out any leading slash if using a non-slash command  prefix
+
+                # NOW we can send it (possibly modded) on to server...
                 self.message(chatmsg)
                 return False  # and cancel this original packet
 
