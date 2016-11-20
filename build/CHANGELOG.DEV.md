@@ -1,3 +1,18 @@
+Build #144  version [0.10.0]
+- refactor API's world and entity:
+    * api.entity (class EntityControl) is now the actual Entity api versus the internal tracking methods, which are now
+    moved to the core.entities module.
+    * removed entity api methods from api.world to api.entity.
+- Added:
+```
+    def getGameRules(self):
+        """
+
+        returns: a dictionary of gamerules.
+
+        """
+```
+
 Build #143
 Bugfix: forgot to change api/world references to "Gameplay"/"Entities" section.
 

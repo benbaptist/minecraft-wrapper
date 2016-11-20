@@ -150,12 +150,12 @@ class API:
     def blockForEvent(self, eventtype):
         """ Blocks until the specified event is called. """
         sock = []
-        self.wrapper.listeners.append(sock)
+        self.wrapper.events.listeners.append(sock)  #
         while True:
             for event in sock:
                 if event["event"] == eventtype:
                     payload = event["payload"][:]
-                    self.wrapper.listeners.remove(sock)
+                    self.wrapper.events.listeners.remove(sock)
                     return payload
                 else:
                     sock.remove(event)
@@ -168,15 +168,15 @@ class API:
         """
         return self.wrapper.callevent(event, payload)
 
-    def getPluginContext(self, pid):
+    def getPluginContext(self, plugin_id):
         """
         Returns the content of another plugin with the specified ID.
         i.e. api.getPluginContext("com.benbaptist.plugins.essentials")
         """
-        if pid in self.wrapper.plugins:
-            return self.wrapper.plugins[pid]["main"]
+        if plugin_id in self.wrapper.plugins:
+            return self.wrapper.plugins[plugin_id]["main"]
         else:
-            raise exceptions.NonExistentPlugin("Plugin %s does not exist!" % pid)
+            raise exceptions.NonExistentPlugin("Plugin %s does not exist!" % plugin_id)
 
     def getStorage(self, name, world=False):
         """
@@ -191,7 +191,7 @@ class API:
             return Storage(name, root="wrapper-data/plugins/%s" % self.id)
 
     def getHelpers(self, attribute, yourname="callingPlugin"):
-        """return the utils.helper.py code base
+        """returns a function from the utils.helper.py code base
 
         yourname is an optional argument for a better error message if case something goes wrong.
 

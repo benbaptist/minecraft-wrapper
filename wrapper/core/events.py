@@ -33,6 +33,8 @@ class Events:
         if event == "player.runCommand":
             if not self.wrapper.commands.playercommand(payload):
                 return False
+
+        # listeners is normally empty.  Supposed to be part of the blockForEvent code.
         for sock in self.listeners:
             sock.append({"event": event, "payload": payload})
         try:

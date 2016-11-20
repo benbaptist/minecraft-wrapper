@@ -4,6 +4,7 @@ from utils.helpers import getargs, getargsafter, processcolorcodes
 from api.base import API
 from api.player import Player
 from api.world import World
+from api.entity import EntityControl
 
 from core.backups import Backups
 from core.exceptions import UnsupportedOSException, InvalidServerStartedError
@@ -78,6 +79,7 @@ class MCServer:
         self.protocolVersion = -1  # -1 until proxy mode checks the server's MOTD on boot
         self.version = None  # this is string name of the server version.
         self.world = None
+        self.entity_control = None
         self.motd = None
         self.timeofday = -1  # -1 until a player logs on and server sends a time update
         self.onlineMode = True
@@ -517,6 +519,7 @@ class MCServer:
             elif getargs(line.split(" "), 0) == "Preparing" and getargs(line.split(" "), 1) == "level":
                 self.worldname = getargs(line.split(" "), 2).replace('"', "")
                 self.world = World(self.worldname, self)
+                self.entity_control = EntityControl(self)
             elif getargs(line.split(" "), 0)[0] == "<":  # Player Message
                 name = self.stripspecial(getargs(line.split(" "), 0)[1:-1])
                 message = self.stripspecial(getargsafter(line.split(" "), 1))
@@ -578,6 +581,7 @@ class MCServer:
                 # Getting world name
                 self.worldname = getargs(line.split(" "), 5).replace('"', "")
                 self.world = World(self.worldname, self)
+                self.entity_control = EntityControl(self)
             elif getargs(line.split(" "), 3)[0] == "<":  # Player Message
                 name = self.stripspecial(getargs(line.split(" "), 3)[1:-1])
                 message = self.stripspecial(getargsafter(line.split(" "), 4))

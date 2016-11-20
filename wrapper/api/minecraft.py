@@ -377,6 +377,24 @@ class Minecraft:
         f = NBTFile("%s/%s/level.dat" % (self.serverpath, worldname), "rb")
         return f["Data"]
 
+    def getGameRules(self):
+        """
+
+        returns: a dictionary of gamerules.
+
+        """
+        game_rules = self.getLevelInfo()["GameRules"]
+        rules = {}
+        for rule in game_rules:
+            rules[rule] = str(game_rules[rule])
+            if rules[rule] == "true":
+                rules[rule] = True
+            elif rules[rule] == "false":
+                rules[rule] = False
+            else:
+                rules[rule] = int(rules[rule])
+        return rules
+
     def getSpawnPoint(self):
         """
 
