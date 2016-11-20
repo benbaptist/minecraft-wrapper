@@ -20,6 +20,7 @@ class Commands:
 
         self.commands = {}
 
+
     def __getitem__(self, index):
         if not type(index) == str:
             raise Exception("A string must be passed - got %s" % type(index))
@@ -386,7 +387,7 @@ class Commands:
                         "underlined": True,
                         "clickEvent": {
                             "action": "run_command",
-                            "value": "/help Minecraft %d" % (page + 2)
+                            "value": "%shelp Minecraft %d" % (self.wrapper.command_prefix, page + 2)
                         }
                     }, {
                         "text": " "
@@ -417,7 +418,7 @@ class Commands:
                                         "color": "gold",
                                         "clickEvent": {
                                             "action": "suggest_command",
-                                            "value": command
+                                            "value": "%s%s" % (self.wrapper.command_prefix, command[1:])
                                         },
                                         "hoverEvent": {
                                             "action": "show_text",
@@ -431,7 +432,7 @@ class Commands:
                                         "text": " - %s " % i[1]
                                     }]
                                 })
-                            showpage(player, page, items, "/help %s" % groupName, 4)
+                            showpage(player, page, items, "help %s" % groupName, 4, command_prefix=self.wrapper.command_prefix)
                             return
                 player.message("&cThe help group '%s' does not exist." % group)
 
@@ -449,13 +450,13 @@ class Commands:
                         "color": "blue",
                         "clickEvent": {
                             "action": "run_command",
-                            "value": "/help " + v["name"]
+                            "value": "%shelp %s" % (self.wrapper.command_prefix, v["name"])
                         }
                     }, {
                         "text": " - " + v["description"]
                     }]
                 })
-            showpage(player, page, items, "/help", 4)
+            showpage(player, page, items, "help", 4, command_prefix=self.wrapper.command_prefix)
         return False
 
     def command_playerstats(self, player, payload):

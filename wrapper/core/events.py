@@ -37,20 +37,45 @@ class Events:
         # listeners is normally empty.  Supposed to be part of the blockForEvent code.
         for sock in self.listeners:
             sock.append({"event": event, "payload": payload})
-        try:
-            for pluginID in self.events:
-                if event in self.events[pluginID]:
-                    try:
-                        result = self.events[pluginID][event](payload)
-                        if result is None:
-                            continue
-                        if result is not True:
-                            return result
-                    except Exception as e:
-                        self.log.exception("Plugin '%s' errored out when executing callback event '%s': \n%s",
-                                           pluginID, event, e)
-        except Exception as ex:
-            pass
-            self.log.exception("A serious runtime error occurred - if you notice any strange behaviour, please "
-                               "restart immediately: \n%s", ex)
-        return True
+
+        payload_status = True
+        # old_payload = payload  # retaining the original payload might be helpful for the future features.
+
+        # in all plugins with this event listed..
+        for plugin_id in self.events:
+
+            # for each plugin...
+            if event in self.events[plugin_id]:
+
+                # run the plugin code and get the plugin's return value
+                result = None
+                try:
+                    # 'self.events[plugin_id][event]' is the <bound method Main.__the_plugin_event_function>
+                    # pass 'payload' as the argument for the plugin-defined event code function
+                    result = self.events[plugin_id][event](payload)
+                except Exception as e:
+                    self.log.exception("Plugin '%s' \nexperienced an exception calling '%s': \n%s",
+                                       plugin_id, event, e)
+
+                # Evaluate this plugin's result
+                # every plugin will be given equal time to run it's event code.  however, if one plugin
+                # returns a False, no payload changes will be possible.
+                #
+                if result is None:  # Don't change the payload status
+                    pass
+                elif result is False:  # mark this event permanently as False
+                    payload_status = False
+                elif result is True:    # Again, don't change the payload status
+                    pass
+                else:
+                    # A payload is being returned
+                    # if any plugin rejects the event, no payload changes will be authorized.
+                    if payload_status is not False:
+                        # the next plugin looking at this event sees the new payload.
+                        if type(result) == dict:
+                            payload, payload_status = result
+                        else:
+                            # non dictionary payloads are deprecated and will be overridden by dict payloads
+                            # dict payloads are those that return the payload in the same format as it was passed.
+                            payload_status = result
+        return payload_status
