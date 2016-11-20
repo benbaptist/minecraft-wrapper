@@ -68,6 +68,8 @@ class MCServer:
         self.lastsizepoll = 0
         self.data = []
         self.spammy_stuff = ["found nothing", "vehicle of"]
+        self.server_muted = False
+        self.queued_lines = []
 
         if not self.wrapper.storage["ServerStarted"]:
             self.log.warning("NOTE: Server was in 'STOP' state last time Wrapper.py was running. "
@@ -512,7 +514,10 @@ class MCServer:
                 server_spaming = True
 
         if not server_spaming:
-            print(buff)
+            if not self.server_muted:
+                print(buff)
+            else:
+                self.queued_lines.append(buff)
 
         deathprefixes = ["fell", "was", "drowned", "blew", "walked", "went", "burned", "hit", "tried",
                          "died", "got", "starved", "suffocated", "withered"]

@@ -208,25 +208,25 @@ class Wrapper:
             command = getargs(wholecommandline, 0)
             allargs = wholecommandline[1:]  # this can be passed to runwrapperconsolecommand() command for args
             # Most of these are too small to use the runwrapperconsolecommand command (or work better here)
-            if command in ("/halt", "halt"):
+            if command.lower() in ("/halt", "halt"):
                 self.javaserver.stop("Halting server...", save=False)
                 self.halt = True
                 sys.exit()
-            elif command in ("/stop", "stop"):
+            elif command.lower() in ("/stop", "stop"):
                 self.javaserver.stop("Stopping server...")
-            elif command == "/kill":  # "kill" (with no slash) is a server command.
+            elif command.lower() == "/kill":  # "kill" (with no slash) is a server command.
                 self.javaserver.kill("Server killed at Console...")
-            elif command in ("/start", "start"):
+            elif command.lower() in ("/start", "start"):
                 self.javaserver.start()
-            elif command in ("/restart", "restart"):
+            elif command.lower() in ("/restart", "restart"):
                 self.javaserver.restart("Server restarting, be right back!")
-            elif command == "/reload":  # "reload" (with no slash) may be used by bukkit servers
+            elif command.lower() == "/reload":  # "reload" (with no slash) may be used by bukkit servers
                 self.runwrapperconsolecommand("reload", [])
-            elif command in ("/update-wrapper", "update-wrapper"):
+            elif command.lower()in ("/update-wrapper", "update-wrapper"):
                 self.checkforupdate(True)
-            elif command == "/plugins":  # "plugins" command (with no slash) reserved for possible server commands
+            elif command.lower() == "/plugins":  # "plugins" command (with no slash) reserved for server commands
                 self.listplugins()
-            elif command in ("/mem", "/memory", "mem", "memory"):
+            elif command.lower() in ("/mem", "/memory", "mem", "memory"):
                 try:
                     get_bytes = self.javaserver.getmemoryusage()
                 except UnsupportedOSException as e:
@@ -236,7 +236,7 @@ class Wrapper:
                 else:
                     amount, units = format_bytes(get_bytes)
                     self.log.info("Server Memory Usage: %s %s (%s bytes)" % (amount, units, get_bytes))
-            elif command in ("/raw", "raw"):
+            elif command.lower() in ("/raw", "raw"):
                 try:
                     if len(getargsafter(consoleinput[1:].split(" "), 1)) > 0:
                         self.javaserver.console(getargsafter(consoleinput[1:].split(" "), 1))
@@ -244,7 +244,7 @@ class Wrapper:
                         self.log.info("Usage: /raw [command]")
                 except InvalidServerStartedError as e:
                     self.log.warning(e)
-            elif command in ("/freeze", "freeze"):
+            elif command.lower() in ("/freeze", "freeze"):
                 try:
                     self.javaserver.freeze()
                 except InvalidServerStartedError as e:
@@ -253,7 +253,7 @@ class Wrapper:
                     self.log.error(ex)
                 except Exception as exc:
                     self.log.exception("Something went wrong when trying to freeze the server! (%s)", exc)
-            elif command in ("/unfreeze", "unfreeze"):
+            elif command.lower() in ("/unfreeze", "unfreeze"):
                 try:
                     self.javaserver.unfreeze()
                 except InvalidServerStartedError as e:
@@ -262,21 +262,30 @@ class Wrapper:
                     self.log.error(ex)
                 except Exception as exc:
                     self.log.exception("Something went wrong when trying to unfreeze the server! (%s)", exc)
-            elif command == "/version":
+            elif command.lower() == "/version":
                 readout("/version", self.getbuildstring())
+
+            elif command.lower() in ("/mute", "/pause", "/cm", "/m", "/p"):
+                pausetime = 30
+                if len(allargs) > 0:
+                    pausetime = int(allargs[0])
+                # spur off a pause thread
+                cm = threading.Thread(target=self._pause_console, args=(pausetime,))
+                cm.daemon = True
+                cm.start()
 
             # Ban commands MUST over-ride the server version in proxy mode; otherwise, the server will re-write
             #       Its version from memory, undoing wrapper's changes to the disk file version.
-            elif self.proxymode and command in ("/ban", "ban"):
+            elif self.proxymode and command == "/ban":
                 self.runwrapperconsolecommand("ban", allargs)
 
-            elif self.proxymode and command in ("/ban-ip", "ban-ip"):
+            elif self.proxymode and command == "/ban-ip":
                 self.runwrapperconsolecommand("ban-ip", allargs)
 
-            elif self.proxymode and command in ("/pardon-ip", "pardon-ip"):
+            elif self.proxymode and command == "/pardon-ip":
                 self.runwrapperconsolecommand("pardon-ip", allargs)
 
-            elif self.proxymode and command in ("/pardon", "pardon"):
+            elif self.proxymode and command == "/pardon":
                 self.runwrapperconsolecommand("pardon", allargs)
 
             elif command in ("/perm", "/perms", "/super", "/permissions", "perm", "perms", "super", "permissions"):
@@ -291,6 +300,7 @@ class Wrapper:
                 else:
                     readout("ERROR - ", "Entity tracking requires proxy mode. "
                                         "(proxy mode is not on).", separator="", pad=10)
+
             elif command.lower() in ("/config", "/con", "/prop", "/property", "/properties"):
                 self.runwrapperconsolecommand("config", allargs)
 
@@ -317,6 +327,7 @@ class Wrapper:
                 readout("/start", "Start the minecraft server.")
                 readout("/restart", "Restarts the minecraft server.")
                 readout("/halt", "Shutdown Wrapper.py completely.")
+                readout("/cm [seconds]", "Mute server output (Wrapper console logging still happens)")
                 readout("/kill", "Force kill the server without saving.")
                 readout("/freeze", "Temporarily locks the server up until /unfreeze is executed\n"
                                    "                  (Only works on *NIX servers).")
@@ -757,6 +768,18 @@ class Wrapper:
             time.sleep(0.05)
             if self.use_timer_tick_event:
                 self.events.callevent("timer.tick", None)  # don't really advise the use of this timer
+
+    def _pause_console(self, pause_time):
+        if not self.javaserver:
+            readout("ERROR - ", "There is no running server instance to mute.", separator="", pad=10)
+            return
+        self.javaserver.server_muted = True
+        time.sleep(pause_time)
+        self.javaserver.server_muted = False
+        for lines in self.javaserver.queued_lines:
+            readout("Q\\", "", lines, pad=3)
+            time.sleep(.1)
+        self.javaserver.queued_lines = []
 
 
 # - due to being refrerenced by the external wrapper API that is camelCase
