@@ -166,7 +166,7 @@ class Player:
             opstext = getfileaslines("ops.txt", self.serverpath)
             if not opstext:
                 return False
-            for op in opstext:  # range(len(opstext)):
+            for op in opstext:
                 # create a 'fake' ops list from the old pre-1.8 text line name list
                 # notice that the level (an option not the old list) is set to 1
                 #   This will pass as true, but if the plugin is also checking op-levels, it

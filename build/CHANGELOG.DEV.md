@@ -1,3 +1,7 @@
+Build #144  version [0.10.0]
+- refactor API's world and entity:
+
+
 Build #143
 Bugfix: forgot to change api/world references to "Gameplay"/"Entities" section.
 

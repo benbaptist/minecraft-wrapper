@@ -8,6 +8,7 @@ class Events:
         self.log = wrapper.log
         self.listeners = []
         self.events = {}
+        self.debugprint = 1
 
     def __getitem__(self, index):
         if not type(index) == str:
@@ -30,9 +31,15 @@ class Events:
             yield i
 
     def callevent(self, event, payload):
+        self.debugprint += 1
+        if 1 < self.debugprint < 4:
+            # print("listeners: \n%s\n" % self.listeners)
+            print("events: \n%s\n" % self.events)
         if event == "player.runCommand":
             if not self.wrapper.commands.playercommand(payload):
                 return False
+
+        # listeners is normally empty.  Supposed to be part of the blockForEvent code.
         for sock in self.listeners:
             sock.append({"event": event, "payload": payload})
         try:

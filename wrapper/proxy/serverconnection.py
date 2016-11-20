@@ -16,7 +16,7 @@ import traceback
 # local
 from proxy.packet import Packet
 from proxy import mcpackets
-from api.entity import Entity
+from core.entities import Entity
 
 # Py3-2
 import sys
@@ -361,7 +361,7 @@ class ServerConnection:
                 # self.log.trace("(PROXY SERVER) -> Converted SPAWN_PLAYER packet:\n%s", dt)
 
             elif pkid == self.pktCB.SPAWN_OBJECT:
-                if not self.wrapper.javaserver.world:
+                if not self.wrapper.javaserver.entity_control:
                     return True  # return now if no object tracking
                 if self.version < mcpackets.PROTOCOL_1_9START:
                     dt = self.packet.readpkt([_VARINT, _NULL, _BYTE, _INT, _INT, _INT, _BYTE, _BYTE])
@@ -374,16 +374,16 @@ class ServerConnection:
                 entityuuid = dt[1]
 
                 # we have to check these first, lest the object type be new and cause an exception.
-                if dt[2] in self.wrapper.javaserver.world.objecttypes:
-                    objectname = self.wrapper.javaserver.world.objecttypes[dt[2]]
+                if dt[2] in self.wrapper.javaserver.entity_control.objecttypes:
+                    objectname = self.wrapper.javaserver.entity_control.objecttypes[dt[2]]
                     newobject = {dt[0]: Entity(dt[0], entityuuid, dt[2], objectname,
                                                (dt[3], dt[4], dt[5],), (dt[6], dt[7]), True, self.username)}
 
-                    self.wrapper.javaserver.world.entities.update(newobject)
+                    self.wrapper.javaserver.entity_control.entities.update(newobject)
                 # self.log.trace("(PROXY SERVER) -> Parsed SPAWN_OBJECT packet:\n%s", dt)
 
             elif pkid == self.pktCB.SPAWN_MOB:
-                if not self.wrapper.javaserver.world:
+                if not self.wrapper.javaserver.entity_control:
                     # self.log.trace("(PROXY SERVER) -> did not parse SPAWN_MOB packet.")
                     return True
                 if self.version < mcpackets.PROTOCOL_1_9START:
@@ -401,19 +401,19 @@ class ServerConnection:
                 entityuuid = dt[1]
 
                 # This little ditty means that a new mob type will be untracked (but it wont generate exception either!
-                if dt[2] in self.wrapper.javaserver.world.entitytypes:
-                    mobname = self.wrapper.javaserver.world.entitytypes[dt[2]]["name"]
+                if dt[2] in self.wrapper.javaserver.entity_control.entitytypes:
+                    mobname = self.wrapper.javaserver.entity_control.entitytypes[dt[2]]["name"]
                     newmob = {dt[0]: Entity(dt[0], entityuuid, dt[2], mobname,
                                             (dt[3], dt[4], dt[5],), (dt[6], dt[7], dt[8]), False, self.username)}
 
-                    self.wrapper.javaserver.world.entities.update(newmob)
-                    # self.wrapper.javaserver.world.entities[dt[0]] = Entity(dt[0], entityuuid, dt[2],
+                    self.wrapper.javaserver.entity_control.entities.update(newmob)
+                    # self.wrapper.javaserver.entity_control.entities[dt[0]] = Entity(dt[0], entityuuid, dt[2],
                     #                                                        (dt[3], dt[4], dt[5], ),
                     #                                                        (dt[6], dt[7], dt[8]),
                     #                                                        False)
 
             elif pkid == self.pktCB.ENTITY_RELATIVE_MOVE:
-                if not self.wrapper.javaserver.world:
+                if not self.wrapper.javaserver.entity_control:
                     # self.log.trace("(PROXY SERVER) -> did not parse ENTITY_RELATIVE_MOVE packet.")
                     return True
                 if self.version < mcpackets.PROTOCOL_1_8START:  # 1.7.10 - 1.7.2
@@ -423,12 +423,12 @@ class ServerConnection:
                 # ("varint:eid|byte:dx|byte:dy|byte:dz")
                 # self.log.trace("(PROXY SERVER) -> Parsed ENTITY_RELATIVE_MOVE packet:\n%s", data)
 
-                entityupdate = self.wrapper.javaserver.world.getEntityByEID(data[0])
+                entityupdate = self.wrapper.javaserver.entity_control.getEntityByEID(data[0])
                 if entityupdate:
-                    entityupdate.moveRelative((data[1], data[2], data[3]))
+                    entityupdate.move_relative((data[1], data[2], data[3]))
 
             elif pkid == self.pktCB.ENTITY_TELEPORT:
-                if not self.wrapper.javaserver.world:
+                if not self.wrapper.javaserver.entity_control:
                     # self.log.trace("(PROXY SERVER) -> did not parse ENTITY_TELEPORT packet.")
                     return True
                 if self.version < mcpackets.PROTOCOL_1_8START:  # 1.7.10 and prior
@@ -441,7 +441,7 @@ class ServerConnection:
                 # ("varint:eid|int:x|int:y|int:z|byte:yaw|byte:pitch")
 
                 # self.log.trace("(PROXY SERVER) -> Parsed ENTITY_TELEPORT packet:\n%s", data)
-                entityupdate = self.wrapper.javaserver.world.getEntityByEID(data[0])
+                entityupdate = self.wrapper.javaserver.entity_control.getEntityByEID(data[0])
                 if entityupdate:
                     entityupdate.teleport((data[1], data[2], data[3]))
 
@@ -476,16 +476,16 @@ class ServerConnection:
                                                                        "leash": leash})
                         self.client.riding = vehormobeid
                         self.log.debug("player mount called for %s on eid %s", player.username, vehormobeid)
-                        if not self.wrapper.javaserver.world:
+                        if not self.wrapper.javaserver.entity_control:
                             return
-                        entityupdate = self.wrapper.javaserver.world.getEntityByEID(vehormobeid)
+                        entityupdate = self.wrapper.javaserver.entity_control.getEntityByEID(vehormobeid)
                         if entityupdate:
                             self.client.riding = entityupdate
                             entityupdate.rodeBy = self.client
 
             elif pkid == self.pktCB.DESTROY_ENTITIES:
                 # Get rid of dead entities so that python can GC them.
-                if not self.wrapper.javaserver.world:
+                if not self.wrapper.javaserver.entity_control:
                     # self.log.trace("(PROXY SERVER) -> did not parse DESTROY_ENTITIES packet.")
                     return True
                 eids = []
@@ -499,7 +499,7 @@ class ServerConnection:
                 for _ in range(entitycount):
                     eid = self.packet.readpkt(parser)[0]
                     try:
-                        self.wrapper.javaserver.world.entities.pop(eid, None)
+                        self.wrapper.javaserver.entity_control.entities.pop(eid, None)
                     except:
                         pass
 
