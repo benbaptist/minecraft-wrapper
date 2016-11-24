@@ -206,6 +206,11 @@ def mkdir_p(path):
                 raise
 
 
+def mk_int(s):
+    s = s.strip()
+    return int(s) if s else 0
+
+
 def processcolorcodes(messagestring):
     """
     Used internally to process old-style color-codes with the & symbol, and returns a JSON chat object.

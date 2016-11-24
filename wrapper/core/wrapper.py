@@ -335,7 +335,8 @@ class Wrapper:
                 readout("/mem", "Get memory usage of the server (Only works on *NIX servers).")
                 readout("/raw [command]", "Send command to the Minecraft Server. Useful for Forge\n"
                                           "                  commands like '/fml confirm'.")
-                readout("/config (/properties)", "Change wrapper.properties (type /config help for more..)")
+                readout("/perms", "/perms for more...)")
+                readout("/config", "Change wrapper.properties (type /config help for more..)")
                 readout("/version", self.getbuildstring())
                 readout("/entity", "Work with entities (run /entity for more...)")
                 readout("/bans", "Display the ban help page.")
