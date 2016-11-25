@@ -86,7 +86,6 @@ class Wrapper:
         self.events = Events(self)
         self.registered_permissions = {}
         self.help = {}
-        self.xplayer = ConsolePlayer(self)  # future plan to expose this to api
 
         # init items that are set up later (or opted out of/ not set up.)
         self.javaserver = None
@@ -97,6 +96,7 @@ class Wrapper:
         self.proxy = None
         self.halt = False
         self.updated = False
+        self.xplayer = ConsolePlayer(self)  # future plan to expose this to api
 
         # Error messages for non-standard import failures.
         if not readline:
@@ -466,28 +466,29 @@ class Wrapper:
         :returns: returns the online/Mojang MCUUID object from the given name. Updates the wrapper usercache.json
                 Yields False if failed.
         """
+        user_name = "%s" % username  # create a new name variable that is unrelated the the passed variable.
         frequency = 2592000  # 30 days.
         if forcepoll:
             frequency = 3600  # do not allow more than hourly
         user_uuid_matched = None
         for useruuid in self.usercache:  # try wrapper cache first
-            if username == self.usercache[useruuid]["localname"]:
+            if user_name == self.usercache[useruuid]["localname"]:
                 # This search need only be done by 'localname', which is always populated and is always
                 # the same as the 'name', unless a localname has been assigned on the server (such as
                 # when "falling back' on an old name).'''
                 if (time.time() - self.usercache[useruuid]["time"]) < frequency:
                     return MCUUID(useruuid)
                 # if over the time frequency, it needs to be updated by using actual last polled name.
-                username = self.usercache[useruuid]["name"]
+                user_name = self.usercache[useruuid]["name"]
                 user_uuid_matched = useruuid  # cache for later in case multiple name changes require a uuid lookup.
 
         # try mojang  (a new player or player changed names.)
         # requests seems to =have a builtin json() method
-        r = requests.get("https://api.mojang.com/users/profiles/minecraft/%s" % username)
+        r = requests.get("https://api.mojang.com/users/profiles/minecraft/%s" % user_name)
         if r.status_code == 200:
             useruuid = self.formatuuid(r.json()["id"])  # returns a string uuid with dashes
             correctcapname = r.json()["name"]
-            if username != correctcapname:  # this code may not be needed if problems with /perms are corrected.
+            if user_name != correctcapname:  # this code may not be needed if problems with /perms are corrected.
                 self.log.warning("%s's name is not correctly capitalized (offline name warning!)", correctcapname)
             # This should only run subject to the above frequency (hence use of forcepoll=True)
             nameisnow = self.getusernamebyuuid(useruuid, forcepoll=True)
@@ -577,16 +578,16 @@ class Wrapper:
                 self.usercache[useruuid]["localname"] = pastnames[0]["name"]
         return self.usercache[useruuid]["localname"]
 
-    def _pollmojanguuid(self, useruuid):
+    def _pollmojanguuid(self, user_uuid):
         """
         attempts to poll Mojang with the UUID
-        :param useruuid: string uuid with dashes
+        :param user_uuid: string uuid with dashes
         :returns:
                 False - could not resolve the uuid
                 - otherwise, a list of names...
         """
 
-        r = requests.get("https://api.mojang.com/user/profiles/%s/names" % useruuid.replace("-", ""))
+        r = requests.get("https://api.mojang.com/user/profiles/%s/names" % user_uuid.replace("-", ""))
         if r.status_code == 200:
             return r.json()
         if r.status_code == 204:
@@ -600,7 +601,7 @@ class Wrapper:
                         if entry["account.mojang.com"] == "green":
                             self.log.warning("Mojang accounts is green, but request failed - have you "
                                              "over-polled (large busy server) or supplied an incorrect UUID??")
-                            self.log.warning("uuid: %s", useruuid)
+                            self.log.warning("uuid: %s", user_uuid)
                             self.log.warning("response: \n%s", str(rx))
                             return False
                         elif entry["account.mojang.com"] in ("yellow", "red"):
@@ -614,7 +615,7 @@ class Wrapper:
                         self.log.warning("Mojang Status not found - no internet connection, perhaps? "
                                          "(status code may not exist)")
                         try:
-                            return self.usercache[useruuid]["name"]
+                            return self.usercache[user_uuid]["name"]
                         except TypeError:
                             return False
 
@@ -645,8 +646,8 @@ class Wrapper:
             self.configManager.config["Proxy"]["proxy-enabled"] = False
             self.configManager.save()
             self.config = self.configManager.config
-            self.log.error("Proxy mode is disabled because you do not have one or more of the following "
-                           "modules installed: pycrypto and requests")
+            self.log.error("Proxy mode has been disabled in the config file because you do not have one or more "
+                           "of the following modules installed: \npycrypto and requests")
 
     def sigint(*args):  # doing this allows the calling function to pass extra args without defining/using them here
         self = args[0]  # .. as we are only interested in the self component
@@ -796,23 +797,7 @@ class ConsolePlayer:
         self.wrapper = wrapper
         self.permissions = wrapper.permissions
         self.log = wrapper.log
-        self.abort = False
-
-        self.mojangUuid = "00000000-0000-0000-0000-000000000000"
-        self.clientUuid = self.mojangUuid
-        self.offlineUuid = "00000000-0000-0000-0000-000000000000"
-        self.serverUuid = self.offlineUuid
-
-        self.ipaddress = "127.0.0.1"
-
-        self.client = None
-        self.clientboundPackets = None
-        self.serverboundPackets = None
-
-        self.field_of_view = float(1)
-        self.godmode = 0x00
-        self.creative = 0x00
-        self.fly_speed = float(1)
+        self.abort = wrapper.halt
 
         # these map minecraft color codes to "approximate" ANSI terminal color used by our color formatter.
         self.message_number_coders = {'0': 'black',
@@ -850,14 +835,17 @@ class ConsolePlayer:
     def isOp():
         return 4
 
-    @staticmethod
-    def isOp_fast():
-        return 4
-
     def __str__(self):
+        """
+        Permit the console to have a nice display instead of returing the object instance notation.
+        """
         return "CONSOLE OPERATOR"
 
     def message(self, message):
+        """
+        This is a substitute for the player.message() that plugins and the command interface expect for player objects.
+        It translates chat type messages intended for a minecraft client into printed colorized console lines.
+        """
         displaycode, displaycolor = "5", "magenta"
         display = str(message)
         if type(message) is dict:
@@ -880,5 +868,6 @@ class ConsolePlayer:
 
     @staticmethod
     def hasPermission(*args):
+        """return console as always having the requested permission"""
         if args:
             return True

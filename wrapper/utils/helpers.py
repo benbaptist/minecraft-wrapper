@@ -75,6 +75,38 @@ def _addgraphics(text='', foreground='white', background='black', options=()):
     return '%s%s' % (('\x1b[%sm' % ';'.join(codes)), text)
 
 
+def config_to_dict_read(filename, filepath):
+    """reads a disk file with '=' lines (like server.properties) and returns a keyed dictionary"""
+    config_dict = {}
+    if os.path.exists("%s/%s" % (filepath, filename)):
+        config_lines = getfileaslines(filename, filepath)
+        if not config_lines:
+            return {}
+        for line_items in config_lines:
+            line_args = line_items.split("=", 1)
+            if len(line_args) < 2:
+                continue
+            item_key = getargs(line_args, 0)
+            scrubbed_value = scrub_item_value(getargs(line_args, 1))
+            config_dict[item_key] = scrubbed_value
+    return config_dict
+
+
+def scrub_item_value(item):
+    """
+    Takes a text item value and determines if it should be a boolean, integer, or text.. and returns it as the type.
+    """
+    if not item or len(item) < 1:
+        return ""
+    if item.lower() == "true":
+        return True
+    if item.lower() == "false":
+        return False
+    if str(get_int(item)) == item:  # it is an integer if int(a) = str(a)
+        return get_int(item)
+    return item
+
+
 # private static int DataSlotToNetworkSlot(int index)
 def dataslottonetworkslot(index):
     """
@@ -179,7 +211,8 @@ def getfileaslines(filename, directory="."):
         filename: Complete filename
         directory: by default, wrapper script directory.
 
-    Returns: a list if successful. If unsuccessful; None/no data or False (if file/directory not found)
+    :rtype: list
+    if successful. If unsuccessful; None/no data or False (if file/directory not found)
 
     """
     if not os.path.exists(directory):
@@ -206,9 +239,13 @@ def mkdir_p(path):
                 raise
 
 
-def mk_int(s):
-    s = s.strip()
-    return int(s) if s else 0
+def get_int(s):
+    """ returns an int no matter what the input value.  returns 0 for values it can't convert"""
+    try:
+        val = int(s)
+    except ValueError:
+        val = 0
+    return val
 
 
 def processcolorcodes(messagestring):

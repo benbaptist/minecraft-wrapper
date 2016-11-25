@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from utils.helpers import getargs, getargsafter, processcolorcodes, getjsonfile, getfileaslines, mk_int
+from utils.helpers import getargs, getargsafter, processcolorcodes
+from utils.helpers import getjsonfile, getfileaslines, config_to_dict_read, get_int
 from api.base import API
 from api.player import Player
 from api.world import World
@@ -371,31 +372,28 @@ class MCServer:
                 theicon = f.read()
                 iconencoded = base64.standard_b64encode(theicon)
                 self.serverIcon = b"data:image/png;base64," + iconencoded
+
         # Read server.properties and extract some information out of it
         # the PY3.5 ConfigParser seems broken.  This way was much more straightforward and works in both PY2 and PY3
-        if os.path.exists("%s/server.properties" % self.serverpath):
-            with open("%s/server.properties" % self.serverpath, "r") as f:
-                configfile = f.read()
-            detect = configfile.split("level-name=")
-            if len(detect) < 2:
-                self.log.warning("No 'level-name=(worldname)' was found in the server.properties.")
-                return False
-            self.worldname = detect[1].split("\n")[0]
-            self.motd = configfile.split("motd=")[1].split("\n")[0]
-            playerentry = configfile.split("max-players=")
-            if len(playerentry) < 2:
-                self.log.warning("No 'max-players=(count)' was found in the server.properties."
-                                 "The default of '20' will be used.")
-            else:
-                self.maxPlayers = playerentry[1].split("\n")[0]
-            self.onlineMode = configfile.split("online-mode=")[1].split("\n")[0]
-            if self.onlineMode == "false":
-                self.onlineMode = False
-            else:
-                self.onlineMode = True
-            return True
-        self.log.warning("File 'server.properties' not found.")
-        return False
+        self.properties = config_to_dict_read("server.properties", self.serverpath)
+
+        if self.properties == {}:
+            self.log.warning("File 'server.properties' not found.")
+            return False
+
+        if "level-name" in self.properties:
+            self.worldname = self.properties["level-name"]
+        else:
+            self.log.warning("No 'level-name=(worldname)' was found in the server.properties.")
+            return False
+        self.motd = self.properties["motd"]
+        if "max-players" in self.properties:
+            self.maxPlayers = self.properties["max-players"]
+        else:
+            self.log.warning("No 'max-players=(count)' was found in the server.properties."
+                             "The default of '20' will be used.")
+            self.maxPlayers = 20
+        self.onlineMode = self.properties["online-mode"]
 
     def console(self, command):
         """
@@ -621,9 +619,9 @@ class MCServer:
             elif "minecraft server version" in line:  # Starting minecraft server version 1.11
                 self.version = getargs(line_words, 4)
                 semanitics = self.version.split(".")
-                release = mk_int(getargs(semanitics, 0))
-                major = mk_int(getargs(semanitics, 1))
-                minor = mk_int(getargs(semanitics, 2))
+                release = get_int(getargs(semanitics, 0))
+                major = get_int(getargs(semanitics, 1))
+                minor = get_int(getargs(semanitics, 2))
                 if release > 1 and major > 6 and minor > 4 and self.protocolVersion < 0:
                     self.protocolVersion = 5
                 self.refresh_ops()

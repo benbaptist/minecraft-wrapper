@@ -8,6 +8,7 @@ import json
 import os
 from core.nbt import NBTFile
 from core.entities import Items
+from utils.helpers import scrub_item_value
 
 
 # noinspection PyPep8Naming
@@ -43,17 +44,8 @@ class Minecraft:
                 new_value = new_value.split(",")  # may need additional quote stripping?
         except:
             pass
-        # detect and correct string booleans
-        if new_value in ("true", "True"):
-            new_value = True
-        if new_value in ("false", "False"):
-            new_value = False
-        # detect and correct string integers
-        try:
-            if str(int(new_value)) == new_value:
-                new_value = int(new_value)
-        except:
-            pass
+        # correct any string to boolean or integer
+        new_value = scrub_item_value(new_value)
 
         if self.interfacecfg.change_item(section, config_item, new_value):
             self.interfacecfg.save()
@@ -148,29 +140,30 @@ class Minecraft:
         else:
             online = False
         players = {}
-        for uuidf in os.listdir("wrapper-data/players"):
-            puuid = uuidf.rsplit(".", 1)[0]
+        for uuid_file_found in os.listdir("wrapper-data/players"):
+            player_uuid = uuid_file_found.rsplit(".", 1)[0]
 
-            username = self.wrapper.getusernamebyuuid(puuid)
+            username = self.wrapper.getusernamebyuuid(player_uuid)
             if type(username) != str:
-                puuid = "None"
+                player_uuid = "None"
 
-            # remove any old bad objects
-            if puuid in ("None", "False"):
-                os.remove("wrapper-data/players/" + uuidf)
+            # remove any old bad 'None' and 'False' files.
+            if player_uuid in ("None", "False"):
+                os.remove("wrapper-data/players/" + uuid_file_found)
                 continue
 
-            offinelineuuid = self.wrapper.getuuidfromname(username)
+            # if the server is in online mode and the player's offline and regular uuid are the same...
             if online:
-                if offinelineuuid == puuid:
+                if player_uuid == self.wrapper.getuuidfromname(username):
                     continue
-            with open("wrapper-data/players/" + uuidf) as f:
+
+            with open("wrapper-data/players/" + uuid_file_found) as f:
                 data = f.read()
             try:
-                players[puuid] = json.loads(data, self._encoding)
+                players[player_uuid] = json.loads(data, self._encoding)
             except Exception as e:
-                self.log.error("Failed to load player data '%s':\n%s", puuid, e)
-                os.remove("wrapper-data/players/" + uuidf)
+                self.log.error("Failed to load player data '%s':\n%s", player_uuid, e)
+                os.remove("wrapper-data/players/" + uuid_file_found)
         return players
 
     def getPlayers(self):  # returns a list of players
