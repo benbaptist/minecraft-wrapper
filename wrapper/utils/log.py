@@ -58,12 +58,12 @@ DEFAULT_CONFIG = dict({
 })
 
 
-def configure_logger():
-    loadconfig()
+def configure_logger(betterconsole=False):
+    loadconfig(betterconsole=betterconsole)
     logging.getLogger()
 
 
-def loadconfig(configfile="logging.json"):
+def loadconfig(betterconsole=False, configfile="logging.json"):
     dictConfig(DEFAULT_CONFIG)  # Load default config
     try:
         if os.path.isfile(configfile):
@@ -76,6 +76,9 @@ def loadconfig(configfile="logging.json"):
                     f.write(json.dumps(DEFAULT_CONFIG, indent=4, separators=(',', ': ')))
                 logging.warning("Logging configuration updated (%s) -- creating new logging configuration", configfile)
             else:
+                if betterconsole:
+                    readcurrent = conf["formatters"]["standard"]["format"]
+                    conf["formatters"]["standard"]["format"] = ("\033[1A%s\n" % readcurrent)
                 dictConfig(conf)
                 logging.info("Logging configuration file (%s) located and loaded, logging configuration set!",
                              configfile)
@@ -89,7 +92,8 @@ def loadconfig(configfile="logging.json"):
 
 class ColorFormatter(logging.Formatter):
     """
-    This custom formatter will format console color/option (bold, italic, etc) output based on logging level
+    This custom formatter will format console color/option (bold, italic, etc) output based on logging level.
+
     """
     def __init__(self, *args, **kwargs):
         super(ColorFormatter, self).__init__(*args, **kwargs)

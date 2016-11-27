@@ -1,3 +1,10 @@
+Build 149
+
+- "We must push the build so we can find out what's in it" - paraphrasing our US Congress as they were pushing for passage of a 2K page healthcare law
+
+Build 148
+- make wrapper's output (logger.logging() and utils.helpers.readout() ) reserve the last line for user input as well.
+
 Build 147 version [0.8.17]
 - Added console mute (/cm) function to mute a spammy server or while running wrapper commands.
 - More and more refactors and tweaks, like making 'ban' a server command again (versus wrapper proxy '.ban')
