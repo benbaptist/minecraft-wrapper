@@ -16,7 +16,7 @@ import sys  # used to pass sys.argv to server
 
 # small feature and helpers
 from utils.helpers import format_bytes, getargs, getargsafter, readout, get_int
-from utils.readchar import readchar, key, readkey
+from utils.readchar import key, readkey
 import core.buildinfo as core_buildinfo_version
 from core.mcuuid import MCUUID
 from core.config import Config
@@ -209,20 +209,15 @@ class Wrapper:
             else:
                 # keypress = readchar()
                 keypress = readkey()
-                if keypress == key.UP:
-                    print("YEA! UP ARROW")
 
                 if keypress == key.BACKSPACE:
                     self.input_buff = self.input_buff[:-1]
                     print("\033[0A%s         " % self.input_buff)
                     continue
 
-                if keypress != key.CR and len(keypress) < 2:
+                if keypress != key.CR:
                     self.input_buff = "%s%s" % (self.input_buff, keypress)
-                    if self.input_buff[0:1] == '/':  # /wrapper commands receive special magenta coloring
-                        print("%s\033[0A\033[35m%s\033[0m" % (self.cursor, self.input_buff))
-                    else:
-                        print("%s\033[0A%s" % (self.cursor, self.input_buff))
+                    print("\033[0A%s" % self.input_buff)
                     continue
 
                 consoleinput = "%s" % self.input_buff
@@ -662,7 +657,7 @@ class Wrapper:
 
     def listplugins(self):
         readout("", "List of Wrapper.py plugins installed:", separator="", pad=4,
-                            usereadline=self.use_readline)
+                usereadline=self.use_readline)
         for plid in self.plugins:
             plugin = self.plugins[plid]
             if plugin["good"]:
@@ -673,11 +668,11 @@ class Wrapper:
 
                 version = plugin["version"]
                 readout(name, summary, separator=(" - v%s - " % ".".join([str(_) for _ in version])),
-                            usereadline=self.use_readline)
+                        usereadline=self.use_readline)
                 # self.log.info("%s v%s - %s", name, ".".join([str(_) for _ in version]), summary)
             else:
                 readout("failed to load plugin", plugin, " - ", pad=25,
-                            usereadline=self.use_readline)
+                        usereadline=self.use_readline)
 
     def startproxy(self):
         self.proxy = proxy.Proxy(self)
@@ -818,7 +813,7 @@ class Wrapper:
     def _pause_console(self, pause_time):
         if not self.javaserver:
             readout("ERROR - ", "There is no running server instance to mute.", separator="", pad=10,
-                            usereadline=self.use_readline)
+                    usereadline=self.use_readline)
             return
         self.javaserver.server_muted = True
         readout("Server is now nuted for %d seconds." % pause_time, "", separator="", command_text_fg="yellow",
