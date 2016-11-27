@@ -401,7 +401,7 @@ def read_timestr(mc_time_string):
 
 def readout(commandtext, description, separator=" - ", pad=15,
             command_text_fg="magenta", command_text_opts=("bold",),
-            description_text_fg="yellow"):
+            description_text_fg="yellow", usereadline=True):
     """
     display console text only with no logging - useful for displaying pretty console-only messages.
     Args:
@@ -412,6 +412,7 @@ def readout(commandtext, description, separator=" - ", pad=15,
         command_text_fg: Foreground color, magenta by default
         command_text_opts: Tuple of ptions, '(bold,)' by default)
         description_text_fg: description area foreground color
+        usereadline: Use default readline  (or 'False', use readchar/readkey (with anti- scroll off capabilities))
 
     Returns: Just prints to stdout/console for console operator readout:
       DISPLAYS:
@@ -421,8 +422,10 @@ def readout(commandtext, description, separator=" - ", pad=15,
     descstyle = use_style(foreground=description_text_fg)
     x = '{0: <%d}' % pad
     commandtextpadded = x.format(commandtext)
-    print("%s%s%s" % (commstyle(commandtextpadded), separator, descstyle(description)))
-
+    if usereadline:
+        print("%s%s%s" % (commstyle(commandtextpadded), separator, descstyle(description)))
+    else:
+        print("\033[1A%s%s%s\n" % (commstyle(commandtextpadded), separator, descstyle(description)))
 
 def secondstohuman(seconds):
     results = "None at all!"

@@ -152,7 +152,6 @@ class Commands:
             player.message("&9%s" % items)
             return
         if section.lower() == "help" or len(commargs) < 3:
-            # readout("Usage:", "/config <section> <item> <desired value> [reload?(T/F)]")
             player.message("&cUsage: /config <section> <item> <desired value> [reload?(T/F)]")
             player.message("&c - Config headers and items are case-sensative!")
             player.message("&c       /config sections - view section headers")
@@ -260,7 +259,7 @@ class Commands:
             if not worldloaded:
                 # only console could be the source:
                 readout("ERROR - ", "There is no world instance (no server started).", separator="",
-                        pad=10)
+                        pad=10, usereadline=self.wrapper.use_readline)
                 return
             commargs = payload["args"]
             if len(commargs) < 1:

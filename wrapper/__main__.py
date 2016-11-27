@@ -3,13 +3,27 @@
 import os
 import sys
 from core.wrapper import Wrapper
+from utils.helpers import getjsonfile
 from utils.log import configure_logger
 
 PY3 = sys.version_info[0] > 2
 SUBVER = sys.version_info[1:1]
 
 if __name__ == "__main__":
-    configure_logger()
+    better_console = False
+    # noinspection PyBroadException
+    try:
+        configuration = getjsonfile("wrapper.properties")
+    except:
+        configuration = False
+    if configuration:
+        if "Misc" in configuration:
+            # noinspection PyUnresolvedReferences
+            if "use-readline" in configuration["Misc"]:
+                # noinspection PyUnresolvedReferences
+                better_console = not(configuration["Misc"]["use-readline"])
+
+    configure_logger(betterconsole=better_console)
 
     # check python version compatibilities
     if PY3:
