@@ -16,7 +16,7 @@ import sys  # used to pass sys.argv to server
 
 # small feature and helpers
 from utils.helpers import format_bytes, getargs, getargsafter, readout, get_int
-from utils.readchar import key, readkey
+from utils import readchar
 import core.buildinfo as core_buildinfo_version
 from core.mcuuid import MCUUID
 from core.config import Config
@@ -207,17 +207,20 @@ class Wrapper:
                     self.log.error("[continue] variable 'consoleinput' in 'console()' did not evaluate \n%s" % e)
                     consoleinput = ""
             else:
-                # keypress = readchar()
-                keypress = readkey()
 
-                if keypress == key.BACKSPACE:
+                keypress = readchar.readkey()
+
+                if keypress == readchar.key.BACKSPACE:
                     self.input_buff = self.input_buff[:-1]
                     print("\033[0A%s         " % self.input_buff)
                     continue
 
-                if keypress != key.CR:
+                if keypress != readchar.key.CR and len(keypress) < 2:
                     self.input_buff = "%s%s" % (self.input_buff, keypress)
-                    print("\033[0A%s" % self.input_buff)
+                    if self.input_buff[0:1] == '/':  # /wrapper commands receive special magenta coloring
+                        print("%s\033[0A\033[33m%s\033[0m" % (self.cursor, self.input_buff))
+                    else:
+                        print("%s\033[0A%s" % (self.cursor, self.input_buff))
                     continue
 
                 consoleinput = "%s" % self.input_buff
