@@ -507,7 +507,6 @@ class ServerConnection:
                 #                 # Null Chunk
                 #                 chunkcolumn += bytearray(16 * 16 * 16 * 2)
 
-
             elif pkid == self.pktCB.CHANGE_GAME_STATE:
                 data = self.packet.readpkt([_UBYTE, _FLOAT])
                 # ("ubyte:reason|float:value")
