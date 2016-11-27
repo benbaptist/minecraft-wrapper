@@ -302,9 +302,10 @@ class Player:
                 also adds ability to granularize with the OP level
 
         Accepts player as OP based on either the username OR server UUID.
-        This should NOT be used in a recursive loop (like a protection plugin, etc)
-        or a very frequently run function because it accesses the disk file
-        (ops.json) at each call!  Use of isOP_fast() is recommended instead.
+
+        If a player has been opped since the last server start, ensure that you run refreshOpsList() to
+        ensure that wrapper will acknowlege them as OP.
+
         """
 
         if self.javaserver.operatordict in (False, None):

@@ -48,7 +48,9 @@ NEWCONFIG = {
         "command-prefix": "/",
         "reboot-message": "Server is conducting a scheduled reboot. The server will be back momentarily!",
         "default-restart-message": "Server restarting...",
-        "stop-message": "Stopping The Minecraft Server"
+        "stop-message": "Stopping The Minecraft Server",
+        "use-readline": False  # using readline is like more-cross platform, but does not use wrapper's ability to
+                               # keep console keystroke entries visually intact while server produces output.
     },
     "General": {
         "auto-restart": True,

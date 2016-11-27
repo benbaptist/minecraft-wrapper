@@ -60,7 +60,7 @@ class EntityControl:
         try:
             return self.entities[eid]
         except Exception as e:
-            self.log.trace("getEntityByEID returned False: %s", e)
+            self.log.debug("getEntityByEID returned False: %s", e)
             return False
 
     def countActiveEntities(self):
@@ -148,7 +148,6 @@ class EntityControl:
         self.log.debug("_entityprocessor thread started.")
         while self.javaserver.state in (1, 2, 4) and not self.abortep:  # server is running
 
-            self.log.trace("_entityprocessor looping.")
             sleep(updatefrequency)  # timer for adding entities
 
             # start looking for stale client entities
@@ -163,7 +162,6 @@ class EntityControl:
                     except:
                         pass
 
-            self.log.trace("_entityprocessor updates done.")
         self.log.debug("_entityprocessor thread closed.")
 
     # each entity IS a dictionary, so...
@@ -172,7 +170,6 @@ class EntityControl:
         self.log.debug("_entity_thinner thread started.")
         while self.javaserver.state in (1, 2, 4) and not self.abortep:  # server is running
 
-            self.log.trace("_entity_thinner looping.")
             sleep(self.thining_frequency)  # timer
             if self.max_mob_limit > self.countActiveEntities():
                 continue  # don't bother, server load is light.
@@ -206,7 +203,6 @@ class EntityControl:
                         killcount = counts[mobs] - maxofthiskind
                         self._kill_around_player(players_position, "%s" % mobs, killcount)
 
-            self.log.trace("_entity_thinner done.")
         self.log.debug("_entity_thinner thread closed.")
 
     def _kill_around_player(self, position, entity_name, count, dropitems=False, finishstateof_domobloot=True):

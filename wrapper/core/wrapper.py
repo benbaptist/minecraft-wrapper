@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import print_function
+
 # py3 non-compliant at runtime
 
 # system imports
@@ -13,7 +15,8 @@ import socket
 import sys  # used to pass sys.argv to server
 
 # small feature and helpers
-from utils.helpers import format_bytes, getargs, getargsafter, readout
+from utils.helpers import format_bytes, getargs, getargsafter, readout, get_int
+from utils.readchar import readchar, key, readkey
 import core.buildinfo as core_buildinfo_version
 from core.mcuuid import MCUUID
 from core.config import Config
@@ -53,6 +56,9 @@ STARTED = 2
 STOPPING = 3
 FROZEN = 4
 
+# blinking cursor ANSI code
+CURSOR = "\033[5m>\033[0m"
+
 
 class Wrapper:
 
@@ -65,6 +71,7 @@ class Wrapper:
         self.config = self.configManager.config  # set up config
 
         # Read Config items
+        self.cursor = "\033[5m>\033[0m"  # hard coded
         self.wrapper_ban_system = False
         self.encoding = self.config["General"]["encoding"]  # This was to allow alternate encodings
         self.proxymode = self.config["Proxy"]["proxy-enabled"]
@@ -74,6 +81,7 @@ class Wrapper:
         self.auto_update_branch = self.config["Updates"]["auto-update-branch"]
         self.use_timer_tick_event = self.config["Gameplay"]["use-timer-tick-event"]
         self.command_prefix = self.config["Misc"]["command-prefix"]
+        self.use_readline = self.config["Misc"]["use-readline"]
 
         # Storages
         self.storage = Storage("wrapper", encoding=self.encoding)
@@ -86,6 +94,9 @@ class Wrapper:
         self.events = Events(self)
         self.registered_permissions = {}
         self.help = {}
+        self.input_buff = ""
+        self.last_input_line = ["/help", ]
+        self.last_input_line_index = 0
 
         # init items that are set up later (or opted out of/ not set up.)
         self.javaserver = None
@@ -191,13 +202,34 @@ class Wrapper:
 
     def parseconsoleinput(self):
         while not self.halt:
+            if self.use_readline:
+                # Obtain a line of console input
+                try:
+                    consoleinput = sys.stdin.readline().strip()
+                except Exception as e:
+                    self.log.error("[continue] variable 'consoleinput' in 'console()' did not evaluate \n%s" % e)
+                    consoleinput = ""
+            else:
+                # keypress = readchar()
+                keypress = readkey()
+                if keypress == key.UP:
+                    print("YEA! UP ARROW")
 
-            # Obtain a line of console input
-            try:
-                consoleinput = sys.stdin.readline().strip()
-            except Exception as e:
-                print("[continue] variable 'consoleinput' in 'console()' did not evaluate \n%s" % e)
-                continue
+                if keypress == key.BACKSPACE:
+                    self.input_buff = self.input_buff[:-1]
+                    print("\033[0A%s         " % self.input_buff)
+                    continue
+
+                if keypress != key.CR and len(keypress) < 2:
+                    self.input_buff = "%s%s" % (self.input_buff, keypress)
+                    if self.input_buff[0:1] == '/':  # /wrapper commands receive special magenta coloring
+                        print("%s\033[0A\033[35m%s\033[0m" % (self.cursor, self.input_buff))
+                    else:
+                        print("%s\033[0A%s" % (self.cursor, self.input_buff))
+                    continue
+
+                consoleinput = "%s" % self.input_buff
+                self.input_buff = ""
 
             # No command (perhaps just a line feed or spaces?)
             if len(consoleinput) < 1:
@@ -209,9 +241,7 @@ class Wrapper:
             allargs = wholecommandline[1:]  # this can be passed to runwrapperconsolecommand() command for args
             # Most of these are too small to use the runwrapperconsolecommand command (or work better here)
             if command.lower() in ("/halt", "halt"):
-                self.javaserver.stop("Halting server...", save=False)
-                self.halt = True
-                sys.exit()
+                self._halt()
             elif command.lower() in ("/stop", "stop"):
                 self.javaserver.stop("Stopping server...")
             elif command.lower() == "/kill":  # "kill" (with no slash) is a server command.
@@ -268,7 +298,7 @@ class Wrapper:
             elif command.lower() in ("/mute", "/pause", "/cm", "/m", "/p"):
                 pausetime = 30
                 if len(allargs) > 0:
-                    pausetime = int(allargs[0])
+                    pausetime = get_int(allargs[0])
                 # spur off a pause thread
                 cm = threading.Thread(target=self._pause_console, args=(pausetime,))
                 cm.daemon = True
@@ -783,6 +813,11 @@ class Wrapper:
             time.sleep(.1)
         self.javaserver.queued_lines = []
 
+    def _halt(self):
+        self.javaserver.stop("Halting server...", save=False)
+        self.halt = True
+        sys.exit()
+
 
 # - due to being refrerenced by the external wrapper API that is camelCase
 # noinspection PyUnresolvedReferences,PyPep8Naming,PyBroadException
@@ -837,7 +872,7 @@ class ConsolePlayer:
 
     def __str__(self):
         """
-        Permit the console to have a nice display instead of returing the object instance notation.
+        Permit the console to have a nice display instead of returning the object instance notation.
         """
         return "CONSOLE OPERATOR"
 

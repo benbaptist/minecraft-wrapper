@@ -8,7 +8,7 @@ from logging.config import dictConfig
 from utils.helpers import mkdir_p, use_style
 
 DEFAULT_CONFIG = dict({
-    "wrapperversion": 1.1,
+    "wrapperversion": 1.2,
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
@@ -19,10 +19,6 @@ DEFAULT_CONFIG = dict({
         },
         "file": {
             "format": "[%(asctime)s] [%(name)s/%(levelname)s]: %(message)s",
-            "datefmt": "%Y-%m-%d %H:%M:%S"
-        },
-        "trace": {
-            "format": "[%(asctime)s] [%(name)s/%(levelname)s] [THREAD:%(threadName)s]: %(message)s",
             "datefmt": "%Y-%m-%d %H:%M:%S"
         }
     },
@@ -53,39 +49,18 @@ DEFAULT_CONFIG = dict({
             "maxBytes": 10485760,
             "backupCount": 20,
             "encoding": "utf8"
-        },
-        "trace_file_handler": {
-            "class": "utils.log.WrapperHandler",
-            "level": "ERROR",
-            "formatter": "trace",
-            "filters": [],
-            "filename": "logs/wrapper/wrapper.trace.log",
-            "maxBytes": 10485760,
-            "backupCount": 20,
-            "encoding": "utf8"
         }
     },
     "root": {
         "level": "NOTSET",
-        "handlers": ["console", "wrapper_file_handler", "error_file_handler", "trace_file_handler"]
+        "handlers": ["console", "wrapper_file_handler", "error_file_handler"]
     }
 })
 
 
 def configure_logger():
-    setcustomlevels()
     loadconfig()
-
     logging.getLogger()
-
-
-def setcustomlevels():
-    # Create a TRACE level
-    # We should probably not do this, but for wrappers use case this is non-impacting.
-    # See: https://docs.python.org/2/howto/logging.html#custom-levels
-    logging.TRACE = 5  # lower than DEBUG
-    logging.addLevelName(logging.TRACE, "TRACE")
-    logging.Logger.trace = lambda inst, msg, *args, **kwargs: inst.log(logging.TRACE, msg, *args, **kwargs)
 
 
 def loadconfig(configfile="logging.json"):
@@ -139,9 +114,6 @@ class ColorFormatter(logging.Formatter):
             elif record.levelno == logging.CRITICAL:
                 crit_style = use_style(foreground="black", background="red", options=("bold",))
                 msg = crit_style(msg)
-            elif record.levelno == logging.TRACE:
-                trace_style = use_style(foreground="white", background="black", options=("italic",))
-                msg = trace_style(msg)
 
         record.msg = msg
 

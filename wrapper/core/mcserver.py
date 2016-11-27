@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
+from __future__ import print_function
 
-from utils.helpers import getargs, getargsafter, processcolorcodes
-from utils.helpers import getjsonfile, getfileaslines, config_to_dict_read, get_int
+from utils.helpers import getargs, getargsafter, get_int, processcolorcodes
+from utils.helpers import getjsonfile, getfileaslines, config_to_dict_read, set_item
+
 from api.base import API
 from api.player import Player
 from api.world import World
@@ -67,10 +69,11 @@ class MCServer:
         self.proc = None
         self.rebootWarnings = 0
         self.lastsizepoll = 0
-        self.data = []
+        self.console_output_data = []
         self.spammy_stuff = ["found nothing", "vehicle of"]
         self.server_muted = False
         self.queued_lines = []
+        self.server_stalled = False
 
         if not self.wrapper.storage["ServerStarted"]:
             self.log.warning("NOTE: Server was in 'STOP' state last time Wrapper.py was running. "
@@ -158,13 +161,13 @@ class MCServer:
                     break
 
                 # This level runs continously once server console starts
-
-                for line in self.data:
+                # is is only reading server console output
+                for line in self.console_output_data:
                     try:
                         self.readconsole(line.replace("\r", ""))
                     except Exception as e:
                         self.log.exception(e)
-                self.data = []
+                self.console_output_data = []
             self.server_handle_on = False
 
     def start(self, save=True):
@@ -198,6 +201,7 @@ class MCServer:
         self.console("stop")
 
     def accepteula(self):
+
         if os.path.isfile("%s/eula.txt" % self.serverpath):
             self.log.debug("Checking EULA agreement...")
             with open("%s/eula.txt" % self.serverpath, "r") as f:
@@ -206,8 +210,7 @@ class MCServer:
             if "false" in eula:
                 # if forced, should be at info level since acceptance is a legal matter.
                 self.log.warning("EULA agreement was not accepted, accepting on your behalf...")
-                with open("%s/eula.txt" % self.serverpath, "w") as f:
-                    f.write(eula.replace("false", "true"))
+                set_item("eula", "true", "eula.txt", self.serverpath)
 
             self.log.debug("EULA agreement has been accepted.")
             return True
@@ -427,26 +430,63 @@ class MCServer:
         else:
             return "vanilla"
 
+    def server_reload(self):
+        """
+        Restarts the server quickly.  Wrapper "auto-restart" must be set to True.
+        If wrapper is in proxy mode, it will reconnect all clients to the serverconnection.
+        """
+        if self.state in (STOPPING, OFF):
+            self.log.warning("The server is not already running... Just use '/start'.")
+            return
+        if self.wrapper.proxymode:
+            # discover who all is playing and store that knowledge
+
+            # tell the serverconnection to stop processing play packets
+            self.server_stalled = True
+
+        # stop the server.
+
+        # Call events to "do stuff" while server is down (write whilelists, OP files, server properties, etc)
+
+        # restart the server.
+
+        if self.wrapper.proxymode:
+            pass
+            # once server is back up,  Reconnect stalled/idle clients back to the serverconnection process.
+            #   #  do I need to create a new serverconnection, or can the old one be tricked into continuing??
+
+        reason = None
+        self.log.info("Restarting Minecraft server with reason:")
+        self.changestate(STOPPING, reason)
+        for player in self.players:
+            self.console("kick %s %s" % (player, reason))
+        self.console("stop")
+
     def __stdout__(self):
+        # handles server output, not lines typed in console.
         while not self.wrapper.halt:
             # noinspection PyBroadException,PyUnusedLocal
+
+            # this reads the line and puts the line in the 'self.data' buffer for processing by
+            # readconsole() (inside handle_server)
             try:
                 data = self.proc.stdout.readline()
                 for line in data.split("\n"):
                     if len(line) < 1:
                         continue
-                    self.data.append(line)
+                    self.console_output_data.append(line)
             except Exception as e:
                 time.sleep(0.1)
                 continue
 
     def __stderr__(self):
+        # like __stdout__, handles server output (not lines typed in console)
         while not self.wrapper.halt:
             try:
                 data = self.proc.stderr.readline()
                 if len(data) > 0:
                     for line in data.split("\n"):
-                        self.data.append(line.replace("\r", ""))
+                        self.console_output_data.append(line.replace("\r", ""))
             except Exception as e:
                 time.sleep(0.1)
                 continue
@@ -530,6 +570,8 @@ class MCServer:
         """
         if not self.wrapper.events.callevent("server.consoleMessage", {"message": buff}):
             return False
+
+        # remove time stamp and server labeling pre-pends.
         if self.getservertype() == "spigot":
             line = " ".join(buff.split(" ")[2:])
         else:
@@ -541,12 +583,29 @@ class MCServer:
             if things in buff:
                 server_spaming = True
 
+        # server_spaming setting does not stop it from being parsed below.
         if not server_spaming:
             if not self.server_muted:
-                print(buff)
+
+                if self.wrapper.use_readline:
+                    print(buff)
+                else:
+                    # Format the output to prevent a command that is in-process of being typed get carried away.
+                    if self.wrapper.input_buff == "":  # input_buff is built by parseconsoleinput() of core.wrapper.
+                        print("\033[1A%s" % buff)
+                        print(self.wrapper.cursor)
+                    else:
+                        # print the server lines above and re-print what the console user was typing right below that.
+                        print("\033[1A%s" % buff)
+                        if self.wrapper.input_buff[0:1] == '/':  # /wrapper commands receive special magenta coloring
+                            print("%s\033[35m%s\033[0m" % (self.wrapper.cursor, self.wrapper.input_buff))
+                        else:
+                            print("%s%s" % (self.wrapper.cursor, self.wrapper.input_buff))
+
             else:
                 self.queued_lines.append(buff)
 
+        # server console parsing section
         line_words = line.split(" ")
         deathprefixes = ["fell", "was", "drowned", "blew", "walked", "went", "burned", "hit", "tried",
                          "died", "got", "starved", "suffocated", "withered"]
@@ -693,7 +752,7 @@ class MCServer:
             self.version = "Pre-1.7"
             self.refresh_ops()
 
-            # mcserver.py onsecond Event Handler
+    # mcserver.py onsecond Event Handler
     def eachsecond(self, payload):
         if self.config["General"]["timed-reboot"]:
             if time.time() - self.bootTime > self.config["General"]["timed-reboot-seconds"]:

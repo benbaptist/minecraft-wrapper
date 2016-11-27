@@ -444,6 +444,36 @@ def secondstohuman(seconds):
     return results
 
 
+def set_item(item, string_val, filename, path='.'):
+    """
+    reads a file with "item=" lines and looks for 'item'.  If found, replaces the existing value
+    with 'item=string_val'.
+
+    :param item: the config item in the file.  Will search the file for occurences of 'item='.
+    :param string_val: must have a valid __str__ representation (if not an actual string)
+    :param filename: full filename, including extension.
+    :param path: defaults to wrappers path.
+    :return:
+    """
+
+    if os.path.isfile("%s/%s" % (path, filename)):
+        searchitem = "%s=" % item
+        with open("%s/%s" % (path, filename), "r") as f:
+            file_contents = f.read()
+
+            print("hello=hi\n"
+                  "gm=0\n"
+                  "test=\n".split("test")[1].split('\n')[0])
+        if searchitem in file_contents:
+            current_item = str(file_contents.split(searchitem)[1].split('/n'[0]))
+            new_item = '%s%s' % (searchitem, string_val)
+            with open("%s/%s" % (path, filename), "w") as f:
+                f.write(file_contents.replace(current_item, new_item))
+        return True
+    else:
+        return False
+
+
 def showpage(player, page, items, command, perpage, command_prefix='/'):
     fullcommand = "%s%s" % (command_prefix, command)
     pagecount = len(items) // perpage
