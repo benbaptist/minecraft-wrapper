@@ -2,7 +2,7 @@ Build 147 version [0.8.17]
 - Added console mute (/cm) function to mute a spammy server or while running wrapper commands.
 - More and more refactors and tweaks, like making 'ban' a server command again (versus wrapper proxy '.ban')
 - add /perms to console help (the command already existed, but was not documented in help)
-- OPs processing:
+- OPs processing (make checking OPs less disk-intense):
     - removed operator file reads from the player object API and moved to the server object
     - OPs file is read ONCE by default, when server is instantiated, and at any starts and restarts.
     - a mcserver.py MCServer class method added to be able to refresh OPs list when changes are made.
@@ -12,11 +12,15 @@ Build 147 version [0.8.17]
 - fix issue with wrapper's getuuidbyusername that could cause the person's local name on the server to revert unexpectedly.
 - added neater way to read server properties and have them included in mcserver.py self.properties as a dictionary.
 - add set_item() to utils.helpers.  This will allow wrapper to easily write new server.properties values to disk.
+- add other nice helper functions.
 - Added readchar package to utils and...
 - Optional console input processing to read keystrokes (instead of waiting for /n readline) so that:
     - I can fix issue #326 https://github.com/benbaptist/minecraft-wrapper/issues/326
     - make console input even fancier.
+    - staged wrapper self variables to allow up/down arrow key command history.
+- did some work on
 - removed trace-level logging.
+- staged some things to start work on the ability to restart a server and keep players connected in proxy mode.
 
 Build 146
 - custom startup/restart messages (#319)

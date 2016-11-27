@@ -56,9 +56,6 @@ STARTED = 2
 STOPPING = 3
 FROZEN = 4
 
-# blinking cursor ANSI code
-CURSOR = "\033[5m>\033[0m"
-
 
 class Wrapper:
 
