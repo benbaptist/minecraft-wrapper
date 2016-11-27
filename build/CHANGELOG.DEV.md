@@ -18,7 +18,6 @@ Build 147 version [0.8.17]
     - I can fix issue #326 https://github.com/benbaptist/minecraft-wrapper/issues/326
     - make console input even fancier.
     - staged wrapper self variables to allow up/down arrow key command history.
-- did some work on
 - removed trace-level logging.
 - staged some things to start work on the ability to restart a server and keep players connected in proxy mode.
 

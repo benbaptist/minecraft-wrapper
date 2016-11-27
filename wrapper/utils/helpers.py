@@ -461,9 +461,6 @@ def set_item(item, string_val, filename, path='.'):
         with open("%s/%s" % (path, filename), "r") as f:
             file_contents = f.read()
 
-            print("hello=hi\n"
-                  "gm=0\n"
-                  "test=\n".split("test")[1].split('\n')[0])
         if searchitem in file_contents:
             current_item = str(file_contents.split(searchitem)[1].split('/n'[0]))
             new_item = '%s%s' % (searchitem, string_val)
