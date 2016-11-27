@@ -9,7 +9,6 @@ import time
 import json
 import hashlib
 import argparse
-# import zipfile
 import subprocess
 
 parser = argparse.ArgumentParser(
@@ -66,32 +65,6 @@ def build_wrapper(buildargs):
     with open("./build/Wrapper.py.md5", "w") as f:
         f.write(hashlib.md5(open("./Wrapper.py", "r").read()).hexdigest())
 
-    # This never worked to create a valid python archive
-
-    # if buildargs.verbose:
-    #     print('Creating Archive...')
-
-    # zf = zipfile.ZipFile('Wrapper.py', mode='w')
-    # try:
-    #     if buildargs.verbose:
-    #         print('Adding Files...')
-    #     for root, dirs, files in os.walk("wrapper"):
-    #         for f in files:
-    #             path = os.path.join(root, f)
-    #             if buildargs.verbose:
-    #                 print('Archiving %s...' % path)
-    #             zf.write(path, arcname=path[4:])
-    # finally:
-    #     if buildargs.verbose:
-    #         print('Closing Archive...')
-    #    zf.close()
-
-    # with open("Wrapper.py", "r") as f:
-    #     content = f.read()
-
-    # with open("build/Wrapper.py.md5", "w") as f:
-    #     f.write(hashlib.md5(content).hexdigest())
-
     # Mainly just for me (benbaptist), since most people will probably want to build locally without committing.
     if buildargs.commit:
         subprocess.Popen("git add --update :/", shell=True).wait()
@@ -101,8 +74,5 @@ def build_wrapper(buildargs):
         subprocess.Popen("git push", shell=True).wait()
     print("Built version %d (%s build)" % (version["__build__"], buildargs.branch))
 
-#using try except here just hides errors
-#try:
+# Don't try-except here (just hides errors)
 build_wrapper(args)
-#except Exception as e:
-#    print("Unexpected error: \n%s", e)
