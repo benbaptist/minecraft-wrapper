@@ -819,7 +819,7 @@ class Wrapper:
         readout("Server is now nuted for %d seconds." % pause_time, "", separator="", command_text_fg="yellow",
                 usereadline=self.use_readline)
         time.sleep(pause_time)
-        readout("Server now unmuted." % pause_time, "", separator="", usereadline=self.use_readline)
+        readout("Server now unmuted.", "", separator="", usereadline=self.use_readline)
         self.javaserver.server_muted = False
         for lines in self.javaserver.queued_lines:
             readout("Q\\", "", lines, pad=3, usereadline=self.use_readline)
