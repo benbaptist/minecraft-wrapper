@@ -3,17 +3,31 @@
 import os
 import sys
 from core.wrapper import Wrapper
-from utils.helpers import getjsonfile
+from utils.helpers import getjsonfile, config_to_dict_read
 from utils.log import configure_logger
+
+BOOT_OPTIONS = "ENCODING=UTF-8\n"
+
+bootoption_count = 1
 
 PY3 = sys.version_info[0] > 2
 SUBVER = sys.version_info[1:1]
 
 if __name__ == "__main__":
-    better_console = False
+
+    # determine immediate need-to-know options for wrapper start
+    better_console = False  # same as 'use-readline = True'
+    encoding = 'UTF-8'
+    bootoptions = config_to_dict_read("boot.txt", '.')
+    if len(bootoptions) < bootoption_count:
+        with open("boot.txt", "w") as f:
+            f.write(BOOT_OPTIONS)
+    if "ENCODING" in bootoptions:
+        encoding = bootoptions["ENCODING"]
+
     # noinspection PyBroadException
     try:
-        configuration = getjsonfile("wrapper.properties")
+        configuration = getjsonfile("wrapper.properties", ".", encodedas=encoding)
     except:
         configuration = False
     if configuration:
@@ -21,7 +35,7 @@ if __name__ == "__main__":
             # noinspection PyUnresolvedReferences
             if "use-readline" in configuration["Misc"]:
                 # noinspection PyUnresolvedReferences
-                better_console = not(configuration["Misc"]["use-readline"])
+                better_console = not(configuration["Misc"]["use-readline"])  # use readline = not using better_console
 
     configure_logger(betterconsole=better_console)
 
