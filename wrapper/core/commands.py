@@ -11,6 +11,7 @@ import json
 from utils.helpers import format_bytes, getargs, getargsafter, secondstohuman, showpage, readout
 
 
+# noinspection PyBroadException
 class Commands:
 
     def __init__(self, wrapper):
@@ -19,7 +20,6 @@ class Commands:
         self.config = wrapper.config
 
         self.commands = {}
-
 
     def __getitem__(self, index):
         if not type(index) == str:
@@ -100,7 +100,7 @@ class Commands:
                 try:
                     self.commands[pluginID][command](payload["player"], payload["args"])
                 except Exception as e:
-                    pass
+                    self.log.debug("Exception in 'Wrapper.py' while trying to run '%s' command:\n%s", (command, e))
                 continue
             if pluginID not in self.wrapper.plugins:
                 continue
@@ -117,9 +117,9 @@ class Commands:
                         player.message({"translate": "commands.generic.permission", "color": "red"})
                     return True
                 except Exception as e:
-                    self.log.exception("Plugin '%s' errored out when executing command: '<%s> /%s':",
-                                       pluginID, payload["player"], command)
-                    payload["player"].message({"text": "An internal error occurred on the server side "
+                    self.log.exception("Plugin '%s' errored out when executing command: '<%s> /%s':\n%s",
+                                       pluginID, payload["player"], command, e)
+                    payload["player"].message({"text": "An internal error occurred in wrapper"
                                                        "while trying to execute this command. Apologies.",
                                                "color": "red"})
                     return True
@@ -350,7 +350,7 @@ class Commands:
                                             "from the console, use `/raw /reload` or `reload` (with no "
                                             "slash).", "color": "gold"})
             except Exception as e:
-                self.log.exception("Failure to reload plugins:")
+                self.log.exception("Failure to reload plugins:\n%s" % e)
                 player.message({"text": "An error occurred while reloading plugins. Please check the console "
                                         "immediately for a traceback.", "color": "red"})
             return False
@@ -432,7 +432,8 @@ class Commands:
                                         "text": " - %s " % i[1]
                                     }]
                                 })
-                            showpage(player, page, items, "help %s" % groupName, 4, command_prefix=self.wrapper.command_prefix)
+                            showpage(player, page, items, "help %s" % groupName, 4,
+                                     command_prefix=self.wrapper.command_prefix)
                             return
                 player.message("&cThe help group '%s' does not exist." % group)
 

@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
+from __future__ import print_function
 
-from utils.helpers import getargs, getargsafter, processcolorcodes
+from utils.helpers import getargs, getargsafter, get_int, processcolorcodes
+from utils.helpers import getjsonfile, getfileaslines, config_to_dict_read, set_item
+
 from api.base import API
 from api.player import Player
 from api.world import World
@@ -66,8 +69,11 @@ class MCServer:
         self.proc = None
         self.rebootWarnings = 0
         self.lastsizepoll = 0
-        self.data = []
+        self.console_output_data = []
         self.spammy_stuff = ["found nothing", "vehicle of"]
+        self.server_muted = False
+        self.queued_lines = []
+        self.server_stalled = False
 
         if not self.wrapper.storage["ServerStarted"]:
             self.log.warning("NOTE: Server was in 'STOP' state last time Wrapper.py was running. "
@@ -81,13 +87,14 @@ class MCServer:
         self.worldSize = 0
         self.maxPlayers = 20
         self.protocolVersion = -1  # -1 until proxy mode checks the server's MOTD on boot
-        self.version = None  # this is string name of the server version.
+        self.version = None  # this is string name of the server version, collected by console output
         self.world = None
         self.entity_control = None
         self.motd = None
         self.timeofday = -1  # -1 until a player logs on and server sends a time update
         self.onlineMode = True
         self.serverIcon = None
+        self.operatordict = self.read_ops_file()
 
         self.properties = {}
 
@@ -154,13 +161,13 @@ class MCServer:
                     break
 
                 # This level runs continously once server console starts
-
-                for line in self.data:
+                # is is only reading server console output
+                for line in self.console_output_data:
                     try:
                         self.readconsole(line.replace("\r", ""))
                     except Exception as e:
                         self.log.exception(e)
-                self.data = []
+                self.console_output_data = []
             self.server_handle_on = False
 
     def start(self, save=True):
@@ -194,6 +201,7 @@ class MCServer:
         self.console("stop")
 
     def accepteula(self):
+
         if os.path.isfile("%s/eula.txt" % self.serverpath):
             self.log.debug("Checking EULA agreement...")
             with open("%s/eula.txt" % self.serverpath, "r") as f:
@@ -202,8 +210,7 @@ class MCServer:
             if "false" in eula:
                 # if forced, should be at info level since acceptance is a legal matter.
                 self.log.warning("EULA agreement was not accepted, accepting on your behalf...")
-                with open("%s/eula.txt" % self.serverpath, "w") as f:
-                    f.write(eula.replace("false", "true"))
+                set_item("eula", "true", "eula.txt", self.serverpath)
 
             self.log.debug("EULA agreement has been accepted.")
             return True
@@ -342,7 +349,7 @@ class MCServer:
         """
         # player object is defunct at this point.  All we can pass to the plugin is a name
         nameduser = "%s" % players_name
-        x = MiniPlayer(nameduser)
+        x = MiniPlayer(nameduser)  # create a new simple object describing the logged off player.
 
         # self.wrapper.callEvent("player.logout", {"player": self.getPlayer(username)})
         self.wrapper.events.callevent("player.logout", {"player": x})
@@ -368,31 +375,28 @@ class MCServer:
                 theicon = f.read()
                 iconencoded = base64.standard_b64encode(theicon)
                 self.serverIcon = b"data:image/png;base64," + iconencoded
+
         # Read server.properties and extract some information out of it
         # the PY3.5 ConfigParser seems broken.  This way was much more straightforward and works in both PY2 and PY3
-        if os.path.exists("%s/server.properties" % self.serverpath):
-            with open("%s/server.properties" % self.serverpath, "r") as f:
-                configfile = f.read()
-            detect = configfile.split("level-name=")
-            if len(detect) < 2:
-                self.log.warning("No 'level-name=(worldname)' was found in the server.properties.")
-                return False
-            self.worldname = detect[1].split("\n")[0]
-            self.motd = configfile.split("motd=")[1].split("\n")[0]
-            playerentry = configfile.split("max-players=")
-            if len(playerentry) < 2:
-                self.log.warning("No 'max-players=(count)' was found in the server.properties."
-                                 "The default of '20' will be used.")
-            else:
-                self.maxPlayers = playerentry[1].split("\n")[0]
-            self.onlineMode = configfile.split("online-mode=")[1].split("\n")[0]
-            if self.onlineMode == "false":
-                self.onlineMode = False
-            else:
-                self.onlineMode = True
-            return True
-        self.log.warning("File 'server.properties' not found.")
-        return False
+        self.properties = config_to_dict_read("server.properties", self.serverpath)
+
+        if self.properties == {}:
+            self.log.warning("File 'server.properties' not found.")
+            return False
+
+        if "level-name" in self.properties:
+            self.worldname = self.properties["level-name"]
+        else:
+            self.log.warning("No 'level-name=(worldname)' was found in the server.properties.")
+            return False
+        self.motd = self.properties["motd"]
+        if "max-players" in self.properties:
+            self.maxPlayers = self.properties["max-players"]
+        else:
+            self.log.warning("No 'max-players=(count)' was found in the server.properties."
+                             "The default of '20' will be used.")
+            self.maxPlayers = 20
+        self.onlineMode = self.properties["online-mode"]
 
     def console(self, command):
         """
@@ -426,29 +430,95 @@ class MCServer:
         else:
             return "vanilla"
 
+    def server_reload(self):
+        """
+        Restarts the server quickly.  Wrapper "auto-restart" must be set to True.
+        If wrapper is in proxy mode, it will reconnect all clients to the serverconnection.
+        """
+        if self.state in (STOPPING, OFF):
+            self.log.warning("The server is not already running... Just use '/start'.")
+            return
+        if self.wrapper.proxymode:
+            # discover who all is playing and store that knowledge
+
+            # tell the serverconnection to stop processing play packets
+            self.server_stalled = True
+
+        # stop the server.
+
+        # Call events to "do stuff" while server is down (write whilelists, OP files, server properties, etc)
+
+        # restart the server.
+
+        if self.wrapper.proxymode:
+            pass
+            # once server is back up,  Reconnect stalled/idle clients back to the serverconnection process.
+            #   #  do I need to create a new serverconnection, or can the old one be tricked into continuing??
+
+        reason = None
+        self.log.info("Restarting Minecraft server with reason:")
+        self.changestate(STOPPING, reason)
+        for player in self.players:
+            self.console("kick %s %s" % (player, reason))
+        self.console("stop")
+
     def __stdout__(self):
+        # handles server output, not lines typed in console.
         while not self.wrapper.halt:
             # noinspection PyBroadException,PyUnusedLocal
+
+            # this reads the line and puts the line in the 'self.data' buffer for processing by
+            # readconsole() (inside handle_server)
             try:
                 data = self.proc.stdout.readline()
                 for line in data.split("\n"):
                     if len(line) < 1:
                         continue
-                    self.data.append(line)
+                    self.console_output_data.append(line)
             except Exception as e:
                 time.sleep(0.1)
                 continue
 
     def __stderr__(self):
+        # like __stdout__, handles server output (not lines typed in console)
         while not self.wrapper.halt:
             try:
                 data = self.proc.stderr.readline()
                 if len(data) > 0:
                     for line in data.split("\n"):
-                        self.data.append(line.replace("\r", ""))
+                        self.console_output_data.append(line.replace("\r", ""))
             except Exception as e:
                 time.sleep(0.1)
                 continue
+
+    def read_ops_file(self):
+        """
+        Keep a list of ops in the server instance to stop reading the disk for it
+        :rtype: Dictionary
+        """
+        ops = False
+        if self.protocolVersion > 4:  # (4 = PROTOCOL_1_7 ) - 1.7.6 or greater use ops.json
+            ops = getjsonfile("ops", self.serverpath, encodedas=self.encoding)
+        if not ops:
+            # try for an old "ops.txt" file instead.
+            ops = []
+            opstext = getfileaslines("ops.txt", self.serverpath)
+            if not opstext:
+                return False
+            for op in opstext:
+                # create a 'fake' ops list from the old pre-1.8 text line name list
+                # notice that the level (an option not the old list) is set to 1
+                #   This will pass as true, but if the plugin is also checking op-levels, it
+                #   may not pass truth.
+                indivop = {"uuid": op,
+                           "name": op,
+                           "level": 1}
+                ops.append(indivop)
+
+        return ops
+
+    def refresh_ops(self):
+        self.operatordict = self.read_ops_file()
 
     def getmemoryusage(self):
         """
@@ -500,6 +570,8 @@ class MCServer:
         """
         if not self.wrapper.events.callevent("server.consoleMessage", {"message": buff}):
             return False
+
+        # remove time stamp and server labeling pre-pends.
         if self.getservertype() == "spigot":
             line = " ".join(buff.split(" ")[2:])
         else:
@@ -511,111 +583,146 @@ class MCServer:
             if things in buff:
                 server_spaming = True
 
+        # server_spaming setting does not stop it from being parsed below.
         if not server_spaming:
-            print(buff)
+            if not self.server_muted:
 
+                if self.wrapper.use_readline:
+                    print(buff)
+                else:
+                    # Format the output to prevent a command that is in-process of being typed get carried away.
+                    if self.wrapper.input_buff == "":  # input_buff is built by parseconsoleinput() of core.wrapper.
+                        print("\033[1A%s" % buff)
+                        print(self.wrapper.cursor)
+                    else:
+                        # print the server lines above and re-print what the console user was typing right below that.
+                        print("\033[1A%s" % buff)
+                        if self.wrapper.input_buff[0:1] == '/':  # /wrapper commands receive special magenta coloring
+                            print("%s\033[35m%s\033[0m" % (self.wrapper.cursor, self.wrapper.input_buff))
+                        else:
+                            print("%s%s" % (self.wrapper.cursor, self.wrapper.input_buff))
+
+            else:
+                self.queued_lines.append(buff)
+
+        # server console parsing section
+        line_words = line.split(" ")
         deathprefixes = ["fell", "was", "drowned", "blew", "walked", "went", "burned", "hit", "tried",
                          "died", "got", "starved", "suffocated", "withered"]
         if not self.config["General"]["pre-1.7-mode"]:
             if len(getargs(line.split(" "), 0)) < 1:
                 return
-            if getargs(line.split(" "), 0) == "Done":  # Confirmation that the server finished booting
+
+            # confirm server start
+            if "Done (" in line:
                 self.changestate(STARTED)
                 self.log.info("Server started")
                 self.bootTime = time.time()
+
             # Getting world name
-            elif getargs(line.split(" "), 0) == "Preparing" and getargs(line.split(" "), 1) == "level":
+            elif "Preparing level" in line:
                 self.worldname = getargs(line.split(" "), 2).replace('"', "")
                 self.world = World(self.worldname, self)
                 self.entity_control = EntityControl(self)
-            elif getargs(line.split(" "), 0)[0] == "<":  # Player Message
-                name = self.stripspecial(getargs(line.split(" "), 0)[1:-1])
-                message = self.stripspecial(getargsafter(line.split(" "), 1))
-                original = getargsafter(line.split(" "), 0)
+
+            elif getargs(line_words, 0)[0] == "<":  # Player Message
+                name = self.stripspecial(getargs(line_words, 0)[1:-1])
+                message = self.stripspecial(getargsafter(line_words, 1))
+                original = getargsafter(line_words, 0)
                 self.wrapper.events.callevent("player.message", {
                     "player": self.getplayer(name), 
                     "message": message, 
                     "original": original
                 })
-            elif getargs(line.split(" "), 1) == "logged":  # Player Login
-                name = self.stripspecial(getargs(line.split(" "), 0)[0:getargs(line.split(" "), 0).find("[")])
-                eid = int(getargs(line.split(" "), 6))
+            elif getargs(line_words, 1) == "logged":  # Player Login
+                name = self.stripspecial(getargs(line_words, 0)[0:getargs(line_words, 0).find("[")])
+                eid = int(getargs(line_words, 6))
                 locationtext = getargs(line.split(" ("), 1)[:-1].split(", ")
                 location = int(float(locationtext[0])), int(float(locationtext[1])), int(float(locationtext[2]))
                 self.login(name, eid, location)
-            elif getargs(line.split(" "), 1) == "left":  # Player Logout
-                name = getargs(line.split(" "), 0)
+            elif getargs(line_words, 1) == "left":  # Player Logout
+                name = getargs(line_words, 0)
                 self.logout(name)
-            elif getargs(line.split(" "), 0) == "*":
-                name = self.stripspecial(getargs(line.split(" "), 1))
-                message = self.stripspecial(getargsafter(line.split(" "), 2))
+            elif getargs(line_words, 0) == "*":
+                name = self.stripspecial(getargs(line_words, 1))
+                message = self.stripspecial(getargsafter(line_words, 2))
                 self.wrapper.events.callevent("player.action", {
                     "player": self.getplayer(name),
                     "action": message
                 })
-            elif getargs(line.split(" "), 0)[0] == "[" and getargs(line.split(" "), 0)[-1] == "]":  # /say command
+            elif getargs(line_words, 0)[0] == "[" and getargs(line_words, 0)[-1] == "]":  # /say command
                 if self.getservertype != "vanilla":
                     return  # Unfortunately, Spigot and Bukkit output things that conflict with this
-                name = self.stripspecial(getargs(line.split(" "), 0)[1:-1])
-                message = self.stripspecial(getargsafter(line.split(" "), 1))
-                original = getargsafter(line.split(" "), 0)
+                name = self.stripspecial(getargs(line_words, 0)[1:-1])
+                message = self.stripspecial(getargsafter(line_words, 1))
+                original = getargsafter(line_words, 0)
                 self.wrapper.events.callevent("server.say", {
                     "player": name, 
                     "message": message, 
                     "original": original
                 })
             # Player Achievement
-            elif getargs(line.split(" "), 1) == "has" and getargs(line.split(" "), 5) == "achievement":
-                name = self.stripspecial(getargs(line.split(" "), 0))
-                achievement = getargsafter(line.split(" "), 6)
+            elif getargs(line_words, 1) == "has" and getargs(line_words, 5) == "achievement":
+                name = self.stripspecial(getargs(line_words, 0))
+                achievement = getargsafter(line_words, 6)
                 self.wrapper.events.callevent("player.achievement", {
                     "player": name, 
                     "achievement": achievement
                 })
-            elif getargs(line.split(" "), 1) in deathprefixes:  # Player Death
-                name = self.stripspecial(getargs(line.split(" "), 0))
+            elif getargs(line_words, 1) in deathprefixes:  # Player Death
+                name = self.stripspecial(getargs(line_words, 0))
                 self.wrapper.events.callevent("player.death", {
                     "player": self.getplayer(name), 
-                    "death": getargsafter(line.split(" "), 4)
+                    "death": getargsafter(line_words, 4)
                 })
+            elif "minecraft server version" in line:  # Starting minecraft server version 1.11
+                self.version = getargs(line_words, 4)
+                semanitics = self.version.split(".")
+                release = get_int(getargs(semanitics, 0))
+                major = get_int(getargs(semanitics, 1))
+                minor = get_int(getargs(semanitics, 2))
+                if release > 1 and major > 6 and minor > 4 and self.protocolVersion < 0:
+                    self.protocolVersion = 5
+                self.refresh_ops()
+
         else:  # pre 1.7 mode
-            if len(getargs(line.split(" "), 3)) < 1:
+            if len(getargs(line_words, 3)) < 1:
                 return
-            if getargs(line.split(" "), 3) == "Done":  # Confirmation that the server finished booting
+            if getargs(line_words, 3) == "Done":  # Confirmation that the server finished booting
                 self.changestate(STARTED)
                 self.log.info("Server started")
                 self.bootTime = time.time()
-            elif getargs(line.split(" "), 3) == "Preparing" and getargs(line.split(" "), 4) == "level":
+            elif getargs(line_words, 3) == "Preparing" and getargs(line_words, 4) == "level":
                 # Getting world name
-                self.worldname = getargs(line.split(" "), 5).replace('"', "")
+                self.worldname = getargs(line_words, 5).replace('"', "")
                 self.world = World(self.worldname, self)
                 self.entity_control = EntityControl(self)
-            elif getargs(line.split(" "), 3)[0] == "<":  # Player Message
-                name = self.stripspecial(getargs(line.split(" "), 3)[1:-1])
-                message = self.stripspecial(getargsafter(line.split(" "), 4))
-                original = getargsafter(line.split(" "), 3)
+            elif getargs(line_words, 3)[0] == "<":  # Player Message
+                name = self.stripspecial(getargs(line_words, 3)[1:-1])
+                message = self.stripspecial(getargsafter(line_words, 4))
+                original = getargsafter(line_words, 3)
                 self.wrapper.events.callevent("player.message", {
                     "player": self.getplayer(name), 
                     "message": message, 
                     "original": original
                 })
-            elif getargs(line.split(" "), 4) == "logged":  # Player Login
-                name = self.stripspecial(getargs(line.split(" "), 3)[0:getargs(line.split(" "), 3).find("[")])
+            elif getargs(line_words, 4) == "logged":  # Player Login
+                name = self.stripspecial(getargs(line_words, 3)[0:getargs(line_words, 3).find("[")])
                 self.login(name, None, (0, 0, 0))
-            elif getargs(line.split(" "), 4) == "lost":  # Player Logout
-                name = getargs(line.split(" "), 3)
+            elif getargs(line_words, 4) == "lost":  # Player Logout
+                name = getargs(line_words, 3)
                 self.logout(name)
-            elif getargs(line.split(" "), 3) == "*":
-                name = self.stripspecial(getargs(line.split(" "), 4))
-                message = self.stripspecial(getargsafter(line.split(" "), 5))
+            elif getargs(line_words, 3) == "*":
+                name = self.stripspecial(getargs(line_words, 4))
+                message = self.stripspecial(getargsafter(line_words, 5))
                 self.wrapper.events.callevent("player.action", {
                     "player": self.getplayer(name), 
                     "action": message
                 })
-            elif getargs(line.split(" "), 3)[0] == "[" and getargs(line.split(" "), 3)[-1] == "]":  # /say command
-                name = self.stripspecial(getargs(line.split(" "), 3)[1:-1])
-                message = self.stripspecial(getargsafter(line.split(" "), 4))
-                original = getargsafter(line.split(" "), 3)
+            elif getargs(line_words, 3)[0] == "[" and getargs(line_words, 3)[-1] == "]":  # /say command
+                name = self.stripspecial(getargs(line_words, 3)[1:-1])
+                message = self.stripspecial(getargsafter(line_words, 4))
+                original = getargsafter(line_words, 3)
                 if name == "Server":
                     return
                 self.wrapper.events.callevent("server.say", {
@@ -623,16 +730,16 @@ class MCServer:
                     "message": message, 
                     "original": original
                 })
-            elif getargs(line.split(" "), 4) == "has" and getargs(line.split(" "), 8) == "achievement":
+            elif getargs(line_words, 4) == "has" and getargs(line_words, 8) == "achievement":
                 # Player Achievement
-                name = self.stripspecial(getargs(line.split(" "), 3))
-                achievement = getargsafter(line.split(" "), 9)
+                name = self.stripspecial(getargs(line_words, 3))
+                achievement = getargsafter(line_words, 9)
                 self.wrapper.events.callevent("player.achievement", {
                     "player": name, 
                     "achievement": achievement
                 })
-            elif getargs(line.split(" "), 4) in deathprefixes:  # Pre- 1.7 Player Death
-                name = self.stripspecial(getargs(line.split(" "), 3))
+            elif getargs(line_words, 4) in deathprefixes:  # Pre- 1.7 Player Death
+                name = self.stripspecial(getargs(line_words, 3))
                 # No such config items!
                 # deathmessage = self.config["Death"]["death-kick-messages"][random.randrange(
                 #     0, len(self.config["Death"]["death-kick-messages"]))]
@@ -640,8 +747,10 @@ class MCServer:
                 #     self.console("kick %s %s" % (name, deathmessage))
                 self.wrapper.events.callevent("player.death", {
                     "player": self.getplayer(name), 
-                    "death": getargsafter(line.split(" "), 4)
+                    "death": getargsafter(line_words, 4)
                 })
+            self.version = "Pre-1.7"
+            self.refresh_ops()
 
     # mcserver.py onsecond Event Handler
     def eachsecond(self, payload):

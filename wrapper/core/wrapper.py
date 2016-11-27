@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import print_function
+
 # py3 non-compliant at runtime
 
 # system imports
@@ -13,7 +15,8 @@ import socket
 import sys  # used to pass sys.argv to server
 
 # small feature and helpers
-from utils.helpers import format_bytes, getargs, getargsafter, readout
+from utils.helpers import format_bytes, getargs, getargsafter, readout, get_int
+from utils.readchar import readchar, key, readkey
 import core.buildinfo as core_buildinfo_version
 from core.mcuuid import MCUUID
 from core.config import Config
@@ -53,6 +56,9 @@ STARTED = 2
 STOPPING = 3
 FROZEN = 4
 
+# blinking cursor ANSI code
+CURSOR = "\033[5m>\033[0m"
+
 
 class Wrapper:
 
@@ -65,6 +71,7 @@ class Wrapper:
         self.config = self.configManager.config  # set up config
 
         # Read Config items
+        self.cursor = "\033[5m>\033[0m"  # hard coded
         self.wrapper_ban_system = False
         self.encoding = self.config["General"]["encoding"]  # This was to allow alternate encodings
         self.proxymode = self.config["Proxy"]["proxy-enabled"]
@@ -74,6 +81,7 @@ class Wrapper:
         self.auto_update_branch = self.config["Updates"]["auto-update-branch"]
         self.use_timer_tick_event = self.config["Gameplay"]["use-timer-tick-event"]
         self.command_prefix = self.config["Misc"]["command-prefix"]
+        self.use_readline = self.config["Misc"]["use-readline"]
 
         # Storages
         self.storage = Storage("wrapper", encoding=self.encoding)
@@ -86,7 +94,9 @@ class Wrapper:
         self.events = Events(self)
         self.registered_permissions = {}
         self.help = {}
-        self.xplayer = ConsolePlayer(self)  # future plan to expose this to api
+        self.input_buff = ""
+        self.last_input_line = ["/help", ]
+        self.last_input_line_index = 0
 
         # init items that are set up later (or opted out of/ not set up.)
         self.javaserver = None
@@ -97,6 +107,7 @@ class Wrapper:
         self.proxy = None
         self.halt = False
         self.updated = False
+        self.xplayer = ConsolePlayer(self)  # future plan to expose this to api
 
         # Error messages for non-standard import failures.
         if not readline:
@@ -191,13 +202,34 @@ class Wrapper:
 
     def parseconsoleinput(self):
         while not self.halt:
+            if self.use_readline:
+                # Obtain a line of console input
+                try:
+                    consoleinput = sys.stdin.readline().strip()
+                except Exception as e:
+                    self.log.error("[continue] variable 'consoleinput' in 'console()' did not evaluate \n%s" % e)
+                    consoleinput = ""
+            else:
+                # keypress = readchar()
+                keypress = readkey()
+                if keypress == key.UP:
+                    print("YEA! UP ARROW")
 
-            # Obtain a line of console input
-            try:
-                consoleinput = sys.stdin.readline().strip()
-            except Exception as e:
-                print("[continue] variable 'consoleinput' in 'console()' did not evaluate \n%s" % e)
-                continue
+                if keypress == key.BACKSPACE:
+                    self.input_buff = self.input_buff[:-1]
+                    print("\033[0A%s         " % self.input_buff)
+                    continue
+
+                if keypress != key.CR and len(keypress) < 2:
+                    self.input_buff = "%s%s" % (self.input_buff, keypress)
+                    if self.input_buff[0:1] == '/':  # /wrapper commands receive special magenta coloring
+                        print("%s\033[0A\033[35m%s\033[0m" % (self.cursor, self.input_buff))
+                    else:
+                        print("%s\033[0A%s" % (self.cursor, self.input_buff))
+                    continue
+
+                consoleinput = "%s" % self.input_buff
+                self.input_buff = ""
 
             # No command (perhaps just a line feed or spaces?)
             if len(consoleinput) < 1:
@@ -208,25 +240,23 @@ class Wrapper:
             command = getargs(wholecommandline, 0)
             allargs = wholecommandline[1:]  # this can be passed to runwrapperconsolecommand() command for args
             # Most of these are too small to use the runwrapperconsolecommand command (or work better here)
-            if command in ("/halt", "halt"):
-                self.javaserver.stop("Halting server...", save=False)
-                self.halt = True
-                sys.exit()
-            elif command in ("/stop", "stop"):
+            if command.lower() in ("/halt", "halt"):
+                self._halt()
+            elif command.lower() in ("/stop", "stop"):
                 self.javaserver.stop("Stopping server...")
-            elif command == "/kill":  # "kill" (with no slash) is a server command.
+            elif command.lower() == "/kill":  # "kill" (with no slash) is a server command.
                 self.javaserver.kill("Server killed at Console...")
-            elif command in ("/start", "start"):
+            elif command.lower() in ("/start", "start"):
                 self.javaserver.start()
-            elif command in ("/restart", "restart"):
+            elif command.lower() in ("/restart", "restart"):
                 self.javaserver.restart("Server restarting, be right back!")
-            elif command == "/reload":  # "reload" (with no slash) may be used by bukkit servers
+            elif command.lower() == "/reload":  # "reload" (with no slash) may be used by bukkit servers
                 self.runwrapperconsolecommand("reload", [])
-            elif command in ("/update-wrapper", "update-wrapper"):
+            elif command.lower()in ("/update-wrapper", "update-wrapper"):
                 self.checkforupdate(True)
-            elif command == "/plugins":  # "plugins" command (with no slash) reserved for possible server commands
+            elif command.lower() == "/plugins":  # "plugins" command (with no slash) reserved for server commands
                 self.listplugins()
-            elif command in ("/mem", "/memory", "mem", "memory"):
+            elif command.lower() in ("/mem", "/memory", "mem", "memory"):
                 try:
                     get_bytes = self.javaserver.getmemoryusage()
                 except UnsupportedOSException as e:
@@ -236,7 +266,7 @@ class Wrapper:
                 else:
                     amount, units = format_bytes(get_bytes)
                     self.log.info("Server Memory Usage: %s %s (%s bytes)" % (amount, units, get_bytes))
-            elif command in ("/raw", "raw"):
+            elif command.lower() in ("/raw", "raw"):
                 try:
                     if len(getargsafter(consoleinput[1:].split(" "), 1)) > 0:
                         self.javaserver.console(getargsafter(consoleinput[1:].split(" "), 1))
@@ -244,7 +274,7 @@ class Wrapper:
                         self.log.info("Usage: /raw [command]")
                 except InvalidServerStartedError as e:
                     self.log.warning(e)
-            elif command in ("/freeze", "freeze"):
+            elif command.lower() in ("/freeze", "freeze"):
                 try:
                     self.javaserver.freeze()
                 except InvalidServerStartedError as e:
@@ -253,7 +283,7 @@ class Wrapper:
                     self.log.error(ex)
                 except Exception as exc:
                     self.log.exception("Something went wrong when trying to freeze the server! (%s)", exc)
-            elif command in ("/unfreeze", "unfreeze"):
+            elif command.lower() in ("/unfreeze", "unfreeze"):
                 try:
                     self.javaserver.unfreeze()
                 except InvalidServerStartedError as e:
@@ -262,21 +292,30 @@ class Wrapper:
                     self.log.error(ex)
                 except Exception as exc:
                     self.log.exception("Something went wrong when trying to unfreeze the server! (%s)", exc)
-            elif command == "/version":
+            elif command.lower() == "/version":
                 readout("/version", self.getbuildstring())
+
+            elif command.lower() in ("/mute", "/pause", "/cm", "/m", "/p"):
+                pausetime = 30
+                if len(allargs) > 0:
+                    pausetime = get_int(allargs[0])
+                # spur off a pause thread
+                cm = threading.Thread(target=self._pause_console, args=(pausetime,))
+                cm.daemon = True
+                cm.start()
 
             # Ban commands MUST over-ride the server version in proxy mode; otherwise, the server will re-write
             #       Its version from memory, undoing wrapper's changes to the disk file version.
-            elif self.proxymode and command in ("/ban", "ban"):
+            elif self.proxymode and command == "/ban":
                 self.runwrapperconsolecommand("ban", allargs)
 
-            elif self.proxymode and command in ("/ban-ip", "ban-ip"):
+            elif self.proxymode and command == "/ban-ip":
                 self.runwrapperconsolecommand("ban-ip", allargs)
 
-            elif self.proxymode and command in ("/pardon-ip", "pardon-ip"):
+            elif self.proxymode and command == "/pardon-ip":
                 self.runwrapperconsolecommand("pardon-ip", allargs)
 
-            elif self.proxymode and command in ("/pardon", "pardon"):
+            elif self.proxymode and command == "/pardon":
                 self.runwrapperconsolecommand("pardon", allargs)
 
             elif command in ("/perm", "/perms", "/super", "/permissions", "perm", "perms", "super", "permissions"):
@@ -291,6 +330,7 @@ class Wrapper:
                 else:
                     readout("ERROR - ", "Entity tracking requires proxy mode. "
                                         "(proxy mode is not on).", separator="", pad=10)
+
             elif command.lower() in ("/config", "/con", "/prop", "/property", "/properties"):
                 self.runwrapperconsolecommand("config", allargs)
 
@@ -317,6 +357,7 @@ class Wrapper:
                 readout("/start", "Start the minecraft server.")
                 readout("/restart", "Restarts the minecraft server.")
                 readout("/halt", "Shutdown Wrapper.py completely.")
+                readout("/cm [seconds]", "Mute server output (Wrapper console logging still happens)")
                 readout("/kill", "Force kill the server without saving.")
                 readout("/freeze", "Temporarily locks the server up until /unfreeze is executed\n"
                                    "                  (Only works on *NIX servers).")
@@ -324,7 +365,8 @@ class Wrapper:
                 readout("/mem", "Get memory usage of the server (Only works on *NIX servers).")
                 readout("/raw [command]", "Send command to the Minecraft Server. Useful for Forge\n"
                                           "                  commands like '/fml confirm'.")
-                readout("/config (/properties)", "Change wrapper.properties (type /config help for more..)")
+                readout("/perms", "/perms for more...)")
+                readout("/config", "Change wrapper.properties (type /config help for more..)")
                 readout("/version", self.getbuildstring())
                 readout("/entity", "Work with entities (run /entity for more...)")
                 readout("/bans", "Display the ban help page.")
@@ -454,28 +496,29 @@ class Wrapper:
         :returns: returns the online/Mojang MCUUID object from the given name. Updates the wrapper usercache.json
                 Yields False if failed.
         """
+        user_name = "%s" % username  # create a new name variable that is unrelated the the passed variable.
         frequency = 2592000  # 30 days.
         if forcepoll:
             frequency = 3600  # do not allow more than hourly
         user_uuid_matched = None
         for useruuid in self.usercache:  # try wrapper cache first
-            if username == self.usercache[useruuid]["localname"]:
+            if user_name == self.usercache[useruuid]["localname"]:
                 # This search need only be done by 'localname', which is always populated and is always
                 # the same as the 'name', unless a localname has been assigned on the server (such as
                 # when "falling back' on an old name).'''
                 if (time.time() - self.usercache[useruuid]["time"]) < frequency:
                     return MCUUID(useruuid)
                 # if over the time frequency, it needs to be updated by using actual last polled name.
-                username = self.usercache[useruuid]["name"]
+                user_name = self.usercache[useruuid]["name"]
                 user_uuid_matched = useruuid  # cache for later in case multiple name changes require a uuid lookup.
 
         # try mojang  (a new player or player changed names.)
         # requests seems to =have a builtin json() method
-        r = requests.get("https://api.mojang.com/users/profiles/minecraft/%s" % username)
+        r = requests.get("https://api.mojang.com/users/profiles/minecraft/%s" % user_name)
         if r.status_code == 200:
             useruuid = self.formatuuid(r.json()["id"])  # returns a string uuid with dashes
             correctcapname = r.json()["name"]
-            if username != correctcapname:  # this code may not be needed if problems with /perms are corrected.
+            if user_name != correctcapname:  # this code may not be needed if problems with /perms are corrected.
                 self.log.warning("%s's name is not correctly capitalized (offline name warning!)", correctcapname)
             # This should only run subject to the above frequency (hence use of forcepoll=True)
             nameisnow = self.getusernamebyuuid(useruuid, forcepoll=True)
@@ -565,16 +608,16 @@ class Wrapper:
                 self.usercache[useruuid]["localname"] = pastnames[0]["name"]
         return self.usercache[useruuid]["localname"]
 
-    def _pollmojanguuid(self, useruuid):
+    def _pollmojanguuid(self, user_uuid):
         """
         attempts to poll Mojang with the UUID
-        :param useruuid: string uuid with dashes
+        :param user_uuid: string uuid with dashes
         :returns:
                 False - could not resolve the uuid
                 - otherwise, a list of names...
         """
 
-        r = requests.get("https://api.mojang.com/user/profiles/%s/names" % useruuid.replace("-", ""))
+        r = requests.get("https://api.mojang.com/user/profiles/%s/names" % user_uuid.replace("-", ""))
         if r.status_code == 200:
             return r.json()
         if r.status_code == 204:
@@ -588,7 +631,7 @@ class Wrapper:
                         if entry["account.mojang.com"] == "green":
                             self.log.warning("Mojang accounts is green, but request failed - have you "
                                              "over-polled (large busy server) or supplied an incorrect UUID??")
-                            self.log.warning("uuid: %s", useruuid)
+                            self.log.warning("uuid: %s", user_uuid)
                             self.log.warning("response: \n%s", str(rx))
                             return False
                         elif entry["account.mojang.com"] in ("yellow", "red"):
@@ -602,7 +645,7 @@ class Wrapper:
                         self.log.warning("Mojang Status not found - no internet connection, perhaps? "
                                          "(status code may not exist)")
                         try:
-                            return self.usercache[useruuid]["name"]
+                            return self.usercache[user_uuid]["name"]
                         except TypeError:
                             return False
 
@@ -633,8 +676,8 @@ class Wrapper:
             self.configManager.config["Proxy"]["proxy-enabled"] = False
             self.configManager.save()
             self.config = self.configManager.config
-            self.log.error("Proxy mode is disabled because you do not have one or more of the following "
-                           "modules installed: pycrypto and requests")
+            self.log.error("Proxy mode has been disabled in the config file because you do not have one or more "
+                           "of the following modules installed: \npycrypto and requests")
 
     def sigint(*args):  # doing this allows the calling function to pass extra args without defining/using them here
         self = args[0]  # .. as we are only interested in the self component
@@ -758,6 +801,23 @@ class Wrapper:
             if self.use_timer_tick_event:
                 self.events.callevent("timer.tick", None)  # don't really advise the use of this timer
 
+    def _pause_console(self, pause_time):
+        if not self.javaserver:
+            readout("ERROR - ", "There is no running server instance to mute.", separator="", pad=10)
+            return
+        self.javaserver.server_muted = True
+        time.sleep(pause_time)
+        self.javaserver.server_muted = False
+        for lines in self.javaserver.queued_lines:
+            readout("Q\\", "", lines, pad=3)
+            time.sleep(.1)
+        self.javaserver.queued_lines = []
+
+    def _halt(self):
+        self.javaserver.stop("Halting server...", save=False)
+        self.halt = True
+        sys.exit()
+
 
 # - due to being refrerenced by the external wrapper API that is camelCase
 # noinspection PyUnresolvedReferences,PyPep8Naming,PyBroadException
@@ -772,23 +832,7 @@ class ConsolePlayer:
         self.wrapper = wrapper
         self.permissions = wrapper.permissions
         self.log = wrapper.log
-        self.abort = False
-
-        self.mojangUuid = "00000000-0000-0000-0000-000000000000"
-        self.clientUuid = self.mojangUuid
-        self.offlineUuid = "00000000-0000-0000-0000-000000000000"
-        self.serverUuid = self.offlineUuid
-
-        self.ipaddress = "127.0.0.1"
-
-        self.client = None
-        self.clientboundPackets = None
-        self.serverboundPackets = None
-
-        self.field_of_view = float(1)
-        self.godmode = 0x00
-        self.creative = 0x00
-        self.fly_speed = float(1)
+        self.abort = wrapper.halt
 
         # these map minecraft color codes to "approximate" ANSI terminal color used by our color formatter.
         self.message_number_coders = {'0': 'black',
@@ -826,14 +870,17 @@ class ConsolePlayer:
     def isOp():
         return 4
 
-    @staticmethod
-    def isOp_fast():
-        return 4
-
     def __str__(self):
+        """
+        Permit the console to have a nice display instead of returning the object instance notation.
+        """
         return "CONSOLE OPERATOR"
 
     def message(self, message):
+        """
+        This is a substitute for the player.message() that plugins and the command interface expect for player objects.
+        It translates chat type messages intended for a minecraft client into printed colorized console lines.
+        """
         displaycode, displaycolor = "5", "magenta"
         display = str(message)
         if type(message) is dict:
@@ -856,5 +903,6 @@ class ConsolePlayer:
 
     @staticmethod
     def hasPermission(*args):
+        """return console as always having the requested permission"""
         if args:
             return True

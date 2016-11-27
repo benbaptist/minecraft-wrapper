@@ -75,6 +75,38 @@ def _addgraphics(text='', foreground='white', background='black', options=()):
     return '%s%s' % (('\x1b[%sm' % ';'.join(codes)), text)
 
 
+def config_to_dict_read(filename, filepath):
+    """reads a disk file with '=' lines (like server.properties) and returns a keyed dictionary"""
+    config_dict = {}
+    if os.path.exists("%s/%s" % (filepath, filename)):
+        config_lines = getfileaslines(filename, filepath)
+        if not config_lines:
+            return {}
+        for line_items in config_lines:
+            line_args = line_items.split("=", 1)
+            if len(line_args) < 2:
+                continue
+            item_key = getargs(line_args, 0)
+            scrubbed_value = scrub_item_value(getargs(line_args, 1))
+            config_dict[item_key] = scrubbed_value
+    return config_dict
+
+
+def scrub_item_value(item):
+    """
+    Takes a text item value and determines if it should be a boolean, integer, or text.. and returns it as the type.
+    """
+    if not item or len(item) < 1:
+        return ""
+    if item.lower() == "true":
+        return True
+    if item.lower() == "false":
+        return False
+    if str(get_int(item)) == item:  # it is an integer if int(a) = str(a)
+        return get_int(item)
+    return item
+
+
 # private static int DataSlotToNetworkSlot(int index)
 def dataslottonetworkslot(index):
     """
@@ -179,7 +211,8 @@ def getfileaslines(filename, directory="."):
         filename: Complete filename
         directory: by default, wrapper script directory.
 
-    Returns: a list if successful. If unsuccessful; None/no data or False (if file/directory not found)
+    :rtype: list
+    if successful. If unsuccessful; None/no data or False (if file/directory not found)
 
     """
     if not os.path.exists(directory):
@@ -204,6 +237,15 @@ def mkdir_p(path):
         except OSError as exc:  # Guard against race condition
             if exc.errno != errno.EEXIST:
                 raise
+
+
+def get_int(s):
+    """ returns an int no matter what the input value.  returns 0 for values it can't convert"""
+    try:
+        val = int(s)
+    except ValueError:
+        val = 0
+    return val
 
 
 def processcolorcodes(messagestring):
@@ -400,6 +442,36 @@ def secondstohuman(seconds):
             plural = ""
         results = "%s day%s" % (str(seconds / 86400.0), plural)
     return results
+
+
+def set_item(item, string_val, filename, path='.'):
+    """
+    reads a file with "item=" lines and looks for 'item'.  If found, replaces the existing value
+    with 'item=string_val'.
+
+    :param item: the config item in the file.  Will search the file for occurences of 'item='.
+    :param string_val: must have a valid __str__ representation (if not an actual string)
+    :param filename: full filename, including extension.
+    :param path: defaults to wrappers path.
+    :return:
+    """
+
+    if os.path.isfile("%s/%s" % (path, filename)):
+        searchitem = "%s=" % item
+        with open("%s/%s" % (path, filename), "r") as f:
+            file_contents = f.read()
+
+            print("hello=hi\n"
+                  "gm=0\n"
+                  "test=\n".split("test")[1].split('\n')[0])
+        if searchitem in file_contents:
+            current_item = str(file_contents.split(searchitem)[1].split('/n'[0]))
+            new_item = '%s%s' % (searchitem, string_val)
+            with open("%s/%s" % (path, filename), "w") as f:
+                f.write(file_contents.replace(current_item, new_item))
+        return True
+    else:
+        return False
 
 
 def showpage(player, page, items, command, perpage, command_prefix='/'):

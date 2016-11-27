@@ -6,7 +6,7 @@ import json
 import threading
 import proxy.mcpackets as mcpackets
 from core.storage import Storage
-from utils.helpers import processoldcolorcodes, processcolorcodes, getjsonfile, getfileaslines
+from utils.helpers import processoldcolorcodes, processcolorcodes
 
 
 # region Constants
@@ -50,12 +50,11 @@ class Player:
         self.javaserver = wrapper.javaserver
         self.permissions = wrapper.permissions
         self.log = wrapper.log
-        self._encoding = wrapper.config["General"]["encoding"]
-        self.serverpath = wrapper.config["General"]["server-directory"]
 
         self.username = username
         self.loggedIn = time.time()
-        self.abort = False
+        self.abort = self.wrapper.halt  # mcserver will set this to false later to close the thread.  meanwhile,
+        # it still needs to respect wrapper halts
 
         # these are all MCUUID objects.. I have separated out various uses of uuid to clarify for later refractoring
         # ---------------
@@ -65,7 +64,7 @@ class Player:
         #     old api (and internally here).
         # server uuid = the local server uuid... used to reference the player on the local server.  Could be same as
         #     Mojang UUID if server is in online mode or same as offline if server is in offline mode (proxy mode).
-
+        # *******************
         # This can be False if cache (and requests) Fail... bad name or bad Mojang service connection.
         self.mojangUuid = self.wrapper.getuuidbyusername(username)
         # IF False error carries forward, this is not a valid player, for whatever reason...
@@ -75,7 +74,6 @@ class Player:
         self.serverUuid = self.offlineUuid  # Start out as the Offline - change it to Mojang if local server is Online
 
         self.ipaddress = "127.0.0.0"
-        self.operatordict = self._read_ops_file()
 
         self.client = None
         self.clientboundPackets = mcpackets.ClientBound(self.javaserver.protocolVersion)
@@ -104,15 +102,19 @@ class Player:
                     break
             if not gotclient:
                 self.log.error("Proxy is on, but this client is not listed in wrapper.proxy.clients!")
-        self.data = Storage(self.clientUuid.string, root="wrapper-data/players")
+
+        # populate dictionary items to prevent errors due to missing items
         if "groups" not in self.permissions:
             self.permissions["groups"] = {}
             self.permissions["groups"]["Default"] = {}
             self.permissions["groups"]["Default"]["permissions"] = {}
-        if "users" not in self.permissions:  # top -level dict item should be just checked once here (not over and over)
+        if "users" not in self.permissions:
             self.permissions["users"] = {}
-        if self.mojangUuid.string not in self.permissions["users"]:  # no reason not to do this here too
+        if self.mojangUuid.string not in self.permissions["users"]:
             self.permissions["users"][self.mojangUuid.string] = {"groups": [], "permissions": {}}
+
+        # Process login data
+        self.data = Storage(self.clientUuid.string, root="wrapper-data/players")
         if "firstLoggedIn" not in self.data:
             self.data["firstLoggedIn"] = (time.time(), time.tzname)
         if "logins" not in self.data:
@@ -120,6 +122,7 @@ class Player:
         self.data["lastLoggedIn"] = (self.loggedIn, time.tzname)
         self.data.save()
 
+        # start player logged in time tracking thread
         t = threading.Thread(target=self._track, args=())
         t.daemon = True
         t.start()
@@ -150,33 +153,6 @@ class Player:
                 self.data["logins"][int(self.loggedIn)] = int(time.time())
             time.sleep(.5)  # this needs a fast response to ensure the storage closes immediately on player logoff
         self.data.close()
-
-    def _read_ops_file(self):
-        """
-        Internal private method - Not intended as a part of the public player object API
-        Returns: contents of ops.json as dictionary
-        :rtype: Dictionary
-        """
-        ops = False
-        if self.javaserver.protocolVersion > mcpackets.PROTOCOL_1_7:  # 1.7.6 or greater use ops.json
-            ops = getjsonfile("ops", self.serverpath, encodedas=self._encoding)
-        if not ops:
-            # try for an old "ops.txt" file instead.
-            ops = []
-            opstext = getfileaslines("ops.txt", self.serverpath)
-            if not opstext:
-                return False
-            for op in opstext:
-                # create a 'fake' ops list from the old pre-1.8 text line name list
-                # notice that the level (an option not the old list) is set to 1
-                #   This will pass as true, but if the plugin is also checking op-levels, it
-                #   may not pass truth.
-                indivop = {"uuid": op,
-                           "name": op,
-                           "level": 1}
-                ops.append(indivop)
-
-        return ops
 
     def execute(self, string):
         """
@@ -312,6 +288,10 @@ class Player:
             self.client.packet.sendpkt(self.clientboundPackets.RESOURCE_PACK_SEND,
                                        [_STRING, _STRING], (url, hashrp))
 
+    def refreshOpsList(self):
+        """ OPs list is read from disk at startup.  Use this method to refresh the in-memory list from disk."""
+        self.javaserver.refresh_ops()
+
     def isOp(self, strict=False):
         """
         Args:
@@ -322,45 +302,20 @@ class Player:
                 also adds ability to granularize with the OP level
 
         Accepts player as OP based on either the username OR server UUID.
-        This should NOT be used in a recursive loop (like a protection plugin, etc)
-        or a very frequently run function because it accesses the disk file
-        (ops.json) at each call!  Use of isOP_fast() is recommended instead.
+
+        If a player has been opped since the last server start, ensure that you run refreshOpsList() to
+        ensure that wrapper will acknowlege them as OP.
+
         """
 
-        operators = self._read_ops_file()
-        if operators in (False, None):
+        if self.javaserver.operatordict in (False, None):
             return False  # no ops in file
-        for ops in operators:
+        for ops in self.javaserver.operatordict:
             if ops["uuid"] == self.serverUuid.string:
                 return ops["level"]
             if ops["name"] == self.username and not strict:
                 return ops["level"]
         return False
-
-    def isOp_fast(self, strict=False):
-        """
-        Args:
-            strict: True - use ONLY the UUID as verification
-
-        returns:  A 1-4 op level if the player is currently a server operator.
-                can be treated, as before, like a boolean - `if player.isOp():`, but now
-                also adds ability to granularize with the OP level
-
-        Works like isOp(), but uses an oplist cached from the __init__ of the player.py api for this player.
-        Suitable for quick fast lookup without accessing disk, but someone who is deopped after the
-        player logs in will still show as OP.
-        """
-        if self.operatordict in (False, None):
-            return False  # no ops in file
-        for ops in self.operatordict:
-            if ops["uuid"] == self.serverUuid.string:
-                return ops["level"]
-            if ops["name"] == self.username and not strict:
-                return ops["level"]
-        return False
-
-    def refreshOps(self):
-        self.operatordict = self._read_ops_file()
 
     # region Visual notifications
     def message(self, message=""):

@@ -12,26 +12,14 @@ class World:
 
     """
     def __init__(self, name, mcserver):
-        self.chunks = {}
-
         self.name = name
         self.javaserver = mcserver
         self.log = mcserver.log
 
+        self.chunks = {}  # not implemented
+
     def __str__(self):
         return self.name
-
-    def getBlock(self, pos):
-        x, y, z = pos
-        chunkx, chunkz = int(x / 16), int(z / 16)
-        localx, localz = (x / 16.0 - x / 16) * 16, (z / 16.0 - z / 16) * 16
-        # print chunkx, chunkz, localx, y, localz
-        return self.chunks[chunkx][chunkz].getBlock(localx, y, localz)
-
-    def setChunk(self, x, z, chunk):
-        if x not in self.chunks:
-            self.chunks[x] = {}
-        self.chunks[x][z] = chunk
 
     def setBlock(self, x, y, z, tilename, damage=0, mode="replace", data=None):
         if not data:
@@ -67,10 +55,24 @@ class World:
                 x1, y1, z1, x2, y2, z2, tilename2, damage2, tilename1, damage1))
         return
 
+    def getBlock(self, pos):
+        """ not implemented """
+        x, y, z = pos
+        chunkx, chunkz = int(x / 16), int(z / 16)
+        localx, localz = (x / 16.0 - x / 16) * 16, (z / 16.0 - z / 16) * 16
+        # print chunkx, chunkz, localx, y, localz
+        return self.chunks[chunkx][chunkz].getBlock(localx, y, localz)
+
+    def setChunk(self, x, z, chunk):
+        """ not implemented """
+        if x not in self.chunks:
+            self.chunks[x] = {}
+        self.chunks[x][z] = chunk
+
 
 # noinspection PyPep8Naming
 class Chunk:
-
+    """ not implemented """
     def __init__(self, bytesarray, x, z):
         self.ids = struct.unpack("<" + ("H" * (len(bytesarray) / 2)), bytesarray)
         self.x = x
