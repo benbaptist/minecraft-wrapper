@@ -255,33 +255,33 @@ class Commands:
 
     def command_entities(self, player, payload):
         if player.isOp() > 2:
-            worldloaded = self.wrapper.api.minecraft.getWorld()
-            if not worldloaded:
+            entitycontrol = self.wrapper.javaserver.entity_control
+            if not entitycontrol:
                 # only console could be the source:
-                readout("ERROR - ", "There is no world instance (no server started).", separator="",
+                readout("ERROR - ", "No entity code found. (no server started?)", separator="",
                         pad=10, usereadline=self.wrapper.use_readline)
                 return
             commargs = payload["args"]
             if len(commargs) < 1:
                 pass
             elif commargs[0].lower() in ("c", "count", "s", "sum", "summ", "summary"):
-                player.message("Entities loaded: %d" % worldloaded.countActiveEntities())
+                player.message("Entities loaded: %d" % entitycontrol.countActiveEntities())
                 return
             elif commargs[0].lower() in ("k", "kill"):
                 eid = getargs(commargs, 1)
                 count = getargs(commargs, 2)
                 if count < 1:
                     count = 1
-                worldloaded.killEntityByEID(eid, dropitems=False, finishstateof_domobloot=True, count=count)
+                    entitycontrol.killEntityByEID(eid, dropitems=False, finishstateof_domobloot=True, count=count)
                 return
             elif commargs[0].lower() in ("l", "list", "sh", "show" "all"):
-                player.message("Entities: \n%s" % worldloaded.entities)
+                player.message("Entities: \n%s" % entitycontrol.entities)
                 return
             elif commargs[0].lower() in ("p", "player", "name"):
                 if len(commargs) < 3:
                     player.message("&c/entity player <name> count/list")
                     return
-                them = worldloaded.countEntitiesInPlayer(commargs[1])
+                them = entitycontrol.countEntitiesInPlayer(commargs[1])
                 if commargs[2].lower() in ("l", "list", "sh", "show" "all"):
                     player.message("Entities: \n%s" % json.dumps(them, indent=2))
                 else:

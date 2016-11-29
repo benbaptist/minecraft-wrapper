@@ -81,7 +81,7 @@ def get_complete_version(version=None):
     then checks for correctness of the tuple provided.
     """
     if version is None:
-        from wrapper import VERSION as version  # TODO "constant variable imported as non-constant."
+        from wrapper import VERSION as version
     else:
         assert len(version) == 5
         assert version[3] in ('alpha', 'beta', 'rc', 'final')

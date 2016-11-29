@@ -197,17 +197,17 @@ class Wrapper:
 
         # wrapper execution ends here.
 
-    def parseconsoleinput(self):
-        while not self.halt:
-            if self.use_readline:
-                # Obtain a line of console input
-                try:
-                    consoleinput = sys.stdin.readline().strip()
-                except Exception as e:
-                    self.log.error("[continue] variable 'consoleinput' in 'console()' did not evaluate \n%s" % e)
-                    consoleinput = ""
-            else:
+    def getconsoleinput(self):
+        if self.use_readline:
+            # Obtain a line of console input
+            try:
+                consoleinput = sys.stdin.readline().strip()
+            except Exception as e:
+                self.log.error("[continue] variable 'consoleinput' in 'console()' did not evaluate \n%s" % e)
+                consoleinput = ""
 
+        else:
+            while not self.halt:
                 keypress = readchar.readkey()
 
                 if keypress == readchar.key.BACKSPACE:
@@ -223,9 +223,18 @@ class Wrapper:
                         print("%s\033[0A%s" % (self.cursor, self.input_buff))
                     continue
 
-                consoleinput = "%s" % self.input_buff
-                self.input_buff = ""
+                if keypress in (readchar.key.CR, readchar.key.CTRL_C):
+                    break
 
+            consoleinput = "%s" % self.input_buff
+            self.input_buff = ""
+            # print a line so last typed line is not covered by new output
+            print("")
+        return consoleinput
+
+    def parseconsoleinput(self):
+        while not self.halt:
+            consoleinput = self.getconsoleinput()
             # No command (perhaps just a line feed or spaces?)
             if len(consoleinput) < 1:
                 continue
