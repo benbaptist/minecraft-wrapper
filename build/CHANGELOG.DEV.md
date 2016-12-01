@@ -1,8 +1,4 @@
-Build 150
-
-- "We must push the build so we can find out what's in it" - paraphrasing our US Congress as they were pushing for passage of a 2K page healthcare law they never read.
-
-Build 149
+Build 149  Version [0.8.18]
 - BugFix broken "entity" command.
 - neaten up server console parsing area.
 - wrapper.py - separate the console input reading function out of the command parsing (add function getconsoleinput())

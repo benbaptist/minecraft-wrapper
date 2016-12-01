@@ -31,7 +31,6 @@ class EntityControl:
         self.entity_control = self.javaserver.config["Entities"]["enable-entity-controls"]
         self.entity_processor_frequency = self.javaserver.config["Entities"]["entity-update-frequency"]
         self.thining_frequency = self.javaserver.config["Entities"]["thinning-frequency"]
-        self.generic_max_mob_limit = self.javaserver.config["Entities"]["thin-any-mob"]
         self.server_start_thinning_threshshold = self.javaserver.config["Entities"]["thinning-activation-threshhold"]
         # self.kill_aura_radius = self.javaserver.config["Entities"]["player-thinning-radius"]
 
