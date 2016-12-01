@@ -275,7 +275,10 @@ class Commands:
                     entitycontrol.killEntityByEID(eid, dropitems=False, finishstateof_domobloot=True, count=count)
                 return
             elif commargs[0].lower() in ("l", "list", "sh", "show" "all"):
-                player.message("Entities: \n%s" % entitycontrol.entities)
+                nice_list = {}
+                for ent in entitycontrol.entities:
+                    nice_list[entitycontrol.entities[ent].eid] = entitycontrol.entities[ent].entityname
+                player.message("Entities: \n%s" % nice_list)
                 return
             elif commargs[0].lower() in ("p", "player", "name"):
                 if len(commargs) < 3:

@@ -1,9 +1,16 @@
 Build 150
 
-- "We must push the build so we can find out what's in it" - paraphrasing our US Congress as they were pushing for passage of a 2K page healthcare law
+- "We must push the build so we can find out what's in it" - paraphrasing our US Congress as they were pushing for passage of a 2K page healthcare law they never read.
 
 Build 149
-- 
+- BugFix broken "entity" command.
+- neaten up server console parsing area.
+- wrapper.py - separate the console input reading function out of the command parsing (add function getconsoleinput())
+- Add "server.lagged" event (post 1.6.4 mode only!) which returns payload - "ticks": (number of ticks server skipped).
+- Made entity processor speed configurable.
+- toned down thinner code to kill less aggresively.  Merely "thins" half of any detected excess at each cycle.
+- "kills" are actually "tp"'s, making the code cleaner and more reliable (server does not have to cycle doMobLoot gamerules)
+- removed option to limit all mobs (it was killing item stacks and innocent mobs under certain circumstances.
 
 Build 148
 - make wrapper's output (logger.logging() and utils.helpers.readout() ) reserve the last line for user input as well.

@@ -70,7 +70,7 @@ class MCServer:
         self.rebootWarnings = 0
         self.lastsizepoll = 0
         self.console_output_data = []
-        self.spammy_stuff = ["found nothing", "vehicle of"]
+        self.spammy_stuff = ["found nothing", "vehicle of", "Wrong location!", "Tried to add entity"]
         self.server_muted = False
         self.queued_lines = []
         self.server_stalled = False
@@ -700,6 +700,13 @@ class MCServer:
                 if release > 1 and major > 6 and minor > 4 and self.protocolVersion < 0:
                     self.protocolVersion = 5
                 self.refresh_ops()
+
+            # server lagged
+            elif "Can't keep up!" in line:
+                skipping_ticks = getargs(line_words, 17)
+                self.wrapper.events.callevent("server.lagged", {
+                    "ticks": get_int(skipping_ticks)
+                })
 
         else:  # pre 1.7 mode
 

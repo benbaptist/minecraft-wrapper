@@ -340,7 +340,7 @@ class Entity:
         self.clientname = playerclientname
 
     def __str__(self):
-        return str(self.entitytype)
+        return self.entitytype
 
     def move_relative(self, position):
         """ Move the entity relative to their position, unless it is illegal.
