@@ -70,7 +70,7 @@ class MCServer:
         self.rebootWarnings = 0
         self.lastsizepoll = 0
         self.console_output_data = []
-        self.spammy_stuff = ["found nothing", "vehicle of"]
+        self.spammy_stuff = ["found nothing", "vehicle of", "Wrong location!", "Tried to add entity"]
         self.server_muted = False
         self.queued_lines = []
         self.server_stalled = False
@@ -609,7 +609,9 @@ class MCServer:
         line_words = line.split(" ")
         deathprefixes = ["fell", "was", "drowned", "blew", "walked", "went", "burned", "hit", "tried",
                          "died", "got", "starved", "suffocated", "withered"]
+
         if not self.config["General"]["pre-1.7-mode"]:
+            # no output...
             if len(getargs(line.split(" "), 0)) < 1:
                 return
 
@@ -625,7 +627,8 @@ class MCServer:
                 self.world = World(self.worldname, self)
                 self.entity_control = EntityControl(self)
 
-            elif getargs(line_words, 0)[0] == "<":  # Player Message
+            # Player Message
+            elif getargs(line_words, 0)[0] == "<":
                 name = self.stripspecial(getargs(line_words, 0)[1:-1])
                 message = self.stripspecial(getargsafter(line_words, 1))
                 original = getargsafter(line_words, 0)
@@ -634,15 +637,21 @@ class MCServer:
                     "message": message, 
                     "original": original
                 })
-            elif getargs(line_words, 1) == "logged":  # Player Login
+
+            # Player Login
+            elif getargs(line_words, 1) == "logged":
                 name = self.stripspecial(getargs(line_words, 0)[0:getargs(line_words, 0).find("[")])
                 eid = int(getargs(line_words, 6))
                 locationtext = getargs(line.split(" ("), 1)[:-1].split(", ")
                 location = int(float(locationtext[0])), int(float(locationtext[1])), int(float(locationtext[2]))
                 self.login(name, eid, location)
-            elif getargs(line_words, 1) == "left":  # Player Logout
+
+            # Player Logout
+            elif getargs(line_words, 1) == "left":
                 name = getargs(line_words, 0)
                 self.logout(name)
+
+            # player action
             elif getargs(line_words, 0) == "*":
                 name = self.stripspecial(getargs(line_words, 1))
                 message = self.stripspecial(getargsafter(line_words, 2))
@@ -650,7 +659,9 @@ class MCServer:
                     "player": self.getplayer(name),
                     "action": message
                 })
-            elif getargs(line_words, 0)[0] == "[" and getargs(line_words, 0)[-1] == "]":  # /say command
+
+            # /say command
+            elif getargs(line_words, 0)[0] == "[" and getargs(line_words, 0)[-1] == "]":
                 if self.getservertype != "vanilla":
                     return  # Unfortunately, Spigot and Bukkit output things that conflict with this
                 name = self.stripspecial(getargs(line_words, 0)[1:-1])
@@ -661,6 +672,7 @@ class MCServer:
                     "message": message, 
                     "original": original
                 })
+
             # Player Achievement
             elif getargs(line_words, 1) == "has" and getargs(line_words, 5) == "achievement":
                 name = self.stripspecial(getargs(line_words, 0))
@@ -669,13 +681,17 @@ class MCServer:
                     "player": name, 
                     "achievement": achievement
                 })
-            elif getargs(line_words, 1) in deathprefixes:  # Player Death
+
+            # Player Death
+            elif getargs(line_words, 1) in deathprefixes:
                 name = self.stripspecial(getargs(line_words, 0))
                 self.wrapper.events.callevent("player.death", {
                     "player": self.getplayer(name), 
                     "death": getargsafter(line_words, 4)
                 })
-            elif "minecraft server version" in line:  # Starting minecraft server version 1.11
+
+            # Find server version - develop protocol for determining the type of op list on disk
+            elif "minecraft server version" in line:
                 self.version = getargs(line_words, 4)
                 semanitics = self.version.split(".")
                 release = get_int(getargs(semanitics, 0))
@@ -685,19 +701,34 @@ class MCServer:
                     self.protocolVersion = 5
                 self.refresh_ops()
 
+            # server lagged
+            elif "Can't keep up!" in line:
+                skipping_ticks = getargs(line_words, 17)
+                self.wrapper.events.callevent("server.lagged", {
+                    "ticks": get_int(skipping_ticks)
+                })
+
         else:  # pre 1.7 mode
+
+            # no output (pre-1.7)
             if len(getargs(line_words, 3)) < 1:
                 return
+
+            # confirm server start (pre-1.7)
             if getargs(line_words, 3) == "Done":  # Confirmation that the server finished booting
                 self.changestate(STARTED)
                 self.log.info("Server started")
                 self.bootTime = time.time()
+
+            # get world name (pre-1.7)
             elif getargs(line_words, 3) == "Preparing" and getargs(line_words, 4) == "level":
                 # Getting world name
                 self.worldname = getargs(line_words, 5).replace('"', "")
                 self.world = World(self.worldname, self)
-                self.entity_control = EntityControl(self)
-            elif getargs(line_words, 3)[0] == "<":  # Player Message
+                self.entity_control = False
+
+            # Player Message (pre-1.7)
+            elif getargs(line_words, 3)[0] == "<":
                 name = self.stripspecial(getargs(line_words, 3)[1:-1])
                 message = self.stripspecial(getargsafter(line_words, 4))
                 original = getargsafter(line_words, 3)
@@ -706,12 +737,19 @@ class MCServer:
                     "message": message, 
                     "original": original
                 })
-            elif getargs(line_words, 4) == "logged":  # Player Login
+
+            # TODO - see if 1.6 versions tell the players location
+            # Player Login (pre-1.7)
+            elif getargs(line_words, 4) == "logged":
                 name = self.stripspecial(getargs(line_words, 3)[0:getargs(line_words, 3).find("[")])
                 self.login(name, None, (0, 0, 0))
-            elif getargs(line_words, 4) == "lost":  # Player Logout
+
+            # Player Logout (pre-1.7)
+            elif getargs(line_words, 4) == "lost":
                 name = getargs(line_words, 3)
                 self.logout(name)
+
+            # Player action (pre-1.7)
             elif getargs(line_words, 3) == "*":
                 name = self.stripspecial(getargs(line_words, 4))
                 message = self.stripspecial(getargsafter(line_words, 5))
@@ -719,6 +757,8 @@ class MCServer:
                     "player": self.getplayer(name), 
                     "action": message
                 })
+
+            # server say (pre-1.7)
             elif getargs(line_words, 3)[0] == "[" and getargs(line_words, 3)[-1] == "]":  # /say command
                 name = self.stripspecial(getargs(line_words, 3)[1:-1])
                 message = self.stripspecial(getargsafter(line_words, 4))
@@ -730,15 +770,18 @@ class MCServer:
                     "message": message, 
                     "original": original
                 })
+
+            # Player Achievement (pre-1.7)
             elif getargs(line_words, 4) == "has" and getargs(line_words, 8) == "achievement":
-                # Player Achievement
                 name = self.stripspecial(getargs(line_words, 3))
                 achievement = getargsafter(line_words, 9)
                 self.wrapper.events.callevent("player.achievement", {
                     "player": name, 
                     "achievement": achievement
                 })
-            elif getargs(line_words, 4) in deathprefixes:  # Pre- 1.7 Player Death
+
+            # Player Death (pre-1.7)
+            elif getargs(line_words, 4) in deathprefixes:
                 name = self.stripspecial(getargs(line_words, 3))
                 # No such config items!
                 # deathmessage = self.config["Death"]["death-kick-messages"][random.randrange(

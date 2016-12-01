@@ -29,12 +29,13 @@ NEWCONFIG = {
     },
     "Entities": {
         "enable-entity-controls": False,  # enable entity controls.
-        "thinning-frequency": 10,  # how often thinning of mobs runs, in seconds
-        "thinning-activation-threshhold": 100,  # when TOTAL mobs are below this number, thinning is skipped entirely
-        "thin-any-mob": 50,  # any mob count above this number gets thinned.
-        "thin-Cow": 30,  # Example, keeps Cows < 30.  Name must match exactly.  Overrides 'thin-any-mob'.
-        "thin-Sheep": 30,
-        "thin-Chicken": 30
+        "entity-update-frequency": 4,  # how often the entity processor updates world entity counts
+        "thinning-frequency": 30,  # how often thinning of mobs runs, in seconds.  a large difference between this and
+                                   # the entity update frequency will ensure no 'overkill" occurs.
+        "thinning-activation-threshhold": 100,  # when mobs < this number, thinning is inactive (server or player)
+        "thin-Cow": 40,  # Example, starts thinning Cow > 40.  Name must match exactly.  Overrides 'thin-any-mob'.
+        "thin-Sheep": 40,  # another example
+        "thin-Chicken": 30  # because they are especially annoying
     },
     "Updates": {
         "auto-update-branch": None,  # Use one of the names listed herein (i.e. 'stable-branch')
@@ -45,7 +46,7 @@ NEWCONFIG = {
         # You will need to update this to your particular server start command line.
     },
     "Misc": {  # look 'n' feel type customizations
-        "command-prefix": "/",
+        "command-prefix": "/",  # if you change this, no minecraft command will work. Bug or feature? TODO not sure.
         "reboot-message": "Server is conducting a scheduled reboot. The server will be back momentarily!",
         "default-restart-message": "Server restarting...",
         "stop-message": "Stopping The Minecraft Server",

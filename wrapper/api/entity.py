@@ -29,9 +29,10 @@ class EntityControl:
 
         # load config settings
         self.entity_control = self.javaserver.config["Entities"]["enable-entity-controls"]
+        self.entity_processor_frequency = self.javaserver.config["Entities"]["entity-update-frequency"]
         self.thining_frequency = self.javaserver.config["Entities"]["thinning-frequency"]
-        self.max_mob_limit = self.javaserver.config["Entities"]["thin-any-mob"]
-        self.start_thinning = self.javaserver.config["Entities"]["thinning-activation-threshhold"]
+        self.server_start_thinning_threshshold = self.javaserver.config["Entities"]["thinning-activation-threshhold"]
+        # self.kill_aura_radius = self.javaserver.config["Entities"]["player-thinning-radius"]
 
         self.entities = {}
         self.abortep = False
@@ -60,7 +61,7 @@ class EntityControl:
         try:
             return self.entities[eid]
         except Exception as e:
-            self.log.debug("getEntityByEID returned False: %s", e)
+            # self.log.debug("getEntityByEID returned False: %s", e)
             return False
 
     def countActiveEntities(self):
@@ -119,7 +120,7 @@ class EntityControl:
         else:
             return False
 
-    def killEntityByEID(self, eid, dropitems=False, finishstateof_domobloot=True, count=1):
+    def killEntityByEID(self, eid, dropitems=False, count=1):
         """ takes the entity by eid and kills the first entity of that type centered
         at the coordinates where that entity is.
 
@@ -133,22 +134,23 @@ class EntityControl:
         entityinfo = self.getEntityInfo(eid)
         if not entityinfo:
             return
-        if dropitems:
-            self.javaserver.console("gamerule doMobLoot true")
-        else:
-            self.javaserver.console("gamerule doMobLoot false")
+
         pos = entityinfo["position"]
         entitydesc = entityinfo["name"]
-        self.javaserver.console("kill @e[type=%s,x=%d,y=%d,z=%d,c=%s]" %
-                                (entitydesc, pos[0], pos[1], pos[2], count))
-        if finishstateof_domobloot:
-            self.javaserver.console("gamerule doMobLoot true")
+        if dropitems:
+            # kill them (get loots if enabled doMobDrops)
+            self.javaserver.console("kill @e[type=%s,x=%d,y=%d,z=%d,c=%s]" %
+                                    (entitydesc, pos[0], pos[1], pos[2], count))
+        else:
+            # send them into void (no loots)
+            self.javaserver.console("tp @e[type=%s,x=%d,y=%d,z=%d,c=%s] ~ -500 ~" %
+                                    (entitydesc, pos[0], pos[1], pos[2], count))
 
-    def _entity_processor(self, updatefrequency=10):
+    def _entity_processor(self):
         self.log.debug("_entityprocessor thread started.")
         while self.javaserver.state in (1, 2, 4) and not self.abortep:  # server is running
 
-            sleep(updatefrequency)  # timer for adding entities
+            sleep(self.entity_processor_frequency)  # timer for removing stale entities
 
             # start looking for stale client entities
             players = self.javaserver.players
@@ -157,11 +159,11 @@ class EntityControl:
                 playerlist.append(player)
             for eid in self.entities.keys():
                 if self.getEntityByEID(eid).clientname not in playerlist:
+                    # noinspection PyBroadException
                     try:
                         self.entities.pop(eid, None)
                     except:
                         pass
-
         self.log.debug("_entityprocessor thread closed.")
 
     # each entity IS a dictionary, so...
@@ -171,7 +173,7 @@ class EntityControl:
         while self.javaserver.state in (1, 2, 4) and not self.abortep:  # server is running
 
             sleep(self.thining_frequency)  # timer
-            if self.max_mob_limit > self.countActiveEntities():
+            if self.countActiveEntities() < self.server_start_thinning_threshshold:
                 continue  # don't bother, server load is light.
 
             # gather player list
@@ -179,11 +181,12 @@ class EntityControl:
             playerlist = []
             for player in players:
                 playerlist.append(player)
+
             # loop through playerlist
             for playerclient in playerlist:
                 players_position = self.javaserver.getplayer(playerclient).getPosition()
                 his_entities = self.countEntitiesInPlayer(playerclient)
-                if len(his_entities) < self.start_thinning:
+                if len(his_entities) < self.server_start_thinning_threshshold:
                     # don't worry with this player, his load is light.
                     continue
 
@@ -195,23 +198,27 @@ class EntityControl:
                     else:
                         counts[entity["name"]] = 1  # like {"Cow": 1}
 
-                for mobs in counts:
-                    maxofthiskind = self.max_mob_limit
-                    if "thin-%s" % mobs in self.javaserver.config["Entities"]:
-                        maxofthiskind = self.javaserver.config["Entities"]["thin-%s" % mobs]
-                    if counts[mobs] >= maxofthiskind:
-                        killcount = counts[mobs] - maxofthiskind
-                        self._kill_around_player(players_position, "%s" % mobs, killcount)
+                for mob_type in counts:
+                    if "thin-%s" % mob_type in self.javaserver.config["Entities"]:
+                        maxofthiskind = self.javaserver.config["Entities"]["thin-%s" % mob_type]
+                        if counts[mob_type] >= maxofthiskind:
+                            # turn off console_spam
+                            if "Teleported %s to" % mob_type not in self.javaserver.spammy_stuff:
+                                self.javaserver.spammy_stuff.append("Teleported %s to" % mob_type)
+
+                            # can't be too agressive with killing because entitycount might be off/lagging
+                            # kill half of any mob above this number
+                            killcount = (counts[mob_type] - maxofthiskind) // 2
+                            if killcount > 1:
+                                self._kill_around_player(players_position, "%s" % mob_type, killcount)
 
         self.log.debug("_entity_thinner thread closed.")
 
-    def _kill_around_player(self, position, entity_name, count, dropitems=False, finishstateof_domobloot=True):
-        if dropitems:
-            self.javaserver.console("gamerule doMobLoot true")
-        else:
-            self.javaserver.console("gamerule doMobLoot false")
+    def _kill_around_player(self, position, entity_name, count):
+
         pos = position
-        self.javaserver.console("kill @e[type=%s,x=%d,y=%d,z=%d,c=-%s]" %
+        # send those creatures away
+        self.log.debug("killing %d %s" % (count, entity_name))
+        self.javaserver.console("tp @e[type=%s,x=%d,y=%d,z=%d,c=%s] ~ -500 ~" %
                                 (entity_name, pos[0], pos[1], pos[2], count))
-        if finishstateof_domobloot:
-            self.javaserver.console("gamerule doMobLoot true")
+
