@@ -427,6 +427,7 @@ def readout(commandtext, description, separator=" - ", pad=15,
     else:
         print("\033[1A%s%s%s\n" % (commstyle(commandtextpadded), separator, descstyle(description)))
 
+
 def secondstohuman(seconds):
     results = "None at all!"
     plural = "s"
@@ -538,3 +539,57 @@ def use_style(foreground='white', background='black', options=()):
 
     """
     return lambda text: _addgraphics(text, foreground, background, options)
+
+
+def chattocolorcodes(jsondata):
+
+    total = _handle_extras(jsondata)
+    if "extra" in jsondata:
+        for extra in jsondata["extra"]:
+            total += _handle_extras(extra)
+    return total
+
+
+def _handle_extras(extra):
+    extras = ""
+    if "color" in extra:
+        extras += _getcolorcode(extra["color"])
+    if "text" in extra:
+        extras += extra["text"]
+    if "string" in extra:
+        extras += extra["string"]
+    return extras
+
+
+def _getcolorcode(color):
+    for code in COLORCODES:
+        if COLORCODES[code] == color:
+            return u"\xa7" + code
+    return ""
+
+
+def _test_console(message):
+    print(message)
+
+
+def _test_broadcast(message, version_compute=10704, encoding='utf-8'):
+    """
+    Broadcasts the specified message to all clients connected. message can be a JSON chat object,
+    or a string with formatting codes using the § as a prefix
+    """
+
+    if isinstance(message, dict):
+        if version_compute < 10700:
+            _test_console("say %s" % chattocolorcodes(message))
+        else:
+            _test_console("tellraw @a %s" % json.dumps(message, encoding=encoding, ensure_ascii=False))
+    else:
+        if version_compute < 10700:
+            temp = processcolorcodes(message)
+            _test_console("say %s" % chattocolorcodes(json.loads(temp)))
+        else:
+            _test_console("tellraw @a %s" % processcolorcodes(message))
+
+# channel = "WrapperCraft"
+# message = "welcome fahgoot!"
+# _test_broadcast("&5[%s] %s" % (channel, message))
