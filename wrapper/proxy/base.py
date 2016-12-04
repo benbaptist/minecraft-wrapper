@@ -18,7 +18,7 @@ except ImportError:
 try:
     import utils.encryption as encryption
 except ImportError:
-    requests = False
+    encryption = False
 
 
 class Proxy:
@@ -41,6 +41,9 @@ class Proxy:
 
         self.privateKey = encryption.generate_key_pair()
         self.publicKey = encryption.encode_public_key(self.privateKey)
+
+        if not encryption and self.wrapper.proxymode:
+            raise Exception("You must have the pycryto installed to run in proxy mode!")
 
         if not requests and self.wrapper.proxymode:
             raise Exception("You must have the requests module installed to run in proxy mode!")
