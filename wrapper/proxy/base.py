@@ -7,8 +7,6 @@ import json
 
 from utils.helpers import getjsonfile, putjsonfile, find_in_json, epoch_to_timestr, read_timestr
 
-from proxy.clientconnection import Client
-from proxy.packet import Packet
 
 try:
     import requests
@@ -19,6 +17,13 @@ try:
     import utils.encryption as encryption
 except ImportError:
     encryption = False
+
+if requests and encryption:
+    from proxy.clientconnection import Client
+    from proxy.packet import Packet
+else:
+    Client = False
+    Packet = False
 
 
 class Proxy:
