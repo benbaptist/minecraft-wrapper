@@ -80,8 +80,6 @@ To completely shutdown the wrapper, type /halt.</br>
 Please read our [wiki](https://github.com/benbaptist/minecraft-wrapper/wiki) for additional information and review the issues page before submitting bug reports.<br>
 If you run into any bugs, please _do_ report them!
 
-If you want to use proxy mode in 1.9 or later versions and experience excessive lag, try using the 'stable-formc1.9-1.10' branch (again, only for vanilla type unmodded servers!)
-
 #Features#
 Wrapper.py supports the following features:
 - Plugin system for adding Bukkit-like features to a vanilla server
