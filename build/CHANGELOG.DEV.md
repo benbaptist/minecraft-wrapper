@@ -1,3 +1,6 @@
+Build 157
+- refactor uuid and username methods out of core.wrapper and into new class UUIDS in core.mcuuid.py
+
 Build 156
 - generate warnings on wrapper start for python versions below 2.7.
 - move chattocolorcodes out of mcserver.py to utils/helpers.py where it can be properly debugged and refactored

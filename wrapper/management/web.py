@@ -460,7 +460,7 @@ class WebClient:
             # for uu in totalPlayers:
             #   if not "logins" in totalPlayers[uu]:
             #       continue
-            #   playerName = self.web.wrapper.getusernamebyuuid(uu)
+            #   playerName = self.api.lookupbyUUID(uu)
             #   totalPlaytime[playerName] = [0, 0]
             #   for i in totalPlayers[uu]["logins"]:
             #       totalPlaytime[playerName][0] += totalPlayers[uu]["logins"][i] - int(i)

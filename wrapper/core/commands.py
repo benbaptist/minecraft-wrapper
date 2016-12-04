@@ -172,7 +172,7 @@ class Commands:
             banexpires = False
             reason = "the Ban Hammer has Spoken"
             timeunit = 86400  # days is default
-            lookupuuid = self.wrapper.getuuidbyusername(playername)
+            lookupuuid = self.wrapper.uuids.getuuidbyusername(playername)
             if not lookupuuid:
                 player.message({"text": "Not a valid Username!", "color": "red"})
                 return False
@@ -224,7 +224,7 @@ class Commands:
             byuuid = True
             if str(getargs(commargs, -1))[-5:].lower() == "false":  # last five letters of last argument
                 byuuid = False
-            lookupuuid = self.wrapper.getuuidbyusername(playername)
+            lookupuuid = self.wrapper.uuids.getuuidbyusername(playername)
             if not lookupuuid and byuuid:
                 player.message({"text": "Not a valid Username!", "color": "red"})
                 return False
@@ -470,7 +470,7 @@ class Commands:
             for uu in players:
                 if "logins" not in players[uu]:
                     continue
-                playername = self.wrapper.getusernamebyuuid(uu)
+                playername = self.wrapper.uuids.getusernamebyuuid(uu)
                 totalplaytime[playername] = [0, 0]
                 for i in players[uu]["logins"]:
                     totalplaytime[playername][0] += players[uu]["logins"][i] - int(i)
@@ -549,7 +549,7 @@ class Commands:
                     player.message("&aUsers in the group '%s':" % group)
                     for uuid in self.wrapper.permissions["users"]:
                         if group in self.wrapper.permissions["users"][uuid]["groups"]:
-                            player.message("%s: &2%s" % (self.wrapper.getusernamebyuuid(uuid), uuid))
+                            player.message("%s: &2%s" % (self.wrapper.uuids.getusernamebyuuid(uuid), uuid))
                     player.message("&aPermissions for the group '%s':" % group)
                     for node in self.wrapper.permissions["groups"][group]["permissions"]:
                         value = self.wrapper.permissions["groups"][group]["permissions"][node]
@@ -565,7 +565,7 @@ class Commands:
             elif command == "users":
                 username = getargs(payload["args"], 1)
                 subcommand = getargs(payload["args"], 2)
-                uuid = self.wrapper.getuuidbyusername(username).string
+                uuid = self.wrapper.uuids.getuuidbyusername(username).string
                 if not uuid:
                     player.message("&cNo valid UUID exists for '%s'." % username)
                     return False

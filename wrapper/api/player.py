@@ -66,11 +66,11 @@ class Player:
         #     Mojang UUID if server is in online mode or same as offline if server is in offline mode (proxy mode).
         # *******************
         # This can be False if cache (and requests) Fail... bad name or bad Mojang service connection.
-        self.mojangUuid = self.wrapper.getuuidbyusername(username)
+        self.mojangUuid = self.wrapper.uuids.getuuidbyusername(username)
         # IF False error carries forward, this is not a valid player, for whatever reason...
         self.clientUuid = self.mojangUuid
         # These two are offline by default.
-        self.offlineUuid = self.wrapper.getuuidfromname(self.username)
+        self.offlineUuid = self.wrapper.uuids.getuuidfromname(self.username)
         self.serverUuid = self.offlineUuid  # Start out as the Offline - change it to Mojang if local server is Online
 
         self.ipaddress = "127.0.0.0"
@@ -507,7 +507,7 @@ class Player:
         if node is None:
             return True
         if another_player:
-            other_uuid = self.wrapper.getuuidbyusername(another_player)  # get other player mojang uuid
+            other_uuid = self.wrapper.uuids.getuuidbyusername(another_player)  # get other player mojang uuid
             if other_uuid:  # make sure other player permission is initialized.
                 if self.mojangUuid.string not in self.permissions["users"]:  # no reason not to do this here too
                     self.permissions["users"][self.mojangUuid.string] = {"groups": [], "permissions": {}}
