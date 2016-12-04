@@ -576,6 +576,8 @@ class MCServer:
         """
         Internally-used function that parses a particular console line
         """
+        if not self.wrapper.events.callevent("server.consoleMessage", {"message": buff}):
+            return False
 
         if len(buff) < 1:
             return
