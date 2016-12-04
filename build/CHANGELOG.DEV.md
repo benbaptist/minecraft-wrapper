@@ -1,4 +1,7 @@
-Build 153
+Build 154
+- second (typo) - fix proxy errors when proxy is not used and pycrypto is not installed.
+
+Build 152 - 153
 - remove remaining pre-1.7 mode code.  Wrapper detects server version and adjusts accordingly.
 - fix proxy errors when proxy is not used and pycrypto is not installed.
 
