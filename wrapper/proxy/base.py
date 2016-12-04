@@ -48,11 +48,23 @@ class Proxy:
         # get the protocol version from the server
         while not self.wrapper.javaserver.state == 2:
             time.sleep(.2)
+
+        if self.wrapper.javaserver.version_compute < 10702:
+            self.log.warning("\nProxy mode cannot start because the server is a pre-Netty version:\n\n"
+                             "http://wiki.vg/Protocol_version_numbers#Versions_before_the_Netty_rewrite\n\n"
+                             "Server will continue in non-proxy mode.")
+            self.wrapper.disable_proxymode()
+            return
+
+        if self.wrapper.config["Proxy"]["proxy-port"] == self.wrapper.javaserver.server_port:
+            self.log.warning("Proxy mode cannot start because the wrapper port is identical to the server port.")
+            self.wrapper.disable_proxymode()
+            return
+
         try:
             self.pollserver()
         except Exception as e:
-            self.log.exception("Proxy could not poll the Minecraft server - are you sure that the ports are "
-                               "configured properly? (%s)", e)
+            self.log.exception("Proxy could not poll the Minecraft server - check server/wrapper configs? (%s)", e)
 
         # open proxy port to accept client connections
         while not self.usingSocket:
@@ -95,11 +107,11 @@ class Proxy:
         server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         # server_sock = socket.socket()
         server_sock.settimeout(5)
-        server_sock.connect(("localhost", self.wrapper.config["Proxy"]["server-port"]))
+        server_sock.connect(("localhost", self.javaserver.server_port))
         packet = Packet(server_sock, self)
 
         packet.send(0x00, "varint|string|ushort|varint", (5, "localhost",
-                                                          self.wrapper.config["Proxy"]["server-port"], 1))
+                                                          self.javaserver.server_port, 1))
         packet.send(0x00, "", ())
         packet.flush()
         self.wrapper.javaserver.protocolVersion = -1
@@ -173,7 +185,7 @@ class Proxy:
                     try:
                         expiration = epoch_to_timestr(expires)
                     except Exception as e:
-                        print(e)
+                        print('Exception: %s' % e)
                         return "expiration date invalid"  # error text
                 else:
                     expiration = "forever"
@@ -214,7 +226,7 @@ class Proxy:
                     try:
                         expiration = epoch_to_timestr(expires)
                     except Exception as e:
-                        print(e)
+                        print('Exception: %s' % e)
                         return "expiration date invalid"  # error text
                 else:
                     expiration = "forever"
@@ -256,7 +268,7 @@ class Proxy:
                     try:
                         expiration = epoch_to_timestr(expires)
                     except Exception as e:
-                        print(e)
+                        print('Exception: %s' % e)
                         return "expiration date invalid"  # error text
                 else:
                     expiration = "forever"

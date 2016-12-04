@@ -276,10 +276,10 @@ class Client:
         if self.spigot_mode:
             payload = "localhost\x00%s\x00%s" % (self.addr[0], self.uuid.hex)
             self.server.packet.sendpkt(0x00, [_VARINT, _STRING, _USHORT, _VARINT],
-                                       (self.clientversion, payload, self.config["Proxy"]["server-port"], 2))
+                                       (self.clientversion, payload, self.wrapper.javaserver.server_port, 2))
         else:
             self.server.packet.sendpkt(0x00, [_VARINT, _STRING, _USHORT, _VARINT],
-                                       (self.clientversion, "localhost", self.config["Proxy"]["server-port"], 2))
+                                       (self.clientversion, "localhost", self.wrapper.javaserver.server_port, 2))
         self.server.packet.sendpkt(0x00, [_STRING], [self.username])
 
         # Turn this off for now.

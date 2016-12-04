@@ -14,7 +14,7 @@ class Permissions:
         if groupname in self.wrapper.permissions["groups"]:
             raise Exception("Group '%s' already exists!" % groupname)
         else:
-            print(self.wrapper.permissions["groups"])
+            print('groups:\n%s' % self.wrapper.permissions["groups"])
 
     def groupexists(self, groupname):
         return groupname in self.wrapper.permissions["groups"]

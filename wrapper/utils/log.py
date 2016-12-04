@@ -7,7 +7,7 @@ from logging.config import dictConfig
 
 from utils.helpers import mkdir_p, use_style
 
-DEFAULT_CONFIG = dict({
+DEFAULT_CONFIG = {
     "wrapperversion": 1.2,
     "version": 1,
     "disable_existing_loggers": False,
@@ -55,7 +55,7 @@ DEFAULT_CONFIG = dict({
         "level": "NOTSET",
         "handlers": ["console", "wrapper_file_handler", "error_file_handler"]
     }
-})
+}
 
 
 def configure_logger(betterconsole=False):

@@ -141,7 +141,7 @@ class ServerConnection:
 
     def connect(self):
         if self.ip is None:
-            self.server_socket.connect(("localhost", self.wrapper.config["Proxy"]["server-port"]))
+            self.server_socket.connect(("localhost", self.wrapper.javaserver.server_port))
         else:
             self.server_socket.connect((self.ip, self.port))
             self.client.isLocal = False

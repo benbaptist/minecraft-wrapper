@@ -110,13 +110,12 @@ NEWCONFIG = {
         # _________________________________
         "convert-player-files": False,
         "max-players": 1024,
-        "online-mode": True,  # the wrapper's online mode, NOT the child server.
+        "online-mode": True,  # the wrapper's online mode, NOT the server.
         "proxy-bind": "0.0.0.0",
         "proxy-enabled": False,
         "proxy-port": 25565,  # the wrapper's proxy port that accepts client connections from the internet. This
                               # port is exposed to the internet via your port forwards.
-        "server-port": 25564,  # the minecraft server port (the hub for hub setups) that traffic is directed to. This
-                               # port must not be exposed to outside traffic.
+        "server-port": "deprecated",  # This port is autoconfigured from server console output now.
         "spigot-mode": False
     },
     "Web": {
