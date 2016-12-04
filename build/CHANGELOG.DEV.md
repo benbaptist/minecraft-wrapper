@@ -3,7 +3,9 @@ Build 152
 - "We must push the build so we can find out what's in it" - paraphrasing our US Congress as they were pushing for passage of a 2K page healthcare law they never read.
 
 Build 151
-- Minor PEP-8 and bugfix of helpers/version.py
+- Minor PEP-8 and bugfix of utils/version.py
+- Bugfixes to console parsing
+- Modify the vanilla server's message to console about hackers connecting.
 
 build 150
 - changed server console parsing to be more independent of server versions
