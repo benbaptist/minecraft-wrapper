@@ -43,7 +43,6 @@ NEWCONFIG = {
         # You can point these to another branch, if desired.
         "stable-branch": "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master/build/version.json",
         "dev-branch": "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/build/version.json",
-        # You will need to update this to your particular server start command line.
     },
     "Misc": {  # look 'n' feel type customizations
         "command-prefix": "/",  # if you change this, no minecraft command will work. Bug or feature? TODO not sure.
@@ -58,8 +57,7 @@ NEWCONFIG = {
         # You will need to update this to your particular server start command line.
         "command": "java -jar -Xmx2G -Xms1G server.jar nogui",
         "encoding": "UTF-8",
-        # Set this to read the console properly for pre-1.7 servers.  DO NOT use proxy mode for pre-1.7 servers!
-        "pre-1.7-mode": False,
+        "pre-1.7-mode": "deprecated",  # wrapper detects server version and adjusts accordingly now
         "server-directory": ".",  # Using the default '.' roots the server in the same folder with wrapper. Change
                                   # this to another folder to keep the wrapper and server folders separate.
                                   # Do not use a trailing slash.

@@ -5,7 +5,6 @@ import threading
 import time
 import json
 
-import utils.encryption as encryption
 from utils.helpers import getjsonfile, putjsonfile, find_in_json, epoch_to_timestr, read_timestr
 
 from proxy.clientconnection import Client
@@ -16,7 +15,9 @@ try:
 except ImportError:
     requests = False
 
-if not encryption:
+try:
+    import utils.encryption as encryption
+except ImportError:
     requests = False
 
 
@@ -41,7 +42,7 @@ class Proxy:
         self.privateKey = encryption.generate_key_pair()
         self.publicKey = encryption.encode_public_key(self.privateKey)
 
-        if not requests:
+        if not requests and self.wrapper.proxymode:
             raise Exception("You must have the requests module installed to run in proxy mode!")
 
     def host(self):

@@ -301,12 +301,12 @@ class MCServer:
         or a string with formatting codes using the & as a prefix 
         """
         if isinstance(message, dict):
-            if self.config["General"]["pre-1.7-mode"]:
+            if self.version_compute < 10700:
                 self.console("say %s" % self.chattocolorcodes(message))
             else:
                 self.console("tellraw @a %s" % json.dumps(message, encoding=self.encoding, ensure_ascii=False))
         else:
-            if self.config["General"]["pre-1.7-mode"]:
+            if self.version_compute < 10700:
                 self.console("say %s" %
                              self.chattocolorcodes(json.loads(processcolorcodes(message)).decode(self.encoding)))
             else:

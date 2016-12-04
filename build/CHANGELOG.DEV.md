@@ -1,6 +1,6 @@
-Build 152
-
-- "We must push the build so we can find out what's in it" - paraphrasing our US Congress as they were pushing for passage of a 2K page healthcare law they never read.
+Build 153
+- remove remaining pre-1.7 mode code.  Wrapper detects server version and adjusts accordingly.
+- fix proxy errors when proxy is not used and pycrypto is not installed.
 
 Build 151
 - Minor PEP-8 and bugfix of utils/version.py
