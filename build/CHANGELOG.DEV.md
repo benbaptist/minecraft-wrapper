@@ -1,3 +1,9 @@
+Build 156
+- generate warnings on wrapper start for python versions below 2.7.
+
+Build 155
+- third - fix clientconnection import errors when proxy is not used and pycrypto is not installed.
+
 Build 154
 - second (typo) - fix proxy errors when proxy is not used and pycrypto is not installed.
 

@@ -45,9 +45,9 @@ if __name__ == "__main__":
     wrapper = Wrapper()
     log = wrapper.log
     log.info("Wrapper.py started - Version %s", wrapper.getbuildstring())
-    if not PY3 and SUBVER < 6:
-        log.warning("You are using python 2.%s.  wrapper uses several 2.6 - 2.7.x contructs."
-                    "  You may encounter errors", SUBVER)
+    if not PY3 and SUBVER < 7:
+        log.warning("You are using python 2.%s.  wrapper uses 2.7.x contructs and imports that may not be"
+                    " backwards compatible.  You may encounter errors", SUBVER)
     if PY3 and SUBVER < 4:
         log.warning("You are using python 3.%s.  wrapper only supports 3.4 and later."
                     "  You may encounter errors", SUBVER)

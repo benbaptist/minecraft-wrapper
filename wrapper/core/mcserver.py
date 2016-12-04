@@ -300,6 +300,8 @@ class MCServer:
         Broadcasts the specified message to all clients connected. message can be a JSON chat object, 
         or a string with formatting codes using the & as a prefix 
         """
+        print("\ncomputed version: %s\n" % self.version_compute)
+        print("\nmessage: '%s'\n" % message)
         if isinstance(message, dict):
             if self.version_compute < 10700:
                 self.console("say %s" % self.chattocolorcodes(message))
