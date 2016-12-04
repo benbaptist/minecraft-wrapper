@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 
-from utils.helpers import getargs, getargsafter, get_int, processcolorcodes
+from utils.helpers import getargs, getargsafter, get_int, processcolorcodes, chattocolorcodes
 from utils.helpers import getjsonfile, getfileaslines, config_to_dict_read, set_item
 
 from api.base import API
@@ -295,48 +295,24 @@ class MCServer:
         else:
             raise InvalidServerStartedError("Server is not started. Please run '/start' to boot it up.")
 
-    def broadcast(self, message=""):
+    def broadcast(self, message):
         """
-        Broadcasts the specified message to all clients connected. message can be a JSON chat object, 
-        or a string with formatting codes using the & as a prefix 
+        Broadcasts the specified message to all clients connected. message can be a JSON chat object,
+        or a string with formatting codes using the § as a prefix
         """
-        print("\ncomputed version: %s\n" % self.version_compute)
-        print("\nmessage: '%s'\n" % message)
+
         if isinstance(message, dict):
             if self.version_compute < 10700:
-                self.console("say %s" % self.chattocolorcodes(message))
+                self.console("say %s" % chattocolorcodes(message))
             else:
-                self.console("tellraw @a %s" % json.dumps(message, encoding=self.encoding, ensure_ascii=False))
+                encoding = self.wrapper.encoding
+                self.console("tellraw @a %s" % json.dumps(message, encoding=encoding, ensure_ascii=False))
         else:
             if self.version_compute < 10700:
-                self.console("say %s" %
-                             self.chattocolorcodes(json.loads(processcolorcodes(message)).decode(self.encoding)))
+                temp = processcolorcodes(message)
+                self.console("say %s" % chattocolorcodes(json.loads(temp)))
             else:
                 self.console("tellraw @a %s" % processcolorcodes(message))
-
-    def chattocolorcodes(self, jsondata):
-        def getcolorcode(color):
-            for code in API.colorcodes:
-                if API.colorcodes[code] == color:
-                    return "\xa7\xc2" + code
-            return ""
-
-        def handlechunk(chunk):
-            extras = ""
-            if "color" in chunk:
-                extras += getcolorcode(chunk["color"])
-            if "text" in chunk:
-                extras += chunk["text"]
-            if "string" in chunk:
-                extras += chunk["string"]
-            return extras
-
-        total = handlechunk(jsondata)
-
-        if "extra" in jsondata:
-            for extra in jsondata["extra"]:
-                total += handlechunk(extra)
-        return total.encode(self.encoding)
 
     def login(self, username, eid, location):
         """

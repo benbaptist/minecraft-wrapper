@@ -1,5 +1,7 @@
 Build 156
 - generate warnings on wrapper start for python versions below 2.7.
+- move chattocolorcodes out of mcserver.py to utils/helpers.py where it can be properly debugged and refactored
+- refactored and debugged mcserver broadcast()
 
 Build 155
 - third - fix clientconnection import errors when proxy is not used and pycrypto is not installed.
