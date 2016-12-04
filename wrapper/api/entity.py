@@ -51,6 +51,7 @@ class EntityControl:
     def __del__(self):
         self.abortep = True
 
+    # noinspection PyBroadException
     def getEntityByEID(self, eid):
         """ Returns the entity context or False if the specified entity ID doesn't exist.
 
@@ -60,7 +61,7 @@ class EntityControl:
         """
         try:
             return self.entities[eid]
-        except Exception as e:
+        except Exception:  # as e:
             # self.log.debug("getEntityByEID returned False: %s", e)
             return False
 
@@ -221,4 +222,3 @@ class EntityControl:
         self.log.debug("killing %d %s" % (count, entity_name))
         self.javaserver.console("tp @e[type=%s,x=%d,y=%d,z=%d,c=%s] ~ -500 ~" %
                                 (entity_name, pos[0], pos[1], pos[2], count))
-

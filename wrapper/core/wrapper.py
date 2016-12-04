@@ -2,8 +2,6 @@
 
 from __future__ import print_function
 
-# py3 non-compliant at runtime
-
 # system imports
 import signal
 import hashlib
@@ -107,7 +105,7 @@ class Wrapper:
         self.xplayer = ConsolePlayer(self)  # future plan to expose this to api
 
         # Error messages for non-standard import failures.
-        if not readline:
+        if not readline and self.use_readline:
             self.log.warning("'readline' not imported.  This is needed for proper console functioning")
 
         if not requests:
@@ -693,16 +691,20 @@ class Wrapper:
             proxythread.daemon = True
             proxythread.start()
         else:
-            self.proxymode = False
-            self.configManager.config["Proxy"]["proxy-enabled"] = False
-            self.configManager.save()
-            self.config = self.configManager.config
-            self.log.error("Proxy mode has been disabled in the config file because you do not have one or more "
+            self.disable_proxymode()
+            self.log.error("Proxy mode has been disabled because you do not have one or more "
                            "of the following modules installed: \npycrypto and requests")
 
     def sigint(*args):  # doing this allows the calling function to pass extra args without defining/using them here
         self = args[0]  # .. as we are only interested in the self component
         self.shutdown()
+
+    def disable_proxymode(self):
+        self.proxymode = False
+        self.configManager.config["Proxy"]["proxy-enabled"] = False
+        self.configManager.save()
+        self.config = self.configManager.config
+        self.log.warning("\nProxy mode is now turned off in wrapper.properties.json.\n")
 
     def shutdown(self, status=0):
         self.storage.close()

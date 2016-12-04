@@ -74,6 +74,7 @@ class Player:
         self.serverUuid = self.offlineUuid  # Start out as the Offline - change it to Mojang if local server is Online
 
         self.ipaddress = "127.0.0.0"
+        self.loginposition = [0, 0, 0]
 
         self.client = None
         self.clientboundPackets = mcpackets.ClientBound(self.javaserver.protocolVersion)

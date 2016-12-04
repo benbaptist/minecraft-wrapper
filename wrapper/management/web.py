@@ -89,7 +89,7 @@ class Web:
         }))
 
     def onPlayerJoin(self, payload):
-        print(payload)
+        # print(payload)
         while len(self.chatScrollback) > 200:
             try:
                 del self.chatScrollback[0]
