@@ -81,7 +81,8 @@ def get_complete_version(version=None):
     then checks for correctness of the tuple provided.
     """
     if version is None:
-        from wrapper import VERSION as version
+        from wrapper import VERSION as VERSION
+        version = VERSION
     else:
         assert len(version) == 5
         assert version[3] in ('alpha', 'beta', 'rc', 'final')
@@ -94,7 +95,7 @@ def get_docs_version(version=None):
     if version[3] != 'final':
         return 'dev'
     else:
-        return '%d.%d' % version[:2]  # TODO "Too few arguments for formatstring"
+        return '%d.%d' % (version[0], version[1])
 
 
 def get_git_changeset():

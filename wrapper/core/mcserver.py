@@ -94,7 +94,7 @@ class MCServer:
         self.protocolVersion = -1  # -1 until proxy mode checks the server's MOTD on boot
         self.version = None  # this is string name of the server version, collected by console output
         self.version_compute = 0  # a comparable number = x0y0z, where x, y, z = release, major, minor, of version.
-        self.server_port = "25565"
+        self.server_port = "25564"  # this port should be hidden from outside traffic.
 
         self.world = None
         self.entity_control = None
@@ -588,11 +588,11 @@ class MCServer:
         # .. and load the proper ops file
         if "Starting minecraft server version" in buff and self.prepends_offset == 0:
             for place in range(len(line_words)-1):
+                self.prepends_offset = place
                 if line_words[place] == "Starting":
                     break
-                self.prepends_offset = place
 
-            line_words = buff.split(' ')[self.prepends_offset]
+            line_words = buff.split(' ')[self.prepends_offset:]
             self.version = getargs(line_words, 4)
             semantics = self.version.split(".")
             release = get_int(getargs(semantics, 0))
@@ -605,6 +605,15 @@ class MCServer:
 
         if len(line_words) < 1:
             return
+
+        # modify the server warning
+        if "While this makes the game possible to play without internet access," in buff:
+            prefix = " ".join(buff.split(' ')[:self.prepends_offset])
+            message = "%s Since you are running wrapper in proxy mode, this should be ok because Wrapper " \
+                      "is handling the authenication, PROVIDED no one can access port %s from outside " \
+                      "your network." % (prefix, self.server_port)
+            if self.wrapper.proxymode:
+                buff = message
 
         # check for server console spam before printing to wrapper console
         server_spaming = False
@@ -638,10 +647,10 @@ class MCServer:
 
         # read port of server
         if "Starting Minecraft server" in buff:
-            self.server_port = buff.split('on *:')[1]
+            self.server_port = get_int(buff.split('on *:')[1])
 
         # confirm server start
-        if "Done (" in buff:
+        elif "Done (" in buff:
             self.changestate(STARTED)
             self.log.info("Server started")
             self.bootTime = time.time()
