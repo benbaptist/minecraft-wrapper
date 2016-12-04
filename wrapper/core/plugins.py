@@ -85,9 +85,6 @@ class Plugins:
         self.log.info("Plugin %s loaded...", i)
 
     def unloadplugin(self, plugin):
-        del self.wrapper.commands[plugin]
-        del self.wrapper.events[plugin]
-        del self.wrapper.help[plugin]
         try:
             self.plugins[plugin]["main"].onDisable()
             self.log.debug("Plugin %s disabled with no errors." % plugin)
@@ -95,6 +92,10 @@ class Plugins:
             self.log.debug("Plugin %s disabled (has no onDisable() event)." % plugin)
         except Exception as e:
             self.log.exception("Error while disabling plugin '%s': \n%s", (plugin, e))
+        finally:
+            del self.wrapper.commands[plugin]
+            del self.wrapper.events[plugin]
+            del self.wrapper.help[plugin]
 
     def loadplugins(self):
         self.log.info("Loading plugins...")
