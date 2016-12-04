@@ -605,6 +605,9 @@ class MCServer:
 
         if len(line_words) < 1:
             return
+        if len(line_words[0]) < 1:
+            print('')  # the server was attempting to print a blank line
+            return
 
         # modify the server warning
         if "While this makes the game possible to play without internet access," in buff:
@@ -661,7 +664,6 @@ class MCServer:
             self.world = World(self.worldname, self)
             if self.wrapper.proxymode:
                 self.entity_control = EntityControl(self)
-
         # Player Message
         if getargs(line_words, 0)[0] == "<":
             name = self.stripspecial(getargs(line_words, 0)[1:-1])
