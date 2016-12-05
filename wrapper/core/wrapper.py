@@ -532,14 +532,17 @@ class Wrapper:
         r = requests.get(self.config["Updates"][branch_key])
         if r.status_code == 200:
             data = r.json()
-            if data("__build__") > core_buildinfo_version.__build__:
+            print(data)
+            if data["__build__"] > core_buildinfo_version.__build__:
                 if repotype == "dev":
                     reponame = "development"
                 elif repotype == "stable":
                     reponame = "master"
                 else:
                     reponame = data["__branch__"]
-                return data["__version__"], data["__build__"], data["__branch__", reponame]
+                if "__version__" not in data:
+                    data["__version__"] = data["version"]
+                return data["__version__"], data["__build__"], data["__branch__"], reponame
 
         else:
             self.log.warning("Failed to check for updates - are you connected to the internet? "
@@ -565,9 +568,7 @@ class Wrapper:
             if hashlib.md5(wrapperfile.content).hexdigest() == wrapperhash.text:
                 self.log.info("Update file successfully verified. Installing...")
                 with open(sys.argv[0], "w") as f:
-                    # requests object is the binary/Wrapper.py file.
-                    # noinspection PyTypeChecker
-                    f.write(wrapperfile)
+                    f.write(wrapperfile.content)
                 self.log.info("Wrapper.py %s (#%d) installed. Please reboot Wrapper.py.",
                               ".".join([str(_) for _ in version]), build)
                 self.updated = True
