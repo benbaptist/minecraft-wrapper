@@ -143,7 +143,7 @@ class Minecraft:
         for uuid_file_found in os.listdir("wrapper-data/players"):
             player_uuid = uuid_file_found.rsplit(".", 1)[0]
 
-            username = self.wrapper.getusernamebyuuid(player_uuid)
+            username = self.wrapper.uuids.getusernamebyuuid(player_uuid)
             if type(username) != str:
                 player_uuid = "None"
 
@@ -154,7 +154,7 @@ class Minecraft:
 
             # if the server is in online mode and the player's offline and regular uuid are the same...
             if online:
-                if player_uuid == self.wrapper.getuuidfromname(username):
+                if player_uuid == self.wrapper.uuids.getuuidfromname(username):
                     continue
 
             with open("wrapper-data/players/" + uuid_file_found) as f:
@@ -198,7 +198,7 @@ class Minecraft:
         :param name: gets UUID object based on "OfflinePlayer:<playername>"
         :return: a MCUUID object based on the name
         """
-        return self.wrapper.getuuidfromname(name)
+        return self.wrapper.uuids.getuuidfromname(name)
 
     def lookupUUID(self, uuid):
         """
@@ -229,7 +229,7 @@ class Minecraft:
         Returns: username
 
         """
-        return self.wrapper.getusernamebyuuid(uuid)
+        return self.wrapper.uuids.getusernamebyuuid(uuid)
 
     def lookupbyName(self, name):  # This function is just part of the API for plugin devs/users.
         """
@@ -243,7 +243,7 @@ class Minecraft:
         Returns: a UUID object (wrapper type MCUUID)
 
         """
-        return self.wrapper.getuuidbyusername(name)
+        return self.wrapper.uuids.getuuidbyusername(name)
 
     # World and console interaction
 
@@ -461,7 +461,7 @@ class Minecraft:
 
         Returns: String describing the operation's outcome.
         """
-        useruuid = self.wrapper.getuuidbyusername(playername)
+        useruuid = self.wrapper.uuids.getuuidbyusername(playername)
         if not useruuid:
             return self.wrapper.proxy.banuuidraw(useruuid, playername, reason, source, expires)
         else:

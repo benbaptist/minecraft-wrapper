@@ -1,4 +1,53 @@
 #Changelog#
+<h4>0.7.8 - 0.9.0</h4>
+The scope of this update has been __enormous__.  It is a completely new refactor of the old Wrapper.
+It has been our intent to keep the original API intact, but some minor changes were made.  LOTS of _NEW_
+features, configurations, bugfixes, and new events have been added!
+
+**Features** *(by no means a complete list)*
+- Console interface is completely revamped.
+- console supports and uses colorized text.
+- Server and Console parsing is completely new and includes optional anti-scroll-away mode to keep your typing at the last line.
+- Ability to mute server output temporarily while you work at the console.
+- New console commands for modifying the config file, tracking entities, and proxy ban functions.
+- Console can now run in-game wrapper commands, like "/permissions"!
+- Entity tracking implemented:
+    - Entities are parsed/tracked (added and removed) in wrapper's memory.
+    - Entity limits/ mob controls can now be set in each players loaded chunks.
+    - Api items for entities in API.entity
+- Proxy mode refactored and supports newer minecraft versions with less effort.
+- Proxy mode bans system functional (that operate from Mojang uuid service) in API.Minecraft.
+- Tons of new API.minecraft methods, like "getGameRules()", which returns a dictionary of the server gamerules.
+- More reliable permissions code in API.player.
+- More fun stuff in API.player, like "setPlayerAbilities", "sendBlock", "getBedPostion" methods, and better hand/items tracking.
+- Tons of performance updates to make wrapper cycle the disks less and decrease memory leaks.
+- Class API.Backups added to allow plugins to control backups.
+- Improved (hopefully) event processing to allow multiple plugins to rationally use the same event.
+- Fixed the pesky UUID None/False issues experienced by proxy mode.
+- the server folder and wrapper folder can be truly divorced from one another with all server files in one
+folder and all the wrapper files in another (making the plugin-developers decision to use world-based storages
+more meaningful/consequential).
+- Wrapper auto-detects the server port (removed 'server-port' from proxy config)
+- Wrapper parses console output for pre-1.7 and spigot/bukkit/etc servers without using special config items.
+- Wrapper config files are now in 'logging.json' and 'wrapper.properties.json' (in json format, of course)
+- Speaking of which, wrapper writes all json files and storages with human-readable spacing and indents.
+
+
+**Developer Changes**
+- __MOST IMPORTANT__ - Plugins using Storages _must_ invoke `self.<storageObject>.close()` in their `onDisable(self):` method
+to ensure their data is saved on wrapper shutdown.
+- If you wrote or edited wrapper code before, forget everything you learned.  It's that different.  Only the API
+was (mostly) maintained for plugin compatibility.
+
+**Bug Fixes**
+- Old bugs were fixed
+- TONS of new ones were added
+- The code was almost broken, repaired again, and new bugs fixed.. all too
+numerous to detail!
+- At least a year's work of adding new bugs and fixing them!
+
+
+
 <h4>0.7.7</h4>
 This update contains an important patch regarding username changes. It is important that you update immediately if you use proxy mode, or else any players who've changed their names will be treated as new players upon logging in.
 

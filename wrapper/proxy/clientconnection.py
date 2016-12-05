@@ -809,13 +809,13 @@ class Client:
                         # send to client 1.8 +
                         self.packet.sendpkt(0x01, [_STRING, _BYTEARRAY, _BYTEARRAY],
                                             (self.serverID, self.publicKey, self.verifyToken))
-                    self.serveruuid = self.wrapper.getuuidfromname(self.username)  # MCUUID object
+                    self.serveruuid = self.wrapper.uuids.getuuidfromname(self.username)  # MCUUID object
 
                 # probably not a good idea to be below here ;)
                 else:
                     self.connect_to_server()
-                    self.uuid = self.wrapper.getuuidfromname(self.username)  # MCUUID object
-                    self.serveruuid = self.wrapper.getuuidfromname(self.username)  # MCUUID object
+                    self.uuid = self.wrapper.uuids.getuuidfromname(self.username)  # MCUUID object
+                    self.serveruuid = self.wrapper.uuids.getuuidfromname(self.username)  # MCUUID object
                     self.packet.sendpkt(0x02, [_STRING, _STRING], (self.uuid.string, self.username))
                     self.state = PLAY
                     self.log.info("%s's client (insecure) LOGON from (IP: %s)", self.username, self.addr[0])
@@ -865,15 +865,15 @@ class Client:
                     else:
                         self.disconnect("Proxy Client Session Error (HTTP Status Code %d)" % r.status_code)
                         return False
-                    currentname = self.wrapper.getusernamebyuuid(self.uuid.string)
+                    currentname = self.wrapper.uuids.getusernamebyuuid(self.uuid.string)
                     if currentname:
                         if currentname != self.username:
                             self.log.info("%s's client performed LOGON in with new name, falling back to %s",
                                           self.username, currentname)
                             self.username = currentname
-                    self.serveruuid = self.wrapper.getuuidfromname(self.username)
+                    self.serveruuid = self.wrapper.uuids.getuuidfromname(self.username)
                 else:
-                    self.wrapper.getuuidfromname(self.username)
+                    self.wrapper.uuids.getuuidfromname(self.username)
                     self.log.debug("Client login with no proxymode - 'self.uuid = OfflinePlayer:<name>'")
 
                 #  This needs re-worked.

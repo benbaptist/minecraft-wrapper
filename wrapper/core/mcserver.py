@@ -11,6 +11,7 @@ from api.entity import EntityControl
 
 from core.backups import Backups
 from core.exceptions import UnsupportedOSException, InvalidServerStartedError
+from core.consoleuser import MiniPlayer
 
 import time
 import threading
@@ -739,11 +740,3 @@ class MCServer:
                     for f in os.listdir(i[0]):
                         size += os.path.getsize(os.path.join(i[0], f))
                 self.worldSize = size
-
-
-class MiniPlayer:
-    """ a shell of the original player, who is now logged off and real player object is defunct.
-    Only used to pass some info to the player payload for event player.Logout, mostly for back-wards
-    compatibility to plugins."""
-    def __init__(self, playername):
-        self.username = playername

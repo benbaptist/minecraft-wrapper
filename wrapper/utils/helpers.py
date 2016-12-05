@@ -8,6 +8,7 @@ import sys
 import json
 import time
 import datetime
+import socket
 
 COLORCODES = {
     "0": "black",
@@ -246,6 +247,14 @@ def get_int(s):
     except ValueError:
         val = 0
     return val
+
+
+def isipv4address(addr):
+    try:
+        socket.inet_aton(addr)  # Attempts to convert to an IPv4 address
+    except socket.error:  # If it fails, the ip is not in a valid format
+        return False
+    return True
 
 
 def processcolorcodes(messagestring):
