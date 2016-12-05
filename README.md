@@ -11,7 +11,7 @@ You will also need "tar" installed if you need backups. Most Linux distros have 
 
 You only need to download Wrapper.py, the 'wrapper' folder is just the extracted version of Wrapper.py.</br>
 
-*This branch will only reliably work with Python 2.7.x.  This branch is also dead to further development until the next update from the development branch occurs (planned release 1.0.0 rc 1) *
+####*This branch will only reliably work with Python 2.7.x.*  *This branch is also dead to further development until the next update from the development branch occurs (planned release 1.0.0 rc 1)*####
 
 **LINUX Installation**
 
