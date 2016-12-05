@@ -16,7 +16,25 @@ You will also need "tar" installed if you need backups. Most Linux distros have 
 
 You only need to download Wrapper.py, the 'wrapper' folder is just the extracted version of Wrapper.py.</br>
 
-*Wrapper is presently written for Python 2.7, but we are progressing towards python 3.  Afterwards, only python 3.4+ and 2.6+ will be supported.*
+**Wrapper.py Versions**
+The original stable branch "master" is build (version 0.7.6).  This version is considered to be the working 
+standard version.  However, it is quite old at this point and the development version has far outpaced it.
+
+The current "development" branch version (0.8.x) is now at a point where it is probably a much better choice to use.
+
+- If you are running proxymode with a 1.9 or newer server, you _must_ use the development version.
+- The master version 0.7.6 may be a better choice if you require web mode and possibly IRC, as those have not been tested on development.
+- If you experience serious errors with IRC or web mode in the master branch, you should switch to development (unless you are able to create a pull request to fix the master).
+- The features/advantages of the 0.8.x version are presently too numerous to list.
+
+
+**Python Versions**
+
+*Wrapper is presently written for Python 2.7, but we are progressing towards python 3.*
+
+*It may run under 2.6, but this may cause problems with some dependencies.*
+
+*Once it is fully Python 3 compatible, only python 3.4/5+ and 2.7+ will be supported.*
 
 **LINUX Installation**
 
@@ -24,7 +42,7 @@ if you have wget installed, You can run the following command to download the st
 
 `wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master/Wrapper.py`
 
-or the following to download the unstable, development version (0.8.x) of Wrapper.py:
+or the following to download the development version (0.8.x) of Wrapper.py:
 
 `wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/Wrapper.py`
 
@@ -62,7 +80,7 @@ Download the wrapper.py file and place it in your minecraft folder, then create 
 **Start Up**
 
 Run `python Wrapper.py` to start.<br>
-On first start, it'll create a wrapper.properties file  (wrapper.properties.json in wrapper 0.8.x) for you to configure and exit.<br>
+On first start, it'll create a wrapper.properties file  (wrapper.properties.json after wrapper 0.8.x) for you to configure and exit.<br>
 Open the file, set the 'command' item to boot the jar file and java start options of your choice.<br>
 Tune the file to your remaining preferences, and then run wrapper again.
 
@@ -126,8 +144,7 @@ look for the logging.json file and make changes to the "console" section:
             "filters": [
                 "plugin"
             ],
-            "level": "INFO" <-- Set to DEBUG or TRACE
+            "level": "INFO" <-- Set to DEBUG for more detailed output
         },
 ...
 ```
-  Debug is a normal debugging setting.  TRACE allows detailed information, such as parsing of packets, etc.  If you want TRACE to be logged, find the item "trace" and change it's "level" to "TRACE" (set to "ERROR" by default)
