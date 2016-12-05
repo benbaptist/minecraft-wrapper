@@ -11,15 +11,15 @@ You will also need "tar" installed if you need backups. Most Linux distros have 
 
 You only need to download Wrapper.py, the 'wrapper' folder is just the extracted version of Wrapper.py.</br>
 
-*Wrapper is presently written for Python 2.7, but we are progressing towards python 3.  Afterwards, only python 3.4+ and 2.6+ will be supported.*
+*This branch will only reliably work with Python 2.7.x.  This branch is also dead to further development until the next update from the development branch occurs (planned release 1.0.0 rc 1) *
 
 **LINUX Installation**
 
-if you have wget installed, You can run the following command to download the stable Wrapper.py (0.7.6):
+if you have wget installed, You can run the following command to download this older stable Wrapper.py (0.7.6):
 
 `wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master/Wrapper.py`
 
-or the following to download the unstable, development version (0.8.x) of Wrapper.py:
+or the following to download the newest development version (0.8.x) of Wrapper.py:
 
 `wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/Wrapper.py`
 
@@ -75,7 +75,7 @@ To completely shutdown the wrapper, type /halt.</br>
 Please read our [wiki](https://github.com/benbaptist/minecraft-wrapper/wiki) for additional information and review the issues page before submitting bug reports.<br>
 If you run into any bugs, please _do_ report them!
 
-The master branch will run all versions of minecraft if you don't use proxy mode. If you're using 1.6 and earlier, please turn on pre-1.7-mode in wrapper.properties.  If you want to use proxy mode in 1.9 or later versions, you must switch to the 'development' branch or 'stable-formc1.9-1.10' branch (again, only for vanilla type unmodded servers!)
+The master branch will run all versions of minecraft if you don't use proxy mode. If you're using 1.6 and earlier, please turn on pre-1.7-mode in wrapper.properties.  If you want to use proxy mode in 1.9 or later versions, you must switch to the 'development' branch.
 
 #Features#
 Wrapper.py supports the following features:
