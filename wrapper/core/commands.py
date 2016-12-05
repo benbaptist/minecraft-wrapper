@@ -255,6 +255,9 @@ class Commands:
 
     def command_entities(self, player, payload):
         if player.isOp() > 2:
+            if not self.wrapper.proxymode:
+                player.message("&cProxy mode is off - Entity control is not enabled.")
+
             entitycontrol = self.wrapper.javaserver.entity_control
             if not entitycontrol:
                 # only console could be the source:

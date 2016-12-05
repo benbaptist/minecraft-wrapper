@@ -1,5 +1,6 @@
 Build 157
 - refactor uuid and username methods out of core.wrapper and into new class UUIDS in core.mcuuid.py
+- refactor commands and wrapper console commands section (make it easier to read)
 
 Build 156
 - generate warnings on wrapper start for python versions below 2.7.

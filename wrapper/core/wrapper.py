@@ -11,30 +11,6 @@ import os
 import logging
 import sys  # used to pass sys.argv to server
 
-# small feature and helpers
-from utils.helpers import format_bytes, getargs, getargsafter, readout, get_int
-from utils import readchar
-import core.buildinfo as core_buildinfo_version
-from core.mcuuid import UUIDS
-from core.config import Config
-from core.exceptions import UnsupportedOSException, InvalidServerStartedError
-
-# big ticket items
-import proxy.base as proxy
-from api.base import API
-from core.mcserver import MCServer
-
-from core.plugins import Plugins
-from core.commands import Commands
-from core.events import Events
-from core.storage import Storage
-
-# extra functionality imports
-import management.web as manageweb
-# from management.dashboard import Web as Managedashboard  # presently unused
-from core.irc import IRC
-from core.scripts import Scripts
-
 # non standard library imports
 try:
     import readline
@@ -46,7 +22,31 @@ try:
 except ImportError:
     requests = False
 
-# javaserver constants
+# small feature and helpers
+from utils.helpers import format_bytes, getargs, getargsafter, readout, get_int
+from utils import readchar
+
+# core items
+from core.mcserver import MCServer
+from core.plugins import Plugins
+from core.commands import Commands
+from core.events import Events
+from core.storage import Storage
+from core.irc import IRC
+from core.scripts import Scripts
+import core.buildinfo as core_buildinfo_version
+from core.mcuuid import UUIDS
+from core.config import Config
+from core.consoleuser import ConsolePlayer
+from core.exceptions import UnsupportedOSException, InvalidServerStartedError
+
+# optional API type stuff
+import proxy.base as proxy
+from api.base import API
+import management.web as manageweb
+# from management.dashboard import Web as Managedashboard  # presently unused
+
+# javaserver state constants
 OFF = 0  # this is the start mode.
 STARTING = 1
 STARTED = 2
@@ -174,12 +174,12 @@ class Wrapper:
                                "*NIX-based system, please file a bug report.")
 
         if self.proxymode:
-            t = threading.Thread(target=self.startproxy, args=())
+            t = threading.Thread(target=self._startproxy, args=())
             t.daemon = True
             t.start()
 
         if self.auto_update_wrapper:
-            t = threading.Thread(target=self.auto_update_process, args=())
+            t = threading.Thread(target=self._auto_update_process, args=())
             t.daemon = True
             t.start()
 
@@ -241,7 +241,8 @@ class Wrapper:
             wholecommandline = consoleinput[0:].split(" ")
             command = getargs(wholecommandline, 0)
             allargs = wholecommandline[1:]  # this can be passed to runwrapperconsolecommand() command for args
-            # Most of these are too small to use the runwrapperconsolecommand command (or work better here)
+
+            # Console only commands (not accessible in-game)
             if command.lower() in ("/halt", "halt"):
                 self._halt()
             elif command.lower() in ("/stop", "stop"):
@@ -252,62 +253,28 @@ class Wrapper:
                 self.javaserver.start()
             elif command.lower() in ("/restart", "restart"):
                 self.javaserver.restart("Server restarting, be right back!")
-            elif command.lower() == "/reload":  # "reload" (with no slash) may be used by bukkit servers
-                self.runwrapperconsolecommand("reload", [])
             elif command.lower()in ("/update-wrapper", "update-wrapper"):
-                self.checkforupdate(True)
+                self._checkforupdate(True)
             elif command.lower() == "/plugins":  # "plugins" command (with no slash) reserved for server commands
                 self.listplugins()
             elif command.lower() in ("/mem", "/memory", "mem", "memory"):
-                try:
-                    get_bytes = self.javaserver.getmemoryusage()
-                except UnsupportedOSException as e:
-                    self.log.error(e)
-                except Exception as ex:
-                    self.log.exception("Something went wrong when trying to fetch memory usage! (%s)", ex)
-                else:
-                    amount, units = format_bytes(get_bytes)
-                    self.log.info("Server Memory Usage: %s %s (%s bytes)" % (amount, units, get_bytes))
+                self._memory()
             elif command.lower() in ("/raw", "raw"):
-                try:
-                    if len(getargsafter(consoleinput[1:].split(" "), 1)) > 0:
-                        self.javaserver.console(getargsafter(consoleinput[1:].split(" "), 1))
-                    else:
-                        self.log.info("Usage: /raw [command]")
-                except InvalidServerStartedError as e:
-                    self.log.warning(e)
+                self._raw(consoleinput)
             elif command.lower() in ("/freeze", "freeze"):
-                try:
-                    self.javaserver.freeze()
-                except InvalidServerStartedError as e:
-                    self.log.warning(e)
-                except UnsupportedOSException as ex:
-                    self.log.error(ex)
-                except Exception as exc:
-                    self.log.exception("Something went wrong when trying to freeze the server! (%s)", exc)
+                self._freeze()
             elif command.lower() in ("/unfreeze", "unfreeze"):
-                try:
-                    self.javaserver.unfreeze()
-                except InvalidServerStartedError as e:
-                    self.log.warning(e)
-                except UnsupportedOSException as ex:
-                    self.log.error(ex)
-                except Exception as exc:
-                    self.log.exception("Something went wrong when trying to unfreeze the server! (%s)", exc)
+                self._unfreeze()
             elif command.lower() == "/version":
                 readout("/version", self.getbuildstring(), usereadline=self.use_readline)
-
             elif command.lower() in ("/mute", "/pause", "/cm", "/m", "/p"):
-                pausetime = 30
-                if len(allargs) > 0:
-                    pausetime = get_int(allargs[0])
-                # spur off a pause thread
-                cm = threading.Thread(target=self._pause_console, args=(pausetime,))
-                cm.daemon = True
-                cm.start()
+                self._mute_console(allargs)
 
-            # Ban commands MUST over-ride the server version in proxy mode; otherwise, the server will re-write
-            #       Its version from memory, undoing wrapper's changes to the disk file version.
+            # Commands that share the commands.py in-game interface
+            elif command.lower() == "/reload":  # "reload" (with no slash) may be used by bukkit servers
+                self.runwrapperconsolecommand("reload", [])
+
+            # proxy mode ban system
             elif self.proxymode and command == "/ban":
                 self.runwrapperconsolecommand("ban", allargs)
 
@@ -327,11 +294,7 @@ class Wrapper:
                 self.runwrapperconsolecommand("playerstats", allargs)
 
             elif command in ("/ent", "/entity", "/entities", "ent", "entity", "entities"):
-                if self.proxymode:
-                    self.runwrapperconsolecommand("ent", allargs)
-                else:
-                    readout("ERROR - ", "Entity tracking requires proxy mode. "
-                                        "(proxy mode is not on).", separator="", pad=10, usereadline=self.use_readline)
+                self.runwrapperconsolecommand("ent", allargs)
 
             elif command.lower() in ("/config", "/con", "/prop", "/property", "/properties"):
                 self.runwrapperconsolecommand("config", allargs)
@@ -485,7 +448,7 @@ class Wrapper:
                 readout("failed to load plugin", plugin, " - ", pad=25,
                         usereadline=self.use_readline)
 
-    def startproxy(self):
+    def _startproxy(self):
         self.proxy = proxy.Proxy(self)
         if proxy.requests:  # requests will be set to False if requests or any crptography is missing.
             proxythread = threading.Thread(target=self.proxy.host, args=())
@@ -498,7 +461,7 @@ class Wrapper:
 
     def sigint(*args):  # doing this allows the calling function to pass extra args without defining/using them here
         self = args[0]  # .. as we are only interested in the self component
-        self.shutdown()
+        self._shutdown()
 
     def disable_proxymode(self):
         self.proxymode = False
@@ -507,7 +470,7 @@ class Wrapper:
         self.config = self.configManager.config
         self.log.warning("\nProxy mode is now turned off in wrapper.properties.json.\n")
 
-    def shutdown(self, status=0):
+    def _shutdown(self, status=0):
         self.storage.close()
         self.permissions.close()
         self.usercache.close()
@@ -517,6 +480,7 @@ class Wrapper:
         sys.exit(status)
 
     def reboot(self):
+        # TODO unused
         self.halt = True
         os.system(" ".join(sys.argv) + "&")
 
@@ -531,15 +495,15 @@ class Wrapper:
                                                    core_buildinfo_version.__branch__,
                                                    core_buildinfo_version.__build__)
 
-    def auto_update_process(self):
+    def _auto_update_process(self):
         while not self.halt:
             time.sleep(3600)
             if self.updated:
                 self.log.info("An update for wrapper has been loaded, Please restart wrapper.")
             else:
-                self.checkforupdate()
+                self._checkforupdate()
 
-    def checkforupdate(self, update_now=False):
+    def _checkforupdate(self, update_now=False):
         """ checks for update """
         self.log.info("Checking for new builds...")
         update = self.get_wrapper_update_info()
@@ -641,96 +605,56 @@ class Wrapper:
             time.sleep(.1)
         self.javaserver.queued_lines = []
 
+    def _mute_console(self, all_args):
+        pausetime = 30
+        if len(all_args) > 0:
+            pausetime = get_int(all_args[0])
+        # spur off a pause thread
+        cm = threading.Thread(target=self._pause_console, args=(pausetime,))
+        cm.daemon = True
+        cm.start()
+
     def _halt(self):
         self.javaserver.stop("Halting server...", save=False)
         self.halt = True
         sys.exit()
 
+    def _freeze(self):
+        try:
+            self.javaserver.freeze()
+        except InvalidServerStartedError as e:
+            self.log.warning(e)
+        except UnsupportedOSException as ex:
+            self.log.error(ex)
+        except Exception as exc:
+            self.log.exception("Something went wrong when trying to freeze the server! (%s)", exc)
 
-# - due to being refrerenced by the external wrapper API that is camelCase
-# noinspection PyUnresolvedReferences,PyPep8Naming,PyBroadException
-class ConsolePlayer:
-    """
-    This class minimally represents the console as a player so that the console can use wrapper/plugin commands.
-    """
-
-    def __init__(self, wrapper):
-        self.username = "*Console*"
-        self.loggedIn = time.time()
-        self.wrapper = wrapper
-        self.permissions = wrapper.permissions
-        self.log = wrapper.log
-        self.abort = wrapper.halt
-
-        # these map minecraft color codes to "approximate" ANSI terminal color used by our color formatter.
-        self.message_number_coders = {'0': 'black',
-                                      '1': 'blue',
-                                      '2': 'green',
-                                      '3': 'cyan',
-                                      '4': 'red',
-                                      '5': 'magenta',
-                                      '6': 'yellow',
-                                      '7': 'white',
-                                      '8': 'black',
-                                      '9': 'blue',
-                                      'a': 'green',
-                                      'b': 'cyan',
-                                      'c': 'red',
-                                      'd': 'magenta',
-                                      'e': 'yellow',
-                                      'f': 'white'
-                                      }
-
-        # these do the same for color names (things like 'red', 'white', 'yellow, etc, not needing conversion...
-        self.messsage_color_coders = {'dark_blue': 'blue',
-                                      'dark_green': 'green',
-                                      'dark_aqua': 'cyan',
-                                      'dark_red': 'red',
-                                      'dark_purple': 'magenta',
-                                      'gold': 'yellow',
-                                      'gray': 'white',
-                                      'dark_gray': 'black',
-                                      'aqua': 'cyan',
-                                      'light_purple': 'magenta'
-                                      }
-
-    @staticmethod
-    def isOp():
-        return 4
-
-    def __str__(self):
-        """
-        Permit the console to have a nice display instead of returning the object instance notation.
-        """
-        return "CONSOLE OPERATOR"
-
-    def message(self, message):
-        """
-        This is a substitute for the player.message() that plugins and the command interface expect for player objects.
-        It translates chat type messages intended for a minecraft client into printed colorized console lines.
-        """
-        displaycode, displaycolor = "5", "magenta"
-        display = str(message)
-        if type(message) is dict:
-            jsondisplay = message
+    def _memory(self):
+        try:
+            get_bytes = self.javaserver.getmemoryusage()
+        except UnsupportedOSException as e:
+            self.log.error(e)
+        except Exception as ex:
+            self.log.exception("Something went wrong when trying to fetch memory usage! (%s)", ex)
         else:
-            jsondisplay = False
-        if display[0:1] == "&":  # format "&c" type color (roughly) to console formatters color
-            displaycode = display[1:1]
-            display = display[2:]
-        if displaycode in self.message_number_coders:
-            displaycolor = self.message_number_coders[displaycode]
-        if jsondisplay:  # or use json formatting, if available
-            if "text" in jsondisplay:
-                display = jsondisplay["text"]
-            if "color" in jsondisplay:
-                displaycolor = jsondisplay["color"]
-                if displaycolor in self.messsage_color_coders:
-                    displaycolor = self.messsage_color_coders[displaycolor]
-        readout(display, "", "", pad=15, command_text_fg=displaycolor, usereadline=self.wrapper.use_readline)
+            amount, units = format_bytes(get_bytes)
+            self.log.info("Server Memory Usage: %s %s (%s bytes)" % (amount, units, get_bytes))
 
-    @staticmethod
-    def hasPermission(*args):
-        """return console as always having the requested permission"""
-        if args:
-            return True
+    def _raw(self, console_input):
+        try:
+            if len(getargsafter(console_input[1:].split(" "), 1)) > 0:
+                self.javaserver.console(getargsafter(console_input[1:].split(" "), 1))
+            else:
+                self.log.info("Usage: /raw [command]")
+        except InvalidServerStartedError as e:
+            self.log.warning(e)
+
+    def _unfreeze(self):
+        try:
+            self.javaserver.unfreeze()
+        except InvalidServerStartedError as e:
+            self.log.warning(e)
+        except UnsupportedOSException as ex:
+            self.log.error(ex)
+        except Exception as exc:
+            self.log.exception("Something went wrong when trying to unfreeze the server! (%s)", exc)
