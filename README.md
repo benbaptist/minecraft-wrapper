@@ -15,6 +15,19 @@ Wrapper.py doesn't require any special modules for most of the basic features to
 You will also need "tar" installed if you need backups. Most Linux distros have this pre-installed, but you may need to install it manually on Windows: http://gnuwin32.sourceforge.net/packages/gtar.htm
 
 You only need to download Wrapper.py, the 'wrapper' folder is just the extracted version of Wrapper.py.</br>
+
+**Wrapper.py Versions**
+The original stable branch "master" is build (version 0.7.6).  This version is considered to be the working 
+standard version.  However, it is quite old at this point and the development version has far outpaced it.
+
+The current "development" branch version (0.8.x) is now at a point where it is probably a much better choice to use.
+
+- If you are running proxymode with a 1.9 or newer server, you _must_ use the development version.
+- The master version 0.7.6 may be a better choice if you require web mode and possibly IRC, as those have not been tested on development.
+- If you experience serious errors with IRC or web mode in the master branch, you should switch to development (unless you are able to create a pull request to fix the master).
+- The features/advantages of the 0.8.x version are presently too numerous to list.
+
+
 **Python Versions**
 
 *Wrapper is presently written for Python 2.7, but we are progressing towards python 3.*
