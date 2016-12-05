@@ -24,7 +24,6 @@ class MCUUID (uuid.UUID):
 class UUIDS:
     def __init__(self, wrapper):
         self.wrapper = wrapper
-        self.javaserver = wrapper.javaserver
         self.log = wrapper.log
         self.usercache = self.wrapper.usercache
 

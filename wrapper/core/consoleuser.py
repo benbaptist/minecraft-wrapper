@@ -5,6 +5,8 @@
 Collection of Virtual player classes used elsewhere.
 """
 
+import time
+
 
 # - due to being refrerenced by the external wrapper API that is camelCase
 # noinspection PyUnresolvedReferences,PyPep8Naming,PyBroadException
