@@ -1,5 +1,5 @@
 #Changelog#
-<h4>0.7.8 to 0.8.x</h4>
+<h4>0.7.8 - 0.8.x</h4>
 The scope of this update has been __enormous__.  It is a completely new refactor of the old Wrapper.
 It has been our intent to keep the original API intact, but some minor changes were made.  LOTS of _NEW_
 features, configurations, bugfixes, and new events have been added!
@@ -27,6 +27,10 @@ features, configurations, bugfixes, and new events have been added!
 - the server folder and wrapper folder can be truly divorced from one another with all server files in one
 folder and all the wrapper files in another (making the plugin-developers decision to use world-based storages
 more meaningful/consequential).
+- Wrapper auto-detects the server port (removed 'server-port' from proxy config)
+- Wrapper parses console output for pre-1.7 and spigot/bukkit/etc servers without using special config items.
+- Wrapper config files are now in 'logging.json' and 'wrapper.properties.json' (in json format, of course)
+- Speaking of which, wrapper writes all json files and storages with human-readable spacing and indents.
 
 
 **Developer Changes**
@@ -36,8 +40,12 @@ to ensure their data is saved on wrapper shutdown.
 was (mostly) maintained for plugin compatibility.
 
 **Bug Fixes**
-Old bugs were fixed, TONS of new ones were added, the code was almost broken, repaired again, the new bugs fixed.. all too
-numerous to detail!  At least a year's work of adding new bugs and fixing them!
+- Old bugs were fixed
+- TONS of new ones were added
+- The code was almost broken, repaired again, and new bugs fixed.. all too
+numerous to detail!
+- At least a year's work of adding new bugs and fixing them!
+
 
 
 <h4>0.7.7</h4>
