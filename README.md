@@ -20,7 +20,7 @@ You only need to download Wrapper.py, the 'wrapper' folder is just the extracted
 The original stable branch "master" is build (version 0.7.6).  This version is considered to be the working 
 standard version.  However, it is quite old at this point and the development version has far outpaced it.
 
-The current "development" branch version (0.8.x) is now at a point where it is probably a much better choice to use.
+The current "development" branch version (0.9.x) is now at a point where it is probably a much better choice to use.
 
 - If you are running proxymode with a 1.9 or newer server, you _must_ use the development version.
 - The master version 0.7.6 may be a better choice if you require web mode and possibly IRC, as those have not been tested on development.
@@ -42,7 +42,7 @@ if you have wget installed, You can run the following command to download the st
 
 `wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master/Wrapper.py`
 
-or the following to download the development version (0.8.x) of Wrapper.py:
+or the following to download the development version (0.9.x) of Wrapper.py:
 
 `wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/Wrapper.py`
 
