@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import print_function
+
+# system imports
 import uuid
 import hashlib
 import time

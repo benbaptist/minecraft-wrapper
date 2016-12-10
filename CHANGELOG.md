@@ -1,5 +1,5 @@
 #Changelog#
-<h4>0.7.8 - 0.9.0</h4>
+<h4>0.7.8 - 0.9.1</h4>
 The scope of this update has been __enormous__.  It is a completely new refactor of the old Wrapper.
 It has been our intent to keep the original API intact, but some minor changes were made.  LOTS of _NEW_
 features, configurations, bugfixes, and new events have been added!
