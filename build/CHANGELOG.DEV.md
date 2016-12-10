@@ -1,3 +1,6 @@
+Build 159
+- Bugfix: - core.wrapper - renamed _shutdown() back to shutdown()
+
 Build 158 Version [0.9.1]
 refactor core.plugins module:
 - Move some setup code to the init where it belongs.

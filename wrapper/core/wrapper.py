@@ -461,7 +461,7 @@ class Wrapper:
 
     def sigint(*args):  # doing this allows the calling function to pass extra args without defining/using them here
         self = args[0]  # .. as we are only interested in the self component
-        self._shutdown()
+        self.shutdown()
 
     def disable_proxymode(self):
         self.proxymode = False
@@ -470,7 +470,7 @@ class Wrapper:
         self.config = self.configManager.config
         self.log.warning("\nProxy mode is now turned off in wrapper.properties.json.\n")
 
-    def _shutdown(self, status=0):
+    def shutdown(self, status=0):
         self.storage.close()
         self.permissions.close()
         self.usercache.close()
