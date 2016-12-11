@@ -1,6 +1,7 @@
 Build 160 Version [0.9.2]
 - More wrapper imports improvements to dependency import process
-- Including more documentation in example-plugins/template.py and example.py
+- Including more plugin documentation in example-plugins/example.py.
+- Strip down example-plugins/template.py to the bare minimums for a plugin shell.
 - Strip old 'Global' plugin dependency back out of teleport.py
 - Wrapper now requires requests.  It is no longer optional based on usages (proxy-mode, etc).
 
