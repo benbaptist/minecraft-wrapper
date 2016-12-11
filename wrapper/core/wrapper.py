@@ -108,13 +108,10 @@ class Wrapper:
         if not readline and self.use_readline:
             self.log.warning("'readline' not imported.  This is needed for proper console functioning")
 
+        # requests is just being used in too many places to try and track its usages piece-meal.
         if not requests:
-            if self.auto_update_wrapper:
-                self.log.error("You must have the requests module installed to enable auto-updates for wrapper!")
-                return
-            if self.proxymode:
-                self.log.error("You must have the requests module installed to run in proxy mode!")
-                return
+            self.log.error("You must have the requests module installed to use wrapper!")
+            self.shutdown(server_running=False)
 
     def __del__(self):
         if self.storage:  # prevent error message on very first wrapper starts when wrapper exits after creating
@@ -137,6 +134,7 @@ class Wrapper:
         self.javaserver = MCServer(self)
         self.javaserver.init()
 
+        # load plugins
         self.plugins.loadplugins()
 
         if self.config["IRC"]["irc-enabled"]:  # this should be a plugin
@@ -461,7 +459,7 @@ class Wrapper:
 
     def sigint(*args):  # doing this allows the calling function to pass extra args without defining/using them here
         self = args[0]  # .. as we are only interested in the self component
-        self._shutdown()
+        self.shutdown()
 
     def disable_proxymode(self):
         self.proxymode = False
@@ -470,12 +468,13 @@ class Wrapper:
         self.config = self.configManager.config
         self.log.warning("\nProxy mode is now turned off in wrapper.properties.json.\n")
 
-    def _shutdown(self, status=0):
+    def shutdown(self, status=0, server_running=True):
         self.storage.close()
         self.permissions.close()
         self.usercache.close()
         self.halt = True
-        self.javaserver.stop(reason="Wrapper.py Shutting Down", save=False)
+        if server_running:
+            self.javaserver.stop(reason="Wrapper.py Shutting Down", save=False)
         time.sleep(1)
         sys.exit(status)
 

@@ -14,75 +14,40 @@ VERSION = (0, 2, 1)
 TIMEOUT = 120
 
 
+# noinspection PyPep8Naming,PyUnusedLocal
 class Main:
     def __init__(self, api, log):
         self.api = api
         self.minecraft = api.minecraft
         self.log = log
-        # change these if desired
-        self.usePermissions = False  # Perms - 'teleport.tpahere', 'teleport.tpa', or 'teleport.denied'
-        self.useVanillaBehavior = False  # mask TPA plugin.  Hide help group and give generic "unknown command" message.
-
-        # Don't change this - automatically detects Global plugin
-        self.hasDependencyGlobal = True
-        """ if SurestTexas00 global plugin available, gets it for use in Teleports.  The global plugin simply tracks
-        and stores the users location prior to teleport.  This is for use in commands by other plugins, like "/back",
-        which need to know where the user was before the teleport. """
-        try:
-            self.globalset = api.getPluginContext("com.suresttexas00.plugins.global")
-        except:
-            self.hasDependencyGlobal = False
+        self.data = {}
 
     def onEnable(self):
-        self.data = {}
-        if self.hasDependencyGlobal is True:
-            if "teleport_useVanillaBehavior" in self.globalset.config:
-                if self.globalset.config["teleport_useVanillaBehavior"] == "true":
-                    self.useVanillaBehavior = True
-            if "teleport_usePermissions" in self.globalset.config:
-                if self.globalset.config["teleport_usePermissions"] == "true":
-                    self.usePermissions = True
+        self.api.registerHelp("Teleport", "Commands from the Teleport plugin", [
+            ("/tpa", "Request to teleport to the specified player.", "teleport"),
+            ("/tpahere", "Request that the specified player teleport to you.", "teleport"),
+            ("/tpaccept", "Accept a teleport request.", None),
+            ("/tpdeny", "Reject a teleport request.", None),
+        ])
 
-        if self.useVanillaBehavior is False:
-            if self.usePermissions is True:
-                self.api.registerHelp("Teleport", "Commands from the Teleport plugin", [
-                    ("/tpa", "Request to teleport to the specified player.", "teleport.tpa"),
-                    ("/tpahere", "Request that the specified player teleport to you.", "teleport.tpahere"),
-                    ("/tpaccept", "Accept a teleport request.", None),
-                    ("/tpdeny", "Reject a teleport request.", None),
-                ])
-            else:
-                self.api.registerHelp("Teleport", "Commands from the Teleport plugin", [
-                    ("/tpa", "Request to teleport to the specified player.", None),
-                    ("/tpahere", "Request that the specified player teleport to you.", None),
-                    ("/tpaccept", "Accept a teleport request.", None),
-                    ("/tpdeny", "Reject a teleport request.", None),
-                ])
+        self.api.registerCommand("tpa", self.tpa, "teleport")
+        self.api.registerCommand("tpahere", self.tpahere, "teleport")
+        self.api.registerCommand("tpaccept", self.tpaccept)
+        self.api.registerCommand("tpdeny", self.tpdeny)
 
-        if (self.usePermissions is True) and (self.useVanillaBehavior is False):
-            self.api.registerCommand("tpa", self.tpa, "teleport.tpa")
-            self.api.registerCommand("tpahere", self.tpahere, "teleport.tpahere")
-        else:
-            self.api.registerCommand("tpa", self.tpa, None)
-            self.api.registerCommand("tpahere", self.tpahere, None)
+        # self.api.registerPermission("teleport", True)  # uncomment this line to give all players permission
 
-        # tpaccept/deny don't have permissions
-        self.api.registerCommand("tpaccept", self.tpaccept, None)
-        self.api.registerCommand("tpdeny", self.tpdeny, None)
+        # assigning a player permission "teleport.denied" will prevent them from using the plugin
 
     def onDisable(self):
         pass
 
     def tpa(self, player, args):
         """ Request teleport to another player position """
-        if self._permitted(player, "teleport.tpa") is False:
-            return
         self._doTeleportRequest(player, "tpa", args)
 
     def tpahere(self, player, args):
         """ Request another player to teleport to your position """
-        if self._permitted(player, "teleport.tpahere") is False:
-            return
         self._doTeleportRequest(player, "tpahere", args)
 
     def tpaccept(self, player, args):
@@ -99,8 +64,6 @@ class Main:
                 where = otherPlayer
             who.message({"text": "Teleporting to %s." % where.username, "color": "yellow"})
             pos = where.getPosition()
-            if self.hasDependencyGlobal is True:
-                self.globalset.backlocation(who)
             self.minecraft.console("tp %s %d %d %d" % (who.username, pos[0], pos[1], pos[2]))
         if player.username in self.data:
             del self.data[player.username]
@@ -122,6 +85,7 @@ class Main:
         if not player.getDimension() == 0:
             player.message({"text": "Sorry, but you can't do this from the Nether or End.", "color": "red"})
             return
+        # noinspection PyBroadException
         try:
             otherPlayer = self.minecraft.getPlayer(args[0])
         except:
@@ -161,8 +125,6 @@ class Main:
     def _doTestTeleportReply(self, player):
         """ Essential tests before teleport reply """
         if player.username not in self.data:
-            if self._permitted(player, "teleport.tpahere") is False:
-                return None
             player.message({"text": "Error: You do not have a pending request", "color": "red"})
             return None
         if not player.getDimension() == 0:
@@ -171,6 +133,7 @@ class Main:
         if self.data[player.username]['time'] < (time.time() - TIMEOUT):
             player.message({"text": "Error: Teleport request has timed out.", "color": "red"})
             return None
+        # noinspection PyBroadException
         try:
             otherPlayer = self.minecraft.getPlayer(self.data[player.username]['requester'])
         except:
@@ -184,13 +147,3 @@ class Main:
                 {"text": "Sorry, but %s is not in this world any more." % otherPlayer.username, "color": "red"})
             return None
         return otherPlayer
-
-    def _permitted(self, player, permission):
-        """check for player permission to run a command.  This routine returns false
-        if the player has no permission and prints a vanilla 'unknown command' message
-        versus the wrapper's 'permission denied' type message
-        Usage: if self._permitted(player, 'somepermissions.permission') is False: return """
-        if (self.usePermissions is True) and player.hasPermission(permission) is False:
-            player.message("&cUnknown Command. Try /help for a list of commands")
-            return False
-        return True
