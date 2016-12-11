@@ -8,9 +8,9 @@ import time
 import core.exceptions as exceptions
 
 from api.minecraft import Minecraft
-from api.backups import Backups
+from api.util import Utils
 from core.storage import Storage
-import utils.helpers as helpercode
+from api.backups import Backups
 
 """ api.py contains the majority of code for the plugin API. """
 
@@ -79,8 +79,9 @@ class API:
         self.name = name
         self.minecraft = Minecraft(wrapper)
         self.backups = Backups(wrapper)
-        self.javaserver = wrapper.javaserver
+        self.utils = Utils()
         self.config = wrapper.config
+        self.entity = False
         self.serverpath = self.config["General"]["server-directory"]
         self.internal = internal
         if someid is None:
@@ -189,17 +190,3 @@ class API:
                                       (self.serverpath, self.minecraft.getWorldName(), self.id))
         else:
             return Storage(name, root="wrapper-data/plugins/%s" % self.id)
-
-    def getHelpers(self, attribute, yourname="callingPlugin"):
-        """returns a function from the utils.helper.py code base
-
-        yourname is an optional argument for a better error message if case something goes wrong.
-
-        """
-        function = helpercode.secondstohuman(0)
-        try:
-            exec("function = helpercode.%s" % attribute)
-            return function
-        except AttributeError:
-            self.log.error("%s failed to get attribute in helpers.py: %s", yourname, attribute)
-            return False

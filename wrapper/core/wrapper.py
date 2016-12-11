@@ -37,6 +37,7 @@ from core.scripts import Scripts
 import core.buildinfo as core_buildinfo_version
 from core.mcuuid import UUIDS
 from core.config import Config
+from core.backups import Backups
 from core.consoleuser import ConsolePlayer
 from core.exceptions import UnsupportedOSException, InvalidServerStartedError
 
@@ -100,6 +101,7 @@ class Wrapper:
         self.scripts = None
         self.web = None
         self.proxy = None
+        self.backups = None
         self.halt = False
         self.updated = False
         self.xplayer = ConsolePlayer(self)  # future plan to expose this to api
@@ -126,6 +128,8 @@ class Wrapper:
 
         signal.signal(signal.SIGINT, self.sigint)
         signal.signal(signal.SIGTERM, self.sigint)
+
+        self.backups = Backups(self)
 
         self.api = API(self, "Wrapper.py")
         self._registerwrappershelp()
@@ -414,6 +418,7 @@ class Wrapper:
         self.commands.playercommand(xpayload)
 
     def isonlinemode(self):
+        # TODO this needs to just return wrapper's online mode
         """
         :returns: Whether the server OR (for proxy mode) wrapper is in online mode.
         This should normally 'always' render True, unless you want hackers coming on :(

@@ -14,12 +14,13 @@ from utils.helpers import scrub_item_value
 # noinspection PyPep8Naming
 # noinspection PyBroadException
 class Minecraft:
-    """ This class contains functions related to in-game features directly. These methods are
-    located at self.api.minecraft. """
+    """
+    This class contains functions related to in-game features directly. These methods are
+    accessed using 'self.api.minecraft'
+    """
 
     def __init__(self, wrapper):
         self.wrapper = wrapper
-        self.proxy = wrapper.proxy
         self.log = wrapper.log
         self._encoding = wrapper.config["General"]["encoding"]
         self.serverpath = wrapper.config["General"]["server-directory"]
@@ -174,6 +175,27 @@ class Minecraft:
 
         """
         return self.getServer().players
+
+    def getEntityControl(self):
+        """
+        Returns the server's entity controls context.  Will be None if the server is not up.
+        Supported varaibles and methods:
+
+        These variables affect entity processing:
+        self.entityControl from config["Entities"]["enable-entity-controls"]
+        self.entityProcessorFrequency from config["Entities"]["entity-update-frequency"]
+        self.thiningFrequency from config["Entities"]["thinning-frequency"]
+        self.serverStartThinningThreshshold from config["Entities"]["thinning-activation-threshhold"]
+
+        def killEntityByEID(self, eid, dropitems=False, count=1)
+        def existsEntityByEID(self, eid)
+        def getEntityInfo(self, eid)
+        def countEntitiesInPlayer(self, playername)
+        def countActiveEntities(self)
+        def getEntityByEID(self, eid)
+
+        """
+        return self.wrapper.javaserver.entity_control
 
     def getPlayer(self, username=""):
         """
@@ -409,15 +431,21 @@ class Minecraft:
     def getServer(self):
         """
 
-        Returns: Returns the server context.
+        Returns: Returns the server context.  Use at own risk - items in server are private.
 
         """
         return self.wrapper.javaserver
 
+    def getServerPath(self):
+        """
+        Returns: Returns the server's path.
+        """
+        return self.wrapper.javaserver.serverpath
+
     def getWorld(self):
         """
 
-        Returns: Returns the world context.
+        Returns: Returns the world context of 'api.world, class World' for the running server instance
 
         """
         return self.getServer().world
@@ -430,7 +458,7 @@ class Minecraft:
         """
         return self.getServer().worldname
 
-    # Ban related items - These simply wrap the proxy base methods
+    # Ban related items - These wrap the proxy base methods
     def banUUID(self, playeruuid, reason="by wrapper api.", source="minecraft.api", expires=False):
         """
         Ban a player using the wrapper proxy system.

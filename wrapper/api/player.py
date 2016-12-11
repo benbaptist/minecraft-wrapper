@@ -40,6 +40,8 @@ _NULL = 100
 # noinspection PyPep8Naming
 class Player:
     """
+    This class is accessed either as a passed argument, or can be called using getPlayer(username).
+
     Player objects contains methods and data of a currently logged-in player. This object is destroyed
     upon logging off.
     """
