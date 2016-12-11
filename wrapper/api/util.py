@@ -13,6 +13,8 @@ from utils.helpers import putjsonfile
 
 class Utils:
     """
+    These methods are accessed using 'self.api.utils'
+
     Class that wraps some utils.helpers functions for the plugin API user.
     ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 

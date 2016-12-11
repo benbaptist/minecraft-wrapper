@@ -431,7 +431,7 @@ class Minecraft:
     def getServer(self):
         """
 
-        Returns: Returns the server context.  Use at own risk items in server are private.
+        Returns: Returns the server context.  Use at own risk - items in server are private.
 
         """
         return self.wrapper.javaserver
@@ -445,7 +445,7 @@ class Minecraft:
     def getWorld(self):
         """
 
-        Returns: Returns the world context of api.world class World for the running server instance
+        Returns: Returns the world context of 'api.world, class World' for the running server instance
 
         """
         return self.getServer().world

@@ -20,9 +20,13 @@ the API.  The only other alternative would be to create excessive wrappers betwe
 
 # noinspection PyPep8Naming
 class Backups:
-    """ This class wraps the wrapper.backups functions.  Wrapper starts starts core.backups.py
+    """
+    These methods are accessed using 'self.api.backups'
+
+     This class wraps the wrapper.backups functions.  Wrapper starts starts core.backups.py
      class Backups (as .backups).  This API class manipulates the backups instance within
-     core.wrapper"""
+     core.wrapper
+    """
 
     def __init__(self, wrapper):
         self.wrapper = wrapper

@@ -7,6 +7,7 @@ import json
 # noinspection PyPep8Naming
 class World:
     """
+    This class is accessed via getWorld().  Requires a running server.
 
     World is established by console when wrapper reads "preparing ...."
 
