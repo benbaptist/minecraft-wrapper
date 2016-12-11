@@ -52,7 +52,6 @@ class Main:
     def __init__(self, api, log):
         self.api = api
         self.log = log
-        self.data = api.getStorage  # placeholder for readability - This will be assigned to a storage object
 
         # the following getPluginContext is safe to run here because the Main class for any dependency will
         # be instantiated before this Main is, providing you have listed the plugin as a 'DEPENDENCIES'

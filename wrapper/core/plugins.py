@@ -58,11 +58,11 @@ class Plugins:
         dependencies = getattr(plugin, 'DEPENDENCIES', [])
 
         if pid in self.wrapper.storage["disabled_plugins"] or disabled:
-            self.log.debug("Plugin '%s' disabled - not loading" % name)
+            self.log.debug("Plugin '%s' disabled - not loading", name)
             return True
 
         if pid in self.plugins:  # Once successfully loaded, further attempts to load the plugin are ignored
-            self.log.debug("Plugin '%s' is already loaded (probably as a dependency) - not reloading" % name)
+            self.log.debug("Plugin '%s' is already loaded (probably as a dependency) - not reloading", name)
             return True
 
         # check for unloaded dependencies and develop a list of required dependencies.
@@ -80,18 +80,18 @@ class Plugins:
                         dep_loads.append(dep_name)
                 else:
                     good_deps = False
-                    self.log.warn("Plugin '%s'.py is missing a dependency: '%s.py'" % (name, dep_name))
+                    self.log.warn("Plugin '%s'.py is missing a dependency: '%s.py'", name, dep_name)
         if not good_deps:
-            self.log.warn("Plugin '%s'.py failed to load because of missing dependencies." % name)
+            self.log.warn("Plugin '%s'.py failed to load because of missing dependencies.", name)
             return False
 
         # load the required dependencies first.
         for dependency in dep_loads:
             if self.loadplugin(dependency, available_files):
-                self.log.debug("Dependency '%s' loaded." % dependency)
+                self.log.debug("Dependency '%s' loaded.", dependency)
                 self.plugins_loaded.append(name)
             else:
-                self.log.warn("Dependency '%s' could not be loaded." % dependency)
+                self.log.warn("Dependency '%s' could not be loaded.", dependency)
                 self.log.warn("Plugin '%s'.py failed to load because of missing dependency '%s'.", name, dependency)
                 self.plugins_loaded.append(name)
                 return False
@@ -129,11 +129,11 @@ class Plugins:
     def unloadplugin(self, plugin):
         try:
             self.plugins[plugin]["main"].onDisable()
-            self.log.debug("Plugin %s disabled with no errors." % plugin)
+            self.log.debug("Plugin %s disabled with no errors.", plugin)
         except AttributeError:
-            self.log.debug("Plugin %s disabled (has no onDisable() event)." % plugin)
+            self.log.debug("Plugin %s disabled (has no onDisable() event).", plugin)
         except Exception as e:
-            self.log.exception("Error while disabling plugin '%s': \n%s", (plugin, e))
+            self.log.exception("Error while disabling plugin '%s': \n%s", plugin, e)
         finally:
             del self.wrapper.commands[plugin]
             del self.wrapper.events[plugin]
