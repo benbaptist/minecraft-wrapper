@@ -703,7 +703,7 @@ class MCServer:
             name = self.stripspecial(getargs(line_words, 0))
             self.wrapper.events.callevent("player.death", {
                 "player": self.getplayer(name),
-                "death": getargsafter(line_words, 4)
+                "death": getargsafter(line_words, 1)
             })
 
         # server lagged

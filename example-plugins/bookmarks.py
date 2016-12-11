@@ -17,8 +17,6 @@ class Main:
         self.data = self.api.getStorage("bookmarks", True)
 
     def onEnable(self):
-        self.data = self.api.getStorage("bookmarks", True)
-
         self.api.registerHelp("Bookmarks", "Commands from the Bookmarks plugin", [
             ("/bmset <name>", "Save current position as bookmark", "bookmarks"),
             ("/bmgo <name>", "Teleports you to your bookmark", "bookmarks"),

@@ -20,7 +20,10 @@ DESCRIPTION = SUMMARY + "\n\nThe name comes from the old Bukkit plugin, BigBroth
 # only loggs block placements; lava and water "placement" generate console errors (logger does not check action type)
 # Toggle mode is the only working mode.. and it only works for left-clicking (dig action)
 # Does not seem to
-
+#
+# Plugin also uses absolute server paths and not the wrapper/server directory splits, so wrapper and server must
+#  be in the same folder for this plugin
+#
 
 class Main:
     def __init__(self, api, log):
