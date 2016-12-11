@@ -1,15 +1,29 @@
-NAME = "Example Plugin"  # the visible name of the plugin, seen in /plugins and whatnot
+# -*- coding: utf-8 -*-
+
+# Any missing item will use it's DEFAULT, which is "", unless otherwise noted
+
+# the visible name of the plugin, seen in /plugins and whatnot
+NAME = "Example Plugin"  # DEFAULT = the filename (without the '.py' extension)
 AUTHOR = "Ben Baptist"  # the creator/developer of the plugin
-ID = "com.benbaptist.plugins.example"  # the ID of the plugin, used for identifying the plugin for storage objects and more
-VERSION = (1, 1) # the version number, with commas in place of periods. add more commas if needed
-SUMMARY = "This plugin helps demonstrate functions in Wrapper.py. :D"  # a quick, short summary of the plugin seen in /plugins
-WEBSITE = "http://wrapper.benbaptist.com/" # the developer or plugin's website
+WEBSITE = "http://wrapper.benbaptist.com/"  # the developer or plugin's website
+
+# the ID of the plugin, used for identifying the plugin for storage objects and more
+ID = "com.benbaptist.plugins.example"  # DEFAULT = the filename with out '.py' extention (in this case, 'example')
+
+# the version number, with commas in place of periods.
+VERSION = (1, 1)  # DEFAULT (0, 1)
+
+# a short summary of the plugin seen in /plugins
+SUMMARY = "This plugin helps demonstrate functions in Wrapper.py. :D"
 DESCRIPTION = """The longer description of how this plugin helps demonstrate functions in Wrapper.py. :D"""
 
 # The following are optional and affect the plugin import process (for versions after builds circa 107-110).
 # Either do not include them or set them to = False if not used:
-DISABLED = False  # disables this plugin (for instance, if this *.py file is really only a module for another file/plugin)
-DEPENDENCIES = False  # even if there is only 1 dependency, it must be a 'list' type (enclosed in '[]').
+
+# disables plugin (for instance, if this *.py file is really only a module for another file/plugin)
+DISABLED = False
+# even if there is only 1 dependency, it must be a 'list' type (enclosed in '[]').
+DEPENDENCIES = False
 
 
 class Main:

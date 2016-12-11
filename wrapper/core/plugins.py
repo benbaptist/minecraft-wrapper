@@ -44,8 +44,11 @@ class Plugins:
             yield i
 
     def loadplugin(self, name, available_files):
+        if name in self.plugins_loaded:
+            # Don't try to load a previously errored ( attempted to load..) plugin
+            return False
         self.log.debug("Reading plugin file %s.py ...", name)
-        # hack to remove previously loaded modules
+        # hack to remove previously loaded modules during reloads
         if name in sys.modules:
             del sys.modules[name]
 
@@ -55,12 +58,12 @@ class Plugins:
         dependencies = getattr(plugin, 'DEPENDENCIES', [])
 
         if pid in self.wrapper.storage["disabled_plugins"] or disabled:
-            self.log.debug("Plugin '%s' disabled - not loading", name)
-            return
+            self.log.debug("Plugin '%s' disabled - not loading" % name)
+            return True
 
         if pid in self.plugins:  # Once successfully loaded, further attempts to load the plugin are ignored
-            self.log.debug("Plugin '%s' is already loaded (probably as a dependency) - not reloading", name)
-            return
+            self.log.debug("Plugin '%s' is already loaded (probably as a dependency) - not reloading" % name)
+            return True
 
         # check for unloaded dependencies and develop a list of required dependencies.
         good_deps = True
@@ -79,15 +82,32 @@ class Plugins:
                     good_deps = False
                     self.log.warn("Plugin '%s'.py is missing a dependency: '%s.py'" % (name, dep_name))
         if not good_deps:
-            self.log.warn("Plugin '%s'.py failed to load because of missing dependencies.", name)
-            return
+            self.log.warn("Plugin '%s'.py failed to load because of missing dependencies." % name)
+            return False
 
         # load the required dependencies first.
         for dependency in dep_loads:
-            self.loadplugin(dependency, available_files)
+            if self.loadplugin(dependency, available_files):
+                self.log.debug("Dependency '%s' loaded." % dependency)
+                self.plugins_loaded.append(name)
+            else:
+                self.log.warn("Dependency '%s' could not be loaded." % dependency)
+                self.log.warn("Plugin '%s'.py failed to load because of missing dependency '%s'.", name, dependency)
+                self.plugins_loaded.append(name)
+                return False
 
         # Finally, initialize this plugin
         self.log.debug("Loading plugin %s...", name)
+        if not getattr(plugin, 'Main', False):
+            self.log.warn("Plugin '%s' is malformed and missing a class 'Main'", name)
+            self.plugins_loaded.append(name)
+            return False
+        has_onenable = getattr(getattr(plugin, 'Main', False), 'onEnable', False)
+        if not has_onenable:
+            self.log.warn("Plugin '%s' is missing an 'onEnable' method.", name)
+            self.plugins_loaded.append(name)
+            return False
+
         main = plugin.Main(API(self.wrapper, name, pid), logging.getLogger(name))
         self.plugins[pid] = {"main": main, "good": True, "module": plugin}  # "events": {}, "commands": {}}
         self.plugins[pid]["name"] = getattr(plugin, "NAME", name)
@@ -104,6 +124,7 @@ class Plugins:
         main.onEnable()
         self.log.info("Plugin %s loaded...", name)
         self.plugins_loaded.append(name)
+        return True
 
     def unloadplugin(self, plugin):
         try:
@@ -133,10 +154,6 @@ class Plugins:
         for names in py_files:
             self.loadplugin(names, py_files)
 
-            # except Exception as e:
-            #    self.log.exception("Failed to import plugin '%s' (%s)", i, e)
-            #    self.plugins[i] = {"name": i, "good": False}
-
     def disableplugins(self):
         self.log.info("Disabling plugins...")
         for i in self.plugins:
@@ -145,6 +162,7 @@ class Plugins:
         self.log.info("Disabling plugins...Done!")
 
     def reloadplugins(self):
+        self.plugins_loaded = []
         self.disableplugins()
         self.loadplugins()
         self.log.info("Plugins reloaded")

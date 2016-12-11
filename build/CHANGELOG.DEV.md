@@ -1,3 +1,9 @@
+Build 160 Version [0.9.2]
+- More wrapper imports improvements to dependency import process
+- Including more documentation in example-plugins/template.py and example.py
+- Strip old 'Global' plugin dependency back out of teleport.py
+- Wrapper now requires requests.  It is no longer optional based on usages (proxy-mode, etc).
+
 Build 159
 - Bugfix: - core.wrapper - renamed _shutdown() back to shutdown()
 

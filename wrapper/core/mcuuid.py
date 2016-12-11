@@ -6,7 +6,6 @@ from __future__ import print_function
 import uuid
 import hashlib
 import time
-import requests
 
 
 class MCUUID (uuid.UUID):
@@ -86,7 +85,7 @@ class UUIDS:
 
         # try mojang  (a new player or player changed names.)
         # requests seems to =have a builtin json() method
-        r = requests.get("https://api.mojang.com/users/profiles/minecraft/%s" % user_name)
+        r = self.wrapper.requests.get("https://api.mojang.com/users/profiles/minecraft/%s" % user_name)
         if r.status_code == 200:
             useruuid = self.formatuuid(r.json()["id"])  # returns a string uuid with dashes
             correctcapname = r.json()["name"]
@@ -189,13 +188,13 @@ class UUIDS:
                 - otherwise, a list of names...
         """
 
-        r = requests.get("https://api.mojang.com/user/profiles/%s/names" % user_uuid.replace("-", ""))
+        r = self.wrapper.requests.get("https://api.mojang.com/user/profiles/%s/names" % user_uuid.replace("-", ""))
         if r.status_code == 200:
             return r.json()
         if r.status_code == 204:
             return False
         else:
-            rx = requests.get("https://status.mojang.com/check")
+            rx = self.wrapper.requests.get("https://status.mojang.com/check")
             if rx.status_code == 200:
                 rx = rx.json()
                 for entry in rx:
