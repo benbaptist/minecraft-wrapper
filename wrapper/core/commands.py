@@ -494,7 +494,7 @@ class Commands:
                 player.message("&6----- Top 10 Players' Playtime -----")
                 for i, p in enumerate(topplayers):
                     result = secondstohuman(p[0])
-                    player.message("&7%d. &e%s: &6%s" % (i + 1, p[1], result))
+                    player.message("&7%d. &e%s:&6 %s" % (i + 1, p[1], result))
                     if i == 9:
                         break
             return
