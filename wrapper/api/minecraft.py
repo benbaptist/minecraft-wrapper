@@ -135,21 +135,22 @@ class Minecraft:
         players ever connected to the server.
 
         """
+        alluuidfiles = os.listdir("wrapper-data/players")
         if self.wrapper.isonlinemode():
             online = True
         else:
             online = False
         players = {}
-        for uuid_file_found in os.listdir("wrapper-data/players"):
+        for uuid_file_found in alluuidfiles:
             player_uuid = uuid_file_found.rsplit(".", 1)[0]
 
             username = self.wrapper.uuids.getusernamebyuuid(player_uuid)
-            if type(username) != str:
+            if username in (False, None):
                 player_uuid = "None"
 
             # remove any old bad 'None' and 'False' files.
             if player_uuid in ("None", "False"):
-                os.remove("wrapper-data/players/" + uuid_file_found)
+                os.remove("wrapper-data/players/%s" % uuid_file_found)
                 continue
 
             # if the server is in online mode and the player's offline and regular uuid are the same...
@@ -157,7 +158,7 @@ class Minecraft:
                 if player_uuid == self.wrapper.uuids.getuuidfromname(username):
                     continue
 
-            with open("wrapper-data/players/" + uuid_file_found) as f:
+            with open("wrapper-data/players/%s" % uuid_file_found) as f:
                 data = f.read()
             try:
                 players[player_uuid] = json.loads(data, self._encoding)

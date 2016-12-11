@@ -470,13 +470,13 @@ class Commands:
         if player.isOp():
             totalplaytime = {}
             players = self.wrapper.api.minecraft.getAllPlayers()
-            for uu in players:
-                if "logins" not in players[uu]:
+            for each_uuid in players:
+                if "logins" not in players[each_uuid]:
                     continue
-                playername = self.wrapper.uuids.getusernamebyuuid(uu)
+                playername = self.wrapper.uuids.getusernamebyuuid(each_uuid)
                 totalplaytime[playername] = [0, 0]
-                for i in players[uu]["logins"]:
-                    totalplaytime[playername][0] += players[uu]["logins"][i] - int(i)
+                for i in players[each_uuid]["logins"]:
+                    totalplaytime[playername][0] += players[each_uuid]["logins"][i] - int(i)
                     totalplaytime[playername][1] += 1
 
             if subcommand == "all":
@@ -484,7 +484,7 @@ class Commands:
                 for name in totalplaytime:
                     seconds = totalplaytime[name][0]
                     result = secondstohuman(seconds)
-                    player.message("&e%s: &6%s (%d logins)" % (name, result, totalplaytime[name][1]))  # 86400.0
+                    player.message("&e%s:&6 %s (%d logins)" % (name, result, totalplaytime[name][1]))  # 86400.0
             else:
                 topplayers = []
                 for username in totalplaytime:
