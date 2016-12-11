@@ -19,10 +19,10 @@ features, configurations, bugfixes, and new events have been added!
 - Proxy mode bans system functional (that operate from Mojang uuid service) in API.Minecraft.
 - Tons of new API.minecraft methods, like "getGameRules()", which returns a dictionary of the server gamerules.
 - More reliable permissions code in API.player.
-- More fun stuff in API.player, like "setPlayerAbilities", "sendBlock", "getBedPostion" methods, and better hand/items tracking.
+- More fun stuff in API.player, like "setPlayerAbilities", "sendBlock", "getBedPostion" methods, and better hand/window items tracking.
 - Tons of performance updates to make wrapper cycle the disks less and decrease memory leaks.
 - Class API.Backups added to allow plugins to control backups.
-- Improved (hopefully) event processing to allow multiple plugins to rationally use the same event.
+- Improved (hopefully) event processing to allow multiple plugins to rationally use the same events.
 - Fixed the pesky UUID None/False issues experienced by proxy mode.
 - the server folder and wrapper folder can be truly divorced from one another with all server files in one
 folder and all the wrapper files in another (making the plugin-developers decision to use world-based storages
@@ -38,6 +38,9 @@ more meaningful/consequential).
 to ensure their data is saved on wrapper shutdown.
 - If you wrote or edited wrapper code before, forget everything you learned.  It's that different.  Only the API
 was (mostly) maintained for plugin compatibility.
+- If your plugins accessed server or wrapper methods (maybe even via api.minecraft.getServer!), those methods are
+certainly broken.  If you were using self.wrapper.someWrapperFunction, it is likely broken.  Look over the API and see
+if a method was added to do what you want.  If not, please submit an issue or PR for that feature :)
 
 **Bug Fixes**
 - Old bugs were fixed

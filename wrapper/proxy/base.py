@@ -4,23 +4,19 @@ import socket
 import threading
 import time
 import json
+import requests
 
 from utils.helpers import getjsonfile, putjsonfile, find_in_json, epoch_to_timestr, read_timestr, isipv4address
-
-
-try:
-    import requests
-except ImportError:
-    requests = False
 
 try:
     import utils.encryption as encryption
 except ImportError:
     encryption = False
 
-if requests and encryption:
+if encryption:
     from proxy.clientconnection import Client
     from proxy.packet import Packet
+
 else:
     Client = False
     Packet = False
@@ -47,11 +43,9 @@ class Proxy:
         self.privateKey = encryption.generate_key_pair()
         self.publicKey = encryption.encode_public_key(self.privateKey)
 
+        # requests is required wrapper-wide now, so no checks here for that...
         if not encryption and self.wrapper.proxymode:
             raise Exception("You must have the pycryto installed to run in proxy mode!")
-
-        if not requests and self.wrapper.proxymode:
-            raise Exception("You must have the requests module installed to run in proxy mode!")
 
     def host(self):
         # get the protocol version from the server
@@ -145,8 +139,8 @@ class Proxy:
             if client.serveruuid.string == str(uuid):
                 self.uuidTranslate[uuid] = client.uuid.string
                 return client
-        self.log.debug("getclientbyofflineserveruuid failed: \n %s" % attempts)
-        self.log.debug("POSSIBLE CLIENTS: \n %s" % self.clients)
+        self.log.debug("getclientbyofflineserveruuid failed: \n %s", attempts)
+        self.log.debug("POSSIBLE CLIENTS: \n %s", self.clients)
         return False  # no client
 
     def banplayer(self, playername, reason="Banned by an operator", source="Wrapper", expires="forever"):
@@ -364,7 +358,7 @@ class Proxy:
                 if read_timestr(banrecord["expires"]) < int(time.time()):  # if ban has expired
                     pardoning = self.pardonuuid(str(uuid))
                     if pardoning[:8] == "pardoned":
-                        self.log.info("UUID: %s was pardoned (expired ban)" % str(uuid))
+                        self.log.info("UUID: %s was pardoned (expired ban)", str(uuid))
                         return False  # player is "NOT" banned (anymore)
                     else:
                         self.log.warning("isuuidbanned attempted a pardon of uuid: %s (expired ban), "

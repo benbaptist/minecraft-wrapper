@@ -103,6 +103,54 @@ class Packet:
             11: self.read_int_array
         }
 
+        self._PKTSEND = {
+            0: self.read_string,
+            1: self.read_json,
+            2: self.read_ubyte,
+            3: self.read_byte,
+            4: self.read_int,
+            5: self.read_short,
+            6: self.read_ushort,
+            7: self.read_long,
+            8: self.read_double,
+            9: self.read_float,
+            10: self.read_bool,
+            11: self.read_varint,
+            12: self.read_bytearray,
+            13: self.read_bytearray_short,
+            14: self.read_position,
+            15: self.read_slot,
+            16: self.read_uuid,
+            17: self.read_metadata,
+            18: self.read_slot_nbtless,
+            90: self.read_rest
+        }
+
+        self._PKTREAD = {
+            0: self.read_string,
+            1: self.read_json,
+            2: self.read_ubyte,
+            3: self.read_byte,
+            4: self.read_int,
+            5: self.read_short,
+            6: self.read_ushort,
+            7: self.read_long,
+            8: self.read_double,
+            9: self.read_float,
+            10: self.read_bool,
+            11: self.read_varint,
+            12: self.read_bytearray,
+            13: self.read_bytearray_short,
+            14: self.read_position,
+            15: self.read_slot,
+            16: self.read_uuid,
+            17: self.read_metadata,
+            18: self.read_slot_nbtless,
+            90: self.read_rest,
+            100: self.read_none
+        }
+        # result.append(self._PKTREAD[args[index]]())
+
     def close(self):
         self.abort = True
 
@@ -223,7 +271,7 @@ class Packet:
 
         Args:
             args: a list of integers representing the type of read operation.  Special _NULL (100) type
-                    argument allows and extra "padding" argument to be appended.  To see how this is useful,
+                    argument allows an extra "padding" argument to be appended.  To see how this is useful,
                     look at serverconnection.py parsing of packet 'self.pktCB.SPAWN_OBJECT'
 
         Returns:  A list of those read results (not a dictionary) in the same order the args
@@ -622,6 +670,9 @@ class Packet:
     def read_rest(self):
         return self.read_data(1024 * 1024)
 
+    def read_none(self):
+        return None
+
     def read_metadata(self):
         data = {}
         while True:
@@ -647,7 +698,6 @@ class Packet:
             else:
                 print("Unsupported data type '%d' for read_metadata()  (Class Packet)", type_)
                 raise ValueError
-        return data
 
     def read_short_string(self):
         size = self.read_short()
