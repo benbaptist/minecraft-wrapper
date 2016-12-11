@@ -71,9 +71,9 @@ class Main:
     def onEnable(self):
 
         # Sample register commands
-        self.api.registerCommand("/topic1", self._command1, "permission.node")
-        self.api.registerCommand(("/topic2", "top2", "topic_2"), self._command2, "another.permission")
-        self.api.registerCommand("/topic3", self._command3, "third.permission")
+        self.api.registerCommand("topic1", self._command1, "permission.node")
+        self.api.registerCommand(("topic2", "top2", "topic_2"), self._command2, "another.permission")
+        self.api.registerCommand("topic3", self._command3, "third.permission")
 
         # Sample register help
         self.api.registerHelp("Topic", "description of Topic plugin", [
