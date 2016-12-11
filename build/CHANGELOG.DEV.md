@@ -1,3 +1,9 @@
+Build 162 Version [0.9.3]
+- BugFix: Added getEntityControl() to Minecraft API so plugins can actually access the new entity control methods (gasp!)
+- Added getServerPath() to minecraft API (since server can be in other folders now and some plugins need to know this)
+- Added utils.py Utils class to API.  These wrap some useful functions from utils.helpers.
+- moved backup code out of server instance and put it in the main wrapper instance.
+
 Build 161
 - clean up example plugins.
 - fix player death event death message (mcserver.py)

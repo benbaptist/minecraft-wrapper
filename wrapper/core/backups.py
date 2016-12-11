@@ -27,6 +27,7 @@ class Backups:
         self.api = API(wrapper, "Backups", internal=True)
 
         self.interval = 0
+        self.backup_interval = self.config["Backups"]["backup-interval"]
         self.time = time.time()
         self.backups = []
         self.enabled = self.config["Backups"]["enabled"]  # allow plugins to shutdown backups via api
@@ -37,7 +38,7 @@ class Backups:
 
     def eachsecond(self, payload):
         self.interval += 1
-        if time.time() - self.time > self.config["Backups"]["backup-interval"] and self.enabled:
+        if time.time() - self.time > self.backup_interval and self.enabled:
             self.dobackup()
 
     def pruneoldbackups(self, filename="IndependentPurge"):

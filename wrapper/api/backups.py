@@ -20,9 +20,9 @@ the API.  The only other alternative would be to create excessive wrappers betwe
 
 # noinspection PyPep8Naming
 class Backups:
-    """ This class wraps the wrapper.javaserver backups functions.  Wrapper starts javaserver(McServer class)
-     and javaserver starts core.backups.py class Backups (as .backups).  This API class manipulates backups within
-     wrapper.javaserver"""
+    """ This class wraps the wrapper.backups functions.  Wrapper starts starts core.backups.py
+     class Backups (as .backups).  This API class manipulates the backups instance within
+     core.wrapper"""
 
     def __init__(self, wrapper):
         self.wrapper = wrapper
@@ -33,40 +33,40 @@ class Backups:
         checks for tar on users system.
         :return: True if installed, False if not (along with error logs and console messages).
         """
-        return self.wrapper.javaserver.backups.dotarchecks()
+        return self.wrapper.backups.dotarchecks()
 
     def performBackup(self):
         """
         Perform an immediate backup
         :return: check console for messages (or wrapper backup Events)
         """
-        self.wrapper.javaserver.backups.dobackup()
+        self.wrapper.backups.dobackup()
 
     def pruneBackups(self):
         """
         prune backups according to wrapper properties settings.
         :return: Output to console and logs
         """
-        self.wrapper.javaserver.backups.pruneoldbackups()
+        self.wrapper.backups.pruneoldbackups()
 
     def disableBackups(self):
         """
         Allow plugin to temporarily shut off backups (only during this wrapper session).
         :return: None
         """
-        self.wrapper.javaserver.backups.enabled = False
+        self.wrapper.backups.enabled = False
 
     def enableBackups(self):
         """
         Allow plugin to re-enable disabled backups or enable backups during this wrapper session.
         :return: True.  returns False if tar is not installed
         """
-        self.wrapper.javaserver.backups.enabled = True
-        if not self.wrapper.javaserver.backups.timerstarted:
-            if not self.wrapper.javaserver.backups.dotarchecks():
+        self.wrapper.backups.enabled = True
+        if not self.wrapper.backups.timerstarted:
+            if not self.wrapper.backups.dotarchecks():
                 return False
-            self.wrapper.javaserver.backups.timerstarted = True
-            self.wrapper.javaserver.backups.api.registerEvent("timer.second", self.wrapper.javaserver.backups.eachsecond)
+            self.wrapper.backups.timerstarted = True
+            self.wrapper.backups.api.registerEvent("timer.second", self.wrapper.backups.eachsecond)
 
     def adjustBackupInterval(self, desired_interval):
         """
@@ -75,8 +75,9 @@ class Backups:
         :return:
         """
         interval = int(desired_interval)
-        self.wrapper.javaserver.backups.config["Backups"]["backup-interval"] = interval
+        self.wrapper.backups.config["Backups"]["backup-interval"] = interval
         self.wrapper.configManager.save()
+        self.wrapper.backups.backup_interval = interval
 
     def adjustBackupsKept(self, desired_number):
         """
@@ -85,5 +86,5 @@ class Backups:
         :return:
         """
         num_kept = int(desired_number)
-        self.wrapper.javaserver.backups.config["Backups"]["backups-keep"] = num_kept
+        self.wrapper.backups.config["Backups"]["backups-keep"] = num_kept
         self.wrapper.configManager.save()

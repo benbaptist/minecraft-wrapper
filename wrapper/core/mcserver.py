@@ -9,7 +9,7 @@ from api.player import Player
 from api.world import World
 from api.entity import EntityControl
 
-from core.backups import Backups
+# from core.backups import Backups
 from core.exceptions import UnsupportedOSException, InvalidServerStartedError
 from core.consoleuser import MiniPlayer
 
@@ -60,7 +60,7 @@ class MCServer:
                 self.args.append(part)
 
         self.api = API(wrapper, "Server", internal=True)
-        self.backups = Backups(wrapper)
+        # self.backups = Backups(wrapper)
 
         if "ServerStarted" not in self.wrapper.storage:
             self.wrapper.storage["ServerStarted"] = True
@@ -112,8 +112,6 @@ class MCServer:
 
         if self.config["General"]["timed-reboot"] or self.config["Web"]["web-enabled"]:  # don't reg. an unused event
             self.api.registerEvent("timer.second", self.eachsecond)
-
-        # self.api.backups.init_backups()
 
     def init(self):
         """
