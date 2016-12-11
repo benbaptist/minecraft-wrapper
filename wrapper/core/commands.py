@@ -641,67 +641,34 @@ class Commands:
             })
             for pid in self.wrapper.plugins:
                 plugin = self.wrapper.plugins[pid]
-                if plugin["good"]:
-                    name = plugin["name"]
-                    version = plugin["version"]
-                    summary = plugin["summary"]
-                    description = plugin["description"]
-                else:
-                    name = pid
-                    version = None
-                    summary = None
-                    description = ""
+                name = plugin["name"]
+                version = ".".join([str(_) for _ in plugin["version"]])
+                summary = plugin["summary"]
+                description = plugin["description"]
+                if description is None:
+                    description = "No description is available for this plugin"
                 if summary is None:
-                    summary = {
-                        "text": "No description is available for this plugin",
-                        "color": "gray",
-                        "italic": True,
-                        "hoverEvent": {
-                            "action": "show_text",
-                            "value": description
-                        }
+                    summary = "Plugin %s" % name
+                summary = {
+                    "text": summary,
+                    "color": "white",
+                    "hoverEvent": {
+                        "action": "show_text",
+                        "value": description
                     }
-                else:
-                    summary = {
-                        "text": summary,
-                        "color": "white",
-                        "hoverEvent": {
-                            "action": "show_text",
-                            "value": description
-                        }
-                    }
-
-                if version is None:
-                    version = "v?.?"
-                else:
-                    version = ".".join([str(_) for _ in version])
-                if plugin["good"]:
-                    player.message({
-                        "text": name,
-                        "color": "dark_green",
-                        "hoverEvent": {
-                            "action": "show_text",
-                            "value": "Filename: %s | ID: %s" % (plugin["filename"], pid)
-                        },
-                        "extra": [{
-                            "text": " v%s" % version,
-                            "color": "dark_gray"
-                        }, {
-                            "text": " - ",
-                            "color": "white"
-                        }, summary]
-                    })
-                else:
-                    player.message({
-                        "text": name,
-                        "color": "dark_red",
-                        "extra": [{
-                            "text": " - ",
-                            "color": "white"
-                        }, {
-                            "text": "Failed to import this plugin!",
-                            "color": "red",
-                            "italic": "true"
-                        }]
-                    })
-                return False
+                }
+                player.message({
+                    "text": name,
+                    "color": "dark_green",
+                    "hoverEvent": {
+                        "action": "show_text",
+                        "value": "Filename: %s | ID: %s" % (plugin["filename"], pid)
+                    },
+                    "extra": [{
+                        "text": " v%s" % version,
+                        "color": "dark_gray"
+                    }, {
+                        "text": " - ",
+                        "color": "white"
+                    }, summary]
+                })
