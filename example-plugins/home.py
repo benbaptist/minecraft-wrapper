@@ -12,10 +12,9 @@ class Main:
         self.api = api
         self.minecraft = api.minecraft
         self.log = log
-
-    def onEnable(self):
         self.data = self.api.getStorage("home", True)
 
+    def onEnable(self):
         self.api.registerHelp("Home", "Commands from the Home plugin", [
             ("/sethome", "Save curremt position as home", None),
             ("/home", "Teleports you to your home set by /sethome", None),
@@ -44,4 +43,4 @@ class Main:
             return
         player.message({"text": "Teleporting you to your home.", "color": "green"})
         self.api.minecraft.console("tp %s %d %d %d" % (username, self.data[username][0], self.data[username][1],
-													   self.data[username][2]))
+                                                       self.data[username][2]))

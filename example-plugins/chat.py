@@ -1,6 +1,6 @@
 NAME = "chat"
 AUTHOR = "SurestTexas00"
-ID = "com.suresttexas00.plugins.global"
+ID = "com.suresttexas00.chat"
 VERSION = (0, 1)
 SUMMARY = "Chat handler."
 WEBSITE = ""
@@ -14,7 +14,6 @@ colored/styled chat.
 class Main:
     def __init__(self, api, log):
         self.api = api
-        self.minecraft = api.minecraft
         self.log = log
 
     def onEnable(self):

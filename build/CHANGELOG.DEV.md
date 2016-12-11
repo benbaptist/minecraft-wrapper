@@ -1,3 +1,8 @@
+Build 161
+- clean up example plugins.
+- fix player death event death message (mcserver.py)
+- Fix /playerstats command (bug in getAllPlayers)
+
 Build 160 Version [0.9.2]
 - More wrapper imports improvements to dependency import process
 - Including more plugin documentation in example-plugins/example.py.
