@@ -1,5 +1,11 @@
-Build 163
-- just minor edits thus far
+Build 163 Version [0.9.4]
+- refactor packet.py
+- rewrites to proxy system:
+    - option to have ip bans simply drop the connection, making the server un-responsive
+    to traffic from the banned address.
+    - start cleaning up logon process in clientconnection.
+    - fix broken offline wrapper logon process (may have contributed to player.connect() issues).
+    - bigfix in ban-ip that excluded valid ipv4s from being banned.
 
 Build 162 Version [0.9.3]
 - BugFix: Added getEntityControl() to Minecraft API so plugins can actually access the new entity control methods (gasp!)
@@ -383,7 +389,6 @@ Build #114 [0.8.1]:
 - A completely new rewrite.  Fully compatible with x.7.x version plugins _if_ they do not dip into wrapper's internal methods and stick strictly to the previously documented API:
 http://wrapper.benbaptist.com/docs/api.html
 - Methods in the client/server (like sending packets) are different.  Plugins doing this will need to be modified. Using the wrapper permissions or other wrapper components directly (self.wrapper.permissions, etc) by plugins will be broken with this version.
-- I take that back about packet sending... there is a wrapper that will still allow client.send() (instead of the new client.packet.sendpkt(); However, if you have debug set to true, expect the console to get spammed with 'deprecated server.send()...' messages!
 
 API changes Summary:
 

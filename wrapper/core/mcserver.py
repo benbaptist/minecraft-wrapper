@@ -587,9 +587,19 @@ class MCServer:
         # modify the server warning
         if "While this makes the game possible to play without internet access," in buff:
             prefix = " ".join(buff.split(' ')[:self.prepends_offset])
-            message = "%s Since you are running Wrapper in proxy mode, this should be ok because Wrapper " \
-                      "is handling the authenication, PROVIDED no one can access port %s from outside " \
-                      "your network." % (prefix, self.server_port)
+
+            if not self.wrapper.wrapper_onlinemode:
+                message = ("%s Since you are running Wrapper in OFFLINE mode, THIS COULD BE SERIOUS!\n"
+                           "%s Wrapper is not handling any authenication.\n"
+                           "%s This is only ok if this wrapper is not accessible"
+                           " from either port %s or port %s (I.e., this wrapper is a multiworld for a hub server, or"
+                           " you are doing your own authorization via a plugin)."
+                           % (prefix, prefix, prefix, self.server_port, self.wrapper.proxy.proxy_port))
+            else:
+                message = ("%s Since you are running Wrapper in proxy mode, this should be ok because Wrapper "
+                           "is handling the authenication, PROVIDED no one can access port %s from outside "
+                           "your network." % (prefix, self.server_port))
+
             if self.wrapper.proxymode:
                 buff = message
 

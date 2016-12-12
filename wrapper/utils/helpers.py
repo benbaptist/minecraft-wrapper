@@ -598,3 +598,5 @@ def _test_broadcast(message, version_compute=10704, encoding='utf-8'):
             _test_console("say %s" % chattocolorcodes(json.loads(temp)))
         else:
             _test_console("tellraw @a %s" % processcolorcodes(message))
+
+print(isipv4address("127.0.0.1"))

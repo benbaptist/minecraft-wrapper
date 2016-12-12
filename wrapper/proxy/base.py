@@ -6,7 +6,9 @@ import time
 import json
 import requests
 
-from utils.helpers import getjsonfile, putjsonfile, find_in_json, epoch_to_timestr, read_timestr, isipv4address
+from utils.helpers import getjsonfile, putjsonfile, find_in_json
+from utils.helpers import epoch_to_timestr, read_timestr
+from utils.helpers import isipv4address
 
 try:
     import utils.encryption as encryption
@@ -28,9 +30,11 @@ class Proxy:
         self.javaserver = wrapper.javaserver
         self.log = wrapper.log
         self.config = wrapper.config
-        self.encoding = self.config["General"]["encoding"]
+        self.encoding = self.wrapper.encoding
         self.serverpath = self.config["General"]["server-directory"]
-
+        self.proxy_bind = self.wrapper.config["Proxy"]["proxy-bind"]
+        self.proxy_port = self.wrapper.config["Proxy"]["proxy-port"]
+        self.silent_ip_banning = self.wrapper.config["Proxy"]["silent-ipban"]
         self.proxy_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.usingSocket = False
         self.isServer = False
@@ -59,7 +63,7 @@ class Proxy:
             self.wrapper.disable_proxymode()
             return
 
-        if self.wrapper.config["Proxy"]["proxy-port"] == self.wrapper.javaserver.server_port:
+        if self.proxy_port == self.wrapper.javaserver.server_port:
             self.log.warning("Proxy mode cannot start because the wrapper port is identical to the server port.")
             self.wrapper.disable_proxymode()
             return
@@ -73,8 +77,7 @@ class Proxy:
         while not self.usingSocket:
             self.proxy_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             try:
-                self.proxy_socket.bind((self.wrapper.config["Proxy"]["proxy-bind"],
-                                        self.wrapper.config["Proxy"]["proxy-port"]))
+                self.proxy_socket.bind((self.proxy_bind, self.proxy_port))
             except Exception as e:
                 self.log.exception("Proxy mode could not bind - retrying in ten seconds (%s)", e)
                 self.usingSocket = False
@@ -90,8 +93,12 @@ class Proxy:
                 self.log.exception("An error has occured while trying to accept a socket connection \n(%s)", e)
                 continue
 
+            banned_ip = self.wrapper.proxy.isipbanned(addr)
+            if self.silent_ip_banning and banned_ip:
+                self.proxy_socket.close()
+
             # spur off client thread
-            client = Client(sock, addr, self.wrapper, self.publicKey, self.privateKey)
+            client = Client(sock, addr, self.wrapper, self.publicKey, self.privateKey, banned=banned_ip)
             t = threading.Thread(target=client.handle, args=())
             t.daemon = True
             t.start()
@@ -258,7 +265,7 @@ class Proxy:
 
         This probably only works on 1.7.10 servers or later
         """
-        if isipv4address(ipaddress):
+        if not isipv4address(ipaddress):
             return "Invalid IPV4 address: %s" % ipaddress
         banlist = getjsonfile("banned-ips", self.serverpath)
         if banlist is not False:  # file and directory exist.

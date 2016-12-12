@@ -417,7 +417,7 @@ class Wrapper:
         xpayload = {'player': self.xplayer, 'command': wrappercommand, 'args': argslist}
         self.commands.playercommand(xpayload)
 
-    def isonline(self):
+    def isonlinemode(self):
         """
         :returns: Whether the server OR (for proxy mode) wrapper is in online mode.
         This should normally 'always' render True. Under rare circumstances it could be false,

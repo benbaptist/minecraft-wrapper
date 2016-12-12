@@ -114,7 +114,9 @@ NEWCONFIG = {
         "proxy-port": 25565,  # the wrapper's proxy port that accepts client connections from the internet. This
                               # port is exposed to the internet via your port forwards.
         "server-port": "deprecated",  # This port is autoconfigured from server console output now.
-        "spigot-mode": False
+        "spigot-mode": False,
+        "silent-ipban": True  # silent bans cause your server to ignore sockets from that IP (for IP bans)
+                              #  The idea is to cause your server to appear offline and avoid possible confrontations.
     },
     "Web": {
         "public-stats": True,
