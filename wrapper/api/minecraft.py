@@ -137,10 +137,13 @@ class Minecraft:
 
         """
         alluuidfiles = os.listdir("wrapper-data/players")
+
+        # do this now so we don't re-run the function in each 'for .. in ..' loop
         if self.wrapper.isonlinemode():
             online = True
         else:
             online = False
+
         players = {}
         for uuid_file_found in alluuidfiles:
             player_uuid = uuid_file_found.rsplit(".", 1)[0]

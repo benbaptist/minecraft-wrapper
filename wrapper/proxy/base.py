@@ -4,23 +4,21 @@ import socket
 import threading
 import time
 import json
+import requests
 
-from utils.helpers import getjsonfile, putjsonfile, find_in_json, epoch_to_timestr, read_timestr, isipv4address
-
-
-try:
-    import requests
-except ImportError:
-    requests = False
+from utils.helpers import getjsonfile, putjsonfile, find_in_json
+from utils.helpers import epoch_to_timestr, read_timestr
+from utils.helpers import isipv4address
 
 try:
     import utils.encryption as encryption
 except ImportError:
     encryption = False
 
-if requests and encryption:
+if encryption:
     from proxy.clientconnection import Client
     from proxy.packet import Packet
+
 else:
     Client = False
     Packet = False
@@ -32,9 +30,11 @@ class Proxy:
         self.javaserver = wrapper.javaserver
         self.log = wrapper.log
         self.config = wrapper.config
-        self.encoding = self.config["General"]["encoding"]
+        self.encoding = self.wrapper.encoding
         self.serverpath = self.config["General"]["server-directory"]
-
+        self.proxy_bind = self.wrapper.config["Proxy"]["proxy-bind"]
+        self.proxy_port = self.wrapper.config["Proxy"]["proxy-port"]
+        self.silent_ip_banning = self.wrapper.config["Proxy"]["silent-ipban"]
         self.proxy_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.usingSocket = False
         self.isServer = False
@@ -47,11 +47,9 @@ class Proxy:
         self.privateKey = encryption.generate_key_pair()
         self.publicKey = encryption.encode_public_key(self.privateKey)
 
+        # requests is required wrapper-wide now, so no checks here for that...
         if not encryption and self.wrapper.proxymode:
             raise Exception("You must have the pycryto installed to run in proxy mode!")
-
-        if not requests and self.wrapper.proxymode:
-            raise Exception("You must have the requests module installed to run in proxy mode!")
 
     def host(self):
         # get the protocol version from the server
@@ -65,7 +63,7 @@ class Proxy:
             self.wrapper.disable_proxymode()
             return
 
-        if self.wrapper.config["Proxy"]["proxy-port"] == self.wrapper.javaserver.server_port:
+        if self.proxy_port == self.wrapper.javaserver.server_port:
             self.log.warning("Proxy mode cannot start because the wrapper port is identical to the server port.")
             self.wrapper.disable_proxymode()
             return
@@ -79,8 +77,7 @@ class Proxy:
         while not self.usingSocket:
             self.proxy_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             try:
-                self.proxy_socket.bind((self.wrapper.config["Proxy"]["proxy-bind"],
-                                        self.wrapper.config["Proxy"]["proxy-port"]))
+                self.proxy_socket.bind((self.proxy_bind, self.proxy_port))
             except Exception as e:
                 self.log.exception("Proxy mode could not bind - retrying in ten seconds (%s)", e)
                 self.usingSocket = False
@@ -96,8 +93,12 @@ class Proxy:
                 self.log.exception("An error has occured while trying to accept a socket connection \n(%s)", e)
                 continue
 
+            banned_ip = self.isipbanned(addr)
+            if self.silent_ip_banning and banned_ip:
+                sock.shutdown(0)  # 0: done receiving, 1: done sending, 2: both
+                continue
             # spur off client thread
-            client = Client(sock, addr, self.wrapper, self.publicKey, self.privateKey)
+            client = Client(sock, addr, self.wrapper, self.publicKey, self.privateKey, banned=banned_ip)
             t = threading.Thread(target=client.handle, args=())
             t.daemon = True
             t.start()
@@ -145,8 +146,8 @@ class Proxy:
             if client.serveruuid.string == str(uuid):
                 self.uuidTranslate[uuid] = client.uuid.string
                 return client
-        self.log.debug("getclientbyofflineserveruuid failed: \n %s" % attempts)
-        self.log.debug("POSSIBLE CLIENTS: \n %s" % self.clients)
+        self.log.debug("getclientbyofflineserveruuid failed: \n %s", attempts)
+        self.log.debug("POSSIBLE CLIENTS: \n %s", self.clients)
         return False  # no client
 
     def banplayer(self, playername, reason="Banned by an operator", source="Wrapper", expires="forever"):
@@ -264,7 +265,7 @@ class Proxy:
 
         This probably only works on 1.7.10 servers or later
         """
-        if isipv4address(ipaddress):
+        if not isipv4address(ipaddress):
             return "Invalid IPV4 address: %s" % ipaddress
         banlist = getjsonfile("banned-ips", self.serverpath)
         if banlist is not False:  # file and directory exist.
@@ -290,7 +291,7 @@ class Proxy:
                     banned = ""
                     for i in self.wrapper.javaserver.players:
                         player = self.wrapper.javaserver.players[i]
-                        if str(player.client.addr[0]) == str(ipaddress):
+                        if str(player.client.ip) == str(ipaddress):
                             self.wrapper.javaserver.console("kick %s Your IP is Banned!" % player.username)
                             banned += "\n%s" % player.username
                     return "Banned ip address: %s\nPlayers kicked as a result:%s" % (ipaddress, banned)
@@ -364,7 +365,7 @@ class Proxy:
                 if read_timestr(banrecord["expires"]) < int(time.time()):  # if ban has expired
                     pardoning = self.pardonuuid(str(uuid))
                     if pardoning[:8] == "pardoned":
-                        self.log.info("UUID: %s was pardoned (expired ban)" % str(uuid))
+                        self.log.info("UUID: %s was pardoned (expired ban)", str(uuid))
                         return False  # player is "NOT" banned (anymore)
                     else:
                         self.log.warning("isuuidbanned attempted a pardon of uuid: %s (expired ban), "
@@ -375,17 +376,19 @@ class Proxy:
     def isipbanned(self, ipaddress):  # Check if the IP address is banned
         banlist = getjsonfile("banned-ips", self.serverpath)
         if banlist:  # in this case we just care if banlist exits in any fashion
-            banrecord = find_in_json(banlist, "ip", ipaddress)
-            if banrecord:
-                if read_timestr(banrecord["expires"]) < int(time.time()):  # if ban has expired
-                    pardoning = self.pardonip(ipaddress)
-                    if pardoning[:8] == "pardoned":
-                        self.log.info("IP: %s was pardoned (expired ban)", ipaddress)
-                        return False  # IP is "NOT" banned (anymore)
-                    else:
-                        self.log.warning("isipbanned attempted a pardon of IP: %s (expired ban), but it failed:\n %s",
-                                         ipaddress, pardoning)
-                return True  # IP is still banned
+            for record in banlist:
+                _ip = record["ip"]
+                if _ip in ipaddress:
+                    _expires = read_timestr(record["expires"])
+                    if _expires < int(time.time()):  # if ban has expired
+                        pardoning = self.pardonip(ipaddress)
+                        if pardoning[:8] == "pardoned":
+                            self.log.info("IP: %s was pardoned (expired ban)", ipaddress)
+                            return False  # IP is "NOT" banned (anymore)
+                        else:
+                            self.log.warning("isipbanned attempted a pardon of IP: %s (expired ban), "
+                                             "but it failed:\n %s", ipaddress, pardoning)
+                    return True  # IP is still banned
         return False  # banlist empty or record not found
 
     def getskintexture(self, uuid):

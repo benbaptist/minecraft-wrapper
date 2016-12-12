@@ -418,11 +418,10 @@ class Wrapper:
         self.commands.playercommand(xpayload)
 
     def isonlinemode(self):
-        # TODO this needs to just return wrapper's online mode
         """
         :returns: Whether the server OR (for proxy mode) wrapper is in online mode.
-        This should normally 'always' render True, unless you want hackers coming on :(
-        not sure what circumstances you would want a different confguration...
+        This should normally 'always' render True. Under rare circumstances it could be false,
+        such as when this wrapper and its server are the target for a wrapper lobby with player.connect().
         """
         if self.proxymode:
             # if wrapper is using proxy mode (which should be set to online)

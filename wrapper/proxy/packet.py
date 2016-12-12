@@ -88,7 +88,6 @@ class Packet:
             10: self.send_comp,
             11: self.send_int_array
         }
-
         self._DECODERS = {
             1: self.read_byte,
             2: self.read_short,
@@ -101,6 +100,53 @@ class Packet:
             9: self.read_list,
             10: self.read_comp,
             11: self.read_int_array
+        }
+
+        # packet send/read operations
+        self._PKTSEND = {
+            0: self.send_string,
+            1: self.send_json,
+            2: self.send_ubyte,
+            3: self.send_byte,
+            4: self.send_int,
+            5: self.send_short,
+            6: self.send_ushort,
+            7: self.send_long,
+            8: self.send_double,
+            9: self.send_float,
+            10: self.send_bool,
+            11: self.send_varint,
+            12: self.send_bytearray,
+            13: self.send_bytearray_short,
+            14: self.send_position,
+            15: self.send_slot,
+            16: self.send_uuid,
+            17: self.send_metadata,
+            90: self.send_pay,
+            100: self.send_nothing
+        }
+        self._PKTREAD = {
+            0: self.read_string,
+            1: self.read_json,
+            2: self.read_ubyte,
+            3: self.read_byte,
+            4: self.read_int,
+            5: self.read_short,
+            6: self.read_ushort,
+            7: self.read_long,
+            8: self.read_double,
+            9: self.read_float,
+            10: self.read_bool,
+            11: self.read_varint,
+            12: self.read_bytearray,
+            13: self.read_bytearray_short,
+            14: self.read_position,
+            15: self.read_slot,
+            16: self.read_uuid,
+            17: self.read_metadata,
+            18: self.read_slot_nbtless,
+            90: self.read_rest,
+            100: self.read_none
         }
 
     def close(self):
@@ -183,7 +229,7 @@ class Packet:
     def read(self, expression):
         """
         This is deprecated. It functions as a readpkt() wrapper.  This is not as fast as calling readpkt(), but
-        makes a nice abstraction and is back-wards compatible.
+        makes a nice abstraction and is back-wards compatible.  It is also nice because it gives you a dictionary back.
 
         Args:
             expression: Something like "double:x|double:y|double:z|bool:on_ground"
@@ -223,7 +269,7 @@ class Packet:
 
         Args:
             args: a list of integers representing the type of read operation.  Special _NULL (100) type
-                    argument allows and extra "padding" argument to be appended.  To see how this is useful,
+                    argument allows an extra "padding" argument to be appended.  To see how this is useful,
                     look at serverconnection.py parsing of packet 'self.pktCB.SPAWN_OBJECT'
 
         Returns:  A list of those read results (not a dictionary) in the same order the args
@@ -231,57 +277,15 @@ class Packet:
 
         """
         result = []
-
         argcount = len(args)
         for index in xrange(argcount):
-            if args[index] == 100:
-                result.append(None)  # pad with special _NULL spacer type
-            elif args[index] == 0:
-                result.append(self.read_string())
-            elif args[index] == 1:
-                result.append(self.read_json())
-            elif args[index] == 2:
-                result.append(self.read_ubyte())
-            elif args[index] == 3:
-                result.append(self.read_byte())
-            elif args[index] == 4:
-                result.append(self.read_int())
-            elif args[index] == 5:
-                result.append(self.read_short())
-            elif args[index] == 6:
-                result.append(self.read_ushort())
-            elif args[index] == 7:
-                result.append(self.read_long())
-            elif args[index] == 8:
-                result.append(self.read_double())
-            elif args[index] == 9:
-                result.append(self.read_float())
-            elif args[index] == 10:
-                result.append(self.read_bool())
-            elif args[index] == 11:
-                result.append(self.read_varint())
-            elif args[index] == 12:
-                result.append(self.read_bytearray())
-            elif args[index] == 13:
-                result.append(self.read_bytearray_short())
-            elif args[index] == 14:
-                result.append(self.read_position())
-            elif args[index] == 15:
-                result.append(self.read_slot())
-            elif args[index] == 16:
-                result.append(self.read_uuid())
-            elif args[index] == 17:
-                result.append(self.read_metadata())
-            elif args[index] == 18:
-                result.append(self.read_slot_nbtless())
-            else:
-                result.append(self.read_rest())
+            result.append(self._PKTREAD[args[index]]())
         return result
 
     def send(self, pkid, expression, payload):
         """
-        This is deprecated. It functions as a sendpkt() wrapper.  This is not as fast as calling sendpkt(), but
-         makes a nice abstraction and is back-wards compatible.
+        This is deprecated. It functions as a sendpkt() wrapper.  This is not as fast as calling sendpkt(),
+        is back-wards compatible, but not really any easier to use.
 
         Args:
             pkid: packet id (int or hex - usually as an abstracted constant)
@@ -307,7 +311,6 @@ class Packet:
     def sendpkt(self, pkid, args, payload):
         # result = bytearray  # TODO  This is a PY2-3 compatibility line.  Will use <str> for PY2 and <bytes> for PY3...
         result = b""  # TODO
-
         # start with packet id
         result += self.send_varint(pkid)
 
@@ -318,57 +321,12 @@ class Packet:
             return result
         for index in xrange(argcount):
             pay = payload[index]
-            if args[index] == 100:
-                continue  # ignore special _NULL spacer type
-            elif args[index] == 0:
-                result += self.send_string(pay)
-            elif args[index] == 1:
-                result += self.send_json(pay)
-            elif args[index] == 2:
-                result += self.send_ubyte(pay)
-            elif args[index] == 3:
-                result += self.send_byte(pay)
-            elif args[index] == 4:
-                result += self.send_int(pay)
-            elif args[index] == 5:
-                result += self.send_short(pay)
-            elif args[index] == 6:
-                result += self.send_ushort(pay)
-            elif args[index] == 7:
-                result += self.send_long(pay)
-            elif args[index] == 8:
-                result += self.send_double(pay)
-            elif args[index] == 9:
-                result += self.send_float(pay)
-            elif args[index] == 10:
-                result += self.send_bool(pay)
-            elif args[index] == 11:
-                result += self.send_varint(pay)
-            elif args[index] == 12:
-                result += self.send_bytearray(pay)
-            elif args[index] == 13:
-                result += self.send_bytearray_short(pay)
-            elif args[index] == 14:
-                result += self.send_position(pay)
-            elif args[index] == 15:
-                result += self.send_slot(pay)
-            elif args[index] == 16:
-                result += self.send_uuid(pay)
-            elif args[index] == 17:
-                result += self.send_metadata(pay)
-            else:
-                result += pay
+            result += self._PKTSEND[args[index]](pay)
         self.send_raw(result)
         return result
 
     # -- SENDING DATA TYPES -- #
-
-    def send_byte(self, payload):
-        return struct.pack("b", payload)
-
-    def send_ubyte(self, payload):
-        return struct.pack("B", payload)
-
+    # ------------------------ #
     def send_string(self, payload):
         try:
             returnitem = payload.encode("utf-8", errors="ignore")
@@ -379,11 +337,14 @@ class Packet:
     def send_json(self, payload):
         return self.send_string(json.dumps(payload))
 
+    def send_ubyte(self, payload):
+        return struct.pack("B", payload)
+
+    def send_byte(self, payload):
+        return struct.pack("b", payload)
+
     def send_int(self, payload):
         return struct.pack(">i", payload)
-
-    def send_long(self, payload):
-        return struct.pack(">q", payload)
 
     def send_short(self, payload):
         return struct.pack(">h", payload)
@@ -391,11 +352,20 @@ class Packet:
     def send_ushort(self, payload):
         return struct.pack(">H", payload)
 
-    def send_float(self, payload):
-        return struct.pack(">f", payload)
+    def send_long(self, payload):
+        return struct.pack(">q", payload)
 
     def send_double(self, payload):
         return struct.pack(">d", payload)
+
+    def send_float(self, payload):
+        return struct.pack(">f", payload)
+
+    def send_bool(self, payload):
+        if payload:
+            return self.send_byte(1)
+        else:
+            return self.send_byte(0)
 
     def send_varint(self, payload):
         return self.pack_varint(payload)
@@ -406,12 +376,25 @@ class Packet:
     def send_bytearray_short(self, payload):
         return self.send_short(len(payload)) + payload
 
-    def send_uuid(self, payload):
-        return payload.bytes
-
     def send_position(self, payload):
         x, y, z = payload
         return struct.pack(">Q", ((x & 0x3FFFFFF) << 38) | ((y & 0xFFF) << 26) | (z & 0x3FFFFFF))
+
+    def send_slot(self, slot):
+        """Sending slots, such as {"id":98,"count":64,"damage":0,"nbt":None}"""
+        r = self.send_short(slot["id"])
+        if slot["id"] == -1:
+            return r
+        r += self.send_byte(slot["count"])
+        r += self.send_short(slot["damage"])
+        if slot["nbt"]:
+            r += self.send_tag(slot['nbt'])
+        else:
+            r += "\x00"
+        return r
+
+    def send_uuid(self, payload):
+        return payload.bytes
 
     def send_metadata(self, payload):
         b = ""
@@ -436,22 +419,21 @@ class Packet:
         b += self.send_ubyte(0x7f)
         return b
 
-    def send_bool(self, payload):
-        if payload:
-            return self.send_byte(1)
-        else:
-            return self.send_byte(0)
+    def send_pay(self, payload):
+        return payload
 
-    # Similar to send_string, but uses a short as length prefix
-    def send_short_string(self, string):
-        return self.send_short(len(string)) + str.encode("utf8")
+    # noinspection PyUnusedLocal
+    def send_nothing(self, payload):
+        """does not really do anything"""
+        return b""
 
+    # NBT sending types (self._ENCODERS only)
+    # ---------------------------------------
     def send_byte_array(self, payload):
         return self.send_int(len(payload)) + payload
 
-    def send_int_array(self, values):
-        r = self.send_int(len(values))
-        return r + struct.pack(">%di" % len(values), *values)
+    def send_short_string(self, string):
+        return self.send_short(len(string)) + str.encode("utf8")
 
     def send_list(self, tag):
         # Check that all values are the same type
@@ -476,6 +458,10 @@ class Packet:
         r += "\x00"  # close compbound
         return r
 
+    def send_int_array(self, values):
+        r = self.send_int(len(values))
+        return r + struct.pack(">%di" % len(values), *values)
+
     def send_tag(self, tag):
         r = self.send_byte(tag['type'])  # send type indicator
         r += self.send_short(len(tag["name"]))  # send lenght prefix
@@ -483,21 +469,8 @@ class Packet:
         r += self._ENCODERS[tag["type"]](tag["value"])  # send tag
         return r
 
-    def send_slot(self, slot):
-        """Sending slots, such as {"id":98,"count":64,"damage":0,"nbt":None}"""
-        r = self.send_short(slot["id"])
-        if slot["id"] == -1:
-            return r
-        r += self.send_byte(slot["count"])
-        r += self.send_short(slot["damage"])
-        if slot["nbt"]:
-            r += self.send_tag(slot['nbt'])
-        else:
-            r += "\x00"
-        return r
-
-    # -- READING DATA TYPES -- #
-
+    # -- READING Methods  -- #
+    # ---------------------- #
     def recv(self, length):
         if length > 200:
             # d = bytearray  # TODO  This is a PY2-3 compatibility line.  Will use <str> for PY2 and <bytes> for PY3...
@@ -522,29 +495,22 @@ class Packet:
             return ""
         return d
 
-    def read_byte(self):
-        return struct.unpack("b", self.read_data(1))[0]
+    # -- READING DATA TYPES -- #
+    # ------------------------ #
+    def read_string(self):
+        return self.read_data(self.read_varint())
+
+    def read_json(self):
+        return json.loads(self.read_string().decode('utf-8'))
 
     def read_ubyte(self):
         return struct.unpack("B", self.read_data(1))[0]
 
-    def read_long(self):
-        return struct.unpack(">q", self.read_data(8))[0]
-
-    def read_ulong(self):
-        return struct.unpack(">Q", self.read_data(8))[0]
-
-    def read_float(self):
-        return struct.unpack(">f", self.read_data(4))[0]
+    def read_byte(self):
+        return struct.unpack("b", self.read_data(1))[0]
 
     def read_int(self):
         return struct.unpack(">i", self.read_data(4))[0]
-
-    def read_double(self):
-        return struct.unpack(">d", self.read_data(8))[0]
-
-    def read_bool(self):
-        return self.read_data(1) == 0x01
 
     def read_short(self):
         return struct.unpack(">h", self.read_data(2))[0]
@@ -552,12 +518,32 @@ class Packet:
     def read_ushort(self):
         return struct.unpack(">H", self.read_data(2))[0]
 
+    def read_long(self):
+        return struct.unpack(">q", self.read_data(8))[0]
+
+    def read_double(self):
+        return struct.unpack(">d", self.read_data(8))[0]
+
+    def read_float(self):
+        return struct.unpack(">f", self.read_data(4))[0]
+
+    def read_bool(self):
+        return self.read_data(1) == 0x01
+
+    def read_varint(self):
+        total = 0
+        shift = 0
+        val = 0x80
+        while val & 0x80:
+            val = struct.unpack('B', self.read_data(1))[0]
+            total |= ((val & 0x7F) << shift)
+            shift += 7
+        if total & (1 << 31):
+            total = total - (1 << 32)
+        return total
+
     def read_bytearray(self):
         return self.read_data(self.read_varint())
-
-    def read_int_array(self):
-        size = self.read_int()
-        return [self.read_int() for _ in range(size)]
 
     def read_bytearray_short(self):
         return self.read_data(self.read_short())
@@ -587,40 +573,8 @@ class Packet:
             # nbt = self.read_data(nbtCount)
             return {"id": sid, "count": count, "damage": damage, "nbt": nbt}
 
-    def read_slot_nbtless(self):
-        """Temporary? solution for parsing pre- 1.8 slots"""
-        sid = self.read_short()
-        if sid != -1:
-            count = self.read_ubyte()
-            damage = self.read_short()
-            # nbt = self.read_tag()
-            # nbtCount = self.read_ubyte()
-            # nbt = self.read_data(nbtCount)
-            return {"id": sid, "count": count, "damage": damage, "nbt": {}}
-
-    def read_varint(self):
-        total = 0
-        shift = 0
-        val = 0x80
-        while val & 0x80:
-            val = struct.unpack('B', self.read_data(1))[0]
-            total |= ((val & 0x7F) << shift)
-            shift += 7
-        if total & (1 << 31):
-            total = total - (1 << 32)
-        return total
-
     def read_uuid(self):
         return MCUUID(bytes=self.read_data(16))
-
-    def read_string(self):
-        return self.read_data(self.read_varint())
-
-    def read_json(self):
-        return json.loads(self.read_string().decode('utf-8'))
-
-    def read_rest(self):
-        return self.read_data(1024 * 1024)
 
     def read_metadata(self):
         data = {}
@@ -647,28 +601,30 @@ class Packet:
             else:
                 print("Unsupported data type '%d' for read_metadata()  (Class Packet)", type_)
                 raise ValueError
-        return data
 
+    def read_slot_nbtless(self):
+        """Temporary? solution for parsing pre- 1.8 slots"""
+        sid = self.read_short()
+        if sid != -1:
+            count = self.read_ubyte()
+            damage = self.read_short()
+            # nbt = self.read_tag()
+            # nbtCount = self.read_ubyte()
+            # nbt = self.read_data(nbtCount)
+            return {"id": sid, "count": count, "damage": damage, "nbt": {}}
+
+    def read_rest(self):
+        return self.read_data(1024 * 1024)
+
+    def read_none(self):
+        return None
+
+    # NBT reading types (self._DECODERS only)
+    # ---------------------------------------
     def read_short_string(self):
         size = self.read_short()
         string = self.read_data(size)
         return string.decode("utf8")
-
-    def read_comp(self):
-        a = []
-        while True:
-            b = self.read_tag()
-            if b['type'] == 0:
-                break
-            a.append(b)
-        return a
-
-    def read_tag(self):
-        a = {"type": self.read_byte()}
-        if a["type"] != 0:
-            a["name"] = self.read_short_string()
-            a["value"] = self._DECODERS[a["type"]]()
-        return a
 
     def read_list(self):
         r = []
@@ -680,3 +636,26 @@ class Packet:
                  "value": self._DECODERS[btype]()}
             r.append(b)
         return r
+
+    def read_comp(self):
+        a = []
+        while True:
+            b = self.read_tag()
+            if b['type'] == 0:
+                break
+            a.append(b)
+        return a
+
+    def read_int_array(self):
+        size = self.read_int()
+        return [self.read_int() for _ in range(size)]
+
+    def read_tag(self):
+        a = {"type": self.read_byte()}
+        if a["type"] != 0:
+            a["name"] = self.read_short_string()
+            a["value"] = self._DECODERS[a["type"]]()
+        return a
+
+    def read_ulong(self):  # unused ...?
+        return struct.unpack(">Q", self.read_data(8))[0]

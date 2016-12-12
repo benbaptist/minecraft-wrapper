@@ -391,7 +391,7 @@ class Player:
             self.getClient().windowCounter = 2
         # TODO Test what kind of field title is (json or text)
         if self.getClient().version > mcpackets.PROTOCOL_1_8START:
-            self.getClient().packet.send(
+            self.getClient().packet.sendpkt(
                 self.clientboundPackets.OPEN_WINDOW, [_UBYTE, _STRING, _JSON, _UBYTE], (
                     self.getClient().windowCounter, windowtype, {"text": title}, slots))
         return None  # return a Window object soon

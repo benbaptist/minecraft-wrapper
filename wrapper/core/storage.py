@@ -40,10 +40,6 @@ class Storage:
         t.daemon = True
         t.start()
 
-    def __del__(self):
-        self.abort = True
-        self.save()
-
     def __getitem__(self, index):
         if not type(index) in (str, str2):
             raise Exception("A string must be passed - got %s" % type(index))
@@ -69,6 +65,9 @@ class Storage:
         del self.data[index]
 
     def __iter__(self):
+        if self.data is None:
+            self.data = {}
+        # noinspection PyTypeChecker
         for i in self.data:
             yield i
 
