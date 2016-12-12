@@ -93,10 +93,10 @@ class Proxy:
                 self.log.exception("An error has occured while trying to accept a socket connection \n(%s)", e)
                 continue
 
-            banned_ip = self.wrapper.proxy.isipbanned(addr)
+            banned_ip = self.isipbanned(addr)
             if self.silent_ip_banning and banned_ip:
-                self.proxy_socket.close()
-
+                sock.shutdown(0)  # 0: done receiving, 1: done sending, 2: both
+                continue
             # spur off client thread
             client = Client(sock, addr, self.wrapper, self.publicKey, self.privateKey, banned=banned_ip)
             t = threading.Thread(target=client.handle, args=())
@@ -291,7 +291,7 @@ class Proxy:
                     banned = ""
                     for i in self.wrapper.javaserver.players:
                         player = self.wrapper.javaserver.players[i]
-                        if str(player.client.addr[0]) == str(ipaddress):
+                        if str(player.client.ip) == str(ipaddress):
                             self.wrapper.javaserver.console("kick %s Your IP is Banned!" % player.username)
                             banned += "\n%s" % player.username
                     return "Banned ip address: %s\nPlayers kicked as a result:%s" % (ipaddress, banned)
@@ -376,17 +376,19 @@ class Proxy:
     def isipbanned(self, ipaddress):  # Check if the IP address is banned
         banlist = getjsonfile("banned-ips", self.serverpath)
         if banlist:  # in this case we just care if banlist exits in any fashion
-            banrecord = find_in_json(banlist, "ip", ipaddress)
-            if banrecord:
-                if read_timestr(banrecord["expires"]) < int(time.time()):  # if ban has expired
-                    pardoning = self.pardonip(ipaddress)
-                    if pardoning[:8] == "pardoned":
-                        self.log.info("IP: %s was pardoned (expired ban)", ipaddress)
-                        return False  # IP is "NOT" banned (anymore)
-                    else:
-                        self.log.warning("isipbanned attempted a pardon of IP: %s (expired ban), but it failed:\n %s",
-                                         ipaddress, pardoning)
-                return True  # IP is still banned
+            for record in banlist:
+                _ip = record["ip"]
+                if _ip in ipaddress:
+                    _expires = read_timestr(record["expires"])
+                    if _expires < int(time.time()):  # if ban has expired
+                        pardoning = self.pardonip(ipaddress)
+                        if pardoning[:8] == "pardoned":
+                            self.log.info("IP: %s was pardoned (expired ban)", ipaddress)
+                            return False  # IP is "NOT" banned (anymore)
+                        else:
+                            self.log.warning("isipbanned attempted a pardon of IP: %s (expired ban), "
+                                             "but it failed:\n %s", ipaddress, pardoning)
+                    return True  # IP is still banned
         return False  # banlist empty or record not found
 
     def getskintexture(self, uuid):

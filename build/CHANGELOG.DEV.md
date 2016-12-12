@@ -1,11 +1,12 @@
 Build 163 Version [0.9.4]
 - refactor packet.py
-- rewrites to proxy system:
+- rewrites and bug fixes to proxy system:
     - option to have ip bans simply drop the connection, making the server un-responsive
     to traffic from the banned address.
     - start cleaning up logon process in clientconnection.
     - fix broken offline wrapper logon process (may have contributed to player.connect() issues).
     - bigfix in ban-ip that excluded valid ipv4s from being banned.
+    - fix broken isipbanned function in proxy.base.
 
 Build 162 Version [0.9.3]
 - BugFix: Added getEntityControl() to Minecraft API so plugins can actually access the new entity control methods (gasp!)
