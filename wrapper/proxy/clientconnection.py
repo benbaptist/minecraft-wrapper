@@ -111,7 +111,7 @@ class Client:
         self.pktCB = mcpackets.ClientBound(self.clientversion)
         # self.parsers = {}
         self._getclientpacketset()
-        self.buildmode = True
+        self.buildmode = False
 
         self.abort = False
         self.time_server_pinged = 0
@@ -189,6 +189,16 @@ class Client:
                 self.server_connection.packet.send_raw(original)
         self.close()
 
+    def parser(self, pkid):
+        try:
+            return self.parsers[self.state][pkid]()
+        except KeyError:
+            self.parsers[self.state][pkid] = self._parse_built
+            if self.buildmode:
+                # some code here to document un-parsed packets?
+                pass
+            return True
+
     def flush_loop(self):
         while not self.abort:
             try:
@@ -213,13 +223,67 @@ class Client:
     def version(self):
         return self.clientversion
 
-    def inittheplayer(self):
+    def _inittheplayer(self):
         # so few items and so infrequently run that fussing with xrange/range PY2 difference is not needed.
         for i in range(46):  # there are 46 items 0-45 in 1.9 (shield) versus 45 (0-44) in 1.8 and below.
             self.inventory[i] = None
         self.time_server_pinged = time.time()
         self.time_client_responded = time.time()
         self._refresh_server_version()
+
+    def _refresh_server_version(self):
+        # Get serverversion for mcpackets use
+        try:
+            self.serverversion = self.wrapper.javaserver.protocolVersion
+        except AttributeError:
+            self.serverversion = -1
+
+    def _getclientpacketset(self):
+        # Determine packet types  - in this context, pktSB/pktCB is what is being received/sent from/to the client.
+        #   that is why we refresh to the clientversion.
+        self.pktSB = mcpackets.ServerBound(self.clientversion)
+        self.pktCB = mcpackets.ClientBound(self.clientversion)
+        self._define_parsers()
+
+    def _define_parsers(self):
+        # the packets we parse and the methods that parse them.
+        self.parsers = {
+            HANDSHAKE: {
+                self.pktSB.HANDSHAKE: self._parse_handshaking
+                },
+            STATUS: {
+                self.pktSB.STATUS_PING: self._parse_status_ping,
+                self.pktSB.REQUEST: self._parse_status_request
+                },
+            LOGIN: {
+                self.pktSB.LOGIN_START: self._parse_login_start,
+                self.pktSB.LOGIN_ENCR_RESPONSE: self._parse_login_encr_response
+                },
+            PLAY: {
+                self.pktSB.CHAT_MESSAGE: self._parse_play_chat_message,
+                self.pktSB.CLICK_WINDOW: self._parse_play_click_window,
+                self.pktSB.CLIENT_SETTINGS: self._parse_play_client_settings,
+                self.pktSB.CLIENT_STATUS: self._parse_built,
+                self.pktSB.HELD_ITEM_CHANGE: self._parse_play_held_item_change,
+                self.pktSB.KEEP_ALIVE: self._parse_play_keep_alive,
+                self.pktSB.PLAYER: self._parse_built,
+                self.pktSB.PLAYER_ABILITIES: self._parse_built,
+                self.pktSB.PLAYER_BLOCK_PLACEMENT: self._parse_play_player_block_placement,
+                self.pktSB.PLAYER_DIGGING: self._parse_play_player_digging,
+                self.pktSB.PLAYER_LOOK: self._parse_play_player_look,
+                self.pktSB.PLAYER_POSITION: self._parse_play_player_position,
+                self.pktSB.PLAYER_POSLOOK: self._parse_play_player_poslook,
+                self.pktSB.PLAYER_UPDATE_SIGN: self._parse_play_player_update_sign,
+                self.pktSB.SPECTATE: self._parse_play_spectate,
+                self.pktSB.TELEPORT_CONFIRM: self._parse_play_teleport_confirm,
+                self.pktSB.USE_ENTITY: self._parse_built,
+                self.pktSB.USE_ITEM: self._parse_play_use_item,
+                },
+            LOBBY: {
+                self.pktSB.KEEP_ALIVE: self._parse_lobby_keep_alive,
+                self.pktSB.CLICK_WINDOW: self._parse_lobby_click_window
+            }
+        }
 
     def connect_to_server(self, ip=None, port=None):
         """
@@ -332,20 +396,6 @@ class Client:
     def message(self, string):
         self.server_connection.packet.sendpkt(self.pktSB.CHAT_MESSAGE, [_STRING], [string])
 
-    def _refresh_server_version(self):
-        # Get serverversion for mcpackets use
-        try:
-            self.serverversion = self.wrapper.javaserver.protocolVersion
-        except AttributeError:
-            self.serverversion = -1
-
-    def _getclientpacketset(self):
-        # Determine packet types  - in this context, pktSB/pktCB is what is being received/sent from/to the client.
-        #   that is why we refresh to the clientversion.
-        self.pktSB = mcpackets.ServerBound(self.clientversion)
-        self.pktCB = mcpackets.ClientBound(self.clientversion)
-        self._define_parsers()
-
     def _keep_alive_tracker(self, playername):
         # send keep alives to client and send client settings to server.
         while not self.abort:
@@ -375,7 +425,7 @@ class Client:
         self.state = HANDSHAKE
         self.log.debug("Client keepalive tracker aborted (%s's client thread)", playername)
 
-    def _authenticate_client(self, server_id):
+    def _login_authenticate_client(self, server_id):
         if self.wrapper_onlinemode:
             r = requests.get("https://sessionserver.mojang.com/session/minecraft/hasJoined?username=%s"
                              "&serverId=%s" % (self.username, server_id))
@@ -417,15 +467,15 @@ class Client:
         if self.clientversion > 26:
             self.packet.setcompression(256)
 
-    def _joinplayer(self):
+    def _login_joinplayer(self):
         # Put player object and client into server. (player login will be called later by mcserver.py)
         self.wrapper.proxy.clients.append(self)
 
         if self.username not in self.wrapper.javaserver.players:
             self.wrapper.javaserver.players[self.username] = Player(self.username, self.wrapper)
-        self.inittheplayer()  # set up inventory and stuff
+        self._inittheplayer()  # set up inventory and stuff
 
-    def _client_logon(self):
+    def _login_client_logon(self):
 
         if self.wrapper.proxy.isuuidbanned(self.uuid.__str__()):
             banreason = self.wrapper.proxy.getuuidbanreason(self.uuid.__str__())
@@ -450,7 +500,7 @@ class Client:
         self.log.info("%s's client LOGON occurred: (UUID: %s | IP: %s | SecureConnection: %s)",
                       self.username, self.uuid.string, self.ip, self.wrapper_onlinemode)
 
-        self._joinplayer()
+        self._login_joinplayer()
 
         # send login success to client
         self.packet.sendpkt(self.pktCB.LOGIN_SUCCESS, [_STRING, _STRING], (self.uuid.string, self.username))
@@ -497,57 +547,6 @@ class Client:
         #                         self.wrapper.javaserver.console("whitelist reload")
         #                         with open("%s/.wrapper-proxy-whitelist-migrate" % worldname, "a") as f:
         #                             f.write("%s %s\n" % (self.uuid.string, self.serveruuid.string))
-
-    def _define_parsers(self):
-        # the packets we parse and the methods that parse them.
-        self.parsers = {
-            HANDSHAKE: {
-                self.pktSB.HANDSHAKE: self._parse_handshaking
-                },
-            STATUS: {
-                self.pktSB.STATUS_PING: self._parse_status_ping,
-                self.pktSB.REQUEST: self._parse_status_request
-                },
-            LOGIN: {
-                self.pktSB.LOGIN_START: self._parse_login_start,
-                self.pktSB.LOGIN_ENCR_RESPONSE: self._parse_login_encr_response
-                },
-            PLAY: {
-                self.pktSB.CHAT_MESSAGE: self._parse_play_chat_message,
-                self.pktSB.CLICK_WINDOW: self._parse_play_click_window,
-                self.pktSB.CLIENT_SETTINGS: self._parse_play_client_settings,
-                self.pktSB.CLIENT_STATUS: self._parse_built,
-                self.pktSB.HELD_ITEM_CHANGE: self._parse_play_held_item_change,
-                self.pktSB.KEEP_ALIVE: self._parse_play_keep_alive,
-                self.pktSB.PLAYER: self._parse_built,
-                self.pktSB.PLAYER_ABILITIES: self._parse_built,
-                self.pktSB.PLAYER_BLOCK_PLACEMENT: self._parse_play_player_block_placement,
-                self.pktSB.PLAYER_DIGGING: self._parse_play_player_digging,
-                self.pktSB.PLAYER_LOOK: self._parse_play_player_look,
-                self.pktSB.PLAYER_POSITION: self._parse_play_player_position,
-                self.pktSB.PLAYER_POSLOOK: self._parse_play_player_poslook,
-                self.pktSB.PLAYER_UPDATE_SIGN: self._parse_play_player_update_sign,
-                self.pktSB.SPECTATE: self._parse_play_spectate,
-                self.pktSB.TELEPORT_CONFIRM: self._parse_play_teleport_confirm,
-                self.pktSB.USE_ENTITY: self._parse_built,
-                self.pktSB.USE_ITEM: self._parse_play_use_item,
-                },
-            LOBBY: {
-                self.pktSB.KEEP_ALIVE: self._parse_lobby_keep_alive,
-                self.pktSB.CLICK_WINDOW: self._parse_lobby_click_window
-            }
-        }
-    # noinspection PyCallingNonCallable
-
-    def parser(self, pkid):
-        try:
-            return self.parsers[self.state][pkid]()
-        except KeyError:
-            self.parsers[self.state][pkid] = self._parse_built
-            if self.buildmode:
-                # some code here to document un-parsed packets?
-                pass
-            return True
 
     def _parse_built(self):
         return True
@@ -665,7 +664,7 @@ class Client:
 
             # Since wrapper is offline, we are using offline for self.uuid also
             self.serveruuid = self.uuid  # MCUUID object
-            return self._client_logon()
+            return self._login_client_logon()
 
         # Don't send this packet on to the actual server because WE are handling client's logon.
         return False
@@ -705,13 +704,13 @@ class Client:
 
         # begin Client login process
         # Wrapper in online mode, taking care of authentication
-        if self._authenticate_client(serverid) is False:
+        if self._login_authenticate_client(serverid) is False:
             return False  # client failed to authenticate
 
         # TODO Whitelist processing Here
 
         # log the client on
-        return self._client_logon()
+        return self._login_client_logon()
 
     def _parse_play_chat_message(self):
         data = self.packet.readpkt([_STRING])
