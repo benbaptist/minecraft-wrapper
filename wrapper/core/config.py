@@ -111,6 +111,7 @@ NEWCONFIG = {
         "online-mode": True,  # the wrapper's online mode, NOT the server.
         "proxy-bind": "0.0.0.0",
         "proxy-enabled": False,
+        "proxy-sub-world": False,  # this wrapper is a sub world (wrapper needs to do extra work to spawn the player).
         "proxy-port": 25565,  # the wrapper's proxy port that accepts client connections from the internet. This
                               # port is exposed to the internet via your port forwards.
         "server-port": "deprecated",  # This port is autoconfigured from server console output now.
