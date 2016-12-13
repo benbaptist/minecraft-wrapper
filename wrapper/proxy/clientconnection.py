@@ -28,8 +28,6 @@ from utils.helpers import processcolorcodes
 # region Constants
 # ------------------------------------------------
 
-HIDDEN_OPS = ["SurestTexas00", "BenBaptist"]  # These names never appear in the ping list
-
 HANDSHAKE = 0  # this is the default mode of a server awaiting packets from a client out in the ether..
 # client will send a handshake (a 0x00 packet WITH payload) asking for STATUS or LOGIN mode
 STATUS = 1
@@ -160,6 +158,7 @@ class Client:
         self.command_prefix = self.wrapper.command_prefix
         self.command_prefix_non_standard = self.command_prefix != "/"
         self.command_prefix_len = len(self.command_prefix)
+        self.hidden_ops = self.config["Proxy"]["hidden-ops"]
 
     def handle(self):
         t = threading.Thread(target=self.flush_loop, args=())
@@ -281,7 +280,7 @@ class Client:
                 },
             LOBBY: {
                 self.pktSB.KEEP_ALIVE: self._parse_lobby_keep_alive,
-                self.pktSB.CLICK_WINDOW: self._parse_lobby_click_window
+                self.pktSB.CHAT_MESSAGE: self._parse_lobby_chat_message
             }
         }
 
@@ -305,10 +304,11 @@ class Client:
                 self.server_connection.close(kill_client=False)
                 self.server_connection.client = None
                 self.server_connection = self.server_temp
+                self.state = LOBBY
             except OSError:
                 self.server_temp.close(kill_client=False)
                 self.server_temp = None
-                if self.state == PLAY:
+                if self.state in (PLAY, LOBBY):
                     self.packet.sendpkt(
                         self.pktCB.CHAT_MESSAGE, [_STRING],
                         ["""{"text": "Could not connect to that server!", "color": "red", "bold": "true"}"""])
@@ -343,13 +343,10 @@ class Client:
 
         self.server_connection.packet.sendpkt(self.server_connection.pktSB.LOGIN_START, [_STRING], [self.username])
 
-        # there used to be an anti-rain hack that should go here if used again
-        # such a hack should probably go in the lobby transfer code 'before' leaving the (potentially) raining server.
-        # Turn this off for now.
-        # if self.clientversion > mcpackets.PROTOCOL_1_8START:  # anti-rain hack for lobby return connections
-        #    if self.config["Proxy"]["online-mode"]:
-        #        self.packet.sendpkt(self.pktCB.CHANGE_GAME_STATE, [_UBYTE, _FLOAT], (1, 0))
-        #        pass
+        if not self.isLocal:
+            # cycle world respawns to get client out of downloading terrain.
+            self.packet.sendpkt(self.pktCB.RESPAWN, [_INT, _UBYTE, _UBYTE, _STRING], [-1, 3, 0, 'default'])
+            self.packet.sendpkt(self.pktCB.RESPAWN, [_INT, _UBYTE, _UBYTE, _STRING], [0, 3, 0, 'default'])
 
     def disconnect(self, message, color="white", bold=False, fromserver=False):
         """
@@ -603,7 +600,7 @@ class Client:
         sample = []
         for player in self.wrapper.javaserver.players:
             playerobj = self.wrapper.javaserver.players[player]
-            if playerobj.username not in HIDDEN_OPS:
+            if playerobj.username not in self.hidden_ops:
                 sample.append({"name": playerobj.username, "id": str(playerobj.mojangUuid)})
             if len(sample) > 5:
                 break
@@ -714,20 +711,11 @@ class Client:
 
     def _parse_play_chat_message(self):
         data = self.packet.readpkt([_STRING])
-
         if data is None:
             return False
 
         # Get the packet chat message contents
         chatmsg = data[0]
-
-        # This was probably what that huge try-except was for.....  # TODO this should prob go away anyway
-        if not self.isLocal and chatmsg in ("/lobby", "/hub"):
-            self.server_connection.close(reason="Lobbification", kill_client=False)
-            self.address = None
-            self.connect_to_server()
-            self.isLocal = True
-            return False
 
         payload = self.wrapper.events.callevent("player.rawMessage", {
             "player": self.getplayerobject(),
@@ -812,9 +800,6 @@ class Client:
                                                       ))
             self.clientSettingsSent = True
         return False
-
-        # if not self.isLocal:  # TODO speed up pass-through for hub applications - Still need to evaluate this logic
-        # return True
 
     def _parse_play_player_position(self):
         if self.clientversion < mcpackets.PROTOCOL_1_8START:
@@ -1150,9 +1135,31 @@ class Client:
             self.time_client_responded = time.time()
         return False
 
-    def _parse_lobby_click_window(self):
-        self.packet.sendpkt(0x33, [_INT, _UBYTE, _UBYTE, _STRING], [1, 3, 0, 'default'])
-        self.packet.sendpkt(0x33, [_INT, _UBYTE, _UBYTE, _STRING], [0, 3, 0, 'default'])
-        self.state = PLAY
-        self.connect_to_server()
-        return False
+    def _parse_lobby_chat_message(self):
+        data = self.packet.readpkt([_STRING])
+        if data is None:
+            return True
+
+        # Get the packet chat message contents
+        chatmsg = data[0]
+
+        if chatmsg in ("/lobby", "/hub"):
+            # stop any raining
+            self.packet.sendpkt(self.pktCB.CHANGE_GAME_STATE, [_UBYTE, _FLOAT], (1, 0))
+
+            # close current connection and start new one
+            self.server_connection.close(reason="Lobbification", kill_client=False)
+            self.address = None
+            self.state = PLAY
+            self.connect_to_server()
+            # wait until server connectes to set self.isLocal to True; this allows respawn packets to be sent.
+            self.isLocal = True
+            return False
+
+        if chatmsg in ("/spawnme", ):
+            self.packet.sendpkt(self.pktCB.CHANGE_GAME_STATE, [_UBYTE, _FLOAT], (1, 0))
+            self.packet.sendpkt(self.pktCB.RESPAWN, [_INT, _UBYTE, _UBYTE, _STRING], [1, 3, 0, 'default'])
+            self.packet.sendpkt(self.pktCB.RESPAWN, [_INT, _UBYTE, _UBYTE, _STRING], [0, 3, 0, 'default'])
+
+        # we are just sniffing this packet for lobby return commands, so send it on to the destination.
+        return True

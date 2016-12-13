@@ -154,17 +154,12 @@ class ServerConnection:
         t.start()
 
     def close(self, reason="Disconnected", kill_client=True):
-        # TODO in lobbies, self.client is now None for some reason
         if self.client:
             if not self.client.isLocal and kill_client:
                 self.client.isLocal = True
                 message = {"text": "Disconnected from server.", "color": "red"}
 
-                # reconnect client back to lobby/hub server (this wrapper's server).
-                # end raining in case the previous server was raining.
-                self.client.packet.sendpkt(self.pktCB.CHANGE_GAME_STATE, [_UBYTE, _FLOAT], (1, 0))
-                self.client.packet.sendpkt(self.pktCB.CHAT_MESSAGE, [_STRING, _BYTE], (json.dumps(message), 0))
-                self.client.connect()
+                self.client.connect_to_server()
                 return
             self.abort = True
 
@@ -175,13 +170,6 @@ class ServerConnection:
         except OSError:
             pass
 
-        # I may remove this later so the client can remain connected upon server disconnection
-        #  - - -- - if re-activating code ;;;; update arguments!!   --- -- --
-        # self.client.packet.send(0x02, "string|byte",
-        #                         (json.dumps({"text": "Disconnected from server. Reason: %s" % reason,
-        #                                       "color": "red"}),0))
-        # self.abort = True
-        # self.client.connect()
         if kill_client:
             self.client.abort = True
             self.client.server = None
