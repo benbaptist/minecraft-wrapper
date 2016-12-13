@@ -95,7 +95,6 @@ class Client:
         self.config = wrapper.config
         self.packet = Packet(self.client_socket, self)
 
-        self.warning_about_deprecated_send = True
         self.verifyToken = encryption.generate_challenge_token()
         self.serverID = encryption.generate_server_id()
         self.MOTD = {}
@@ -107,7 +106,7 @@ class Client:
 
         self.pktSB = mcpackets.ServerBound(self.clientversion)
         self.pktCB = mcpackets.ClientBound(self.clientversion)
-        # self.parsers = {}
+        self.parsers = {}  # dictionary of parser packet constants and associated parsing methods
         self._getclientpacketset()
         self.buildmode = False
 
@@ -116,7 +115,6 @@ class Client:
         self.time_client_responded = 0
         self.keepalive_val = 0
         self.server_connection = None  # Proxy ServerConnection() (not the javaserver)
-        self.isServer = False
         self.isLocal = True
         self.server_temp = None
 
@@ -184,11 +182,11 @@ class Client:
 
             # send packet if server available and parsing passed.
             # already tested - Python will not attempt eval of self.server.state if self.server is False
-            if self.parser(pkid) and self.server_connection and self.server_connection.state == 3:
+            if self.parse(pkid) and self.server_connection and self.server_connection.state == 3:
                 self.server_connection.packet.send_raw(original)
         self.close()
 
-    def parser(self, pkid):
+    def parse(self, pkid):
         try:
             return self.parsers[self.state][pkid]()
         except KeyError:
@@ -298,7 +296,7 @@ class Client:
             self.address = (ip, port)
         if ip is not None:
             # Connect() feature . . .
-            self.server_temp = ServerConnection(self, self.wrapper, ip, port)
+            self.server_temp = ServerConnection(self, ip, port)
             try:
                 self.server_temp.connect()
                 self.server_connection.close(kill_client=False)
@@ -320,7 +318,7 @@ class Client:
                 self.address = None
                 return
         else:
-            self.server_connection = ServerConnection(self, self.wrapper, ip, port)
+            self.server_connection = ServerConnection(self, ip, port)
             try:
                 self.server_connection.connect()
             except Exception as e:

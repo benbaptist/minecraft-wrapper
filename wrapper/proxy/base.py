@@ -37,7 +37,6 @@ class Proxy:
         self.silent_ip_banning = self.wrapper.config["Proxy"]["silent-ipban"]
         self.proxy_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.usingSocket = False
-        self.isServer = False
         self.clients = []
         self.skins = {}
         self.skinTextures = {}

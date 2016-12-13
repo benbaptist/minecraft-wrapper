@@ -5,6 +5,7 @@ Build 164
 - fix more player-connnect stuff.  works in a limited fashion.  Respawn in new world glitches screen until player dies and respawns
     if player does not use /lobby to get back, strange things happen if he disconnects and rejoins.  /lobby does not re-connect to
     original server (packet length problems).
+- Same refactor of serverconnection that was done to clientconnection...
 
 Build 163 Version [0.9.4]
 - refactor packet.py
