@@ -81,7 +81,7 @@ class ServerConnection:
         self.client = client
         self.wrapper = client.wrapper
         self.proxy = client.wrapper.proxy
-        self.log = client.wrapper.wrapper.log
+        self.log = client.wrapper.log
         self.ip = ip
         self.port = port
 
