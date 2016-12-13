@@ -188,6 +188,11 @@ class ServerConnection:
             self.proxy.removestaleclients()
 
     def getplayerby_eid(self, eid):
+        """
+        :rtype: var
+        this is only to quiet complaints PyCharm makes because in places like this we return booleans
+        sometimes when we can't get valid data and our calling methods check for these booleans.
+        """
         for client in self.wrapper.proxy.clients:
             if client.servereid == eid:
                 return self.get_player_context(client.username, calledby="getplayerby_eid")

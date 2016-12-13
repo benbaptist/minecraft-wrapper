@@ -1,5 +1,7 @@
 Build 164
 - Bugfix request import
+- Big refactor of clientconnection parsing to remove all the if-elif processing.
+- making code preparations to fix player.connect()
 
 Build 163 Version [0.9.4]
 - refactor packet.py

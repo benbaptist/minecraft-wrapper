@@ -86,6 +86,8 @@ class ClientBound:
         if PROTOCOL_1_8END < protocol < PROTOCOL_1_9REL1:
             raise UnsupportedMinecraftProtocol
 
+        # Login, Status, and Ping packets
+        # -------------------------------
         self.LOGIN_DISCONNECT = 0x00
         self.LOGIN_ENCR_REQUEST = 0x01
         self.LOGIN_SUCCESS = 0x02
@@ -94,6 +96,8 @@ class ClientBound:
         self.PING_JSON_RESPONSE = 0x00  # the json data represented as a string
         self.PING_PONG = 0x01  # PONG sent in response to Client PING
 
+        # play mode packets
+        # -------------------------------
         # Base set 1.7 - 1.8.9
         self.ANIMATION = 0x0b
         self.ATTACH_ENTITY = 0x1b
@@ -188,15 +192,20 @@ class ServerBound:
         if PROTOCOL_1_8END < protocol < PROTOCOL_1_9REL1:
             raise UnsupportedMinecraftProtocol
 
+        # Login, Status, and Ping packets
+        # -------------------------------
         self.HANDSHAKE = 0x00  # set server to STATUS(1) or LOGIN(2) mode.
 
-        self.REQUEST = 0x00  # ... functions like a "go!" when one starts a race.  Server sends data in response packet
+        self.REQUEST = 0x00  # Server sends server json list data in response packet
 
         self.STATUS_PING = 0x01  # server responds with a PONG
 
         self.LOGIN_START = 0x00  # contains the "name" of user.  Sent after handshake for LOGIN
+
         self.LOGIN_ENCR_RESPONSE = 0x01  # client response to ENCR_REQUEST
 
+        # Play packets
+        # -------------------------------
         # 1.7 - 1.7.10 PLAY packets
         self.CHAT_MESSAGE = 0x01
         self.CLICK_WINDOW = 0x0e
