@@ -214,7 +214,7 @@ class Client:
             self.log.debug("Client socket for %s already closed!", self.username)
         if self.server_connection:
             self.server_connection.abort = True
-            self.server_connection.close("Client Disconnected", kill_client=False)
+            self.server_connection.close("Client Disconnected", lobby_return=True)
 
     @property
     def version(self):
@@ -291,38 +291,54 @@ class Client:
         this is the connection to a local server or other wrapper instance.
         """
 
-        self.clientSettingsSent = False
-        if self.server_connection is not None:
+        if self.server_connection is None:
+            # use local server
+            pass
+        else:
+            # use player.Connect() server/port
             self.address = (ip, port)
+
         if ip is not None:
             # Connect() feature . . .
             self.server_temp = ServerConnection(self, ip, port)
-            try:
-                self.server_temp.connect()
-                self.server_connection.close(kill_client=False)
-                self.server_connection.client = None
-                self.server_connection = self.server_temp
-                self.state = LOBBY
-            except OSError:
-                self.server_temp.close(kill_client=False)
-                self.server_temp = None
-                if self.state in (PLAY, LOBBY):
-                    self.packet.sendpkt(
-                        self.pktCB.CHAT_MESSAGE, [_STRING],
-                        ["""{"text": "Could not connect to that server!", "color": "red", "bold": "true"}"""])
-                else:
-                    self.packet.sendpkt(
-                        self.pktCB.LOGIN_DISCONNECT, [_STRING],
-                        ["""{"text": "Could not connect to that server!", "color": "red", "bold": "true"}"""])
 
-                self.address = None
-                return
+            self.server_connection.close(lobby_return=True)
+            self.state = LOBBY
+            self.server_temp.connect()
+            self.server_connection = self.server_temp
+
+
+
+            # self.server_temp = ServerConnection(self, ip, port)
+            # try:
+            #    self.server_temp.connect()
+            #    self.server_connection.close(lobby_return=True)
+            #    self.server_connection.client = None
+            #    self.server_connection = self.server_temp
+            #    self.state = LOBBY
+            # except OSError:
+            #    self.server_temp.close(lobby_return=True)
+            #    self.server_temp = None
+            #    if self.state in (PLAY, LOBBY):
+            #        self.packet.sendpkt(
+            #            self.pktCB.CHAT_MESSAGE, [_STRING],
+            #            ["""{"text": "Could not connect to that server!", "color": "red", "bold": "true"}"""])
+            #    else:
+            #        self.packet.sendpkt(
+            #            self.pktCB.LOGIN_DISCONNECT, [_STRING],
+            #            ["""{"text": "Could not connect to that server!", "color": "red", "bold": "true"}"""])
+
+            #    self.address = None
+            #    return
+
         else:
             self.server_connection = ServerConnection(self, ip, port)
             try:
                 self.server_connection.connect()
             except Exception as e:
                 self.disconnect("Proxy client could not connect to the server (%s)" % e)
+
+        # start server handle()
         t = threading.Thread(target=self.server_connection.handle, args=())
         t.daemon = True
         t.start()
@@ -1146,7 +1162,7 @@ class Client:
             self.packet.sendpkt(self.pktCB.CHANGE_GAME_STATE, [_UBYTE, _FLOAT], (1, 0))
 
             # close current connection and start new one
-            self.server_connection.close(reason="Lobbification", kill_client=False)
+            self.server_connection.close(reason="Lobbification", lobby_return=False)
             self.address = None
             self.state = PLAY
             self.connect_to_server()

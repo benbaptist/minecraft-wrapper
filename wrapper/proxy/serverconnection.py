@@ -146,6 +146,7 @@ class ServerConnection:
 
         # connect client back to local server
         self.client.state = PLAY  # should this be before , after , or PART OF connecting to server?
+        self.client.server_connection = False  # this is set to false so client reconnects local server
         self.client.connect_to_server()
 
     def close(self, reason="Disconnected", lobby_return=False):
