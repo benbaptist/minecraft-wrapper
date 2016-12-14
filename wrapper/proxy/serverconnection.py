@@ -64,11 +64,11 @@ _NULL = 100
 class ServerConnection:
     def __init__(self, client, ip=None, port=None):
         """
-        Server receives "CLIENT BOUND" packets from server.  These are what get parsed (CLIENT BOUND format).
-        'client.packet.sendpkt' - sends a packet to the client (use CLIENT BOUND packet format)
-        'self.packet.sendpkt' - sends a packet back to the server (use SERVER BOUND packet format)
-        This part of proxy 'pretends' to be the client interacting with the server.
+        This class ServerConnection is a "fake" client connecting to the server.
+        It receives "CLIENT BOUND" packets from server.  These are parsed in CLIENT BOUND format.
 
+        'client.packet.sendpkt' - sends a packet to the client (use CLIENT BOUND packet format)
+        'self.packet.sendpkt' - sends a packet back to the server (use SERVER BOUND packet format).
 
         Args:
             client: The client to connect to the server
@@ -120,14 +120,16 @@ class ServerConnection:
         self._define_parsers()
 
     def send(self, packetid, xpr, payload):
-        """ not supported. A wrapper of sendpkt() for old code compatability purposes only."""
-        self.log.debug("deprecated server.send() called.  Use server.packet.sendpkt for best performance.")
+        """ Not supported. A wrapper of packet.send(), which is further a wrapper for  packet.sendpkt(); both wrappers
+         exist for older code compatability purposes only for 0.7.x version plugins that might use it."""
+        self.log.debug("deprecated server.send() called.  Use server.packet.sendpkt() for best performance.")
         self.packet.send(packetid, xpr, payload)
         pass
 
     def connect(self):
         if self.ip is None:
             self.server_socket.connect(("localhost", self.wrapper.javaserver.server_port))
+            self.client.isLocal = True
         else:
             self.server_socket.connect((self.ip, self.port))
             self.client.isLocal = False
@@ -139,27 +141,35 @@ class ServerConnection:
         t.daemon = True
         t.start()
 
-    def close(self, reason="Disconnected", kill_client=True):
-        if self.client:
-            if not self.client.isLocal and kill_client:
-                self.client.isLocal = True
-                message = {"text": "Disconnected from server.", "color": "red"}
+    def _return_to_lobby(self):
+        self.client.isLocal = True
 
-                self.client.connect_to_server()
-                return
-            self.abort = True
+        # connect client back to local server
+        self.client.state = PLAY  # should this be before , after , or PART OF connecting to server?
+        self.client.connect_to_server()
 
-        self.packet = None
-        self.log.debug("Disconnected proxy server connection. (%s)", self.username)
+    def close(self, reason="Disconnected", lobby_return=False):
+        self.log.debug("Disconnecting proxy server socket connection. (%s)", self.username)
+        self.abort = True  # end 'handle' cleanly
+        time.sleep(0.1)
         try:
-            self.server_socket.close()
-        except OSError:
+            self.server_socket.shutdown(2)
+            self.log.debug("Sucessfully closed server socket for %s...", self.username)
+        except:
+            self.log.debug("Server socket for %s already closed by server...", self.username)
             pass
 
-        if kill_client:
+        self.state = LOGIN
+
+        if lobby_return:
+            self._return_to_lobby()
+        else:
+            # send Client it's abort signal  -NOTE don't use self.abort this way.. use this self.close!
+            # kill_client is true only for non-lobby
             self.client.abort = True
-            self.client.server = None
-            self.proxy.removestaleclients()
+
+        # allow packet to be GC'ed
+        self.packet = None
 
     def getplayerby_eid(self, eid):
         """
@@ -169,26 +179,57 @@ class ServerConnection:
         """
         for client in self.wrapper.proxy.clients:
             if client.servereid == eid:
-                return self.get_player_context(client.username, calledby="getplayerby_eid")
+                try:
+                    return self.wrapper.javaserver.players[client.username]
+                except Exception as e:
+                    self.log.error("getplayerby_eid failed to get player %s: \n%s",
+                                   client.username, e)
+                    return False
         self.log.debug("Failed to get any player by client Eid: %s", eid)
         return False
-
-    def get_player_context(self, username, calledby=None):
-        try:
-            return self.wrapper.javaserver.players[username]
-        except Exception as e:  # This could be masking an issue and would result in "False" player objects
-            self.log.error("get_player_context (called by: %s) failed to get player %s: \n%s", calledby, username, e)
-            return False
 
     def flush_loop(self):
         while not self.abort:
             try:
                 self.packet.flush()
             except socket.error:
-                self.log.debug("Server socket closed (socket_error).")
+                self.log.debug("(socket_error) %s server socket was closed.", self.username)
                 break
             time.sleep(0.01)
-        self.log.debug("server connection flush_loop thread ended")
+        self.log.debug("%s server connection flush_loop thread ended.", self.username)
+
+    def handle(self):
+        while not self.abort:
+            # get packet
+            try:
+                pkid, original = self.packet.grabpacket()
+            except EOFError as eof:
+                # This error is often erroneous, see https://github.com/suresttexas00/minecraft-wrapper/issues/30
+                self.log.debug("%s server Packet EOF (%s)", self.username, eof)
+                return self._break_handle()
+            except socket.error:  # Bad file descriptor occurs anytime a socket is closed.
+                self.log.debug("%s Failed to grab packet [SERVER] socket error", self.username)
+                return self._break_handle()
+            except Exception as e:
+                # anything that gets here is a bona-fide error we need to become aware of
+                self.log.debug("%s Failed to grab packet [SERVER] (%s):", self.username, e)
+                return self._break_handle()
+
+            # parse it
+            if self.parse(pkid) and self.client:
+                try:
+                    self.client.packet.send_raw(original)
+                except Exception as e:
+                    self.log.debug("[SERVER] Could not send packet (%s): (%s): \n%s", pkid, e, traceback)
+                    return self._break_handle()
+
+    def _break_handle(self):
+        if self.state == LOBBY:
+            self.log.info("%s forced back to Hub", self.username)
+            self.close("%s server connection closing..." % self.username, lobby_return=True)
+        else:
+            self.close("%s server connection closing..." % self.username)
+        return
 
     def parse(self, pkid):
         try:
@@ -200,37 +241,7 @@ class ServerConnection:
                 pass
             return True
 
-    def handle(self):
-        while not self.abort:
-            if self.abort:
-                break
-            try:
-                pkid, original = self.packet.grabpacket()
-                # self.lastPacketIDs.append((hex(pkid), len(original)))
-                # if len(self.lastPacketIDs) > 10:
-                #     for i, v in enumerate(self.lastPacketIDs):
-                #         del self.lastPacketIDs[i]
-                #         break
-            except EOFError as eof:
-                # This error is often erroneous, see https://github.com/suresttexas00/minecraft-wrapper/issues/30
-                self.log.debug("Packet EOF (%s)", eof)
-                break
-            except socket.error:  # Bad file descriptor occurs anytime a socket is closed.
-                self.log.debug("Failed to grab packet [SERVER] socket closed; bad file descriptor")
-                break
-            except Exception as e:
-                # anything that gets here is a bona-fide error we need to become aware of
-                self.log.debug("Failed to grab packet [SERVER] (%s):", e)
-                break
-            if self.parse(pkid) and self.client:
-                try:
-                    self.client.packet.send_raw(original)
-                except Exception as e:
-                    self.log.debug("[SERVER] Could not send packet (%s): (%s): \n%s", pkid, e, traceback)
-                    break
-        self.close("Disconnected", kill_client=False)
-
-    # -----------------------------
+    # PARSERS SECTION
     # -----------------------------
     def _define_parsers(self):
         # the packets we parse and the methods that parse them.
@@ -267,7 +278,9 @@ class ServerConnection:
                 self.pktCB.PLAYER_LIST_ITEM: self._parse_play_player_list_item,
                 self.pktCB.DISCONNECT: self._parse_play_disconnect,
                 },
-            LOBBY: {}
+            LOBBY: {
+                self.pktCB.DISCONNECT: self._lobby_play_disconnect,
+            }
         }
 
     # Do nothing parser
@@ -819,10 +832,13 @@ class ServerConnection:
     def _parse_play_disconnect(self):
         # def __str__():
         #    return "PLAY_DISCONNECT"
-        message = self.packet.readpkt([_JSON])  # [0]["json"]
-        self.log.info("Disconnected from server: %s", message)
-        if not self.client.isLocal:
-            self.close("Disconnected", kill_client=False)
-        else:
-            self.client.disconnect(message, fromserver=True)
-        return False
+        message = self.packet.readpkt([_JSON])
+        self.log.info("%s disconnected from Server", self.username)
+        self.close(message)
+
+    # Lobby parsers
+    # -----------------------
+    def _lobby_play_disconnect(self):
+        message = self.packet.readpkt([_JSON])
+        self.log.info("%s went back to Hub", self.username)
+        self.close(message, lobby_return=True)
