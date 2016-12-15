@@ -46,7 +46,7 @@ class Main:
         self.log.debug("This'll only show up if you have debug mode on.")
 
     def onDisable(self):
-        self.data.close()  # save Storage to disk and close the Storage's periodicsave() thread.
+        self.data.close_server()  # save Storage to disk and close the Storage's periodicsave() thread.
 
     # Commands section
     def _command(self, player, args):

@@ -488,7 +488,7 @@ class Packet:
     def read_data(self, length):
         d = self.buffer.read(length)
         if len(d) == 0 and length is not 0:
-            self.obj.close("Received no data or less data than expected - connection closed")
+            self.obj.close_server("Received no data or less data than expected - connection closed")
             return ""
         return d
 

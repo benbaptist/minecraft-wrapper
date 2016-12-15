@@ -156,7 +156,7 @@ class Client:
         self.riding = None
         self.lastplacecoords = (0, 0, 0)  # last placement (for use in cases of bucket use)
         self.properties = {}
-        self.clientSettings = {}
+        self.clientSettings = False
         self.clientSettingsSent = False
         self.skinBlob = {}
         self.windowCounter = 2  # restored this
@@ -188,7 +188,7 @@ class Client:
             # already tested - Python will not attempt eval of self.server.state if self.server is False
             if self.parse(pkid) and self.server_connection and self.server_connection.state == 3:
                 self.server_connection.packet.send_raw(original)
-        self.close()
+        self.close_server()
 
     def flush_loop(self):
         while not self.abort:
@@ -250,19 +250,21 @@ class Client:
         # close current connection and start new one
         # noinspection PyBroadException
         try:
-            self.server_connection.close(reason="Lobbification", lobby_return=True)
+            self.server_connection.close_server(reason="Lobbification", lobby_return=True)
             self.state = LOBBY
             self.connect_to_server(ip, port)
+            self.clientSettingsSent = False
+            self._send_client_settings()
         except:
             # if there is a problem, close the client and disconnect player
-            self.close()
+            self.close_server()
 
-    def close(self):
+    def close_server(self):
         # close the server connection gracefully first, if possible.
 
         # noinspection PyBroadException
         try:
-            self.server_connection.close("Client Disconnecting...")
+            self.server_connection.close_server("Client Disconnecting...")
         except:
             self.log.debug("Client socket for %s already closed!", self.username)
         self.abort = True  # TODO investigate this
@@ -294,7 +296,8 @@ class Client:
             self.packet.sendpkt(self.pktCB.LOGIN_DISCONNECT, [_JSON], [message])
             self.log.debug("upon disconnect, state was 'other' (sent LOGIN_DISCONNECT)")
         time.sleep(1)
-        self.close()
+        self.state = STATUS
+        self.close_server()
 
     # internal init and properties
     # -----------------------------
@@ -354,16 +357,17 @@ class Client:
     # -----------------------------
     def _keep_alive_tracker(self, playername):
         # send keep alives to client and send client settings to server.
+        # TODO future - use a plugin channel to see if the client is actually another wrapper
         while not self.abort:
-            if self.abort is True:
-                self.log.debug("Closing Keep alive tracker thread for %s's client.", playername)
-                break
             time.sleep(1)
-            while self.state in (PLAY, LOBBY) and not self.abort:
-
+            if self.state in (PLAY, LOBBY):
                 # client expects < 20sec
                 if time.time() - self.time_server_pinged > 5:
+
+                    # create the keep alive value
                     self.keepalive_val = random.randrange(0, 99999)
+
+                    # challenge the client with it
                     if self.clientversion > mcpackets.PROTOCOL_1_8START:
                         self.packet.sendpkt(self.pktCB.KEEP_ALIVE, [_VARINT], [self.keepalive_val])
                     else:
@@ -374,11 +378,9 @@ class Client:
                 # check for active client keep alive status:
                 # server can allow up to 30 seconds for response
                 if time.time() - self.time_client_responded > 25 and not self.abort:
-                    self.state = HANDSHAKE
                     self.disconnect("Client closed due to lack of keepalive response")
                     self.log.debug("Closed %s's client thread due to lack of keepalive response", playername)
                     return
-        self.state = HANDSHAKE
         self.log.debug("Client keepalive tracker aborted (%s's client thread)", playername)
 
     def _login_authenticate_client(self, server_id):
@@ -423,7 +425,7 @@ class Client:
         if self.clientversion > 26:
             self.packet.setcompression(256)
 
-    def _login_joinplayer(self, new_client=True):
+    def _add_player_and_client_objects_to_wrapper(self, new_client=True):
         # Put player object and client into server. (player login will be called later by mcserver.py)
         if new_client:
             self.wrapper.proxy.clients.append(self)
@@ -457,7 +459,7 @@ class Client:
         self.log.info("%s's client LOGON occurred: (UUID: %s | IP: %s | SecureConnection: %s)",
                       self.username, self.uuid.string, self.ip, self.wrapper_onlinemode)
 
-        self._login_joinplayer()
+        self._add_player_and_client_objects_to_wrapper()
 
         # send login success to client
         self.packet.sendpkt(self.pktCB.LOGIN_SUCCESS, [_STRING, _STRING], (self.uuid.string, self.username))
@@ -472,6 +474,20 @@ class Client:
         # connect to server
         self.connect_to_server()
 
+        return False
+
+    def _send_client_settings(self):
+        if self.clientSettings and not self.clientSettingsSent:
+            self.server_connection.packet.sendpkt(self.pktSB.CLIENT_SETTINGS, [_RAW], (self.clientSettings,))
+            self.clientSettingsSent = True
+
+    def _read_keep_alive(self):
+        if self.serverversion < mcpackets.PROTOCOL_1_8START:
+            data = self.packet.readpkt([_INT])
+        else:  # self.version >= mcpackets.PROTOCOL_1_8START:
+            data = self.packet.readpkt([_VARINT])
+        if data[0] == self.keepalive_val:
+            self.time_client_responded = time.time()
         return False
 
     def _whitelist_processing(self):
@@ -771,54 +787,7 @@ class Client:
         return False  # and cancel this original packet
 
     def _parse_play_keep_alive(self):
-        if self.serverversion < mcpackets.PROTOCOL_1_8START:
-            data = self.packet.readpkt([_INT])
-            # ("int:payload")
-        else:  # self.version >= mcpackets.PROTOCOL_1_8START:
-            data = self.packet.readpkt([_VARINT])
-            # ("varint:payload")
-        if data[0] == self.keepalive_val:
-            self.time_client_responded = time.time()
-
-        # Arbitrary place for this.  It works since Keep alives will be received periodically
-        # Needed to move out of the _keep_alive_tracker thread
-
-        # I have no idea what the purpose of parsing these and resending them is (ask the ben bot?)
-        if self.clientSettings and not self.clientSettingsSent:
-            if self.clientversion < mcpackets.PROTOCOL_1_8START:
-                self.server_connection.packet.sendpkt(self.pktSB.CLIENT_SETTINGS,
-                                                      [_STRING, _BYTE, _BYTE, _BOOL, _BYTE, _BOOL],
-                                                      (
-                                                          self.clientSettings["locale"],
-                                                          self.clientSettings["view_distance"],
-                                                          self.clientSettings["chatflags"],
-                                                          self.clientSettings["chat_colors"],
-                                                          self.clientSettings["difficulty"],
-                                                          self.clientSettings["show_cape"]
-                                                      ))
-            elif mcpackets.PROTOCOL_1_7_9 < self.clientversion < mcpackets.PROTOCOL_1_9START:
-                self.server_connection.packet.sendpkt(self.pktSB.CLIENT_SETTINGS,
-                                                      [_STRING, _BYTE, _BYTE, _BOOL, _UBYTE],
-                                                      (
-                                                          self.clientSettings["locale"],
-                                                          self.clientSettings["view_distance"],
-                                                          self.clientSettings["chat_mode"],
-                                                          self.clientSettings["chat_colors"],
-                                                          self.clientSettings["displayed_skin_parts"]
-                                                      ))
-            else:
-                self.server_connection.packet.sendpkt(self.pktSB.CLIENT_SETTINGS,
-                                                      [_STRING, _BYTE, _VARINT, _BOOL, _UBYTE, _VARINT],
-                                                      (
-                                                          self.clientSettings["locale"],
-                                                          self.clientSettings["view_distance"],
-                                                          self.clientSettings["chat_mode"],
-                                                          self.clientSettings["chat_colors"],
-                                                          self.clientSettings["displayed_skin_parts"],
-                                                          self.clientSettings["main_hand"]
-                                                      ))
-            self.clientSettingsSent = True
-        return False
+        return self._read_keep_alive()
 
     def _parse_play_player_position(self):
         if self.clientversion < mcpackets.PROTOCOL_1_8START:
@@ -1043,30 +1012,8 @@ class Client:
         return False
 
     def _parse_play_client_settings(self):  # read Client Settings
-        if self.clientversion <= mcpackets.PROTOCOL_1_7_9:
-            data = self.packet.readpkt([_STRING, _BYTE, _BYTE, _BOOL, _BYTE, _BOOL, _NULL, _NULL])
-            # "string:locale|byte:view_distance|byte:chat_flags|bool:chat_colors|
-            # byte:difficulty|bool:show_cape")
-        elif mcpackets.PROTOCOL_1_7_9 < self.clientversion < mcpackets.PROTOCOL_1_9START:  # "1.8"
-            data = self.packet.readpkt([_STRING, _BYTE, _BYTE, _BOOL, _NULL, _NULL, _UBYTE, _NULL])
-            # "string:locale|byte:view_distance|byte:chat_mode|bool:chat_colors|
-            # ubyte:displayed_skin_parts")
-        else:
-            data = self.packet.readpkt([_STRING, _BYTE, _VARINT, _BOOL, _NULL, _NULL, _UBYTE, _VARINT])
-            # "string:locale|byte:view_distance|varint:chat_mode|bool:chat_colors|
-            # ubyte:displayed_skin_parts|
-            # varint:main_hand")
-        settingsdict = {"locale": data[0],
-                        "view_distance": data[1],
-                        "chat_mode": data[2],
-                        "chatflags": data[2],
-                        "chat_colors": data[3],
-                        "difficulty": data[4],
-                        "show_cape": data[5],
-                        "displayed_skin_parts": data[6],
-                        "main_hand": data[7]
-                        }
-        self.clientSettings = settingsdict
+        """ This is read for later sending to servers we connect to """
+        self.clientSettings = self.packet.readpkt([_RAW])
         self.clientSettingsSent = True  # the packet is not stopped, sooo...
         return True
 
@@ -1148,13 +1095,7 @@ class Client:
     # Lobby parsers
     # -----------------------
     def _parse_lobby_keep_alive(self):
-        if self.serverversion < mcpackets.PROTOCOL_1_8START:
-            data = self.packet.readpkt([_INT])
-        else:  # self.version >= mcpackets.PROTOCOL_1_8START:
-            data = self.packet.readpkt([_VARINT])
-        if data[0] == self.keepalive_val:
-            self.time_client_responded = time.time()
-        return False
+        return self._read_keep_alive()
 
     def _parse_lobby_chat_message(self):
         data = self.packet.readpkt([_STRING])
@@ -1173,13 +1114,15 @@ class Client:
             # close current connection and start new one
             # noinspection PyBroadException
             try:
-                self.server_connection.close(reason="Lobbification", lobby_return=True)
+                self.server_connection.close_server(reason="Lobbification", lobby_return=True)
                 self.state = PLAY
                 self.connect_to_server()  # with no arguments, this reconnects to local server
-                self._login_joinplayer(new_client=False)
+                self._add_player_and_client_objects_to_wrapper(new_client=False)
+                self.clientSettingsSent = False
+                self._send_client_settings()
             except:
                 # if there is a problem, close the client and disconnect player
-                self.close()
+                self.close_server()
             return False
 
         # we are just sniffing this packet for lobby return commands, so send it on to the destination.

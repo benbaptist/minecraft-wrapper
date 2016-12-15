@@ -557,7 +557,7 @@ class NBTFile(TAG_Compound):
                 # Note: GzipFile().close() does NOT close the fileobj,
                 # So the caller is still responsible for closing that.
                 try:
-                    self.file.close()
+                    self.file.close_server()
                 except (AttributeError, IOError):
                     pass
             self.file = None

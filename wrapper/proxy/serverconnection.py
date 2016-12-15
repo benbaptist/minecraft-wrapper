@@ -202,6 +202,16 @@ class ServerConnection:
             self.close("%s server connection closing..." % self.username)
         return
 
+    def _keep_alive_response(self):
+        if self.version < mcpackets.PROTOCOL_1_8START:
+            # readpkt returns this as [123..] (a list with a single integer)
+            data = self.packet.readpkt([_INT])
+            self.packet.sendpkt(self.pktSB.KEEP_ALIVE, [_INT], data)  # which is why no need to [data] as a list
+        else:  # self.version >= mcpackets.PROTOCOL_1_8START: - future elif in case protocol changes again.
+            data = self.packet.readpkt([_VARINT])
+            self.packet.sendpkt(self.pktSB.KEEP_ALIVE, [_VARINT], data)
+        return False
+
     # PARSERS SECTION
     # -----------------------------
     def parse(self, pkid):
@@ -247,10 +257,11 @@ class ServerConnection:
                 self.pktCB.WINDOW_ITEMS: self._parse_play_window_items,
                 self.pktCB.ENTITY_PROPERTIES: self._parse_play_entity_properties,
                 self.pktCB.PLAYER_LIST_ITEM: self._parse_play_player_list_item,
-                self.pktCB.DISCONNECT: self._parse_play_disconnect,
+                self.pktCB.DISCONNECT: self._parse_play_disconnect
                 },
             LOBBY: {
-                self.pktCB.DISCONNECT: self._lobby_play_disconnect,
+                self.pktCB.DISCONNECT: self._parse_lobby_disconnect,
+                self.pktCB.KEEP_ALIVE: self._parse_lobby_keep_alive
             }
         }
 
@@ -292,14 +303,7 @@ class ServerConnection:
     # Play parsers
     # -----------------------
     def _parse_play_keep_alive(self):
-        if self.version < mcpackets.PROTOCOL_1_8START:
-            # readpkt returns this as [123..] (a list with a single integer)
-            data = self.packet.readpkt([_INT])
-            self.packet.sendpkt(self.pktSB.KEEP_ALIVE, [_INT], data)  # which is why no need to [data] as a list
-        else:  # self.version >= mcpackets.PROTOCOL_1_8START: - future elif in case protocol changes again.
-            data = self.packet.readpkt([_VARINT])
-            self.packet.sendpkt(self.pktSB.KEEP_ALIVE, [_VARINT], data)
-        return False
+        return self._keep_alive_response()
 
     def _parse_play_chat_message(self):
         if self.version < mcpackets.PROTOCOL_1_8START:
@@ -804,7 +808,10 @@ class ServerConnection:
 
     # Lobby parsers
     # -----------------------
-    def _lobby_play_disconnect(self):
+    def _parse_lobby_disconnect(self):
         message = self.packet.readpkt([_JSON])
         self.log.info("%s went back to Hub", self.username)
         self.close(message, lobby_return=True)
+
+    def _parse_lobby_keep_alive(self):
+        return self._keep_alive_response()

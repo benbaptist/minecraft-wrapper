@@ -30,7 +30,7 @@ class Main:
         self.api.registerCommand("bmlist", self.bookmarklist)
 
     def onDisable(self):
-        self.data.close()
+        self.data.close_server()
 
     def _isallowed(self, cmd, player, args):
         """ Essential tests before accepting command """

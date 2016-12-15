@@ -64,7 +64,7 @@ class Main:
         self.api.registerEvent("player.login", self.login)
         self.api.registerEvent("player.dig", self.click)
     def onDisable(self):
-        self.data.close()
+        self.data.close_server()
     def deny(self, player):
         player.message({"text": "Permission denied for this command.", "color": "red"})
     def getMOTD(self, name):

@@ -94,7 +94,7 @@ class Main:
 
     def onDisable(self):  # onDisable is not required, but highly suggested, especially if you have to save Storages.
         # this code must terminate before wrapper will stop.
-        self.data.close()  # save Storage to disk and close the Storage's periodicsave() thread.
+        self.data.close_server()  # save Storage to disk and close the Storage's periodicsave() thread.
 
     # Commands section
     def _command1(self, player, args):

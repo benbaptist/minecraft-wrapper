@@ -56,7 +56,7 @@ class Main:
                                                     "held item from the menu named WNAME")])
 
     def onDisable(self):
-        self.storage.close()
+        self.storage.close_server()
 
     def setSlot(self, payload):
         # payload['player'].message(str(payload))
