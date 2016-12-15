@@ -140,7 +140,7 @@ class ServerConnection:
         t.daemon = True
         t.start()
 
-    def close(self, reason="Disconnected", lobby_return=False):
+    def close_server(self, reason="Disconnected", lobby_return=False):
         self.log.debug("Disconnecting proxy server socket connection. (%s)", self.username)
         self.abort = True  # end 'handle' cleanly
         time.sleep(0.1)
