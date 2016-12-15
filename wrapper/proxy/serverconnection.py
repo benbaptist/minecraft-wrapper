@@ -65,44 +65,38 @@ class ServerConnection:
     def __init__(self, client, ip=None, port=None):
         """
         This class ServerConnection is a "fake" client connecting to the server.
-        It receives "CLIENT BOUND" packets from server.  These are parsed in CLIENT BOUND format.
+        It receives "CLIENT BOUND" packets from server, parses them, and forards them on to the client.
 
-        'client.packet.sendpkt' - sends a packet to the client (use CLIENT BOUND packet format)
-        'self.packet.sendpkt' - sends a packet back to the server (use SERVER BOUND packet format).
-
-        Args:
-            client: The client to connect to the server
-            ip:
-            port:
-
-        Returns:
-
+        ServerConnection receives the parent client as it's argument. It's wrapper and proxy instances are passed
+        from the Client.  Therefore, a server instance does not really validly exist unless it has a valid parent
+        client. Client, by contrast, can exist and run in the absence of a server.
         """
+
+        # basic __init__ items from passed arguments
         self.client = client
         self.wrapper = client.wrapper
-        self.proxy = client.wrapper.proxy
+        self.proxy = client.proxy
         self.log = client.wrapper.log
         self.ip = ip
         self.port = port
 
+        # server setup and operating paramenters
         self.abort = False
-        self.server_socket = socket.socket()
-
         self.state = HANDSHAKE
         self.packet = None
         self.buildmode = False
         self.parsers = {}  # dictionary of parser packet constants and associated parsing methods
 
-        self.version = self.wrapper.javaserver.protocolVersion
+        self.version = -1
         self._refresh_server_version()  # self parsers get updated here
+
+        # player/client variables in this server instance
         self.username = self.client.username
-
-        # self.eid = None  # WHAT IS THIS - code seemed to use it in entity and player id code sections !?
-        # self.playereid = None
-
-        self.headlooks = 0
+        self.eid = None
         self.currentwindowid = -1
         self.noninventoryslotcount = 0
+
+        self.server_socket = socket.socket()  # temporary assignment.  The actual socket is assigned later.
 
     def _refresh_server_version(self):
         # Get serverversion for mcpackets use
@@ -112,12 +106,14 @@ class ServerConnection:
         except AttributeError:
             # -1 to signal no server is running
             self.version = -1
+
         self.pktSB = mcpackets.ServerBound(self.version)
         self.pktCB = mcpackets.ClientBound(self.version)
+        self._define_parsers()
+
         if self.version > mcpackets.PROTOCOL_1_7:
             # used by ban code to enable wrapper group help display for ban items.
             self.wrapper.api.registerPermission("mc1.7.6", value=True)
-        self._define_parsers()
 
     def send(self, packetid, xpr, payload):
         """ Not supported. A wrapper of packet.send(), which is further a wrapper for  packet.sendpkt(); both wrappers
@@ -127,12 +123,15 @@ class ServerConnection:
         pass
 
     def connect(self):
+        """ Connect only supports offline server connections, so no fancy login needed """
+
+        # Connect to this wrapper's javaserver (core/mcserver.py)
         if self.ip is None:
             self.server_socket.connect(("localhost", self.wrapper.javaserver.server_port))
-            self.client.isLocal = True
+
+        # Connect to some other server (or an offline wrapper)
         else:
             self.server_socket.connect((self.ip, self.port))
-            self.client.isLocal = False
 
         self.packet = Packet(self.server_socket, self)
         self.packet.version = self.client.clientversion
@@ -140,14 +139,6 @@ class ServerConnection:
         t = threading.Thread(target=self.flush_loop, args=())
         t.daemon = True
         t.start()
-
-    def _return_to_lobby(self):
-        self.client.isLocal = True
-
-        # connect client back to local server
-        self.client.state = PLAY  # should this be before , after , or PART OF connecting to server?
-        self.client.server_connection = False  # this is set to false so client reconnects local server
-        self.client.connect_to_server()
 
     def close(self, reason="Disconnected", lobby_return=False):
         self.log.debug("Disconnecting proxy server socket connection. (%s)", self.username)
@@ -162,32 +153,11 @@ class ServerConnection:
 
         self.state = LOGIN
 
-        if lobby_return:
-            self._return_to_lobby()
-        else:
-            # send Client it's abort signal  -NOTE don't use self.abort this way.. use this self.close!
-            # kill_client is true only for non-lobby
+        if not lobby_return:
             self.client.abort = True
 
         # allow packet to be GC'ed
         self.packet = None
-
-    def getplayerby_eid(self, eid):
-        """
-        :rtype: var
-        this is only to quiet complaints PyCharm makes because in places like this we return booleans
-        sometimes when we can't get valid data and our calling methods check for these booleans.
-        """
-        for client in self.wrapper.proxy.clients:
-            if client.servereid == eid:
-                try:
-                    return self.wrapper.javaserver.players[client.username]
-                except Exception as e:
-                    self.log.error("getplayerby_eid failed to get player %s: \n%s",
-                                   client.username, e)
-                    return False
-        self.log.debug("Failed to get any player by client Eid: %s", eid)
-        return False
 
     def flush_loop(self):
         while not self.abort:
@@ -232,6 +202,8 @@ class ServerConnection:
             self.close("%s server connection closing..." % self.username)
         return
 
+    # PARSERS SECTION
+    # -----------------------------
     def parse(self, pkid):
         try:
             return self.parsers[self.state][pkid]()
@@ -242,8 +214,6 @@ class ServerConnection:
                 pass
             return True
 
-    # PARSERS SECTION
-    # -----------------------------
     def _define_parsers(self):
         # the packets we parse and the methods that parse them.
         self.parsers = {
@@ -294,12 +264,12 @@ class ServerConnection:
     def _parse_login_disconnect(self):
         message = self.packet.readpkt([_STRING])
         self.log.info("Disconnected from server: %s", message)
-        self.client.disconnect(message)
+        self.close(message)
         return False
 
     def _parse_login_encr_request(self):
-        self.client.disconnect("Server is in online mode. Please turn it off in server.properties and "
-                               "allow wrapper to handle the authetication.", color="red")
+        self.close("Server is in online mode. Please turn it off in server.properties and "
+                   "allow wrapper to handle the authetication.")
         return False
 
     def _parse_login_success(self):  # Login Success - UUID & Username are sent in this packet as strings
@@ -321,7 +291,6 @@ class ServerConnection:
 
     # Play parsers
     # -----------------------
-
     def _parse_play_keep_alive(self):
         if self.version < mcpackets.PROTOCOL_1_8START:
             # readpkt returns this as [123..] (a list with a single integer)
@@ -376,9 +345,10 @@ class ServerConnection:
         else:
             data = self.packet.readpkt([_INT, _UBYTE, _INT, _UBYTE, _UBYTE, _STRING])
             #    "int:eid|ubyte:gm|int:dim|ubyte:diff|ubyte:max_players|string:level_type")
+
+        self.eid = data[0]
         self.client.gamemode = data[1]
         self.client.dimension = data[2]
-        self.client.servereid = data[0]
         # self.client.eid = data[0]  # This is the EID of the player on the point-of-use server -
         # not always the EID that the client is aware of.
         return True
@@ -421,13 +391,10 @@ class ServerConnection:
 
     def _parse_play_use_bed(self):
         data = self.packet.readpkt([_VARINT, _POSITION])
-        # "varint:eid|position:location")
-        if data[0] == self.client.servereid:
-            self.client.bedposition = data[0]  # get the players beddy-bye location!
-            self.wrapper.events.callevent("player.usebed", {"player": self.getplayerby_eid(data[0])})
-            # There is no reason to be fabricating a new packet from a non-existent client.eid
-            # self.client.packet.sendpkt(self.pktCB.USE_BED, [_VARINT, _POSITION],
-            #                            (self.client.eid, data[1]))
+        if data[0] == self.eid:
+            self.wrapper.events.callevent("player.usebed",
+                                          {"player": self.wrapper.javaserver.players[self.username],
+                                           "position": data[1]})
         return True
 
     def _parse_play_spawn_player(self):  # embedded UUID -must parse.
@@ -551,12 +518,12 @@ class ServerConnection:
                 leash = False
         entityeid = data[0]  # rider, leash holder, etc
         vehormobeid = data[1]  # vehicle, leashed entity, etc
-        player = self.getplayerby_eid(entityeid)
+        player = self.proxy.getplayerby_eid(entityeid)
 
         if player is None:
             return True
 
-        if entityeid == self.client.servereid:
+        if entityeid == self.eid:
             if not leash:
                 self.wrapper.events.callevent("player.unmount", {"player": player})
                 self.log.debug("player unmount called for %s", player.username)
@@ -721,7 +688,7 @@ class ServerConnection:
 
         # read first level and repack
         pass1 = self.packet.readpkt(parser_one)
-        isplayer = self.getplayerby_eid(pass1[0])
+        isplayer = self.proxy.getplayerby_eid(pass1[0])
         if not isplayer:
             return True
         raw += writer_one(pass1[0])

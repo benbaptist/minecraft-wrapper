@@ -6,6 +6,8 @@ Build 164
     if player does not use /lobby to get back, strange things happen if he disconnects and rejoins.  /lobby does not re-connect to
     original server (packet length problems).
 - Same refactor of serverconnection that was done to clientconnection...
+- Changed player.usebed event.  The (head of the) bed position is is a payload item "position" of x,y,z (parsed minecraft "position")
+- therefore, getBedPostion was removed from the API.player
 
 Build 163 Version [0.9.4]
 - refactor packet.py

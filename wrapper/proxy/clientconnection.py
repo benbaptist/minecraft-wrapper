@@ -68,71 +68,84 @@ _NULL = 100
 
 # noinspection PyMethodMayBeStatic
 class Client:
-    def __init__(self, clientsock, client_addr, wrapper, publickey, privatekey, banned=False):
+    def __init__(self, proxy, clientsock, client_addr, banned=False):
         """
         Handle the client connection.
-        It parses "SERVER BOUND" packets from client.
-        'server.packet.sendpkt' - sends a packet to the server (use SERVER BOUND packet format)
-        'self.packet.sendpkt' - sends a packet back to the client (use CLIENT BOUND packet format)
 
-        Args: (self explanatory, hopefully)
-            sock:
-            addr:
-            wrapper:
-            publickey:
-            privatekey:
-            proxy:
+        This class Client is a "fake" server, accepting connections from clients.
+        It receives "SERVER BOUND" packets from client, parses them, and forards them on to the server.
 
+        Client receives the parent proxy as it's argument.  Accordingly, it receives the proxy's wrapper instance.
         """
+
+        # basic __init__ items from passed arguments
         self.client_socket = clientsock
         self.client_address = client_addr
-        self.wrapper = wrapper
-        self.publicKey = publickey
-        self.privateKey = privatekey
+        self.proxy = proxy
+        self.wrapper = self.proxy.wrapper
+        self.publicKey = self.proxy.publicKey
+        self.privateKey = self.proxy.privatekey
+        self.log = self.proxy.wrapper.log
+        self.config = self.proxy.wrapper.config
         self.ipbanned = banned
 
-        self.log = wrapper.log
-        self.config = wrapper.config
-        self.packet = Packet(self.client_socket, self)
+        # constants from config:
+        self.spigot_mode = self.config["Proxy"]["spigot-mode"]
+        self.command_prefix = self.wrapper.command_prefix
+        self.command_prefix_non_standard = self.command_prefix != "/"
+        self.command_prefix_len = len(self.command_prefix)
+        self.hidden_ops = self.config["Proxy"]["hidden-ops"]
 
+        # client setup and operating paramenters
+        self.packet = Packet(self.client_socket, self)
         self.verifyToken = encryption.generate_challenge_token()
         self.serverID = encryption.generate_server_id()
         self.MOTD = {}
-
         self.serverversion = self.wrapper.javaserver.protocolVersion
         self.clientversion = self.serverversion  # client will reset this later, if need be..
-        self.server_port = self.wrapper.javaserver.server_port
+        self.server_port = self.wrapper.javaserver.server_port  # default server port (to this wrapper's server)
         self.wrapper_onlinemode = self.config["Proxy"]["online-mode"]
 
+        # packet stuff
         self.pktSB = mcpackets.ServerBound(self.clientversion)
         self.pktCB = mcpackets.ClientBound(self.clientversion)
         self.parsers = {}  # dictionary of parser packet constants and associated parsing methods
         self._getclientpacketset()
         self.buildmode = False
 
-        self.abort = False
+        # keep alive data
         self.time_server_pinged = 0
         self.time_client_responded = 0
         self.keepalive_val = 0
+
+        # client and server status
+        self.abort = False
         self.server_connection = None  # Proxy ServerConnection() (not the javaserver)
-        self.isLocal = True
-        self.server_temp = None
-
-        # UUIDs - all should use MCUUID unless otherwise specified
-        self.uuid = None  # this is the client UUID authenticated by connection to session server.
-        self.serveruuid = None  # Server UUID - which Could be the local offline UUID.
-
-        # information gathered during login or socket connection processes
-        self.address = None
-        self.ip = self.client_address[0]  # this will store the client IP for use by player.py
-        self.serveraddressplayeruses = None
-        self.serverportplayeruses = None
-        self.hubslave_spawned = False
-        self.hubtimer = 0
-
         self.state = HANDSHAKE
 
-        # Items gathered for player info for player api
+        # UUIDs - all should use MCUUID unless otherwise specified
+        # --------------------------------------------------------
+        # Server UUID - which is the local offline UUID.
+        self.serveruuid = None
+        # --------------------------------------------------------
+        # this is the client UUID authenticated by connection to session server.
+        self.uuid = None
+        # --------------------------------------------------------
+        # the formal, unique, mojang UUID as looked up on mojang servers.  This ID will be the same
+        #  no matter what mode wrapper is in or whether it is a lobby, etc.  This will be the formal
+        #  uuid to use for all wrapper internal functions for referencing a unique player.
+        self.mojanguuid = None
+
+        # information gathered during login or socket connection processes
+        # TODO in the future, we could use plugin channels to communicate these to subworld wrappers
+        # From socket data
+        self.address = None
+        self.ip = self.client_address[0]  # this will store the client IP for use by player.py
+        # From client handshake
+        self.serveraddressplayeruses = None
+        self.serverportplayeruses = None
+
+        # player api Items
         self.username = ""
         self.gamemode = 0
         self.dimension = 0
@@ -147,16 +160,7 @@ class Client:
         self.clientSettingsSent = False
         self.skinBlob = {}
         self.windowCounter = 2  # restored this
-        self.servereid = None
-        self.bedposition = None
         self.lastitem = None
-
-        # constants from config:
-        self.spigot_mode = self.config["Proxy"]["spigot-mode"]
-        self.command_prefix = self.wrapper.command_prefix
-        self.command_prefix_non_standard = self.command_prefix != "/"
-        self.command_prefix_len = len(self.command_prefix)
-        self.hidden_ops = self.config["Proxy"]["hidden-ops"]
 
     def handle(self):
         t = threading.Thread(target=self.flush_loop, args=())
@@ -186,16 +190,6 @@ class Client:
                 self.server_connection.packet.send_raw(original)
         self.close()
 
-    def parse(self, pkid):
-        try:
-            return self.parsers[self.state][pkid]()
-        except KeyError:
-            self.parsers[self.state][pkid] = self._parse_built
-            if self.buildmode:
-                # some code here to document un-parsed packets?
-                pass
-            return True
-
     def flush_loop(self):
         while not self.abort:
             try:
@@ -206,16 +200,104 @@ class Client:
             time.sleep(0.01)
         self.log.debug("client connection flush_loop thread ended")
 
-    def close(self):
-        self.abort = True
-        try:
-            self.client_socket.close()
-        except OSError:
-            self.log.debug("Client socket for %s already closed!", self.username)
-        if self.server_connection:
-            self.server_connection.abort = True
-            self.server_connection.close("Client Disconnected", lobby_return=True)
+    def connect_to_server(self, ip=None, port=None):
+        """
+        Connects the client to a server.  Creates a new server instance and tries to connect to it.
+        leave ip and port blank to connect to the local wrapped javaserver instance.
 
+        it is the responsibility of the calling method to shutdown any existing server connection first.
+        It is also the caller's responsibility to track LOBBY modes and handle respawns, rain, etc.
+        """
+
+        self.server_connection = ServerConnection(self, ip, port)
+
+        try:
+            self.server_connection.connect()
+        except Exception as e:
+            self.disconnect("Proxy client could not connect to the server (%s)" % e)
+
+        # start server handle()
+        t = threading.Thread(target=self.server_connection.handle, args=())
+        t.daemon = True
+        t.start()
+
+        # log in to (offline) server.
+        self.server_connection.state = LOGIN
+        if self.spigot_mode:
+            payload = "localhost\x00%s\x00%s" % (self.client_address[0], self.uuid.hex)
+            self.server_connection.packet.sendpkt(self.server_connection.pktSB.HANDSHAKE,
+                                                  [_VARINT, _STRING, _USHORT, _VARINT],
+                                                  (self.clientversion, payload, self.server_port, LOGIN))
+        else:
+            self.server_connection.packet.sendpkt(self.server_connection.pktSB.HANDSHAKE,
+                                                  [_VARINT, _STRING, _USHORT, _VARINT],
+                                                  (self.clientversion, "localhost", self.server_port, LOGIN))
+
+        self.server_connection.packet.sendpkt(self.server_connection.pktSB.LOGIN_START, [_STRING], [self.username])
+
+        # LOBBY code and such to go elsewhere
+
+    def change_servers(self, ip=None, port=None):
+
+        # stop any raining
+        self.packet.sendpkt(self.pktCB.CHANGE_GAME_STATE, [_UBYTE, _FLOAT], (1, 0))
+        # respawn them in the end or nether so that when they "respawn" in world, the downloading terrain closes.
+        self.packet.sendpkt(self.pktCB.RESPAWN, [_INT, _UBYTE, _UBYTE, _STRING], [-1, 3, 0, 'default'])
+
+        # del self.wrapper.javaserver.players[str(client.username)]
+        if self.username in self.wrapper.javaserver.players:
+            del self.wrapper.javaserver.players[self.username]
+        # close current connection and start new one
+        # noinspection PyBroadException
+        try:
+            self.server_connection.close(reason="Lobbification", lobby_return=True)
+            self.state = LOBBY
+            self.connect_to_server(ip, port)
+        except:
+            # if there is a problem, close the client and disconnect player
+            self.close()
+
+    def close(self):
+        # close the server connection gracefully first, if possible.
+        self.server_connection.close("Client Disconnecting...")
+        # noinspection PyBroadException
+        try:
+            self.client_socket.shutdown(2)
+        except:
+            self.log.debug("Client socket for %s already closed!", self.username)
+        self.abort = True  # TODO investigate this
+
+    def disconnect(self, message):
+        """
+        disconnects the client (runs close(), which will also shut off the serverconnection.py)
+
+        Not used to disconnect from a server!
+        """
+        jsonmessage = message  # server packets are read as json
+
+        if type(message) is dict:
+            if "text" in message:
+                jsonmessage = {"text": message}
+                if "color" in message:
+                    jsonmessage["color"] = message["color"]
+                if "bold" in message:
+                    jsonmessage["bold"] = message["bold"]
+                message = jsonmessage["text"]
+                jsonmessage = json.dumps(jsonmessage)
+        else:
+            jsonmessage = message  # server packets are read as json
+
+        if self.state == PLAY:
+            self.packet.sendpkt(self.pktCB.DISCONNECT, [_JSON], [jsonmessage])
+            self.log.debug("upon disconnect, state was PLAY (sent PLAY state DISCONNECT)")
+        else:
+            self.packet.sendpkt(self.pktCB.LOGIN_DISCONNECT, [_JSON], [message])
+            self.log.debug("upon disconnect, state was 'other' (sent LOGIN_DISCONNECT)")
+        time.sleep(1)
+        self.close()
+
+    # internal init and properties
+    # -----------------------------
     @property
     def version(self):
         return self.clientversion
@@ -242,147 +324,8 @@ class Client:
         self.pktCB = mcpackets.ClientBound(self.clientversion)
         self._define_parsers()
 
-    def _define_parsers(self):
-        # the packets we parse and the methods that parse them.
-        self.parsers = {
-            HANDSHAKE: {
-                self.pktSB.HANDSHAKE: self._parse_handshaking
-                },
-            STATUS: {
-                self.pktSB.STATUS_PING: self._parse_status_ping,
-                self.pktSB.REQUEST: self._parse_status_request
-                },
-            LOGIN: {
-                self.pktSB.LOGIN_START: self._parse_login_start,
-                self.pktSB.LOGIN_ENCR_RESPONSE: self._parse_login_encr_response
-                },
-            PLAY: {
-                self.pktSB.CHAT_MESSAGE: self._parse_play_chat_message,
-                self.pktSB.CLICK_WINDOW: self._parse_play_click_window,
-                self.pktSB.CLIENT_SETTINGS: self._parse_play_client_settings,
-                self.pktSB.CLIENT_STATUS: self._parse_built,
-                self.pktSB.HELD_ITEM_CHANGE: self._parse_play_held_item_change,
-                self.pktSB.KEEP_ALIVE: self._parse_play_keep_alive,
-                self.pktSB.PLAYER: self._parse_built,
-                self.pktSB.PLAYER_ABILITIES: self._parse_built,
-                self.pktSB.PLAYER_BLOCK_PLACEMENT: self._parse_play_player_block_placement,
-                self.pktSB.PLAYER_DIGGING: self._parse_play_player_digging,
-                self.pktSB.PLAYER_LOOK: self._parse_play_player_look,
-                self.pktSB.PLAYER_POSITION: self._parse_play_player_position,
-                self.pktSB.PLAYER_POSLOOK: self._parse_play_player_poslook,
-                self.pktSB.PLAYER_UPDATE_SIGN: self._parse_play_player_update_sign,
-                self.pktSB.SPECTATE: self._parse_play_spectate,
-                self.pktSB.TELEPORT_CONFIRM: self._parse_play_teleport_confirm,
-                self.pktSB.USE_ENTITY: self._parse_built,
-                self.pktSB.USE_ITEM: self._parse_play_use_item,
-                },
-            LOBBY: {
-                self.pktSB.KEEP_ALIVE: self._parse_lobby_keep_alive,
-                self.pktSB.CHAT_MESSAGE: self._parse_lobby_chat_message
-            }
-        }
-
-    def connect_to_server(self, ip=None, port=None):
-        """
-        Args:
-            ip: server IP
-            port: server port
-
-        this is the connection to a local server or other wrapper instance.
-        """
-
-        if self.server_connection is None:
-            # use local server
-            pass
-        else:
-            # use player.Connect() server/port
-            self.address = (ip, port)
-
-        if ip is not None:
-            # Connect() feature . . .
-            self.server_temp = ServerConnection(self, ip, port)
-
-            self.server_connection.close(lobby_return=True)
-            self.state = LOBBY
-            self.server_temp.connect()
-            self.server_connection = self.server_temp
-
-
-
-            # self.server_temp = ServerConnection(self, ip, port)
-            # try:
-            #    self.server_temp.connect()
-            #    self.server_connection.close(lobby_return=True)
-            #    self.server_connection.client = None
-            #    self.server_connection = self.server_temp
-            #    self.state = LOBBY
-            # except OSError:
-            #    self.server_temp.close(lobby_return=True)
-            #    self.server_temp = None
-            #    if self.state in (PLAY, LOBBY):
-            #        self.packet.sendpkt(
-            #            self.pktCB.CHAT_MESSAGE, [_STRING],
-            #            ["""{"text": "Could not connect to that server!", "color": "red", "bold": "true"}"""])
-            #    else:
-            #        self.packet.sendpkt(
-            #            self.pktCB.LOGIN_DISCONNECT, [_STRING],
-            #            ["""{"text": "Could not connect to that server!", "color": "red", "bold": "true"}"""])
-
-            #    self.address = None
-            #    return
-
-        else:
-            self.server_connection = ServerConnection(self, ip, port)
-            try:
-                self.server_connection.connect()
-            except Exception as e:
-                self.disconnect("Proxy client could not connect to the server (%s)" % e)
-
-        # start server handle()
-        t = threading.Thread(target=self.server_connection.handle, args=())
-        t.daemon = True
-        t.start()
-
-        # log in to local (offline) server.
-        self.server_connection.state = LOGIN
-        if self.spigot_mode:
-            payload = "localhost\x00%s\x00%s" % (self.client_address[0], self.uuid.hex)
-            self.server_connection.packet.sendpkt(self.server_connection.pktSB.HANDSHAKE,
-                                                  [_VARINT, _STRING, _USHORT, _VARINT],
-                                                  (self.clientversion, payload, self.server_port, LOGIN))
-        else:
-            self.server_connection.packet.sendpkt(self.server_connection.pktSB.HANDSHAKE,
-                                                  [_VARINT, _STRING, _USHORT, _VARINT],
-                                                  (self.clientversion, "localhost", self.server_port, LOGIN))
-
-        self.server_connection.packet.sendpkt(self.server_connection.pktSB.LOGIN_START, [_STRING], [self.username])
-
-        if not self.isLocal:
-            # cycle world respawns to get client out of downloading terrain.
-            self.packet.sendpkt(self.pktCB.RESPAWN, [_INT, _UBYTE, _UBYTE, _STRING], [-1, 3, 0, 'default'])
-            self.packet.sendpkt(self.pktCB.RESPAWN, [_INT, _UBYTE, _UBYTE, _STRING], [0, 3, 0, 'default'])
-
-    def disconnect(self, message, color="white", bold=False, fromserver=False):
-        """
-        text only message
-        """
-        if not fromserver:
-            jsonmessage = {"text": message,
-                           "color": color,
-                           "bold": bold
-                           }
-        else:
-            jsonmessage = message  # server packets are read as json
-            self.log.debug("Disconnect message was from server.")
-        if self.state == PLAY:
-            self.packet.sendpkt(self.pktCB.DISCONNECT, [_JSON], [jsonmessage])
-            self.log.debug("upon disconnect, state was PLAY (sent PLAY state DISCONNECT)")
-        else:
-            self.packet.sendpkt(self.pktCB.LOGIN_DISCONNECT, [_JSON], [message])
-            self.log.debug("upon disconnect, state was 'other' (sent LOGIN_DISCONNECT)")
-        time.sleep(1)
-        self.close()
-
+    # api related
+    # -----------------------------
     def getplayerobject(self):
         if self.username in self.wrapper.javaserver.players:
             return self.wrapper.javaserver.players[self.username]
@@ -407,6 +350,8 @@ class Client:
     def message(self, string):
         self.server_connection.packet.sendpkt(self.pktSB.CHAT_MESSAGE, [_STRING], [string])
 
+    # internal client login methods
+    # -----------------------------
     def _keep_alive_tracker(self, playername):
         # send keep alives to client and send client settings to server.
         while not self.abort:
@@ -414,7 +359,7 @@ class Client:
                 self.log.debug("Closing Keep alive tracker thread for %s's client.", playername)
                 break
             time.sleep(1)
-            while self.state in (PLAY, LOBBY) and not self.abort and self.isLocal:
+            while self.state in (PLAY, LOBBY) and not self.abort:
 
                 # client expects < 20sec
                 if time.time() - self.time_server_pinged > 5:
@@ -478,9 +423,10 @@ class Client:
         if self.clientversion > 26:
             self.packet.setcompression(256)
 
-    def _login_joinplayer(self):
+    def _login_joinplayer(self, new_client=True):
         # Put player object and client into server. (player login will be called later by mcserver.py)
-        self.wrapper.proxy.clients.append(self)
+        if new_client:
+            self.wrapper.proxy.clients.append(self)
 
         if self.username not in self.wrapper.javaserver.players:
             self.wrapper.javaserver.players[self.username] = Player(self.username, self.wrapper)
@@ -559,9 +505,66 @@ class Client:
         #                         with open("%s/.wrapper-proxy-whitelist-migrate" % worldname, "a") as f:
         #                             f.write("%s %s\n" % (self.uuid.string, self.serveruuid.string))
 
+    # PARSERS SECTION
+    # -----------------------------
+    def parse(self, pkid):
+        try:
+            return self.parsers[self.state][pkid]()
+        except KeyError:
+            # Add unparsed packetID to the 'Do nothing parser'
+            self.parsers[self.state][pkid] = self._parse_built
+            if self.buildmode:
+                # some code here to document un-parsed packets?
+                pass
+            return True
+
+    def _define_parsers(self):
+        # the packets we parse and the methods that parse them.
+        self.parsers = {
+            HANDSHAKE: {
+                self.pktSB.HANDSHAKE: self._parse_handshaking
+                },
+            STATUS: {
+                self.pktSB.STATUS_PING: self._parse_status_ping,
+                self.pktSB.REQUEST: self._parse_status_request
+                },
+            LOGIN: {
+                self.pktSB.LOGIN_START: self._parse_login_start,
+                self.pktSB.LOGIN_ENCR_RESPONSE: self._parse_login_encr_response
+                },
+            PLAY: {
+                self.pktSB.CHAT_MESSAGE: self._parse_play_chat_message,
+                self.pktSB.CLICK_WINDOW: self._parse_play_click_window,
+                self.pktSB.CLIENT_SETTINGS: self._parse_play_client_settings,
+                self.pktSB.CLIENT_STATUS: self._parse_built,
+                self.pktSB.HELD_ITEM_CHANGE: self._parse_play_held_item_change,
+                self.pktSB.KEEP_ALIVE: self._parse_play_keep_alive,
+                self.pktSB.PLAYER: self._parse_built,
+                self.pktSB.PLAYER_ABILITIES: self._parse_built,
+                self.pktSB.PLAYER_BLOCK_PLACEMENT: self._parse_play_player_block_placement,
+                self.pktSB.PLAYER_DIGGING: self._parse_play_player_digging,
+                self.pktSB.PLAYER_LOOK: self._parse_play_player_look,
+                self.pktSB.PLAYER_POSITION: self._parse_play_player_position,
+                self.pktSB.PLAYER_POSLOOK: self._parse_play_player_poslook,
+                self.pktSB.PLAYER_UPDATE_SIGN: self._parse_play_player_update_sign,
+                self.pktSB.SPECTATE: self._parse_play_spectate,
+                self.pktSB.TELEPORT_CONFIRM: self._parse_play_teleport_confirm,
+                self.pktSB.USE_ENTITY: self._parse_built,
+                self.pktSB.USE_ITEM: self._parse_play_use_item,
+                },
+            LOBBY: {
+                self.pktSB.KEEP_ALIVE: self._parse_lobby_keep_alive,
+                self.pktSB.CHAT_MESSAGE: self._parse_lobby_chat_message
+            }
+        }
+
+    # Do nothing parser
+    # -----------------------
     def _parse_built(self):
         return True
 
+    # Login parsers
+    # -----------------------
     def _parse_handshaking(self):
         data = self.packet.readpkt([_VARINT, _STRING, _USHORT, _VARINT])  # "version|address|port|state"
 
@@ -723,6 +726,8 @@ class Client:
         # log the client on
         return self._login_client_logon()
 
+    # Play parsers
+    # -----------------------
     def _parse_play_chat_message(self):
         data = self.packet.readpkt([_STRING])
         if data is None:
@@ -1140,6 +1145,8 @@ class Client:
                 return False
         return True
 
+    # Lobby parsers
+    # -----------------------
     def _parse_lobby_keep_alive(self):
         if self.serverversion < mcpackets.PROTOCOL_1_8START:
             data = self.packet.readpkt([_INT])
@@ -1160,20 +1167,20 @@ class Client:
         if chatmsg in ("/lobby", "/hub"):
             # stop any raining
             self.packet.sendpkt(self.pktCB.CHANGE_GAME_STATE, [_UBYTE, _FLOAT], (1, 0))
+            # spawn them and end or nether respawn so that when they "respawn" in world, the downloading terrain closes.
+            self.packet.sendpkt(self.pktCB.RESPAWN, [_INT, _UBYTE, _UBYTE, _STRING], [-1, 3, 0, 'default'])
 
             # close current connection and start new one
-            self.server_connection.close(reason="Lobbification", lobby_return=False)
-            self.address = None
-            self.state = PLAY
-            self.connect_to_server()
-            # wait until server connectes to set self.isLocal to True; this allows respawn packets to be sent.
-            self.isLocal = True
+            # noinspection PyBroadException
+            try:
+                self.server_connection.close(reason="Lobbification", lobby_return=True)
+                self.state = PLAY
+                self.connect_to_server()  # with no arguments, this reconnects to local server
+                self._login_joinplayer(new_client=False)
+            except:
+                # if there is a problem, close the client and disconnect player
+                self.close()
             return False
-
-        if chatmsg in ("/spawnme", ):
-            self.packet.sendpkt(self.pktCB.CHANGE_GAME_STATE, [_UBYTE, _FLOAT], (1, 0))
-            self.packet.sendpkt(self.pktCB.RESPAWN, [_INT, _UBYTE, _UBYTE, _STRING], [1, 3, 0, 'default'])
-            self.packet.sendpkt(self.pktCB.RESPAWN, [_INT, _UBYTE, _UBYTE, _STRING], [0, 3, 0, 'default'])
 
         # we are just sniffing this packet for lobby return commands, so send it on to the destination.
         return True
