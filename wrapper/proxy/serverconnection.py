@@ -372,8 +372,6 @@ class ServerConnection:
         # "int:dimension|ubyte:difficulty|ubyte:gamemode|level_type:string")
         self.client.gamemode = data[2]
         self.client.dimension = data[0]
-        if not self.client.hubslave_spawned:
-            self.client.hubslave_spawned = True
         return True
 
     def _parse_play_player_poslook(self):

@@ -84,7 +84,7 @@ class Client:
         self.proxy = proxy
         self.wrapper = self.proxy.wrapper
         self.publicKey = self.proxy.publicKey
-        self.privateKey = self.proxy.privatekey
+        self.privateKey = self.proxy.privateKey
         self.log = self.proxy.wrapper.log
         self.config = self.proxy.wrapper.config
         self.ipbanned = banned
@@ -146,7 +146,7 @@ class Client:
         self.serverportplayeruses = None
 
         # player api Items
-        self.username = ""
+        self.username = "PING REQUEST"
         self.gamemode = 0
         self.dimension = 0
         self.position = (0, 0, 0)  # X, Y, Z
@@ -259,10 +259,10 @@ class Client:
 
     def close(self):
         # close the server connection gracefully first, if possible.
-        self.server_connection.close("Client Disconnecting...")
+
         # noinspection PyBroadException
         try:
-            self.client_socket.shutdown(2)
+            self.server_connection.close("Client Disconnecting...")
         except:
             self.log.debug("Client socket for %s already closed!", self.username)
         self.abort = True  # TODO investigate this

@@ -321,7 +321,7 @@ class MCServer:
         if self.wrapper.proxy:
             playerclient = self.getplayer(username).getClient()
             if playerclient:
-                playerclient.server.eid = eid
+                playerclient.server_connection.eid = eid
                 playerclient.position = location
         self.players[username].loginposition = self.player_eids[username][1]
         self.wrapper.events.callevent("player.login", {"player": self.getplayer(username)})
