@@ -197,9 +197,9 @@ class ServerConnection:
     def _break_handle(self):
         if self.state == LOBBY:
             self.log.info("%s forced back to Hub", self.username)
-            self.close("%s server connection closing..." % self.username, lobby_return=True)
+            self.close_server("%s server connection closing..." % self.username, lobby_return=True)
         else:
-            self.close("%s server connection closing..." % self.username)
+            self.close_server("%s server connection closing..." % self.username)
         return
 
     def _keep_alive_response(self):
@@ -275,11 +275,11 @@ class ServerConnection:
     def _parse_login_disconnect(self):
         message = self.packet.readpkt([_STRING])
         self.log.info("Disconnected from server: %s", message)
-        self.close(message)
+        self.close_server(message)
         return False
 
     def _parse_login_encr_request(self):
-        self.close("Server is in online mode. Please turn it off in server.properties and "
+        self.close_server("Server is in online mode. Please turn it off in server.properties and "
                    "allow wrapper to handle the authetication.")
         return False
 
@@ -804,14 +804,14 @@ class ServerConnection:
         #    return "PLAY_DISCONNECT"
         message = self.packet.readpkt([_JSON])
         self.log.info("%s disconnected from Server", self.username)
-        self.close(message)
+        self.close_server(message)
 
     # Lobby parsers
     # -----------------------
     def _parse_lobby_disconnect(self):
         message = self.packet.readpkt([_JSON])
         self.log.info("%s went back to Hub", self.username)
-        self.close(message, lobby_return=True)
+        self.close_server(message, lobby_return=True)
 
     def _parse_lobby_keep_alive(self):
         return self._keep_alive_response()

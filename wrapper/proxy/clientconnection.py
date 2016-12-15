@@ -271,7 +271,7 @@ class Client:
 
     def disconnect(self, message):
         """
-        disconnects the client (runs close(), which will also shut off the serverconnection.py)
+        disconnects the client (runs close_server(), which will also shut off the serverconnection.py)
 
         Not used to disconnect from a server!
         """
