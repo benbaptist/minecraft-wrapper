@@ -9,6 +9,8 @@ Build 164
 - Changed player.usebed event.  The (head of the) bed position is passed as a payload item: "position" of x,y,z (parsed minecraft "position")
 - therefore, getBedPostion was removed from the API.player
 
+* Stuck* - wrapper does not connect players to a server in offline mode.  other wise this build is a good stop point
+
 Build 163 Version [0.9.4]
 - refactor packet.py
 - rewrites and bug fixes to proxy system:

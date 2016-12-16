@@ -87,6 +87,7 @@ class ServerConnection:
         self.buildmode = False
         self.parsers = {}  # dictionary of parser packet constants and associated parsing methods
 
+        self.infos_debug = "(player=%s, IP=%s, Port=%s)" % (self.client.username, self.ip, self.port)
         self.version = -1
         self._refresh_server_version()  # self parsers get updated here
 
@@ -97,15 +98,16 @@ class ServerConnection:
         self.noninventoryslotcount = 0
 
         self.server_socket = socket.socket()  # temporary assignment.  The actual socket is assigned later.
+        self.infos_debug = "(player=%s, IP=%s, Port=%s)" % (self.username, self.ip, self.port)
 
     def _refresh_server_version(self):
         # Get serverversion for mcpackets use
-        try:
-            self.version = self.wrapper.javaserver.protocolVersion
-            self.log.debug("detected server version is %s" % self.version)
-        except AttributeError:
-            # -1 to signal no server is running
-            self.version = -1
+        #try:
+        self.version = self.wrapper.javaserver.protocolVersion
+        self.log.debug("%s detected server version is %s", self.infos_debug, self.version)
+        # except AttributeError:
+        #     # -1 to signal no server is running
+        #     self.version = -1
 
         self.pktSB = mcpackets.ServerBound(self.version)
         self.pktCB = mcpackets.ClientBound(self.version)
@@ -124,7 +126,7 @@ class ServerConnection:
 
     def connect(self):
         """ Connect only supports offline server connections, so no fancy login needed """
-
+        self.state = LOGIN
         # Connect to this wrapper's javaserver (core/mcserver.py)
         if self.ip is None:
             self.server_socket.connect(("localhost", self.wrapper.javaserver.server_port))
@@ -141,17 +143,17 @@ class ServerConnection:
         t.start()
 
     def close_server(self, reason="Disconnected", lobby_return=False):
-        self.log.debug("Disconnecting proxy server socket connection. (%s)", self.username)
+        if lobby_return:
+            self.state = LOBBY  # stop parsing PLAY OR LOGIN packets to prevent further "disconnects"
+        self.log.debug("Disconnecting proxy server socket connection. %s", self.infos_debug)
         self.abort = True  # end 'handle' cleanly
         time.sleep(0.1)
         try:
             self.server_socket.shutdown(2)
-            self.log.debug("Sucessfully closed server socket for %s...", self.username)
+            self.log.debug("Sucessfully closed server socket for %s", self.infos_debug)
         except:
-            self.log.debug("Server socket for %s already closed by server...", self.username)
+            self.log.debug("Server socket for %s already closed", self.infos_debug)
             pass
-
-        self.state = LOGIN
 
         if not lobby_return:
             self.client.abort = True
@@ -164,10 +166,10 @@ class ServerConnection:
             try:
                 self.packet.flush()
             except socket.error:
-                self.log.debug("(socket_error) %s server socket was closed.", self.username)
+                self.log.debug("Socket_error- server socket was closed %s", self.infos_debug)
                 break
             time.sleep(0.01)
-        self.log.debug("%s server connection flush_loop thread ended.", self.username)
+        self.log.debug("server connection flush_loop thread ended. %s", self.infos_debug)
 
     def handle(self):
         while not self.abort:
@@ -176,14 +178,14 @@ class ServerConnection:
                 pkid, original = self.packet.grabpacket()
             except EOFError as eof:
                 # This error is often erroneous, see https://github.com/suresttexas00/minecraft-wrapper/issues/30
-                self.log.debug("%s server Packet EOF (%s)", self.username, eof)
+                self.log.debug("%s server Packet EOF (%s)", self.infos_debug, eof)
                 return self._break_handle()
             except socket.error:  # Bad file descriptor occurs anytime a socket is closed.
-                self.log.debug("%s Failed to grab packet [SERVER] socket error", self.username)
+                self.log.debug("%s Failed to grab packet [SERVER] socket error", self.infos_debug)
                 return self._break_handle()
             except Exception as e:
                 # anything that gets here is a bona-fide error we need to become aware of
-                self.log.debug("%s Failed to grab packet [SERVER] (%s):", self.username, e)
+                self.log.debug("%s Failed to grab packet [SERVER] (%s):", self.infos_debug, e)
                 return self._break_handle()
 
             # parse it
@@ -191,13 +193,14 @@ class ServerConnection:
                 try:
                     self.client.packet.send_raw(original)
                 except Exception as e:
-                    self.log.debug("[SERVER] Could not send packet (%s): (%s): \n%s", pkid, e, traceback)
+                    self.log.debug("[SERVER %s] Could not send packet (%s): (%s): \n%s",
+                                   self.infos_debug, pkid, e, traceback)
                     return self._break_handle()
 
     def _break_handle(self):
         if self.state == LOBBY:
-            self.log.info("%s forced back to Hub", self.username)
-            self.close_server("%s server connection closing..." % self.username, lobby_return=True)
+            self.log.info("%s is without a server now.", self.username)
+            # self.close_server("%s server connection closing..." % self.username, lobby_return=True)
         else:
             self.close_server("%s server connection closing..." % self.username)
         return
@@ -280,7 +283,7 @@ class ServerConnection:
 
     def _parse_login_encr_request(self):
         self.close_server("Server is in online mode. Please turn it off in server.properties and "
-                   "allow wrapper to handle the authetication.")
+                          "allow wrapper to handle the authetication.")
         return False
 
     def _parse_login_success(self):  # Login Success - UUID & Username are sent in this packet as strings
@@ -509,6 +512,7 @@ class ServerConnection:
         data = []
         leash = True  # False to detach
         if self.version < mcpackets.PROTOCOL_1_8START:
+            print("\n server version is %s\n" % self.version)
             data = self.packet.readpkt([_INT, _INT, _BOOL])
             leash = data[2]
         if mcpackets.PROTOCOL_1_8START <= self.version < mcpackets.PROTOCOL_1_9START:

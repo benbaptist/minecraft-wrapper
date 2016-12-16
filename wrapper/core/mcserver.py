@@ -10,7 +10,6 @@ from api.world import World
 from api.entity import EntityControl
 
 from core.exceptions import UnsupportedOSException, InvalidServerStartedError
-from core.consoleuser import MiniPlayer
 
 import time
 import threading
@@ -330,15 +329,13 @@ class MCServer:
         """
         Called when a player logs out
         """
-        # player object is defunct at this point.  All we can pass to the plugin is a name
-        nameduser = "%s" % players_name
-        x = MiniPlayer(nameduser)  # create a new simple object describing the logged off player.
 
         # self.wrapper.callEvent("player.logout", {"player": self.getPlayer(username)})
-        self.wrapper.events.callevent("player.logout", {"player": x})
+        self.wrapper.events.callevent("player.logout", self.getplayer(players_name))
         if self.wrapper.proxy:
             self.wrapper.proxy.removestaleclients()
 
+        # remove a hub player or not??
         if players_name in self.players:
             self.players[players_name].abort = True
             del self.players[players_name]

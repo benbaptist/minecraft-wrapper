@@ -40,6 +40,7 @@ LOGIN = 2
 PLAY = 3
 LOBBY = 4  # in lobby state, client is connected to clientconnection, but nothing is passed to the server.
 #            the actual client will be in play mode.
+IDLE = 5  # no parsing at all; just keeping client suspended
 
 _STRING = 0
 _JSON = 1
@@ -186,9 +187,12 @@ class Client:
 
             # send packet if server available and parsing passed.
             # already tested - Python will not attempt eval of self.server.state if self.server is False
-            if self.parse(pkid) and self.server_connection and self.server_connection.state == 3:
+            if self.parse(pkid) and self.server_connection and self.server_connection.state in (PLAY, LOBBY):
+                # sending to the server only happens in PLAY/LOBBY (not IDLE, HANDSHAKE, or LOGIN)
+                # wrapper handles LOGIN/HANDSHAKE with servers (via self.parse(pkid), which DOES happen in all modes)
                 self.server_connection.packet.send_raw(original)
-        self.close_server()
+
+        self.close_server()  # upon self.abort
 
     def flush_loop(self):
         while not self.abort:
@@ -199,6 +203,84 @@ class Client:
                 break
             time.sleep(0.01)
         self.log.debug("client connection flush_loop thread ended")
+
+    def change_servers(self, ip=None, port=None):
+
+        # stop any raining
+        # self.packet.sendpkt(self.pktCB.CHANGE_GAME_STATE, [_UBYTE, _FLOAT], (1, 0))
+        # respawn them in the end or nether so that when they "respawn" in world, the downloading terrain closes.
+        # self.packet.sendpkt(self.pktCB.RESPAWN, [_INT, _UBYTE, _UBYTE, _STRING], [-1, 3, 0, 'default'])
+        # self.packet.sendpkt(self.pktCB.RESPAWN, [_INT, _UBYTE, _UBYTE, _STRING], [1, 3, 0, 'default'])
+
+        # close current connection and start new one
+        self.state = IDLE  # get it out of PLAY __"NOW"__ to prevent second disconnect that kills client
+        self.server_connection.close_server(reason="Lobbification", lobby_return=True)
+        time.sleep(1)
+
+        # setup for connect
+        self.clientSettingsSent = False
+
+        # noinspection PyBroadException
+        # try:
+        self.state = PLAY
+        self._login_client_logon(start_keep_alives=False, ip=ip, port=port)
+        # reconnect back to local server
+        # self.change_servers()
+        # self.state = PLAY
+        # TODO whatever respawn stuff works
+        # return
+
+
+
+        # send these right quick to client
+        self._send_client_settings()
+        self.packet.sendpkt(self.pktCB.CHANGE_GAME_STATE, [_UBYTE, _FLOAT], (1, 0))
+        self.packet.sendpkt(self.pktCB.RESPAWN, [_INT, _UBYTE, _UBYTE, _STRING], [-1, 3, 0, 'default'])
+        self.state = LOBBY
+
+    def _login_client_logon(self, start_keep_alives=True, ip=None, port=None):
+
+        self._inittheplayer()  # set up inventory and stuff
+
+        if self.wrapper.proxy.isuuidbanned(self.uuid.__str__()):
+            banreason = self.wrapper.proxy.getuuidbanreason(self.uuid.__str__())
+            self.log.info("Banned player %s tried to connect:\n %s" % (self.username, banreason))
+            self.state = HANDSHAKE
+            self.disconnect("Banned: %s" % banreason)
+            return False
+
+        # Run the pre-login event
+        if not self.wrapper.events.callevent("player.preLogin",
+                                             {
+                                                 "player": self.username,
+                                                 "online_uuid": self.uuid.string,
+                                                 "offline_uuid": self.serveruuid.string,
+                                                 "ip": self.ip,
+                                                 "secure_connection": self.wrapper_onlinemode
+                                             }):
+            self.state = HANDSHAKE
+            self.disconnect("Login denied by a Plugin.")
+            return False
+
+        self.log.info("%s's client LOGON occurred: (UUID: %s | IP: %s | SecureConnection: %s)",
+                      self.username, self.uuid.string, self.ip, self.wrapper_onlinemode)
+
+        self._add_player_and_client_objects_to_wrapper()
+
+        # start keep alives
+        if start_keep_alives:
+            # send login success to client (the real client is already logged in if keep alives are running)
+            self.packet.sendpkt(self.pktCB.LOGIN_SUCCESS, [_STRING, _STRING], (self.uuid.string, self.username))
+            self.time_client_responded = time.time()
+
+            t_keepalives = threading.Thread(target=self._keep_alive_tracker, kwargs={'playername': self.username})
+            t_keepalives.daemon = True
+            t_keepalives.start()
+
+        # connect to server
+        self.connect_to_server(ip, port)
+
+        return False
 
     def connect_to_server(self, ip=None, port=None):
         """
@@ -211,18 +293,21 @@ class Client:
 
         self.server_connection = ServerConnection(self, ip, port)
 
+        # connect the socket and start its flush_loop
         try:
             self.server_connection.connect()
         except Exception as e:
             self.disconnect("Proxy client could not connect to the server (%s)" % e)
 
-        # start server handle()
+        # start server handle() to read the packets
         t = threading.Thread(target=self.server_connection.handle, args=())
         t.daemon = True
         t.start()
 
-        # log in to (offline) server.
+        # switch server_connection to LOGIN to log in to (offline) server.
         self.server_connection.state = LOGIN
+
+        # now we send it a handshake to request the server go to login mode
         if self.spigot_mode:
             payload = "localhost\x00%s\x00%s" % (self.client_address[0], self.uuid.hex)
             self.server_connection.packet.sendpkt(self.server_connection.pktSB.HANDSHAKE,
@@ -233,31 +318,10 @@ class Client:
                                                   [_VARINT, _STRING, _USHORT, _VARINT],
                                                   (self.clientversion, "localhost", self.server_port, LOGIN))
 
+        # send the login request (server is offline, so it will accept immediately by sending login_success)
         self.server_connection.packet.sendpkt(self.server_connection.pktSB.LOGIN_START, [_STRING], [self.username])
 
         # LOBBY code and such to go elsewhere
-
-    def change_servers(self, ip=None, port=None):
-
-        # stop any raining
-        self.packet.sendpkt(self.pktCB.CHANGE_GAME_STATE, [_UBYTE, _FLOAT], (1, 0))
-        # respawn them in the end or nether so that when they "respawn" in world, the downloading terrain closes.
-        self.packet.sendpkt(self.pktCB.RESPAWN, [_INT, _UBYTE, _UBYTE, _STRING], [-1, 3, 0, 'default'])
-
-        # del self.wrapper.javaserver.players[str(client.username)]
-        if self.username in self.wrapper.javaserver.players:
-            del self.wrapper.javaserver.players[self.username]
-        # close current connection and start new one
-        # noinspection PyBroadException
-        try:
-            self.server_connection.close_server(reason="Lobbification", lobby_return=True)
-            self.state = LOBBY
-            self.connect_to_server(ip, port)
-            self.clientSettingsSent = False
-            self._send_client_settings()
-        except:
-            # if there is a problem, close the client and disconnect player
-            self.close_server()
 
     def close_server(self):
         # close the server connection gracefully first, if possible.
@@ -362,7 +426,7 @@ class Client:
             time.sleep(1)
             if self.state in (PLAY, LOBBY):
                 # client expects < 20sec
-                if time.time() - self.time_server_pinged > 5:
+                if time.time() - self.time_server_pinged > 10:
 
                     # create the keep alive value
                     self.keepalive_val = random.randrange(0, 99999)
@@ -425,56 +489,14 @@ class Client:
         if self.clientversion > 26:
             self.packet.setcompression(256)
 
-    def _add_player_and_client_objects_to_wrapper(self, new_client=True):
+    def _add_player_and_client_objects_to_wrapper(self):
         # Put player object and client into server. (player login will be called later by mcserver.py)
-        if new_client:
+        if self not in self.wrapper.proxy.clients:
             self.wrapper.proxy.clients.append(self)
 
         if self.username not in self.wrapper.javaserver.players:
             self.wrapper.javaserver.players[self.username] = Player(self.username, self.wrapper)
         self._inittheplayer()  # set up inventory and stuff
-
-    def _login_client_logon(self):
-
-        if self.wrapper.proxy.isuuidbanned(self.uuid.__str__()):
-            banreason = self.wrapper.proxy.getuuidbanreason(self.uuid.__str__())
-            self.log.info("Banned player %s tried to connect:\n %s" % (self.username, banreason))
-            self.state = HANDSHAKE
-            self.disconnect("Banned: %s" % banreason)
-            return False
-
-        # Run the pre-login event -  A great place for AuthMe type plugins.
-        if not self.wrapper.events.callevent("player.preLogin",
-                                             {
-                                                 "player": self.username,
-                                                 "online_uuid": self.uuid.string,
-                                                 "offline_uuid": self.serveruuid.string,
-                                                 "ip": self.ip,
-                                                 "secure_connection": self.wrapper_onlinemode
-                                             }):
-            self.state = HANDSHAKE
-            self.disconnect("Login denied by a Plugin.")
-            return False
-
-        self.log.info("%s's client LOGON occurred: (UUID: %s | IP: %s | SecureConnection: %s)",
-                      self.username, self.uuid.string, self.ip, self.wrapper_onlinemode)
-
-        self._add_player_and_client_objects_to_wrapper()
-
-        # send login success to client
-        self.packet.sendpkt(self.pktCB.LOGIN_SUCCESS, [_STRING, _STRING], (self.uuid.string, self.username))
-        self.time_client_responded = time.time()
-        self.state = PLAY
-
-        # start keep alives
-        t_keepalives = threading.Thread(target=self._keep_alive_tracker, kwargs={'playername': self.username})
-        t_keepalives.daemon = True
-        t_keepalives.start()
-
-        # connect to server
-        self.connect_to_server()
-
-        return False
 
     def _send_client_settings(self):
         if self.clientSettings and not self.clientSettingsSent:
@@ -571,7 +593,8 @@ class Client:
             LOBBY: {
                 self.pktSB.KEEP_ALIVE: self._parse_lobby_keep_alive,
                 self.pktSB.CHAT_MESSAGE: self._parse_lobby_chat_message
-            }
+                },
+            IDLE: {}
         }
 
     # Do nothing parser
@@ -582,6 +605,7 @@ class Client:
     # Login parsers
     # -----------------------
     def _parse_handshaking(self):
+        self.log.debug("HANDSHAKE")
         data = self.packet.readpkt([_VARINT, _STRING, _USHORT, _VARINT])  # "version|address|port|state"
 
         self.clientversion = data[0]
@@ -624,12 +648,14 @@ class Client:
         return False
 
     def _parse_status_ping(self):
+        self.log.debug("STATUS PING")
         data = self.packet.readpkt([_LONG])
         self.packet.sendpkt(self.pktCB.PING_PONG, [_LONG], [data[0]])
         self.state = HANDSHAKE
         return False
 
     def _parse_status_request(self):
+        self.log.debug("STATUS REQUEST")
         sample = []
         for player in self.wrapper.javaserver.players:
             playerobj = self.wrapper.javaserver.players[player]
@@ -663,6 +689,7 @@ class Client:
         return False
 
     def _parse_login_start(self):
+        self.log.debug("LOGIN START")
         data = self.packet.readpkt([_STRING, _NULL])
 
         # "username"
@@ -694,15 +721,12 @@ class Client:
 
             # Since wrapper is offline, we are using offline for self.uuid also
             self.serveruuid = self.uuid  # MCUUID object
-            return self._login_client_logon()
-
-        # Don't send this packet on to the actual server because WE are handling client's logon.
-        return False
 
     def _parse_login_encr_response(self):
         # the client is RESPONDING to our request for encryption (if we sent one above)
         # read response Tokens
         # "shared_secret|verify_token"
+        self.log.debug("LOGIN ENCR RESPONSE")
         if self.serverversion < 6:
             data = self.packet.readpkt([_BYTEARRAY_SHORT, _BYTEARRAY_SHORT])
         else:
@@ -740,11 +764,13 @@ class Client:
         # TODO Whitelist processing Here
 
         # log the client on
-        return self._login_client_logon()
+        self.state = PLAY
+        self._login_client_logon()
 
     # Play parsers
     # -----------------------
     def _parse_play_chat_message(self):
+        self.log.debug("PLAY_CHAT")
         data = self.packet.readpkt([_STRING])
         if data is None:
             return False
@@ -1013,7 +1039,7 @@ class Client:
 
     def _parse_play_client_settings(self):  # read Client Settings
         """ This is read for later sending to servers we connect to """
-        self.clientSettings = self.packet.readpkt([_RAW])
+        self.clientSettings = self.packet.readpkt([_RAW])[0]
         self.clientSettingsSent = True  # the packet is not stopped, sooo...
         return True
 
@@ -1110,14 +1136,16 @@ class Client:
             self.packet.sendpkt(self.pktCB.CHANGE_GAME_STATE, [_UBYTE, _FLOAT], (1, 0))
             # spawn them and end or nether respawn so that when they "respawn" in world, the downloading terrain closes.
             self.packet.sendpkt(self.pktCB.RESPAWN, [_INT, _UBYTE, _UBYTE, _STRING], [-1, 3, 0, 'default'])
+            self.packet.sendpkt(self.pktCB.RESPAWN, [_INT, _UBYTE, _UBYTE, _STRING], [1, 3, 0, 'default'])
 
             # close current connection and start new one
             # noinspection PyBroadException
             try:
+                # TODO whatever respawn stuff works
                 self.server_connection.close_server(reason="Lobbification", lobby_return=True)
                 self.state = PLAY
                 self.connect_to_server()  # with no arguments, this reconnects to local server
-                self._add_player_and_client_objects_to_wrapper(new_client=False)
+                self._add_player_and_client_objects_to_wrapper()
                 self.clientSettingsSent = False
                 self._send_client_settings()
             except:

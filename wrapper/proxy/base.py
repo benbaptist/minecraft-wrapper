@@ -112,7 +112,6 @@ class Proxy:
             if self.clients[i].abort:
                 if str(client.username) in self.wrapper.javaserver.players:
                     self.clients.pop(i)
-                    del self.wrapper.javaserver.players[str(client.username)]
 
     def pollserver(self):
         server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
