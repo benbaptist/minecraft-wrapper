@@ -136,6 +136,7 @@ class ClientBound:
         self.TIME_UPDATE = 0x03
         self.USE_BED = 0x0a
         self.WINDOW_ITEMS = 0x30
+        self.PLUGIN_MESSAGE = 0x3F
         self.UPDATE_BLOCK_ENTITY = 0xEE  # Added protocol 110
 
         # 1.9 changes
@@ -177,6 +178,7 @@ class ClientBound:
             self.TIME_UPDATE = 0x44
             self.USE_BED = 0x2f
             self.WINDOW_ITEMS = 0x14
+            self.PLUGIN_MESSAGE = 0x18
 
         # 1.9.4 changes  http://wiki.vg/index.php?title=Protocol&oldid=7819#Entity_Properties
         if protocol > PROTOCOL_1_9_4:
@@ -224,6 +226,7 @@ class ServerBound:
         self.SPECTATE = 0xEE
         self.TELEPORT_CONFIRM = 0xEE
         self.USE_ENTITY = 0x02
+        self.PLUGIN_MESSAGE = 0x17
         self.USE_ITEM = 0xEE
 
         # 1.8 - 1.8.9
@@ -250,3 +253,4 @@ class ServerBound:
             self.TELEPORT_CONFIRM = 0x00
             self.USE_ENTITY = 0x0a
             self.USE_ITEM = 0x1d
+            self.PLUGIN_MESSAGE = 0x09

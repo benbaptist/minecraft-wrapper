@@ -41,6 +41,18 @@ class Proxy:
         self.skins = {}
         self.skinTextures = {}
         self.uuidTranslate = {}
+
+        # various contructions for non-standard client/servers (forge?) and wrapper's own channel
+        self.mod_info = {}
+        self.forge = False
+        self.forge_login_packet = None
+        self.registered_channels = ["WRAPPER.PY|", ]
+        self.shared = {
+            "whoAmI": "",
+            "received": False,
+            "sent": False
+        }
+
         # removed deprecated proxy-data.json
 
         self.privateKey = encryption.generate_key_pair()
@@ -113,15 +125,17 @@ class Proxy:
                 if str(client.username) in self.wrapper.javaserver.players:
                     self.clients.pop(i)
 
-    def pollserver(self):
+    def pollserver(self, host="localhost", port=None):
+        if port is None:
+            port = self.javaserver.server_port
         server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
         # server_sock = socket.socket()
         server_sock.settimeout(5)
-        server_sock.connect(("localhost", self.javaserver.server_port))
+        server_sock.connect((host, port))
         packet = Packet(server_sock, self)
 
-        packet.send(0x00, "varint|string|ushort|varint", (5, "localhost",
-                                                          self.javaserver.server_port, 1))
+        packet.send(0x00, "varint|string|ushort|varint", (5, host, port, 1))
         packet.send(0x00, "", ())
         packet.flush()
         self.wrapper.javaserver.protocolVersion = -1
@@ -131,6 +145,10 @@ class Proxy:
                 data = json.loads(packet.read("string:response")["response"].decode(self.encoding))  # py3
                 self.wrapper.javaserver.protocolVersion = data["version"]["protocol"]
                 self.wrapper.javaserver.version = data["version"]["name"]
+                if "modinfo" in data and data["modinfo"]["type"] == "FML":
+                    self.forge = True
+                    self.mod_info["modinfo"] = data["modinfo"]
+
                 break
         server_sock.close()
 

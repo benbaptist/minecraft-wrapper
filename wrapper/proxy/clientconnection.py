@@ -163,6 +163,15 @@ class Client:
         self.windowCounter = 2  # restored this
         self.lastitem = None
 
+        # wrapper's own channel on each player client
+        self.shared = {
+            "username": "",
+            "uuid": "",
+            "ip": "",
+            "received": False,
+            "sent": False
+        }
+
     def handle(self):
         t = threading.Thread(target=self.flush_loop, args=())
         t.daemon = True
@@ -229,8 +238,6 @@ class Client:
         # self.state = PLAY
         # TODO whatever respawn stuff works
         # return
-
-
 
         # send these right quick to client
         self._send_client_settings()
@@ -564,11 +571,13 @@ class Client:
                 },
             STATUS: {
                 self.pktSB.STATUS_PING: self._parse_status_ping,
-                self.pktSB.REQUEST: self._parse_status_request
+                self.pktSB.REQUEST: self._parse_status_request,
+                self.pktSB.PLUGIN_MESSAGE: self._parse_plugin_message,
                 },
             LOGIN: {
                 self.pktSB.LOGIN_START: self._parse_login_start,
-                self.pktSB.LOGIN_ENCR_RESPONSE: self._parse_login_encr_response
+                self.pktSB.LOGIN_ENCR_RESPONSE: self._parse_login_encr_response,
+                self.pktSB.PLUGIN_MESSAGE: self._parse_plugin_message,
                 },
             PLAY: {
                 self.pktSB.CHAT_MESSAGE: self._parse_play_chat_message,
@@ -589,10 +598,12 @@ class Client:
                 self.pktSB.TELEPORT_CONFIRM: self._parse_play_teleport_confirm,
                 self.pktSB.USE_ENTITY: self._parse_built,
                 self.pktSB.USE_ITEM: self._parse_play_use_item,
+                self.pktSB.PLUGIN_MESSAGE: self._parse_plugin_message,
                 },
             LOBBY: {
                 self.pktSB.KEEP_ALIVE: self._parse_lobby_keep_alive,
-                self.pktSB.CHAT_MESSAGE: self._parse_lobby_chat_message
+                self.pktSB.CHAT_MESSAGE: self._parse_lobby_chat_message,
+                self.pktSB.PLUGIN_MESSAGE: self._parse_plugin_message,
                 },
             IDLE: {}
         }
@@ -601,6 +612,34 @@ class Client:
     # -----------------------
     def _parse_built(self):
         return True
+
+    # plugin channel handler
+    # -----------------------
+    def _parse_plugin_message(self):
+        channel = self.packet.readpkt([_STRING, ])[0]
+        if channel not in self.proxy.registered_channels:
+            return True
+        if self.clientversion < mcpackets.PROTOCOL_1_8START:
+            datarest = self.packet.readpkt([_SHORT, _REST])[1]
+        else:
+            datarest = self.packet.readpkt([_REST, ])[0]
+        if channel == "WRAPPER.PY|":
+            response = json.loads(datarest.decode(self.wrapper.encoding), encoding=self.wrapper.encoding)
+            self._plugin_response(response)
+            return True
+
+        return True
+
+    def _plugin_response(self, response):
+        if "ip" in response:
+            self.shared = {
+                "username": response["username"],
+                "uuid": response["uuid"],
+                "ip": response["ip"],
+                "received": True,
+            }
+            self.ip = response["ip"]
+            self.mojanguuid = response["uuid"]
 
     # Login parsers
     # -----------------------
@@ -648,14 +687,15 @@ class Client:
         return False
 
     def _parse_status_ping(self):
-        self.log.debug("STATUS PING")
+        self.log.debug("SB -> STATUS PING")
         data = self.packet.readpkt([_LONG])
         self.packet.sendpkt(self.pktCB.PING_PONG, [_LONG], [data[0]])
+        self.log.debug("CB (W)-> STATUS PING")
         self.state = HANDSHAKE
         return False
 
     def _parse_status_request(self):
-        self.log.debug("STATUS REQUEST")
+        self.log.debug("SB -> STATUS REQUEST")
         sample = []
         for player in self.wrapper.javaserver.players:
             playerobj = self.wrapper.javaserver.players[player]
@@ -685,11 +725,12 @@ class Client:
         if self.wrapper.javaserver.serverIcon:  # add Favicon, if it exists
             self.MOTD["favicon"] = self.wrapper.javaserver.serverIcon
         self.packet.sendpkt(self.pktCB.PING_JSON_RESPONSE, [_STRING], [json.dumps(self.MOTD)])
+        self.log.debug("CB (W)-> JSON RESPONSE")
         # after this, proxy waits for the expected PING to go back to Handshake mode
         return False
 
     def _parse_login_start(self):
-        self.log.debug("LOGIN START")
+        self.log.debug("SB -> LOGIN START")
         data = self.packet.readpkt([_STRING, _NULL])
 
         # "username"
@@ -708,6 +749,7 @@ class Client:
                 self.packet.sendpkt(self.pktCB.LOGIN_ENCR_REQUEST,
                                     [_STRING, _BYTEARRAY, _BYTEARRAY],
                                     (self.serverID, self.publicKey, self.verifyToken))
+            self.log.debug("CB (W)-> LOGIN ENCR REQUEST")
 
             # Server UUID is always offline (at the present time)
             self.serveruuid = self.wrapper.uuids.getuuidfromname(self.username)  # MCUUID object
@@ -722,11 +764,16 @@ class Client:
             # Since wrapper is offline, we are using offline for self.uuid also
             self.serveruuid = self.uuid  # MCUUID object
 
+            # TODO TEST
+            # log the client on
+            self.state = PLAY
+            self._login_client_logon()
+
     def _parse_login_encr_response(self):
         # the client is RESPONDING to our request for encryption (if we sent one above)
         # read response Tokens
         # "shared_secret|verify_token"
-        self.log.debug("LOGIN ENCR RESPONSE")
+        self.log.debug("SB -> LOGIN ENCR RESPONSE")
         if self.serverversion < 6:
             data = self.packet.readpkt([_BYTEARRAY_SHORT, _BYTEARRAY_SHORT])
         else:
