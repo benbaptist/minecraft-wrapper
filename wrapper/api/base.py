@@ -190,3 +190,7 @@ class API:
                                       (self.serverpath, self.minecraft.getWorldName(), self.id))
         else:
             return Storage(name, root="wrapper-data/plugins/%s" % self.id)
+
+    def wrapperHalt(self):
+        """ shuts wrapper down """
+        self.wrapper.shutdown()

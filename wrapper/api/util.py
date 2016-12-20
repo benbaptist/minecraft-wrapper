@@ -20,7 +20,8 @@ class Utils:
 
     def getArgs(arginput, i)
     '''
-    return the 'i'th argument.  if item does not exist, returns
+    return the 'i'th argument.  if item does not exist, returns ""
+
     '0' is 'first' argument, as normal""
     '''
 

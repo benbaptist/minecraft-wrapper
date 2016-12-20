@@ -1,4 +1,4 @@
-Build 164
+Build 164 Version [0.9.6]
 - Bugfix request import
 - Big refactor of clientconnection parsing to remove all the if-elif processing.
 - making code preparations to fix player.connect()
@@ -9,6 +9,10 @@ Build 164
 - Changed player.usebed event.  The (head of the) bed position is passed as a payload item: "position" of x,y,z (parsed minecraft "position")
 - therefore, getBedPostion was removed from the API.player
 - successful wrapper offline connection :D
+- introduce item self.api.wrapperHalt() to the base API.  Shuts down wrapper entirely with exit code 0.
+- add self.api.minecraft.getServerPackets(self, packets="CB") to the Minecraft API
+- add self.api.minecraft.setLocalName(MojangUUID, desired_name, kick=True) to effect local server name changes.
+- add self.api.minecraft.getUuidCache() which returns the wrapper's uuid cache.
 
 Build 163 Version [0.9.4]
 - refactor packet.py

@@ -9,6 +9,8 @@ import os
 from core.nbt import NBTFile
 from core.entities import Items
 from utils.helpers import scrub_item_value
+from proxy.mcpackets import ClientBound
+from proxy.mcpackets import ServerBound
 
 
 # noinspection PyPep8Naming
@@ -66,6 +68,18 @@ class Minecraft:
             if self.getServer().state == 2:
                 return True
         return False
+
+    def getServerPackets(self, packets="CB"):
+        if not self.wrapper.proxymode:
+            return False
+
+        server = self.getServer()
+        version = server.protocolVersion
+
+        if packets == "CB":
+            return ClientBound(version)
+        else:
+            return ServerBound(version)
 
     def getTimeofDay(self, dttmformat=0):
         """
@@ -247,7 +261,7 @@ class Minecraft:
         """
         Returns the username from the specified UUID.
         If the player has never logged in before and isn't in the user cache, it will poll Mojang's API.
-        The function will raise an exception if the UUID is invalid.
+        The function will return False if the UUID is invalid.
 
         Args:
             uuid: string uuid with dashes
@@ -261,7 +275,7 @@ class Minecraft:
         """
         Returns the UUID from the specified username.
         If the player has never logged in before and isn't in the user cache, it will poll Mojang's API.
-        The function will raise an exception if the name is invalid.
+        The function will return False if the name is invalid.
 
         Args:
             name:  player name
@@ -272,6 +286,49 @@ class Minecraft:
         return self.wrapper.uuids.getuuidbyusername(name)
 
     # World and console interaction
+
+    def setLocalName(self, MojangUUID, desired_name, kick=True):
+        """ set the local name on the server.  Understand that this will cause a vanilla server UUID change and
+        loss of player data from the old name's offline uuid"""
+
+        cache = self.getUuidCache()
+        proper_name_spelling = self.lookupbyUUID(MojangUUID)
+        if not proper_name_spelling:
+            self.log.error("incorrect UUID %s supplied to api.minecraft.setLocalName()", MojangUUID)
+            return False
+
+        orig_server_uuid = self.getOfflineUUID(proper_name_spelling)
+        new_server_uuid = self.getOfflineUUID(desired_name)
+
+        worldname = str(self.getWorldName())
+        statsdir = ("%s/stats" % worldname)
+        sourcedir = "%s/playerdata/%s.dat" % (worldname, orig_server_uuid)
+        destdir = "%s/playerdata/%s.dat" % (worldname, new_server_uuid)
+
+        # do the name change in the cache
+        if MojangUUID in cache:
+            cache[MojangUUID]["localname"] = desired_name
+            cache.save()
+
+        # kicking them is needed to complete the process
+        if kick:
+            self.console("kick %s Wrapper is changing your name..." % proper_name_spelling)
+
+        if not os.path.exists(sourcedir):
+            self.log.error("(setLocalName): No such directory: %s", sourcedir)
+            return False
+
+        # copy files
+        with open(sourcedir, 'rb') as f:
+            data = f.read()
+        with open(destdir, 'wb') as f:
+            f.write(data)
+        with open(("%s/%s.json" % (statsdir, orig_server_uuid)), 'rb') as f:
+            data = f.read()
+        with open(("%s/%s.json" % (statsdir, new_server_uuid)), 'wb') as f:
+            f.write(data)
+
+        return True
 
     def console(self, string):
         """
@@ -460,6 +517,12 @@ class Minecraft:
 
         """
         return self.getServer().worldname
+
+    def getUuidCache(self):
+        """
+        gets the wrapper uuid cache.  This is as far as the API goes.  The format of the cache's contents are private.
+        """
+        return self.wrapper.usercache
 
     # Ban related items - These wrap the proxy base methods
     def banUUID(self, playeruuid, reason="by wrapper api.", source="minecraft.api", expires=False):
