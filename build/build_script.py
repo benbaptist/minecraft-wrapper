@@ -33,22 +33,31 @@ def build_the_docs():
     Simple docs builder.  creates reStructured text files from the docstrings. See api.base docstrings.
     rst format based on spec: http://docutils.sourceforge.net/docs/ref/rst/restructuredtext.html
     """
-    sep = '"""\n\n**'
 
-    endsep = '"""'
+    sep = '"""'
 
-    api_files = ["base", "minecraft", "world", "player", ]
+    api_files = ["base", "minecraft", "world", "player", "entity", "backups"]
     processed = {}
 
     for files in api_files:
         with open("wrapper/api/%s.py" % files) as f:
             data = f.read()
         all_items = data.split(sep)
-        all_items.pop(0)
         complete_doc = ""
-        for each_item in all_items:
-            item = each_item.split(endsep)[0]
-            complete_doc = "%s%s%s" % (complete_doc, '\n\n**', item)
+        item_count = len(all_items) - 1
+        total_items = range(0, item_count, 2)
+        print("total item Range() list: \n%s" % total_items)
+        for each_item in total_items:
+            item = all_items[each_item + 1]  # each_item.split(endsep)[0]
+            header = "****\n"
+            if "class " in all_items[each_item]:
+                header = "**class%s**\n" % all_items[each_item].split("class")[1].split(":")[0]
+            if "def " in all_items[each_item]:
+                defs = all_items[each_item].split("def")
+                number_of_defs = len(defs) - 1
+                header = "**def%s**\n" % all_items[each_item].split("def")[number_of_defs].split(":")[0]
+
+            complete_doc = "%s\n%s%s\n" % (complete_doc, header, item)
         processed[files] = complete_doc
 
     for files in processed:

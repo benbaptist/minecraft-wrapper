@@ -14,9 +14,6 @@ from api.backups import Backups
 # noinspection PyPep8Naming
 class API:
     """
-
-**class base.API**
-
     The API class contains methods for basic plugin functionality, such as handling events,
     registering commands, and more. Most methods aren't related to gameplay, aside from commands
     and events, but for core stuff. See the Minecraft class (accessible at self.api.minecraft)
@@ -110,9 +107,6 @@ class API:
 
     def registerCommand(self, command, callback, permission=None):
         """
-
-**def registerCommand(self, command, callback, permission=None)**
-
         This registers a command that, when entered by the Minecraft client, will execute `callback(player, args)`.
         permission is an optional attribute if you want your command to only be executable if the player
         has a specified permission node.
@@ -148,9 +142,6 @@ class API:
 
     def registerEvent(self, eventname, callback):
         """
-
-**def registerEvent(self, eventname, callback)**
-
         Register an event and a callback function. See
          https://docs.google.com/spreadsheets/d/1Sxli0mpN3Aib-aejjX7VRlcN2HZkak_wIqPFJ6mtVIk/edit?usp=sharing
          for a list of events.
@@ -172,9 +163,6 @@ class API:
 
     def registerPermission(self, permission=None, value=False):
         """
-
-**def registerPermission(self, permission=None, value=False)**
-
         Used to set a default for a specific permission node.
         Note: You do not need to run this function unless you want certain permission nodes
         to be granted by default.  i.e. `essentials.list` should be on by default, so players
@@ -196,9 +184,6 @@ class API:
 
     def registerHelp(self, groupname, summary, commands):
         """
-
-**def registerHelp(self, groupname, summary, commands)**
-
         Used to create a help group for the /help command.
 
         :groupname: The name of the help group (usually the plugin name). The groupname is the name you'll see
@@ -225,9 +210,6 @@ class API:
     def blockForEvent(self, eventtype):
         # TODO this event's purpose/functionality and use cases are unknown at this time
         """
-
-**def blockForEvent(self, eventtype)**
-
         Blocks until the specified event is called. """
         sock = []
         self.wrapper.events.listeners.append(sock)  #
@@ -244,9 +226,6 @@ class API:
     def callEvent(self, event, payload):
         # TODO this event's purpose/functionality and use cases are unknown at this time
         """
-
-**def callEvent(self, event, payload)**
-
         Invokes the specific event. Payload is extra information relating to the event. Errors
         may occur if you don't specify the right payload information.
         """
@@ -254,11 +233,7 @@ class API:
 
     def getPluginContext(self, plugin_id):
         """
-
-**def getPluginContext(self, plugin_id)**
-
         Returns the instance (content) of another running wrapper plugin with the specified ID.
-
 
         :plugin_id:  The `ID` of the plugin from the plugin's header .  if no `ID` was specified by the plugin, then
          the file name (without the .py extension) is used as the `ID`.
@@ -283,9 +258,6 @@ class API:
 
     def getStorage(self, name, world=False):
         """
-
-**def getStorage(self, name, world=False)**
-
         Return a storage object for storing configurations, player data, and any other data your
         plugin will need to remember across reboots.
 
@@ -321,9 +293,6 @@ class API:
 
     def wrapperHalt(self):
         """
-
-**def wrapperHalt(self)**
-
         Shuts wrapper down entirely.  To use this as a wrapper-restart method, use some code like this in a shell
         file to start wrapper (Linux example).  This code will restart wrapper after every shutdown until the
         console user ends it with CTRL-C.

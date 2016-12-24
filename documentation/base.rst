@@ -1,6 +1,5 @@
 
-
-**class base.API**
+**class API**
 
     The API class contains methods for basic plugin functionality, such as handling events,
     registering commands, and more. Most methods aren't related to gameplay, aside from commands
@@ -114,7 +113,6 @@
 **def getPluginContext(self, plugin_id)**
 
         Returns the instance (content) of another running wrapper plugin with the specified ID.
-
 
         :plugin_id:  The `ID` of the plugin from the plugin's header .  if no `ID` was specified by the plugin, then
          the file name (without the .py extension) is used as the `ID`.
