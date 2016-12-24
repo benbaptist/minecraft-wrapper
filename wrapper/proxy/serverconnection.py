@@ -124,6 +124,7 @@ class ServerConnection:
         self.packet.send(packetid, xpr, payload)
         pass
 
+    # TODO  - This is the entry point from clientconenction.py "self.server_connection.connect()"
     def connect(self):
         """ Connect only supports offline server connections, so no fancy login needed """
         self.state = LOGIN
