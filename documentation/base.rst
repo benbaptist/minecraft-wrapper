@@ -1,6 +1,6 @@
-**class API:**
 
-    
+
+**class base.API**
 
     The API class contains methods for basic plugin functionality, such as handling events,
     registering commands, and more. Most methods aren't related to gameplay, aside from commands
@@ -17,8 +17,7 @@
             self.api = api
 
         def onEnable(self):
-            self.api.minecraft.registerHelp("Home", "Commands from the Home plugin",
-             [
+            self.api.minecraft.registerHelp("Home", "Commands from the Home plugin", [
                 ("/sethome", "Save curremt position as home", None),
                 ("/home", "Teleports you to your home set by /sethome", None),
             ])
@@ -29,9 +28,7 @@
 
     
 
-**def registerCommand(self, command, callback, permission=None):**
-
-        
+**def registerCommand(self, command, callback, permission=None)**
 
         This registers a command that, when entered by the Minecraft client, will execute `callback(player, args)`.
         permission is an optional attribute if you want your command to only be executable if the player
@@ -54,9 +51,7 @@
 
         
 
-**def registerEvent(self, eventname, callback):**
-
-        
+**def registerEvent(self, eventname, callback)**
 
         Register an event and a callback function. See
          https://docs.google.com/spreadsheets/d/1Sxli0mpN3Aib-aejjX7VRlcN2HZkak_wIqPFJ6mtVIk/edit?usp=sharing
@@ -72,9 +67,7 @@
 
         
 
-**def registerPermission(self, permission=None, value=False):**
-
-        
+**def registerPermission(self, permission=None, value=False)**
 
         Used to set a default for a specific permission node.
         Note: You do not need to run this function unless you want certain permission nodes
@@ -89,9 +82,8 @@
 
         
 
-**def registerHelp(self, groupname, summary, commands):**
+**def registerHelp(self, groupname, summary, commands)**
 
-        
         Used to create a help group for the /help command.
 
         :groupname: The name of the help group (usually the plugin name). The groupname is the name you'll see
@@ -109,20 +101,17 @@
 
         
 
-**def blockForEvent(self, eventtype):**
+**def blockForEvent(self, eventtype)**
 
-         Blocks until the specified event is called. 
+        Blocks until the specified event is called. 
 
-    **def callEvent(self, event, payload):**
+**def callEvent(self, event, payload)**
 
-        
         Invokes the specific event. Payload is extra information relating to the event. Errors
         may occur if you don't specify the right payload information.
         
 
-**def getPluginContext(self, plugin_id):**
-
-        
+**def getPluginContext(self, plugin_id)**
 
         Returns the instance (content) of another running wrapper plugin with the specified ID.
 
@@ -144,9 +133,8 @@
 
 
 
-**def getStorage(self, name, world=False):**
+**def getStorage(self, name, world=False)**
 
-        
         Return a storage object for storing configurations, player data, and any other data your
         plugin will need to remember across reboots.
 
@@ -175,9 +163,7 @@
 
         
 
-**def wrapperHalt(self):**
-
-        
+**def wrapperHalt(self)**
 
         Shuts wrapper down entirely.  To use this as a wrapper-restart method, use some code like this in a shell
         file to start wrapper (Linux example).  This code will restart wrapper after every shutdown until the
@@ -210,5 +196,3 @@
 ..
 
         
-
-

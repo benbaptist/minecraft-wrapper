@@ -25,8 +25,42 @@ parser.add_argument('--verbose', '-v', action='store_true', help='verbose flag')
 args = parser.parse_args()
 
 
+def build_the_docs():
+    """
+
+**def build_the_docs()**
+
+    Simple docs builder.  creates reStructured text files from the docstrings. See api.base docstrings.
+    rst format based on spec: http://docutils.sourceforge.net/docs/ref/rst/restructuredtext.html
+    """
+    sep = '"""\n\n**'
+
+    endsep = '"""'
+
+    api_files = ["base", "minecraft", "world", "player", ]
+    processed = {}
+
+    for files in api_files:
+        with open("wrapper/api/%s.py" % files) as f:
+            data = f.read()
+        all_items = data.split(sep)
+        all_items.pop(0)
+        complete_doc = ""
+        for each_item in all_items:
+            item = each_item.split(endsep)[0]
+            complete_doc = "%s%s%s" % (complete_doc, '\n\n**', item)
+        processed[files] = complete_doc
+
+    for files in processed:
+        with open("documentation/%s.rst" % files, "w") as f:
+            f.write(processed[files])
+
+
 def build_wrapper(buildargs):
     os.chdir(buildargs.source)
+
+    # build the docs
+    build_the_docs()
 
     with open("build/version.json", "r") as f:
         version = json.loads(f.read())
