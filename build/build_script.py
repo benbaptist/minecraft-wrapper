@@ -35,10 +35,10 @@ def build_the_docs():
     """
 
     sep = '"""'
-    index_file = "**Welcome to the Wrapper.py API documentation!**\n\n" \
-            "The API is divided into modules.  Click on each module to see it's documentation.\n\n\n"
+    index_file = "**Welcome to the Wrapper.py Plugin API documentation!**\n\n" \
+                 "The API is divided into modules.  Click on each module to see it's documentation.\n\n\n"
 
-    api_files = ["base", "minecraft", "world", "player", "entity", "backups"]
+    api_files = ["base", "minecraft", "world", "player", "entity", "backups", "util"]
     processed = {}
 
     for files in api_files:

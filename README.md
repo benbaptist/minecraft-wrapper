@@ -100,7 +100,7 @@ If you run into any bugs, please _do_ report them!
 
 #Features#
 Wrapper.py supports the following features:
-- Plugin system for adding Bukkit-like features to a vanilla server
+  - [Plugin system](/documentation/index.md) for adding Bukkit-like features to a vanilla server
   - Proxy mode allows you to add extra functionality to plugins, such as real /commands
   - Permissions system with group support
   - Jump to different servers without reconnecting (extremely experimental, can be used by calling api.minecraft.connect(ip, port) )
@@ -119,7 +119,7 @@ Wrapper.py supports the following features:
 
 #API#
 The documentation for Wrapper.py is not complete, but you can find a reference on the plugin API here:
-[Plugin API](/documentation/index.md)
+[Wrapper.py Plugin API](/documentation/index.md)
 
 
 Wrapper continues to be a work in progress and changes often happen faster than they get documented, but this should help give you an idea of the methods that can be used. below is a list of plugin events that can be registered in your plugins:</br></br>
@@ -129,7 +129,7 @@ Here is a list of updates to the events:
 [Wrapper events](https://docs.google.com/spreadsheets/d/1Sxli0mpN3Aib-aejjX7VRlcN2HZkak_wIqPFJ6mtVIk/edit?usp=sharing)
 
 
-</br></br>Check the 'example-plugins' folder to see some example plugins.
+</br></br>Check the 'example-plugins' folder to see some example plugins.  These are very useful for seeing hwo the API functions.
 <ul>
 <li>template.py does nothing - it is just the shell of a plugin to work off of.</li>
 <li>example.py contains some actual functions. </li>
