@@ -186,8 +186,8 @@ class ServerConnection:
             if self.parse(pkid) and self.client.state in (self.proxy.PLAY, self.proxy.LOBBY):
                 try:
                     self.client.packet.send_raw(original)
-                    #if self.proxy.trace:
-                        #self._do_trace(pkid, self.state)
+                    if self.proxy.trace:
+                        self._do_trace(pkid, self.state)
 
                 except Exception as e:
                     self.log.debug("[SERVER %s] Could not send packet (%s): (%s): \n%s",
@@ -327,23 +327,22 @@ class ServerConnection:
         return self._keep_alive_response()
 
     def _parse_play_combat_event(self):
-        #print("\nSTART COMB_PARSE\n")
-        #data = self.packet.readpkt([_VARINT, ])
-        #print("\nread COMB_PARSE\n")
-        #if data[0] == 2:
-        #    print("\nread COMB_PARSE2\n")
-        #    playerID = self.packet.readpkt([_VARINT, ])
-        #    print("\nread COMB_PARSE3\n")
-        #    EID = self.packet.readpkt([_INT, ])
-        #    print("\nread COMB_PARSE4\n")
-        #    strg = self.packet.readpkt([_STRING, ])
+        print("\nSTART COMB_PARSE\n")
+        data = self.packet.readpkt([_VARINT, ])
+        print("\nread COMB_PARSE\n")
+        if data[0] == 2:
+            print("\nread COMB_PARSE2\n")
+            playerID = self.packet.readpkt([_VARINT, ])
+            print("\nread COMB_PARSE3\n")
+            EID = self.packet.readpkt([_INT, ])
+            print("\nread COMB_PARSE4\n")
+            strg = self.packet.readpkt([_STRING, ])
 
-        #    print("\nplayerEID=%s\nEID=%s\n" % (playerID, EID))
-        #    print("\nTEXT=\n%s\n" % strg)
+            print("\nplayerEID=%s\nEID=%s\n" % (playerID, EID))
+            print("\nTEXT=\n%s\n" % strg)
 
-        #    return True
+            return True
         return True
-
     def _parse_play_chat_message(self):
         if self.version < mcpackets.PROTOCOL_1_8START:
             parsing = [_STRING, _NULL]
