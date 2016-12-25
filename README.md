@@ -119,7 +119,9 @@ Wrapper.py supports the following features:
 
 #API#
 The documentation for Wrapper.py is not complete, but you can find a reference on the plugin API here:
-</br><a href="https://github.com/benbaptist/minecraft-wrapper/wiki/Plugin-API">wrapper wiki</a>
+
+[wiki](/documentation/)
+
 
 Wrapper continues to be a work in progress and changes often happen faster than they get documented, but this should help give you an idea of the methods that can be used. below is a list of plugin events that can be registered in your plugins:</br></br>
 <b>List of events</b>: https://docs.google.com/spreadsheet/ccc?key=0AoWx24EFSt80dDRiSGVxcW1xQkVLb2dWTUN4WE5aNmc&usp=sharing</br>
