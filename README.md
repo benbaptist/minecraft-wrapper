@@ -119,12 +119,15 @@ Wrapper.py supports the following features:
 
 #API#
 The documentation for Wrapper.py is not complete, but you can find a reference on the plugin API here:
-
-[wiki](/documentation/)
+[wiki](/documentation/index.rst)
 
 
 Wrapper continues to be a work in progress and changes often happen faster than they get documented, but this should help give you an idea of the methods that can be used. below is a list of plugin events that can be registered in your plugins:</br></br>
 <b>List of events</b>: https://docs.google.com/spreadsheet/ccc?key=0AoWx24EFSt80dDRiSGVxcW1xQkVLb2dWTUN4WE5aNmc&usp=sharing</br>
+
+Here is a list of updates to the events:
+[Wrapper events](https://docs.google.com/spreadsheets/d/1Sxli0mpN3Aib-aejjX7VRlcN2HZkak_wIqPFJ6mtVIk/edit?usp=sharing)
+
 
 </br></br>Check the 'example-plugins' folder to see some example plugins.
 <ul>
