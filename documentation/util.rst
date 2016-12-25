@@ -1,18 +1,6 @@
-# -*- coding: utf-8 -*-
 
-from utils.helpers import mkdir_p
-from utils.helpers import get_int
-from utils.helpers import getargsafter
-from utils.helpers import getargs
-from utils.helpers import scrub_item_value
-from utils.helpers import config_to_dict_read
-from utils.helpers import set_item
-from utils.helpers import getjsonfile
-from utils.helpers import putjsonfile
+**class Utils**
 
-
-class Utils:
-    """
     These methods are accessed using 'self.api.utils'
 
     Class that wraps some utils.helpers functions for the plugin API user.
@@ -70,14 +58,4 @@ class Utils:
     '''
 
 
-    """
-    def __init__(self):
-        self.getArgs = getargs
-        self.getArgsAfter = getargsafter
-        self.getInt = get_int
-        self.makeDir = mkdir_p
-        self.readConfigIntoDict = config_to_dict_read
-        self.setItem = set_item
-        self.scrubItemValue = scrub_item_value
-        self.getJsonFile = getjsonfile
-        self.putJsonFile = putjsonfile
+    

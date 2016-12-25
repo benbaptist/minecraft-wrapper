@@ -1,19 +1,6 @@
-# -*- coding: utf-8 -*-
 
+**class API**
 
-import time
-
-import core.exceptions as exceptions
-
-from api.minecraft import Minecraft
-from api.util import Utils
-from core.storage import Storage
-from api.backups import Backups
-
-
-# noinspection PyPep8Naming
-class API:
-    """
     The API class contains methods for basic plugin functionality, such as handling events,
     registering commands, and more. Most methods aren't related to gameplay, aside from commands
     and events, but for core stuff. See the Minecraft class (accessible at self.api.minecraft)
@@ -38,75 +25,10 @@ class API:
 ..
 
 
-    """
-    statuseffects = {
-        "speed": 1,
-        "slowness": 2,
-        "haste": 3,
-        "mining_fatigue": 4,
-        "strength": 5,
-        "instant_health": 6,
-        "instant_damage": 7,
-        "jump_boost": 8,
-        "nausea": 9,
-        "regeneration": 10,
-        "resistance": 11,
-        "fire_resistance": 12,
-        "water_breathing": 13,
-        "invisibility": 14,
-        "blindness": 15,
-        "night_vision": 16,
-        "hunger": 17,
-        "weakness": 18,
-        "poison": 19,
-        "wither": 20,
-        "health_boost": 21,
-        "absorption": 22,
-        "saturation": 23
-    }
-    colorcodes = {
-        "0": "black",
-        "1": "dark_blue",
-        "2": "dark_green",
-        "3": "dark_aqua",
-        "4": "dark_red",
-        "5": "dark_purple",
-        "6": "gold",
-        "7": "gray",
-        "8": "dark_gray",
-        "9": "blue",
-        "a": "green",
-        "b": "aqua",
-        "c": "red",
-        "d": "light_purple",
-        "e": "yellow",
-        "f": "white",
-        "r": "\xc2\xa7r",
-        "k": "\xc2\xa7k",  # obfuscated
-        "l": "\xc2\xa7l",  # bold
-        "m": "\xc2\xa7m",  # strikethrough
-        "n": "\xc2\xa7n",  # underline
-        "o": "\xc2\xa7o",  # italic,
-    }
+    
 
-    def __init__(self, wrapper, name="", someid=None, internal=False):
-        self.wrapper = wrapper
-        self.log = wrapper.log
-        self.name = name
-        self.minecraft = Minecraft(wrapper)
-        self.backups = Backups(wrapper)
-        self.utils = Utils()
-        self.config = wrapper.config
-        self.entity = False
-        self.serverpath = self.config["General"]["server-directory"]
-        self.internal = internal
-        if someid is None:
-            self.id = name
-        else:
-            self.id = someid
+**def registerCommand(self, command, callback, permission=None)**
 
-    def registerCommand(self, command, callback, permission=None):
-        """
         This registers a command that, when entered by the Minecraft client, will execute `callback(player, args)`.
         permission is an optional attribute if you want your command to only be executable if the player
         has a specified permission node.
@@ -126,22 +48,10 @@ class API:
 
         :returns:  None/Nothing
 
-        """
-        commands = []
-        if type(command) in (tuple, list):
-            for i in command:
-                commands.append(i)
-        else:
-            commands = [command]
-        for name in commands:
-            if not self.internal:
-                self.wrapper.log.debug("[%s] Registered command '%s'", self.name, name)
-            if self.id not in self.wrapper.commands:
-                self.wrapper.commands[self.id] = {}
-            self.wrapper.commands[self.id][name] = {"callback": callback, "permission": permission}
+        
 
-    def registerEvent(self, eventname, callback):
-        """
+**def registerEvent(self, eventname, callback)**
+
         Register an event and a callback function. See
          https://docs.google.com/spreadsheets/d/1Sxli0mpN3Aib-aejjX7VRlcN2HZkak_wIqPFJ6mtVIk/edit?usp=sharing
          for a list of events.
@@ -154,15 +64,10 @@ class API:
 
         :returns:  None/Nothing
 
-        """
-        if not self.internal:
-            self.wrapper.log.debug("[%s] Registered event '%s'", self.name, eventname)
-        if self.id not in self.wrapper.events:
-            self.wrapper.events[self.id] = {}
-        self.wrapper.events[self.id][eventname] = callback
+        
 
-    def registerPermission(self, permission=None, value=False):
-        """
+**def registerPermission(self, permission=None, value=False)**
+
         Used to set a default for a specific permission node.
         Note: You do not need to run this function unless you want certain permission nodes
         to be granted by default.  i.e. `essentials.list` should be on by default, so players
@@ -174,16 +79,10 @@ class API:
 
         :returns:  None/Nothing
 
-        """
-        if not self.internal:
-            self.wrapper.log.debug("[%s] Registered permission '%s' with default value: %s",
-                                   self.name, permission, value)
-        if self.id not in self.wrapper.registered_permissions:
-            self.wrapper.registered_permissions[self.id] = {}
-        self.wrapper.registered_permissions[self.id][permission] = value
+        
 
-    def registerHelp(self, groupname, summary, commands):
-        """
+**def registerHelp(self, groupname, summary, commands)**
+
         Used to create a help group for the /help command.
 
         :groupname: The name of the help group (usually the plugin name). The groupname is the name you'll see
@@ -199,40 +98,20 @@ class API:
 
         :returns:  None/Nothing
 
-        """
-        if not self.internal:
-            self.wrapper.log.debug("[%s] Registered help group '%s' with %d commands",
-                                   self.name, groupname, len(commands))
-        if self.id not in self.wrapper.help:
-            self.wrapper.help[self.id] = {}
-        self.wrapper.help[self.id][groupname] = (summary, commands)
+        
 
-    def blockForEvent(self, eventtype):
-        # TODO this event's purpose/functionality and use cases are unknown at this time
-        """
-        Blocks until the specified event is called. """
-        sock = []
-        self.wrapper.events.listeners.append(sock)  #
-        while True:
-            for event in sock:
-                if event["event"] == eventtype:
-                    payload = event["payload"][:]
-                    self.wrapper.events.listeners.remove(sock)
-                    return payload
-                else:
-                    sock.remove(event)
-            time.sleep(0.05)
+**def blockForEvent(self, eventtype)**
 
-    def callEvent(self, event, payload):
-        # TODO this event's purpose/functionality and use cases are unknown at this time
-        """
+        Blocks until the specified event is called. 
+
+**def callEvent(self, event, payload)**
+
         Invokes the specific event. Payload is extra information relating to the event. Errors
         may occur if you don't specify the right payload information.
-        """
-        return self.wrapper.callevent(event, payload)
+        
 
-    def getPluginContext(self, plugin_id):
-        """
+**def getPluginContext(self, plugin_id)**
+
         Returns the instance (content) of another running wrapper plugin with the specified ID.
 
         :plugin_id:  The `ID` of the plugin from the plugin's header .  if no `ID` was specified by the plugin, then
@@ -250,14 +129,10 @@ class API:
 
         :returns:  Raises wrapper exception `exceptions.NonExistentPlugin` if the specified plugin does not exist.
 
-"""
-        if plugin_id in self.wrapper.plugins:
-            return self.wrapper.plugins[plugin_id]["main"]
-        else:
-            raise exceptions.NonExistentPlugin("Plugin %s does not exist!" % plugin_id)
 
-    def getStorage(self, name, world=False):
-        """
+
+**def getStorage(self, name, world=False)**
+
         Return a storage object for storing configurations, player data, and any other data your
         plugin will need to remember across reboots.
 
@@ -284,15 +159,10 @@ class API:
             self.data.close()
 ..
 
-        """
-        if world:
-            return Storage(name, root="%s/%s/plugins/%s" %
-                                      (self.serverpath, self.minecraft.getWorldName(), self.id))
-        else:
-            return Storage(name, root="wrapper-data/plugins/%s" % self.id)
+        
 
-    def wrapperHalt(self):
-        """
+**def wrapperHalt(self)**
+
         Shuts wrapper down entirely.  To use this as a wrapper-restart method, use some code like this in a shell
         file to start wrapper (Linux example).  This code will restart wrapper after every shutdown until the
         console user ends it with CTRL-C.
@@ -323,5 +193,4 @@ class API:
         done
 ..
 
-        """
-        self.wrapper.shutdown()
+        

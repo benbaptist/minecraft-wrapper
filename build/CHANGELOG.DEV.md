@@ -1,7 +1,18 @@
-Build 164
+Build 164 Version [0.9.6]
 - Bugfix request import
 - Big refactor of clientconnection parsing to remove all the if-elif processing.
 - making code preparations to fix player.connect()
+- fix more player-connnect stuff.  works in a limited fashion.  Respawn in new world glitches screen until player dies and respawns
+    if player does not use /lobby to get back, strange things happen if he disconnects and rejoins.  /lobby does not re-connect to
+    original server (packet length problems).
+- Same refactor of serverconnection that was done to clientconnection...
+- Changed player.usebed event.  The (head of the) bed position is passed as a payload item: "position" of x,y,z (parsed minecraft "position")
+- therefore, getBedPostion was removed from the API.player
+- successful wrapper offline connection :D
+- introduce item self.api.wrapperHalt() to the base API.  Shuts down wrapper entirely with exit code 0.
+- add self.api.minecraft.getServerPackets(self, packets="CB") to the Minecraft API
+- add self.api.minecraft.setLocalName(MojangUUID, desired_name, kick=True) to effect local server name changes.
+- add self.api.minecraft.getUuidCache() which returns the wrapper's uuid cache.
 
 Build 163 Version [0.9.4]
 - refactor packet.py
@@ -201,7 +212,7 @@ Build 133 - 134
     1) wrapper hub can connect player to second server, but Server does not send player packets to
     position (clear "download terrain") or "respawn".  The player must die to spawn into the world.
     2) After that, it works great, until the player leaves and tries to rejoin. The second joining seems to
-    "remember" toom much about the last connection
+    "remember" too much about the last connection
 The purpose of these builds is to progressively work towards full functionality.  Each build will be better
 than the last until player.connect() is fully functional.
 

@@ -56,7 +56,7 @@ class Player:
         self.username = username
         self.loggedIn = time.time()
         self.abort = self.wrapper.halt  # mcserver will set this to false later to close the thread.  meanwhile,
-        # it still needs to respect wrapper halts
+        # it still needs to respect wrapper halts # TODO - clean this out.  let player objects GC with their client
 
         # these are all MCUUID objects.. I have separated out various uses of uuid to clarify for later refractoring
         # ---------------
@@ -228,15 +228,6 @@ class Player:
                                      (self.username, e))
         else:
             return self.client
-
-    def getBedPostion(self):
-        """
-        Returns: returns a tuple of the player's last sleeping place (position x, y, z)
-
-        IMPORTANT: wrapper does not store this permanently. It is up to the plugin to record a
-            "player.usebed" event and then store the data in their own Storage objects!
-        """
-        return self.getClient().bedposition
 
     def getPosition(self):
         """:returns: a tuple of the player's current position x, y, z, and yaw, pitch of head.
@@ -667,4 +658,4 @@ class Player:
 
         Returns: Nothing
         """
-        self.client.connect_to_server(address, port)
+        self.client.change_servers(address, port)

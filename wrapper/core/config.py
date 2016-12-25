@@ -116,8 +116,12 @@ NEWCONFIG = {
                               # port is exposed to the internet via your port forwards.
         "server-port": "deprecated",  # This port is autoconfigured from server console output now.
         "spigot-mode": False,
-        "silent-ipban": True  # silent bans cause your server to ignore sockets from that IP (for IP bans)
+        "silent-ipban": True,  # silent bans cause your server to ignore sockets from that IP (for IP bans)
                               #  The idea is to cause your server to appear offline and avoid possible confrontations.
+        "hidden-ops": [         # these players do no appear in the sample server player list pings.
+            "SurestTexas00",
+            "BenBaptist"
+        ]
     },
     "Web": {
         "public-stats": True,

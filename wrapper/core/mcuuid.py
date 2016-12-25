@@ -8,9 +8,10 @@ import hashlib
 import time
 import requests
 
+
 class MCUUID (uuid.UUID):
     """
-    This class is currently not being used, but may be benefitial in regards to
+    This class is currently not being used, but may be beneficial in regards to
     conforming UUIDs
     """
 

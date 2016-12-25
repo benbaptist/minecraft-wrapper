@@ -240,7 +240,7 @@ class WebClient:
 
     def close(self):
         try:
-            self.socket.close()
+            self.socket.close_server()
             # self.log.debug("(WEB) Connection %s closed", str(self.addr))
         except Exception as e:
             pass

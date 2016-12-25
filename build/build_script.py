@@ -25,8 +25,56 @@ parser.add_argument('--verbose', '-v', action='store_true', help='verbose flag')
 args = parser.parse_args()
 
 
+def build_the_docs():
+    """
+
+**def build_the_docs()**
+
+    Simple docs builder.  creates reStructured text files from the docstrings. See api.base docstrings.
+    rst format based on spec: http://docutils.sourceforge.net/docs/ref/rst/restructuredtext.html
+    """
+
+    sep = '"""'
+    index_file = "**Welcome to the Wrapper.py Plugin API documentation!**\n\n" \
+                 "The API is divided into modules.  Click on each module to see it's documentation.\n\n\n"
+
+    api_files = ["base", "minecraft", "world", "player", "entity", "backups", "util"]
+    processed = {}
+
+    for files in api_files:
+        with open("wrapper/api/%s.py" % files) as f:
+            data = f.read()
+        all_items = data.split(sep)
+        complete_doc = ""
+        item_count = len(all_items) - 1
+        total_items = range(0, item_count, 2)
+        for each_item in total_items:
+            item = all_items[each_item + 1]  # each_item.split(endsep)[0]
+            header = "****\n"
+            if "class " in all_items[each_item]:
+                header = "**class%s**\n" % all_items[each_item].split("class")[1].split(":")[0]
+            if "def " in all_items[each_item]:
+                defs = all_items[each_item].split("def")
+                number_of_defs = len(defs) - 1
+                header = "**def%s**\n" % all_items[each_item].split("def")[number_of_defs].split(":")[0]
+
+            complete_doc = "%s\n%s%s\n" % (complete_doc, header, item)
+        processed[files] = complete_doc
+
+    for files in processed:
+        with open("documentation/%s.rst" % files, "w") as f:
+            f.write(processed[files])
+        index_file = "%s[%s](/documentation/%s.rst)\n\n" % (index_file, files, files)
+
+    with open("documentation/index.md", "w") as f:
+            f.write(index_file)
+
+
 def build_wrapper(buildargs):
     os.chdir(buildargs.source)
+
+    # build the docs
+    build_the_docs()
 
     with open("build/version.json", "r") as f:
         version = json.loads(f.read())

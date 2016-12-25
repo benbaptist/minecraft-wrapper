@@ -37,11 +37,22 @@ class Proxy:
         self.silent_ip_banning = self.wrapper.config["Proxy"]["silent-ipban"]
         self.proxy_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.usingSocket = False
-        self.isServer = False
         self.clients = []
         self.skins = {}
         self.skinTextures = {}
         self.uuidTranslate = {}
+
+        # various contructions for non-standard client/servers (forge?) and wrapper's own channel
+        self.mod_info = {}
+        self.forge = False
+        self.forge_login_packet = None
+        self.registered_channels = ["WRAPPER.PY|", ]
+        self.shared = {
+            "whoAmI": "",
+            "received": False,
+            "sent": False
+        }
+
         # removed deprecated proxy-data.json
 
         self.privateKey = encryption.generate_key_pair()
@@ -97,8 +108,10 @@ class Proxy:
             if self.silent_ip_banning and banned_ip:
                 sock.shutdown(0)  # 0: done receiving, 1: done sending, 2: both
                 continue
+
             # spur off client thread
-            client = Client(sock, addr, self.wrapper, self.publicKey, self.privateKey, banned=banned_ip)
+            # self.server_temp = ServerConnection(self, ip, port)
+            client = Client(self, sock, addr, banned=banned_ip)
             t = threading.Thread(target=client.handle, args=())
             t.daemon = True
             t.start()
@@ -106,22 +119,23 @@ class Proxy:
             self.removestaleclients()
 
     def removestaleclients(self):
+        """only removes aborted clients"""
         for i, client in enumerate(self.clients):
             if self.clients[i].abort:
-                if str(client.username) in self.wrapper.javaserver.players:  # lobby code (in case player not here)
-                    self.wrapper.javaserver.players[str(client.username)].abort = True
+                if str(client.username) in self.wrapper.javaserver.players:
                     self.clients.pop(i)
-                    del self.wrapper.javaserver.players[str(client.username)]
 
-    def pollserver(self):
+    def pollserver(self, host="localhost", port=None):
+        if port is None:
+            port = self.javaserver.server_port
         server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
         # server_sock = socket.socket()
         server_sock.settimeout(5)
-        server_sock.connect(("localhost", self.javaserver.server_port))
+        server_sock.connect((host, port))
         packet = Packet(server_sock, self)
 
-        packet.send(0x00, "varint|string|ushort|varint", (5, "localhost",
-                                                          self.javaserver.server_port, 1))
+        packet.send(0x00, "varint|string|ushort|varint", (5, host, port, 1))
         packet.send(0x00, "", ())
         packet.flush()
         self.wrapper.javaserver.protocolVersion = -1
@@ -131,8 +145,29 @@ class Proxy:
                 data = json.loads(packet.read("string:response")["response"].decode(self.encoding))  # py3
                 self.wrapper.javaserver.protocolVersion = data["version"]["protocol"]
                 self.wrapper.javaserver.version = data["version"]["name"]
+                if "modinfo" in data and data["modinfo"]["type"] == "FML":
+                    self.forge = True
+                    self.mod_info["modinfo"] = data["modinfo"]
+
                 break
         server_sock.close()
+
+    def getplayerby_username(self, username):
+        """
+        :rtype: var
+        this is only to quiet complaints PyCharm makes because in places like this we return booleans
+        sometimes when we can't get valid data and our calling methods check for these booleans.
+        """
+        for client in self.clients:
+            if client.username == username:
+                try:
+                    return self.wrapper.javaserver.players[client.username]
+                except Exception as e:
+                    self.log.error("getplayerby_username failed to get player %s: \n%s",
+                                   username, e)
+                    return False
+        self.log.debug("Failed to get any player by name of: %s", username)
+        return False
 
     def getclientbyofflineserveruuid(self, uuid):
         """
@@ -149,6 +184,23 @@ class Proxy:
         self.log.debug("getclientbyofflineserveruuid failed: \n %s", attempts)
         self.log.debug("POSSIBLE CLIENTS: \n %s", self.clients)
         return False  # no client
+
+    def getplayerby_eid(self, eid):
+        """
+        :rtype: var
+        this is only to quiet complaints PyCharm makes because in places like this we return booleans
+        sometimes when we can't get valid data and our calling methods check for these booleans.
+        """
+        for client in self.clients:
+            if client.server.eid == eid:
+                try:
+                    return self.wrapper.javaserver.players[client.username]
+                except Exception as e:
+                    self.log.error("getplayerby_eid failed to get player %s: \n%s",
+                                   client.username, e)
+                    return False
+        self.log.debug("Failed to get any player by client Eid: %s", eid)
+        return False
 
     def banplayer(self, playername, reason="Banned by an operator", source="Wrapper", expires="forever"):
         """

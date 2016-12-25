@@ -11,9 +11,6 @@ import zlib
 import sys
 # import StringIO
 
-# third party
-# (none)
-
 # local
 from core.mcuuid import MCUUID
 
@@ -264,7 +261,7 @@ class Packet:
             `data = packet.readpkt(_DOUBLE, _DOUBLE, _DOUBLE, _BOOL)`  # abstracts of integer constants
             `x, y, z, on_ground = data`
 
-        proposed as an alternative to all the string operations used by the old (and nee wrapper form of..)
+        proposed as an alternative to all the string operations used by the old (and new wrapper form of..)
         read().
 
         Args:
@@ -491,7 +488,7 @@ class Packet:
     def read_data(self, length):
         d = self.buffer.read(length)
         if len(d) == 0 and length is not 0:
-            self.obj.disconnect("Received no data or less data than expected - connection closed")
+            self.obj.close_server()  # "Received no data or less data than expected - connection closed"
             return ""
         return d
 

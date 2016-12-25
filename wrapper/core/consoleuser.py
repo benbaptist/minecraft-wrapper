@@ -99,15 +99,3 @@ class ConsolePlayer:
         """return console as always having the requested permission"""
         if args:
             return True
-
-
-class MiniPlayer:
-    """ a shell of the original player, who is now logged off and real player object is defunct.
-    Only used to pass some info to the player payload for event player.Logout, mostly for back-wards
-    compatibility to plugins.
-
-    used by mcserver.py
-
-    """
-    def __init__(self, playername):
-        self.username = playername
