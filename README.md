@@ -119,7 +119,7 @@ Wrapper.py supports the following features:
 
 #API#
 The documentation for Wrapper.py is not complete, but you can find a reference on the plugin API here:
-[wiki](/documentation/index.rst)
+[wiki](/documentation/index.md)
 
 
 Wrapper continues to be a work in progress and changes often happen faster than they get documented, but this should help give you an idea of the methods that can be used. below is a list of plugin events that can be registered in your plugins:</br></br>

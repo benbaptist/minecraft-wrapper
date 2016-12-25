@@ -66,8 +66,9 @@ def build_the_docs():
             f.write(processed[files])
         index_file = "%s[%s](/documentation/%s.rst\n\n" % (index_file, files, files)
 
-    with open("documentation/index.rst", "w") as f:
+    with open("documentation/index.md", "w") as f:
             f.write(index_file)
+
 
 def build_wrapper(buildargs):
     os.chdir(buildargs.source)
