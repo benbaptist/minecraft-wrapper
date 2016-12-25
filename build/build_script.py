@@ -64,7 +64,7 @@ def build_the_docs():
     for files in processed:
         with open("documentation/%s.rst" % files, "w") as f:
             f.write(processed[files])
-        index_file = "%s[%s](/documentation/%s.rst\n\n" % (index_file, files, files)
+        index_file = "%s[%s](/documentation/%s.rst)\n\n" % (index_file, files, files)
 
     with open("documentation/index.md", "w") as f:
             f.write(index_file)
