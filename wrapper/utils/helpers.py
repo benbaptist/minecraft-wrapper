@@ -576,7 +576,9 @@ def _getcolorcode(color):
             return u"\xa7" + code
     return ""
 
+
 def create_chat(*args):
+    pass
 
 
 def _test_console(message):
