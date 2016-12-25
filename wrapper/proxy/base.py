@@ -42,16 +42,32 @@ class Proxy:
         self.skinTextures = {}
         self.uuidTranslate = {}
 
+        # Constants used in client and server connections:
+        self.HANDSHAKE = 0  # this is the default mode of a server awaiting packets from a client out in the ether..
+        # client will send a handshake (a 0x00 packet WITH payload) asking for STATUS or LOGIN mode
+        # N/a to serverconnection.py, which starts in LOGIN mode
+        self.OFFLINE = 0  # an alias of Handshake.
+        # MOTD = 1  # not used. clientconnection.py handles PING/MOTD functions
+        self.STATUS = 1  # not used by server. clientconnection.py handles PING/MOTD functions
+        # Status mode will await either a ping (0x01) containing a unique long int and will respond with same integer.
+        #     ... OR if it receives a 0x00 packet (with no payload), that signals server (client.py) to send
+        #         the MOTD json response packet.
+        #         The ping will follow the 0x00 request for json response.  The ping will set wrapper/server
+        #         back to HANDSHAKE mode (to await next handshake).
+        self.LOGIN = 2  # login state
+        self.PLAY = 3  # play state
+        self.LOBBY = 4  # lobby state (remote server)
+        self.IDLE = 5  # no parsing at all; just keeping client suspended
+
         # various contructions for non-standard client/servers (forge?) and wrapper's own channel
         self.mod_info = {}
         self.forge = False
         self.forge_login_packet = None
-        self.registered_channels = ["WRAPPER.PY|", ]
-        self.shared = {
-            "whoAmI": "",
-            "received": False,
-            "sent": False
-        }
+        self.registered_channels = ["WRAPPER.PY|", "WRAPPER.PY|PING", ]
+        self.pinged = False
+        #self.trace = True
+        #self.ignoredSB = [0xe, 0xc, 0x0, 0xd ]
+        #self.ignoredCB = [0x44, 0x49, 0x34, 0x25, 0x26, 0x3b, 0x2e, 0x39, 0x30, 0x3, 0x4a, 0x3c, 0x20, 0x1b, ]
 
         # removed deprecated proxy-data.json
 
@@ -183,7 +199,8 @@ class Proxy:
                 return client
         self.log.debug("getclientbyofflineserveruuid failed: \n %s", attempts)
         self.log.debug("POSSIBLE CLIENTS: \n %s", self.clients)
-        return False  # no client
+        raise Exception
+        #return False  # no client
 
     def getplayerby_eid(self, eid):
         """

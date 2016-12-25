@@ -129,8 +129,7 @@ class EntityControl:
 
         Args:
             eid - Entity EID on server
-            dropitems - whether or not the entity death will drop loot
-            finishstateof_domobloot - True/False - what the desired global state of DoMobLoot is on the server.
+            dropitems - whether or not the entity death will drop loot.  Only works if gamerule doMobDrops is true.
             count - used to specify more than one entity; again, centers on the specified eid location.
 
         """
@@ -141,7 +140,7 @@ class EntityControl:
         pos = entityinfo["position"]
         entitydesc = entityinfo["name"]
         if dropitems:
-            # kill them (get loots if enabled doMobDrops)
+            # kill them (get loots if server has doMobDrops set to true)
             self._javaserver.console("kill @e[type=%s,x=%d,y=%d,z=%d,c=%s]" %
                                      (entitydesc, pos[0], pos[1], pos[2], count))
         else:
