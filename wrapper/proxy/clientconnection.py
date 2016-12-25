@@ -28,20 +28,6 @@ from utils.helpers import processcolorcodes
 # region Constants
 # ------------------------------------------------
 
-HANDSHAKE = 0  # this is the default mode of a server awaiting packets from a client out in the ether..
-# client will send a handshake (a 0x00 packet WITH payload) asking for STATUS or LOGIN mode
-STATUS = 1
-# Status mode will await either a ping (0x01) containing a unique long int and will respond with same integer.
-#     ... OR if it receives a 0x00 packet (with no payload), that signals server (client.py) to send
-#         the MOTD json response packet.
-#         The ping will follow the 0x00 request for json response.  The ping will set wrapper/server
-#         back to HANDSHAKE mode (to await next handshake).
-LOGIN = 2
-PLAY = 3
-LOBBY = 4  # in lobby state, client is connected to clientconnection, but nothing is passed to the server.
-#            the actual client will be in play mode.
-IDLE = 5  # no parsing at all; just keeping client suspended
-
 _STRING = 0
 _JSON = 1
 _UBYTE = 2
@@ -122,7 +108,7 @@ class Client:
         # client and server status
         self.abort = False
         self.server_connection = None  # Proxy ServerConnection() (not the javaserver)
-        self.state = HANDSHAKE
+        self.state = self.proxy.HANDSHAKE
 
         # UUIDs - all should use MCUUID unless otherwise specified
         # --------------------------------------------------------
@@ -196,12 +182,20 @@ class Client:
 
             # send packet if server available and parsing passed.
             # already tested - Python will not attempt eval of self.server.state if self.server is False
-            if self.parse(pkid) and self.server_connection and self.server_connection.state in (PLAY, LOBBY):
+            if self.parse(pkid) and self.server_connection and self.server_connection.state in (self.proxy.PLAY,
+                                                                                                self.proxy.LOBBY):
                 # sending to the server only happens in PLAY/LOBBY (not IDLE, HANDSHAKE, or LOGIN)
                 # wrapper handles LOGIN/HANDSHAKE with servers (via self.parse(pkid), which DOES happen in all modes)
                 self.server_connection.packet.send_raw(original)
+                #if self.proxy.trace:
+                    #self._do_trace(pkid, self.state)
 
         self.close_server()  # upon self.abort
+
+    def _do_trace(self, pkid, state):
+        name = str(self.parsers[state][pkid]).split(" ")[0]
+        if pkid not in self.proxy.ignoredSB:
+            self.log.debug("SB=> %s (%s)", hex(pkid), name)
 
     def flush_loop(self):
         while not self.abort:
@@ -215,35 +209,40 @@ class Client:
 
     def change_servers(self, ip=None, port=None):
 
-        # stop any raining
-        # self.packet.sendpkt(self.pktCB.CHANGE_GAME_STATE, [_UBYTE, _FLOAT], (1, 0))
-        # respawn them in the end or nether so that when they "respawn" in world, the downloading terrain closes.
-        # self.packet.sendpkt(self.pktCB.RESPAWN, [_INT, _UBYTE, _UBYTE, _STRING], [-1, 3, 0, 'default'])
-        # self.packet.sendpkt(self.pktCB.RESPAWN, [_INT, _UBYTE, _UBYTE, _STRING], [1, 3, 0, 'default'])
-
         # close current connection and start new one
-        self.state = IDLE  # get it out of PLAY __"NOW"__ to prevent second disconnect that kills client
+        was_lobby = False
+        if self.state == self.proxy.LOBBY:
+            was_lobby = True
+        self.state = self.proxy.IDLE  # get out of PLAY __"NOW"__ to prevent second disconnect that kills client
+        self.server_connection.state = self.proxy.IDLE  # keep server from sending disconnects
         self.server_connection.close_server(reason="Lobbification", lobby_return=True)
         time.sleep(1)
 
         # setup for connect
         self.clientSettingsSent = False
 
-        # noinspection PyBroadException
-        # try:
-        self.state = PLAY
-        self._login_client_logon(start_keep_alives=False, ip=ip, port=port)
-        # reconnect back to local server
-        # self.change_servers()
-        # self.state = PLAY
-        # TODO whatever respawn stuff works
-        # return
+        # connect to server
+        self.state = self.proxy.PLAY
+        self.connect_to_server(ip, port)
+        if was_lobby:  # if the client was in LOBBY state (connected to remote server)
+            self.log.info("%s's client Returned from remote server: (UUID: %s | IP: %s | SecureConnection: %s)",
+                          self.username, self.uuid.string, self.ip, self.wrapper_onlinemode)
 
+            self._add_player_and_client_objects_to_wrapper()
+
+        # TODO whatever respawn stuff works
         # send these right quick to client
         self._send_client_settings()
         self.packet.sendpkt(self.pktCB.CHANGE_GAME_STATE, [_UBYTE, _FLOAT], (1, 0))
         self.packet.sendpkt(self.pktCB.RESPAWN, [_INT, _UBYTE, _UBYTE, _STRING], [-1, 3, 0, 'default'])
-        self.state = LOBBY
+        if self.version < mcpackets.PROTOCOL_1_8START:
+            self.server_connection.packet.sendpkt(self.pktSB.CLIENT_STATUS, [_BYTE, ], (0, ))
+        else:
+            self.packet.sendpkt(0x2c, [_VARINT, _INT, _STRING, ], (self.server_connection.eid, "DURNIT"))
+            # self.packet.sendpkt(0x3e, [_FLOAT, _VARINT, _FLOAT], (-1, 0, 0.0))
+            self.server_connection.packet.sendpkt(self.pktSB.CLIENT_STATUS, [_VARINT, ], (0, ))
+            self.server_connection.packet.sendpkt(self.pktSB.PLAYER, [_BOOL, ], (True,))
+        self.state = self.proxy.LOBBY
 
     def _login_client_logon(self, start_keep_alives=True, ip=None, port=None):
 
@@ -252,7 +251,7 @@ class Client:
         if self.wrapper.proxy.isuuidbanned(self.uuid.__str__()):
             banreason = self.wrapper.proxy.getuuidbanreason(self.uuid.__str__())
             self.log.info("Banned player %s tried to connect:\n %s" % (self.username, banreason))
-            self.state = HANDSHAKE
+            self.state = self.proxy.HANDSHAKE
             self.disconnect("Banned: %s" % banreason)
             return False
 
@@ -265,7 +264,7 @@ class Client:
                                                  "ip": self.ip,
                                                  "secure_connection": self.wrapper_onlinemode
                                              }):
-            self.state = HANDSHAKE
+            self.state = self.proxy.HANDSHAKE
             self.disconnect("Login denied by a Plugin.")
             return False
 
@@ -312,18 +311,18 @@ class Client:
         t.start()
 
         # switch server_connection to LOGIN to log in to (offline) server.
-        self.server_connection.state = LOGIN
+        self.server_connection.state = self.proxy.LOGIN
 
         # now we send it a handshake to request the server go to login mode
+        server_addr = "localhost"
         if self.spigot_mode:
-            payload = "localhost\x00%s\x00%s" % (self.client_address[0], self.uuid.hex)
-            self.server_connection.packet.sendpkt(self.server_connection.pktSB.HANDSHAKE,
-                                                  [_VARINT, _STRING, _USHORT, _VARINT],
-                                                  (self.clientversion, payload, self.server_port, LOGIN))
-        else:
-            self.server_connection.packet.sendpkt(self.server_connection.pktSB.HANDSHAKE,
-                                                  [_VARINT, _STRING, _USHORT, _VARINT],
-                                                  (self.clientversion, "localhost", self.server_port, LOGIN))
+            server_addr = "localhost\x00%s\x00%s" % (self.client_address[0], self.uuid.hex)
+        if self.proxy.forge:
+            server_addr = "localhost\x00FML\x00"
+
+        self.server_connection.packet.sendpkt(self.server_connection.pktSB.HANDSHAKE,
+                                              [_VARINT, _STRING, _USHORT, _VARINT],
+                                              (self.clientversion, server_addr, self.server_port, self.proxy.LOGIN))
 
         # send the login request (server is offline, so it will accept immediately by sending login_success)
         self.server_connection.packet.sendpkt(self.server_connection.pktSB.LOGIN_START, [_STRING], [self.username])
@@ -360,14 +359,14 @@ class Client:
         else:
             jsonmessage = message  # server packets are read as json
 
-        if self.state == PLAY:
+        if self.state in (self.proxy.PLAY, self.proxy.LOBBY):
             self.packet.sendpkt(self.pktCB.DISCONNECT, [_JSON], [jsonmessage])
             self.log.debug("upon disconnect, state was PLAY (sent PLAY state DISCONNECT)")
         else:
             self.packet.sendpkt(self.pktCB.LOGIN_DISCONNECT, [_JSON], [message])
             self.log.debug("upon disconnect, state was 'other' (sent LOGIN_DISCONNECT)")
         time.sleep(1)
-        self.state = STATUS
+        self.state = self.proxy.HANDSHAKE
         self.close_server()
 
     # internal init and properties
@@ -431,7 +430,7 @@ class Client:
         # TODO future - use a plugin channel to see if the client is actually another wrapper
         while not self.abort:
             time.sleep(1)
-            if self.state in (PLAY, LOBBY):
+            if self.state in (self.proxy.PLAY, self.proxy.LOBBY):
                 # client expects < 20sec
                 if time.time() - self.time_server_pinged > 10:
 
@@ -507,8 +506,36 @@ class Client:
 
     def _send_client_settings(self):
         if self.clientSettings and not self.clientSettingsSent:
-            self.server_connection.packet.sendpkt(self.pktSB.CLIENT_SETTINGS, [_RAW], (self.clientSettings,))
+            self.server_connection.packet.sendpkt(self.pktSB.CLIENT_SETTINGS, [_RAW, ], (self.clientSettings,))
             self.clientSettingsSent = True
+
+    def _send_forge_client_handshakereset(self):
+        """
+        Sends a forge plugin channel packet to causes the client to recomplete its entire handshake from the start.
+
+        from 'http://wiki.vg/Minecraft_Forge_Handshake':
+         The normal forge server does not ever use this packet, but it is used when connecting through a
+         BungeeCord instance, specifically when transitioning from a vanilla server to a modded one or from
+         a modded server to another modded server.
+         """
+        channel = "FML|HS"
+        if self.clientversion < mcpackets.PROTOCOL_1_8START:
+            self.packet.sendpkt(self.pktCB.PLUGIN_MESSAGE, [_STRING, _SHORT, _BYTE], [channel, 1, 254])
+        else:
+            self.packet.sendpkt(self.pktCB.PLUGIN_MESSAGE, [_STRING, _BYTE], [channel, 254])
+
+    def _transmit_downstream(self):
+        """ transmit wrapper channel status info to the server's direction to help sync hub/lobby wrappers """
+
+        channel = "WRAPPER.PY|PING"
+        state = self.state
+        if self.server_connection:
+            if self.version < mcpackets.PROTOCOL_1_8START:
+                self.server_connection.packet.sendpkt(self.pktSB.PLUGIN_MESSAGE, [_STRING, _SHORT, _BYTE],
+                                                      [channel, 1,  state])
+            else:
+                self.server_connection.packet.sendpkt(self.pktSB.PLUGIN_MESSAGE, [_STRING, _BOOL],
+                                                      [channel, state])
 
     def _read_keep_alive(self):
         if self.serverversion < mcpackets.PROTOCOL_1_8START:
@@ -566,20 +593,21 @@ class Client:
     def _define_parsers(self):
         # the packets we parse and the methods that parse them.
         self.parsers = {
-            HANDSHAKE: {
-                self.pktSB.HANDSHAKE: self._parse_handshaking
+            self.proxy.HANDSHAKE: {
+                self.pktSB.HANDSHAKE: self._parse_handshaking,
+                self.pktSB.PLUGIN_MESSAGE: self._parse_plugin_message,
                 },
-            STATUS: {
+            self.proxy.STATUS: {
                 self.pktSB.STATUS_PING: self._parse_status_ping,
                 self.pktSB.REQUEST: self._parse_status_request,
                 self.pktSB.PLUGIN_MESSAGE: self._parse_plugin_message,
                 },
-            LOGIN: {
+            self.proxy.LOGIN: {
                 self.pktSB.LOGIN_START: self._parse_login_start,
                 self.pktSB.LOGIN_ENCR_RESPONSE: self._parse_login_encr_response,
                 self.pktSB.PLUGIN_MESSAGE: self._parse_plugin_message,
                 },
-            PLAY: {
+            self.proxy.PLAY: {
                 self.pktSB.CHAT_MESSAGE: self._parse_play_chat_message,
                 self.pktSB.CLICK_WINDOW: self._parse_play_click_window,
                 self.pktSB.CLIENT_SETTINGS: self._parse_play_client_settings,
@@ -600,12 +628,14 @@ class Client:
                 self.pktSB.USE_ITEM: self._parse_play_use_item,
                 self.pktSB.PLUGIN_MESSAGE: self._parse_plugin_message,
                 },
-            LOBBY: {
+            self.proxy.LOBBY: {
                 self.pktSB.KEEP_ALIVE: self._parse_lobby_keep_alive,
                 self.pktSB.CHAT_MESSAGE: self._parse_lobby_chat_message,
                 self.pktSB.PLUGIN_MESSAGE: self._parse_plugin_message,
                 },
-            IDLE: {}
+            self.proxy.IDLE: {
+                self.pktSB.PLUGIN_MESSAGE: self._parse_plugin_message,
+            }
         }
 
     # Do nothing parser
@@ -617,13 +647,21 @@ class Client:
     # -----------------------
     def _parse_plugin_message(self):
         channel = self.packet.readpkt([_STRING, ])[0]
+
         if channel not in self.proxy.registered_channels:
+            # we are not actually registering our channels with the MC server.
             return True
-        if self.clientversion < mcpackets.PROTOCOL_1_8START:
-            datarest = self.packet.readpkt([_SHORT, _REST])[1]
-        else:
-            datarest = self.packet.readpkt([_REST, ])[0]
+        if channel == "WRAPPER.PY|PING":
+            self.proxy.pinged = True
+            return False
+
         if channel == "WRAPPER.PY|":
+            if self.clientversion < mcpackets.PROTOCOL_1_8START:
+                datarest = self.packet.readpkt([_SHORT, _REST])[1]
+            else:
+                datarest = self.packet.readpkt([_REST, ])[0]
+                
+            #print("\nDATA_REST = %s\n" % datarest)
             response = json.loads(datarest.decode(self.wrapper.encoding), encoding=self.wrapper.encoding)
             self._plugin_response(response)
             return True
@@ -654,11 +692,11 @@ class Client:
         self.serverportplayeruses = data[2]
         requestedstate = data[3]
 
-        if requestedstate == STATUS:
-            self.state = STATUS
+        if requestedstate == self.proxy.STATUS:
+            self.state = self.proxy.STATUS
             return False  # wrapper will handle responses, so we do not pass this to the server.
 
-        if requestedstate == LOGIN:
+        if requestedstate == self.proxy.LOGIN:
             # TODO - coming soon: allow client connections despite lack of server connection
 
             if self.serverversion == -1:
@@ -676,7 +714,7 @@ class Client:
 
             if self.serverversion == self.clientversion:
                 # login start...
-                self.state = LOGIN
+                self.state = self.proxy.LOGIN
                 return True  # packet passes to server, which will also switch to Login
 
             if self.serverversion != self.clientversion:
@@ -691,7 +729,7 @@ class Client:
         data = self.packet.readpkt([_LONG])
         self.packet.sendpkt(self.pktCB.PING_PONG, [_LONG], [data[0]])
         self.log.debug("CB (W)-> STATUS PING")
-        self.state = HANDSHAKE
+        self.state = self.proxy.HANDSHAKE
         return False
 
     def _parse_status_request(self):
@@ -722,8 +760,15 @@ class Client:
                 "protocol": reported_version
             }
         }
-        if self.wrapper.javaserver.serverIcon:  # add Favicon, if it exists
+
+        # add Favicon, if it exists
+        if self.wrapper.javaserver.serverIcon:
             self.MOTD["favicon"] = self.wrapper.javaserver.serverIcon
+
+        # add Forge information, if applicable.
+        if self.proxy.forge:
+            self.MOTD["modinfo"] = self.proxy.mod_info["modinfo"]
+
         self.packet.sendpkt(self.pktCB.PING_JSON_RESPONSE, [_STRING], [json.dumps(self.MOTD)])
         self.log.debug("CB (W)-> JSON RESPONSE")
         # after this, proxy waits for the expected PING to go back to Handshake mode
@@ -766,7 +811,7 @@ class Client:
 
             # TODO TEST
             # log the client on
-            self.state = PLAY
+            self.state = self.proxy.PLAY
             self._login_client_logon()
 
     def _parse_login_encr_response(self):
@@ -799,7 +844,7 @@ class Client:
         # determine if IP is banned:
         if self.ipbanned:  # client never gets to this point if 'silent-ipban' is enabled
             self.log.info("Player %s tried to connect from banned ip: %s", self.username, self.ip)
-            self.state = HANDSHAKE
+            self.state = self.proxy.HANDSHAKE
             self.disconnect("Your address is IP-banned from this server!.")
             return False
 
@@ -811,7 +856,7 @@ class Client:
         # TODO Whitelist processing Here
 
         # log the client on
-        self.state = PLAY
+        self.state = self.proxy.PLAY
         self._login_client_logon()
 
     # Play parsers
@@ -1180,24 +1225,10 @@ class Client:
 
         if chatmsg in ("/lobby", "/hub"):
             # stop any raining
-            self.packet.sendpkt(self.pktCB.CHANGE_GAME_STATE, [_UBYTE, _FLOAT], (1, 0))
-            # spawn them and end or nether respawn so that when they "respawn" in world, the downloading terrain closes.
-            self.packet.sendpkt(self.pktCB.RESPAWN, [_INT, _UBYTE, _UBYTE, _STRING], [-1, 3, 0, 'default'])
-            self.packet.sendpkt(self.pktCB.RESPAWN, [_INT, _UBYTE, _UBYTE, _STRING], [1, 3, 0, 'default'])
-
             # close current connection and start new one
             # noinspection PyBroadException
-            try:
-                # TODO whatever respawn stuff works
-                self.server_connection.close_server(reason="Lobbification", lobby_return=True)
-                self.state = PLAY
-                self.connect_to_server()  # with no arguments, this reconnects to local server
-                self._add_player_and_client_objects_to_wrapper()
-                self.clientSettingsSent = False
-                self._send_client_settings()
-            except:
-                # if there is a problem, close the client and disconnect player
-                self.close_server()
+
+            self.change_servers()
             return False
 
         # we are just sniffing this packet for lobby return commands, so send it on to the destination.

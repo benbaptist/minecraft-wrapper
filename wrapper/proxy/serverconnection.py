@@ -28,13 +28,6 @@ if PY3:
 # region Constants
 # ------------------------------------------------
 
-HANDSHAKE = 0  # initial state only.  As a server client, serverconnection.py starts in LOGIN mode
-OFFLINE = 0  # an alias of Handshake.
-# MOTD = 1  # not used. clientconnection.py handles PING/MOTD functions
-LOGIN = 2  # login state
-PLAY = 3  # play state
-LOBBY = 4  # lobby state (remote server).  packets received from remote server and just passed to client
-
 _STRING = 0
 _JSON = 1
 _UBYTE = 2
@@ -82,7 +75,7 @@ class ServerConnection:
 
         # server setup and operating paramenters
         self.abort = False
-        self.state = HANDSHAKE
+        self.state = self.proxy.HANDSHAKE
         self.packet = None
         self.buildmode = False
         self.parsers = {}  # dictionary of parser packet constants and associated parsing methods
@@ -101,13 +94,10 @@ class ServerConnection:
         self.infos_debug = "(player=%s, IP=%s, Port=%s)" % (self.username, self.ip, self.port)
 
     def _refresh_server_version(self):
-        # Get serverversion for mcpackets use
-        #try:
+        """Get serverversion for mcpackets use"""
+
         self.version = self.wrapper.javaserver.protocolVersion
         self.log.debug("%s detected server version is %s", self.infos_debug, self.version)
-        # except AttributeError:
-        #     # -1 to signal no server is running
-        #     self.version = -1
 
         self.pktSB = mcpackets.ServerBound(self.version)
         self.pktCB = mcpackets.ClientBound(self.version)
@@ -124,10 +114,9 @@ class ServerConnection:
         self.packet.send(packetid, xpr, payload)
         pass
 
-    # TODO  - This is the entry point from clientconenction.py "self.server_connection.connect()"
     def connect(self):
-        """ Connect only supports offline server connections, so no fancy login needed """
-        self.state = LOGIN
+        """ This simply establishes the tcp socket connection and starts the flush loop, NOTHING MORE. """
+        self.state = self.proxy.LOGIN
         # Connect to this wrapper's javaserver (core/mcserver.py)
         if self.ip is None:
             self.server_socket.connect(("localhost", self.wrapper.javaserver.server_port))
@@ -144,8 +133,12 @@ class ServerConnection:
         t.start()
 
     def close_server(self, reason="Disconnected", lobby_return=False):
+        """
+        :lobby_return: determines whether the client should be aborted too.
+        :return:
+        """
         if lobby_return:
-            self.state = LOBBY  # stop parsing PLAY OR LOGIN packets to prevent further "disconnects"
+            self.state = self.proxy.LOBBY  # stop parsing PLAY packets to prevent further "disconnects"
         self.log.debug("Disconnecting proxy server socket connection. %s", self.infos_debug)
         self.abort = True  # end 'handle' cleanly
         time.sleep(0.1)
@@ -190,16 +183,24 @@ class ServerConnection:
                 return self._break_handle()
 
             # parse it
-            if self.parse(pkid) and self.client:
+            if self.parse(pkid) and self.client.state in (self.proxy.PLAY, self.proxy.LOBBY):
                 try:
                     self.client.packet.send_raw(original)
+                    #if self.proxy.trace:
+                        #self._do_trace(pkid, self.state)
+
                 except Exception as e:
                     self.log.debug("[SERVER %s] Could not send packet (%s): (%s): \n%s",
                                    self.infos_debug, pkid, e, traceback)
                     return self._break_handle()
 
+    def _do_trace(self, pkid, state):
+        name = str(self.parsers[state][pkid]).split(" ")[0]
+        if pkid not in self.proxy.ignoredCB:
+            self.log.warn("<=CB %s (%s)", hex(pkid), name)
+
     def _break_handle(self):
-        if self.state == LOBBY:
+        if self.state == self.proxy.LOBBY:
             self.log.info("%s is without a server now.", self.username)
             # self.close_server("%s server connection closing..." % self.username, lobby_return=True)
         else:
@@ -216,6 +217,21 @@ class ServerConnection:
             self.packet.sendpkt(self.pktSB.KEEP_ALIVE, [_VARINT], data)
         return False
 
+    def _transmit_upstream(self):
+        """ transmit wrapper channel status info to the server's direction to help sync hub/lobby wrappers """
+
+        channel = "WRAPPER|SYNC"
+        received = self.proxy.shared["received"]  # received SYNC from the client (this is a child wrapper)
+        sent = self.proxy.shared["sent"]  # if true, this is a multiworld (child wrapper instance)
+        state = self.state
+
+        if self.version < mcpackets.PROTOCOL_1_8START:
+            self.packet.sendpkt(self.pktCB.PLUGIN_MESSAGE, [_STRING, _SHORT, _BOOL, _BOOL, _BYTE],
+                                [channel, 3, received, sent, state])
+        else:
+            self.packet.sendpkt(self.pktCB.PLUGIN_MESSAGE, [_STRING, _BOOL, _BOOL, _BYTE],
+                                [channel, received, sent, state])
+
     # PARSERS SECTION
     # -----------------------------
     def parse(self, pkid):
@@ -231,14 +247,15 @@ class ServerConnection:
     def _define_parsers(self):
         # the packets we parse and the methods that parse them.
         self.parsers = {
-            HANDSHAKE: {},  # maps identically to OFFLINE ( '0' )
-            LOGIN: {
+            self.proxy.HANDSHAKE: {},  # maps identically to OFFLINE ( '0' )
+            self.proxy.LOGIN: {
                 self.pktCB.LOGIN_DISCONNECT: self._parse_login_disconnect,
                 self.pktCB.LOGIN_ENCR_REQUEST: self._parse_login_encr_request,
                 self.pktCB.LOGIN_SUCCESS: self._parse_login_success,
                 self.pktCB.LOGIN_SET_COMPRESSION: self._parse_login_set_compression
             },
-            PLAY: {
+            self.proxy.PLAY: {
+                0x2c: self._parse_play_combat_event,
                 self.pktCB.KEEP_ALIVE: self._parse_play_keep_alive,
                 self.pktCB.CHAT_MESSAGE: self._parse_play_chat_message,
                 self.pktCB.JOIN_GAME: self._parse_play_join_game,
@@ -263,7 +280,7 @@ class ServerConnection:
                 self.pktCB.PLAYER_LIST_ITEM: self._parse_play_player_list_item,
                 self.pktCB.DISCONNECT: self._parse_play_disconnect
                 },
-            LOBBY: {
+            self.proxy.LOBBY: {
                 self.pktCB.DISCONNECT: self._parse_lobby_disconnect,
                 self.pktCB.KEEP_ALIVE: self._parse_lobby_keep_alive
             }
@@ -288,7 +305,7 @@ class ServerConnection:
         return False
 
     def _parse_login_success(self):  # Login Success - UUID & Username are sent in this packet as strings
-        self.state = PLAY
+        self.state = self.proxy.PLAY
         data = self.packet.readpkt([_STRING, _STRING])
         return False
 
@@ -308,6 +325,24 @@ class ServerConnection:
     # -----------------------
     def _parse_play_keep_alive(self):
         return self._keep_alive_response()
+
+    def _parse_play_combat_event(self):
+        #print("\nSTART COMB_PARSE\n")
+        #data = self.packet.readpkt([_VARINT, ])
+        #print("\nread COMB_PARSE\n")
+        #if data[0] == 2:
+        #    print("\nread COMB_PARSE2\n")
+        #    playerID = self.packet.readpkt([_VARINT, ])
+        #    print("\nread COMB_PARSE3\n")
+        #    EID = self.packet.readpkt([_INT, ])
+        #    print("\nread COMB_PARSE4\n")
+        #    strg = self.packet.readpkt([_STRING, ])
+
+        #    print("\nplayerEID=%s\nEID=%s\n" % (playerID, EID))
+        #    print("\nTEXT=\n%s\n" % strg)
+
+        #    return True
+        return True
 
     def _parse_play_chat_message(self):
         if self.version < mcpackets.PROTOCOL_1_8START:

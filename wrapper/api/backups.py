@@ -4,17 +4,23 @@
 # noinspection PyPep8Naming
 
 """
-Wrapper's orginal convention throughtout the codebase has been camelCase from the begining.  The internal code
-should be converted (going forward) to snake_case per PEP-8.
-However, PEP-8 also acknowledges that:
+* just an odd note in an odd place *
 
-'mixedCase is allowed only in contexts where that's already the prevailing style (e.g. threading.py), to retain
+ backups is one of the newer api modules and some thought was given to making these methods snake_case when it
+ was first being written.
+
+Wrapper's orginal convention throughtout the codebase was mixed camelCase.  The internal code is being
+converted (going forward) to snake_case per PEP-8.
+However, PEP-8 acknowledges that:
+
+'mixedCase [... is allowed ...] in contexts where that's already the prevailing style (e.g. threading.py), to retain
 backwards compatibility.'
 
 This is certainly the case with the wrapper plugin API.  Converting the entire plugin API to snake_case will
-break all existing plugins.  Creating this API with snake_case will create an inconsitent `look 'n feel` within
-the API.  The only other alternative would be to create excessive wrappers between oldFunctions and new_functions
-(and does not serve to remove the oldFunctions anyway!)
+break all existing plugins.  Implementing this API with snake_case will create an inconsitent `look 'n feel` within
+wrapper's plugin API.  The only other alternative would be to clutter the code with wrappers between oldFunctions and
+new_functions.
+
 """
 
 
