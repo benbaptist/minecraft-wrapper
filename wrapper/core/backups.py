@@ -11,7 +11,7 @@ import os
 import platform
 
 from api.base import API
-from utils.helpers import putjsonfile, getjsonfile, mkdir_p
+from api.helpers import putjsonfile, getjsonfile, mkdir_p
 
 # I should probably not use irc=True when broadcasting, and instead should just rely on events and having
 # MCserver.py and irc.py print messages themselves for the sake of consistency.

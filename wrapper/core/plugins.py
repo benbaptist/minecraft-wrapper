@@ -6,7 +6,7 @@ import importlib
 import sys
 
 from api.base import API
-from utils.helpers import mkdir_p
+from api.helpers import mkdir_p
 
 
 class Plugins:

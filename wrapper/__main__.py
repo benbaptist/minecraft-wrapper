@@ -3,7 +3,7 @@
 import os
 import sys
 from core.wrapper import Wrapper
-from utils.helpers import getjsonfile, config_to_dict_read
+from api.helpers import getjsonfile, config_to_dict_read
 from utils.log import configure_logger
 
 BOOT_OPTIONS = "ENCODING=UTF-8\n"

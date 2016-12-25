@@ -23,7 +23,7 @@ from proxy import mcpackets
 from api.player import Player
 from core.mcuuid import MCUUID
 
-from utils.helpers import processcolorcodes
+from api.helpers import processcolorcodes
 
 # region Constants
 # ------------------------------------------------

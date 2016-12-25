@@ -10,7 +10,7 @@ import urllib
 import os
 import logging
 
-from utils.helpers import getargs
+from api.helpers import getargs
 from api.base import API
 from core.storage import Storage
 
@@ -466,7 +466,7 @@ class WebClient:
             #       totalPlaytime[playerName][0] += totalPlayers[uu]["logins"][i] - int(i)
             #       totalPlaytime[playerName][1] += 1
 
-            # secondstohuman was removed from here... a new version is in utils.helpers, if needed later.
+            # secondstohuman was removed from here... a new version is in api.helpers, if needed later.
 
             topplayers = []
             # for i,username in enumerate(totalPlaytime):

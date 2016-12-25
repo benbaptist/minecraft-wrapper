@@ -8,7 +8,7 @@ import random
 import time
 import json
 
-from utils.helpers import format_bytes, getargs, getargsafter, secondstohuman, showpage, readout
+from api.helpers import format_bytes, getargs, getargsafter, _secondstohuman, _showpage, _readout
 
 
 # noinspection PyBroadException
@@ -261,8 +261,8 @@ class Commands:
             entitycontrol = self.wrapper.javaserver.entity_control
             if not entitycontrol:
                 # only console could be the source:
-                readout("ERROR - ", "No entity code found. (no server started?)", separator="",
-                        pad=10, usereadline=self.wrapper.use_readline)
+                _readout("ERROR - ", "No entity code found. (no server started?)", separator="",
+                         pad=10, usereadline=self.wrapper.use_readline)
                 return
             commargs = payload["args"]
             if len(commargs) < 1:
@@ -437,8 +437,8 @@ class Commands:
                                         "text": " - %s " % i[1]
                                     }]
                                 })
-                            showpage(player, page, items, "help %s" % groupName, 4,
-                                     command_prefix=self.wrapper.command_prefix)
+                            _showpage(player, page, items, "help %s" % groupName, 4,
+                                      command_prefix=self.wrapper.command_prefix)
                             return
                 player.message("&cThe help group '%s' does not exist." % group)
 
@@ -462,7 +462,7 @@ class Commands:
                         "text": " - " + v["description"]
                     }]
                 })
-            showpage(player, page, items, "help", 4, command_prefix=self.wrapper.command_prefix)
+            _showpage(player, page, items, "help", 4, command_prefix=self.wrapper.command_prefix)
         return False
 
     def command_playerstats(self, player, payload):
@@ -483,7 +483,7 @@ class Commands:
                 player.message("&6----- All Players' Playtime -----")
                 for name in totalplaytime:
                     seconds = totalplaytime[name][0]
-                    result = secondstohuman(seconds)
+                    result = _secondstohuman(seconds)
                     player.message("&e%s:&6 %s (%d logins)" % (name, result, totalplaytime[name][1]))  # 86400.0
             else:
                 topplayers = []
@@ -493,7 +493,7 @@ class Commands:
                 topplayers.reverse()
                 player.message("&6----- Top 10 Players' Playtime -----")
                 for i, p in enumerate(topplayers):
-                    result = secondstohuman(p[0])
+                    result = _secondstohuman(p[0])
                     player.message("&7%d. &e%s:&6 %s" % (i + 1, p[1], result))
                     if i == 9:
                         break
