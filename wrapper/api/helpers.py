@@ -9,6 +9,7 @@ import json
 import time
 import datetime
 import socket
+import urllib
 
 COLORCODES = {
     "0": "black",
@@ -724,3 +725,11 @@ def _test_broadcast(message, version_compute=10704, encoding='utf-8'):
             _test_console("say %s" % _chattocolorcodes(json.loads(temp)))
         else:
             _test_console("tellraw @a %s" % processcolorcodes(message))
+
+
+def get_req(something, request):
+    # This is a private function used by management.web
+    for a in request.split("/")[1:][1].split("?")[1].split("&"):
+        if a[0:a.find("=")] == something:
+            return urllib.unquote(a[a.find("=") + 1:])
+    return ""
