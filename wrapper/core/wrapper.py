@@ -23,7 +23,8 @@ except ImportError:
     requests = False
 
 # small feature and helpers
-from api.helpers import format_bytes, getargs, getargsafter, _readout, get_int
+# noinspection PyProtectedMember
+from api.helpers import _format_bytes, getargs, getargsafter, _readout, get_int
 from utils import readchar
 
 # core items
@@ -113,7 +114,7 @@ class Wrapper:
         # requests is just being used in too many places to try and track its usages piece-meal.
         if not requests:
             self.log.error("You must have the requests module installed to use wrapper!")
-            self.shutdown(server_running=False)
+            self._halt(server_running=False)
 
     def __del__(self):
         if self.storage:  # prevent error message on very first wrapper starts when wrapper exits after creating
@@ -126,8 +127,7 @@ class Wrapper:
         """ wrapper should only start ONCE... old code made it restart over when only a server needed restarting"""
         # Configuration is loaded on __init__ each time wrapper starts in order to detect changes
 
-        signal.signal(signal.SIGINT, self.sigint)
-        signal.signal(signal.SIGTERM, self.sigint)
+        self.signals()
 
         self.backups = Backups(self)
 
@@ -195,7 +195,7 @@ class Wrapper:
         self.usercache.close()
         self.log.info("Wrapper Storages closed and saved.")
 
-        # wrapper execution ends here.
+        # wrapper execution ends here.  handle_server ends when wrapper.halt is True.
 
     def getconsoleinput(self):
         if self.use_readline:
@@ -246,7 +246,7 @@ class Wrapper:
 
             # Console only commands (not accessible in-game)
             if command.lower() in ("/halt", "halt"):
-                self._halt()
+                self._halt(self.javaserver.state in (1, 2, 4))
             elif command.lower() in ("/stop", "stop"):
                 self.javaserver.stop("Stopping server...")
             elif command.lower() == "/kill":  # "kill" (with no slash) is a server command.
@@ -314,14 +314,15 @@ class Wrapper:
                 self.javaserver.console(consoleinput)
             elif command == "/help":
                 # This is the console help commands.  Below this in _registerwrappershelp is the in-game help
-                _readout("", "Get Minecraft help.", separator="help (no slash) - ", pad=0, usereadline=self.use_readline)
+                _readout("", "Get Minecraft help.", separator="help (no slash) - ", pad=0,
+                         usereadline=self.use_readline)
                 _readout("/reload", "Reload Wrapper.py plugins.", usereadline=self.use_readline)
                 _readout("/plugins", "Lists Wrapper.py plugins.", usereadline=self.use_readline)
                 _readout("/update-wrapper", "Checks for new Wrapper.py updates, and will install\n"
-                                           "                  them automatically if one is available.",
+                                            "                  them automatically if one is available.",
                          usereadline=self.use_readline)
                 _readout("/stop", "Stop the minecraft server without auto-restarting and without\n"
-                                 "                  shuttingdown Wrapper.py.", usereadline=self.use_readline)
+                                  "                  shuttingdown Wrapper.py.", usereadline=self.use_readline)
                 _readout("/start", "Start the minecraft server.", usereadline=self.use_readline)
                 _readout("/restart", "Restarts the minecraft server.", usereadline=self.use_readline)
                 _readout("/halt", "Shutdown Wrapper.py completely.", usereadline=self.use_readline)
@@ -329,13 +330,13 @@ class Wrapper:
                          usereadline=self.use_readline)
                 _readout("/kill", "Force kill the server without saving.", usereadline=self.use_readline)
                 _readout("/freeze", "Temporarily locks the server up until /unfreeze is executed\n"
-                                   "                  (Only works on *NIX servers).", usereadline=self.use_readline)
+                                    "                  (Only works on *NIX servers).", usereadline=self.use_readline)
                 _readout("/unfreeze", "Unlocks a frozen state server (Only works on *NIX servers).",
                          usereadline=self.use_readline)
                 _readout("/mem", "Get memory usage of the server (Only works on *NIX servers).",
                          usereadline=self.use_readline)
                 _readout("/raw [command]", "Send command to the Minecraft Server. Useful for Forge\n"
-                                          "                  commands like '/fml confirm'.",
+                                           "                  commands like '/fml confirm'.",
                          usereadline=self.use_readline)
                 _readout("/perms", "/perms for more...)", usereadline=self.use_readline)
                 _readout("/config", "Change wrapper.properties (type /config help for more..)",
@@ -357,7 +358,7 @@ class Wrapper:
                              separator="<ip> [<reason..> <d:<number of days>] ", pad=12,
                              usereadline=self.use_readline)
                     _readout("/pardon", " - pardon a player. Default is byuuidonly.  To unban a"
-                                       "specific name (without checking uuid), use `pardon <player> False`",
+                                        "specific name (without checking uuid), use `pardon <player> False`",
                              separator="<player> [byuuidonly(true/false)]", pad=12,
                              usereadline=self.use_readline)
                     _readout("/pardon-ip", " - Pardon an IP address.",
@@ -368,7 +369,7 @@ class Wrapper:
                              usereadline=self.use_readline)
                 else:
                     _readout("ERROR - ", "Wrapper proxy-mode bans are not enabled "
-                                        "(proxy mode is not on).", separator="", pad=10,
+                                         "(proxy mode is not on).", separator="", pad=10,
                              usereadline=self.use_readline)
 
             else:
@@ -461,31 +462,12 @@ class Wrapper:
             self.log.error("Proxy mode has been disabled because you do not have one or more "
                            "of the following modules installed: \npycrypto and requests")
 
-    def sigint(*args):  # doing this allows the calling function to pass extra args without defining/using them here
-        self = args[0]  # .. as we are only interested in the self component
-        self.shutdown()
-
     def disable_proxymode(self):
         self.proxymode = False
         self.configManager.config["Proxy"]["proxy-enabled"] = False
         self.configManager.save()
         self.config = self.configManager.config
         self.log.warning("\nProxy mode is now turned off in wrapper.properties.json.\n")
-
-    def shutdown(self, status=0, server_running=True):
-        self.storage.close()
-        self.permissions.close()
-        self.usercache.close()
-        self.halt = True
-        if server_running:
-            self.javaserver.stop(reason="Wrapper.py Shutting Down", save=False)
-        time.sleep(1)
-        sys.exit(status)
-
-    def reboot(self):
-        # TODO unused
-        self.halt = True
-        os.system(" ".join(sys.argv) + "&")
 
     @staticmethod
     def getbuildstring():
@@ -618,10 +600,23 @@ class Wrapper:
         cm.daemon = True
         cm.start()
 
-    def _halt(self):
-        self.javaserver.stop("Halting server...", save=False)
+    def signals(self):
+        signal.signal(signal.SIGINT, self.sigint)  # CTRL-C
+        # signal.signal(signal.SIGTERM, self.sigterm)
+
+    def sigint(*args):  # doing this allows the calling function to pass extra args without defining/using them here
+        print("\b\bWRAPPER SIGINT'ed\n\n")
+        self = args[0]  # .. as we are only interested in the self component
+        self._halt()
+
+    def _halt(self, server_running=True):
+        if server_running:
+            self.javaserver.stop("Halting server...", save=True)
         self.halt = True
         sys.exit()
+
+    def shutdown(self, server_running=True,):
+        self._halt(server_running)
 
     def _freeze(self):
         try:
@@ -641,7 +636,7 @@ class Wrapper:
         except Exception as ex:
             self.log.exception("Something went wrong when trying to fetch memory usage! (%s)", ex)
         else:
-            amount, units = format_bytes(get_bytes)
+            amount, units = _format_bytes(get_bytes)
             self.log.info("Server Memory Usage: %s %s (%s bytes)" % (amount, units, get_bytes))
 
     def _raw(self, console_input):

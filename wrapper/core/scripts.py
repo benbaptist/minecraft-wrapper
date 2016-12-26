@@ -26,6 +26,7 @@ scripts = {
 }
 
 
+# noinspection PyMethodMayBeStatic,PyUnusedLocal
 class Scripts:
 
     def __init__(self, wrapper):

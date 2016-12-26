@@ -19,11 +19,6 @@
 
     
 
-**def format_bytes(number_raw_bytes)**
-
-    takes a raw bytes number and returns an appropriate 4 place digit number > 1.0 and the corresponding units.
-    
-
 **def getargs(arginput, i)**
 
     returns a certain index of argument (without producting an error if our of range, etc).

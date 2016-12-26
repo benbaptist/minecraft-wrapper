@@ -13,8 +13,8 @@ bootoption_count = 1
 PY3 = sys.version_info[0] > 2
 SUBVER = sys.version_info[1:1]
 
-if __name__ == "__main__":
 
+def main():
     # determine immediate need-to-know options for wrapper start
     better_console = False  # same as 'use-readline = True'
     encoding = 'UTF-8'
@@ -55,7 +55,7 @@ if __name__ == "__main__":
     # start wrapper
     try:
         wrapper.start()
-    except SystemExit as e:
+    except SystemExit:
         if not wrapper.configManager.exit:
             os.system("reset")
         wrapper.plugins.disableplugins()
@@ -72,3 +72,6 @@ if __name__ == "__main__":
         except AttributeError as exc:
             log.critical("Wrapper has no server instance. Server is likely killed but could still be running, or it "
                          "might be corrupted! (%s)", exc, exc_info=True)
+
+if __name__ == "__main__":
+    main()

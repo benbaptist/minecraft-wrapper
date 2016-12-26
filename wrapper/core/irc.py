@@ -16,9 +16,13 @@ from api.base import API
 import sys
 PY3 = sys.version_info > (3,)
 if PY3:
+    # noinspection PyShadowingBuiltins
     xrange = range
 
 
+# due to self.socket being ducktyped as boolean when it is used later as a socket.
+# also, api uses mixedCase
+# noinspection PyUnresolvedReferences,PyPep8Naming,PyUnusedLocal
 class IRC:
 
     def __init__(self, mcserver, log, wrapper):
@@ -98,8 +102,8 @@ class IRC:
             self.send("QUIT :%s" % message)
             self.socket.close()
             self.socket = False
-        except:
-            pass
+        except Exception as e:
+            self.log.debug("Exception in IRC disconnect: \n%s", e)
 
     def send(self, payload):
         if self.socket:
@@ -139,6 +143,7 @@ class IRC:
                 else:
                     final += chunk
             except Exception as e:
+                self.log.debug("Exception in IRC onchannelmessage: \n%s", e)
                 final += chunk
         self.messagefromchannel(channel, "&a<%s> &r%s" % (nick, final))
 
@@ -228,6 +233,7 @@ class IRC:
                     self.timeout = True
                 irc_buffer = ""
             except Exception as e:
+                self.log.debug("Exception in IRC handle: \n%s", e)
                 irc_buffer = ""
             for line in irc_buffer.split("\n"):
                 self.line = line
@@ -311,6 +317,7 @@ class IRC:
                     "color": "white"
                 }])
             except Exception as e:
+                self.log.debug("Exception in IRC in parse (MODE): \n%s", e)
                 pass
         if getargs(self.line.split(" "), 0) == "PING":
             self.send("PONG %s" % getargs(self.line.split(" "), 1))

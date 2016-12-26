@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 
+# noinspection PyProtectedMember
 from api.helpers import getargs, getargsafter, get_int, processcolorcodes, _chattocolorcodes
 from api.helpers import getjsonfile, getfileaslines, config_to_dict_read, set_item
 
@@ -240,7 +241,9 @@ class MCServer:
         if save:
             self.wrapper.storage["ServerStarted"] = False
             self.wrapper.storage.save()
+            self.console("save-all flush")
         self.console("stop")  # really no reason to kick the players.  Stop will do it
+        time.sleep(3)
 
     def kill(self, reason="Killing Server"):
         """ 

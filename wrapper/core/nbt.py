@@ -1,32 +1,20 @@
 # -*- coding: utf-8 -*-
 
-# p2 and py3 compliant
-#  (has errors due to the manner of import)
-
-"""
-Handle the NBT (Named Binary Tag) data format
-"""
-
-from core.exceptions import MalformedFileError
-
 from collections import MutableMapping, MutableSequence, Sequence
 from struct import Struct, error as StructError
 from gzip import GzipFile
 
-PISS = True
-try:
-    unicode
-    basestring
-except NameError:
-    unicode = str  # compatibility for Python 3
-    basestring = str  # compatibility for Python 3
 
+from core.exceptions import MalformedFileError
 
-# Py3-2
 import sys
+
 PY3 = sys.version_info > (3,)
 if PY3:
     xrange = range
+    unicode = str
+    basestring = str
+
 
 TAG_END = 0
 TAG_BYTE = 1

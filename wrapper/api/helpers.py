@@ -164,9 +164,9 @@ def find_in_json(jsonlist, keyname, searchvalue):
     return None
 
 
-def format_bytes(number_raw_bytes):
+def _format_bytes(number_raw_bytes):
     """
-    takes a raw bytes number and returns an appropriate 4 place digit number > 1.0 and the corresponding units.
+    takes number of bytes and converts to Kbtye, MiB, GiB, etc... using 4 most significant digits.
     """
     large_bytes = number_raw_bytes / 1073741824
     units = "GiB"
@@ -660,10 +660,10 @@ def _getcolorcode(color):
 
 
 def _create_chat(translateable="death.attack.outOfWorld", insertion="<playername>",
-                click_event_action="suggest_command", click_event_value="/msg <playername> ",
-                hov_event_action="show_entity",
-                hov_event_text_value="{name:\"<playername>\", id:\"3269fd15-5be9-3c2a-af6c-0000000000000\"}",
-                with_text="<playername>", plain_dict_chat=""):
+                 click_event_action="suggest_command", click_event_value="/msg <playername> ",
+                 hov_event_action="show_entity",
+                 hov_event_text_value="{name:\"<playername>\", id:\"3269fd15-5be9-3c2a-af6c-0000000000000\"}",
+                 with_text="<playername>", plain_dict_chat=""):
     """
     Creates a json minecraft chat object string (for sending over Protocol).
 
@@ -724,3 +724,14 @@ def _test_broadcast(message, version_compute=10704, encoding='utf-8'):
             _test_console("say %s" % _chattocolorcodes(json.loads(temp)))
         else:
             _test_console("tellraw @a %s" % processcolorcodes(message))
+
+
+def sample_func():
+    print(x)
+    for x in range(1, 5):
+        print(x)
+
+
+if __name__ == "__main__":
+    for x in range(1, 5):
+        sample_func()
