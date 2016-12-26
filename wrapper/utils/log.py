@@ -5,6 +5,7 @@ import os
 import logging
 from logging.config import dictConfig
 
+# noinspection PyProtectedMember
 from api.helpers import mkdir_p, _use_style
 
 DEFAULT_CONFIG = {

@@ -26,7 +26,7 @@ except ImportError:
 # server anyways. I just wrote it at like 3AM in like an hour.
 
 
-# noinspection PyBroadException,PyUnusedLocal
+# noinspection PyBroadException,PyUnusedLocal,PyPep8Naming
 class Web:
     def __init__(self, wrapper):
         self.wrapper = wrapper
@@ -198,7 +198,8 @@ class Web:
         self.log.info("Web Interface bound to %s:%d",
                       self.config["Web"]["web-bind"], self.config["Web"]["web-port"])
         while not self.wrapper.halt:
-            sock, addr = self.socket.accept()  # TODO yea! duck typing!
+            # noinspection PyUnresolvedReferences
+            sock, addr = self.socket.accept()
             # self.log.debug("(WEB) Connection %s started", str(addr))
             client = WebClient(self.wrapper, sock, addr, self)
             t = threading.Thread(target=client.wrap, args=())
@@ -206,7 +207,7 @@ class Web:
             t.start()
 
 
-# noinspection PyBroadException,PyUnusedLocal,PyMethodMayBeStatic
+# noinspection PyBroadException,PyUnusedLocal,PyMethodMayBeStatic,PyPep8Naming
 class WebClient:
 
     def __init__(self, wrapper, sock, addr, web):
@@ -625,15 +626,16 @@ class WebClient:
                 if len(data) < 1:
                     self.close()
                     return
-                self.buffer = data.split("\n")
+                # self.buffer = data.split("\n")  # TODO replace all new_buffer with self.buffer to restore back
+                new_buffer = data.split("\n")
             except Exception as e:
                 self.close()
                 # self.log.debug("(WEB) Connection %s closed", str(self.addr))
                 break
-            if len(self.buffer) < 1:
+            if len(new_buffer) < 1:
                 print("Web connection closed suddenly")
                 return False
-            for line in self.buffer:
+            for line in new_buffer:
                 if getargs(line.split(" "), 0) == "GET":
                     self.get(getargs(line.split(" "), 1))
                 if getargs(line.split(" "), 0) == "POST":

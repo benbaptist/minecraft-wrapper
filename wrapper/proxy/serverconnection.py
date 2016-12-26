@@ -332,17 +332,18 @@ class ServerConnection:
         print("\nread COMB_PARSE\n")
         if data[0] == 2:
             print("\nread COMB_PARSE2\n")
-            playerID = self.packet.readpkt([_VARINT, ])
+            player_i_d = self.packet.readpkt([_VARINT, ])
             print("\nread COMB_PARSE3\n")
-            EID = self.packet.readpkt([_INT, ])
+            e_i_d = self.packet.readpkt([_INT, ])
             print("\nread COMB_PARSE4\n")
             strg = self.packet.readpkt([_STRING, ])
 
-            print("\nplayerEID=%s\nEID=%s\n" % (playerID, EID))
+            print("\nplayerEID=%s\nEID=%s\n" % (player_i_d, e_i_d))
             print("\nTEXT=\n%s\n" % strg)
 
             return True
         return True
+
     def _parse_play_chat_message(self):
         if self.version < mcpackets.PROTOCOL_1_8START:
             parsing = [_STRING, _NULL]

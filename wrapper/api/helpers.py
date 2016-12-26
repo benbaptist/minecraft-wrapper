@@ -724,14 +724,3 @@ def _test_broadcast(message, version_compute=10704, encoding='utf-8'):
             _test_console("say %s" % _chattocolorcodes(json.loads(temp)))
         else:
             _test_console("tellraw @a %s" % processcolorcodes(message))
-
-
-def sample_func():
-    print(x)
-    for x in range(1, 5):
-        print(x)
-
-
-if __name__ == "__main__":
-    for x in range(1, 5):
-        sample_func()
