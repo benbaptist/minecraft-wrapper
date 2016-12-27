@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 
-# p2 and py3 compliant (no PyCharm IDE-flagged errors)
-#  (still has weak warnings in both versions)
+# Copyright (C) 2016, 2017 - BenBaptist and minecraft-wrapper (AKA 'Wrapper.py')
+#  developer(s).
+# https://github.com/benbaptist/minecraft-wrapper
+# This program is distributed under the terms of the GNU General Public License,
+#  version 3 or later.
 
 import ast
 import random

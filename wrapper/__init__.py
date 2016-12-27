@@ -1,5 +1,7 @@
-from utils.version import get_version
+# -*- coding: utf-8 -*-
 
-VERSION = (1, 0, 0, 'rc', 1)
-
-__version__ = get_version(VERSION)  # Work in progress
+# Copyright (C) 2016, 2017 - BenBaptist and minecraft-wrapper (AKA 'Wrapper.py')
+#  developer(s).
+# https://github.com/benbaptist/minecraft-wrapper
+# This program is distributed under the terms of the GNU General Public License,
+#  version 3 or later.
