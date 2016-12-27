@@ -71,7 +71,7 @@ class Proxy:
         self.forge_login_packet = None
         self.registered_channels = ["WRAPPER.PY|", "WRAPPER.PY|PING", ]
         self.pinged = False
-        self.trace = True
+        self.trace = False
         self.ignoredSB = [0xe, 0xc, 0x0, 0xd, ]
         self.ignoredCB = [0x44, 0x49, 0x34, 0x25, 0x26, 0x3b, 0x2e, 0x39, 0x30, 0x3, 0x4a, 0x3c, 0x20, 0x1b, ]
 
