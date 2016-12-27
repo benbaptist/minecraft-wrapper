@@ -111,6 +111,8 @@ def build_wrapper(buildargs):
     os.chdir("wrapper")
     os.system("zip ../Wrapper.py -r . -x *~ /.git* *.pyc")
     os.chdir("..")
+    os.system("zip Wrapper.py LICENSE.txt")
+
     with open("./build/Wrapper.py.md5", "w") as f:
         f.write(hashlib.md5(open("./Wrapper.py", "r").read()).hexdigest())
 

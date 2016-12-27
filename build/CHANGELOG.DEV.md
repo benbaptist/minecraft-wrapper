@@ -1,5 +1,19 @@
-Build 166 Version [0.9.7]
+Build 168 Version [0.9.9]  (future version)
 - "we must push the build so we can find out what's in it!"
+
+Build 167 Version [0.9.8]
+- release wrapper from BBL license to GPL version 3 or later
+- buildscript inserts LICENSE.txt into Wrapper.py at build time.
+
+Build 166 Version [0.9.7]
+- Documentation of API is created automatically as part of each build.
+- Cleaned up web.py some.
+- Cleaned up wrapper shutdown code.
+- Completed entry of all known client-bound packets to mcpackets.py
+- re-implement utils/helpers directly into api/helpers. Still contains
+    private methods, but those are marked to prevent their inclusion in
+    the documentation (or are prefixed with '_' to mark them as private
+    methods.
 
 Build 164-165 Version [0.9.6]
 - Bugfix request import
