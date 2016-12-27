@@ -1,5 +1,9 @@
-Build 168 Version [0.9.9]  (future version)
+Build 168 Version [0.9.10]  (future version)
 - "we must push the build so we can find out what's in it!"
+
+Build 168 Version [0.9.9] * potential critical bugfix
+- Completed entry of all known server-bound packets to mcpackets.py Found
+    some problems in packet assignment that could cause packet confusion.
 
 Build 167 Version [0.9.8]
 - release wrapper from BBL license to GPL version 3 or later

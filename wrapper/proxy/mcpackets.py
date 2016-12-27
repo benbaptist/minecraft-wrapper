@@ -26,7 +26,9 @@ set something False/unimplemented using 0xEE
 
 # Version Constants
 # use these constants decide how a packet should be parsed.
-PROTOCOL_MAX = 1000
+PROTOCOL_MAX = 4000
+
+PROTOCOL_1_11 = 314
 
 PROTOCOL_1_10 = 205
 #
@@ -275,7 +277,7 @@ class ClientBound:
             self.MAP_CHUNK_BULK = 0xee
             self.BROKEN_SET_COMPRESSION_REMOVED1_9 = 0xee
 
-        # 1.9.4 changes  http://wiki.vg/index.php?title=Protocol&oldid=7819#Entity_Properties
+        # 1.9.4 - 1.11 changes  http://wiki.vg/index.php?title=Protocol&oldid=7819#Entity_Properties
         # still good packet numbers through protocol 315
         if protocol > PROTOCOL_1_9_4:
             self.UPDATE_SIGN = 0xee
@@ -296,60 +298,80 @@ class ServerBound:
         # Login, Status, and Ping packets
         # -------------------------------
         self.HANDSHAKE = 0x00  # set server to STATUS(1) or LOGIN(2) mode.
-
         self.REQUEST = 0x00  # Server sends server json list data in response packet
-
         self.STATUS_PING = 0x01  # server responds with a PONG
-
         self.LOGIN_START = 0x00  # contains the "name" of user.  Sent after handshake for LOGIN
-
         self.LOGIN_ENCR_RESPONSE = 0x01  # client response to ENCR_REQUEST
 
         # Play packets
         # -------------------------------
         # 1.7 - 1.7.10 PLAY packets
+        self.KEEP_ALIVE = 0x00
         self.CHAT_MESSAGE = 0x01
+        self.USE_ENTITY = 0x02
+        self.PLAYER = 0x03
+        self.PLAYER_POSITION = 0x04
+        self.PLAYER_LOOK = 0x05
+        self.PLAYER_POSLOOK = 0x06
+        self.PLAYER_DIGGING = 0x07
+        self.PLAYER_BLOCK_PLACEMENT = 0x08
+        self.HELD_ITEM_CHANGE = 0x09
+        self.ANIMATION = 0x0a  # TODO NEW
+        self.ENTITY_ACTION = 0x0b  # TODO NEW
+        self.STEER_VEHICLE = 0x0c  # TODO NEW
+        self.CLOSE_WINDOW = 0x0b  # TODO NEW
         self.CLICK_WINDOW = 0x0e
+        self.CONFIRM_TRANSACTION = 0x0f  # TODO NEW
+        self.CREATIVE_INVENTORY_ACTION = 0x10  # TODO NEW
+        self.ENCHANT_ITEM = 0x11  # TODO NEW
+        self.PLAYER_UPDATE_SIGN = 0x12
+        self.PLAYER_ABILITIES = 0x13
+        self.TAB_COMPLETE = 0x14  # TODO NEW
         self.CLIENT_SETTINGS = 0x15
         self.CLIENT_STATUS = 0x16
-        self.HELD_ITEM_CHANGE = 0x09
-        self.KEEP_ALIVE = 0x00
-        self.PLAYER = 0x03
-        self.PLAYER_ABILITIES = 0x13
-        self.PLAYER_BLOCK_PLACEMENT = 0x08
-        self.PLAYER_DIGGING = 0x07
-        self.PLAYER_LOOK = 0x05
-        self.PLAYER_POSITION = 0x04
-        self.PLAYER_POSLOOK = 0x06
-        self.PLAYER_UPDATE_SIGN = 0x12
-        self.SPECTATE = 0xEE
-        self.TELEPORT_CONFIRM = 0xEE
-        self.USE_ENTITY = 0x02
         self.PLUGIN_MESSAGE = 0x17
-        self.USE_ITEM = 0xEE
 
-        # 1.8 - 1.8.9
+        # new packets unimplemented in 1.7
+        self.SPECTATE = 0xee
+        self.RESOURCE_PACK_STATUS = 0xee
+        self.TELEPORT_CONFIRM = 0xee
+        self.USE_ITEM = 0xee
+        self.VEHICLE_MOVE = 0xee
+        self.STEER_BOAT = 0xee
+
         if PROTOCOL_1_9START > protocol >= PROTOCOL_1_8START:
             self.SPECTATE = 0x18
+            self.RESOURCE_PACK_STATUS = 0x19
 
         # 1.9
         if protocol >= PROTOCOL_1_9REL1:
+            self.TELEPORT_CONFIRM = 0x00
+            self.TAB_COMPLETE = 0x01  # TODO NEW
             self.CHAT_MESSAGE = 0x02
-            self.CLICK_WINDOW = 0x07
-            self.CLIENT_SETTINGS = 0x04
             self.CLIENT_STATUS = 0x03
-            self.HELD_ITEM_CHANGE = 0x17
+            self.CLIENT_SETTINGS = 0x04
+            self.CONFIRM_TRANSACTION = 0x05  # TODO NEW
+            self.ENCHANT_ITEM = 0x06  # TODO NEW
+            self.CLICK_WINDOW = 0x07
+            self.CLOSE_WINDOW = 0x08  # TODO NEW
+            self.PLUGIN_MESSAGE = 0x09
+            self.USE_ENTITY = 0x0a
             self.KEEP_ALIVE = 0x0b
-            self.PLAYER = 0x0f
-            self.PLAYER_ABILITIES = 0x12
-            self.PLAYER_BLOCK_PLACEMENT = 0x1c
-            self.PLAYER_DIGGING = 0x13
-            self.PLAYER_LOOK = 0x0e
             self.PLAYER_POSITION = 0x0c
             self.PLAYER_POSLOOK = 0x0d
+            self.PLAYER_LOOK = 0x0e
+            self.PLAYER = 0x0f
+            self.VEHICLE_MOVE = 0x10  # TODO NEW
+            self.STEER_BOAT = 0x11  # TODO NEW
+            self.PLAYER_ABILITIES = 0x12
+            self.PLAYER_DIGGING = 0x13
+            self.ENTITY_ACTION = 0x14  # TODO NEW
+            self.STEER_VEHICLE = 0x15  # TODO NEW
+            self.RESOURCE_PACK_STATUS = 0x16  # TODO NEW
+            self.HELD_ITEM_CHANGE = 0x17
+            self.CREATIVE_INVENTORY_ACTION = 0x18  # TODO NEW
             self.PLAYER_UPDATE_SIGN = 0x19
+            self.ANIMATION = 0x1a  # TODO NEW
             self.SPECTATE = 0x1b
-            self.TELEPORT_CONFIRM = 0x00
-            self.USE_ENTITY = 0x0a
+            self.PLAYER_BLOCK_PLACEMENT = 0x1c
             self.USE_ITEM = 0x1d
-            self.PLUGIN_MESSAGE = 0x09
