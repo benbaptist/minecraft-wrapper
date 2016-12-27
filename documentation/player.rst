@@ -7,12 +7,6 @@
     upon logging off.
     
 
-**def _track(self)**
-
-        internal tracking that updates a player's server play time. Not intended as a part of the public
-        player object API
-        
-
 **def execute(self, string)**
 
         Run a command as this player. If proxy mode is not enabled,

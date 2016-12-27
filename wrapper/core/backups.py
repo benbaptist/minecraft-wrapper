@@ -11,7 +11,7 @@ import os
 import platform
 
 from api.base import API
-from utils.helpers import putjsonfile, getjsonfile, mkdir_p
+from api.helpers import putjsonfile, getjsonfile, mkdir_p
 
 # I should probably not use irc=True when broadcasting, and instead should just rely on events and having
 # MCserver.py and irc.py print messages themselves for the sake of consistency.
@@ -36,6 +36,7 @@ class Backups:
             self.api.registerEvent("timer.second", self.eachsecond)
             self.timerstarted = True
 
+    # noinspection PyUnusedLocal
     def eachsecond(self, payload):
         self.interval += 1
         if time.time() - self.time > self.backup_interval and self.enabled:
@@ -175,6 +176,7 @@ class Backups:
                 # import old backups from previous versions of Wrapper.py
                 backuptimestamps = []
                 for backupNames in os.listdir(self.config["Backups"]["backup-location"]):
+                    # noinspection PyBroadException,PyUnusedLocal
                     try:
                         backuptimestamps.append(int(backupNames[backupNames.find('-') + 1:backupNames.find('.')]))
                     except Exception as e:

@@ -23,7 +23,7 @@ from proxy import mcpackets
 from api.player import Player
 from core.mcuuid import MCUUID
 
-from utils.helpers import processcolorcodes
+from api.helpers import processcolorcodes
 
 # region Constants
 # ------------------------------------------------
@@ -187,8 +187,8 @@ class Client:
                 # sending to the server only happens in PLAY/LOBBY (not IDLE, HANDSHAKE, or LOGIN)
                 # wrapper handles LOGIN/HANDSHAKE with servers (via self.parse(pkid), which DOES happen in all modes)
                 self.server_connection.packet.send_raw(original)
-                #if self.proxy.trace:
-                    #self._do_trace(pkid, self.state)
+                if self.proxy.trace:
+                    self._do_trace(pkid, self.state)
 
         self.close_server()  # upon self.abort
 
@@ -661,7 +661,7 @@ class Client:
             else:
                 datarest = self.packet.readpkt([_REST, ])[0]
                 
-            #print("\nDATA_REST = %s\n" % datarest)
+            print("\nDATA_REST = %s\n" % datarest)
             response = json.loads(datarest.decode(self.wrapper.encoding), encoding=self.wrapper.encoding)
             self._plugin_response(response)
             return True

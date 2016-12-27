@@ -6,7 +6,7 @@ import os
 import stat
 
 from api.base import API
-from utils.helpers import mkdir_p
+from api.helpers import mkdir_p
 
 scripts = {
     "server-start.sh":  """ # This script is called just before the server starts. 
@@ -26,6 +26,7 @@ scripts = {
 }
 
 
+# noinspection PyMethodMayBeStatic,PyUnusedLocal
 class Scripts:
 
     def __init__(self, wrapper):

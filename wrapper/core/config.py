@@ -3,7 +3,7 @@
 import os
 import sys
 import logging
-from utils.helpers import getjsonfile, putjsonfile
+from api.helpers import getjsonfile, putjsonfile
 
 
 # Default Configuration File

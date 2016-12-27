@@ -6,9 +6,9 @@ import time
 import json
 import requests
 
-from utils.helpers import getjsonfile, putjsonfile, find_in_json
-from utils.helpers import epoch_to_timestr, read_timestr
-from utils.helpers import isipv4address
+from api.helpers import getjsonfile, putjsonfile, find_in_json
+from api.helpers import epoch_to_timestr, read_timestr
+from api.helpers import isipv4address
 
 try:
     import utils.encryption as encryption
@@ -65,9 +65,9 @@ class Proxy:
         self.forge_login_packet = None
         self.registered_channels = ["WRAPPER.PY|", "WRAPPER.PY|PING", ]
         self.pinged = False
-        #self.trace = True
-        #self.ignoredSB = [0xe, 0xc, 0x0, 0xd ]
-        #self.ignoredCB = [0x44, 0x49, 0x34, 0x25, 0x26, 0x3b, 0x2e, 0x39, 0x30, 0x3, 0x4a, 0x3c, 0x20, 0x1b, ]
+        self.trace = True
+        self.ignoredSB = [0xe, 0xc, 0x0, 0xd ]
+        self.ignoredCB = [0x44, 0x49, 0x34, 0x25, 0x26, 0x3b, 0x2e, 0x39, 0x30, 0x3, 0x4a, 0x3c, 0x20, 0x1b, ]
 
         # removed deprecated proxy-data.json
 

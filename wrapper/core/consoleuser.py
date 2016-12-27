@@ -6,7 +6,8 @@ Collection of Virtual player classes used elsewhere.
 """
 
 import time
-from utils.helpers import readout
+# noinspection PyProtectedMember
+from api.helpers import _readout
 
 
 # - due to being refrerenced by the external wrapper API that is camelCase
@@ -92,7 +93,7 @@ class ConsolePlayer:
                 displaycolor = jsondisplay["color"]
                 if displaycolor in self.messsage_color_coders:
                     displaycolor = self.messsage_color_coders[displaycolor]
-        readout(display, "", "", pad=15, command_text_fg=displaycolor, usereadline=self.wrapper.use_readline)
+        _readout(display, "", "", pad=15, command_text_fg=displaycolor, usereadline=self.wrapper.use_readline)
 
     @staticmethod
     def hasPermission(*args):

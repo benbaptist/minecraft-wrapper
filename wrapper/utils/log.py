@@ -5,7 +5,8 @@ import os
 import logging
 from logging.config import dictConfig
 
-from utils.helpers import mkdir_p, use_style
+# noinspection PyProtectedMember
+from api.helpers import mkdir_p, _use_style
 
 DEFAULT_CONFIG = {
     "wrapperversion": 1.2,
@@ -98,25 +99,26 @@ class ColorFormatter(logging.Formatter):
     def __init__(self, *args, **kwargs):
         super(ColorFormatter, self).__init__(*args, **kwargs)
 
+    # noinspection PyUnusedLocal
     def format(self, record):
         args = record.args
         msg = record.msg
 
         if os.name in ("posix", "mac"):  # Only style on *nix since windows doesn't support ANSI
             if record.levelno == logging.INFO:
-                info_style = use_style(foreground="green")
+                info_style = _use_style(foreground="green")
                 msg = info_style(msg)
             elif record.levelno == logging.DEBUG:
-                debug_style = use_style(foreground="cyan")
+                debug_style = _use_style(foreground="cyan")
                 msg = debug_style(msg)
             elif record.levelno == logging.WARNING:
-                warn_style = use_style(foreground="yellow", options=("bold",))
+                warn_style = _use_style(foreground="yellow", options=("bold",))
                 msg = warn_style(msg)
             elif record.levelno == logging.ERROR:
-                error_style = use_style(foreground="red", options=("bold",))
+                error_style = _use_style(foreground="red", options=("bold",))
                 msg = error_style(msg)
             elif record.levelno == logging.CRITICAL:
-                crit_style = use_style(foreground="black", background="red", options=("bold",))
+                crit_style = _use_style(foreground="black", background="red", options=("bold",))
                 msg = crit_style(msg)
 
         record.msg = msg
@@ -124,6 +126,8 @@ class ColorFormatter(logging.Formatter):
         return super(ColorFormatter, self).format(record)
 
 
+# TODO - is this an issue? (handlers not resolving)
+# noinspection PyUnresolvedReferences,PyPep8Naming
 class WrapperHandler(logging.handlers.RotatingFileHandler):
     def __init__(self, filename, mode='a', maxBytes=0, backupCount=0, encoding=None, delay=0):
         mkdir_p(os.path.dirname(filename))

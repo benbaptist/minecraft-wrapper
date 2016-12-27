@@ -6,7 +6,7 @@ import json
 import threading
 import proxy.mcpackets as mcpackets
 from core.storage import Storage
-from utils.helpers import processoldcolorcodes, processcolorcodes
+from api.helpers import processoldcolorcodes, processcolorcodes
 
 
 # region Constants

@@ -38,7 +38,7 @@ def build_the_docs():
     index_file = "**Welcome to the Wrapper.py Plugin API documentation!**\n\n" \
                  "The API is divided into modules.  Click on each module to see it's documentation.\n\n\n"
 
-    api_files = ["base", "minecraft", "world", "player", "entity", "backups", "util"]
+    api_files = ["base", "minecraft", "world", "player", "entity", "backups", "helpers"]
     processed = {}
 
     for files in api_files:
@@ -58,7 +58,8 @@ def build_the_docs():
                 number_of_defs = len(defs) - 1
                 header = "**def%s**\n" % all_items[each_item].split("def")[number_of_defs].split(":")[0]
 
-            complete_doc = "%s\n%s%s\n" % (complete_doc, header, item)
+            if "def _" not in header:  # dont create documentation for private functions
+                complete_doc = "%s\n%s%s\n" % (complete_doc, header, item)
         processed[files] = complete_doc
 
     for files in processed:

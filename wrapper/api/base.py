@@ -6,9 +6,9 @@ import time
 import core.exceptions as exceptions
 
 from api.minecraft import Minecraft
-from api.util import Utils
 from core.storage import Storage
 from api.backups import Backups
+import helpers
 
 
 # noinspection PyPep8Naming
@@ -95,7 +95,7 @@ class API:
         self.name = name
         self.minecraft = Minecraft(wrapper)
         self.backups = Backups(wrapper)
-        self.utils = Utils()
+        self.helpers = helpers
         self.config = wrapper.config
         self.entity = False
         self.serverpath = self.config["General"]["server-directory"]

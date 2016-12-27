@@ -21,6 +21,7 @@ import sys
 PY3 = sys.version_info > (3,)
 
 if PY3:
+    # noinspection PyShadowingBuiltins
     xrange = range
 
 
@@ -102,6 +103,7 @@ class RC4(object):
     decrypt = encrypt = crypt
 
 
+# noinspection PyPep8Naming
 def AES128CFB8(shared_secret):
     """Creates a AES128 stream cipher using cfb8 mode"""
     return AES.new(shared_secret, AES.MODE_CFB, shared_secret)

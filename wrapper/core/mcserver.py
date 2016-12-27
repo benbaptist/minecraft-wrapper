@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 
-from utils.helpers import getargs, getargsafter, get_int, processcolorcodes, chattocolorcodes
-from utils.helpers import getjsonfile, getfileaslines, config_to_dict_read, set_item
+# noinspection PyProtectedMember
+from api.helpers import getargs, getargsafter, get_int, processcolorcodes, _chattocolorcodes
+from api.helpers import getjsonfile, getfileaslines, config_to_dict_read, set_item
 
 from api.base import API
 from api.player import Player
@@ -240,7 +241,9 @@ class MCServer:
         if save:
             self.wrapper.storage["ServerStarted"] = False
             self.wrapper.storage.save()
+        self.console("save-all flush")
         self.console("stop")  # really no reason to kick the players.  Stop will do it
+        time.sleep(3)
 
     def kill(self, reason="Killing Server"):
         """ 
@@ -299,14 +302,14 @@ class MCServer:
 
         if isinstance(message, dict):
             if self.version_compute < 10700:
-                self.console("say %s" % chattocolorcodes(message))
+                self.console("say %s" % _chattocolorcodes(message))
             else:
                 encoding = self.wrapper.encoding
                 self.console("tellraw @a %s" % json.dumps(message, encoding=encoding, ensure_ascii=False))
         else:
             if self.version_compute < 10700:
                 temp = processcolorcodes(message)
-                self.console("say %s" % chattocolorcodes(json.loads(temp)))
+                self.console("say %s" % _chattocolorcodes(json.loads(temp)))
             else:
                 self.console("tellraw @a %s" % processcolorcodes(message))
 
