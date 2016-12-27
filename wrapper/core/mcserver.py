@@ -241,7 +241,7 @@ class MCServer:
         if save:
             self.wrapper.storage["ServerStarted"] = False
             self.wrapper.storage.save()
-            self.console("save-all flush")
+        self.console("save-all flush")
         self.console("stop")  # really no reason to kick the players.  Stop will do it
         time.sleep(3)
 

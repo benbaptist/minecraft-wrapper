@@ -611,7 +611,7 @@ class Wrapper:
 
     def _halt(self, server_running=True):
         if server_running:
-            self.javaserver.stop("Halting server...", save=True)
+            self.javaserver.stop("Halting server...", save=False)
         self.halt = True
         sys.exit()
 
