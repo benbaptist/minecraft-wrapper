@@ -392,7 +392,7 @@ class MCServer:
         """
         Execute a console command on the server
         """
-        if self.state in (STARTING, STARTED, STOPPING):
+        if self.state in (STARTING, STARTED):
             self.proc.stdin.write("%s\n" % command)
         else:
             self.log.info("Server is not started. Please run '/start' to boot it up.")

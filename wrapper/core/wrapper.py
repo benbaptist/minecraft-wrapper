@@ -608,11 +608,10 @@ class Wrapper:
 
     def signals(self):
         signal.signal(signal.SIGINT, self.sigint)  # CTRL-C
-        # signal.signal(signal.SIGTERM, self.sigterm)
+        signal.signal(signal.SIGTERM, self.sigint)  # (I dont think wrapper will actually be allowed to stop SIGTERM)
 
-    def sigint(*args):  # doing this allows the calling function to pass extra args without defining/using them here
-        print("\b\bWRAPPER SIGINT'ed\n\n")
-        self = args[0]  # .. as we are only interested in the self component
+    def sigint(*args):
+        self = args[0]  # We are only interested in the self component
         self._halt()
 
     def _halt(self, server_running=True):
