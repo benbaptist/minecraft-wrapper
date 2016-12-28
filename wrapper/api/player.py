@@ -111,6 +111,8 @@ class Player:
                     break
             if not gotclient:
                 self.log.error("Proxy is on, but this client is not listed in wrapper.proxy.clients!")
+                self.log.error("The usual cause of this would be that someone is connecting directly"
+                               "to your server port and not the wrapper proxy port!")
 
         # populate dictionary items to prevent errors due to missing items
         if "groups" not in self.permissions:

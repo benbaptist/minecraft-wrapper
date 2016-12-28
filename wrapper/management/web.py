@@ -545,7 +545,7 @@ class WebClient:
             atype = get_req("action", request)
             if atype == "stop":
                 reason = get_req("reason", request)
-                self.wrapper.javaserver.stop(reason)
+                self.wrapper.javaserver.stop_server_command(reason)
                 self.log.warning("[%s] Server stop with reason: %s", self.addr[0], reason)
                 return "success"
             elif atype == "restart":
