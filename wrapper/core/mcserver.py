@@ -152,11 +152,7 @@ class MCServer:
         """
         Function that handles booting the server, parsing console output, and such.
         """
-        self.log.debug("handle_server called...")
         trystart = 0
-        # if self.server_handle_on:
-        #     self.log.debug("handle_server already on (aborting handle_server attempt)...")
-        #     return
         while not self.wrapper.halt:
             trystart += 1
             self.proc = None
@@ -179,20 +175,21 @@ class MCServer:
                 self.log.error("Could not start server.  check your server.properties, wrapper.properties and this"
                                " startup 'command' from wrapper.properties:\n'%s'", " ".join(self.args))
                 self.changestate(OFF)
+                # halt wrapper
                 self.wrapper.halt = True
-                self.log.debug("handle_server error (wrapper halting)...")
+                # exit server_handle
                 break
 
             # The server loop
-            self.log.debug("handle_server intiated the server subprocess...")
             while True:
+                # This loop runs continously as long as server console is running
                 time.sleep(0.1)
                 if self.proc.poll() is not None:
                     self.changestate(OFF)
                     self.boot_server = self.server_autorestart
+                    # break back out to `while not self.wrapper.halt:` loop to (possibly) connect to server again.
                     break
 
-                # This level runs continously once server console starts
                 # is is only reading server console output
                 for line in self.console_output_data:
                     try:
@@ -200,15 +197,11 @@ class MCServer:
                     except Exception as e:
                         self.log.exception(e)
                 self.console_output_data = []
-            self.log.debug("handle_server ended... waiting for next server start")
-
-        # otherwise, code ends here on wrapper.halt
-        self.log.debug("handle_server exited... passing to wrapper exit routine")
+        # otherwise, code ends here on wrapper.halt and execution returns to the end of wrapper.start()
 
     def _toggle_server_started(self, server_started=True):
         self.wrapper.storage["ServerStarted"] = server_started
         self.wrapper.storage.save()
-        self.log.debug("server started set to %s in wrapper.json", server_started)
 
     def start(self):
         """
@@ -409,7 +402,7 @@ class MCServer:
         if self.state in (STARTING, STARTED, STOPPING) and self.proc:
             self.proc.stdin.write("%s\n" % command)
         else:
-            self.log.debug("Attempted to run '%s' but the Server is not started.", command)
+            self.log.debug("Attempted to run console command '%s' but the Server is not started.", command)
 
     def changestate(self, state, reason=None):
         """
