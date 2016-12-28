@@ -24,10 +24,22 @@ VARINT = 11
 BYTEARRAY = 12
 BYTEARRAY_SHORT = 13
 POSITION = 14
+
+# gets full slot info, including NBT data.
 SLOT = 15
+
+# This fellow is a bit of a hack that allows getting the basic slot data where the NBT part may be buggy or
+#  you are not sure you are correctly parsing the NBT data (like in older pre-1.8 minecrafts).
 SLOT_NO_NBT = 18
+
 UUID = 16
 METADATA = 17
+
+
+# Both of these just read or send the rest of the packet in its raw bytes form.
 REST = 90
 RAW = 90
+
+# allows the insertion of padding into argument lists.  Any field with this designation is just
+#  silently skipped.
 NULL = 100
