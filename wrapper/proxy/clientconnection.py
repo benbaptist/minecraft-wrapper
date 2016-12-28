@@ -31,32 +31,8 @@ from core.mcuuid import MCUUID
 
 from api.helpers import processcolorcodes
 
-# region Constants
-# ------------------------------------------------
-
-_STRING = 0
-_JSON = 1
-_UBYTE = 2
-_BYTE = 3
-_INT = 4
-_SHORT = 5
-_USHORT = 6
-_LONG = 7
-_DOUBLE = 8
-_FLOAT = 9
-_BOOL = 10
-_VARINT = 11
-_BYTEARRAY = 12
-_BYTEARRAY_SHORT = 13
-_POSITION = 14
-_SLOT = 15
-_SLOT_NO_NBT = 18
-_UUID = 16
-_METADATA = 17
-_REST = 90
-_RAW = 90
-_NULL = 100
-# endregion
+# noinspection PyPep8Naming
+from utils import pkt_datatypes as D
 
 
 # noinspection PyMethodMayBeStatic
@@ -239,15 +215,15 @@ class Client:
         # TODO whatever respawn stuff works
         # send these right quick to client
         self._send_client_settings()
-        self.packet.sendpkt(self.pktCB.CHANGE_GAME_STATE, [_UBYTE, _FLOAT], (1, 0))
-        self.packet.sendpkt(self.pktCB.RESPAWN, [_INT, _UBYTE, _UBYTE, _STRING], [-1, 3, 0, 'default'])
+        self.packet.sendpkt(self.pktCB.CHANGE_GAME_STATE, [D.UBYTE, D.FLOAT], (1, 0))
+        self.packet.sendpkt(self.pktCB.RESPAWN, [D.INT, D.UBYTE, D.UBYTE, D.STRING], [-1, 3, 0, 'default'])
         if self.version < mcpackets.PROTOCOL_1_8START:
-            self.server_connection.packet.sendpkt(self.pktSB.CLIENT_STATUS, [_BYTE, ], (0, ))
+            self.server_connection.packet.sendpkt(self.pktSB.CLIENT_STATUS, [D.BYTE, ], (0, ))
         else:
-            self.packet.sendpkt(0x2c, [_VARINT, _INT, _STRING, ], (self.server_connection.eid, "DURNIT"))
-            # self.packet.sendpkt(0x3e, [_FLOAT, _VARINT, _FLOAT], (-1, 0, 0.0))
-            self.server_connection.packet.sendpkt(self.pktSB.CLIENT_STATUS, [_VARINT, ], (0, ))
-            self.server_connection.packet.sendpkt(self.pktSB.PLAYER, [_BOOL, ], (True,))
+            self.packet.sendpkt(0x2c, [D.VARINT, D.INT, D.STRING, ], (self.server_connection.eid, "DURNIT"))
+            # self.packet.sendpkt(0x3e, [D.FLOAT, D.VARINT, D.FLOAT], (-1, 0, 0.0))
+            self.server_connection.packet.sendpkt(self.pktSB.CLIENT_STATUS, [D.VARINT, ], (0, ))
+            self.server_connection.packet.sendpkt(self.pktSB.PLAYER, [D.BOOL, ], (True,))
         self.state = self.proxy.LOBBY
 
     def _login_client_logon(self, start_keep_alives=True, ip=None, port=None):
@@ -282,7 +258,7 @@ class Client:
         # start keep alives
         if start_keep_alives:
             # send login success to client (the real client is already logged in if keep alives are running)
-            self.packet.sendpkt(self.pktCB.LOGIN_SUCCESS, [_STRING, _STRING], (self.uuid.string, self.username))
+            self.packet.sendpkt(self.pktCB.LOGIN_SUCCESS, [D.STRING, D.STRING], (self.uuid.string, self.username))
             self.time_client_responded = time.time()
 
             t_keepalives = threading.Thread(target=self._keep_alive_tracker, kwargs={'playername': self.username})
@@ -327,11 +303,11 @@ class Client:
             server_addr = "localhost\x00FML\x00"
 
         self.server_connection.packet.sendpkt(self.server_connection.pktSB.HANDSHAKE,
-                                              [_VARINT, _STRING, _USHORT, _VARINT],
+                                              [D.VARINT, D.STRING, D.USHORT, D.VARINT],
                                               (self.clientversion, server_addr, self.server_port, self.proxy.LOGIN))
 
         # send the login request (server is offline, so it will accept immediately by sending login_success)
-        self.server_connection.packet.sendpkt(self.server_connection.pktSB.LOGIN_START, [_STRING], [self.username])
+        self.server_connection.packet.sendpkt(self.server_connection.pktSB.LOGIN_START, [D.STRING], [self.username])
 
         # LOBBY code and such to go elsewhere
 
@@ -366,10 +342,10 @@ class Client:
             jsonmessage = message  # server packets are read as json
 
         if self.state in (self.proxy.PLAY, self.proxy.LOBBY):
-            self.packet.sendpkt(self.pktCB.DISCONNECT, [_JSON], [jsonmessage])
+            self.packet.sendpkt(self.pktCB.DISCONNECT, [D.JSON], [jsonmessage])
             self.log.debug("upon disconnect, state was PLAY (sent PLAY state DISCONNECT)")
         else:
-            self.packet.sendpkt(self.pktCB.LOGIN_DISCONNECT, [_JSON], [message])
+            self.packet.sendpkt(self.pktCB.LOGIN_DISCONNECT, [D.JSON], [message])
             self.log.debug("upon disconnect, state was 'other' (sent LOGIN_DISCONNECT)")
         time.sleep(1)
         self.state = self.proxy.HANDSHAKE
@@ -419,15 +395,15 @@ class Client:
             y = position[1]
             z = position[2]
             self.server_connection.packet.sendpkt(self.pktSB.PLAYER_UPDATE_SIGN,
-                                                  [_INT, _SHORT, _INT, _STRING, _STRING, _STRING, _STRING],
+                                                  [D.INT, D.SHORT, D.INT, D.STRING, D.STRING, D.STRING, D.STRING],
                                                   (x, y, z, line1, line2, line3, line4))
         else:
             self.server_connection.packet.sendpkt(
-                self.pktSB.PLAYER_UPDATE_SIGN, [_POSITION, _STRING, _STRING, _STRING, _STRING],
+                self.pktSB.PLAYER_UPDATE_SIGN, [D.POSITION, D.STRING, D.STRING, D.STRING, D.STRING],
                 (position, line1, line2, line3, line4))
 
     def message(self, string):
-        self.server_connection.packet.sendpkt(self.pktSB.CHAT_MESSAGE, [_STRING], [string])
+        self.server_connection.packet.sendpkt(self.pktSB.CHAT_MESSAGE, [D.STRING], [string])
 
     # internal client login methods
     # -----------------------------
@@ -445,10 +421,10 @@ class Client:
 
                     # challenge the client with it
                     if self.clientversion > mcpackets.PROTOCOL_1_8START:
-                        self.packet.sendpkt(self.pktCB.KEEP_ALIVE, [_VARINT], [self.keepalive_val])
+                        self.packet.sendpkt(self.pktCB.KEEP_ALIVE, [D.VARINT], [self.keepalive_val])
                     else:
                         # pre- 1.8
-                        self.packet.sendpkt(self.pktCB.KEEP_ALIVE, [_INT], [self.keepalive_val])
+                        self.packet.sendpkt(self.pktCB.KEEP_ALIVE, [D.INT], [self.keepalive_val])
                     self.time_server_pinged = time.time()
 
                 # check for active client keep alive status:
@@ -512,7 +488,7 @@ class Client:
 
     def _send_client_settings(self):
         if self.clientSettings and not self.clientSettingsSent:
-            self.server_connection.packet.sendpkt(self.pktSB.CLIENT_SETTINGS, [_RAW, ], (self.clientSettings,))
+            self.server_connection.packet.sendpkt(self.pktSB.CLIENT_SETTINGS, [D.RAW, ], (self.clientSettings,))
             self.clientSettingsSent = True
 
     def _send_forge_client_handshakereset(self):
@@ -526,9 +502,9 @@ class Client:
          """
         channel = "FML|HS"
         if self.clientversion < mcpackets.PROTOCOL_1_8START:
-            self.packet.sendpkt(self.pktCB.PLUGIN_MESSAGE, [_STRING, _SHORT, _BYTE], [channel, 1, 254])
+            self.packet.sendpkt(self.pktCB.PLUGIN_MESSAGE, [D.STRING, D.SHORT, D.BYTE], [channel, 1, 254])
         else:
-            self.packet.sendpkt(self.pktCB.PLUGIN_MESSAGE, [_STRING, _BYTE], [channel, 254])
+            self.packet.sendpkt(self.pktCB.PLUGIN_MESSAGE, [D.STRING, D.BYTE], [channel, 254])
 
     def _transmit_downstream(self):
         """ transmit wrapper channel status info to the server's direction to help sync hub/lobby wrappers """
@@ -537,17 +513,17 @@ class Client:
         state = self.state
         if self.server_connection:
             if self.version < mcpackets.PROTOCOL_1_8START:
-                self.server_connection.packet.sendpkt(self.pktSB.PLUGIN_MESSAGE, [_STRING, _SHORT, _BYTE],
+                self.server_connection.packet.sendpkt(self.pktSB.PLUGIN_MESSAGE, [D.STRING, D.SHORT, D.BYTE],
                                                       [channel, 1,  state])
             else:
-                self.server_connection.packet.sendpkt(self.pktSB.PLUGIN_MESSAGE, [_STRING, _BOOL],
+                self.server_connection.packet.sendpkt(self.pktSB.PLUGIN_MESSAGE, [D.STRING, D.BOOL],
                                                       [channel, state])
 
     def _read_keep_alive(self):
         if self.serverversion < mcpackets.PROTOCOL_1_8START:
-            data = self.packet.readpkt([_INT])
+            data = self.packet.readpkt([D.INT])
         else:  # self.version >= mcpackets.PROTOCOL_1_8START:
-            data = self.packet.readpkt([_VARINT])
+            data = self.packet.readpkt([D.VARINT])
         if data[0] == self.keepalive_val:
             self.time_client_responded = time.time()
         return False
@@ -652,7 +628,7 @@ class Client:
     # plugin channel handler
     # -----------------------
     def _parse_plugin_message(self):
-        channel = self.packet.readpkt([_STRING, ])[0]
+        channel = self.packet.readpkt([D.STRING, ])[0]
 
         if channel not in self.proxy.registered_channels:
             # we are not actually registering our channels with the MC server.
@@ -663,11 +639,11 @@ class Client:
 
         if channel == "WRAPPER.PY|":
             if self.clientversion < mcpackets.PROTOCOL_1_8START:
-                datarest = self.packet.readpkt([_SHORT, _REST])[1]
+                datarest = self.packet.readpkt([D.SHORT, D.REST])[1]
             else:
-                datarest = self.packet.readpkt([_REST, ])[0]
-                
-            print("\nDATA_REST = %s\n" % datarest)
+                datarest = self.packet.readpkt([D.REST, ])[0]
+
+            print("\nDATA D.REST = %s\n" % datarest)
             response = json.loads(datarest.decode(self.wrapper.encoding), encoding=self.wrapper.encoding)
             self._plugin_response(response)
             return True
@@ -689,7 +665,7 @@ class Client:
     # -----------------------
     def _parse_handshaking(self):
         self.log.debug("HANDSHAKE")
-        data = self.packet.readpkt([_VARINT, _STRING, _USHORT, _VARINT])  # "version|address|port|state"
+        data = self.packet.readpkt([D.VARINT, D.STRING, D.USHORT, D.VARINT])  # "version|address|port|state"
 
         self.clientversion = data[0]
         self._getclientpacketset()
@@ -732,8 +708,8 @@ class Client:
 
     def _parse_status_ping(self):
         self.log.debug("SB -> STATUS PING")
-        data = self.packet.readpkt([_LONG])
-        self.packet.sendpkt(self.pktCB.PING_PONG, [_LONG], [data[0]])
+        data = self.packet.readpkt([D.LONG])
+        self.packet.sendpkt(self.pktCB.PING_PONG, [D.LONG], [data[0]])
         self.log.debug("CB (W)-> STATUS PING")
         self.state = self.proxy.HANDSHAKE
         return False
@@ -775,14 +751,14 @@ class Client:
         if self.proxy.forge:
             self.MOTD["modinfo"] = self.proxy.mod_info["modinfo"]
 
-        self.packet.sendpkt(self.pktCB.PING_JSON_RESPONSE, [_STRING], [json.dumps(self.MOTD)])
+        self.packet.sendpkt(self.pktCB.PING_JSON_RESPONSE, [D.STRING], [json.dumps(self.MOTD)])
         self.log.debug("CB (W)-> JSON RESPONSE")
         # after this, proxy waits for the expected PING to go back to Handshake mode
         return False
 
     def _parse_login_start(self):
         self.log.debug("SB -> LOGIN START")
-        data = self.packet.readpkt([_STRING, _NULL])
+        data = self.packet.readpkt([D.STRING, D.NULL])
 
         # "username"
         self.username = data[0]
@@ -793,12 +769,12 @@ class Client:
             if self.serverversion < 6:  # 1.7.x versions
                 # send to client 1.7
                 self.packet.sendpkt(self.pktCB.LOGIN_ENCR_REQUEST,
-                                    [_STRING, _BYTEARRAY_SHORT, _BYTEARRAY_SHORT],
+                                    [D.STRING, D.BYTEARRAY_SHORT, D.BYTEARRAY_SHORT],
                                     (self.serverID, self.publicKey, self.verifyToken))
             else:
                 # send to client 1.8 +
                 self.packet.sendpkt(self.pktCB.LOGIN_ENCR_REQUEST,
-                                    [_STRING, _BYTEARRAY, _BYTEARRAY],
+                                    [D.STRING, D.BYTEARRAY, D.BYTEARRAY],
                                     (self.serverID, self.publicKey, self.verifyToken))
             self.log.debug("CB (W)-> LOGIN ENCR REQUEST")
 
@@ -826,9 +802,9 @@ class Client:
         # "shared_secret|verify_token"
         self.log.debug("SB -> LOGIN ENCR RESPONSE")
         if self.serverversion < 6:
-            data = self.packet.readpkt([_BYTEARRAY_SHORT, _BYTEARRAY_SHORT])
+            data = self.packet.readpkt([D.BYTEARRAY_SHORT, D.BYTEARRAY_SHORT])
         else:
-            data = self.packet.readpkt([_BYTEARRAY, _BYTEARRAY])
+            data = self.packet.readpkt([D.BYTEARRAY, D.BYTEARRAY])
 
         sharedsecret = encryption.decrypt_shared_secret(data[0], self.privateKey)
         verifytoken = encryption.decrypt_shared_secret(data[1], self.privateKey)
@@ -869,7 +845,7 @@ class Client:
     # -----------------------
     def _parse_play_chat_message(self):
         self.log.debug("PLAY_CHAT")
-        data = self.packet.readpkt([_STRING])
+        data = self.packet.readpkt([D.STRING])
         if data is None:
             return False
 
@@ -915,10 +891,10 @@ class Client:
 
     def _parse_play_player_position(self):
         if self.clientversion < mcpackets.PROTOCOL_1_8START:
-            data = self.packet.readpkt([_DOUBLE, _DOUBLE, _DOUBLE, _DOUBLE, _BOOL])
+            data = self.packet.readpkt([D.DOUBLE, D.DOUBLE, D.DOUBLE, D.DOUBLE, D.BOOL])
             # ("double:x|double:y|double:yhead|double:z|bool:on_ground")
         elif self.clientversion >= mcpackets.PROTOCOL_1_8START:
-            data = self.packet.readpkt([_DOUBLE, _DOUBLE, _NULL, _DOUBLE, _BOOL])
+            data = self.packet.readpkt([D.DOUBLE, D.DOUBLE, D.NULL, D.DOUBLE, D.BOOL])
             # ("double:x|double:y|double:z|bool:on_ground")
         else:
             data = [0, 0, 0, 0]
@@ -927,9 +903,9 @@ class Client:
 
     def _parse_play_player_poslook(self):  # player position and look
         if self.clientversion < mcpackets.PROTOCOL_1_8START:
-            data = self.packet.readpkt([_DOUBLE, _DOUBLE, _DOUBLE, _DOUBLE, _FLOAT, _FLOAT, _BOOL])
+            data = self.packet.readpkt([D.DOUBLE, D.DOUBLE, D.DOUBLE, D.DOUBLE, D.FLOAT, D.FLOAT, D.BOOL])
         else:
-            data = self.packet.readpkt([_DOUBLE, _DOUBLE, _DOUBLE, _FLOAT, _FLOAT, _BOOL])
+            data = self.packet.readpkt([D.DOUBLE, D.DOUBLE, D.DOUBLE, D.FLOAT, D.FLOAT, D.BOOL])
         # ("double:x|double:y|double:z|float:yaw|float:pitch|bool:on_ground")
         self.position = (data[0], data[1], data[4])
         self.head = (data[4], data[5])
@@ -937,11 +913,11 @@ class Client:
 
     def _parse_play_teleport_confirm(self):
         # don't interfere with this and self.pktSB.PLAYER_POSLOOK... doing so will glitch the client
-        # data = self.packet.readpkt([_VARINT])
+        # data = self.packet.readpkt([D.VARINT])
         return True
 
     def _parse_play_player_look(self):
-        data = self.packet.readpkt([_FLOAT, _FLOAT, _BOOL])
+        data = self.packet.readpkt([D.FLOAT, D.FLOAT, D.BOOL])
         # ("float:yaw|float:pitch|bool:on_ground")
         self.head = (data[0], data[1])
         return True
@@ -951,11 +927,11 @@ class Client:
             data = None
             position = data
         elif mcpackets.PROTOCOL_1_7 <= self.clientversion < mcpackets.PROTOCOL_1_8START:
-            data = self.packet.readpkt([_BYTE, _INT, _UBYTE, _INT, _BYTE])
+            data = self.packet.readpkt([D.BYTE, D.INT, D.UBYTE, D.INT, D.BYTE])
             # "byte:status|int:x|ubyte:y|int:z|byte:face")
             position = (data[1], data[2], data[3])
         else:
-            data = self.packet.readpkt([_BYTE, _POSITION, _NULL, _NULL, _BYTE])
+            data = self.packet.readpkt([D.BYTE, D.POSITION, D.NULL, D.NULL, D.BYTE])
             # "byte:status|position:position|byte:face")
             position = data[1]
 
@@ -1011,23 +987,23 @@ class Client:
             position = data
 
         elif mcpackets.PROTOCOL_1_7 <= self.clientversion < mcpackets.PROTOCOL_1_8START:
-            data = self.packet.readpkt([_INT, _UBYTE, _INT, _BYTE, _SLOT_NO_NBT, _REST])
-            # "int:x|ubyte:y|int:z|byte:face|slot:item")  _REST includes cursor positions x-y-z
+            data = self.packet.readpkt([D.INT, D.UBYTE, D.INT, D.BYTE, D.SLOT_NO_NBT, D.REST])
+            # "int:x|ubyte:y|int:z|byte:face|slot:item")  D.REST includes cursor positions x-y-z
             position = (data[0], data[1], data[2])
 
             # just FYI, notchian servers have been ignoring this field ("item")
             # for a long time, using server inventory instead.
-            helditem = data[4]  # "item" - _SLOT
+            helditem = data[4]  # "item" - D.SLOT
 
         elif mcpackets.PROTOCOL_1_8START <= self.clientversion < mcpackets.PROTOCOL_1_9REL1:
-            data = self.packet.readpkt([_POSITION, _NULL, _NULL, _BYTE, _SLOT, _REST])
+            data = self.packet.readpkt([D.POSITION, D.NULL, D.NULL, D.BYTE, D.SLOT, D.REST])
             # "position:Location|byte:face|slot:item|byte:CurPosX|byte:CurPosY|byte:CurPosZ")
             # helditem = data["item"]  -available in packet, but server ignores it (we should too)!
             # starting with 1.8, the server maintains inventory also.
             position = data[0]
 
         else:  # self.clientversion >= mcpackets.PROTOCOL_1_9REL1:
-            data = self.packet.readpkt([_POSITION, _NULL, _NULL, _VARINT, _VARINT, _BYTE, _BYTE, _BYTE])
+            data = self.packet.readpkt([D.POSITION, D.NULL, D.NULL, D.VARINT, D.VARINT, D.BYTE, D.BYTE, D.BYTE])
             # "position:Location|varint:face|varint:hand|byte:CurPosX|byte:CurPosY|byte:CurPosZ")
             hand = data[4]  # used to be the spot occupied by "slot"
             position = data[0]
@@ -1071,7 +1047,7 @@ class Client:
         return True
 
     def _parse_play_use_item(self):  # no 1.8 or prior packet
-        data = self.packet.readpkt([_REST])
+        data = self.packet.readpkt([D.REST])
         # "rest:pack")
         player = self.getplayerobject()
         position = self.lastplacecoords
@@ -1087,7 +1063,7 @@ class Client:
         return True
 
     def _parse_play_held_item_change(self):
-        slot = self.packet.readpkt([_SHORT])
+        slot = self.packet.readpkt([D.SHORT])
         # "short:short")  # ["short"]
         if 9 > slot[0] > -1:
             self.slot = slot[0]
@@ -1097,12 +1073,12 @@ class Client:
 
     def _parse_play_player_update_sign(self):
         if self.clientversion < mcpackets.PROTOCOL_1_8START:
-            data = self.packet.readpkt([_INT, _SHORT, _INT, _STRING, _STRING, _STRING, _STRING])
+            data = self.packet.readpkt([D.INT, D.SHORT, D.INT, D.STRING, D.STRING, D.STRING, D.STRING])
             # "int:x|short:y|int:z|string:line1|string:line2|string:line3|string:line4")
             position = (data[0], data[1], data[2])
             pre_18 = True
         else:
-            data = self.packet.readpkt([_POSITION, _NULL, _NULL, _STRING, _STRING, _STRING, _STRING])
+            data = self.packet.readpkt([D.POSITION, D.NULL, D.NULL, D.STRING, D.STRING, D.STRING, D.STRING])
             # "position:position|string:line1|string:line2|string:line3|string:line4")
             position = data[0]
             pre_18 = False
@@ -1137,19 +1113,19 @@ class Client:
 
     def _parse_play_client_settings(self):  # read Client Settings
         """ This is read for later sending to servers we connect to """
-        self.clientSettings = self.packet.readpkt([_RAW])[0]
+        self.clientSettings = self.packet.readpkt([D.RAW])[0]
         self.clientSettingsSent = True  # the packet is not stopped, sooo...
         return True
 
     def _parse_play_click_window(self):  # click window
         if self.clientversion < mcpackets.PROTOCOL_1_8START:
-            data = self.packet.readpkt([_BYTE, _SHORT, _BYTE, _SHORT, _BYTE, _SLOT_NO_NBT])
+            data = self.packet.readpkt([D.BYTE, D.SHORT, D.BYTE, D.SHORT, D.BYTE, D.SLOT_NO_NBT])
             # ("byte:wid|short:slot|byte:button|short:action|byte:mode|slot:clicked")
         elif mcpackets.PROTOCOL_1_8START < self.clientversion < mcpackets.PROTOCOL_1_9START:
-            data = self.packet.readpkt([_UBYTE, _SHORT, _BYTE, _SHORT, _BYTE, _SLOT])
+            data = self.packet.readpkt([D.UBYTE, D.SHORT, D.BYTE, D.SHORT, D.BYTE, D.SLOT])
             # ("ubyte:wid|short:slot|byte:button|short:action|byte:mode|slot:clicked")
         elif mcpackets.PROTOCOL_1_9START <= self.clientversion < mcpackets.PROTOCOL_MAX:
-            data = self.packet.readpkt([_UBYTE, _SHORT, _BYTE, _SHORT, _VARINT, _SLOT])
+            data = self.packet.readpkt([D.UBYTE, D.SHORT, D.BYTE, D.SHORT, D.VARINT, D.SLOT])
             # ("ubyte:wid|short:slot|byte:button|short:action|varint:mode|slot:clicked")
         else:
             data = [False, 0, 0, 0, 0, 0, 0]
@@ -1208,11 +1184,11 @@ class Client:
         # player; if necessary, the player will be respawned in the right world."
         """ Inter-dimensional player-to-player TP ! """  # TODO !
 
-        data = self.packet.readpkt([_UUID, _NULL])  # solves the uncertainty of dealing with what gets returned.
+        data = self.packet.readpkt([D.UUID, D.NULL])  # solves the uncertainty of dealing with what gets returned.
         # ("uuid:target_player")
         for client in self.wrapper.proxy.clients:
             if data[0] == client.uuid:
-                self.server_connection.packet.sendpkt(self.pktSB.SPECTATE, [_UUID], [client.serveruuid])
+                self.server_connection.packet.sendpkt(self.pktSB.SPECTATE, [D.UUID], [client.serveruuid])
                 return False
         return True
 
@@ -1222,7 +1198,7 @@ class Client:
         return self._read_keep_alive()
 
     def _parse_lobby_chat_message(self):
-        data = self.packet.readpkt([_STRING])
+        data = self.packet.readpkt([D.STRING])
         if data is None:
             return True
 

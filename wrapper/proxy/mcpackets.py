@@ -60,33 +60,6 @@ PROTOCOL_1_7 = 4          # 1.7.1-pre to 1.7.5
  Accordingly, an old protocol version number may ambiguously refer to an one of those old versions and
  from the list above.  Do not run a 1.6.4 server with proxy mode."""
 
-# region Constants # unused at present. intended to be used so a calling module does not need to define them.
-# ------------------------------------------------
-
-_STRING = 0
-_JSON = 1
-_UBYTE = 2
-_BYTE = 3
-_INT = 4
-_SHORT = 5
-_USHORT = 6
-_LONG = 7
-_DOUBLE = 8
-_FLOAT = 9
-_BOOL = 10
-_VARINT = 11
-_BYTEARRAY = 12
-_BYTEARRAY_SHORT = 13
-_POSITION = 14
-_SLOT = 15
-_UUID = 16
-_METADATA = 17
-_SLOT_NO_NBT = 18
-_REST = 90
-_RAW = 90
-_NULL = 100
-# endregion
-
 
 class ClientBound:
     def __init__(self, protocol):

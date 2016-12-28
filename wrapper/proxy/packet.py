@@ -231,7 +231,7 @@ class Packet:
 
     def read(self, expression):
         """
-        This is deprecated. It functions as a readpkt() wrapper.  This is not as fast as calling readpkt(), but
+        a readpkt() wrapper.  This is not as fast as calling readpkt(), but
         makes a nice abstraction and is back-wards compatible.  It is also nice because it gives you a dictionary back.
 
         Args:
@@ -287,7 +287,7 @@ class Packet:
 
     def send(self, pkid, expression, payload):
         """
-        This is deprecated. It functions as a sendpkt() wrapper.  This is not as fast as calling sendpkt(),
+        A sendpkt() wrapper.  This is not as fast as calling sendpkt(),
         is back-wards compatible, but not really any easier to use.
 
         Args:
