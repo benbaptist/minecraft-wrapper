@@ -68,13 +68,12 @@ class MCServer:
         self.api = API(wrapper, "Server", internal=True)
 
         if "ServerStarted" not in self.wrapper.storage:
-            self.wrapper.storage["ServerStarted"] = True
-            self.wrapper.storage.save()
+            self._toggle_server_started(False)
 
         self.state = OFF
         self.bootTime = time.time()
-        self.serverbooted = self.wrapper.storage["ServerStarted"]
-        self.server_handle_on = False
+        self.boot_server = self.wrapper.storage["ServerStarted"]  # False/True - whether server will attempt boot
+        self.server_autorestart = self.config["General"]["auto-restart"]  # whether a stopped server tries rebooting
         self.proc = None
         self.rebootWarnings = 0
         self.lastsizepoll = 0
@@ -89,7 +88,6 @@ class MCServer:
         if not self.wrapper.storage["ServerStarted"]:
             self.log.warning("NOTE: Server was in 'STOP' state last time Wrapper.py was running. "
                              "To start the server, run /start.")
-            time.sleep(5)
 
         # Server Information
         self.players = {}
@@ -131,86 +129,7 @@ class MCServer:
         capturethread.start()
 
     def __del__(self):
-        self.state = 0  # OFF use hard-coded number in case Class MCSState is GC'ed
-
-    def handle_server(self):
-        """
-        Function that handles booting the server, parsing console output, and such.
-        """
-
-        trystart = 0
-        if self.server_handle_on:
-            return
-        while not self.wrapper.halt:
-            trystart += 1
-            self.proc = None
-            self.server_handle_on = True
-            if not self.serverbooted:
-                time.sleep(0.1)
-                trystart = 0
-                continue
-            self.changestate(STARTING)
-            self.log.info("Starting server...")
-            self.reloadproperties()
-            self.proc = subprocess.Popen(self.args, cwd=self.serverpath, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                         stdin=subprocess.PIPE, universal_newlines=True)
-            self.players = {}
-            self.accepteula()  # Auto accept eula
-            if self.proc.poll() is None and trystart > 3:
-                self.log.error("Could not start server.  check your server.properties, wrapper.properties and this"
-                               " startup 'command' from wrapper.properties:\n'%s'", " ".join(self.args))
-                self.changestate(OFF)
-                self.server_handle_on = False
-                break
-
-            # The server loop
-            while True:
-                time.sleep(0.1)
-                if self.proc.poll() is not None:
-                    self.changestate(OFF)
-                    if not self.config["General"]["auto-restart"]:
-                        self.wrapper.halt = True
-                    break
-
-                # This level runs continously once server console starts
-                # is is only reading server console output
-                for line in self.console_output_data:
-                    try:
-                        self.readconsole(line.replace("\r", ""))
-                    except Exception as e:
-                        self.log.exception(e)
-                self.console_output_data = []
-            self.server_handle_on = False
-
-    def start(self, save=True):
-        """
-        Start the Minecraft server
-        """
-        if self.state in (STARTED, STARTING):
-            self.log.warning("The server is already running!")
-            return
-        if not self.serverbooted:
-            self.serverbooted = True
-        else:
-            self.handle_server()
-        if save:
-            self.wrapper.storage["ServerStarted"] = True
-            self.wrapper.storage.save()
-
-    def restart(self, reason=""):
-        """
-        Restart the Minecraft server, and kick people with the specified reason
-        """
-        if reason == "":
-            reason = self.restart_message
-        if self.state in (STOPPING, OFF):
-            self.log.warning("The server is not already running... Just use '/start'.")
-            return
-        self.log.info("Restarting Minecraft server with reason: %s", reason)
-        self.changestate(STOPPING, reason)
-        for player in self.players:
-            self.console("kick %s %s" % (player, reason))
-        self.console("stop")
+        self.state = 0
 
     def accepteula(self):
 
@@ -229,28 +148,116 @@ class MCServer:
         else:
             return False
 
-    def stop(self, reason="", save=True):
+    def handle_server(self):
         """
-        Stop the Minecraft server, prevent it from auto-restarting.
+        Function that handles booting the server, parsing console output, and such.
+        """
+        trystart = 0
+        while not self.wrapper.halt:
+            trystart += 1
+            self.proc = None
+
+            # endless loop for not booting the server (but allowing handle to run).
+            if not self.boot_server:
+                time.sleep(0.2)
+                trystart = 0
+                continue
+
+            self.changestate(STARTING)
+            self.log.info("Starting server...")
+            self.reloadproperties()
+            self.proc = subprocess.Popen(self.args, cwd=self.serverpath, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                         stdin=subprocess.PIPE, universal_newlines=True)
+            self.players = {}
+            self.accepteula()  # Auto accept eula
+
+            if self.proc.poll() is None and trystart > 3:
+                self.log.error("Could not start server.  check your server.properties, wrapper.properties and this"
+                               " startup 'command' from wrapper.properties:\n'%s'", " ".join(self.args))
+                self.changestate(OFF)
+                # halt wrapper
+                self.wrapper.halt = True
+                # exit server_handle
+                break
+
+            # The server loop
+            while True:
+                # This loop runs continously as long as server console is running
+                time.sleep(0.1)
+                if self.proc.poll() is not None:
+                    self.changestate(OFF)
+                    self.boot_server = self.server_autorestart
+                    # break back out to `while not self.wrapper.halt:` loop to (possibly) connect to server again.
+                    break
+
+                # is is only reading server console output
+                for line in self.console_output_data:
+                    try:
+                        self.readconsole(line.replace("\r", ""))
+                    except Exception as e:
+                        self.log.exception(e)
+                self.console_output_data = []
+        # otherwise, code ends here on wrapper.halt and execution returns to the end of wrapper.start()
+
+    def _toggle_server_started(self, server_started=True):
+        self.wrapper.storage["ServerStarted"] = server_started
+        self.wrapper.storage.save()
+
+    def start(self):
+        """
+        Start the Minecraft server
+        """
+        self.server_autorestart = self.config["General"]["auto-restart"]
+        if self.state in (STARTED, STARTING):
+            self.log.warning("The server is already running!")
+            return
+        if not self.boot_server:
+            self.boot_server = True
+        else:
+            self.handle_server()
+
+        self._toggle_server_started()
+
+    def restart(self, reason=""):
+        """
+        Restart the Minecraft server, and kick people with the specified reason
+        """
+        if reason == "":
+            reason = self.restart_message
+        if self.state in (STOPPING, OFF):
+            self.log.warning("The server is not already running... Just use '/start'.")
+            return
+        self.stop(reason)
+
+    def stop(self, reason="", restart_the_server=True):
+        """
+        Stop the Minecraft server from an automatic process.  Allow it to restart by default.
+        """
+        self.log.info("Stopping Minecraft server with reason: %s", reason)
+        self.changestate(STOPPING, reason)
+        for player in self.players:
+            self.console("kick %s %s" % (player, reason))
+        self.console("stop")
+
+        # False will allow this loop to run with no server (and reboot if permitted).
+        self.boot_server = restart_the_server
+
+    def stop_server_command(self, reason="", restart_the_server=False):
+        """
+        Stop the Minecraft server (as a command).  By default, do not restart.
         """
         if reason == "":
             reason = self.stop_message
-        if self.state in (STOPPING, OFF):
+        if self.state == OFF:
             self.log.warning("The server is not running... :?")
             return
         if self.state == FROZEN:
             self.log.warning("The server is currently frozen.\n"
                              "To stop it, you must /unfreeze it first")
             return
-        self.log.info("Stopping Minecraft server with reason: %s", reason)
-        self.changestate(STOPPING, reason)
-        self.serverbooted = False
-        if save:
-            self.wrapper.storage["ServerStarted"] = False
-            self.wrapper.storage.save()
-        self.console("save-all flush")
-        self.console("stop")  # really no reason to kick the players.  Stop will do it
-        time.sleep(3)
+        self.server_autorestart = False
+        self.stop(reason, restart_the_server)
+        self._toggle_server_started(restart_the_server)
 
     def kill(self, reason="Killing Server"):
         """ 
@@ -392,14 +399,14 @@ class MCServer:
         """
         Execute a console command on the server
         """
-        if self.state in (STARTING, STARTED, STOPPING):
+        if self.state in (STARTING, STARTED, STOPPING) and self.proc:
             self.proc.stdin.write("%s\n" % command)
         else:
-            self.log.info("Server is not started. Please run '/start' to boot it up.")
+            self.log.debug("Attempted to run console command '%s' but the Server is not started.", command)
 
     def changestate(self, state, reason=None):
         """
-        Change the boot state of the server, with a reason message
+        Change the boot state indicator of the server, with a reason message.
         """
         self.state = state
         if self.state == OFF:
@@ -422,6 +429,7 @@ class MCServer:
 
     def server_reload(self):
         """
+        This is not used yet.. intended to restart a server without kicking players
         Restarts the server quickly.  Wrapper "auto-restart" must be set to True.
         If wrapper is in proxy mode, it will reconnect all clients to the serverconnection.
         """
@@ -445,12 +453,7 @@ class MCServer:
             # once server is back up,  Reconnect stalled/idle clients back to the serverconnection process.
             #   #  do I need to create a new serverconnection, or can the old one be tricked into continuing??
 
-        reason = None
-        self.log.info("Restarting Minecraft server with reason:")
-        self.changestate(STOPPING, reason)
-        for player in self.players:
-            self.console("kick %s %s" % (player, reason))
-        self.console("stop")
+        self.stop_server_command()
 
     def __stdout__(self):
         # handles server output, not lines typed in console.
@@ -646,6 +649,7 @@ class MCServer:
 
         # confirm server start
         elif "Done (" in buff:
+            self._toggle_server_started(True)
             self.changestate(STARTED)
             self.log.info("Server started")
             self.bootTime = time.time()

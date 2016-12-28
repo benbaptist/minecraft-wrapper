@@ -413,7 +413,7 @@ class IRC:
                             self.javaserver.changestate(3)
                         elif getargs(message.split(" "), 0) == 'stop':
                             self.javaserver.console('stop')
-                            self.javaserver.stop("Stopped from IRC remote")
+                            self.javaserver.stop_server_command("Stopped from IRC remote")
                             msg("Server stopping")
                         elif getargs(message.split(" "), 0) == 'start':
                             self.javaserver.start()

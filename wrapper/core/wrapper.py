@@ -120,7 +120,7 @@ class Wrapper:
         # requests is just being used in too many places to try and track its usages piece-meal.
         if not requests:
             self.log.error("You must have the requests module installed to use wrapper!")
-            self._halt(server_running=False)
+            self._halt()
 
     def __del__(self):
         if self.storage:  # prevent error message on very first wrapper starts when wrapper exits after creating
@@ -203,6 +203,21 @@ class Wrapper:
 
         # wrapper execution ends here.  handle_server ends when wrapper.halt is True.
 
+    def signals(self):
+        signal.signal(signal.SIGINT, self.sigint)  # CTRL-C
+        signal.signal(signal.SIGTERM, self.sigint)  # (I dont think wrapper will actually be allowed to stop SIGTERM)
+
+    def sigint(*args):
+        self = args[0]  # We are only interested in the self component
+        self._halt()
+
+    def _halt(self):
+        self.javaserver.stop("Halting server...")
+        self.halt = True
+
+    def shutdown(self):
+        self._halt()
+
     def getconsoleinput(self):
         if self.use_readline:
             # Obtain a line of console input
@@ -252,9 +267,9 @@ class Wrapper:
 
             # Console only commands (not accessible in-game)
             if command.lower() in ("/halt", "halt"):
-                self._halt(self.javaserver.state in (1, 2, 4))
+                self._halt()
             elif command.lower() in ("/stop", "stop"):
-                self.javaserver.stop("Stopping server...")
+                self.javaserver.stop_server_command("Stopping server...")
             elif command.lower() == "/kill":  # "kill" (with no slash) is a server command.
                 self.javaserver.kill("Server killed at Console...")
             elif command.lower() in ("/start", "start"):
@@ -605,24 +620,6 @@ class Wrapper:
         cm = threading.Thread(target=self._pause_console, args=(pausetime,))
         cm.daemon = True
         cm.start()
-
-    def signals(self):
-        signal.signal(signal.SIGINT, self.sigint)  # CTRL-C
-        # signal.signal(signal.SIGTERM, self.sigterm)
-
-    def sigint(*args):  # doing this allows the calling function to pass extra args without defining/using them here
-        print("\b\bWRAPPER SIGINT'ed\n\n")
-        self = args[0]  # .. as we are only interested in the self component
-        self._halt()
-
-    def _halt(self, server_running=True):
-        if server_running:
-            self.javaserver.stop("Halting server...", save=False)
-        self.halt = True
-        sys.exit()
-
-    def shutdown(self, server_running=True,):
-        self._halt(server_running)
 
     def _freeze(self):
         try:

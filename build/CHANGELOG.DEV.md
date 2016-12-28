@@ -1,5 +1,8 @@
-Build 171 Version [0.9.10]  (future version)
+Build 172 Version [0.9.11]  (future version)
 - "we must push the build so we can find out what's in it!"
+
+Build 171 Version [0.9.10]
+- Finally bigfix wrapper /start /restart /stop /halt commands to an error-free state with serverStart flag properly set at shutdowns
 
 Build 170 Version [0.9.9]
 - turn of debug parsing by default.
