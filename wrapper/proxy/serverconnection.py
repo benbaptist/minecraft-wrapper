@@ -827,6 +827,8 @@ class ServerConnection:
     def _parse_entity_metadata(self):
         data = self.packet.readpkt([D.VARINT, D.METADATA_1_9])
         self.log.debug("EID: %s\n%s\n", data[0], data[1])
+        self.client.packet.sendpkt(self.pktCB.ENTITY_METADATA, [D.VARINT, D.METADATA_1_9], (data[0], data[1]))
+        return False
 
     # Lobby parsers
     # -----------------------
