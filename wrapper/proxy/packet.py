@@ -603,7 +603,7 @@ class Packet:
         return struct.unpack(">f", self.read_data(4))[0]
 
     def read_bool(self):
-        return self.read_data(1) == 0x01
+        return struct.unpack("b", self.read_data(1))[0] == 1
 
     def read_varint(self):
         total = 0

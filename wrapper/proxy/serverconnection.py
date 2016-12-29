@@ -825,8 +825,23 @@ class ServerConnection:
         self.close_server(message)
 
     def _parse_entity_metadata(self):
+        """
+        This packet is parsed, then re-constituted, the original rejected, and and new packet formed to the client.
+        if the entity is a baby, we rename it.. All of this, just for fun! (and as a demo)  Otherwise,
+        this is a pretty useless parse, unless we opt to pump this data into the entity API.
+        """
         eid, metadata = self.packet.readpkt([D.VARINT, D.METADATA_1_9])
-        self.log.info("EID: %s\n%s\n", eid, metadata)
+        self.log.debug("EID: %s - %s", eid, metadata)
+        if 12 in metadata:  # ageable
+            if 6 in metadata[12]:  # boolean isbaby
+                if metadata[12][1] is True:  # it's a baby!
+
+                    # print the data for reference
+                    # see http://wiki.vg/Entities#Entity_Metadata_Format
+                    self.log.debug("EID: %s - %s", eid, metadata)
+                    # name the baby and make tag visible (no index/type checking; accessing base entity class)
+                    metadata[2] = (3, "Entity_%s" % eid)
+                    metadata[3] = (6, True)
 
         self.client.packet.sendpkt(self.pktCB.ENTITY_METADATA, [D.VARINT, D.METADATA_1_9], (eid, metadata))
         return False
