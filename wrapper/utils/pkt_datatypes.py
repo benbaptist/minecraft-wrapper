@@ -33,7 +33,9 @@ SLOT = 15
 SLOT_NO_NBT = 18
 
 UUID = 16
-METADATA = 17
+
+METADATA = 17  # this is the old pre-1.9 metadata parsing.  It is radically different in 1.9+ now (through 11.2 atm)
+METADATA_1_9 = 19
 
 
 # Both of these just read or send the rest of the packet in its raw bytes form.
