@@ -72,6 +72,10 @@ class Packet:
         self.sendCipher = None
         self.compressThreshold = -1
         self.abort = False
+
+        # this is set by the calling class/method.  Not presently used here, but could be. maybe to decide
+        #  which metadata parser to use?
+        self.version = -1
         self.buffer = io.BytesIO()  # Py3
         # self.buffer = StringIO.StringIO()
 
@@ -125,6 +129,7 @@ class Packet:
             15: self.send_slot,
             16: self.send_uuid,
             17: self.send_metadata,
+            19: self.send_metadata_1_9,
             90: self.send_pay,
             100: self.send_nothing
         }
@@ -680,6 +685,7 @@ class Packet:
                     meta_data[index] = (data_type, (bool_option, self.read_position()))
                 else:
                     meta_data[index] = (data_type, (bool_option, ))
+
             elif data_type == 10:  # Direction (VarInt) (Down = 0, Up = 1, North = 2, South = 3, West = 4, East = 5)
                 meta_data[index] = (data_type, self.read_varint())
 
@@ -687,6 +693,8 @@ class Packet:
                 bool_option = self.read_bool()
                 if bool_option:
                     meta_data[index] = (data_type, self.read_uuid())
+                else:
+                    meta_data[index] = (data_type, (bool_option, ))
 
             elif data_type == 12:  # BlockID (VarInt)  notes: id << 4 | data - 0 for absent otherwise, id << 4 | data
                 meta_data[index] = (data_type, self.read_varint())
