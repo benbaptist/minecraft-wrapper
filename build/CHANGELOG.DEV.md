@@ -1,5 +1,14 @@
-Build 172 Version [0.9.11]  (future version)
+Build 172 Version [0.9.12]  (future version)
 - "we must push the build so we can find out what's in it!"
+
+Build 172 Version [0.9.11]
+- FUN STUFF just for this build! - Babies are given nametags above their heads with their EID!
+   (done to test the metadata code!)
+- serious bugfix in packet.read_bool() where all booleans were always false. detected this while:
+- bring entity metadata parsing up to date (new methods for 1.9+ added)
+- implemented new 1.9 entity packet.read_metadata and packet.send_metadata.  These are suffixed as
+   _1_9 (i.e., read_metadata_1_9).
+- refactor the datatype constants for parsing to their own module (preparing for inclusion in API)
 
 Build 171 Version [0.9.10]
 - Finally bigfix wrapper /start /restart /stop /halt commands to an error-free state with serverStart flag properly set at shutdowns

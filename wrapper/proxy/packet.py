@@ -56,6 +56,7 @@ _CODERS = {
     "slot_noNBT": 18,
     "uuid": 16,
     "metadata": 17,
+    "metadata1.9": 19,
     "rest": 90,
     "raw": 90
 }
@@ -70,8 +71,11 @@ class Packet:
         self.recvCipher = None
         self.sendCipher = None
         self.compressThreshold = -1
-        self.version = 5
         self.abort = False
+
+        # this is set by the calling class/method.  Not presently used here, but could be. maybe to decide
+        #  which metadata parser to use?
+        self.version = -1
         self.buffer = io.BytesIO()  # Py3
         # self.buffer = StringIO.StringIO()
 
@@ -125,6 +129,7 @@ class Packet:
             15: self.send_slot,
             16: self.send_uuid,
             17: self.send_metadata,
+            19: self.send_metadata_1_9,
             90: self.send_pay,
             100: self.send_nothing
         }
@@ -148,6 +153,7 @@ class Packet:
             16: self.read_uuid,
             17: self.read_metadata,
             18: self.read_slot_nbtless,
+            19: self.read_metadata_1_9,
             90: self.read_rest,
             100: self.read_none
         }
@@ -231,7 +237,7 @@ class Packet:
 
     def read(self, expression):
         """
-        This is deprecated. It functions as a readpkt() wrapper.  This is not as fast as calling readpkt(), but
+        a readpkt() wrapper.  This is not as fast as calling readpkt(), but
         makes a nice abstraction and is back-wards compatible.  It is also nice because it gives you a dictionary back.
 
         Args:
@@ -399,6 +405,62 @@ class Packet:
     def send_uuid(self, payload):
         return payload.bytes
 
+    def send_metadata_1_9(self, meta_data):
+        """ payload is a dictionary of entity metadata items, keyed by index number."""
+        b = ""
+        for index in meta_data:
+            b += self.send_ubyte(index)  # Index
+
+            value_type = meta_data[index][0]  # Type
+            b += self.send_byte(value_type)
+
+            value = meta_data[index][1]  # value
+
+            if value_type == 0:
+                b += self.send_byte(value)
+            elif value_type == 1:
+                b += self.send_varint(value)
+            elif value_type == 2:
+                b += self.send_float(value)
+            elif value_type == 3:
+                b += self.send_string(value)
+            elif value_type == 4:
+                b += self.send_json(value)
+            elif value_type == 5:
+                b += self.send_slot(value)
+            elif value_type == 6:
+                b += self.send_bool(value)
+            elif value_type == 7:
+                b += self.send_float(value[0])
+                b += self.send_float(value[1])
+                b += self.send_float(value[2])
+            elif value_type == 8:
+                b += self.send_position(value)
+
+            elif value_type == 9:  # OPT Position
+                bool_option = value[0]
+                b += self.send_bool(bool_option)
+                if bool_option:
+                    b += self.send_position(value[1])
+
+            elif value_type == 10:
+                b += self.send_varint(value)
+
+            elif value_type == 11:  # OPT UUID
+                bool_option = value[0]
+                b += self.send_bool(bool_option)
+                if bool_option:
+                    b += self.send_uuid(value[1])
+
+            elif value_type == 12:
+                b += self.send_varint(value)
+
+            else:
+                print("Unsupported data type '%d' for send_metadata()  (Class Packet)" % value_type)
+                raise ValueError
+        b += self.send_ubyte(0xff)
+        return b
+
     def send_metadata(self, payload):
         b = ""
         for index in payload:
@@ -416,6 +478,16 @@ class Packet:
                 b += self.send_float(value)
             elif type_ == 4:
                 b += self.send_string(value)
+            elif type_ == 5:
+                b += self.send_slot(value)
+            elif type_ == 6:
+                b += self.send_int(value[0])
+                b += self.send_int(value[1])
+                b += self.send_int(value[2])
+            elif type_ == 7:
+                b += self.send_float(value[0])
+                b += self.send_float(value[1])
+                b += self.send_float(value[2])
             else:
                 print("Unsupported data type '%d' for send_metadata()  (Class Packet)" % type_)
                 raise ValueError
@@ -531,7 +603,7 @@ class Packet:
         return struct.unpack(">f", self.read_data(4))[0]
 
     def read_bool(self):
-        return self.read_data(1) == 0x01
+        return struct.unpack("b", self.read_data(1))[0] == 1
 
     def read_varint(self):
         total = 0
@@ -579,30 +651,94 @@ class Packet:
     def read_uuid(self):
         return MCUUID(bytes=self.read_data(16))
 
-    def read_metadata(self):
-        data = {}
+    def read_metadata_1_9(self):
+        meta_data = {}
         while True:
-            a = self.read_ubyte()
-            if a == 0x7f:
-                return data
-            index = a & 0x1f
-            type_ = a >> 5
-            if type_ == 0:
-                data[index] = (type_, self.read_byte())
-            elif type_ == 1:
-                data[index] = (type_, self.read_short())
-            elif type_ == 2:
-                data[index] = (type_, self.read_int())
-            elif type_ == 3:
-                data[index] = (type_, self.read_float())
-            elif type_ == 4:
-                data[index] = (type_, self.read_string())
-            elif type_ == 5:
-                data[index] = (type_, self.read_slot())
-            elif type_ == 6:
-                data[index] = (type_, (self.read_int(), self.read_int(), self.read_int()))
+            index = self.read_ubyte()  # index keys the meaning ( base class 0-5, 6 extending, etc)
+            if index == 0xff:
+                return meta_data
+            data_type = self.read_byte()  # a byte coding the data type
+            if data_type == 0:
+                meta_data[index] = (data_type, self.read_byte())
+            elif data_type == 1:
+                meta_data[index] = (data_type, self.read_varint())
+            elif data_type == 2:
+                meta_data[index] = (data_type, self.read_float())
+            elif data_type == 3:
+                meta_data[index] = (data_type, self.read_string())
+            elif data_type == 4:
+                # old 'thinkofdeath' chat spec: http://wayback.archive.org/web/20160306101755/http://wiki.vg/Chat
+                meta_data[index] = (data_type, self.read_json())
+            elif data_type == 5:
+                meta_data[index] = (data_type, self.read_slot())
+            elif data_type == 6:
+                meta_data[index] = (data_type, self.read_bool())
+
+            elif data_type == 7:  # "vector3F" 3 floats: rotation on x, rotation on y, rotation on z
+                meta_data[index] = (data_type, (self.read_float(), self.read_float(), self.read_float()))
+            elif data_type == 8:
+                meta_data[index] = (data_type, self.read_position())
+
+            elif data_type == 9:  # OptPosition (Bool + Optional Position) Position present if Boolean is set to true
+                bool_option = self.read_bool()
+                if bool_option:
+                    meta_data[index] = (data_type, (bool_option, self.read_position()))
+                else:
+                    meta_data[index] = (data_type, (bool_option, ))
+
+            elif data_type == 10:  # Direction (VarInt) (Down = 0, Up = 1, North = 2, South = 3, West = 4, East = 5)
+                meta_data[index] = (data_type, self.read_varint())
+
+            elif data_type == 11:  # OptUUID (Boolean + Optional UUID) UUID is present if the Boolean is set to true
+                bool_option = self.read_bool()
+                if bool_option:
+                    meta_data[index] = (data_type, self.read_uuid())
+                else:
+                    meta_data[index] = (data_type, (bool_option, ))
+
+            elif data_type == 12:  # BlockID (VarInt)  notes: id << 4 | data - 0 for absent otherwise, id << 4 | data
+                meta_data[index] = (data_type, self.read_varint())
+
             else:
-                print("Unsupported data type '%d' for read_metadata()  (Class Packet)", type_)
+                print("Unsupported data type '%d' for read_metadata_1_9()  (Class Packet)", data_type)
+                raise ValueError
+
+    def read_metadata(self):
+        """
+        /* Prior to 1.9 only! */
+        Sept 3, 2012 in the wayback machine, this was valid for whatever the MC version was.
+        This changed March 6th 2016 with 1.9:
+        http://wayback.archive.org/web/20160306082342/http://wiki.vg/Entities
+        """
+        meta_data = {}
+        while True:
+            # "To create the byte, you can use this: (Type << 5 | Index & 0x1F) & 0xFF"
+            lead_ubyte = self.read_ubyte()
+            if lead_ubyte == 0x7f:
+                return meta_data
+            index = lead_ubyte & 0x1f  # Lower 5 bits
+            data_type = lead_ubyte >> 5
+            if data_type == 0:
+                meta_data[index] = (data_type, self.read_byte())
+            elif data_type == 1:
+                meta_data[index] = (data_type, self.read_short())
+            elif data_type == 2:
+                meta_data[index] = (data_type, self.read_int())
+            elif data_type == 3:
+                meta_data[index] = (data_type, self.read_float())
+            elif data_type == 4:
+                meta_data[index] = (data_type, self.read_string())
+            elif data_type == 5:
+                meta_data[index] = (data_type, self.read_slot())
+            elif data_type == 6:
+                meta_data[index] = (data_type, (self.read_int(), self.read_int(), self.read_int()))
+
+            # Sept 2014, this was added (MC 1.7.2 protocol 4?)  Oct 22 2015
+            elif data_type == 7:
+                meta_data[index] = (data_type, (self.read_float(), self.read_float(), self.read_float()))
+
+            else:
+                print("Unsupported data type '%d' for read_metadata()  (Class Packet)", data_type)
                 raise ValueError
 
     def read_slot_nbtless(self):
