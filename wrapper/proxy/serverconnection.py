@@ -232,7 +232,7 @@ class ServerConnection:
                 self.pktCB.LOGIN_SET_COMPRESSION: self._parse_login_set_compression
             },
             self.proxy.PLAY: {
-                0x2c: self._parse_play_combat_event,
+                self.pktCB.COMBAT_EVENT: self._parse_play_combat_event,
                 self.pktCB.KEEP_ALIVE: self._parse_play_keep_alive,
                 self.pktCB.CHAT_MESSAGE: self._parse_play_chat_message,
                 self.pktCB.JOIN_GAME: self._parse_play_join_game,
@@ -255,7 +255,8 @@ class ServerConnection:
                 self.pktCB.WINDOW_ITEMS: self._parse_play_window_items,
                 self.pktCB.ENTITY_PROPERTIES: self._parse_play_entity_properties,
                 self.pktCB.PLAYER_LIST_ITEM: self._parse_play_player_list_item,
-                self.pktCB.DISCONNECT: self._parse_play_disconnect
+                self.pktCB.DISCONNECT: self._parse_play_disconnect,
+                self.pktCB.ENTITY_METADATA: self._parse_entity_metadata,
                 },
             self.proxy.LOBBY: {
                 self.pktCB.DISCONNECT: self._parse_lobby_disconnect,
@@ -822,6 +823,10 @@ class ServerConnection:
         message = self.packet.readpkt([D.JSON])
         self.log.info("%s disconnected from Server", self.username)
         self.close_server(message)
+
+    def _parse_entity_metadata(self):
+        data = self.packet.readpkt([D.VARINT, D.METADATA_1_9])
+        self.log.debug("EID: %s\n%s\n", data[0], data[1])
 
     # Lobby parsers
     # -----------------------
