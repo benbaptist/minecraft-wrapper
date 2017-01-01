@@ -1,22 +1,35 @@
-#Overview#
-Wrapper.py is an easy to use Minecraft server wrapper for adding extra functionality into the server without modifying the server jar file.
-</br></br>It also comes with a relatively simple and straight-forward - yet powerful - plugin API that can be used to create Bukkit-like plugins with no server modding.  The API works best when operated in proxy mode. (If you are using a modded server system like bukkit, forge, sponge, etc, wrapper should __not__ be run in proxy mode!)
+# Overview #
+Wrapper.py is an easy to use Minecraft server wrapper for adding extra functionality into the server without modifying 
+the server jar file.
+</br></br>It also comes with a relatively simple and straight-forward - yet powerful - plugin API that can be used
+ to create Bukkit-like plugins with no server modding.  The API works best when operated in proxy mode.
 
-[![Join the chat at https://gitter.im/benbaptist/minecraft-wrapper](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/benbaptist/minecraft-wrapper?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
+We also have a gitter channel: [![Join the chat at https://gitter.im/benbaptist/minecraft-wrapper](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/benbaptist/minecraft-wrapper?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 NOTICE: Wrapper will Accept the minecraft server EULA on your behalf.  Using wrapper means you also accept the EULA, which
 will be set to true in the eula.txt file in your server folder.
 [Mojang EULA](https://account.mojang.com/documents/minecraft_eula)
 
 
-#Installation#
-Wrapper.py doesn't require any special modules for most of the basic features to work, but web mode and proxy mode require `requests` and `pycrypto`, and `pkg_resources`.  Some systems may also need `readline` (which is usually standard).
+# Installation #
 
-You will also need "tar" installed if you need backups. Most Linux distros have this pre-installed, but you may need to install it manually on Windows: http://gnuwin32.sourceforge.net/packages/gtar.htm
+###  **Dependencies**
 
-You only need to download Wrapper.py, the 'wrapper' folder is just the extracted version of Wrapper.py.</br>
+Wrapper.py doesn't require any special modules for most of the basic features to work, but web mode and proxy mode
+ require `requests` and `pycrypto`, and `pkg_resources`.  Some systems may also need `readline` (which is usually standard).
 
-**Wrapper.py Versions**
+You will also need "tar" installed if you need backups. Most Linux distros have this pre-installed, but you may need to
+ install it manually on Windows: http://gnuwin32.sourceforge.net/packages/gtar.htm
+
+
+
+###  **Wrapper.py Versions**
+
+You only need to download Wrapper.py, the 'wrapper' folder is the source code and is just the extracted version
+ of Wrapper.py.  Wrapper.py is a Python-executable zipped-up folder, rather than a plain text file.
+
+
 The original stable branch "master" is build (version 0.7.6).  This version is considered to be the working 
 standard version.  However, it is quite old at this point and the development version has far outpaced it.
 
@@ -28,15 +41,16 @@ The current "development" branch version (0.9.x) is now at a point where it is p
 - The features/advantages of the 0.9.x version are presently too numerous to list.
 
 
-**Python Versions**
 
-*Wrapper is presently written for Python 2.7, but we are progressing towards python 3.*
+###  **Python Versions**
+
+*Wrapper is only designed to be compatible with Python 2.7+ and python 3.4+ versions
 
 *It may run under 2.6, but this may cause problems with some dependencies.*
 
-*Once it is fully Python 3 compatible, only python 3.4/5+ and 2.7+ will be supported.*
 
-**LINUX Installation**
+
+**LINUX download and setup**
 
 if you have wget installed, You can run the following command to download the stable Wrapper.py (0.7.6):
 
@@ -46,17 +60,22 @@ or the following to download the development version (0.9.x) of Wrapper.py:
 
 `wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/Wrapper.py`
 
-To install dependencies, use pip:
+To install dependencies, use pip.  Many modern distros will actually have most of wrapper's dependencies installed by default.
+These three are commonly missing from older distros:
 
 `pip install requests pkg_resources pycrypto`
 
-Place the wrapper.py file in your minecraft folder and then run `python Wrapper.py` to start.
 
 
-**Windows Installation**
+**Windows Download and setup**
 
 You may need to get [python](https://www.python.org/downloads/) as it does not normally come with Windows.<br>
 For best results, make sure the location of the python.exe file is in your system 'path' variable.
+
+Windows installations of Python are mostly beyond the scope of this document.  If you get errors; investigate,
+Google it, Stack Overflow it, and read any error messages carefully to find out what additional pieces of Windows-ware
+you will need to get it working.  For convenience, these Python 2.7 instructions were made when I first started using
+wrapper with Windows.  They may not be completely accurate or up to date any more:
 
 
 Python 2.7 should already have pip and setuptools installed, however they will be old versions.  You should manually remove them and install the updated versions from the command prompt (need to be administrator to do this):
@@ -74,21 +93,63 @@ pip install requests
 pip install pycrypto
 ```
 
-Download the wrapper.py file and place it in your minecraft folder, then create a batch file to run the wrapper, or start it from the command prompt.
+Download the Wrapper.py file and place it in the desired folder.
 
 
-**Start Up**
 
-Run `python Wrapper.py` to start.<br>
-On first start, it'll create a wrapper.properties file  (wrapper.properties.json after wrapper 0.8.x) for you to configure and exit.<br>
-Open the file, set the 'command' item to boot the jar file and java start options of your choice.<br>
+###  **Start Up**
+
+Run `python Wrapper.py` to start.
+
+_An alternative method of running wrapper is to run the source package directly.  To do this, clone the repo, copy the
+folder 'wrapper' to the desired location and run it thusly:_<br>
+`python /path/to/wrapperfolder/wrapper`
+
+
+ - You will see the following output at first run, as it creates the logging file, a wrapper.properties 
+ file (wrapper.properties.json after wrapper 0.8.x), and then exits.:
+```
+[12:58:31] [root/WARNING]: Unable to locate logging.json -- Creating default logging configuration
+[12:58:31] [Config/WARNING]: Updated wrapper.properties.json file - check and edit configuration if needed and start again.
+```
+
+- Open the wrapper properties file, set the `["General"]["command"]` item to boot the jar file and java start
+ options of your choice.
+ 
+- Wrapper supports having a separate server and wrapper folder.  This is also recommended, although you can simply put
+ Wrapper in the same directory with your server.  Examples (item `["General"]["server-directory"]` in the config file):
+
+     - setting `../server` - will set the server folder to a sister directory.
+     - or you can use an absolute path: `/home/user/minecraft/server`.
+     - use the default `'.'` to run wrapper inside your server folder.
+
 Tune the file to your remaining preferences, and then run wrapper again.
 
-_An alternative method of running wrapper is to run the source package directly.  To do this, clone the repo, copy the folder 'wrapper' to the desired location (usually in your server folder), and run it thusly:_<br>
-`python /path/to/server/wrapper`
+If the server is new (only a server.jar file in the server directory) You will see output similar
+ to the following as Wrapper boots the server and sets up the Eula:
 
-
-Wrapper.py is a Python-executable zipped-up folder, rather than a plain text file.
+```
+[13:42:34] [root/INFO]: Logging configuration file (logging.json) located and loaded, logging configuration set!
+[13:42:34] [Wrapper.py/INFO]: Wrapper.py started - Version [0, 9, 12] (development build #174)
+[13:42:34] [requests.packages.urllib3.connectionpool/INFO]: Starting new HTTP connection (1): minecraft-ids.grahamedgecombe.com
+[13:42:34] [Wrapper.py/WARNING]: File 'server.properties' not found.
+[13:42:34] [Wrapper.py/INFO]: Loading plugins...
+[13:42:34] [Wrapper.py/INFO]: Starting server...
+[13:42:34] [Wrapper.py/WARNING]: File 'server.properties' not found.
+[13:42:43] [Server thread/INFO]: Starting minecraft server version 1.11.2
+[13:42:43] [Server thread/INFO]: Loading properties
+[13:42:43] [Server thread/WARN]: server.properties does not exist
+[13:42:43] [Server thread/INFO]: Generating new properties file
+[13:42:43] [Server thread/WARN]: Failed to load eula.txt
+[13:42:43] [Server thread/INFO]: You need to agree to the EULA in order to run the server. Go to eula.txt for more info.
+[13:42:43] [Server thread/INFO]: Stopping server
+[13:42:43] [Wrapper.py/INFO]: Starting server...
+[13:42:43] [Wrapper.py/WARNING]: File 'server.properties' not found.
+[13:42:43] [Wrapper.py/WARNING]: EULA agreement was not accepted, accepting on your behalf...
+[13:42:52] [Server thread/INFO]: Starting minecraft server version 1.11.2
+[13:42:52] [Server thread/INFO]: Loading properties
+[13:42:52] [Server thread/INFO]: Default game type: SURVIVAL
+```
 
 
 Any console command beginning with a slash (/) will be interpreted as a Wrapper.py command.<br>
@@ -98,7 +159,7 @@ To completely shutdown the wrapper, type /halt.</br>
 Please read our [wiki](https://github.com/benbaptist/minecraft-wrapper/wiki) for additional information and review the issues page before submitting bug reports.<br>
 If you run into any bugs, please _do_ report them!
 
-#Features#
+# Features #
 Wrapper.py supports the following features:
   - [Plugin system](/documentation/index.md) for adding Bukkit-like features to a vanilla server
   - Proxy mode allows you to add extra functionality to plugins, such as real /commands
@@ -117,7 +178,7 @@ Wrapper.py supports the following features:
 - Minecraft 1.7 and later support (uses tellraw!)
 - Colorized console output.
 
-#API#
+# API #
 The documentation for Wrapper.py is not complete, but you can find a reference on the plugin API here:
 [Wrapper.py Plugin API](/documentation/index.md)
 
@@ -140,6 +201,7 @@ Here is a list of updates to the events:
 </br>Tip:  
 If you want to see more error messages and other useful messages while developing plugins or debugging wrapper,
 look for the logging.json file and make changes to the "console" section:  
+
 ```json
 ...
         "console": {
