@@ -30,8 +30,8 @@ You only need to download Wrapper.py.  The 'wrapper' folder is the source code a
  of Wrapper.py.  Wrapper.py is a Python-executable archive folder containing the sourcecode.
 
 
-The original stable branch "master" is build (version 0.7.6).  This version is considered to be the working 
-standard version.  However, it is quite old at this point and the development version has far outpaced it.
+The original stable branch "master" is version 0.7.6, build 83.  This version is considered to be the working
+standard version for now.  However, it is quite old at this point and the development version has far outpaced it.
 
 The current "development" branch version (0.9.x) is now at a point where it is probably a much better choice to use.
 
