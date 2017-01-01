@@ -265,7 +265,7 @@ class Commands:
             entitycontrol = self.wrapper.javaserver.entity_control
             if not entitycontrol:
                 # only console could be the source:
-                _readout("ERROR - ", "No entity code found. (no server started?)", separator="",
+                _readout("ERROR - ", "No entity code found. (no proxy/server started?)", separator="",
                          pad=10, usereadline=self.wrapper.use_readline)
                 return
             commargs = payload["args"]

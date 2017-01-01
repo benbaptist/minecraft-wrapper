@@ -573,7 +573,7 @@ class Wrapper:
             self.log.info("Verifying Wrapper.py...")
             if hashlib.md5(wrapperfile.content).hexdigest() == wrapperhash.text:
                 self.log.info("Update file successfully verified. Installing...")
-                with open(sys.argv[0], "w") as f:
+                with open(sys.argv[0], "wb") as f:
                     f.write(wrapperfile.content)
                 self.log.info("Wrapper.py %s (#%d) installed. Please reboot Wrapper.py.",
                               ".".join([str(_) for _ in version]), build)

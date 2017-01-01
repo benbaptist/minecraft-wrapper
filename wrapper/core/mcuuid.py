@@ -39,11 +39,12 @@ class UUIDS:
     @staticmethod
     def formatuuid(playeruuid):
         """
-        Takes player's uuid with no dashes and returns it with the dashes
+        Takes player's hex string uuid with no dashes and returns it as astring with the dashes
+
         :param playeruuid: string of player uuid with no dashes (such as you might get back from Mojang)
         :return: string hex format "8-4-4-4-12"
         """
-        return MCUUID(bytes=playeruuid.decode("hex")).string
+        return MCUUID(hex=playeruuid).string
 
     @staticmethod
     def getuuidfromname(name):
