@@ -6,6 +6,7 @@
 # This program is distributed under the terms of the GNU General Public License,
 #  version 3 or later.
 
+
 class Events:
 
     def __init__(self, wrapper):
