@@ -13,7 +13,7 @@ import core.exceptions as exceptions
 from api.minecraft import Minecraft
 from core.storage import Storage
 from api.backups import Backups
-import helpers
+from api import helpers
 
 
 # noinspection PyPep8Naming

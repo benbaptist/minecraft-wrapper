@@ -427,7 +427,7 @@ def processoldcolorcodes(message):
     return message
 
 
-def putjsonfile(data, filename, directory=".", indent_spaces=2, sort=False, encodedas="UTF-8"):
+def putjsonfile(data, filename, directory=".", indent_spaces=2, sort=False):
     """
     writes entire data to a json file.
     This is not for appending items to an existing file!
@@ -442,7 +442,7 @@ def putjsonfile(data, filename, directory=".", indent_spaces=2, sort=False, enco
 
     :sort: whether or not to sort the records for readability.
 
-    :encodedas: encoding
+    :encodedas: This was removed for Python3 compatibility.  Python 3 has no encoding argument for json.dumps.
 
     :returns: True if successful.
 
@@ -457,7 +457,7 @@ def putjsonfile(data, filename, directory=".", indent_spaces=2, sort=False, enco
     if os.path.exists(directory):
         with open("%s/%s.json" % (directory, filename), "w") as f:
             try:
-                f.write(json.dumps(data, ensure_ascii=False, indent=indent_spaces, sort_keys=sort, encoding=encodedas))
+                f.write(json.dumps(data, ensure_ascii=False, indent=indent_spaces, sort_keys=sort))
             except TypeError:
                 return None
             return True
@@ -554,21 +554,24 @@ def set_item(item, string_val, filename, path='.'):
 
     :path: defaults to wrappers path.
 
-    :returns:  Boolean indication of success or failure.
+    :returns:  Boolean indication of success or failure.  None if no item was found.
 
     """
 
     if os.path.isfile("%s/%s" % (path, filename)):
-        searchitem = "%s=" % item
         with open("%s/%s" % (path, filename), "r") as f:
             file_contents = f.read()
 
+        searchitem = "%s=" % item
         if searchitem in file_contents:
-            current_item = str(file_contents.split(searchitem)[1].split('/n'[0]))
+            current_value = str(file_contents.split(searchitem)[1].splitlines()[0])
+            replace_item = "%s%s" % (searchitem, current_value)
             new_item = '%s%s' % (searchitem, string_val)
+            new_file = file_contents.replace(replace_item, new_item)
             with open("%s/%s" % (path, filename), "w") as f:
-                f.write(file_contents.replace(current_item, new_item))
-        return True
+                f.write(new_file)
+            return True
+        return None
     else:
         return False
 
@@ -737,5 +740,6 @@ def get_req(something, request):
     # This is a private function used by management.web
     for a in request.split("/")[1:][1].split("?")[1].split("&"):
         if a[0:a.find("=")] == something:
+            #PY3 unquote not a urllib (py3) method - impacts: Web mode
             return urllib.unquote(a[a.find("=") + 1:])
     return ""

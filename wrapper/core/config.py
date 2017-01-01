@@ -158,7 +158,7 @@ class Config:
 
         # Create new config if none exists
         if not os.path.exists("wrapper.properties.json"):
-            putjsonfile(NEWCONFIG, "wrapper.properties", sort=True, encodedas="UTF-8")
+            putjsonfile(NEWCONFIG, "wrapper.properties", sort=True)
             self.exit = True
 
         # Read existing configuration
@@ -244,4 +244,4 @@ class Config:
             return False
 
     def save(self):
-        putjsonfile(self.config, "wrapper.properties", sort=True, encodedas="UTF-8")
+        putjsonfile(self.config, "wrapper.properties", sort=True)

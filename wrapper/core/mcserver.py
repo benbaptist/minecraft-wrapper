@@ -401,6 +401,7 @@ class MCServer:
         """
         if self.state in (STARTING, STARTED, STOPPING) and self.proc:
             self.proc.stdin.write("%s\n" % command)
+            self.proc.stdin.flush()
         else:
             self.log.debug("Attempted to run console command '%s' but the Server is not started.", command)
 

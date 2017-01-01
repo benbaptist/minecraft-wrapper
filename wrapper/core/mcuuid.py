@@ -55,13 +55,13 @@ class UUIDS:
         """
         playername = "OfflinePlayer:%s" % name
         m = hashlib.md5()
-        m.update(playername)
+        m.update(playername.encode("utf-8"))
         d = bytearray(m.digest())
         d[6] &= 0x0f
         d[6] |= 0x30
         d[8] &= 0x3f
         d[8] |= 0x80
-        return MCUUID(bytes=str(d))
+        return MCUUID(bytes=bytes(d))
 
     def getuuidbyusername(self, username, forcepoll=False):
         """

@@ -17,7 +17,8 @@ BOOT_OPTIONS = "ENCODING=UTF-8\n"
 bootoption_count = 1
 
 PY3 = sys.version_info[0] > 2
-SUBVER = sys.version_info[1:1]
+SUBVER = sys.version_info[1]
+print(SUBVER)
 
 
 def main():
@@ -45,9 +46,7 @@ def main():
 
     configure_logger(betterconsole=better_console)
 
-    # check python version compatibilities
-    if PY3:
-        print("Sorry, but Wrapper is only working for Python 2")
+    # check python version compatibilities\
     wrapper = Wrapper()
     log = wrapper.log
     log.info("Wrapper.py started - Version %s", wrapper.getbuildstring())
