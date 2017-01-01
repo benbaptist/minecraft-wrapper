@@ -226,6 +226,3 @@ class UUIDS:
                             return self.usercache[user_uuid]["name"]
                         except TypeError:
                             return False
-
-
-print(UUIDS.getuuidfromname("SurestTexas00"))

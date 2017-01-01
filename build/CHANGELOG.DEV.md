@@ -1,5 +1,8 @@
-Build 172 Version [0.9.12]  (future version)
-- "we must push the build so we can find out what's in it!"
+Build 173 Version [0.9.12]
+- First Wrapper.py to successfully run on Python 3.  Following known Py3 probems:
+    -proxy mode not working for py3
+    -some uuid methods may still be bugged.
+  wrapper does start from a fresh install, boots server, accepts EULA, and can read the console and issue commands.
 
 Build 172 Version [0.9.11]
 - FUN STUFF just for this build! - Babies are given nametags above their heads with their EID!
