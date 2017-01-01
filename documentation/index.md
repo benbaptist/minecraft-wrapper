@@ -3,17 +3,17 @@
 The API is divided into modules.  Click on each module to see it's documentation.
 
 
-[entity](/documentation/entity.rst)
-
-[player](/documentation/player.rst)
+[backups](/documentation/backups.rst)
 
 [base](/documentation/base.rst)
 
-[helpers](/documentation/helpers.rst)
+[entity](/documentation/entity.rst)
+
+[minecraft](/documentation/minecraft.rst)
+
+[player](/documentation/player.rst)
 
 [world](/documentation/world.rst)
 
-[backups](/documentation/backups.rst)
-
-[minecraft](/documentation/minecraft.rst)
+[helpers](/documentation/helpers.rst)
 

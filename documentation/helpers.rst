@@ -113,7 +113,7 @@
     Just replaces text containing the (&) ampersand with section signs instead (§).
     
 
-**def putjsonfile(data, filename, directory=".", indent_spaces=2, sort=False, encodedas="UTF-8")**
+**def putjsonfile(data, filename, directory=".", indent_spaces=2, sort=False)**
 
     writes entire data to a json file.
     This is not for appending items to an existing file!
@@ -128,7 +128,7 @@
 
     :sort: whether or not to sort the records for readability.
 
-    :encodedas: encoding
+    :encodedas: This was removed for Python3 compatibility.  Python 3 has no encoding argument for json.dumps.
 
     :returns: True if successful.
 
@@ -169,6 +169,6 @@
 
     :path: defaults to wrappers path.
 
-    :returns:  Boolean indication of success or failure.
+    :returns:  Boolean indication of success or failure.  None if no item was found.
 
     

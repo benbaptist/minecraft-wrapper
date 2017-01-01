@@ -60,7 +60,7 @@ class Backups:
                               datetime.datetime.fromtimestamp(int(backup[0])).strftime('%Y-%m-%d_%H:%M:%S'))
                 # hink = self.backups[0][1][:]  # not used...
                 del self.backups[0]
-        putjsonfile(self.backups, "backups", self.config["Backups"]["backup-location"], encodedas=self.encoding)
+        putjsonfile(self.backups, "backups", self.config["Backups"]["backup-location"])
 
     def dotarchecks(self):
         # Check if tar is installed

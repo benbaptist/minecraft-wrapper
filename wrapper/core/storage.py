@@ -95,7 +95,7 @@ class Storage:
     def save(self):
         if not os.path.exists(self.root):
             mkdir_p(self.root)
-        putcode = putjsonfile(self.data, self.name, self.root, encodedas=self.encoding)
+        putcode = putjsonfile(self.data, self.name, self.root)
         if not putcode:
             self.log.exception("TypeError or non-existent path: '%s/%s.json'\nData Dump:\n%s",
                                self.root, self.name, self.data)
