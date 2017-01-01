@@ -564,13 +564,12 @@ def set_item(item, string_val, filename, path='.'):
 
         searchitem = "%s=" % item
         if searchitem in file_contents:
-            current_value = str(file_contents.split(searchitem)[1].split('/n')[0])
+            current_value = str(file_contents.split(searchitem)[1].splitlines()[0])
             replace_item = "%s%s" % (searchitem, current_value)
             new_item = '%s%s' % (searchitem, string_val)
             new_file = file_contents.replace(replace_item, new_item)
-            #with open("%s/%s" % (path, filename), "w") as f:
-                #f.write(new_file)
-            print("----------\n%s\n----------\n\n" % new_file)
+            with open("%s/%s" % (path, filename), "w") as f:
+                f.write(new_file)
             return True
         return None
     else:
@@ -744,6 +743,3 @@ def get_req(something, request):
             #PY3 unquote not a urllib (py3) method - impacts: Web mode
             return urllib.unquote(a[a.find("=") + 1:])
     return ""
-
-pathy = "/home/surest/test/WILDS/server"
-set_item("eula", "true", "eula.txt", path=pathy)
