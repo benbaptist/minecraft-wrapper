@@ -138,7 +138,7 @@ class MCServer:
             with open("%s/eula.txt" % self.serverpath, "r") as f:
                 eula = f.read()
 
-            if "false" in eula:
+            if "eula=false" in eula:
                 # if forced, should be at info level since acceptance is a legal matter.
                 self.log.warning("EULA agreement was not accepted, accepting on your behalf...")
                 set_item("eula", "true", "eula.txt", self.serverpath)

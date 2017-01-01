@@ -1,3 +1,9 @@
+Build 174 Version [0.9.13]
+- Python 3 Bug fixes:
+    - core.mcuuids.formatuuid()
+    - core.wrapper.performupdate()
+    - core.mcserver and core.commands - small typos/improvements
+
 Build 173 Version [0.9.12]
 - First Wrapper.py to successfully run on Python 3.  Following known Py3 probems:
     -proxy mode not working for py3
