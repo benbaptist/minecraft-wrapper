@@ -26,8 +26,8 @@ You will also need "tar" installed if you need backups. Most Linux distros have 
 
 ###  **Wrapper.py Versions**
 
-You only need to download Wrapper.py, the 'wrapper' folder is the source code and is just the extracted version
- of Wrapper.py.  Wrapper.py is a Python-executable zipped-up folder, rather than a plain text file.
+You only need to download Wrapper.py.  The 'wrapper' folder is the source code and is just the extracted version
+ of Wrapper.py.  Wrapper.py is a Python-executable archive folder containing the sourcecode.
 
 
 The original stable branch "master" is build (version 0.7.6).  This version is considered to be the working 
@@ -183,22 +183,27 @@ The documentation for Wrapper.py is not complete, but you can find a reference o
 [Wrapper.py Plugin API](/documentation/index.md)
 
 
-Wrapper continues to be a work in progress and changes often happen faster than they get documented, but this should help give you an idea of the methods that can be used. below is a list of plugin events that can be registered in your plugins:</br></br>
-<b>Original list of events</b>: https://docs.google.com/spreadsheet/ccc?key=0AoWx24EFSt80dDRiSGVxcW1xQkVLb2dWTUN4WE5aNmc&usp=sharing</br>
+Wrapper continues to be a work in progress and changes often happen faster than they
+ get documented, but this should help give you an idea of the methods that can be used.
+ below is a list of plugin events that can be registered in your plugins:
 
-Here is a list of updates to the events:
+[Original list of events](https://docs.google.com/spreadsheet/ccc?key=0AoWx24EFSt80dDRiSGVxcW1xQkVLb2dWTUN4WE5aNmc&usp=sharing)
+
+Here is an updated list of the events:
 [Wrapper events](https://docs.google.com/spreadsheets/d/1Sxli0mpN3Aib-aejjX7VRlcN2HZkak_wIqPFJ6mtVIk/edit?usp=sharing)
 
 
-</br></br>Check the 'example-plugins' folder to see some example plugins.  These are very useful for seeing hwo the API functions.
-<ul>
-<li>template.py does nothing - it is just the shell of a plugin to work off of.</li>
-<li>example.py contains some actual functions. </li>
-<li>zombie.py is a fun test plugin that leaves behind undead versions of people when killed by undead mobs.</li>
-<li>speedboost.py gives everyone a speedboost when someone dies - similar to survival games.</li>
-<li>poll.py allows players to vote for certain things on the server. It isn't very up-to-date at the moment, however. </li>
-</ul>
-</br>Tip:  
+Check the 'example-plugins' folder to see some example plugins.  These are very useful for seeing hwo the API functions.
+
+- template.py does nothing - it is just the shell of a plugin to work off of.
+- example.py contains some actual functions.
+- zombie.py is a fun test plugin that leaves behind undead versions of people when killed by undead mobs.
+- speedboost.py gives everyone a speedboost when someone dies - similar to survival games.
+- poll.py allows players to vote for certain things on the server. It isn't very up-to-date at the moment, however.
+
+
+__Tip__:
+
 If you want to see more error messages and other useful messages while developing plugins or debugging wrapper,
 look for the logging.json file and make changes to the "console" section:  
 
