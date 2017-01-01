@@ -745,5 +745,5 @@ def get_req(something, request):
             return urllib.unquote(a[a.find("=") + 1:])
     return ""
 
-pathy = "/home/james/Desktop/server"
+pathy = "/home/surest/test/WILDS/server"
 set_item("eula", "true", "eula.txt", path=pathy)
