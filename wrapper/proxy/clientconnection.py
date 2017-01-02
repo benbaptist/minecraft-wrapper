@@ -809,7 +809,7 @@ class Client:
         sharedsecret = encryption.decrypt_shared_secret(data[0], self.privateKey)
         verifytoken = encryption.decrypt_shared_secret(data[1], self.privateKey)
         h = hashlib.sha1()
-        h.update(self.serverID)
+        h.update(self.serverID.encode('utf-8'))
         h.update(sharedsecret)
         h.update(self.publicKey)
         serverid = self.packet.hexdigest(h)
