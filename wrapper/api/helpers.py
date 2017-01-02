@@ -117,37 +117,6 @@ def scrub_item_value(item):
     return item
 
 
-# private static int DataSlotToNetworkSlot(int index)
-def _dataslottonetworkslot(index):
-    """
-
-    Args:
-        index: window slot number?
-
-    Returns: "network slot" - not sure what that is.. player.dat file ?
-
-    """
-
-    # // / < summary >
-    # https://gist.github.com/SirCmpwn/459a1691c3dd751db160
-    # // / Thanks to some idiot at Mojang
-    # // / < / summary >
-
-    if index <= 8:
-        index += 36
-    elif index == 100:
-        index = 8
-    elif index == 101:
-        index = 7
-    elif index == 102:
-        index = 6
-    elif index == 103:
-        index = 5
-    elif 83 >= index >= 80:
-        index -= 79
-    return index
-
-
 def epoch_to_timestr(epoch_time):
     """
     takes a time represented as integer/string which you supply and converts it to a formatted string.
@@ -164,7 +133,7 @@ def epoch_to_timestr(epoch_time):
 
 
 def find_in_json(jsonlist, keyname, searchvalue):
-    # used only by proxy base... TODO probably broken.
+    # internal method used only by proxy base ban code..
     for items in jsonlist:
         if items[keyname] == searchvalue:
             return items
@@ -175,8 +144,14 @@ def _format_bytes(number_raw_bytes):
     """
     takes number of bytes and converts to Kbtye, MiB, GiB, etc... using 4 most significant digits.
     """
-    large_bytes = number_raw_bytes / 1073741824
-    units = "GiB"
+    large_bytes = number_raw_bytes / (1024*1024*1024*1024*1024)
+    units = "PiB"
+    if large_bytes < 1.0:
+        large_bytes *= 1024
+        units = "TiB"
+    if large_bytes < 1.0:
+        large_bytes *= 1024
+        units = "GiB"
     if large_bytes < 1.0:
         large_bytes *= 1024
         units = "MiB"
@@ -713,29 +688,6 @@ def _create_chat(translateable="death.attack.outOfWorld", insertion="<playername
     return [json.dumps(chat)]
 
 
-def _test_console(message):
-    print(message)
-
-
-def _test_broadcast(message, version_compute=10704, encoding='utf-8'):
-    """
-    Broadcasts the specified message to all clients connected. message can be a JSON chat object,
-    or a string with formatting codes using the § as a prefix
-    """
-
-    if isinstance(message, dict):
-        if version_compute < 10700:
-            _test_console("say %s" % _chattocolorcodes(message))
-        else:
-            _test_console("tellraw @a %s" % json.dumps(message, encoding=encoding, ensure_ascii=False))
-    else:
-        if version_compute < 10700:
-            temp = processcolorcodes(message)
-            _test_console("say %s" % _chattocolorcodes(json.loads(temp)))
-        else:
-            _test_console("tellraw @a %s" % processcolorcodes(message))
-
-
 def get_req(something, request):
     # This is a private function used by management.web
     for a in request.split("/")[1:][1].split("?")[1].split("&"):
@@ -743,3 +695,42 @@ def get_req(something, request):
             #PY3 unquote not a urllib (py3) method - impacts: Web mode
             return urllib.unquote(a[a.find("=") + 1:])
     return ""
+
+
+def py_test():
+
+    banlist = getjsonfile("banned-players", "/home/surest/Desktop/server")
+    x = find_in_json(banlist, "uuid", "d2a44ac6-6427-4f3a-98b8-33441c263cd4")
+    print(x)
+
+    banlist = getjsonfile("banned-ips", "/home/surest/Desktop/server")
+    x = find_in_json(banlist, "ip", "127.0.0.8")
+    print(x)
+
+    x = config_to_dict_read("server.properties", "/home/surest/Desktop/server")
+    print(x)
+    print(x['pvp'])
+    new_pvp = not(x['pvp'])
+    set_item('pvp', new_pvp, "server.properties", "/home/surest/Desktop/server")
+    x = config_to_dict_read("server.properties", "/home/surest/Desktop/server")
+    print(x['pvp'])
+
+    print(_format_bytes(1024))
+    print(_format_bytes(1048576*2))
+    print(_format_bytes(1073741824.0))
+    print(_format_bytes(1234234230000))
+    print(_format_bytes(1234234230000000))
+    print(_format_bytes(123423423000000000))
+
+    print(isipv4address("123.123.123.123"))
+    print(isipv4address("honkin"))
+    print(isipv4address("www.surestcraft.com"))
+
+    timecurr = time.time()
+    x = epoch_to_timestr(timecurr)
+    print(str(x))
+    print(read_timestr(str(x)))
+    print(time.time())
+
+if __name__ == "__main__":
+    py_test()

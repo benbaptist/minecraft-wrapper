@@ -175,7 +175,7 @@
 
         Args:
             message:
-            irc: Broadcast to IRC if set to True.
+            irc: Also broadcast to IRC if set to True.
 
         Returns:
 

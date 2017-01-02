@@ -831,7 +831,6 @@ class ServerConnection:
         this is a pretty useless parse, unless we opt to pump this data into the entity API.
         """
         eid, metadata = self.packet.readpkt([D.VARINT, D.METADATA_1_9])
-        self.log.debug("EID: %s - %s", eid, metadata)
         if 12 in metadata:  # ageable
             if 6 in metadata[12]:  # boolean isbaby
                 if metadata[12][1] is True:  # it's a baby!

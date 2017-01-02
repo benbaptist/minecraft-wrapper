@@ -12,7 +12,7 @@ import json
 import threading
 import proxy.mcpackets as mcpackets
 from core.storage import Storage
-from api.helpers import processoldcolorcodes, processcolorcodes
+from api.helpers import processoldcolorcodes
 
 
 # region Constants
@@ -112,7 +112,7 @@ class Player:
             if not gotclient:
                 self.log.error("Proxy is on, but this client is not listed in wrapper.proxy.clients!")
                 self.log.error("The usual cause of this would be that someone is connecting directly"
-                               "to your server port and not the wrapper proxy port!")
+                               " to your server port and not the wrapper proxy port!")
 
         # populate dictionary items to prevent errors due to missing items
         if "groups" not in self.permissions:
@@ -321,10 +321,18 @@ class Player:
 
     # region Visual notifications
     def message(self, message=""):
-        if isinstance(message, dict):
-            self.wrapper.javaserver.console("tellraw %s %s" % (self.username, json.dumps(message)))
+        """
+        Sends a message to the player.
+
+        :message: Can be text, colorcoded text, or json chat
+
+        """
+
+        if self.javaserver:
+            self.javaserver.broadcast(self, message, who=self.username)
         else:
-            self.wrapper.javaserver.console("tellraw %s %s" % (self.username, processcolorcodes(message)))
+            # TODO message client directly
+            pass
 
     def actionMessage(self, message=""):
         if self.getClient().version < mcpackets.PROTOCOL_1_8START:
