@@ -164,7 +164,7 @@ class Proxy:
         while True:
             pkid, original = packet.grabpacket()
             if pkid == 0x00:
-                data = json.loads(packet.read("string:response")["response"].decode(self.encoding))  # py3
+                data = json.loads(packet.read("string:response")["response"])
                 self.wrapper.javaserver.protocolVersion = data["version"]["protocol"]
                 self.wrapper.javaserver.version = data["version"]["name"]
                 if "modinfo" in data and data["modinfo"]["type"] == "FML":
@@ -205,8 +205,7 @@ class Proxy:
                 return client
         self.log.debug("getclientbyofflineserveruuid failed: \n %s", attempts)
         self.log.debug("POSSIBLE CLIENTS: \n %s", self.clients)
-        raise Exception
-        #return False  # no client
+        return False  # no client
 
     def getplayerby_eid(self, eid):
         """
@@ -475,8 +474,10 @@ class Proxy:
         """
         if "MCUUID" in str(type(uuid)):
             uuid = uuid.string
+
         if uuid not in self.skins:
             return False
+
         if uuid in self.skinTextures:
             return self.skinTextures[uuid]
         skinblob = json.loads(self.skins[uuid].decode("base64"))

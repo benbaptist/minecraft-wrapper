@@ -18,7 +18,6 @@ bootoption_count = 1
 
 PY3 = sys.version_info[0] > 2
 SUBVER = sys.version_info[1]
-print(SUBVER)
 
 
 def main():
@@ -46,15 +45,18 @@ def main():
 
     configure_logger(betterconsole=better_console)
 
-    # check python version compatibilities\
+    # __init__ wrapper and set up logging
     wrapper = Wrapper()
     log = wrapper.log
+    log.debug("Wrapper is using Python %s.%s.", sys.version_info[0], SUBVER)
+
+    # check python version compatibilities
     log.info("Wrapper.py started - Version %s", wrapper.getbuildstring())
     if not PY3 and SUBVER < 7:
         log.warning("You are using python 2.%s.  wrapper uses 2.7.x contructs and imports that may not be"
                     " backwards compatible.  You may encounter errors", SUBVER)
     if PY3 and SUBVER < 4:
-        log.warning("You are using python 3.%s.  wrapper only supports 3.4 and later."
+        log.warning("You are using python 3.%s.  wrapper only guarantees support with 3.4 and later."
                     "  You may encounter errors", SUBVER)
 
     # start wrapper

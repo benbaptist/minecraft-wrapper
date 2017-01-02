@@ -26,8 +26,6 @@ PY3 = sys.version_info > (3,)
 if PY3:
     # noinspection PyShadowingBuiltins
     xrange = range
-    # noinspection PyShadowingBuiltins
-    long = int
 
 # endregion
 
@@ -162,7 +160,7 @@ class Packet:
         self.abort = True
 
     def hexdigest(self, sh):
-        d = long(sh.hexdigest(), 16)
+        d = int(sh.hexdigest(), 16)
         if d >> 39 * 4 & 0x8:
             return "-%x" % ((-d) & (2 ** (40 * 4) - 1))
         return "%x" % d
@@ -318,8 +316,7 @@ class Packet:
         return result
 
     def sendpkt(self, pkid, args, payload):
-        # result = bytearray  # TODO  This is a PY2-3 compatibility line.  Will use <str> for PY2 and <bytes> for PY3...
-        result = b""  # TODO
+        result = b""  # PY 2-3
         # start with packet id
         result += self.send_varint(pkid)
 
@@ -338,9 +335,9 @@ class Packet:
     # ------------------------ #
     def send_string(self, payload):
         try:
-            returnitem = payload.encode("utf-8", errors="ignore")
+            returnitem = payload.encode("utf-8")
         except:
-            returnitem = str(payload)
+            returnitem = payload
         return self.send_varint(len(returnitem)) + returnitem
 
     def send_json(self, payload):
@@ -407,7 +404,7 @@ class Packet:
 
     def send_metadata_1_9(self, meta_data):
         """ payload is a dictionary of entity metadata items, keyed by index number."""
-        b = ""
+        b = b""
         for index in meta_data:
             b += self.send_ubyte(index)  # Index
 
@@ -548,13 +545,12 @@ class Packet:
     # ---------------------- #
     def recv(self, length):
         if length > 200:
-            # d = bytearray  # TODO  This is a PY2-3 compatibility line.  Will use <str> for PY2 and <bytes> for PY3...
-            d = b""        # TODO
+            d = b""  # Py 2-3
             while len(d) < length:
                 m = length - len(d)
                 if m > 5000:
                     m = 5000
-                d += self.socket.recv(m)  # TODO self.socket.recv(m) receives bytes in PY3, <str> in PY2
+                d += self.socket.recv(m)
         else:
             d = self.socket.recv(length)
             if len(d) == 0:
@@ -573,10 +569,10 @@ class Packet:
     # -- READING DATA TYPES -- #
     # ------------------------ #
     def read_string(self):
-        return self.read_data(self.read_varint())
+        return self.read_data(self.read_varint()).decode('utf-8')
 
     def read_json(self):
-        return json.loads(self.read_string().decode('utf-8'))
+        return json.loads(self.read_string())
 
     def read_ubyte(self):
         return struct.unpack("B", self.read_data(1))[0]
