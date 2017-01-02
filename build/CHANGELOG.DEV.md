@@ -1,6 +1,10 @@
-Build 175
+Build 175 Version [0.9.13]
+- First completely working Python 3 version.  May not be entirely bug free,
+ but any remaining problems are minor or infrequent and can be addressed as
+ discovered.
+- Pared down our version of encrytion strictly to the methods wrapper uses.
 
-Build 174 Version [0.9.13]
+Build 174 Version
 - Python 3 Bug fixes:
     - core.mcuuids.formatuuid()
     - core.wrapper.performupdate()

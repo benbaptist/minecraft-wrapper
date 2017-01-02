@@ -68,7 +68,7 @@ class Client:
         # client setup and operating paramenters
         self.packet = Packet(self.client_socket, self)
         self.verifyToken = encryption.generate_challenge_token()
-        self.serverID = encryption.generate_server_id()
+        self.serverID = encryption.generate_server_id().encode('utf-8')
         self.MOTD = {}
         self.serverversion = self.wrapper.javaserver.protocolVersion
         self.clientversion = self.serverversion  # client will reset this later, if need be..
@@ -791,7 +791,6 @@ class Client:
             # Since wrapper is offline, we are using offline for self.uuid also
             self.serveruuid = self.uuid  # MCUUID object
 
-            # TODO TEST
             # log the client on
             self.state = self.proxy.PLAY
             self._login_client_logon()
@@ -809,7 +808,7 @@ class Client:
         sharedsecret = encryption.decrypt_shared_secret(data[0], self.privateKey)
         verifytoken = encryption.decrypt_shared_secret(data[1], self.privateKey)
         h = hashlib.sha1()
-        h.update(self.serverID)
+        h.update(self.serverID)  # self.serverID already encoded
         h.update(sharedsecret)
         h.update(self.publicKey)
         serverid = self.packet.hexdigest(h)
