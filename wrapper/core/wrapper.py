@@ -602,7 +602,7 @@ class Wrapper:
                      usereadline=self.use_readline)
             return
         self.javaserver.server_muted = True
-        _readout("Server is now nuted for %d seconds." % pause_time, "", separator="", command_text_fg="yellow",
+        _readout("Server is now muted for %d seconds." % pause_time, "", separator="", command_text_fg="yellow",
                  usereadline=self.use_readline)
         time.sleep(pause_time)
         _readout("Server now unmuted.", "", separator="", usereadline=self.use_readline)

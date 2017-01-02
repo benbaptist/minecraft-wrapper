@@ -308,7 +308,7 @@ class MCServer:
         else:
             raise InvalidServerStartedError("Server is not started. Please run '/start' to boot it up.")
 
-    def broadcast(self, message):
+    def broadcast(self, message, who="@a"):
         """
         Broadcasts the specified message to all clients connected. message can be a JSON chat object,
         or a string with formatting codes using the § as a prefix
@@ -316,16 +316,16 @@ class MCServer:
 
         if isinstance(message, dict):
             if self.version_compute < 10700:
-                self.console("say %s" % _chattocolorcodes(message))
+                self.console("say %s %s" % (who, _chattocolorcodes(message)))
             else:
                 encoding = self.wrapper.encoding
-                self.console("tellraw @a %s" % json.dumps(message, encoding=encoding, ensure_ascii=False))
+                self.console("tellraw %s %s" % (who, json.dumps(message, encoding=encoding, ensure_ascii=False)))
         else:
             if self.version_compute < 10700:
                 temp = processcolorcodes(message)
-                self.console("say %s" % _chattocolorcodes(json.loads(temp)))
+                self.console("say %s %s" % (who, _chattocolorcodes(json.loads(temp))))
             else:
-                self.console("tellraw @a %s" % processcolorcodes(message))
+                self.console("tellraw %s %s" % (who, processcolorcodes(message)))
 
     def login(self, username, eid, location):
         """

@@ -844,7 +844,6 @@ class Client:
     # Play parsers
     # -----------------------
     def _parse_play_chat_message(self):
-        self.log.debug("PLAY_CHAT")
         data = self.packet.readpkt([D.STRING])
         if data is None:
             return False

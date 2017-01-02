@@ -359,7 +359,7 @@ class Minecraft:
         Returns: Nothing; succeeds or fails with no programmatic indication.
 
         """
-        self.console("tellraw %s %s" % (destination, json.dumps(jsonmessage, self._encoding)))
+        self.getServer().broadcast(self, jsonmessage, who=destination)
 
     def broadcast(self, message="", irc=False):
         """
@@ -370,7 +370,7 @@ class Minecraft:
 
         Args:
             message:
-            irc: Broadcast to IRC if set to True.
+            irc: Also broadcast to IRC if set to True.
 
         Returns:
 

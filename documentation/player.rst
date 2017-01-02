@@ -115,6 +115,14 @@
 
         
 
+**def message(self, message="")**
+
+        Sends a message to the player.
+
+        :message: Can be text, colorcoded text, or json chat
+
+        
+
 **def setVisualXP(self, progress, level, total)**
 
          Change the XP bar on the client's side only. Does not affect actual XP levels.
