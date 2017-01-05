@@ -1,3 +1,8 @@
+Build 176-177
+- Fix a couple bugs:
+    - fix broken encrytion for Python 2 introduced in build 175
+    - fix entity iteration issues under Python 3
+
 Build 175 Version [0.9.13]
 - First completely working Python 3 version.  May not be entirely bug free,
  but any remaining problems are minor or infrequent and can be addressed as
