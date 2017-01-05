@@ -327,9 +327,8 @@ class Player:
         :message: Can be text, colorcoded text, or json chat
 
         """
-
         if self.javaserver:
-            self.javaserver.broadcast(self, message, who=self.username)
+            self.javaserver.broadcast(message, who=self.username)
         else:
             # TODO message client directly
             pass
