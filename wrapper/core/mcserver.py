@@ -313,7 +313,6 @@ class MCServer:
         Broadcasts the specified message to all clients connected. message can be a JSON chat object,
         or a string with formatting codes using the § as a prefix
         """
-        print("who: %s\n" % who)
         if isinstance(message, dict):
             if self.version_compute < 10700:
                 self.console("say %s %s" % (who, _chattocolorcodes(message)))

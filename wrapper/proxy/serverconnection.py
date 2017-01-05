@@ -305,19 +305,19 @@ class ServerConnection:
         return self._keep_alive_response()
 
     def _parse_play_combat_event(self):
-        print("\nSTART COMB_PARSE\n")
+        #print("\nSTART COMB_PARSE\n")
         data = self.packet.readpkt([D.VARINT, ])
-        print("\nread COMB_PARSE\n")
+        #print("\nread COMB_PARSE\n")
         if data[0] == 2:
-            print("\nread COMB_PARSE2\n")
+            #print("\nread COMB_PARSE2\n")
             player_i_d = self.packet.readpkt([D.VARINT, ])
-            print("\nread COMB_PARSE3\n")
+            #print("\nread COMB_PARSE3\n")
             e_i_d = self.packet.readpkt([D.INT, ])
-            print("\nread COMB_PARSE4\n")
+            #print("\nread COMB_PARSE4\n")
             strg = self.packet.readpkt([D.STRING, ])
 
-            print("\nplayerEID=%s\nEID=%s\n" % (player_i_d, e_i_d))
-            print("\nTEXT=\n%s\n" % strg)
+            #print("\nplayerEID=%s\nEID=%s\n" % (player_i_d, e_i_d))
+            #print("\nTEXT=\n%s\n" % strg)
 
             return True
         return True
