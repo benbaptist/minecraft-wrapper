@@ -35,7 +35,6 @@ class EntityControl:
         self.objecttypes = objectlistobject.objectlist
 
         # load config settings
-        # camelCase signifies that these are valid API items
         self.entityControl = self._javaserver.config["Entities"]["enable-entity-controls"]
         self.entityProcessorFrequency = self._javaserver.config["Entities"]["entity-update-frequency"]
         self.thiningFrequency = self._javaserver.config["Entities"]["thinning-frequency"]
@@ -165,7 +164,8 @@ class EntityControl:
             playerlist = []
             for player in players:
                 playerlist.append(player)
-            for eid in self.entities.keys():
+            entity_eids = list(self.entities.keys())
+            for eid in entity_eids:
                 if self.getEntityByEID(eid).clientname not in playerlist:
                     # noinspection PyBroadException
                     try:

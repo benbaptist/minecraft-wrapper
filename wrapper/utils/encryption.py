@@ -60,6 +60,9 @@ def AES128CFB8(shared_secret):
 
 
 def _pkcs1_unpad(thebytes):
-    pos = thebytes.find(0x00)
+    null_byte = '\x00'
+    if PY3:
+        null_byte = 0x00
+    pos = thebytes.find(null_byte)
     if pos > 0:
         return thebytes[pos + 1:]
