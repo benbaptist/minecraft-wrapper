@@ -17,15 +17,13 @@ import random
 from socket import error as socket_error
 import requests
 
-# import shutil  # these are part of commented out code below for whitelist and name processing
-# import os
-
 # Local imports
 import utils.encryption as encryption
 
 from proxy.serverconnection import ServerConnection
 from proxy.packet import Packet
 from proxy import mcpackets
+from proxy.parse_sb import ParseSB
 from api.player import Player
 from core.mcuuid import MCUUID
 
@@ -66,7 +64,9 @@ class Client:
         self.hidden_ops = self.config["Proxy"]["hidden-ops"]
 
         # client setup and operating paramenters
+        self.username = "PING REQUEST"
         self.packet = Packet(self.client_socket, self)
+        self.parse_sb = ParseSB(self, self.packet)
         self.verifyToken = encryption.generate_challenge_token()
         self.serverID = encryption.generate_server_id().encode('utf-8')
         self.MOTD = {}
@@ -103,6 +103,8 @@ class Client:
         # the formal, unique, mojang UUID as looked up on mojang servers.  This ID will be the same
         #  no matter what mode wrapper is in or whether it is a lobby, etc.  This will be the formal
         #  uuid to use for all wrapper internal functions for referencing a unique player.
+        # TODO - Unused except by plugin channel.  This should be integrated better with wrapper's uuid lookups
+        #        and the player API.
         self.mojanguuid = None
 
         # information gathered during login or socket connection processes
@@ -110,12 +112,12 @@ class Client:
         # From socket data
         self.address = None
         self.ip = self.client_address[0]  # this will store the client IP for use by player.py
-        # From client handshake
-        self.serveraddressplayeruses = None
-        self.serverportplayeruses = None
+
+        # From client handshake.  For vanilla clients, it is what the user entered to connect to your wrapper.
+        self.serveraddressplayerused = None
+        self.serverportplayerused = None
 
         # player api Items
-        self.username = "PING REQUEST"
         self.gamemode = 0
         self.dimension = 0
         self.position = (0, 0, 0)  # X, Y, Z
@@ -226,8 +228,8 @@ class Client:
             self.server_connection.packet.sendpkt(self.pktSB.PLAYER, [D.BOOL, ], (True,))
         self.state = self.proxy.LOBBY
 
-    def _login_client_logon(self, start_keep_alives=True, ip=None, port=None):
-
+    def client_logon(self, start_keep_alives=True, ip=None, port=None):
+        """  When the client first logs in to wrapper """
         self._inittheplayer()  # set up inventory and stuff
 
         if self.wrapper.proxy.isuuidbanned(self.uuid.__str__()):
@@ -519,15 +521,6 @@ class Client:
                 self.server_connection.packet.sendpkt(self.pktSB.PLUGIN_MESSAGE, [D.STRING, D.BOOL],
                                                       [channel, state])
 
-    def _read_keep_alive(self):
-        if self.serverversion < mcpackets.PROTOCOL_1_8START:
-            data = self.packet.readpkt([D.INT])
-        else:  # self.version >= mcpackets.PROTOCOL_1_8START:
-            data = self.packet.readpkt([D.VARINT])
-        if data[0] == self.keepalive_val:
-            self.time_client_responded = time.time()
-        return False
-
     def _whitelist_processing(self):
         pass
         # This needs re-worked.
@@ -590,28 +583,28 @@ class Client:
                 self.pktSB.PLUGIN_MESSAGE: self._parse_plugin_message,
                 },
             self.proxy.PLAY: {
-                self.pktSB.CHAT_MESSAGE: self._parse_play_chat_message,
-                self.pktSB.CLICK_WINDOW: self._parse_play_click_window,
-                self.pktSB.CLIENT_SETTINGS: self._parse_play_client_settings,
+                self.pktSB.CHAT_MESSAGE: self.parse_sb.parse_play_chat_message,
+                self.pktSB.CLICK_WINDOW: self.parse_sb.parse_play_click_window,
+                self.pktSB.CLIENT_SETTINGS: self.parse_sb.parse_play_client_settings,
                 self.pktSB.CLIENT_STATUS: self._parse_built,
-                self.pktSB.HELD_ITEM_CHANGE: self._parse_play_held_item_change,
-                self.pktSB.KEEP_ALIVE: self._parse_play_keep_alive,
+                self.pktSB.HELD_ITEM_CHANGE: self.parse_sb.parse_play_held_item_change,
+                self.pktSB.KEEP_ALIVE: self._parse_keep_alive,
                 self.pktSB.PLAYER: self._parse_built,
                 self.pktSB.PLAYER_ABILITIES: self._parse_built,
-                self.pktSB.PLAYER_BLOCK_PLACEMENT: self._parse_play_player_block_placement,
-                self.pktSB.PLAYER_DIGGING: self._parse_play_player_digging,
-                self.pktSB.PLAYER_LOOK: self._parse_play_player_look,
-                self.pktSB.PLAYER_POSITION: self._parse_play_player_position,
-                self.pktSB.PLAYER_POSLOOK: self._parse_play_player_poslook,
-                self.pktSB.PLAYER_UPDATE_SIGN: self._parse_play_player_update_sign,
-                self.pktSB.SPECTATE: self._parse_play_spectate,
-                self.pktSB.TELEPORT_CONFIRM: self._parse_play_teleport_confirm,
+                self.pktSB.PLAYER_BLOCK_PLACEMENT: self.parse_sb.parse_play_player_block_placement,
+                self.pktSB.PLAYER_DIGGING: self.parse_sb.parse_play_player_digging,
+                self.pktSB.PLAYER_LOOK: self.parse_sb.parse_play_player_look,
+                self.pktSB.PLAYER_POSITION: self.parse_sb.parse_play_player_position,
+                self.pktSB.PLAYER_POSLOOK: self.parse_sb.parse_play_player_poslook,
+                self.pktSB.PLAYER_UPDATE_SIGN: self.parse_sb.parse_play_player_update_sign,
+                self.pktSB.SPECTATE: self.parse_sb.parse_play_spectate,
+                self.pktSB.TELEPORT_CONFIRM: self.parse_sb.parse_play_teleport_confirm,
                 self.pktSB.USE_ENTITY: self._parse_built,
-                self.pktSB.USE_ITEM: self._parse_play_use_item,
+                self.pktSB.USE_ITEM: self.parse_sb.parse_play_use_item,
                 self.pktSB.PLUGIN_MESSAGE: self._parse_plugin_message,
                 },
             self.proxy.LOBBY: {
-                self.pktSB.KEEP_ALIVE: self._parse_lobby_keep_alive,
+                self.pktSB.KEEP_ALIVE: self._parse_keep_alive,
                 self.pktSB.CHAT_MESSAGE: self._parse_lobby_chat_message,
                 self.pktSB.PLUGIN_MESSAGE: self._parse_plugin_message,
                 },
@@ -624,6 +617,15 @@ class Client:
     # -----------------------
     def _parse_built(self):
         return True
+
+    def _parse_keep_alive(self):
+        if self.serverversion < mcpackets.PROTOCOL_1_8START:
+            data = self.packet.readpkt([D.INT])
+        else:  # self.version >= mcpackets.PROTOCOL_1_8START:
+            data = self.packet.readpkt([D.VARINT])
+        if data[0] == self.keepalive_val:
+            self.time_client_responded = time.time()
+        return False
 
     # plugin channel handler
     # -----------------------
@@ -670,8 +672,8 @@ class Client:
         self.clientversion = data[0]
         self._getclientpacketset()
 
-        self.serveraddressplayeruses = data[1]
-        self.serverportplayeruses = data[2]
+        self.serveraddressplayerused = data[1]
+        self.serverportplayerused = data[2]
         requestedstate = data[3]
 
         if requestedstate == self.proxy.STATUS:
@@ -698,8 +700,7 @@ class Client:
                 # login start...
                 self.state = self.proxy.LOGIN
                 return True  # packet passes to server, which will also switch to Login
-
-            if self.serverversion != self.clientversion:
+            else:
                 self.disconnect("You're not running the same Minecraft version as the server!")
                 return False
 
@@ -793,7 +794,7 @@ class Client:
 
             # log the client on
             self.state = self.proxy.PLAY
-            self._login_client_logon()
+            self.client_logon()
 
     def _parse_login_encr_response(self):
         # the client is RESPONDING to our request for encryption (if we sent one above)
@@ -838,363 +839,10 @@ class Client:
 
         # log the client on
         self.state = self.proxy.PLAY
-        self._login_client_logon()
-
-    # Play parsers
-    # -----------------------
-    def _parse_play_chat_message(self):
-        data = self.packet.readpkt([D.STRING])
-        if data is None:
-            return False
-
-        # Get the packet chat message contents
-        chatmsg = data[0]
-
-        payload = self.wrapper.events.callevent("player.rawMessage", {
-            "player": self.getplayerobject(),
-            "message": chatmsg
-        })
-
-        # This part allows the player plugin event "player.rawMessage" to...
-        if payload is False:
-            return False  # ..reject the packet (by returning False)
-
-        # This is here for compatibility.  older plugins may attempt to send a string back
-        if type(payload) == str:  # or, if it can return a substitute payload
-            chatmsg = payload
-
-        # Newer plugins return a modified version of the original payload (i.e., a dictionary).
-        if type(payload) == dict and "message" in payload:  # or, if it can return a substitute payload
-            chatmsg = payload["message"]
-
-        # determine if this is a command. act appropriately
-        if chatmsg[0:self.command_prefix_len] == self.command_prefix:  # it IS a command of some kind
-            if self.wrapper.events.callevent(
-                    "player.runCommand", {
-                        "player": self.getplayerobject(),
-                        "command": chatmsg.split(" ")[0][1:].lower(),
-                        "args": chatmsg.split(" ")[1:]}):
-
-                return False  # wrapper processed this command.. it goes no further
-
-        if chatmsg[0] == "/" and self.command_prefix_non_standard:
-            chatmsg = chatmsg[1:]  # strip out any leading slash if using a non-slash command  prefix
-
-        # NOW we can send it (possibly modded) on to server...
-        self.message(chatmsg)
-        return False  # and cancel this original packet
-
-    def _parse_play_keep_alive(self):
-        return self._read_keep_alive()
-
-    def _parse_play_player_position(self):
-        if self.clientversion < mcpackets.PROTOCOL_1_8START:
-            data = self.packet.readpkt([D.DOUBLE, D.DOUBLE, D.DOUBLE, D.DOUBLE, D.BOOL])
-            # ("double:x|double:y|double:yhead|double:z|bool:on_ground")
-        elif self.clientversion >= mcpackets.PROTOCOL_1_8START:
-            data = self.packet.readpkt([D.DOUBLE, D.DOUBLE, D.NULL, D.DOUBLE, D.BOOL])
-            # ("double:x|double:y|double:z|bool:on_ground")
-        else:
-            data = [0, 0, 0, 0]
-        self.position = (data[0], data[1], data[3])  # skip 1.7.10 and lower protocol yhead args
-        return True
-
-    def _parse_play_player_poslook(self):  # player position and look
-        if self.clientversion < mcpackets.PROTOCOL_1_8START:
-            data = self.packet.readpkt([D.DOUBLE, D.DOUBLE, D.DOUBLE, D.DOUBLE, D.FLOAT, D.FLOAT, D.BOOL])
-        else:
-            data = self.packet.readpkt([D.DOUBLE, D.DOUBLE, D.DOUBLE, D.FLOAT, D.FLOAT, D.BOOL])
-        # ("double:x|double:y|double:z|float:yaw|float:pitch|bool:on_ground")
-        self.position = (data[0], data[1], data[4])
-        self.head = (data[4], data[5])
-        return True
-
-    def _parse_play_teleport_confirm(self):
-        # don't interfere with this and self.pktSB.PLAYER_POSLOOK... doing so will glitch the client
-        # data = self.packet.readpkt([D.VARINT])
-        return True
-
-    def _parse_play_player_look(self):
-        data = self.packet.readpkt([D.FLOAT, D.FLOAT, D.BOOL])
-        # ("float:yaw|float:pitch|bool:on_ground")
-        self.head = (data[0], data[1])
-        return True
-
-    def _parse_play_player_digging(self):
-        if self.clientversion < mcpackets.PROTOCOL_1_7:
-            data = None
-            position = data
-        elif mcpackets.PROTOCOL_1_7 <= self.clientversion < mcpackets.PROTOCOL_1_8START:
-            data = self.packet.readpkt([D.BYTE, D.INT, D.UBYTE, D.INT, D.BYTE])
-            # "byte:status|int:x|ubyte:y|int:z|byte:face")
-            position = (data[1], data[2], data[3])
-        else:
-            data = self.packet.readpkt([D.BYTE, D.POSITION, D.NULL, D.NULL, D.BYTE])
-            # "byte:status|position:position|byte:face")
-            position = data[1]
-
-        if data is None:
-            return True
-
-        # finished digging
-        if data[0] == 2:
-            if not self.wrapper.events.callevent("player.dig", {
-                "player": self.getplayerobject(),
-                "position": position,
-                "action": "end_break",
-                "face": data[4]
-            }):
-                return False  # stop packet if  player.dig returns False
-
-        # started digging
-        if data[0] == 0:
-            if self.gamemode != 1:
-                if not self.wrapper.events.callevent("player.dig", {
-                    "player": self.getplayerobject(),
-                    "position": position,
-                    "action": "begin_break",
-                    "face": data[4]
-                }):
-                    return False
-            else:
-                if not self.wrapper.events.callevent("player.dig", {
-                    "player": self.getplayerobject(),
-                    "position": position,
-                    "action": "end_break",
-                    "face": data[4]
-                }):
-                    return False
-        if data[0] == 5 and data[4] == 255:
-            if self.position != (0, 0, 0):
-                playerpos = self.position
-                if not self.wrapper.events.callevent("player.interact", {
-                    "player": self.getplayerobject(),
-                    "position": playerpos,
-                    "action": "finish_using"
-                }):
-                    return False
-        return True
-
-    def _parse_play_player_block_placement(self):
-        player = self.getplayerobject()
-        hand = 0  # main hand
-        helditem = player.getHeldItem()
-
-        if self.clientversion < mcpackets.PROTOCOL_1_7:
-            data = None
-            position = data
-
-        elif mcpackets.PROTOCOL_1_7 <= self.clientversion < mcpackets.PROTOCOL_1_8START:
-            data = self.packet.readpkt([D.INT, D.UBYTE, D.INT, D.BYTE, D.SLOT_NO_NBT, D.REST])
-            # "int:x|ubyte:y|int:z|byte:face|slot:item")  D.REST includes cursor positions x-y-z
-            position = (data[0], data[1], data[2])
-
-            # just FYI, notchian servers have been ignoring this field ("item")
-            # for a long time, using server inventory instead.
-            helditem = data[4]  # "item" - D.SLOT
-
-        elif mcpackets.PROTOCOL_1_8START <= self.clientversion < mcpackets.PROTOCOL_1_9REL1:
-            data = self.packet.readpkt([D.POSITION, D.NULL, D.NULL, D.BYTE, D.SLOT, D.REST])
-            # "position:Location|byte:face|slot:item|byte:CurPosX|byte:CurPosY|byte:CurPosZ")
-            # helditem = data["item"]  -available in packet, but server ignores it (we should too)!
-            # starting with 1.8, the server maintains inventory also.
-            position = data[0]
-
-        else:  # self.clientversion >= mcpackets.PROTOCOL_1_9REL1:
-            data = self.packet.readpkt([D.POSITION, D.NULL, D.NULL, D.VARINT, D.VARINT, D.BYTE, D.BYTE, D.BYTE])
-            # "position:Location|varint:face|varint:hand|byte:CurPosX|byte:CurPosY|byte:CurPosZ")
-            hand = data[4]  # used to be the spot occupied by "slot"
-            position = data[0]
-
-        # Face and Position exist in all version protocols at this point
-        clickposition = position
-        face = data[3]
-
-        if face == 0:  # Compensate for block placement coordinates
-            position = (position[0], position[1] - 1, position[2])
-        elif face == 1:
-            position = (position[0], position[1] + 1, position[2])
-        elif face == 2:
-            position = (position[0], position[1], position[2] - 1)
-        elif face == 3:
-            position = (position[0], position[1], position[2] + 1)
-        elif face == 4:
-            position = (position[0] - 1, position[1], position[2])
-        elif face == 5:
-            position = (position[0] + 1, position[1], position[2])
-
-        if helditem is None:
-            # if no item, treat as interaction (according to wrappers
-            # inventory :(, return False  )
-            if not self.wrapper.events.callevent("player.interact", {
-                "player": player,
-                "position": position,
-                "action": "useitem",
-                "origin": "pktSB.PLAYER_BLOCK_PLACEMENT"
-            }):
-                return False
-
-        # block placement event
-        self.lastplacecoords = position
-        if not self.wrapper.events.callevent("player.place", {"player": player,
-                                                              "position": position,  # where new block goes
-                                                              "clickposition": clickposition,  # block clicked
-                                                              "hand": hand,
-                                                              "item": helditem}):
-            return False
-        return True
-
-    def _parse_play_use_item(self):  # no 1.8 or prior packet
-        data = self.packet.readpkt([D.REST])
-        # "rest:pack")
-        player = self.getplayerobject()
-        position = self.lastplacecoords
-        if "pack" in data:
-            if data[0] == '\x00':
-                if not self.wrapper.events.callevent("player.interact", {
-                    "player": player,
-                    "position": position,
-                    "action": "useitem",
-                    "origin": "pktSB.USE_ITEM"
-                }):
-                    return False
-        return True
-
-    def _parse_play_held_item_change(self):
-        slot = self.packet.readpkt([D.SHORT])
-        # "short:short")  # ["short"]
-        if 9 > slot[0] > -1:
-            self.slot = slot[0]
-        else:
-            return False
-        return True
-
-    def _parse_play_player_update_sign(self):
-        if self.clientversion < mcpackets.PROTOCOL_1_8START:
-            data = self.packet.readpkt([D.INT, D.SHORT, D.INT, D.STRING, D.STRING, D.STRING, D.STRING])
-            # "int:x|short:y|int:z|string:line1|string:line2|string:line3|string:line4")
-            position = (data[0], data[1], data[2])
-            pre_18 = True
-        else:
-            data = self.packet.readpkt([D.POSITION, D.NULL, D.NULL, D.STRING, D.STRING, D.STRING, D.STRING])
-            # "position:position|string:line1|string:line2|string:line3|string:line4")
-            position = data[0]
-            pre_18 = False
-
-        l1 = data[3]
-        l2 = data[4]
-        l3 = data[5]
-        l4 = data[6]
-        payload = self.wrapper.events.callevent("player.createsign", {
-            "player": self.getplayerobject(),
-            "position": position,
-            "line1": l1,
-            "line2": l2,
-            "line3": l3,
-            "line4": l4
-        })
-        if not payload:  # plugin can reject sign entirely
-            return False
-
-        if type(payload) == dict:  # send back edits
-            if "line1" in payload:
-                l1 = payload["line1"]
-            if "line2" in payload:
-                l2 = payload["line2"]
-            if "line3" in payload:
-                l3 = payload["line3"]
-            if "line4" in payload:
-                l4 = payload["line4"]
-
-        self.editsign(position, l1, l2, l3, l4, pre_18)
-        return False
-
-    def _parse_play_client_settings(self):  # read Client Settings
-        """ This is read for later sending to servers we connect to """
-        self.clientSettings = self.packet.readpkt([D.RAW])[0]
-        self.clientSettingsSent = True  # the packet is not stopped, sooo...
-        return True
-
-    def _parse_play_click_window(self):  # click window
-        if self.clientversion < mcpackets.PROTOCOL_1_8START:
-            data = self.packet.readpkt([D.BYTE, D.SHORT, D.BYTE, D.SHORT, D.BYTE, D.SLOT_NO_NBT])
-            # ("byte:wid|short:slot|byte:button|short:action|byte:mode|slot:clicked")
-        elif mcpackets.PROTOCOL_1_8START < self.clientversion < mcpackets.PROTOCOL_1_9START:
-            data = self.packet.readpkt([D.UBYTE, D.SHORT, D.BYTE, D.SHORT, D.BYTE, D.SLOT])
-            # ("ubyte:wid|short:slot|byte:button|short:action|byte:mode|slot:clicked")
-        elif mcpackets.PROTOCOL_1_9START <= self.clientversion < mcpackets.PROTOCOL_MAX:
-            data = self.packet.readpkt([D.UBYTE, D.SHORT, D.BYTE, D.SHORT, D.VARINT, D.SLOT])
-            # ("ubyte:wid|short:slot|byte:button|short:action|varint:mode|slot:clicked")
-        else:
-            data = [False, 0, 0, 0, 0, 0, 0]
-
-        datadict = {
-            "player": self.getplayerobject(),
-            "wid": data[0],  # window id ... always 0 for inventory
-            "slot": data[1],  # slot number
-            "button": data[2],  # mouse / key button
-            "action": data[3],  # unique action id - incrementing counter
-            "mode": data[4],
-            "clicked": data[5]  # item data
-        }
-
-        if not self.wrapper.events.callevent("player.slotClick", datadict):
-            return False
-
-        # for inventory control, the most straightforward way to update wrapper's inventory is
-        # to use the data from each click.  The server will make other updates and corrections
-        # via SET_SLOT
-
-        # yes, this probably breaks for double clicks that send the item to who-can-guess what slot
-        # we can fix that in a future update... this gets us 98% fixed (versus 50% before)
-        # another source of breakage is if lagging causes server to deny the changes.  Our code
-        # is not checking if the server accepted these changes with a CONFIRM_TRANSACTION.
-
-        if data[0] == 0 and data[2] in (0, 1):  # window 0 (inventory) and right or left click
-            if self.lastitem is None and data[5] is None:  # player first clicks on an empty slot - mark empty.
-                self.inventory[data[1]] = None
-
-            if self.lastitem is None:  # player first clicks on a slot where there IS some data..
-                # having clicked on it puts the slot into NONE status (since it can now be moved)
-                self.inventory[data[1]] = None  # we set the current slot to empty/none
-                self.lastitem = data[5]  # ..and we cache the new slot data to see where it goes
-                return True
-
-            # up to this point, there was not previous item
-            if self.lastitem is not None and data[5] is None:  # now we have a previous item to process
-                self.inventory[data[1]] = self.lastitem  # that previous item now goes into the new slot.
-                self.lastitem = None  # since the slot was empty, there is no newer item to cache.
-                return True
-
-            if self.lastitem is not None and data[5] is not None:
-                # our last item now occupies the space clicked and the new item becomes the cached item.
-                self.inventory[data[1]] = self.lastitem  # set the cached item into the clicked slot.
-                self.lastitem = data[5]  # put the item that was in the clicked slot into the cache now.
-                return True
-        return True
-
-    def _parse_play_spectate(self):  # Spectate - convert packet to local server UUID
-        # !? WHAT!?
-        # ___________
-        # "Teleports the player to the given entity. The player must be in spectator mode.
-        # The Notchian client only uses this to teleport to players, but it appears to accept
-        #  any type of entity. The entity does not need to be in the same dimension as the
-        # player; if necessary, the player will be respawned in the right world."
-        """ Inter-dimensional player-to-player TP ! """  # TODO !
-
-        data = self.packet.readpkt([D.UUID, D.NULL])  # solves the uncertainty of dealing with what gets returned.
-        # ("uuid:target_player")
-        for client in self.wrapper.proxy.clients:
-            if data[0] == client.uuid:
-                self.server_connection.packet.sendpkt(self.pktSB.SPECTATE, [D.UUID], [client.serveruuid])
-                return False
-        return True
+        self.client_logon()
 
     # Lobby parsers
     # -----------------------
-    def _parse_lobby_keep_alive(self):
-        return self._read_keep_alive()
-
     def _parse_lobby_chat_message(self):
         data = self.packet.readpkt([D.STRING])
         if data is None:

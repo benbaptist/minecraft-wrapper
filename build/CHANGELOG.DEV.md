@@ -1,3 +1,9 @@
+build 178
+- bugfix - player.message was sending extra self argument.
+- bugfix - removed encoding argument, which is not supported in json.dumps for py3 (in MCServer.broadcast)
+- bugfix of serverconnection player.chatbox parse.
+- Moved clientconnection play packet parsers to new module parse_sb.py
+
 Build 176-177
 - Fix a couple bugs:
     - fix broken encrytion for Python 2 introduced in build 175

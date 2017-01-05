@@ -305,19 +305,19 @@ class ServerConnection:
         return self._keep_alive_response()
 
     def _parse_play_combat_event(self):
-        print("\nSTART COMB_PARSE\n")
+        # print("\nSTART COMB_PARSE\n")
         data = self.packet.readpkt([D.VARINT, ])
-        print("\nread COMB_PARSE\n")
+        # print("\nread COMB_PARSE\n")
         if data[0] == 2:
-            print("\nread COMB_PARSE2\n")
+            # print("\nread COMB_PARSE2\n")
             player_i_d = self.packet.readpkt([D.VARINT, ])
-            print("\nread COMB_PARSE3\n")
+            # print("\nread COMB_PARSE3\n")
             e_i_d = self.packet.readpkt([D.INT, ])
-            print("\nread COMB_PARSE4\n")
+            # print("\nread COMB_PARSE4\n")
             strg = self.packet.readpkt([D.STRING, ])
 
-            print("\nplayerEID=%s\nEID=%s\n" % (player_i_d, e_i_d))
-            print("\nTEXT=\n%s\n" % strg)
+            # print("\nplayerEID=%s\nEID=%s\n" % (player_i_d, e_i_d))
+            # print("\nTEXT=\n%s\n" % strg)
 
             return True
         return True
@@ -326,13 +326,12 @@ class ServerConnection:
         if self.version < mcpackets.PROTOCOL_1_8START:
             parsing = [D.STRING, D.NULL]
         else:
-            parsing = [D.STRING, D.BYTE]
+            parsing = [D.JSON, D.BYTE]
 
-        rawstring, position = self.packet.readpkt(parsing)
-        try:
-            data = json.loads(rawstring.decode('utf-8'))  # py3
-        except Exception as e:
-            return
+        data, position = self.packet.readpkt(parsing)
+
+        # position (1.8+ only)
+        # 0: chat (chat box), 1: system message (chat box), 2: above hotbar
 
         payload = self.wrapper.events.callevent("player.chatbox", {"player": self.client.getplayerobject(),
                                                                    "json": data})
@@ -347,13 +346,11 @@ class ServerConnection:
         # dictionary easier
         #   when creating complex items like the minecraft chat object.
 
-        elif type(payload) == dict:  # if payload returns a "chat" protocol dictionary http://wiki.vg/Chat
+        elif type(payload) == dict:  # if payload returns a dictionary, convert it to string and resend
             chatmsg = json.dumps(payload)
-            # send fake packet with modded payload
             self.client.packet.sendpkt(self.pktCB.CHAT_MESSAGE, parsing, (chatmsg, position))
             return False  # reject the orginal packet (it will not reach the client)
         elif type(payload) == str:  # if payload (plugin dev) returns a string-only object...
-            self.log.warning("player.Chatbox return payload sent as string")
             self.client.packet.sendpkt(self.pktCB.CHAT_MESSAGE, parsing, (payload, position))
             return False
         else:  # no payload, nor was the packet rejected.. packet passes to the client (and his chat)
