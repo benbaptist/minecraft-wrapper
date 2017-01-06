@@ -1,4 +1,7 @@
-build 178
+Build 179
+- Move and successfully parsed one (1) event out of serverconnection to new parse_cb.py module.
+
+Build 178
 - bugfix - player.message was sending extra self argument.
 - bugfix - removed encoding argument, which is not supported in json.dumps for py3 (in MCServer.broadcast)
 - bugfix of serverconnection player.chatbox parse.

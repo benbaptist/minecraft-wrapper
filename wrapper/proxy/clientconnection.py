@@ -58,9 +58,6 @@ class Client:
 
         # constants from config:
         self.spigot_mode = self.config["Proxy"]["spigot-mode"]
-        self.command_prefix = self.wrapper.command_prefix
-        self.command_prefix_non_standard = self.command_prefix != "/"
-        self.command_prefix_len = len(self.command_prefix)
         self.hidden_ops = self.config["Proxy"]["hidden-ops"]
 
         # client setup and operating paramenters
@@ -269,7 +266,6 @@ class Client:
 
         # connect to server
         self.connect_to_server(ip, port)
-
         return False
 
     def connect_to_server(self, ip=None, port=None):
@@ -288,6 +284,7 @@ class Client:
             self.server_connection.connect()
         except Exception as e:
             self.disconnect("Proxy client could not connect to the server (%s)" % e)
+            return
 
         # start server handle() to read the packets
         t = threading.Thread(target=self.server_connection.handle, args=())

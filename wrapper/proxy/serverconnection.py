@@ -15,6 +15,7 @@ import traceback
 
 # local
 from proxy.packet import Packet
+from proxy.parse_cb import ParseCB
 from proxy import mcpackets
 from core.entities import Entity
 
@@ -54,6 +55,7 @@ class ServerConnection:
         self.abort = False
         self.state = self.proxy.HANDSHAKE
         self.packet = None
+        self.parse_cb = None
         self.buildmode = False
         self.parsers = {}  # dictionary of parser packet constants and associated parsing methods
 
@@ -74,10 +76,9 @@ class ServerConnection:
         """Get serverversion for mcpackets use"""
 
         self.version = self.wrapper.javaserver.protocolVersion
-        self.log.debug("%s detected server version is %s", self.infos_debug, self.version)
-
         self.pktSB = mcpackets.ServerBound(self.version)
         self.pktCB = mcpackets.ClientBound(self.version)
+        self.parse_cb = ParseCB(self, self.packet)
         self._define_parsers()
 
         if self.version > mcpackets.PROTOCOL_1_7:
@@ -102,8 +103,13 @@ class ServerConnection:
         else:
             self.server_socket.connect((self.ip, self.port))
 
+        # start packet handler
         self.packet = Packet(self.server_socket, self)
         self.packet.version = self.client.clientversion
+
+        # define parsers
+        self.parse_cb = ParseCB(self, self.packet)
+        self._define_parsers()
 
         t = threading.Thread(target=self.flush_loop, args=())
         t.daemon = True
@@ -232,7 +238,7 @@ class ServerConnection:
                 self.pktCB.LOGIN_SET_COMPRESSION: self._parse_login_set_compression
             },
             self.proxy.PLAY: {
-                self.pktCB.COMBAT_EVENT: self._parse_play_combat_event,
+                self.pktCB.COMBAT_EVENT: self.parse_cb.parse_play_combat_event,
                 self.pktCB.KEEP_ALIVE: self._parse_play_keep_alive,
                 self.pktCB.CHAT_MESSAGE: self._parse_play_chat_message,
                 self.pktCB.JOIN_GAME: self._parse_play_join_game,

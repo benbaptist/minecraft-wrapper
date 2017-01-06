@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2016, 2017 - BenBaptist and minecraft-wrapper (AKA 'Wrapper.py')
+# Copyright (C) 2017 - BenBaptist and minecraft-wrapper (AKA 'Wrapper.py')
 #  developer(s).
 # https://github.com/benbaptist/minecraft-wrapper
 # This program is distributed under the terms of the GNU General Public License,
@@ -13,6 +13,9 @@ from utils import pkt_datatypes as D
 
 # noinspection PyMethodMayBeStatic
 class ParseSB:
+    """
+    ParseSB parses server bound packets that are coming from the client.
+    """
     def __init__(self, client, packet):
         self.client = client
         self.proxy = client.proxy
