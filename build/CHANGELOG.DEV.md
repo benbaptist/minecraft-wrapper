@@ -1,3 +1,7 @@
+Build 180
+- Move a few more events out of serverconnection to new parse_cb.py module.
+- start code to add event documentation.
+
 Build 179
 - Move and successfully parsed one (1) event out of serverconnection to new parse_cb.py module.
 

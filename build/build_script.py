@@ -25,6 +25,10 @@ parser.add_argument('--verbose', '-v', action='store_true', help='verbose flag')
 args = parser.parse_args()
 
 
+def build_event_docs():
+    pass
+
+
 def build_the_docs():
     """
 

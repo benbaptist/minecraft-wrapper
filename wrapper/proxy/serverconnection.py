@@ -10,7 +10,6 @@
 import socket
 import threading
 import time
-import json
 import traceback
 
 # local
@@ -240,9 +239,9 @@ class ServerConnection:
             self.proxy.PLAY: {
                 self.pktCB.COMBAT_EVENT: self.parse_cb.parse_play_combat_event,
                 self.pktCB.KEEP_ALIVE: self._parse_play_keep_alive,
-                self.pktCB.CHAT_MESSAGE: self._parse_play_chat_message,
-                self.pktCB.JOIN_GAME: self._parse_play_join_game,
-                self.pktCB.TIME_UPDATE: self._parse_play_time_update,
+                self.pktCB.CHAT_MESSAGE: self.parse_cb.parse_play_chat_message,
+                self.pktCB.JOIN_GAME: self.parse_cb.parse_play_join_game,
+                self.pktCB.TIME_UPDATE: self.parse_cb.parse_play_time_update,
                 self.pktCB.SPAWN_POSITION: self._parse_play_spawn_position,
                 self.pktCB.RESPAWN: self._parse_play_respawn,
                 self.pktCB.PLAYER_POSLOOK: self._parse_play_player_poslook,
@@ -309,79 +308,6 @@ class ServerConnection:
     # -----------------------
     def _parse_play_keep_alive(self):
         return self._keep_alive_response()
-
-    def _parse_play_combat_event(self):
-        # print("\nSTART COMB_PARSE\n")
-        data = self.packet.readpkt([D.VARINT, ])
-        # print("\nread COMB_PARSE\n")
-        if data[0] == 2:
-            # print("\nread COMB_PARSE2\n")
-            player_i_d = self.packet.readpkt([D.VARINT, ])
-            # print("\nread COMB_PARSE3\n")
-            e_i_d = self.packet.readpkt([D.INT, ])
-            # print("\nread COMB_PARSE4\n")
-            strg = self.packet.readpkt([D.STRING, ])
-
-            # print("\nplayerEID=%s\nEID=%s\n" % (player_i_d, e_i_d))
-            # print("\nTEXT=\n%s\n" % strg)
-
-            return True
-        return True
-
-    def _parse_play_chat_message(self):
-        if self.version < mcpackets.PROTOCOL_1_8START:
-            parsing = [D.STRING, D.NULL]
-        else:
-            parsing = [D.JSON, D.BYTE]
-
-        data, position = self.packet.readpkt(parsing)
-
-        # position (1.8+ only)
-        # 0: chat (chat box), 1: system message (chat box), 2: above hotbar
-
-        payload = self.wrapper.events.callevent("player.chatbox", {"player": self.client.getplayerobject(),
-                                                                   "json": data})
-
-        if payload is False:  # reject the packet .. no chat gets sent to the client
-            return False
-        #
-        # - this packet is headed to a client.  The plugin's modification could be just a simple "Hello There"
-        #   or the more complex minecraft json dictionary - or just a dictionary written as text:
-        # """{"text":"hello there"}"""
-        #   the minecraft protocol is just json-formatted string, but python users find dealing with a
-        # dictionary easier
-        #   when creating complex items like the minecraft chat object.
-
-        elif type(payload) == dict:  # if payload returns a dictionary, convert it to string and resend
-            chatmsg = json.dumps(payload)
-            self.client.packet.sendpkt(self.pktCB.CHAT_MESSAGE, parsing, (chatmsg, position))
-            return False  # reject the orginal packet (it will not reach the client)
-        elif type(payload) == str:  # if payload (plugin dev) returns a string-only object...
-            self.client.packet.sendpkt(self.pktCB.CHAT_MESSAGE, parsing, (payload, position))
-            return False
-        else:  # no payload, nor was the packet rejected.. packet passes to the client (and his chat)
-            return True  # just gathering info with these parses.
-
-    def _parse_play_join_game(self):
-        if self.version < mcpackets.PROTOCOL_1_9_1PRE:
-            data = self.packet.readpkt([D.INT, D.UBYTE, D.BYTE, D.UBYTE, D.UBYTE, D.STRING])
-            #    "int:eid|ubyte:gm|byte:dim|ubyte:diff|ubyte:max_players|string:level_type")
-        else:
-            data = self.packet.readpkt([D.INT, D.UBYTE, D.INT, D.UBYTE, D.UBYTE, D.STRING])
-            #    "int:eid|ubyte:gm|int:dim|ubyte:diff|ubyte:max_players|string:level_type")
-
-        self.eid = data[0]
-        self.client.gamemode = data[1]
-        self.client.dimension = data[2]
-        # self.client.eid = data[0]  # This is the EID of the player on the point-of-use server -
-        # not always the EID that the client is aware of.
-        return True
-
-    def _parse_play_time_update(self):
-        data = self.packet.readpkt([D.LONG, D.LONG])
-        # "long:worldage|long:timeofday")
-        self.wrapper.javaserver.timeofday = data[1]
-        return True
 
     def _parse_play_spawn_position(self):
         data = self.packet.readpkt([D.POSITION])
