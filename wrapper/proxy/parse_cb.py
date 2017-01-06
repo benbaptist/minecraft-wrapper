@@ -44,7 +44,7 @@ class ParseCB:
             return True
         return True
 
-    def _parse_play_chat_message(self):
+    def parse_play_chat_message(self):
         if self.server.version < mcpackets.PROTOCOL_1_8START:
             parsing = [D.STRING, D.NULL]
         else:
@@ -76,7 +76,7 @@ class ParseCB:
         else:  # no payload, nor was the packet rejected.. packet passes to the client (and his chat)
             return True
 
-    def _parse_play_join_game(self):
+    def parse_play_join_game(self):
         if self.server.version < mcpackets.PROTOCOL_1_9_1PRE:
             data = self.packet.readpkt([D.INT, D.UBYTE, D.BYTE, D.UBYTE, D.UBYTE, D.STRING])
             #    "int:eid|ubyte:gm|byte:dim|ubyte:diff|ubyte:max_players|string:level_type")
@@ -93,7 +93,7 @@ class ParseCB:
 
         return True
 
-    def _parse_play_time_update(self):
+    def parse_play_time_update(self):
         data = self.packet.readpkt([D.LONG, D.LONG])
         # "long:worldage|long:timeofday")
         self.wrapper.javaserver.timeofday = data[1]
