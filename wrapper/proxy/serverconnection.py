@@ -242,12 +242,12 @@ class ServerConnection:
                 self.pktCB.CHAT_MESSAGE: self.parse_cb.parse_play_chat_message,
                 self.pktCB.JOIN_GAME: self.parse_cb.parse_play_join_game,
                 self.pktCB.TIME_UPDATE: self.parse_cb.parse_play_time_update,
-                self.pktCB.SPAWN_POSITION: self._parse_play_spawn_position,
-                self.pktCB.RESPAWN: self._parse_play_respawn,
-                self.pktCB.PLAYER_POSLOOK: self._parse_play_player_poslook,
-                self.pktCB.USE_BED: self._parse_play_use_bed,
-                self.pktCB.SPAWN_PLAYER: self._parse_play_spawn_player,
-                self.pktCB.SPAWN_OBJECT: self._parse_play_spawn_object,
+                self.pktCB.SPAWN_POSITION: self.parse_cb.parse_play_spawn_position,
+                self.pktCB.RESPAWN: self.parse_cb.parse_play_respawn,
+                self.pktCB.PLAYER_POSLOOK: self.parse_cb.parse_play_player_poslook,
+                self.pktCB.USE_BED: self.parse_cb.parse_play_use_bed,
+                self.pktCB.SPAWN_PLAYER: self.parse_cb.parse_play_spawn_player,
+                self.pktCB.SPAWN_OBJECT: self.parse_cb.parse_play_spawn_object,
                 self.pktCB.SPAWN_MOB: self._parse_play_spawn_mob,
                 self.pktCB.ENTITY_RELATIVE_MOVE: self._parse_play_entity_relative_move,
                 self.pktCB.ENTITY_TELEPORT: self._parse_play_entity_teleport,
@@ -308,87 +308,6 @@ class ServerConnection:
     # -----------------------
     def _parse_play_keep_alive(self):
         return self._keep_alive_response()
-
-    def _parse_play_spawn_position(self):
-        data = self.packet.readpkt([D.POSITION])
-        #  javaserver.spawnPoint doesn't exist.. this is player spawnpoint anyway... ?
-        # self.wrapper.javaserver.spawnPoint = data[0]
-        self.client.position = data[0]
-        self.wrapper.events.callevent("player.spawned", {"player": self.client.getplayerobject()})
-        return True
-
-    def _parse_play_respawn(self):
-        data = self.packet.readpkt([D.INT, D.UBYTE, D.UBYTE, D.STRING])
-        # "int:dimension|ubyte:difficulty|ubyte:gamemode|level_type:string")
-        self.client.gamemode = data[2]
-        self.client.dimension = data[0]
-        return True
-
-    def _parse_play_player_poslook(self):
-        # CAVEAT - The client and server bound packet formats are different!
-        if self.version < mcpackets.PROTOCOL_1_8START:
-            data = self.packet.readpkt([D.DOUBLE, D.DOUBLE, D.DOUBLE, D.FLOAT, D.FLOAT, D.BOOL])
-        elif mcpackets.PROTOCOL_1_7_9 < self.version < mcpackets.PROTOCOL_1_9START:
-            data = self.packet.readpkt([D.DOUBLE, D.DOUBLE, D.DOUBLE, D.FLOAT, D.FLOAT, D.BYTE])
-        elif self.version > mcpackets.PROTOCOL_1_8END:
-            data = self.packet.readpkt([D.DOUBLE, D.DOUBLE, D.DOUBLE, D.FLOAT, D.FLOAT, D.BYTE, D.VARINT])
-        else:
-            data = self.packet.readpkt([D.DOUBLE, D.DOUBLE, D.DOUBLE, D.REST])
-        self.client.position = (data[0], data[1], data[2])  # not a bad idea to fill player position
-        return True
-
-    def _parse_play_use_bed(self):
-        data = self.packet.readpkt([D.VARINT, D.POSITION])
-        if data[0] == self.eid:
-            self.wrapper.events.callevent("player.usebed",
-                                          {"player": self.wrapper.javaserver.players[self.username],
-                                           "position": data[1]})
-        return True
-
-    def _parse_play_spawn_player(self):  # embedded UUID -must parse.
-        # This packet  is used to spawn other players into a player client's world.
-        # is this packet does not arrive, the other player(s) will not be visible to the client
-        if self.version < mcpackets.PROTOCOL_1_8START:
-            dt = self.packet.readpkt([D.VARINT, D.STRING, D.REST])
-        else:
-            dt = self.packet.readpkt([D.VARINT, D.UUID, D.REST])
-        # 1.7.6 "varint:eid|string:uuid|rest:metadt")
-        # 1.8 "varint:eid|uuid:uuid|int:x|int:y|int:z|byte:yaw|byte:pitch|short:item|rest:metadt")
-        # 1.9 "varint:eid|uuid:uuid|int:x|int:y|int:z|byte:yaw|byte:pitch|rest:metadt")
-
-        # We dont need to read the whole thing.
-        clientserverid = self.proxy.getclientbyofflineserveruuid(dt[1])
-        if clientserverid.uuid:
-            if self.version < mcpackets.PROTOCOL_1_8START:
-                self.client.packet.sendpkt(
-                    self.pktCB.SPAWN_PLAYER, [D.VARINT, D.STRING, D.RAW], (dt[0], str(clientserverid.uuid), dt[2]))
-            else:
-                self.client.packet.sendpkt(
-                    self.pktCB.SPAWN_PLAYER, [D.VARINT, D.UUID, D.RAW], (dt[0], clientserverid.uuid, dt[2]))
-            return False
-        return True
-
-    def _parse_play_spawn_object(self):
-        if not self.wrapper.javaserver.entity_control:
-            return True  # return now if no object tracking
-        if self.version < mcpackets.PROTOCOL_1_9START:
-            dt = self.packet.readpkt([D.VARINT, D.NULL, D.BYTE, D.INT, D.INT, D.INT, D.BYTE, D.BYTE])
-            dt[3], dt[4], dt[5] = dt[3] / 32, dt[4] / 32, dt[5] / 32
-            # "varint:eid|byte:type_|int:x|int:y|int:z|byte:pitch|byte:yaw")
-        else:
-            dt = self.packet.readpkt([D.VARINT, D.UUID, D.BYTE, D.DOUBLE, D.DOUBLE, D.DOUBLE, D.BYTE, D.BYTE])
-            # "varint:eid|uuid:objectUUID|byte:type_|int:x|int:y|int:z|byte:pitch|byte:yaw|int:info|
-            # short:velocityX|short:velocityY|short:velocityZ")
-        entityuuid = dt[1]
-
-        # we have to check these first, lest the object type be new and cause an exception.
-        if dt[2] in self.wrapper.javaserver.entity_control.objecttypes:
-            objectname = self.wrapper.javaserver.entity_control.objecttypes[dt[2]]
-            newobject = {dt[0]: Entity(dt[0], entityuuid, dt[2], objectname,
-                                       (dt[3], dt[4], dt[5],), (dt[6], dt[7]), True, self.username)}
-
-            self.wrapper.javaserver.entity_control.entities.update(newobject)
-        return True
 
     def _parse_play_spawn_mob(self):
         if not self.wrapper.javaserver.entity_control:
