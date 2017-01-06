@@ -16,7 +16,6 @@ import traceback
 from proxy.packet import Packet
 from proxy.parse_cb import ParseCB
 from proxy import mcpackets
-from core.entities import Entity
 
 # noinspection PyPep8Naming
 from utils import pkt_datatypes as D
@@ -30,7 +29,7 @@ if PY3:
     xrange = range
 
 
-# noinspection PyBroadException,PyUnusedLocal,PyMethodMayBeStatic
+# noinspection PyMethodMayBeStatic
 class ServerConnection:
     def __init__(self, client, ip=None, port=None):
         """
@@ -248,11 +247,11 @@ class ServerConnection:
                 self.pktCB.USE_BED: self.parse_cb.parse_play_use_bed,
                 self.pktCB.SPAWN_PLAYER: self.parse_cb.parse_play_spawn_player,
                 self.pktCB.SPAWN_OBJECT: self.parse_cb.parse_play_spawn_object,
-                self.pktCB.SPAWN_MOB: self._parse_play_spawn_mob,
-                self.pktCB.ENTITY_RELATIVE_MOVE: self._parse_play_entity_relative_move,
-                self.pktCB.ENTITY_TELEPORT: self._parse_play_entity_teleport,
-                self.pktCB.ATTACH_ENTITY: self._parse_play_attach_entity,
-                self.pktCB.DESTROY_ENTITIES: self._parse_play_destroy_entities,
+                self.pktCB.SPAWN_MOB: self.parse_cb.parse_play_spawn_mob,
+                self.pktCB.ENTITY_RELATIVE_MOVE: self.parse_cb.parse_play_entity_relative_move,
+                self.pktCB.ENTITY_TELEPORT: self.parse_cb.parse_play_entity_teleport,
+                self.pktCB.ATTACH_ENTITY: self.parse_cb.parse_play_attach_entity,
+                self.pktCB.DESTROY_ENTITIES: self.parse_cb.parse_play_destroy_entities,
                 self.pktCB.MAP_CHUNK_BULK: self._parse_play_map_chunk_bulk,
                 self.pktCB.CHANGE_GAME_STATE: self._parse_play_change_game_state,
                 self.pktCB.OPEN_WINDOW: self._parse_play_open_window,
@@ -308,126 +307,6 @@ class ServerConnection:
     # -----------------------
     def _parse_play_keep_alive(self):
         return self._keep_alive_response()
-
-    def _parse_play_spawn_mob(self):
-        if not self.wrapper.javaserver.entity_control:
-            return True
-        if self.version < mcpackets.PROTOCOL_1_9START:
-            dt = self.packet.readpkt([D.VARINT, D.NULL, D.UBYTE, D.INT, D.INT, D.INT, D.BYTE, D.BYTE, D.BYTE, D.REST])
-            dt[3], dt[4], dt[5] = dt[3] / 32, dt[4] / 32, dt[5] / 32
-            # "varint:eid|ubyte:type_|int:x|int:y|int:z|byte:pitch|byte:yaw|"
-            # "byte:head_pitch|...
-            # STOP PARSING HERE: short:velocityX|short:velocityY|short:velocityZ|rest:metadata")
-        else:
-            dt = self.packet.readpkt(
-                [D.VARINT, D.UUID, D.UBYTE, D.DOUBLE, D.DOUBLE, D.DOUBLE, D.BYTE, D.BYTE, D.BYTE, D.REST])
-            # ("varint:eid|uuid:entityUUID|ubyte:type_|int:x|int:y|int:z|"
-            # "byte:pitch|byte:yaw|byte:head_pitch|
-            # STOP PARSING HERE: short:velocityX|short:velocityY|short:velocityZ|rest:metadata")
-        entityuuid = dt[1]
-
-        # This little ditty means that a new mob type will be untracked (but it wont generate exception either!
-        if dt[2] in self.wrapper.javaserver.entity_control.entitytypes:
-            mobname = self.wrapper.javaserver.entity_control.entitytypes[dt[2]]["name"]
-            newmob = {dt[0]: Entity(dt[0], entityuuid, dt[2], mobname,
-                                    (dt[3], dt[4], dt[5],), (dt[6], dt[7], dt[8]), False, self.username)}
-
-            self.wrapper.javaserver.entity_control.entities.update(newmob)
-            # self.wrapper.javaserver.entity_control.entities[dt[0]] = Entity(dt[0], entityuuid, dt[2],
-            #                                                        (dt[3], dt[4], dt[5], ),
-            #                                                        (dt[6], dt[7], dt[8]),
-            #                                                        False)
-        return True
-
-    def _parse_play_entity_relative_move(self):
-        if not self.wrapper.javaserver.entity_control:
-            return True
-        if self.version < mcpackets.PROTOCOL_1_8START:  # 1.7.10 - 1.7.2
-            data = self.packet.readpkt([D.INT, D.BYTE, D.BYTE, D.BYTE])
-        else:  # FutureVersion > elif self.version > mcpacket.PROTOCOL_1_7_9:  1.8 ++
-            data = self.packet.readpkt([D.VARINT, D.BYTE, D.BYTE, D.BYTE])
-        # ("varint:eid|byte:dx|byte:dy|byte:dz")
-
-        entityupdate = self.wrapper.javaserver.entity_control.getEntityByEID(data[0])
-        if entityupdate:
-            entityupdate.move_relative((data[1], data[2], data[3]))
-        return True
-
-    def _parse_play_entity_teleport(self):
-        if not self.wrapper.javaserver.entity_control:
-            return True
-        if self.version < mcpackets.PROTOCOL_1_8START:  # 1.7.10 and prior
-            data = self.packet.readpkt([D.INT, D.INT, D.INT, D.INT, D.REST])
-        elif mcpackets.PROTOCOL_1_8START <= self.version < mcpackets.PROTOCOL_1_9START:
-            data = self.packet.readpkt([D.VARINT, D.INT, D.INT, D.INT, D.REST])
-        else:
-            data = self.packet.readpkt([D.VARINT, D.DOUBLE, D.DOUBLE, D.DOUBLE, D.REST])
-            data[1], data[2], data[3] = data[1] * 32, data[2] * 32, data[3] * 32
-        # ("varint:eid|int:x|int:y|int:z|byte:yaw|byte:pitch")
-
-        entityupdate = self.wrapper.javaserver.entity_control.getEntityByEID(data[0])
-        if entityupdate:
-            entityupdate.teleport((data[1], data[2], data[3]))
-        return True
-
-    def _parse_play_attach_entity(self):
-        data = []
-        leash = True  # False to detach
-        if self.version < mcpackets.PROTOCOL_1_8START:
-            print("\n server version is %s\n" % self.version)
-            data = self.packet.readpkt([D.INT, D.INT, D.BOOL])
-            leash = data[2]
-        if mcpackets.PROTOCOL_1_8START <= self.version < mcpackets.PROTOCOL_1_9START:
-            data = self.packet.readpkt([D.VARINT, D.VARINT, D.BOOL])
-            leash = data[2]
-        if self.version >= mcpackets.PROTOCOL_1_9START:
-            data = self.packet.readpkt([D.VARINT, D.VARINT])
-            if data[1] == -1:
-                leash = False
-        entityeid = data[0]  # rider, leash holder, etc
-        vehormobeid = data[1]  # vehicle, leashed entity, etc
-        player = self.proxy.getplayerby_eid(entityeid)
-
-        if player is None:
-            return True
-
-        if entityeid == self.eid:
-            if not leash:
-                self.wrapper.events.callevent("player.unmount", {"player": player})
-                self.log.debug("player unmount called for %s", player.username)
-                self.client.riding = None
-            else:
-                self.wrapper.events.callevent("player.mount", {"player": player, "vehicle_id": vehormobeid,
-                                                               "leash": leash})
-                self.client.riding = vehormobeid
-                self.log.debug("player mount called for %s on eid %s", player.username, vehormobeid)
-                if not self.wrapper.javaserver.entity_control:
-                    return
-                entityupdate = self.wrapper.javaserver.entity_control.getEntityByEID(vehormobeid)
-                if entityupdate:
-                    self.client.riding = entityupdate
-                    entityupdate.rodeBy = self.client
-        return True
-
-    def _parse_play_destroy_entities(self):
-        # Get rid of dead entities so that python can GC them.
-        if not self.wrapper.javaserver.entity_control:
-            return True
-        eids = []
-        if self.version < mcpackets.PROTOCOL_1_8START:
-            entitycount = bytearray(self.packet.readpkt([D.BYTE])[0])[0]  # make sure we get interable integer
-            parser = [D.INT]
-        else:
-            entitycount = bytearray(self.packet.readpkt([D.VARINT]))[0]
-            parser = [D.VARINT]
-
-        for _ in range(entitycount):
-            eid = self.packet.readpkt(parser)[0]
-            try:
-                self.wrapper.javaserver.entity_control.entities.pop(eid, None)
-            except:
-                pass
-        return True
 
     def _parse_play_map_chunk_bulk(self):  # (packet no longer exists in 1.9)
         #  no idea why this is parsed.. we are not doing anything with the data...
