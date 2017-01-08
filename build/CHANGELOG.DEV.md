@@ -1,12 +1,6 @@
-Build 181
-- move rest of play packets out of serverconnection to new parse_cb.py module.
-
-Build 180
-- Move a few more events out of serverconnection to new parse_cb.py module.
+Build 179-180
+- Move play packets out of serverconnection to new parse_cb.py module.
 - start code to add event documentation.
-
-Build 179
-- Move and successfully parsed one (1) event out of serverconnection to new parse_cb.py module.
 
 Build 178
 - bugfix - player.message was sending extra self argument.
