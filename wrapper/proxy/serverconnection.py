@@ -20,14 +20,6 @@ from proxy import mcpackets
 # noinspection PyPep8Naming
 from utils import pkt_datatypes as D
 
-# Py3-2
-import sys
-PY3 = sys.version_info > (3,)
-
-if PY3:
-    # noinspection PyShadowingBuiltins
-    xrange = range
-
 
 # noinspection PyMethodMayBeStatic
 class ServerConnection:
@@ -41,6 +33,7 @@ class ServerConnection:
         client. Client, by contrast, can exist and run in the absence of a server.
         """
 
+        # TODO server needs to be a true child of clientconnection process.  It should not close its own instance, etc
         # basic __init__ items from passed arguments
         self.client = client
         self.wrapper = client.wrapper
@@ -62,13 +55,10 @@ class ServerConnection:
         self._refresh_server_version()  # self parsers get updated here
 
         # player/client variables in this server instance
-        self.username = self.client.username
         self.eid = None
-        self.currentwindowid = -1
-        self.noninventoryslotcount = 0
 
         self.server_socket = socket.socket()  # temporary assignment.  The actual socket is assigned later.
-        self.infos_debug = "(player=%s, IP=%s, Port=%s)" % (self.username, self.ip, self.port)
+        self.infos_debug = "(player=%s, IP=%s, Port=%s)" % (self.client.username, self.ip, self.port)
 
     def _refresh_server_version(self):
         """Get serverversion for mcpackets use"""
@@ -123,9 +113,11 @@ class ServerConnection:
         self.log.debug("Disconnecting proxy server socket connection. %s", self.infos_debug)
         self.abort = True  # end 'handle' cleanly
         time.sleep(0.1)
+        # noinspection PyBroadException
         try:
             self.server_socket.shutdown(2)
             self.log.debug("Sucessfully closed server socket for %s", self.infos_debug)
+        # todo - discover our expected error
         except:
             self.log.debug("Server socket for %s already closed", self.infos_debug)
             pass
@@ -182,10 +174,10 @@ class ServerConnection:
 
     def _break_handle(self):
         if self.state == self.proxy.LOBBY:
-            self.log.info("%s is without a server now.", self.username)
-            # self.close_server("%s server connection closing..." % self.username, lobby_return=True)
+            self.log.info("%s is without a server now.", self.client.username)
+            # self.close_server("%s server connection closing..." % self.client.username, lobby_return=True)
         else:
-            self.close_server("%s server connection closing..." % self.username)
+            self.close_server("%s server connection closing..." % self.client.username)
         return
 
     def _keep_alive_response(self):
@@ -215,63 +207,6 @@ class ServerConnection:
 
     # PARSERS SECTION
     # -----------------------------
-    def parse(self, pkid):
-        try:
-            return self.parsers[self.state][pkid]()
-        except KeyError:
-            self.parsers[self.state][pkid] = self._parse_built
-            if self.buildmode:
-                # some code here to document un-parsed packets?
-                pass
-            return True
-
-    def _define_parsers(self):
-        # the packets we parse and the methods that parse them.
-        self.parsers = {
-            self.proxy.HANDSHAKE: {},  # maps identically to OFFLINE ( '0' )
-            self.proxy.LOGIN: {
-                self.pktCB.LOGIN_DISCONNECT: self._parse_login_disconnect,
-                self.pktCB.LOGIN_ENCR_REQUEST: self._parse_login_encr_request,
-                self.pktCB.LOGIN_SUCCESS: self._parse_login_success,
-                self.pktCB.LOGIN_SET_COMPRESSION: self._parse_login_set_compression
-            },
-            self.proxy.PLAY: {
-                self.pktCB.COMBAT_EVENT: self.parse_cb.parse_play_combat_event,
-                self.pktCB.KEEP_ALIVE: self._parse_play_keep_alive,
-                self.pktCB.CHAT_MESSAGE: self.parse_cb.parse_play_chat_message,
-                self.pktCB.JOIN_GAME: self.parse_cb.parse_play_join_game,
-                self.pktCB.TIME_UPDATE: self.parse_cb.parse_play_time_update,
-                self.pktCB.SPAWN_POSITION: self.parse_cb.parse_play_spawn_position,
-                self.pktCB.RESPAWN: self.parse_cb.parse_play_respawn,
-                self.pktCB.PLAYER_POSLOOK: self.parse_cb.parse_play_player_poslook,
-                self.pktCB.USE_BED: self.parse_cb.parse_play_use_bed,
-                self.pktCB.SPAWN_PLAYER: self.parse_cb.parse_play_spawn_player,
-                self.pktCB.SPAWN_OBJECT: self.parse_cb.parse_play_spawn_object,
-                self.pktCB.SPAWN_MOB: self.parse_cb.parse_play_spawn_mob,
-                self.pktCB.ENTITY_RELATIVE_MOVE: self.parse_cb.parse_play_entity_relative_move,
-                self.pktCB.ENTITY_TELEPORT: self.parse_cb.parse_play_entity_teleport,
-                self.pktCB.ATTACH_ENTITY: self.parse_cb.parse_play_attach_entity,
-                self.pktCB.DESTROY_ENTITIES: self.parse_cb.parse_play_destroy_entities,
-                self.pktCB.MAP_CHUNK_BULK: self._parse_play_map_chunk_bulk,
-                self.pktCB.CHANGE_GAME_STATE: self._parse_play_change_game_state,
-                self.pktCB.OPEN_WINDOW: self._parse_play_open_window,
-                self.pktCB.SET_SLOT: self._parse_play_set_slot,
-                self.pktCB.WINDOW_ITEMS: self._parse_play_window_items,
-                self.pktCB.ENTITY_PROPERTIES: self._parse_play_entity_properties,
-                self.pktCB.PLAYER_LIST_ITEM: self._parse_play_player_list_item,
-                self.pktCB.DISCONNECT: self._parse_play_disconnect,
-                self.pktCB.ENTITY_METADATA: self._parse_entity_metadata,
-                },
-            self.proxy.LOBBY: {
-                self.pktCB.DISCONNECT: self._parse_lobby_disconnect,
-                self.pktCB.KEEP_ALIVE: self._parse_lobby_keep_alive
-            }
-        }
-
-    # Do nothing parser
-    # -----------------------
-    def _parse_built(self):
-        return True
 
     # Login parsers
     # -----------------------
@@ -288,6 +223,8 @@ class ServerConnection:
 
     def _parse_login_success(self):  # Login Success - UUID & Username are sent in this packet as strings
         self.state = self.proxy.PLAY
+        # todo - we may not need to assign this to a variable. (we supplied uuid/name anyway!)
+        # noinspection PyUnusedLocal
         data = self.packet.readpkt([D.STRING, D.STRING])
         return False
 
@@ -307,110 +244,6 @@ class ServerConnection:
     # -----------------------
     def _parse_play_keep_alive(self):
         return self._keep_alive_response()
-
-    def _parse_play_map_chunk_bulk(self):  # (packet no longer exists in 1.9)
-        #  no idea why this is parsed.. we are not doing anything with the data...
-        # if mcpackets.PROTOCOL_1_9START > self.version > mcpackets.PROTOCOL_1_8START:
-        #     data = self.packet.readpkt([D.BOOL, D.VARINT])
-        #     chunks = data[1]
-        #     skylightbool = data[0]
-        #     # ("bool:skylight|varint:chunks")
-        #     for chunk in xxrange(chunks):
-        #         meta = self.packet.readpkt([D.INT, D.INT, _USHORT])
-        #         # ("int:x|int:z|ushort:primary")
-        #         primary = meta[2]
-        #         bitmask = bin(primary)[2:].zfill(16)
-        #         chunkcolumn = bytearray()
-        #         for bit in bitmask:
-        #             if bit == "1":
-        #                 # packetanisc
-        #                 chunkcolumn += bytearray(self.packet.read_data(16 * 16 * 16 * 2))
-        #                 if self.client.dimension == 0:
-        #                     metalight = bytearray(self.packet.read_data(16 * 16 * 16))
-        #                 if skylightbool:
-        #                     skylight = bytearray(self.packet.read_data(16 * 16 * 16))
-        #             else:
-        #                 # Null Chunk
-        #                 chunkcolumn += bytearray(16 * 16 * 16 * 2)
-        return True
-
-    def _parse_play_change_game_state(self):
-        data = self.packet.readpkt([D.UBYTE, D.FLOAT])
-        # ("ubyte:reason|float:value")
-        if data[0] == 3:
-            self.client.gamemode = data[1]
-        return True
-
-    def _parse_play_open_window(self):
-        # This works together with SET_SLOT to maintain accurate inventory in wrapper
-        if self.version < mcpackets.PROTOCOL_1_8START:
-            parsing = [D.UBYTE, D.UBYTE, D.STRING, D.UBYTE]
-        else:
-            parsing = [D.UBYTE, D.STRING, D.JSON, D.UBYTE]
-        data = self.packet.readpkt(parsing)
-        self.currentwindowid = data[0]
-        self.noninventoryslotcount = data[3]
-        return True
-
-    def _parse_play_set_slot(self):
-        # ("byte:wid|short:slot|slot:data")
-        if self.version < mcpackets.PROTOCOL_1_8START:
-            data = self.packet.readpkt([D.BYTE, D.SHORT, D.SLOT_NO_NBT])
-            inventoryslots = 35
-        elif self.version < mcpackets.PROTOCOL_1_9START:
-            data = self.packet.readpkt([D.BYTE, D.SHORT, D.SLOT])
-            inventoryslots = 35
-        elif self.version > mcpackets.PROTOCOL_1_8END:
-            data = self.packet.readpkt([D.BYTE, D.SHORT, D.SLOT])
-            inventoryslots = 36  # 1.9 minecraft with shield / other hand
-        else:
-            data = [-12, -12, None]
-            inventoryslots = 35
-
-        # this only works on startup when server sends WID = 0 with 45/46 items and when an item is moved into
-        # players inventory from outside (like a chest or picking something up)
-        # after this, these are sent on chest opens and so forth, each WID incrementing by +1 per object opened.
-        # the slot numbers that correspond to player hotbar will depend on what window is opened...
-        # the last 10 (for 1.9) or last 9 (for 1.8 and earlier) will be the player hotbar ALWAYS.
-        # to know how many packets and slots total to expect, we have to parse server-bound pktCB.OPEN_WINDOW.
-        if data[0] == 0:
-            self.client.inventory[data[1]] = data[2]
-
-        # Sure.. as though we are done ;)
-
-        if data[0] < 0:
-            return True
-
-        # This part updates our inventory from additional windows the player may open
-        if data[0] == self.currentwindowid:
-            currentslot = data[1]
-            slotdata = data[2]
-            if currentslot >= self.noninventoryslotcount:  # any number of slot above the
-                # pktCB.OPEN_WINDOW declared self.(..)slotcount is an inventory slot for up to update.
-                self.client.inventory[currentslot - self.noninventoryslotcount + 9] = data[2]
-        return True
-
-    def _parse_play_window_items(self):
-        # I am interested to see when this is used and in what versions.  It appears to be superfluous, as
-        # SET_SLOT seems to do the purported job nicely.
-        data = self.packet.readpkt([D.UBYTE, D.SHORT])
-        windowid = data[0]
-        elementcount = data[1]
-        # data = self.packet.read("byte:wid|short:count")
-        # if data["wid"] == 0:
-        #     for slot in range(1, data["count"]):
-        #         data = self.packet.readpkt("slot:data")
-        #         self.client.inventory[slot] = data["data"]
-        elements = []
-        if self.version > mcpackets.PROTOCOL_1_7_9:  # just parsing for now; not acting on, so OK to skip 1.7.9
-            for _ in xrange(elementcount):
-                elements.append(self.packet.read_slot())
-        jsondata = {
-            "windowid": windowid,
-            "elementcount": elementcount,
-            "elements": elements
-        }
-        return True
 
     def _parse_play_entity_properties(self):
         """ Not sure why I added this.  Based on the wiki, it looked like this might
@@ -509,7 +342,9 @@ class ServerConnection:
                                                 len(properties), raw))
                 elif action == 1:
                     data = self.packet.readpkt([D.VARINT])
-                    gamemode = data[0]
+
+                    # noinspection PyUnusedLocal
+                    gamemode = data[0]  # todo should we be using this to set client gamemode?
                     # ("varint:gamemode")
                     self.client.packet.sendpkt(self.pktCB.PLAYER_LIST_ITEM,
                                                [D.VARINT, D.VARINT, D.UUID, D.VARINT],
@@ -548,7 +383,7 @@ class ServerConnection:
         # def __str__():
         #    return "PLAY_DISCONNECT"
         message = self.packet.readpkt([D.JSON])
-        self.log.info("%s disconnected from Server", self.username)
+        self.log.info("%s disconnected from Server", self.client.username)
         self.close_server(message)
 
     def _parse_entity_metadata(self):
@@ -576,8 +411,66 @@ class ServerConnection:
     # -----------------------
     def _parse_lobby_disconnect(self):
         message = self.packet.readpkt([D.JSON])
-        self.log.info("%s went back to Hub", self.username)
+        self.log.info("%s went back to Hub", self.client.username)
         self.close_server(message, lobby_return=True)
 
     def _parse_lobby_keep_alive(self):
         return self._keep_alive_response()
+
+    def parse(self, pkid):
+        try:
+            return self.parsers[self.state][pkid]()
+        except KeyError:
+            self.parsers[self.state][pkid] = self._parse_built
+            if self.buildmode:
+                # some code here to document un-parsed packets?
+                pass
+            return True
+
+    def _define_parsers(self):
+        # the packets we parse and the methods that parse them.
+        self.parsers = {
+            self.proxy.HANDSHAKE: {},  # maps identically to OFFLINE ( '0' )
+            self.proxy.LOGIN: {
+                self.pktCB.LOGIN_DISCONNECT: self._parse_login_disconnect,
+                self.pktCB.LOGIN_ENCR_REQUEST: self._parse_login_encr_request,
+                self.pktCB.LOGIN_SUCCESS: self._parse_login_success,
+                self.pktCB.LOGIN_SET_COMPRESSION: self._parse_login_set_compression
+            },
+            self.proxy.PLAY: {
+                self.pktCB.COMBAT_EVENT: self.parse_cb.parse_play_combat_event,
+                self.pktCB.KEEP_ALIVE: self._parse_play_keep_alive,
+                self.pktCB.CHAT_MESSAGE: self.parse_cb.parse_play_chat_message,
+                self.pktCB.JOIN_GAME: self.parse_cb.parse_play_join_game,
+                self.pktCB.TIME_UPDATE: self.parse_cb.parse_play_time_update,
+                self.pktCB.SPAWN_POSITION: self.parse_cb.parse_play_spawn_position,
+                self.pktCB.RESPAWN: self.parse_cb.parse_play_respawn,
+                self.pktCB.PLAYER_POSLOOK: self.parse_cb.parse_play_player_poslook,
+                self.pktCB.USE_BED: self.parse_cb.parse_play_use_bed,
+                self.pktCB.SPAWN_PLAYER: self.parse_cb.parse_play_spawn_player,
+                self.pktCB.SPAWN_OBJECT: self.parse_cb.parse_play_spawn_object,
+                self.pktCB.SPAWN_MOB: self.parse_cb.parse_play_spawn_mob,
+                self.pktCB.ENTITY_RELATIVE_MOVE: self.parse_cb.parse_play_entity_relative_move,
+                self.pktCB.ENTITY_TELEPORT: self.parse_cb.parse_play_entity_teleport,
+                self.pktCB.ATTACH_ENTITY: self.parse_cb.parse_play_attach_entity,
+                self.pktCB.DESTROY_ENTITIES: self.parse_cb.parse_play_destroy_entities,
+                self.pktCB.MAP_CHUNK_BULK: self.parse_cb.parse_play_map_chunk_bulk,
+                self.pktCB.CHANGE_GAME_STATE: self.parse_cb.parse_play_change_game_state,
+                self.pktCB.OPEN_WINDOW: self.parse_cb.parse_play_open_window,
+                self.pktCB.SET_SLOT: self.parse_cb.parse_play_set_slot,
+                self.pktCB.WINDOW_ITEMS: self.parse_cb.parse_play_window_items,
+                self.pktCB.ENTITY_PROPERTIES: self._parse_play_entity_properties,
+                self.pktCB.PLAYER_LIST_ITEM: self._parse_play_player_list_item,
+                self.pktCB.DISCONNECT: self._parse_play_disconnect,
+                self.pktCB.ENTITY_METADATA: self._parse_entity_metadata,
+                },
+            self.proxy.LOBBY: {
+                self.pktCB.DISCONNECT: self._parse_lobby_disconnect,
+                self.pktCB.KEEP_ALIVE: self._parse_lobby_keep_alive
+            }
+        }
+
+    # Do nothing parser
+    # -----------------------
+    def _parse_built(self):
+        return True

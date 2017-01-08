@@ -128,6 +128,8 @@ class Client:
         self.clientSettingsSent = False
         self.skinBlob = {}
         self.windowCounter = 2  # restored this
+        self.currentwindowid = -1
+        self.noninventoryslotcount = 0
         self.lastitem = None
 
         # wrapper's own channel on each player client
@@ -401,8 +403,16 @@ class Client:
                 self.pktSB.PLAYER_UPDATE_SIGN, [D.POSITION, D.STRING, D.STRING, D.STRING, D.STRING],
                 (position, line1, line2, line3, line4))
 
-    def message(self, string):
+    def chat_to_server(self, string):
+        """ used to resend modified chat packets.  Also to mimic player in API player """
         self.server_connection.packet.sendpkt(self.pktSB.CHAT_MESSAGE, [D.STRING], [string])
+
+    def chat_to_cleint(self, message):
+        if self.version < mcpackets.PROTOCOL_1_8START:
+            parsing = [D.STRING, D.NULL]
+        else:
+            parsing = [D.JSON, D.BYTE]
+        self.packet.sendpkt(self.pktCB.CHAT_MESSAGE, parsing, (message, 0))
 
     # internal client login methods
     # -----------------------------

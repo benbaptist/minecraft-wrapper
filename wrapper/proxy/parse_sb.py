@@ -77,7 +77,7 @@ class ParseSB:
             chatmsg = chatmsg[1:]  # strip out any leading slash if using a non-slash command  prefix
 
         # NOW we can send it (possibly modded) on to server...
-        self.client.message(chatmsg)
+        self.client.chat_to_server(chatmsg)
         return False  # and cancel this original packet
 
     def parse_play_player_position(self):

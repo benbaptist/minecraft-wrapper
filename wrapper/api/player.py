@@ -179,7 +179,7 @@ class Player:
 
         """
         try:
-            self.client.message("/%s" % string)
+            self.client.chat_to_server("/%s" % string)
         except AttributeError:
             if self.javaserver.protocolVersion > mcpackets.PROTOCOL_1_7_9:
                 self.wrapper.javaserver.console("execute %s ~ ~ ~ %s" % (self.username, string))
@@ -217,7 +217,7 @@ class Player:
         commands as the player if the string is prefixed with a slash.
         """
         try:
-            self.client.message(string)
+            self.client.chat_to_server(string)
         except AttributeError:  # pre-1.8
             self.wrapper.javaserver.console("say @a <%s> %s" % (self.username, string))
 

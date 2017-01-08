@@ -13,6 +13,14 @@ from proxy import mcpackets
 # noinspection PyPep8Naming
 from utils import pkt_datatypes as D
 
+# Py3-2
+import sys
+PY3 = sys.version_info > (3,)
+
+if PY3:
+    # noinspection PyShadowingBuiltins
+    xrange = range
+
 
 # noinspection PyMethodMayBeStatic
 class ParseCB:
@@ -308,7 +316,9 @@ class ParseCB:
         # TODO - not certain this works correctly (errors - eids not used and too broad exception)
         if not self.wrapper.javaserver.entity_control:
             return True
-        eids = []  # what was this for??
+
+        # noinspection PyUnusedLocal
+        eids = []  # todo what was this for??
         if self.server.version < mcpackets.PROTOCOL_1_8START:
             entitycount = bytearray(self.packet.readpkt([D.BYTE])[0])[0]  # make sure we get iterable integer
             parser = [D.INT]
@@ -318,8 +328,115 @@ class ParseCB:
 
         for _ in range(entitycount):
             eid = self.packet.readpkt(parser)[0]
+            # noinspection PyBroadException
             try:
                 self.wrapper.javaserver.entity_control.entities.pop(eid, None)
+            # todo - find out what our expected exception is
             except:
                 pass
+        return True
+
+    def parse_play_map_chunk_bulk(self):  # (packet no longer exists in 1.9)
+        #  no idea why this is parsed.. we are not doing anything with the data...
+        # if mcpackets.PROTOCOL_1_9START > self.version > mcpackets.PROTOCOL_1_8START:
+        #     data = self.packet.readpkt([D.BOOL, D.VARINT])
+        #     chunks = data[1]
+        #     skylightbool = data[0]
+        #     # ("bool:skylight|varint:chunks")
+        #     for chunk in xxrange(chunks):
+        #         meta = self.packet.readpkt([D.INT, D.INT, _USHORT])
+        #         # ("int:x|int:z|ushort:primary")
+        #         primary = meta[2]
+        #         bitmask = bin(primary)[2:].zfill(16)
+        #         chunkcolumn = bytearray()
+        #         for bit in bitmask:
+        #             if bit == "1":
+        #                 # packetanisc
+        #                 chunkcolumn += bytearray(self.packet.read_data(16 * 16 * 16 * 2))
+        #                 if self.client.dimension == 0:
+        #                     metalight = bytearray(self.packet.read_data(16 * 16 * 16))
+        #                 if skylightbool:
+        #                     skylight = bytearray(self.packet.read_data(16 * 16 * 16))
+        #             else:
+        #                 # Null Chunk
+        #                 chunkcolumn += bytearray(16 * 16 * 16 * 2)
+        return True
+
+    def parse_play_change_game_state(self):
+        data = self.packet.readpkt([D.UBYTE, D.FLOAT])
+        # ("ubyte:reason|float:value")
+        if data[0] == 3:
+            self.client.gamemode = data[1]
+        return True
+
+    def _parse_play_open_window(self):
+        # This works together with SET_SLOT to maintain accurate inventory in wrapper
+        if self.server.version < mcpackets.PROTOCOL_1_8START:
+            parsing = [D.UBYTE, D.UBYTE, D.STRING, D.UBYTE]
+        else:
+            parsing = [D.UBYTE, D.STRING, D.JSON, D.UBYTE]
+        data = self.packet.readpkt(parsing)
+        self.client.currentwindowid = data[0]
+        self.client.noninventoryslotcount = data[3]
+        return True
+
+    def parse_play_set_slot(self):
+        # ("byte:wid|short:slot|slot:data")
+        data = [-12, -12, None]
+        # inventoryslots = 35  # todo - not sure how we  are dealing with slot counts
+        if self.server.version < mcpackets.PROTOCOL_1_8START:
+            data = self.packet.readpkt([D.BYTE, D.SHORT, D.SLOT_NO_NBT])
+            # inventoryslots = 35
+        elif self.server.version < mcpackets.PROTOCOL_1_9START:
+            data = self.packet.readpkt([D.BYTE, D.SHORT, D.SLOT])
+            # inventoryslots = 35
+        elif self.server.version > mcpackets.PROTOCOL_1_8END:
+            data = self.packet.readpkt([D.BYTE, D.SHORT, D.SLOT])
+            # inventoryslots = 36  # 1.9 minecraft with shield / other hand
+
+        # this only works on startup when server sends WID = 0 with 45/46 items and when an item is moved into
+        # players inventory from outside (like a chest or picking something up)
+        # after this, these are sent on chest opens and so forth, each WID incrementing by +1 per object opened.
+        # the slot numbers that correspond to player hotbar will depend on what window is opened...
+        # the last 10 (for 1.9) or last 9 (for 1.8 and earlier) will be the player hotbar ALWAYS.
+        # to know how many packets and slots total to expect, we have to parse server-bound pktCB.OPEN_WINDOW.
+        if data[0] == 0:
+            self.client.inventory[data[1]] = data[2]
+
+        if data[0] < 0:
+            return True
+
+        # This part updates our inventory from additional windows the player may open
+        if data[0] == self.client.currentwindowid:
+            currentslot = data[1]
+
+            # noinspection PyUnusedLocal
+            slotdata = data[2]  # TODO nothing is done with slot data
+            if currentslot >= self.client.noninventoryslotcount:  # any number of slot above the
+                # pktCB.OPEN_WINDOW declared self.(..)slotcount is an inventory slot for up to update.
+                self.client.inventory[currentslot - self.client.noninventoryslotcount + 9] = data[2]
+        return True
+
+    def parse_play_window_items(self):
+        # I am interested to see when this is used and in what versions.  It appears to be superfluous, as
+        # SET_SLOT seems to do the purported job nicely.
+        data = self.packet.readpkt([D.UBYTE, D.SHORT])
+        windowid = data[0]
+        elementcount = data[1]
+        # data = self.packet.read("byte:wid|short:count")
+        # if data["wid"] == 0:
+        #     for slot in range(1, data["count"]):
+        #         data = self.packet.readpkt("slot:data")
+        #         self.client.inventory[slot] = data["data"]
+        elements = []
+        if self.server.version > mcpackets.PROTOCOL_1_7_9:  # just parsing for now; not acting on, so OK to skip 1.7.9
+            for _ in xrange(elementcount):
+                elements.append(self.packet.read_slot())
+
+        # noinspection PyUnusedLocal
+        jsondata = {  # todo nothin done with data
+            "windowid": windowid,
+            "elementcount": elementcount,
+            "elements": elements
+        }
         return True

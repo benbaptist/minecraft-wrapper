@@ -692,7 +692,7 @@ def get_req(something, request):
     # This is a private function used by management.web
     for a in request.split("/")[1:][1].split("?")[1].split("&"):
         if a[0:a.find("=")] == something:
-            #PY3 unquote not a urllib (py3) method - impacts: Web mode
+            # PY3 unquote not a urllib (py3) method - impacts: Web mode
             return urllib.unquote(a[a.find("=") + 1:])
     return ""
 
@@ -734,3 +734,5 @@ def py_test():
 
 if __name__ == "__main__":
     py_test()
+
+
