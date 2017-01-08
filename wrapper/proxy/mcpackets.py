@@ -8,6 +8,8 @@
 
 from core.exceptions import UnsupportedMinecraftProtocol
 
+from utils.pkt_datatypes import *
+
 """
 Ways to reference packets by names and not hard-coded numbers.
 
@@ -80,7 +82,7 @@ class ClientBound:
         # play mode packets
         # -------------------------------
         # Base set 1.7 - 1.8.9 - The packet numbers were the same, although parsing differed amongst versions
-        self.KEEP_ALIVE = 0x00
+        self.KEEP_ALIVE = [0x00, [INT]]
         self.JOIN_GAME = 0x01
         self.CHAT_MESSAGE = 0x02
         self.TIME_UPDATE = 0x03
@@ -155,15 +157,18 @@ class ClientBound:
         self.RESOURCE_PACK_SEND = 0x48
         self.UPDATE_ENTITY_NBT = 0x49  # TODO - never parsed by wrapper before
 
-        self.PACKET_THAT_EXISTS_IN_FUTURE_PROTOCOL_BUT_NOT_THIS_ONE = 0xee
-
         # NEW to 1.9
+        self.PACKET_THAT_EXISTS_IN_FUTURE_PROTOCOL_BUT_NOT_THIS_ONE = 0xee
         self.UNLOAD_CHUNK = 0xee  # ALL VERSIONS handle chunk unloading DIFFERENTLY - CAVEAT EMPTOR!
         self.NAMED_SOUND_EFFECT = 0xee
         self.BOSS_BAR = 0xee
         self.SET_COOLDOWN = 0xee
         self.VEHICLE_MOVE = 0xee
         self.SET_PASSENGERS = 0xee
+
+        # Parsing changes
+        if protocol >= PROTOCOL_1_8START:
+            self.KEEP_ALIVE[PARSER] = [VARINT]
 
         # 1.9 changes
         if protocol >= PROTOCOL_1_9REL1:
@@ -198,7 +203,7 @@ class ClientBound:
             self.EXPLOSION = 0x1c
             self.UNLOAD_CHUNK = 0x1d  # TODO NEW  # ALL VERSIONS handle chunk unloading DIFFERENTLY - CAVEAT EMPTOR!
             self.CHANGE_GAME_STATE = 0x1e
-            self.KEEP_ALIVE = 0x1f
+            self.KEEP_ALIVE[PKT] = 0x1f
             self.CHUNK_DATA = 0x20
             self.EFFECT = 0x21
             self.PARTICLE = 0x22
@@ -279,7 +284,7 @@ class ServerBound:
         # Play packets
         # -------------------------------
         # 1.7 - 1.7.10 PLAY packets
-        self.KEEP_ALIVE = 0x00
+        self.KEEP_ALIVE = [0x00, [INT]]
         self.CHAT_MESSAGE = 0x01
         self.USE_ENTITY = 0x02
         self.PLAYER = 0x03
@@ -312,6 +317,10 @@ class ServerBound:
         self.VEHICLE_MOVE = 0xee
         self.STEER_BOAT = 0xee
 
+        # Parsing changes
+        if protocol >= PROTOCOL_1_8START:
+            self.KEEP_ALIVE[PARSER] = [VARINT]
+
         if PROTOCOL_1_9START > protocol >= PROTOCOL_1_8START:
             self.SPECTATE = 0x18
             self.RESOURCE_PACK_STATUS = 0x19
@@ -329,7 +338,7 @@ class ServerBound:
             self.CLOSE_WINDOW = 0x08  # TODO NEW
             self.PLUGIN_MESSAGE = 0x09
             self.USE_ENTITY = 0x0a
-            self.KEEP_ALIVE = 0x0b
+            self.KEEP_ALIVE[PKT] = 0x0b
             self.PLAYER_POSITION = 0x0c
             self.PLAYER_POSLOOK = 0x0d
             self.PLAYER_LOOK = 0x0e

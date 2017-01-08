@@ -16,8 +16,9 @@ BOOT_OPTIONS = "ENCODING=UTF-8\n"
 
 bootoption_count = 1
 
-PY3 = sys.version_info[0] > 2
-SUBVER = sys.version_info[1]
+version = sys.version_info
+SUBVER = version[1]
+PY3 = version[0] > 2
 
 
 def main():

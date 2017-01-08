@@ -1,18 +1,20 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2016, 2017 - BenBaptist and minecraft-wrapper (AKA 'Wrapper.py')
+# Copyright (C) 2017 - BenBaptist and minecraft-wrapper (AKA 'Wrapper.py')
 #  developer(s).
 # https://github.com/benbaptist/minecraft-wrapper
 # This program is distributed under the terms of the GNU General Public License,
 #  version 3 or later.
 
 from proxy import mcpackets
-# noinspection PyPep8Naming
-from utils import pkt_datatypes as D
+from utils.pkt_datatypes import *
 
 
 # noinspection PyMethodMayBeStatic
 class ParseSB:
+    """
+    ParseSB parses server bound packets that are coming from the client.
+    """
     def __init__(self, client, packet):
         self.client = client
         self.proxy = client.proxy
@@ -27,16 +29,16 @@ class ParseSB:
 
     def parse_play_player_poslook(self):  # player position and look
         if self.client.clientversion < mcpackets.PROTOCOL_1_8START:
-            data = self.packet.readpkt([D.DOUBLE, D.DOUBLE, D.DOUBLE, D.DOUBLE, D.FLOAT, D.FLOAT, D.BOOL])
+            data = self.packet.readpkt([DOUBLE, DOUBLE, DOUBLE, DOUBLE, FLOAT, FLOAT, BOOL])
         else:
-            data = self.packet.readpkt([D.DOUBLE, D.DOUBLE, D.DOUBLE, D.FLOAT, D.FLOAT, D.BOOL])
+            data = self.packet.readpkt([DOUBLE, DOUBLE, DOUBLE, FLOAT, FLOAT, BOOL])
         # ("double:x|double:y|double:z|float:yaw|float:pitch|bool:on_ground")
         self.client.position = (data[0], data[1], data[4])
         self.client.head = (data[4], data[5])
         return True
 
     def parse_play_chat_message(self):
-        data = self.packet.readpkt([D.STRING])
+        data = self.packet.readpkt([STRING])
         if data is None:
             return False
 
@@ -74,15 +76,15 @@ class ParseSB:
             chatmsg = chatmsg[1:]  # strip out any leading slash if using a non-slash command  prefix
 
         # NOW we can send it (possibly modded) on to server...
-        self.client.message(chatmsg)
+        self.client.chat_to_server(chatmsg)
         return False  # and cancel this original packet
 
     def parse_play_player_position(self):
         if self.client.clientversion < mcpackets.PROTOCOL_1_8START:
-            data = self.packet.readpkt([D.DOUBLE, D.DOUBLE, D.DOUBLE, D.DOUBLE, D.BOOL])
+            data = self.packet.readpkt([DOUBLE, DOUBLE, DOUBLE, DOUBLE, BOOL])
             # ("double:x|double:y|double:yhead|double:z|bool:on_ground")
         elif self.client.clientversion >= mcpackets.PROTOCOL_1_8START:
-            data = self.packet.readpkt([D.DOUBLE, D.DOUBLE, D.NULL, D.DOUBLE, D.BOOL])
+            data = self.packet.readpkt([DOUBLE, DOUBLE, NULL, DOUBLE, BOOL])
             # ("double:x|double:y|double:z|bool:on_ground")
         else:
             data = [0, 0, 0, 0]
@@ -91,11 +93,11 @@ class ParseSB:
 
     def parse_play_teleport_confirm(self):
         # don't interfere with this and self.pktSB.PLAYER_POSLOOK... doing so will glitch the client
-        # data = self.packet.readpkt([D.VARINT])
+        # data = self.packet.readpkt([VARINT])
         return True
 
     def parse_play_player_look(self):
-        data = self.packet.readpkt([D.FLOAT, D.FLOAT, D.BOOL])
+        data = self.packet.readpkt([FLOAT, FLOAT, BOOL])
         # ("float:yaw|float:pitch|bool:on_ground")
         self.client.head = (data[0], data[1])
         return True
@@ -105,11 +107,11 @@ class ParseSB:
             data = None
             position = data
         elif mcpackets.PROTOCOL_1_7 <= self.client.clientversion < mcpackets.PROTOCOL_1_8START:
-            data = self.packet.readpkt([D.BYTE, D.INT, D.UBYTE, D.INT, D.BYTE])
+            data = self.packet.readpkt([BYTE, INT, UBYTE, INT, BYTE])
             # "byte:status|int:x|ubyte:y|int:z|byte:face")
             position = (data[1], data[2], data[3])
         else:
-            data = self.packet.readpkt([D.BYTE, D.POSITION, D.NULL, D.NULL, D.BYTE])
+            data = self.packet.readpkt([BYTE, POSITION, NULL, NULL, BYTE])
             # "byte:status|position:position|byte:face")
             position = data[1]
 
@@ -165,23 +167,23 @@ class ParseSB:
             position = data
 
         elif mcpackets.PROTOCOL_1_7 <= self.client.clientversion < mcpackets.PROTOCOL_1_8START:
-            data = self.packet.readpkt([D.INT, D.UBYTE, D.INT, D.BYTE, D.SLOT_NO_NBT, D.REST])
-            # "int:x|ubyte:y|int:z|byte:face|slot:item")  D.REST includes cursor positions x-y-z
+            data = self.packet.readpkt([INT, UBYTE, INT, BYTE, SLOT_NO_NBT, REST])
+            # "int:x|ubyte:y|int:z|byte:face|slot:item")  REST includes cursor positions x-y-z
             position = (data[0], data[1], data[2])
 
             # just FYI, notchian servers have been ignoring this field ("item")
             # for a long time, using server inventory instead.
-            helditem = data[4]  # "item" - D.SLOT
+            helditem = data[4]  # "item" - SLOT
 
         elif mcpackets.PROTOCOL_1_8START <= self.client.clientversion < mcpackets.PROTOCOL_1_9REL1:
-            data = self.packet.readpkt([D.POSITION, D.NULL, D.NULL, D.BYTE, D.SLOT, D.REST])
+            data = self.packet.readpkt([POSITION, NULL, NULL, BYTE, SLOT, REST])
             # "position:Location|byte:face|slot:item|byte:CurPosX|byte:CurPosY|byte:CurPosZ")
             # helditem = data["item"]  -available in packet, but server ignores it (we should too)!
             # starting with 1.8, the server maintains inventory also.
             position = data[0]
 
         else:  # self.clientversion >= mcpackets.PROTOCOL_1_9REL1:
-            data = self.packet.readpkt([D.POSITION, D.NULL, D.NULL, D.VARINT, D.VARINT, D.BYTE, D.BYTE, D.BYTE])
+            data = self.packet.readpkt([POSITION, NULL, NULL, VARINT, VARINT, BYTE, BYTE, BYTE])
             # "position:Location|varint:face|varint:hand|byte:CurPosX|byte:CurPosY|byte:CurPosZ")
             hand = data[4]  # used to be the spot occupied by "slot"
             position = data[0]
@@ -225,7 +227,7 @@ class ParseSB:
         return True
 
     def parse_play_use_item(self):  # no 1.8 or prior packet
-        data = self.packet.readpkt([D.REST])
+        data = self.packet.readpkt([REST])
         # "rest:pack")
         player = self.client.getplayerobject()
         position = self.client.lastplacecoords
@@ -241,7 +243,7 @@ class ParseSB:
         return True
 
     def parse_play_held_item_change(self):
-        slot = self.packet.readpkt([D.SHORT])
+        slot = self.packet.readpkt([SHORT])
         # "short:short")  # ["short"]
         if 9 > slot[0] > -1:
             self.client.slot = slot[0]
@@ -251,12 +253,12 @@ class ParseSB:
 
     def parse_play_player_update_sign(self):
         if self.client.clientversion < mcpackets.PROTOCOL_1_8START:
-            data = self.packet.readpkt([D.INT, D.SHORT, D.INT, D.STRING, D.STRING, D.STRING, D.STRING])
+            data = self.packet.readpkt([INT, SHORT, INT, STRING, STRING, STRING, STRING])
             # "int:x|short:y|int:z|string:line1|string:line2|string:line3|string:line4")
             position = (data[0], data[1], data[2])
             pre_18 = True
         else:
-            data = self.packet.readpkt([D.POSITION, D.NULL, D.NULL, D.STRING, D.STRING, D.STRING, D.STRING])
+            data = self.packet.readpkt([POSITION, NULL, NULL, STRING, STRING, STRING, STRING])
             # "position:position|string:line1|string:line2|string:line3|string:line4")
             position = data[0]
             pre_18 = False
@@ -291,19 +293,19 @@ class ParseSB:
 
     def parse_play_client_settings(self):  # read Client Settings
         """ This is read for later sending to servers we connect to """
-        self.client.clientSettings = self.packet.readpkt([D.RAW])[0]
+        self.client.clientSettings = self.packet.readpkt([RAW])[0]
         self.client.clientSettingsSent = True  # the packet is not stopped, sooo...
         return True
 
     def parse_play_click_window(self):  # click window
         if self.client.clientversion < mcpackets.PROTOCOL_1_8START:
-            data = self.packet.readpkt([D.BYTE, D.SHORT, D.BYTE, D.SHORT, D.BYTE, D.SLOT_NO_NBT])
+            data = self.packet.readpkt([BYTE, SHORT, BYTE, SHORT, BYTE, SLOT_NO_NBT])
             # ("byte:wid|short:slot|byte:button|short:action|byte:mode|slot:clicked")
         elif mcpackets.PROTOCOL_1_8START < self.client.clientversion < mcpackets.PROTOCOL_1_9START:
-            data = self.packet.readpkt([D.UBYTE, D.SHORT, D.BYTE, D.SHORT, D.BYTE, D.SLOT])
+            data = self.packet.readpkt([UBYTE, SHORT, BYTE, SHORT, BYTE, SLOT])
             # ("ubyte:wid|short:slot|byte:button|short:action|byte:mode|slot:clicked")
         elif mcpackets.PROTOCOL_1_9START <= self.client.clientversion < mcpackets.PROTOCOL_MAX:
-            data = self.packet.readpkt([D.UBYTE, D.SHORT, D.BYTE, D.SHORT, D.VARINT, D.SLOT])
+            data = self.packet.readpkt([UBYTE, SHORT, BYTE, SHORT, VARINT, SLOT])
             # ("ubyte:wid|short:slot|byte:button|short:action|varint:mode|slot:clicked")
         else:
             data = [False, 0, 0, 0, 0, 0, 0]
@@ -362,10 +364,10 @@ class ParseSB:
         # player; if necessary, the player will be respawned in the right world."
         """ Inter-dimensional player-to-player TP ! """  # TODO !
 
-        data = self.packet.readpkt([D.UUID, D.NULL])  # solves the uncertainty of dealing with what gets returned.
+        data = self.packet.readpkt([UUID, NULL])  # solves the uncertainty of dealing with what gets returned.
         # ("uuid:target_player")
         for client in self.wrapper.proxy.clients:
             if data[0] == client.uuid:
-                self.client.server_connection.packet.sendpkt(self.client.pktSB.SPECTATE, [D.UUID], [client.serveruuid])
+                self.client.server_connection.packet.sendpkt(self.client.pktSB.SPECTATE, [UUID], [client.serveruuid])
                 return False
         return True

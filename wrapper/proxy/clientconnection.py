@@ -28,9 +28,7 @@ from api.player import Player
 from core.mcuuid import MCUUID
 
 from api.helpers import processcolorcodes
-
-# noinspection PyPep8Naming
-from utils import pkt_datatypes as D
+from utils.pkt_datatypes import *
 
 
 # noinspection PyMethodMayBeStatic
@@ -58,9 +56,6 @@ class Client:
 
         # constants from config:
         self.spigot_mode = self.config["Proxy"]["spigot-mode"]
-        self.command_prefix = self.wrapper.command_prefix
-        self.command_prefix_non_standard = self.command_prefix != "/"
-        self.command_prefix_len = len(self.command_prefix)
         self.hidden_ops = self.config["Proxy"]["hidden-ops"]
 
         # client setup and operating paramenters
@@ -131,6 +126,8 @@ class Client:
         self.clientSettingsSent = False
         self.skinBlob = {}
         self.windowCounter = 2  # restored this
+        self.currentwindowid = -1
+        self.noninventoryslotcount = 0
         self.lastitem = None
 
         # wrapper's own channel on each player client
@@ -217,15 +214,15 @@ class Client:
         # TODO whatever respawn stuff works
         # send these right quick to client
         self._send_client_settings()
-        self.packet.sendpkt(self.pktCB.CHANGE_GAME_STATE, [D.UBYTE, D.FLOAT], (1, 0))
-        self.packet.sendpkt(self.pktCB.RESPAWN, [D.INT, D.UBYTE, D.UBYTE, D.STRING], [-1, 3, 0, 'default'])
+        self.packet.sendpkt(self.pktCB.CHANGE_GAME_STATE, [UBYTE, FLOAT], (1, 0))
+        self.packet.sendpkt(self.pktCB.RESPAWN, [INT, UBYTE, UBYTE, STRING], [-1, 3, 0, 'default'])
         if self.version < mcpackets.PROTOCOL_1_8START:
-            self.server_connection.packet.sendpkt(self.pktSB.CLIENT_STATUS, [D.BYTE, ], (0, ))
+            self.server_connection.packet.sendpkt(self.pktSB.CLIENT_STATUS, [BYTE, ], (0, ))
         else:
-            self.packet.sendpkt(0x2c, [D.VARINT, D.INT, D.STRING, ], (self.server_connection.eid, "DURNIT"))
-            # self.packet.sendpkt(0x3e, [D.FLOAT, D.VARINT, D.FLOAT], (-1, 0, 0.0))
-            self.server_connection.packet.sendpkt(self.pktSB.CLIENT_STATUS, [D.VARINT, ], (0, ))
-            self.server_connection.packet.sendpkt(self.pktSB.PLAYER, [D.BOOL, ], (True,))
+            self.packet.sendpkt(0x2c, [VARINT, INT, STRING, ], (self.server_connection.eid, "DURNIT"))
+            # self.packet.sendpkt(0x3e, [FLOAT, VARINT, FLOAT], (-1, 0, 0.0))
+            self.server_connection.packet.sendpkt(self.pktSB.CLIENT_STATUS, [VARINT, ], (0, ))
+            self.server_connection.packet.sendpkt(self.pktSB.PLAYER, [BOOL, ], (True,))
         self.state = self.proxy.LOBBY
 
     def client_logon(self, start_keep_alives=True, ip=None, port=None):
@@ -260,7 +257,7 @@ class Client:
         # start keep alives
         if start_keep_alives:
             # send login success to client (the real client is already logged in if keep alives are running)
-            self.packet.sendpkt(self.pktCB.LOGIN_SUCCESS, [D.STRING, D.STRING], (self.uuid.string, self.username))
+            self.packet.sendpkt(self.pktCB.LOGIN_SUCCESS, [STRING, STRING], (self.uuid.string, self.username))
             self.time_client_responded = time.time()
 
             t_keepalives = threading.Thread(target=self._keep_alive_tracker, kwargs={'playername': self.username})
@@ -269,7 +266,6 @@ class Client:
 
         # connect to server
         self.connect_to_server(ip, port)
-
         return False
 
     def connect_to_server(self, ip=None, port=None):
@@ -288,6 +284,7 @@ class Client:
             self.server_connection.connect()
         except Exception as e:
             self.disconnect("Proxy client could not connect to the server (%s)" % e)
+            return
 
         # start server handle() to read the packets
         t = threading.Thread(target=self.server_connection.handle, args=())
@@ -305,11 +302,11 @@ class Client:
             server_addr = "localhost\x00FML\x00"
 
         self.server_connection.packet.sendpkt(self.server_connection.pktSB.HANDSHAKE,
-                                              [D.VARINT, D.STRING, D.USHORT, D.VARINT],
+                                              [VARINT, STRING, USHORT, VARINT],
                                               (self.clientversion, server_addr, self.server_port, self.proxy.LOGIN))
 
         # send the login request (server is offline, so it will accept immediately by sending login_success)
-        self.server_connection.packet.sendpkt(self.server_connection.pktSB.LOGIN_START, [D.STRING], [self.username])
+        self.server_connection.packet.sendpkt(self.server_connection.pktSB.LOGIN_START, [STRING], [self.username])
 
         # LOBBY code and such to go elsewhere
 
@@ -344,10 +341,10 @@ class Client:
             jsonmessage = message  # server packets are read as json
 
         if self.state in (self.proxy.PLAY, self.proxy.LOBBY):
-            self.packet.sendpkt(self.pktCB.DISCONNECT, [D.JSON], [jsonmessage])
+            self.packet.sendpkt(self.pktCB.DISCONNECT, [JSON], [jsonmessage])
             self.log.debug("upon disconnect, state was PLAY (sent PLAY state DISCONNECT)")
         else:
-            self.packet.sendpkt(self.pktCB.LOGIN_DISCONNECT, [D.JSON], [message])
+            self.packet.sendpkt(self.pktCB.LOGIN_DISCONNECT, [JSON], [message])
             self.log.debug("upon disconnect, state was 'other' (sent LOGIN_DISCONNECT)")
         time.sleep(1)
         self.state = self.proxy.HANDSHAKE
@@ -397,15 +394,23 @@ class Client:
             y = position[1]
             z = position[2]
             self.server_connection.packet.sendpkt(self.pktSB.PLAYER_UPDATE_SIGN,
-                                                  [D.INT, D.SHORT, D.INT, D.STRING, D.STRING, D.STRING, D.STRING],
+                                                  [INT, SHORT, INT, STRING, STRING, STRING, STRING],
                                                   (x, y, z, line1, line2, line3, line4))
         else:
             self.server_connection.packet.sendpkt(
-                self.pktSB.PLAYER_UPDATE_SIGN, [D.POSITION, D.STRING, D.STRING, D.STRING, D.STRING],
+                self.pktSB.PLAYER_UPDATE_SIGN, [POSITION, STRING, STRING, STRING, STRING],
                 (position, line1, line2, line3, line4))
 
-    def message(self, string):
-        self.server_connection.packet.sendpkt(self.pktSB.CHAT_MESSAGE, [D.STRING], [string])
+    def chat_to_server(self, string):
+        """ used to resend modified chat packets.  Also to mimic player in API player """
+        self.server_connection.packet.sendpkt(self.pktSB.CHAT_MESSAGE, [STRING], [string])
+
+    def chat_to_cleint(self, message):
+        if self.version < mcpackets.PROTOCOL_1_8START:
+            parsing = [STRING, NULL]
+        else:
+            parsing = [JSON, BYTE]
+        self.packet.sendpkt(self.pktCB.CHAT_MESSAGE, parsing, (message, 0))
 
     # internal client login methods
     # -----------------------------
@@ -422,11 +427,7 @@ class Client:
                     self.keepalive_val = random.randrange(0, 99999)
 
                     # challenge the client with it
-                    if self.clientversion > mcpackets.PROTOCOL_1_8START:
-                        self.packet.sendpkt(self.pktCB.KEEP_ALIVE, [D.VARINT], [self.keepalive_val])
-                    else:
-                        # pre- 1.8
-                        self.packet.sendpkt(self.pktCB.KEEP_ALIVE, [D.INT], [self.keepalive_val])
+                    self.packet.sendpkt(self.pktCB.KEEP_ALIVE[PKT], self.pktCB.KEEP_ALIVE[PARSER], [self.keepalive_val])
                     self.time_server_pinged = time.time()
 
                 # check for active client keep alive status:
@@ -490,7 +491,7 @@ class Client:
 
     def _send_client_settings(self):
         if self.clientSettings and not self.clientSettingsSent:
-            self.server_connection.packet.sendpkt(self.pktSB.CLIENT_SETTINGS, [D.RAW, ], (self.clientSettings,))
+            self.server_connection.packet.sendpkt(self.pktSB.CLIENT_SETTINGS, [RAW, ], (self.clientSettings,))
             self.clientSettingsSent = True
 
     def _send_forge_client_handshakereset(self):
@@ -504,9 +505,9 @@ class Client:
          """
         channel = "FML|HS"
         if self.clientversion < mcpackets.PROTOCOL_1_8START:
-            self.packet.sendpkt(self.pktCB.PLUGIN_MESSAGE, [D.STRING, D.SHORT, D.BYTE], [channel, 1, 254])
+            self.packet.sendpkt(self.pktCB.PLUGIN_MESSAGE, [STRING, SHORT, BYTE], [channel, 1, 254])
         else:
-            self.packet.sendpkt(self.pktCB.PLUGIN_MESSAGE, [D.STRING, D.BYTE], [channel, 254])
+            self.packet.sendpkt(self.pktCB.PLUGIN_MESSAGE, [STRING, BYTE], [channel, 254])
 
     def _transmit_downstream(self):
         """ transmit wrapper channel status info to the server's direction to help sync hub/lobby wrappers """
@@ -515,10 +516,10 @@ class Client:
         state = self.state
         if self.server_connection:
             if self.version < mcpackets.PROTOCOL_1_8START:
-                self.server_connection.packet.sendpkt(self.pktSB.PLUGIN_MESSAGE, [D.STRING, D.SHORT, D.BYTE],
+                self.server_connection.packet.sendpkt(self.pktSB.PLUGIN_MESSAGE, [STRING, SHORT, BYTE],
                                                       [channel, 1,  state])
             else:
-                self.server_connection.packet.sendpkt(self.pktSB.PLUGIN_MESSAGE, [D.STRING, D.BOOL],
+                self.server_connection.packet.sendpkt(self.pktSB.PLUGIN_MESSAGE, [STRING, BOOL],
                                                       [channel, state])
 
     def _whitelist_processing(self):
@@ -554,75 +555,9 @@ class Client:
 
     # PARSERS SECTION
     # -----------------------------
-    def parse(self, pkid):
-        try:
-            return self.parsers[self.state][pkid]()
-        except KeyError:
-            # Add unparsed packetID to the 'Do nothing parser'
-            self.parsers[self.state][pkid] = self._parse_built
-            if self.buildmode:
-                # some code here to document un-parsed packets?
-                pass
-            return True
-
-    def _define_parsers(self):
-        # the packets we parse and the methods that parse them.
-        self.parsers = {
-            self.proxy.HANDSHAKE: {
-                self.pktSB.HANDSHAKE: self._parse_handshaking,
-                self.pktSB.PLUGIN_MESSAGE: self._parse_plugin_message,
-                },
-            self.proxy.STATUS: {
-                self.pktSB.STATUS_PING: self._parse_status_ping,
-                self.pktSB.REQUEST: self._parse_status_request,
-                self.pktSB.PLUGIN_MESSAGE: self._parse_plugin_message,
-                },
-            self.proxy.LOGIN: {
-                self.pktSB.LOGIN_START: self._parse_login_start,
-                self.pktSB.LOGIN_ENCR_RESPONSE: self._parse_login_encr_response,
-                self.pktSB.PLUGIN_MESSAGE: self._parse_plugin_message,
-                },
-            self.proxy.PLAY: {
-                self.pktSB.CHAT_MESSAGE: self.parse_sb.parse_play_chat_message,
-                self.pktSB.CLICK_WINDOW: self.parse_sb.parse_play_click_window,
-                self.pktSB.CLIENT_SETTINGS: self.parse_sb.parse_play_client_settings,
-                self.pktSB.CLIENT_STATUS: self._parse_built,
-                self.pktSB.HELD_ITEM_CHANGE: self.parse_sb.parse_play_held_item_change,
-                self.pktSB.KEEP_ALIVE: self._parse_keep_alive,
-                self.pktSB.PLAYER: self._parse_built,
-                self.pktSB.PLAYER_ABILITIES: self._parse_built,
-                self.pktSB.PLAYER_BLOCK_PLACEMENT: self.parse_sb.parse_play_player_block_placement,
-                self.pktSB.PLAYER_DIGGING: self.parse_sb.parse_play_player_digging,
-                self.pktSB.PLAYER_LOOK: self.parse_sb.parse_play_player_look,
-                self.pktSB.PLAYER_POSITION: self.parse_sb.parse_play_player_position,
-                self.pktSB.PLAYER_POSLOOK: self.parse_sb.parse_play_player_poslook,
-                self.pktSB.PLAYER_UPDATE_SIGN: self.parse_sb.parse_play_player_update_sign,
-                self.pktSB.SPECTATE: self.parse_sb.parse_play_spectate,
-                self.pktSB.TELEPORT_CONFIRM: self.parse_sb.parse_play_teleport_confirm,
-                self.pktSB.USE_ENTITY: self._parse_built,
-                self.pktSB.USE_ITEM: self.parse_sb.parse_play_use_item,
-                self.pktSB.PLUGIN_MESSAGE: self._parse_plugin_message,
-                },
-            self.proxy.LOBBY: {
-                self.pktSB.KEEP_ALIVE: self._parse_keep_alive,
-                self.pktSB.CHAT_MESSAGE: self._parse_lobby_chat_message,
-                self.pktSB.PLUGIN_MESSAGE: self._parse_plugin_message,
-                },
-            self.proxy.IDLE: {
-                self.pktSB.PLUGIN_MESSAGE: self._parse_plugin_message,
-            }
-        }
-
-    # Do nothing parser
-    # -----------------------
-    def _parse_built(self):
-        return True
 
     def _parse_keep_alive(self):
-        if self.serverversion < mcpackets.PROTOCOL_1_8START:
-            data = self.packet.readpkt([D.INT])
-        else:  # self.version >= mcpackets.PROTOCOL_1_8START:
-            data = self.packet.readpkt([D.VARINT])
+        data = self.packet.readpkt(self.pktSB.KEEP_ALIVE[PARSER])
         if data[0] == self.keepalive_val:
             self.time_client_responded = time.time()
         return False
@@ -630,7 +565,7 @@ class Client:
     # plugin channel handler
     # -----------------------
     def _parse_plugin_message(self):
-        channel = self.packet.readpkt([D.STRING, ])[0]
+        channel = self.packet.readpkt([STRING, ])[0]
 
         if channel not in self.proxy.registered_channels:
             # we are not actually registering our channels with the MC server.
@@ -641,11 +576,11 @@ class Client:
 
         if channel == "WRAPPER.PY|":
             if self.clientversion < mcpackets.PROTOCOL_1_8START:
-                datarest = self.packet.readpkt([D.SHORT, D.REST])[1]
+                datarest = self.packet.readpkt([SHORT, REST])[1]
             else:
-                datarest = self.packet.readpkt([D.REST, ])[0]
+                datarest = self.packet.readpkt([REST, ])[0]
 
-            print("\nDATA D.REST = %s\n" % datarest)
+            print("\nDATA REST = %s\n" % datarest)
             response = json.loads(datarest.decode(self.wrapper.encoding), encoding=self.wrapper.encoding)
             self._plugin_response(response)
             return True
@@ -667,7 +602,7 @@ class Client:
     # -----------------------
     def _parse_handshaking(self):
         self.log.debug("HANDSHAKE")
-        data = self.packet.readpkt([D.VARINT, D.STRING, D.USHORT, D.VARINT])  # "version|address|port|state"
+        data = self.packet.readpkt([VARINT, STRING, USHORT, VARINT])  # "version|address|port|state"
 
         self.clientversion = data[0]
         self._getclientpacketset()
@@ -709,8 +644,8 @@ class Client:
 
     def _parse_status_ping(self):
         self.log.debug("SB -> STATUS PING")
-        data = self.packet.readpkt([D.LONG])
-        self.packet.sendpkt(self.pktCB.PING_PONG, [D.LONG], [data[0]])
+        data = self.packet.readpkt([LONG])
+        self.packet.sendpkt(self.pktCB.PING_PONG, [LONG], [data[0]])
         self.log.debug("CB (W)-> STATUS PING")
         self.state = self.proxy.HANDSHAKE
         return False
@@ -752,14 +687,14 @@ class Client:
         if self.proxy.forge:
             self.MOTD["modinfo"] = self.proxy.mod_info["modinfo"]
 
-        self.packet.sendpkt(self.pktCB.PING_JSON_RESPONSE, [D.STRING], [json.dumps(self.MOTD)])
+        self.packet.sendpkt(self.pktCB.PING_JSON_RESPONSE, [STRING], [json.dumps(self.MOTD)])
         self.log.debug("CB (W)-> JSON RESPONSE")
         # after this, proxy waits for the expected PING to go back to Handshake mode
         return False
 
     def _parse_login_start(self):
         self.log.debug("SB -> LOGIN START")
-        data = self.packet.readpkt([D.STRING, D.NULL])
+        data = self.packet.readpkt([STRING, NULL])
 
         # "username"
         self.username = data[0]
@@ -770,12 +705,12 @@ class Client:
             if self.serverversion < 6:  # 1.7.x versions
                 # send to client 1.7
                 self.packet.sendpkt(self.pktCB.LOGIN_ENCR_REQUEST,
-                                    [D.STRING, D.BYTEARRAY_SHORT, D.BYTEARRAY_SHORT],
+                                    [STRING, BYTEARRAY_SHORT, BYTEARRAY_SHORT],
                                     (self.serverID, self.publicKey, self.verifyToken))
             else:
                 # send to client 1.8 +
                 self.packet.sendpkt(self.pktCB.LOGIN_ENCR_REQUEST,
-                                    [D.STRING, D.BYTEARRAY, D.BYTEARRAY],
+                                    [STRING, BYTEARRAY, BYTEARRAY],
                                     (self.serverID, self.publicKey, self.verifyToken))
             self.log.debug("CB (W)-> LOGIN ENCR REQUEST")
 
@@ -802,9 +737,9 @@ class Client:
         # "shared_secret|verify_token"
         self.log.debug("SB -> LOGIN ENCR RESPONSE")
         if self.serverversion < 6:
-            data = self.packet.readpkt([D.BYTEARRAY_SHORT, D.BYTEARRAY_SHORT])
+            data = self.packet.readpkt([BYTEARRAY_SHORT, BYTEARRAY_SHORT])
         else:
-            data = self.packet.readpkt([D.BYTEARRAY, D.BYTEARRAY])
+            data = self.packet.readpkt([BYTEARRAY, BYTEARRAY])
 
         sharedsecret = encryption.decrypt_shared_secret(data[0], self.privateKey)
         verifytoken = encryption.decrypt_shared_secret(data[1], self.privateKey)
@@ -844,7 +779,7 @@ class Client:
     # Lobby parsers
     # -----------------------
     def _parse_lobby_chat_message(self):
-        data = self.packet.readpkt([D.STRING])
+        data = self.packet.readpkt([STRING])
         if data is None:
             return True
 
@@ -861,3 +796,66 @@ class Client:
 
         # we are just sniffing this packet for lobby return commands, so send it on to the destination.
         return True
+
+    def parse(self, pkid):
+        try:
+            return self.parsers[self.state][pkid]()
+        except KeyError:
+            # Add unparsed packetID to the 'Do nothing parser'
+            self.parsers[self.state][pkid] = self._parse_built
+            if self.buildmode:
+                # some code here to document un-parsed packets?
+                pass
+            return True
+
+    # Do nothing parser
+    def _parse_built(self):
+        return True
+
+    def _define_parsers(self):
+        # the packets we parse and the methods that parse them.
+        self.parsers = {
+            self.proxy.HANDSHAKE: {
+                self.pktSB.HANDSHAKE: self._parse_handshaking,
+                self.pktSB.PLUGIN_MESSAGE: self._parse_plugin_message,
+                },
+            self.proxy.STATUS: {
+                self.pktSB.STATUS_PING: self._parse_status_ping,
+                self.pktSB.REQUEST: self._parse_status_request,
+                self.pktSB.PLUGIN_MESSAGE: self._parse_plugin_message,
+                },
+            self.proxy.LOGIN: {
+                self.pktSB.LOGIN_START: self._parse_login_start,
+                self.pktSB.LOGIN_ENCR_RESPONSE: self._parse_login_encr_response,
+                self.pktSB.PLUGIN_MESSAGE: self._parse_plugin_message,
+                },
+            self.proxy.PLAY: {
+                self.pktSB.CHAT_MESSAGE: self.parse_sb.parse_play_chat_message,
+                self.pktSB.CLICK_WINDOW: self.parse_sb.parse_play_click_window,
+                self.pktSB.CLIENT_SETTINGS: self.parse_sb.parse_play_client_settings,
+                self.pktSB.CLIENT_STATUS: self._parse_built,
+                self.pktSB.HELD_ITEM_CHANGE: self.parse_sb.parse_play_held_item_change,
+                self.pktSB.KEEP_ALIVE[PKT]: self._parse_keep_alive,
+                self.pktSB.PLAYER: self._parse_built,
+                self.pktSB.PLAYER_ABILITIES: self._parse_built,
+                self.pktSB.PLAYER_BLOCK_PLACEMENT: self.parse_sb.parse_play_player_block_placement,
+                self.pktSB.PLAYER_DIGGING: self.parse_sb.parse_play_player_digging,
+                self.pktSB.PLAYER_LOOK: self.parse_sb.parse_play_player_look,
+                self.pktSB.PLAYER_POSITION: self.parse_sb.parse_play_player_position,
+                self.pktSB.PLAYER_POSLOOK: self.parse_sb.parse_play_player_poslook,
+                self.pktSB.PLAYER_UPDATE_SIGN: self.parse_sb.parse_play_player_update_sign,
+                self.pktSB.SPECTATE: self.parse_sb.parse_play_spectate,
+                self.pktSB.TELEPORT_CONFIRM: self.parse_sb.parse_play_teleport_confirm,
+                self.pktSB.USE_ENTITY: self._parse_built,
+                self.pktSB.USE_ITEM: self.parse_sb.parse_play_use_item,
+                self.pktSB.PLUGIN_MESSAGE: self._parse_plugin_message,
+                },
+            self.proxy.LOBBY: {
+                self.pktSB.KEEP_ALIVE[PKT]: self._parse_keep_alive,
+                self.pktSB.CHAT_MESSAGE: self._parse_lobby_chat_message,
+                self.pktSB.PLUGIN_MESSAGE: self._parse_plugin_message,
+                },
+            self.proxy.IDLE: {
+                self.pktSB.PLUGIN_MESSAGE: self._parse_plugin_message,
+            }
+        }
