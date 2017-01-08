@@ -26,22 +26,20 @@ class API:
 
     :sample usage:
 
+        .. code:: python
 
-.. code:: python
+            class Main:
+                def __init__(self, api, log):
+                    self.api = api
 
-    class Main:
-        def __init__(self, api, log):
-            self.api = api
+                def onEnable(self):
+                    self.api.minecraft.registerHelp("Home", "Commands from the Home plugin", [
+                        ("/sethome", "Save curremt position as home", None),
+                        ("/home", "Teleports you to your home set by /sethome", None),
+                    ])
 
-        def onEnable(self):
-            self.api.minecraft.registerHelp("Home", "Commands from the Home plugin", [
-                ("/sethome", "Save curremt position as home", None),
-                ("/home", "Teleports you to your home set by /sethome", None),
-            ])
-
-            self.api.minecraft.registerCommand("sethome", self.sethome)
-..
-
+                    self.api.minecraft.registerCommand("sethome", self.sethome)
+        ..
 
     """
     statuseffects = {
@@ -119,7 +117,7 @@ class API:
         :command:  The command the client enters (without the slash).  using a slash will mean two slashes will have
          to be typed (e.g. "/region" means the user must type "//region".
 
-        :callback:  The plugin method you want to call the command is typed. Expected arguments are 1) the player
+        :callback:  The plugin method you want to call when the command is typed. Expected arguments are 1) the player
          object, 2) a list of the arguments (words after the command, stripped of whitespace).
 
         :permission:  A string item of your choosing, such as "essentials.home".  Can be (type) None to require no
@@ -127,7 +125,10 @@ class API:
 
         :sample usage:
 
-        `self.api.registerCommand("home", self._home, None)`
+            .. code:: python
+
+                self.api.registerCommand("home", self._home, None)
+            ..
 
         :returns:  None/Nothing
 
@@ -196,11 +197,14 @@ class API:
 
         :summary: The text that you'll see next next to the help group's name.
 
-        :commands: a list of tuples in the following example format:
+        :commands: a list of tuples in the following example format;
 
-        [("/command <argument>, [optional_argument]", "description", "permission.node"),
-         ("/summon <EntityName> [x] [y] [z]", "Summons an entity", None),
-         ("/suicide", "Kills you - beware of losing your stuff!", "essentials.suicide")]
+            .. code:: python
+
+                     [("/command <argument>, [optional_argument]", "description", "permission.node"),
+                     ("/summon <EntityName> [x] [y] [z]", "Summons an entity", None),
+                     ("/suicide", "Kills you - beware of losing your stuff!", "essentials.suicide")]
+            ..
 
         :returns:  None/Nothing
 
@@ -245,13 +249,13 @@ class API:
 
         :sample usage:
 
-.. code:: python
+            .. code:: python
 
-        essentials_id = "com.benbaptist.plugins.essentials"
-        running_essentials = api.getPluginContext(essentials_id)
-        warps = running_essentials.data["warps"]
-        print("Warps data currently being used by essentials: \\n %s" % warps)
-..
+                essentials_id = "com.benbaptist.plugins.essentials"
+                running_essentials = api.getPluginContext(essentials_id)
+                warps = running_essentials.data["warps"]
+                print("Warps data currently being used by essentials: \\n %s" % warps)
+            ..
 
         :returns:  Raises wrapper exception `exceptions.NonExistentPlugin` if the specified plugin does not exist.
 
@@ -270,24 +274,24 @@ class API:
 
         :world:
 
-         `False` sets the storages location to `/wrapper-data/plugins`.
+            "False" sets the storages location to `/wrapper-data/plugins`.
 
-         `True` sets the storage path to `<serverpath>/<worldname>/plugins`.
+            "True" sets the storage path to `<serverpath>/<worldname>/plugins`.
 
         :sample methods:
 
-.. code:: python
+            .. code:: python
 
-        # to start a storage:
-        self.data = self.api.getStorage("worldly", True)
+                # to start a storage:
+                self.data = self.api.getStorage("worldly", True)
 
-        # to save:
-        self.data.save()  # storages also do periodic saves every minute.
+                # to save:
+                self.data.save()  # storages also do periodic saves every minute.
 
-        # to close (and save):
-        def onDisable(self):
-            self.data.close()
-..
+                # to close (and save):
+                def onDisable(self):
+                    self.data.close()
+            ..
 
         """
         if world:
@@ -302,31 +306,31 @@ class API:
         file to start wrapper (Linux example).  This code will restart wrapper after every shutdown until the
         console user ends it with CTRL-C.
 
-.. caution::
-    (using CTRL-C will allow Wrapper.py to close gracefully, saving it's Storages, and shutting down plugins.
-    Don't use CTRL-Z unless absolutely necessary!)
-..
+        .. caution::
+            (using CTRL-C will allow Wrapper.py to close gracefully, saving it's Storages, and shutting down plugins.
+            Don't use CTRL-Z unless absolutely necessary!)
+        ..
 
-./start.sh
+        :./start.sh:
 
 
-.. code:: bash
+            .. code:: bash
 
-        #! bin/bash
-        function finish() {
-          echo "Stopped startup script!"
-          read -p "Press [Enter] key to continue..."
-          exit
-        }
+                    #! bin/bash
+                    function finish() {
+                      echo "Stopped startup script!"
+                      read -p "Press [Enter] key to continue..."
+                      exit
+                    }
 
-        trap finish SIGINT SIGTERM SIGQUIT
+                    trap finish SIGINT SIGTERM SIGQUIT
 
-        while true; do
-          cd "/home/wrapper/"
-          python Wrapper.py
-          sleep 1
-        done
-..
+                    while true; do
+                      cd "/home/wrapper/"
+                      python Wrapper.py
+                      sleep 1
+                    done
+            ..
 
         """
         self.wrapper.shutdown()
