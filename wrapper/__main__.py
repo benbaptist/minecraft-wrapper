@@ -16,7 +16,7 @@ BOOT_OPTIONS = "ENCODING=UTF-8\n"
 
 bootoption_count = 1
 
-version = sys.version
+version = sys.version_info
 SUBVER = version[1]
 PY3 = version[0] > 2
 
