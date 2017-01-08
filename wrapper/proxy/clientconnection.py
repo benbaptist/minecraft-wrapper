@@ -427,11 +427,7 @@ class Client:
                     self.keepalive_val = random.randrange(0, 99999)
 
                     # challenge the client with it
-                    if self.clientversion > mcpackets.PROTOCOL_1_8START:
-                        self.packet.sendpkt(self.pktCB.KEEP_ALIVE, [VARINT], [self.keepalive_val])
-                    else:
-                        # pre- 1.8
-                        self.packet.sendpkt(self.pktCB.KEEP_ALIVE, [INT], [self.keepalive_val])
+                    self.packet.sendpkt(self.pktCB.KEEP_ALIVE[PKT], self.pktCB.KEEP_ALIVE[PARSER], [self.keepalive_val])
                     self.time_server_pinged = time.time()
 
                 # check for active client keep alive status:
@@ -559,75 +555,9 @@ class Client:
 
     # PARSERS SECTION
     # -----------------------------
-    def parse(self, pkid):
-        try:
-            return self.parsers[self.state][pkid]()
-        except KeyError:
-            # Add unparsed packetID to the 'Do nothing parser'
-            self.parsers[self.state][pkid] = self._parse_built
-            if self.buildmode:
-                # some code here to document un-parsed packets?
-                pass
-            return True
-
-    def _define_parsers(self):
-        # the packets we parse and the methods that parse them.
-        self.parsers = {
-            self.proxy.HANDSHAKE: {
-                self.pktSB.HANDSHAKE: self._parse_handshaking,
-                self.pktSB.PLUGIN_MESSAGE: self._parse_plugin_message,
-                },
-            self.proxy.STATUS: {
-                self.pktSB.STATUS_PING: self._parse_status_ping,
-                self.pktSB.REQUEST: self._parse_status_request,
-                self.pktSB.PLUGIN_MESSAGE: self._parse_plugin_message,
-                },
-            self.proxy.LOGIN: {
-                self.pktSB.LOGIN_START: self._parse_login_start,
-                self.pktSB.LOGIN_ENCR_RESPONSE: self._parse_login_encr_response,
-                self.pktSB.PLUGIN_MESSAGE: self._parse_plugin_message,
-                },
-            self.proxy.PLAY: {
-                self.pktSB.CHAT_MESSAGE: self.parse_sb.parse_play_chat_message,
-                self.pktSB.CLICK_WINDOW: self.parse_sb.parse_play_click_window,
-                self.pktSB.CLIENT_SETTINGS: self.parse_sb.parse_play_client_settings,
-                self.pktSB.CLIENT_STATUS: self._parse_built,
-                self.pktSB.HELD_ITEM_CHANGE: self.parse_sb.parse_play_held_item_change,
-                self.pktSB.KEEP_ALIVE: self._parse_keep_alive,
-                self.pktSB.PLAYER: self._parse_built,
-                self.pktSB.PLAYER_ABILITIES: self._parse_built,
-                self.pktSB.PLAYER_BLOCK_PLACEMENT: self.parse_sb.parse_play_player_block_placement,
-                self.pktSB.PLAYER_DIGGING: self.parse_sb.parse_play_player_digging,
-                self.pktSB.PLAYER_LOOK: self.parse_sb.parse_play_player_look,
-                self.pktSB.PLAYER_POSITION: self.parse_sb.parse_play_player_position,
-                self.pktSB.PLAYER_POSLOOK: self.parse_sb.parse_play_player_poslook,
-                self.pktSB.PLAYER_UPDATE_SIGN: self.parse_sb.parse_play_player_update_sign,
-                self.pktSB.SPECTATE: self.parse_sb.parse_play_spectate,
-                self.pktSB.TELEPORT_CONFIRM: self.parse_sb.parse_play_teleport_confirm,
-                self.pktSB.USE_ENTITY: self._parse_built,
-                self.pktSB.USE_ITEM: self.parse_sb.parse_play_use_item,
-                self.pktSB.PLUGIN_MESSAGE: self._parse_plugin_message,
-                },
-            self.proxy.LOBBY: {
-                self.pktSB.KEEP_ALIVE: self._parse_keep_alive,
-                self.pktSB.CHAT_MESSAGE: self._parse_lobby_chat_message,
-                self.pktSB.PLUGIN_MESSAGE: self._parse_plugin_message,
-                },
-            self.proxy.IDLE: {
-                self.pktSB.PLUGIN_MESSAGE: self._parse_plugin_message,
-            }
-        }
-
-    # Do nothing parser
-    # -----------------------
-    def _parse_built(self):
-        return True
 
     def _parse_keep_alive(self):
-        if self.serverversion < mcpackets.PROTOCOL_1_8START:
-            data = self.packet.readpkt([INT])
-        else:  # self.version >= mcpackets.PROTOCOL_1_8START:
-            data = self.packet.readpkt([VARINT])
+        data = self.packet.readpkt(self.pktSB.KEEP_ALIVE[PARSER])
         if data[0] == self.keepalive_val:
             self.time_client_responded = time.time()
         return False
@@ -866,3 +796,66 @@ class Client:
 
         # we are just sniffing this packet for lobby return commands, so send it on to the destination.
         return True
+
+    def parse(self, pkid):
+        try:
+            return self.parsers[self.state][pkid]()
+        except KeyError:
+            # Add unparsed packetID to the 'Do nothing parser'
+            self.parsers[self.state][pkid] = self._parse_built
+            if self.buildmode:
+                # some code here to document un-parsed packets?
+                pass
+            return True
+
+    # Do nothing parser
+    def _parse_built(self):
+        return True
+
+    def _define_parsers(self):
+        # the packets we parse and the methods that parse them.
+        self.parsers = {
+            self.proxy.HANDSHAKE: {
+                self.pktSB.HANDSHAKE: self._parse_handshaking,
+                self.pktSB.PLUGIN_MESSAGE: self._parse_plugin_message,
+                },
+            self.proxy.STATUS: {
+                self.pktSB.STATUS_PING: self._parse_status_ping,
+                self.pktSB.REQUEST: self._parse_status_request,
+                self.pktSB.PLUGIN_MESSAGE: self._parse_plugin_message,
+                },
+            self.proxy.LOGIN: {
+                self.pktSB.LOGIN_START: self._parse_login_start,
+                self.pktSB.LOGIN_ENCR_RESPONSE: self._parse_login_encr_response,
+                self.pktSB.PLUGIN_MESSAGE: self._parse_plugin_message,
+                },
+            self.proxy.PLAY: {
+                self.pktSB.CHAT_MESSAGE: self.parse_sb.parse_play_chat_message,
+                self.pktSB.CLICK_WINDOW: self.parse_sb.parse_play_click_window,
+                self.pktSB.CLIENT_SETTINGS: self.parse_sb.parse_play_client_settings,
+                self.pktSB.CLIENT_STATUS: self._parse_built,
+                self.pktSB.HELD_ITEM_CHANGE: self.parse_sb.parse_play_held_item_change,
+                self.pktSB.KEEP_ALIVE[PKT]: self._parse_keep_alive,
+                self.pktSB.PLAYER: self._parse_built,
+                self.pktSB.PLAYER_ABILITIES: self._parse_built,
+                self.pktSB.PLAYER_BLOCK_PLACEMENT: self.parse_sb.parse_play_player_block_placement,
+                self.pktSB.PLAYER_DIGGING: self.parse_sb.parse_play_player_digging,
+                self.pktSB.PLAYER_LOOK: self.parse_sb.parse_play_player_look,
+                self.pktSB.PLAYER_POSITION: self.parse_sb.parse_play_player_position,
+                self.pktSB.PLAYER_POSLOOK: self.parse_sb.parse_play_player_poslook,
+                self.pktSB.PLAYER_UPDATE_SIGN: self.parse_sb.parse_play_player_update_sign,
+                self.pktSB.SPECTATE: self.parse_sb.parse_play_spectate,
+                self.pktSB.TELEPORT_CONFIRM: self.parse_sb.parse_play_teleport_confirm,
+                self.pktSB.USE_ENTITY: self._parse_built,
+                self.pktSB.USE_ITEM: self.parse_sb.parse_play_use_item,
+                self.pktSB.PLUGIN_MESSAGE: self._parse_plugin_message,
+                },
+            self.proxy.LOBBY: {
+                self.pktSB.KEEP_ALIVE[PKT]: self._parse_keep_alive,
+                self.pktSB.CHAT_MESSAGE: self._parse_lobby_chat_message,
+                self.pktSB.PLUGIN_MESSAGE: self._parse_plugin_message,
+                },
+            self.proxy.IDLE: {
+                self.pktSB.PLUGIN_MESSAGE: self._parse_plugin_message,
+            }
+        }

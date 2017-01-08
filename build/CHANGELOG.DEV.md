@@ -1,6 +1,7 @@
 Build 179
 - Move play packets out of serverconnection to new parse_cb.py module.
 - start code to add event documentation.
+- refactor import of parsing constants using `from module import *` statements
 
 Build 178
 - bugfix - player.message was sending extra self argument.

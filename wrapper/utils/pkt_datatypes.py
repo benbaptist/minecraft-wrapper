@@ -6,6 +6,10 @@
 # This program is distributed under the terms of the GNU General Public License,
 #  version 3 or later.
 
+# parser constants
+PKT = 0
+PARSER = 1
+
 # Data constants
 # ------------------------------------------------
 

@@ -179,14 +179,9 @@ class ServerConnection:
             self.close_server("%s server connection closing..." % self.client.username)
         return
 
-    def _keep_alive_response(self):
-        if self.version < mcpackets.PROTOCOL_1_8START:
-            # readpkt returns this as [123..] (a list with a single integer)
-            data = self.packet.readpkt([INT])
-            self.packet.sendpkt(self.pktSB.KEEP_ALIVE, [INT], data)  # which is why no need to [data] as a list
-        else:  # self.version >= mcpackets.PROTOCOL_1_8START: - future elif in case protocol changes again.
-            data = self.packet.readpkt([VARINT])
-            self.packet.sendpkt(self.pktSB.KEEP_ALIVE, [VARINT], data)
+    def _parse_keep_alive(self):
+        data = self.packet.readpkt(self.pktSB.KEEP_ALIVE[PARSER])
+        self.packet.sendpkt(self.pktSB.KEEP_ALIVE[PKT], self.pktSB.KEEP_ALIVE[PARSER], data)
         return False
 
     def _transmit_upstream(self):
@@ -239,182 +234,12 @@ class ServerConnection:
         time.sleep(10)
         return  # False
 
-    # Play parsers
-    # -----------------------
-    def _parse_play_keep_alive(self):
-        return self._keep_alive_response()
-
-    def _parse_play_entity_properties(self):
-        """ Not sure why I added this.  Based on the wiki, it looked like this might
-        contain a player uuid buried in the lowdata (wiki - "Modifier Data") area
-        that might need to be parsed and reset to the server local uuid.  Thus far,
-        I have not seen it used.
-
-        IF there is a uuid, it may need parsed.
-
-        parser_three = [UUID, DOUBLE, BYTE]
-        if self.version < mcpackets.PROTOCOL_1_8START:
-            parser_one = [INT, INT]
-            parser_two = [STRING, DOUBLE, SHORT]
-            writer_one = self.packet.send_int
-            writer_two = self.packet.send_short
-        else:
-            parser_one = [VARINT, INT]
-            parser_two = [STRING, DOUBLE, VARINT]
-            writer_one = self.packet.send_varint
-            writer_two = self.packet.send_varint
-        raw = b""  # use bytes
-
-        # read first level and repack
-        pass1 = self.packet.readpkt(parser_one)
-        isplayer = self.proxy.getplayerby_eid(pass1[0])
-        if not isplayer:
-            return True
-        raw += writer_one(pass1[0])
-        print(pass1[0], pass1[1])
-        raw += self.packet.send_int(pass1[1])
-
-        # start level 2
-        for _x in range(pass1[1]):
-            pass2 = self.packet.readpkt(parser_two)
-            print(pass2[0], pass2[1], pass2[2])
-            raw += self.packet.send_string(pass2[0])
-            raw += self.packet.send_double(pass2[1])
-            raw += writer_two(pass2[2])
-            print(pass2[2])
-            for _y in range(pass2[2]):
-                lowdata = self.packet.readpkt(parser_three)
-                print(lowdata)
-                packetuuid = lowdata[0]
-                playerclient = self.wrapper.proxy.getclientbyofflineserveruuid(packetuuid)
-                if playerclient:
-                    raw += self.packet.send_uuid(playerclient.uuid.hex)
-                else:
-                    raw += self.packet.send_uuid(lowdata[0])
-                raw += self.packet.send_double(lowdata[1])
-                raw += self.packet.send_byte(lowdata[2])
-                print("Low data: ", lowdata)
-        # self.packet.sendpkt(self.pktCB.ENTITY_PROPERTIES, [RAW], (raw,))
-        return True
-        """
-        return True
-
-    def _parse_play_player_list_item(self):
-        if self.version >= mcpackets.PROTOCOL_1_8START:
-            head = self.packet.readpkt([VARINT, VARINT])
-            # ("varint:action|varint:length")
-            lenhead = head[1]
-            action = head[0]
-            z = 0
-            while z < lenhead:
-                serveruuid = self.packet.readpkt([UUID])[0]
-                playerclient = self.wrapper.proxy.getclientbyofflineserveruuid(serveruuid)
-                if not playerclient:
-                    z += 1
-                    continue
-                try:
-                    # This is an MCUUID object, how could this fail? All clients have a uuid attribute
-                    uuid = playerclient.uuid
-                except Exception as e:
-                    # uuid = playerclient
-                    self.log.exception("playerclient.uuid failed in playerlist item (%s)", e)
-                    z += 1
-                    continue
-                z += 1
-                if action == 0:
-                    properties = playerclient.properties
-                    raw = b""
-                    for prop in properties:
-                        raw += self.client.packet.send_string(prop["name"])
-                        raw += self.client.packet.send_string(prop["value"])
-                        if "signature" in prop:
-                            raw += self.client.packet.send_bool(True)
-                            raw += self.client.packet.send_string(prop["signature"])
-                        else:
-                            raw += self.client.packet.send_bool(False)
-                    raw += self.client.packet.send_varint(0)
-                    raw += self.client.packet.send_varint(0)
-                    raw += self.client.packet.send_bool(False)
-                    self.client.packet.sendpkt(self.pktCB.PLAYER_LIST_ITEM,
-                                               [VARINT, VARINT, UUID, STRING, VARINT, RAW],
-                                               (0, 1, playerclient.uuid, playerclient.username,
-                                                len(properties), raw))
-                elif action == 1:
-                    data = self.packet.readpkt([VARINT])
-
-                    # noinspection PyUnusedLocal
-                    gamemode = data[0]  # todo should we be using this to set client gamemode?
-                    # ("varint:gamemode")
-                    self.client.packet.sendpkt(self.pktCB.PLAYER_LIST_ITEM,
-                                               [VARINT, VARINT, UUID, VARINT],
-                                               (1, 1, uuid, data[0]))
-                    # print(1, 1, uuid, gamemode)
-                elif action == 2:
-                    data = self.packet.readpkt([VARINT])
-                    ping = data[0]
-                    # ("varint:ping")
-                    self.client.packet.sendpkt(self.pktCB.PLAYER_LIST_ITEM, [VARINT, VARINT, UUID, VARINT],
-                                               (2, 1, uuid, ping))
-                elif action == 3:
-                    data = self.packet.readpkt([BOOL])
-                    # ("bool:has_display")
-                    hasdisplay = data[0]
-                    if hasdisplay:
-                        data = self.packet.readpkt([STRING])
-                        displayname = data[0]
-                        # ("string:displayname")
-                        self.client.packet.sendpkt(self.pktCB.PLAYER_LIST_ITEM,
-                                                   [VARINT, VARINT, UUID, BOOL, STRING],
-                                                   (3, 1, uuid, True, displayname))
-                    else:
-                        self.client.packet.sendpkt(self.pktCB.PLAYER_LIST_ITEM,
-                                                   [VARINT, VARINT, UUID, VARINT],
-                                                   (3, 1, uuid, False))
-                elif action == 4:
-                    self.client.packet.sendpkt(self.pktCB.PLAYER_LIST_ITEM,
-                                               [VARINT, VARINT, UUID], (4, 1, uuid))
-                return False
-        else:  # version < 1.7.9 needs no processing
-            return True
-        return True
-
-    def _parse_play_disconnect(self):
-        # def __str__():
-        #    return "PLAY_DISCONNECT"
-        message = self.packet.readpkt([JSON])
-        self.log.info("%s disconnected from Server", self.client.username)
-        self.close_server(message)
-
-    def _parse_entity_metadata(self):
-        """
-        This packet is parsed, then re-constituted, the original rejected, and and new packet formed to the client.
-        if the entity is a baby, we rename it.. All of this, just for fun! (and as a demo)  Otherwise,
-        this is a pretty useless parse, unless we opt to pump this data into the entity API.
-        """
-        eid, metadata = self.packet.readpkt([VARINT, METADATA_1_9])
-        if 12 in metadata:  # ageable
-            if 6 in metadata[12]:  # boolean isbaby
-                if metadata[12][1] is True:  # it's a baby!
-
-                    # print the data for reference
-                    # see http://wiki.vg/Entities#Entity_Metadata_Format
-                    self.log.debug("EID: %s - %s", eid, metadata)
-                    # name the baby and make tag visible (no index/type checking; accessing base entity class)
-                    metadata[2] = (3, "Entity_%s" % eid)
-                    metadata[3] = (6, True)
-
-        self.client.packet.sendpkt(self.pktCB.ENTITY_METADATA, [VARINT, METADATA_1_9], (eid, metadata))
-        return False
-
     # Lobby parsers
     # -----------------------
     def _parse_lobby_disconnect(self):
         message = self.packet.readpkt([JSON])
         self.log.info("%s went back to Hub", self.client.username)
         self.close_server(message, lobby_return=True)
-
-    def _parse_lobby_keep_alive(self):
-        return self._keep_alive_response()
 
     def parse(self, pkid):
         try:
@@ -425,6 +250,10 @@ class ServerConnection:
                 # some code here to document un-parsed packets?
                 pass
             return True
+
+    # Do nothing parser
+    def _parse_built(self):
+        return True
 
     def _define_parsers(self):
         # the packets we parse and the methods that parse them.
@@ -438,7 +267,7 @@ class ServerConnection:
             },
             self.proxy.PLAY: {
                 self.pktCB.COMBAT_EVENT: self.parse_cb.parse_play_combat_event,
-                self.pktCB.KEEP_ALIVE: self._parse_play_keep_alive,
+                self.pktCB.KEEP_ALIVE[PKT]: self._parse_keep_alive,
                 self.pktCB.CHAT_MESSAGE: self.parse_cb.parse_play_chat_message,
                 self.pktCB.JOIN_GAME: self.parse_cb.parse_play_join_game,
                 self.pktCB.TIME_UPDATE: self.parse_cb.parse_play_time_update,
@@ -458,18 +287,13 @@ class ServerConnection:
                 self.pktCB.OPEN_WINDOW: self.parse_cb.parse_play_open_window,
                 self.pktCB.SET_SLOT: self.parse_cb.parse_play_set_slot,
                 self.pktCB.WINDOW_ITEMS: self.parse_cb.parse_play_window_items,
-                self.pktCB.ENTITY_PROPERTIES: self._parse_play_entity_properties,
-                self.pktCB.PLAYER_LIST_ITEM: self._parse_play_player_list_item,
-                self.pktCB.DISCONNECT: self._parse_play_disconnect,
-                self.pktCB.ENTITY_METADATA: self._parse_entity_metadata,
+                self.pktCB.ENTITY_PROPERTIES: self.parse_cb.parse_play_entity_properties,
+                self.pktCB.PLAYER_LIST_ITEM: self.parse_cb.parse_play_player_list_item,
+                self.pktCB.DISCONNECT: self.parse_cb.parse_play_disconnect,
+                self.pktCB.ENTITY_METADATA: self.parse_cb.parse_entity_metadata,
                 },
             self.proxy.LOBBY: {
                 self.pktCB.DISCONNECT: self._parse_lobby_disconnect,
-                self.pktCB.KEEP_ALIVE: self._parse_lobby_keep_alive
+                self.pktCB.KEEP_ALIVE[PKT]: self._parse_keep_alive
             }
         }
-
-    # Do nothing parser
-    # -----------------------
-    def _parse_built(self):
-        return True
