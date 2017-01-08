@@ -17,8 +17,7 @@ from proxy.packet import Packet
 from proxy.parse_cb import ParseCB
 from proxy import mcpackets
 
-# noinspection PyPep8Naming
-from utils import pkt_datatypes as D
+from utils.pkt_datatypes import *
 
 
 # noinspection PyMethodMayBeStatic
@@ -183,11 +182,11 @@ class ServerConnection:
     def _keep_alive_response(self):
         if self.version < mcpackets.PROTOCOL_1_8START:
             # readpkt returns this as [123..] (a list with a single integer)
-            data = self.packet.readpkt([D.INT])
-            self.packet.sendpkt(self.pktSB.KEEP_ALIVE, [D.INT], data)  # which is why no need to [data] as a list
+            data = self.packet.readpkt([INT])
+            self.packet.sendpkt(self.pktSB.KEEP_ALIVE, [INT], data)  # which is why no need to [data] as a list
         else:  # self.version >= mcpackets.PROTOCOL_1_8START: - future elif in case protocol changes again.
-            data = self.packet.readpkt([D.VARINT])
-            self.packet.sendpkt(self.pktSB.KEEP_ALIVE, [D.VARINT], data)
+            data = self.packet.readpkt([VARINT])
+            self.packet.sendpkt(self.pktSB.KEEP_ALIVE, [VARINT], data)
         return False
 
     def _transmit_upstream(self):
@@ -199,10 +198,10 @@ class ServerConnection:
         state = self.state
 
         if self.version < mcpackets.PROTOCOL_1_8START:
-            self.packet.sendpkt(self.pktCB.PLUGIN_MESSAGE, [D.STRING, D.SHORT, D.BOOL, D.BOOL, D.BYTE],
+            self.packet.sendpkt(self.pktCB.PLUGIN_MESSAGE, [STRING, SHORT, BOOL, BOOL, BYTE],
                                 [channel, 3, received, sent, state])
         else:
-            self.packet.sendpkt(self.pktCB.PLUGIN_MESSAGE, [D.STRING, D.BOOL, D.BOOL, D.BYTE],
+            self.packet.sendpkt(self.pktCB.PLUGIN_MESSAGE, [STRING, BOOL, BOOL, BYTE],
                                 [channel, received, sent, state])
 
     # PARSERS SECTION
@@ -211,7 +210,7 @@ class ServerConnection:
     # Login parsers
     # -----------------------
     def _parse_login_disconnect(self):
-        message = self.packet.readpkt([D.STRING])
+        message = self.packet.readpkt([STRING])
         self.log.info("Disconnected from server: %s", message)
         self.close_server(message)
         return False
@@ -225,11 +224,11 @@ class ServerConnection:
         self.state = self.proxy.PLAY
         # todo - we may not need to assign this to a variable. (we supplied uuid/name anyway!)
         # noinspection PyUnusedLocal
-        data = self.packet.readpkt([D.STRING, D.STRING])
+        data = self.packet.readpkt([STRING, STRING])
         return False
 
     def _parse_login_set_compression(self):
-        data = self.packet.readpkt([D.VARINT])
+        data = self.packet.readpkt([VARINT])
         # ("varint:threshold")
         if data[0] != -1:
             self.packet.compression = True
@@ -253,15 +252,15 @@ class ServerConnection:
 
         IF there is a uuid, it may need parsed.
 
-        parser_three = [D.UUID, D.DOUBLE, D.BYTE]
+        parser_three = [UUID, DOUBLE, BYTE]
         if self.version < mcpackets.PROTOCOL_1_8START:
-            parser_one = [D.INT, D.INT]
-            parser_two = [D.STRING, D.DOUBLE, D.SHORT]
+            parser_one = [INT, INT]
+            parser_two = [STRING, DOUBLE, SHORT]
             writer_one = self.packet.send_int
             writer_two = self.packet.send_short
         else:
-            parser_one = [D.VARINT, D.INT]
-            parser_two = [D.STRING, D.DOUBLE, D.VARINT]
+            parser_one = [VARINT, INT]
+            parser_two = [STRING, DOUBLE, VARINT]
             writer_one = self.packet.send_varint
             writer_two = self.packet.send_varint
         raw = b""  # use bytes
@@ -295,20 +294,20 @@ class ServerConnection:
                 raw += self.packet.send_double(lowdata[1])
                 raw += self.packet.send_byte(lowdata[2])
                 print("Low data: ", lowdata)
-        # self.packet.sendpkt(self.pktCB.ENTITY_PROPERTIES, [D.RAW], (raw,))
+        # self.packet.sendpkt(self.pktCB.ENTITY_PROPERTIES, [RAW], (raw,))
         return True
         """
         return True
 
     def _parse_play_player_list_item(self):
         if self.version >= mcpackets.PROTOCOL_1_8START:
-            head = self.packet.readpkt([D.VARINT, D.VARINT])
+            head = self.packet.readpkt([VARINT, VARINT])
             # ("varint:action|varint:length")
             lenhead = head[1]
             action = head[0]
             z = 0
             while z < lenhead:
-                serveruuid = self.packet.readpkt([D.UUID])[0]
+                serveruuid = self.packet.readpkt([UUID])[0]
                 playerclient = self.wrapper.proxy.getclientbyofflineserveruuid(serveruuid)
                 if not playerclient:
                     z += 1
@@ -337,43 +336,43 @@ class ServerConnection:
                     raw += self.client.packet.send_varint(0)
                     raw += self.client.packet.send_bool(False)
                     self.client.packet.sendpkt(self.pktCB.PLAYER_LIST_ITEM,
-                                               [D.VARINT, D.VARINT, D.UUID, D.STRING, D.VARINT, D.RAW],
+                                               [VARINT, VARINT, UUID, STRING, VARINT, RAW],
                                                (0, 1, playerclient.uuid, playerclient.username,
                                                 len(properties), raw))
                 elif action == 1:
-                    data = self.packet.readpkt([D.VARINT])
+                    data = self.packet.readpkt([VARINT])
 
                     # noinspection PyUnusedLocal
                     gamemode = data[0]  # todo should we be using this to set client gamemode?
                     # ("varint:gamemode")
                     self.client.packet.sendpkt(self.pktCB.PLAYER_LIST_ITEM,
-                                               [D.VARINT, D.VARINT, D.UUID, D.VARINT],
+                                               [VARINT, VARINT, UUID, VARINT],
                                                (1, 1, uuid, data[0]))
                     # print(1, 1, uuid, gamemode)
                 elif action == 2:
-                    data = self.packet.readpkt([D.VARINT])
+                    data = self.packet.readpkt([VARINT])
                     ping = data[0]
                     # ("varint:ping")
-                    self.client.packet.sendpkt(self.pktCB.PLAYER_LIST_ITEM, [D.VARINT, D.VARINT, D.UUID, D.VARINT],
+                    self.client.packet.sendpkt(self.pktCB.PLAYER_LIST_ITEM, [VARINT, VARINT, UUID, VARINT],
                                                (2, 1, uuid, ping))
                 elif action == 3:
-                    data = self.packet.readpkt([D.BOOL])
+                    data = self.packet.readpkt([BOOL])
                     # ("bool:has_display")
                     hasdisplay = data[0]
                     if hasdisplay:
-                        data = self.packet.readpkt([D.STRING])
+                        data = self.packet.readpkt([STRING])
                         displayname = data[0]
                         # ("string:displayname")
                         self.client.packet.sendpkt(self.pktCB.PLAYER_LIST_ITEM,
-                                                   [D.VARINT, D.VARINT, D.UUID, D.BOOL, D.STRING],
+                                                   [VARINT, VARINT, UUID, BOOL, STRING],
                                                    (3, 1, uuid, True, displayname))
                     else:
                         self.client.packet.sendpkt(self.pktCB.PLAYER_LIST_ITEM,
-                                                   [D.VARINT, D.VARINT, D.UUID, D.VARINT],
+                                                   [VARINT, VARINT, UUID, VARINT],
                                                    (3, 1, uuid, False))
                 elif action == 4:
                     self.client.packet.sendpkt(self.pktCB.PLAYER_LIST_ITEM,
-                                               [D.VARINT, D.VARINT, D.UUID], (4, 1, uuid))
+                                               [VARINT, VARINT, UUID], (4, 1, uuid))
                 return False
         else:  # version < 1.7.9 needs no processing
             return True
@@ -382,7 +381,7 @@ class ServerConnection:
     def _parse_play_disconnect(self):
         # def __str__():
         #    return "PLAY_DISCONNECT"
-        message = self.packet.readpkt([D.JSON])
+        message = self.packet.readpkt([JSON])
         self.log.info("%s disconnected from Server", self.client.username)
         self.close_server(message)
 
@@ -392,7 +391,7 @@ class ServerConnection:
         if the entity is a baby, we rename it.. All of this, just for fun! (and as a demo)  Otherwise,
         this is a pretty useless parse, unless we opt to pump this data into the entity API.
         """
-        eid, metadata = self.packet.readpkt([D.VARINT, D.METADATA_1_9])
+        eid, metadata = self.packet.readpkt([VARINT, METADATA_1_9])
         if 12 in metadata:  # ageable
             if 6 in metadata[12]:  # boolean isbaby
                 if metadata[12][1] is True:  # it's a baby!
@@ -404,13 +403,13 @@ class ServerConnection:
                     metadata[2] = (3, "Entity_%s" % eid)
                     metadata[3] = (6, True)
 
-        self.client.packet.sendpkt(self.pktCB.ENTITY_METADATA, [D.VARINT, D.METADATA_1_9], (eid, metadata))
+        self.client.packet.sendpkt(self.pktCB.ENTITY_METADATA, [VARINT, METADATA_1_9], (eid, metadata))
         return False
 
     # Lobby parsers
     # -----------------------
     def _parse_lobby_disconnect(self):
-        message = self.packet.readpkt([D.JSON])
+        message = self.packet.readpkt([JSON])
         self.log.info("%s went back to Hub", self.client.username)
         self.close_server(message, lobby_return=True)
 

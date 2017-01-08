@@ -8,6 +8,8 @@
 
 from core.exceptions import UnsupportedMinecraftProtocol
 
+from utils.pkt_datatypes import *
+
 """
 Ways to reference packets by names and not hard-coded numbers.
 
@@ -80,7 +82,7 @@ class ClientBound:
         # play mode packets
         # -------------------------------
         # Base set 1.7 - 1.8.9 - The packet numbers were the same, although parsing differed amongst versions
-        self.KEEP_ALIVE = 0x00
+        self.KEEP_ALIVE = 0x00, [INT]
         self.JOIN_GAME = 0x01
         self.CHAT_MESSAGE = 0x02
         self.TIME_UPDATE = 0x03
