@@ -367,7 +367,7 @@ class ParseCB:
             self.client.gamemode = data[1]
         return True
 
-    def _parse_play_open_window(self):
+    def parse_play_open_window(self):
         # This works together with SET_SLOT to maintain accurate inventory in wrapper
         if self.server.version < mcpackets.PROTOCOL_1_8START:
             parsing = [UBYTE, UBYTE, STRING, UBYTE]
