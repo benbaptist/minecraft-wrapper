@@ -13,8 +13,8 @@ import os
 from core.nbt import NBTFile
 from core.entities import Items
 from api.helpers import scrub_item_value
-from proxy.mcpackets import ClientBound
-from proxy.mcpackets import ServerBound
+from proxy.mcpackets_cb import Packets as ClientBound
+from proxy.mcpackets_sb import Packets as ServerBound
 
 
 # noinspection PyPep8Naming

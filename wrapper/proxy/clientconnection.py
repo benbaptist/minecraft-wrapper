@@ -22,13 +22,15 @@ import utils.encryption as encryption
 
 from proxy.serverconnection import ServerConnection
 from proxy.packet import Packet
-from proxy import mcpackets
 from proxy.parse_sb import ParseSB
+from proxy import mcpackets_sb
+from proxy import mcpackets_cb
+from proxy.constants import *
+
 from api.player import Player
 from core.mcuuid import MCUUID
 
 from api.helpers import processcolorcodes
-from utils.pkt_datatypes import *
 
 
 # noinspection PyMethodMayBeStatic
@@ -71,8 +73,8 @@ class Client:
         self.wrapper_onlinemode = self.config["Proxy"]["online-mode"]
 
         # packet stuff
-        self.pktSB = mcpackets.ServerBound(self.clientversion)
-        self.pktCB = mcpackets.ClientBound(self.clientversion)
+        self.pktSB = mcpackets_sb.Packets(self.clientversion)
+        self.pktCB = mcpackets_cb.Packets(self.clientversion)
         self.parsers = {}  # dictionary of parser packet constants and associated parsing methods
         self._getclientpacketset()
         self.buildmode = False
@@ -113,6 +115,7 @@ class Client:
         self.serverportplayerused = None
 
         # player api Items
+        self.server_eid = 0  # EID collected by serverconnection (changes on each server)
         self.gamemode = 0
         self.dimension = 0
         self.position = (0, 0, 0)  # X, Y, Z
@@ -216,10 +219,10 @@ class Client:
         self._send_client_settings()
         self.packet.sendpkt(self.pktCB.CHANGE_GAME_STATE, [UBYTE, FLOAT], (1, 0))
         self.packet.sendpkt(self.pktCB.RESPAWN, [INT, UBYTE, UBYTE, STRING], [-1, 3, 0, 'default'])
-        if self.version < mcpackets.PROTOCOL_1_8START:
+        if self.version < PROTOCOL_1_8START:
             self.server_connection.packet.sendpkt(self.pktSB.CLIENT_STATUS, [BYTE, ], (0, ))
         else:
-            self.packet.sendpkt(0x2c, [VARINT, INT, STRING, ], (self.server_connection.eid, "DURNIT"))
+            self.packet.sendpkt(0x2c, [VARINT, INT, STRING, ], (self.server_eid, "DURNIT"))
             # self.packet.sendpkt(0x3e, [FLOAT, VARINT, FLOAT], (-1, 0, 0.0))
             self.server_connection.packet.sendpkt(self.pktSB.CLIENT_STATUS, [VARINT, ], (0, ))
             self.server_connection.packet.sendpkt(self.pktSB.PLAYER, [BOOL, ], (True,))
@@ -374,8 +377,8 @@ class Client:
     def _getclientpacketset(self):
         # Determine packet types  - in this context, pktSB/pktCB is what is being received/sent from/to the client.
         #   that is why we refresh to the clientversion.
-        self.pktSB = mcpackets.ServerBound(self.clientversion)
-        self.pktCB = mcpackets.ClientBound(self.clientversion)
+        self.pktSB = mcpackets_sb.Packets(self.clientversion)
+        self.pktCB = mcpackets_cb.Packets(self.clientversion)
         self._define_parsers()
 
     # api related
@@ -406,7 +409,7 @@ class Client:
         self.server_connection.packet.sendpkt(self.pktSB.CHAT_MESSAGE, [STRING], [string])
 
     def chat_to_cleint(self, message):
-        if self.version < mcpackets.PROTOCOL_1_8START:
+        if self.version < PROTOCOL_1_8START:
             parsing = [STRING, NULL]
         else:
             parsing = [JSON, BYTE]
@@ -504,7 +507,7 @@ class Client:
          a modded server to another modded server.
          """
         channel = "FML|HS"
-        if self.clientversion < mcpackets.PROTOCOL_1_8START:
+        if self.clientversion < PROTOCOL_1_8START:
             self.packet.sendpkt(self.pktCB.PLUGIN_MESSAGE, [STRING, SHORT, BYTE], [channel, 1, 254])
         else:
             self.packet.sendpkt(self.pktCB.PLUGIN_MESSAGE, [STRING, BYTE], [channel, 254])
@@ -515,7 +518,7 @@ class Client:
         channel = "WRAPPER.PY|PING"
         state = self.state
         if self.server_connection:
-            if self.version < mcpackets.PROTOCOL_1_8START:
+            if self.version < PROTOCOL_1_8START:
                 self.server_connection.packet.sendpkt(self.pktSB.PLUGIN_MESSAGE, [STRING, SHORT, BYTE],
                                                       [channel, 1,  state])
             else:
@@ -575,7 +578,7 @@ class Client:
             return False
 
         if channel == "WRAPPER.PY|":
-            if self.clientversion < mcpackets.PROTOCOL_1_8START:
+            if self.clientversion < PROTOCOL_1_8START:
                 datarest = self.packet.readpkt([SHORT, REST])[1]
             else:
                 datarest = self.packet.readpkt([REST, ])[0]
@@ -627,7 +630,7 @@ class Client:
                 self.disconnect("Server has not finished booting. Please try connecting again in a few seconds")
                 return False
 
-            if mcpackets.PROTOCOL_1_9START < self.clientversion < mcpackets.PROTOCOL_1_9REL1:
+            if PROTOCOL_1_9START < self.clientversion < PROTOCOL_1_9REL1:
                 self.disconnect("You're running an unsupported snapshot (protocol: %s)!" % self.clientversion)
                 return False
 
@@ -662,7 +665,7 @@ class Client:
         reported_version = self.serverversion
         reported_name = self.wrapper.javaserver.version
 
-        if self.clientversion < mcpackets.PROTOCOL_1_8START:
+        if self.clientversion < PROTOCOL_1_8START:
             motdtext = self.wrapper.javaserver.motd
         else:
             motdtext = json.loads(processcolorcodes(self.wrapper.javaserver.motd.replace("\\", "")))
