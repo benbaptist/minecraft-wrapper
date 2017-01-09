@@ -214,7 +214,7 @@ class Proxy:
         sometimes when we can't get valid data and our calling methods check for these booleans.
         """
         for client in self.clients:
-            if client.server.eid == eid:
+            if client.server_eid == eid:
                 try:
                     return self.wrapper.javaserver.players[client.username]
                 except Exception as e:

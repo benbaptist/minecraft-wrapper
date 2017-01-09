@@ -74,7 +74,7 @@ class Packets:
         self.ENTITY_HEAD_LOOK = 0x19
         self.ENTITY_STATUS = 0x1a
         self.ATTACH_ENTITY = 0x1b
-        self.ENTITY_METADATA = 0x1c
+        self.ENTITY_METADATA = [0x1c, [VARINT, RAW]]  # [VARINT, METADATA]  This one and NBT things are broke in 1.7
         self.ENTITY_EFFECT = 0x1d
         self.REMOVE_ENTITY_EFFECT = 0x1e
         self.SET_EXPERIENCE = 0x1f
@@ -135,6 +135,8 @@ class Packets:
             # Parsing changes
             self.KEEP_ALIVE[PARSER] = [VARINT]
             self.CHAT_MESSAGE[PARSER] = [JSON, BYTE]
+            self.ENTITY_METADATA[PARSER] = [VARINT, METADATA]
+
         # 1.9 changes
         if protocol >= PROTOCOL_1_9REL1:
             self.SPAWN_OBJECT = 0x00
@@ -194,7 +196,7 @@ class Packets:
             self.CAMERA = 0x36
             self.HELD_ITEM_CHANGE = 0x37
             self.DISPLAY_SCOREBOARD = 0x38
-            self.ENTITY_METADATA = 0x39
+            self.ENTITY_METADATA = [0x39, [VARINT, METADATA_1_9]]
             self.ATTACH_ENTITY = 0x3a
             self.ENTITY_VELOCITY = 0x3b
             self.ENTITY_EQUIPMENT = 0x3c

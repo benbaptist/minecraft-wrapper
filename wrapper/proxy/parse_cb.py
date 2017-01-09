@@ -35,28 +35,28 @@ class ParseCB:
         self.packet = packet
 
     def parse_play_combat_event(self):
+        """ just parsed for testing for now """
+        pass
         # 1.9 packet, conditionally parsed
-        print("\nSTART COMB_PARSE\n")
-        data = self.packet.readpkt([VARINT, ])
-        print("\nread COMB_PARSE\n")
-        if data[0] == 2:
-            print("\nread COMB_PARSE2\n")
-            player_i_d = self.packet.readpkt([VARINT, ])
-            print("\nread COMB_PARSE3\n")
-            e_i_d = self.packet.readpkt([INT, ])
-            print("\nread COMB_PARSE4\n")
-            strg = self.packet.readpkt([STRING, ])
+        # print("\nSTART COMB_PARSE\n")
+        # data = self.packet.readpkt([VARINT, ])
+        # print("\nread COMB_PARSE\n")
+        # if data[0] == 2:
+        #    # print("\nread COMB_PARSE2\n")
+        #    #player_i_d = self.packet.readpkt([VARINT, ])
+        #    # print("\nread COMB_PARSE3\n")
+        #    #e_i_d = self.packet.readpkt([INT, ])
+        #    # print("\nread COMB_PARSE4\n")
+        #    #strg = self.packet.readpkt([STRING, ])
 
-            print("\nplayerEID=%s\nEID=%s\n" % (player_i_d, e_i_d))
-            print("\nTEXT=\n%s\n" % strg)
+        #    # print("\nplayerEID=%s\nEID=%s\n" % (player_i_d, e_i_d))
+        #    # print("\nTEXT=\n%s\n" % strg)
 
-            return True
+        #    # return True
         return True
 
     def parse_play_chat_message(self):
         data, position = self.packet.readpkt(self.pktCB.CHAT_MESSAGE[PARSER])
-        print("Message: %s\nposition: %s\nposition 'type': %s\n\n" % (data, position, type(position)))
-
         # position (1.8+ only)
         # 0: chat (chat box), 1: system message (chat box), 2: above hotbar
 
@@ -576,17 +576,18 @@ class ParseCB:
         if the entity is a baby, we rename it.. All of this, just for fun! (and as a demo)  Otherwise,
         this is a pretty useless parse, unless we opt to pump this data into the entity API.
         """
-        eid, metadata = self.packet.readpkt([VARINT, METADATA_1_9])
-        if 12 in metadata:  # ageable
-            if 6 in metadata[12]:  # boolean isbaby
-                if metadata[12][1] is True:  # it's a baby!
+        eid, metadata = self.packet.readpkt(self.pktCB.ENTITY_METADATA[PARSER])
+        if self.client.version >= PROTOCOL_1_8START:
+            if 12 in metadata:  # ageable
+                if 6 in metadata[12]:  # boolean isbaby
+                    if metadata[12][1] is True:  # it's a baby!
 
-                    # print the data for reference
-                    # see http://wiki.vg/Entities#Entity_Metadata_Format
-                    self.log.debug("EID: %s - %s", eid, metadata)
-                    # name the baby and make tag visible (no index/type checking; accessing base entity class)
-                    metadata[2] = (3, "Entity_%s" % eid)
-                    metadata[3] = (6, True)
+                        # print the data for reference
+                        # see http://wiki.vg/Entities#Entity_Metadata_Format
+                        self.log.debug("EID: %s - %s", eid, metadata)
+                        # name the baby and make tag visible (no index/type checking; accessing base entity class)
+                        metadata[2] = (3, "Entity_%s" % eid)
+                        metadata[3] = (6, True)
 
-        self.client.packet.sendpkt(self.pktCB.ENTITY_METADATA, [VARINT, METADATA_1_9], (eid, metadata))
+        self.client.packet.sendpkt(self.pktCB.ENTITY_METADATA[PKT], self.pktCB.ENTITY_METADATA[PARSER], (eid, metadata))
         return False

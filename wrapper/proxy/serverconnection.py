@@ -289,7 +289,7 @@ class ServerConnection:
                 self.pktCB.ENTITY_PROPERTIES: self.parse_cb.parse_play_entity_properties,
                 self.pktCB.PLAYER_LIST_ITEM: self.parse_cb.parse_play_player_list_item,
                 self.pktCB.DISCONNECT: self.parse_cb.parse_play_disconnect,
-                self.pktCB.ENTITY_METADATA: self.parse_cb.parse_entity_metadata,
+                self.pktCB.ENTITY_METADATA[PKT]: self.parse_cb.parse_entity_metadata,
                 },
             self.proxy.LOBBY: {
                 self.pktCB.DISCONNECT: self._parse_lobby_disconnect,

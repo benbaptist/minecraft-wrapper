@@ -664,11 +664,9 @@ class Client:
                 break
         reported_version = self.serverversion
         reported_name = self.wrapper.javaserver.version
-
-        if self.clientversion < PROTOCOL_1_8START:
-            motdtext = self.wrapper.javaserver.motd
-        else:
-            motdtext = json.loads(processcolorcodes(self.wrapper.javaserver.motd.replace("\\", "")))
+        motdtext = self.wrapper.javaserver.motd
+        if self.clientversion >= PROTOCOL_1_8START:
+            motdtext = json.loads(processcolorcodes(motdtext.replace("\\", "")))
         self.MOTD = {
             "description": motdtext,
             "players": {
