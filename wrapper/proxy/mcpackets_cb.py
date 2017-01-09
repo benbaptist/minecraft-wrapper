@@ -8,7 +8,7 @@
 
 from core.exceptions import UnsupportedMinecraftProtocol
 
-from utils.pkt_datatypes import *
+from proxy.constants import *
 
 """
 Ways to reference packets by names and not hard-coded numbers.
@@ -26,44 +26,8 @@ set something False/unimplemented using 0xEE
 
 """
 
-# Version Constants
-# use these constants decide how a packet should be parsed.
-PROTOCOL_MAX = 4000
 
-PROTOCOL_1_11 = 314
-
-PROTOCOL_1_10 = 205
-#
-PROTOCOL_1_9_4 = 110      # post- 1.9.3 "pre" releases (1.9.3 pre-2 -)
-# Still in development at versions 201-210(6/14/16)
-
-# PAGE: http://wiki.vg/index.php?title=Protocol&oldid=7817
-PROTOCOL_1_9_3PRE3 = 109  # post- 1.9 "pre" releases (1.9.2 - 1.9.3 pre-1)
-
-# PAGE: http://wiki.vg/index.php?title=Protocol&oldid=7617
-PROTOCOL_1_9_1PRE = 108   # post- 1.9 "pre" releases (1.9.1 pre-3 through 1.9.1)
-PROTOCOL_1_9REL1 = 107    # first stable 1.9 release
-
-# Between 49-106, the protocol is incredibly unstable.  Packet numbers changed almost weekly.
-# using a version in this range will raise as UnsupportedMinecraftProtocol Exception
-PROTOCOL_1_9START = 48    # start of 1.9 snapshots
-
-# PAGE: http://wiki.vg/index.php?title=Protocol&oldid=7368
-PROTOCOL_1_8END = 47      # 1.8.9
-PROTOCOL_1_8START = 6     # 1.8 snapshots start- #
-
-# PAGE: http://wiki.vg/index.php?title=Protocol&oldid=6003
-PROTOCOL_1_7_9 = 5       # 1.7.6 - 1.7.10
-
-# PAGE: http://wiki.vg/index.php?title=Protocol&oldid=5486
-PROTOCOL_1_7 = 4          # 1.7.1-pre to 1.7.5
-
-"""Minecraft version 1.6.4 and older used a protocol versioning scheme separate from the current one.
- Accordingly, an old protocol version number may ambiguously refer to an one of those old versions and
- from the list above.  Do not run a 1.6.4 server with proxy mode."""
-
-
-class ClientBound:
+class Packets:
     def __init__(self, protocol):
 
         if PROTOCOL_1_8END < protocol < PROTOCOL_1_9REL1:
@@ -83,8 +47,8 @@ class ClientBound:
         # -------------------------------
         # Base set 1.7 - 1.8.9 - The packet numbers were the same, although parsing differed amongst versions
         self.KEEP_ALIVE = [0x00, [INT]]
-        self.JOIN_GAME = 0x01
-        self.CHAT_MESSAGE = 0x02
+        self.JOIN_GAME = [0x01, [INT, UBYTE, BYTE, UBYTE, UBYTE, STRING]]
+        self.CHAT_MESSAGE = [0x02, [STRING, NULL]]
         self.TIME_UPDATE = 0x03
         self.ENTITY_EQUIPMENT = 0x04  # TODO - never parsed by wrapper before
         self.SPAWN_POSITION = 0x05
@@ -110,7 +74,7 @@ class ClientBound:
         self.ENTITY_HEAD_LOOK = 0x19
         self.ENTITY_STATUS = 0x1a
         self.ATTACH_ENTITY = 0x1b
-        self.ENTITY_METADATA = 0x1c
+        self.ENTITY_METADATA = [0x1c, [VARINT, RAW]]  # [VARINT, METADATA]  This one and NBT things are broke in 1.7
         self.ENTITY_EFFECT = 0x1d
         self.REMOVE_ENTITY_EFFECT = 0x1e
         self.SET_EXPERIENCE = 0x1f
@@ -166,9 +130,12 @@ class ClientBound:
         self.VEHICLE_MOVE = 0xee
         self.SET_PASSENGERS = 0xee
 
-        # Parsing changes
+        # 1.8 changes
         if protocol >= PROTOCOL_1_8START:
+            # Parsing changes
             self.KEEP_ALIVE[PARSER] = [VARINT]
+            self.CHAT_MESSAGE[PARSER] = [JSON, BYTE]
+            self.ENTITY_METADATA[PARSER] = [VARINT, METADATA]
 
         # 1.9 changes
         if protocol >= PROTOCOL_1_9REL1:
@@ -187,7 +154,7 @@ class ClientBound:
             self.BOSS_BAR = 0x0c  # TODO NEW
             self.SERVER_DIFFICULTY = 0x0d
             self.TAB_COMPLETE = 0x0e
-            self.CHAT_MESSAGE = 0x0f
+            self.CHAT_MESSAGE[PKT] = 0x0f
             self.MULTI_BLOCK_CHANGE = 0x10
             self.CONFIRM_TRANSACTION = 0x11
             self.CLOSE_WINDOW = 0x12
@@ -207,7 +174,7 @@ class ClientBound:
             self.CHUNK_DATA = 0x20
             self.EFFECT = 0x21
             self.PARTICLE = 0x22
-            self.JOIN_GAME = 0x23
+            self.JOIN_GAME[PKT] = 0x23
             self.MAP = 0x24
             self.ENTITY_RELATIVE_MOVE = 0x25
             self.ENTITY_LOOK_AND_RELATIVE_MOVE = 0x26
@@ -229,7 +196,7 @@ class ClientBound:
             self.CAMERA = 0x36
             self.HELD_ITEM_CHANGE = 0x37
             self.DISPLAY_SCOREBOARD = 0x38
-            self.ENTITY_METADATA = 0x39
+            self.ENTITY_METADATA = [0x39, [VARINT, METADATA_1_9]]
             self.ATTACH_ENTITY = 0x3a
             self.ENTITY_VELOCITY = 0x3b
             self.ENTITY_EQUIPMENT = 0x3c
@@ -255,6 +222,9 @@ class ClientBound:
             self.MAP_CHUNK_BULK = 0xee
             self.BROKEN_SET_COMPRESSION_REMOVED1_9 = 0xee
 
+            # parsing changes
+            self.JOIN_GAME[PARSER] = [INT, UBYTE, INT, UBYTE, UBYTE, STRING]
+
         # 1.9.4 - 1.11 changes  http://wiki.vg/index.php?title=Protocol&oldid=7819#Entity_Properties
         # still good packet numbers through protocol 315
         if protocol > PROTOCOL_1_9_4:
@@ -265,95 +235,3 @@ class ClientBound:
             self.ENTITY_TELEPORT = 0x49
             self.ENTITY_PROPERTIES = 0x4a
             self.ENTITY_EFFECT = 0x4b
-
-
-class ServerBound:
-    def __init__(self, protocol):
-
-        if PROTOCOL_1_8END < protocol < PROTOCOL_1_9REL1:
-            raise UnsupportedMinecraftProtocol
-
-        # Login, Status, and Ping packets
-        # -------------------------------
-        self.HANDSHAKE = 0x00  # set server to STATUS(1) or LOGIN(2) mode.
-        self.REQUEST = 0x00  # Server sends server json list data in response packet
-        self.STATUS_PING = 0x01  # server responds with a PONG
-        self.LOGIN_START = 0x00  # contains the "name" of user.  Sent after handshake for LOGIN
-        self.LOGIN_ENCR_RESPONSE = 0x01  # client response to ENCR_REQUEST
-
-        # Play packets
-        # -------------------------------
-        # 1.7 - 1.7.10 PLAY packets
-        self.KEEP_ALIVE = [0x00, [INT]]
-        self.CHAT_MESSAGE = 0x01
-        self.USE_ENTITY = 0x02
-        self.PLAYER = 0x03
-        self.PLAYER_POSITION = 0x04
-        self.PLAYER_LOOK = 0x05
-        self.PLAYER_POSLOOK = 0x06
-        self.PLAYER_DIGGING = 0x07
-        self.PLAYER_BLOCK_PLACEMENT = 0x08
-        self.HELD_ITEM_CHANGE = 0x09
-        self.ANIMATION = 0x0a  # TODO NEW
-        self.ENTITY_ACTION = 0x0b  # TODO NEW
-        self.STEER_VEHICLE = 0x0c  # TODO NEW
-        self.CLOSE_WINDOW = 0x0b  # TODO NEW
-        self.CLICK_WINDOW = 0x0e
-        self.CONFIRM_TRANSACTION = 0x0f  # TODO NEW
-        self.CREATIVE_INVENTORY_ACTION = 0x10  # TODO NEW
-        self.ENCHANT_ITEM = 0x11  # TODO NEW
-        self.PLAYER_UPDATE_SIGN = 0x12
-        self.PLAYER_ABILITIES = 0x13
-        self.TAB_COMPLETE = 0x14  # TODO NEW
-        self.CLIENT_SETTINGS = 0x15
-        self.CLIENT_STATUS = 0x16
-        self.PLUGIN_MESSAGE = 0x17
-
-        # new packets unimplemented in 1.7
-        self.SPECTATE = 0xee
-        self.RESOURCE_PACK_STATUS = 0xee
-        self.TELEPORT_CONFIRM = 0xee
-        self.USE_ITEM = 0xee
-        self.VEHICLE_MOVE = 0xee
-        self.STEER_BOAT = 0xee
-
-        # Parsing changes
-        if protocol >= PROTOCOL_1_8START:
-            self.KEEP_ALIVE[PARSER] = [VARINT]
-
-        if PROTOCOL_1_9START > protocol >= PROTOCOL_1_8START:
-            self.SPECTATE = 0x18
-            self.RESOURCE_PACK_STATUS = 0x19
-
-        # 1.9
-        if protocol >= PROTOCOL_1_9REL1:
-            self.TELEPORT_CONFIRM = 0x00
-            self.TAB_COMPLETE = 0x01  # TODO NEW
-            self.CHAT_MESSAGE = 0x02
-            self.CLIENT_STATUS = 0x03
-            self.CLIENT_SETTINGS = 0x04
-            self.CONFIRM_TRANSACTION = 0x05  # TODO NEW
-            self.ENCHANT_ITEM = 0x06  # TODO NEW
-            self.CLICK_WINDOW = 0x07
-            self.CLOSE_WINDOW = 0x08  # TODO NEW
-            self.PLUGIN_MESSAGE = 0x09
-            self.USE_ENTITY = 0x0a
-            self.KEEP_ALIVE[PKT] = 0x0b
-            self.PLAYER_POSITION = 0x0c
-            self.PLAYER_POSLOOK = 0x0d
-            self.PLAYER_LOOK = 0x0e
-            self.PLAYER = 0x0f
-            self.VEHICLE_MOVE = 0x10  # TODO NEW
-            self.STEER_BOAT = 0x11  # TODO NEW
-            self.PLAYER_ABILITIES = 0x12
-            self.PLAYER_DIGGING = 0x13
-            self.ENTITY_ACTION = 0x14  # TODO NEW
-            self.STEER_VEHICLE = 0x15  # TODO NEW
-            self.RESOURCE_PACK_STATUS = 0x16  # TODO NEW
-            self.HELD_ITEM_CHANGE = 0x17
-            self.CREATIVE_INVENTORY_ACTION = 0x18  # TODO NEW
-            self.PLAYER_UPDATE_SIGN = 0x19
-            self.ANIMATION = 0x1a  # TODO NEW
-            self.SPECTATE = 0x1b
-            self.PLAYER_BLOCK_PLACEMENT = 0x1c
-            self.USE_ITEM = 0x1d

@@ -459,13 +459,17 @@ class Packet:
         return b
 
     def send_metadata(self, payload):
-        b = ""
+        # definitely broken in 1.7.4.  works for 1.8
+        b = b""
+        # print("payload:\n%s\n\n" % payload)
         for index in payload:
             type_ = payload[index][0]
             value = payload[index][1]
+            # "To create the byte, you can use this: (Type << 5 | Index & 0x1F) & 0xFF"
             header = (type_ << 5) | index
+            # header = (type_ << 5 | index & 0x1F) & 0xFF
             b += self.send_ubyte(header)
-            if index == 0:
+            if type_ == 0:
                 b += self.send_byte(value)
             elif type_ == 1:
                 b += self.send_short(value)
@@ -489,6 +493,7 @@ class Packet:
                 print("Unsupported data type '%d' for send_metadata()  (Class Packet)" % type_)
                 raise ValueError
         b += self.send_ubyte(0x7f)
+        # print("\n\n%s\n\n\n" % b)
         return b
 
     def send_pay(self, payload):
@@ -563,7 +568,7 @@ class Packet:
         d = self.buffer.read(length)
         if len(d) == 0 and length is not 0:
             self.obj.close_server()  # "Received no data or less data than expected - connection closed"
-            return ""
+            return b""
         return d
 
     # -- READING DATA TYPES -- #
@@ -759,7 +764,10 @@ class Packet:
     def read_short_string(self):
         size = self.read_short()
         string = self.read_data(size)
-        return string.decode("utf8")
+        try:
+            return string.decode("utf8")
+        except:
+            return string.decode("utf-16")
 
     def read_list(self):
         r = []

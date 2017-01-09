@@ -6,8 +6,7 @@
 # This program is distributed under the terms of the GNU General Public License,
 #  version 3 or later.
 
-from proxy import mcpackets
-from utils.pkt_datatypes import *
+from proxy.constants import *
 
 
 # noinspection PyMethodMayBeStatic
@@ -28,7 +27,7 @@ class ParseSB:
         self.command_prefix_len = len(self.command_prefix)
 
     def parse_play_player_poslook(self):  # player position and look
-        if self.client.clientversion < mcpackets.PROTOCOL_1_8START:
+        if self.client.clientversion < PROTOCOL_1_8START:
             data = self.packet.readpkt([DOUBLE, DOUBLE, DOUBLE, DOUBLE, FLOAT, FLOAT, BOOL])
         else:
             data = self.packet.readpkt([DOUBLE, DOUBLE, DOUBLE, FLOAT, FLOAT, BOOL])
@@ -80,10 +79,10 @@ class ParseSB:
         return False  # and cancel this original packet
 
     def parse_play_player_position(self):
-        if self.client.clientversion < mcpackets.PROTOCOL_1_8START:
+        if self.client.clientversion < PROTOCOL_1_8START:
             data = self.packet.readpkt([DOUBLE, DOUBLE, DOUBLE, DOUBLE, BOOL])
             # ("double:x|double:y|double:yhead|double:z|bool:on_ground")
-        elif self.client.clientversion >= mcpackets.PROTOCOL_1_8START:
+        elif self.client.clientversion >= PROTOCOL_1_8START:
             data = self.packet.readpkt([DOUBLE, DOUBLE, NULL, DOUBLE, BOOL])
             # ("double:x|double:y|double:z|bool:on_ground")
         else:
@@ -103,10 +102,10 @@ class ParseSB:
         return True
 
     def parse_play_player_digging(self):
-        if self.client.clientversion < mcpackets.PROTOCOL_1_7:
+        if self.client.clientversion < PROTOCOL_1_7:
             data = None
             position = data
-        elif mcpackets.PROTOCOL_1_7 <= self.client.clientversion < mcpackets.PROTOCOL_1_8START:
+        elif PROTOCOL_1_7 <= self.client.clientversion < PROTOCOL_1_8START:
             data = self.packet.readpkt([BYTE, INT, UBYTE, INT, BYTE])
             # "byte:status|int:x|ubyte:y|int:z|byte:face")
             position = (data[1], data[2], data[3])
@@ -162,11 +161,11 @@ class ParseSB:
         hand = 0  # main hand
         helditem = player.getHeldItem()
 
-        if self.client.clientversion < mcpackets.PROTOCOL_1_7:
+        if self.client.clientversion < PROTOCOL_1_7:
             data = None
             position = data
 
-        elif mcpackets.PROTOCOL_1_7 <= self.client.clientversion < mcpackets.PROTOCOL_1_8START:
+        elif PROTOCOL_1_7 <= self.client.clientversion < PROTOCOL_1_8START:
             data = self.packet.readpkt([INT, UBYTE, INT, BYTE, SLOT_NO_NBT, REST])
             # "int:x|ubyte:y|int:z|byte:face|slot:item")  REST includes cursor positions x-y-z
             position = (data[0], data[1], data[2])
@@ -175,14 +174,14 @@ class ParseSB:
             # for a long time, using server inventory instead.
             helditem = data[4]  # "item" - SLOT
 
-        elif mcpackets.PROTOCOL_1_8START <= self.client.clientversion < mcpackets.PROTOCOL_1_9REL1:
+        elif PROTOCOL_1_8START <= self.client.clientversion < PROTOCOL_1_9REL1:
             data = self.packet.readpkt([POSITION, NULL, NULL, BYTE, SLOT, REST])
             # "position:Location|byte:face|slot:item|byte:CurPosX|byte:CurPosY|byte:CurPosZ")
             # helditem = data["item"]  -available in packet, but server ignores it (we should too)!
             # starting with 1.8, the server maintains inventory also.
             position = data[0]
 
-        else:  # self.clientversion >= mcpackets.PROTOCOL_1_9REL1:
+        else:  # self.clientversion >= PROTOCOL_1_9REL1:
             data = self.packet.readpkt([POSITION, NULL, NULL, VARINT, VARINT, BYTE, BYTE, BYTE])
             # "position:Location|varint:face|varint:hand|byte:CurPosX|byte:CurPosY|byte:CurPosZ")
             hand = data[4]  # used to be the spot occupied by "slot"
@@ -252,7 +251,7 @@ class ParseSB:
         return True
 
     def parse_play_player_update_sign(self):
-        if self.client.clientversion < mcpackets.PROTOCOL_1_8START:
+        if self.client.clientversion < PROTOCOL_1_8START:
             data = self.packet.readpkt([INT, SHORT, INT, STRING, STRING, STRING, STRING])
             # "int:x|short:y|int:z|string:line1|string:line2|string:line3|string:line4")
             position = (data[0], data[1], data[2])
@@ -298,13 +297,13 @@ class ParseSB:
         return True
 
     def parse_play_click_window(self):  # click window
-        if self.client.clientversion < mcpackets.PROTOCOL_1_8START:
+        if self.client.clientversion < PROTOCOL_1_8START:
             data = self.packet.readpkt([BYTE, SHORT, BYTE, SHORT, BYTE, SLOT_NO_NBT])
             # ("byte:wid|short:slot|byte:button|short:action|byte:mode|slot:clicked")
-        elif mcpackets.PROTOCOL_1_8START < self.client.clientversion < mcpackets.PROTOCOL_1_9START:
+        elif PROTOCOL_1_8START < self.client.clientversion < PROTOCOL_1_9START:
             data = self.packet.readpkt([UBYTE, SHORT, BYTE, SHORT, BYTE, SLOT])
             # ("ubyte:wid|short:slot|byte:button|short:action|byte:mode|slot:clicked")
-        elif mcpackets.PROTOCOL_1_9START <= self.client.clientversion < mcpackets.PROTOCOL_MAX:
+        elif PROTOCOL_1_9START <= self.client.clientversion < PROTOCOL_MAX:
             data = self.packet.readpkt([UBYTE, SHORT, BYTE, SHORT, VARINT, SLOT])
             # ("ubyte:wid|short:slot|byte:button|short:action|varint:mode|slot:clicked")
         else:

@@ -1,7 +1,21 @@
+Build 180 Version [0.10.0]
+- packet API is changed (pre-release 'major' version increased).  Packet constants
+    now have two fields (and are a list). The first field is the packet constant
+    (such as 0x02).  The second field is the parsing definition ( for example,
+    [JSON, BYTE]). Thus far, only applies to select play packets.
+- Missing or added parsing definition fields between minecraft versions are handled (for some
+    time now internally, anyway) by assigning a NULL type to the missing field.  For example,
+    CHAT_MESSAGE is parsed using [JSON, BYTE] in 1.8 and later and [STRING, NULL]
+    prior to 1.8.
+- slit proxy modules even more. mcpackets split into client-bound and server-bound.
+    moved (and renamed) wrapper/utils/pkt_datatypes.py to proxy/constants.py.
+
 Build 179
 - Move play packets out of serverconnection to new parse_cb.py module.
 - start code to add event documentation.
 - refactor import of parsing constants using `from module import *` statements
+- Started experiment (using KEEP_ALIVE): try making packet definitions include
+ not just the packet constant, but their parsing formula as well.
 
 Build 178
 - bugfix - player.message was sending extra self argument.

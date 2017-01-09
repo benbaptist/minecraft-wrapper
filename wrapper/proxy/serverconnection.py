@@ -15,9 +15,10 @@ import traceback
 # local
 from proxy.packet import Packet
 from proxy.parse_cb import ParseCB
-from proxy import mcpackets
+from proxy import mcpackets_sb
+from proxy import mcpackets_cb
 
-from utils.pkt_datatypes import *
+from proxy.constants import *
 
 
 # noinspection PyMethodMayBeStatic
@@ -53,9 +54,6 @@ class ServerConnection:
         self.version = -1
         self._refresh_server_version()  # self parsers get updated here
 
-        # player/client variables in this server instance
-        self.eid = None
-
         self.server_socket = socket.socket()  # temporary assignment.  The actual socket is assigned later.
         self.infos_debug = "(player=%s, IP=%s, Port=%s)" % (self.client.username, self.ip, self.port)
 
@@ -63,12 +61,12 @@ class ServerConnection:
         """Get serverversion for mcpackets use"""
 
         self.version = self.wrapper.javaserver.protocolVersion
-        self.pktSB = mcpackets.ServerBound(self.version)
-        self.pktCB = mcpackets.ClientBound(self.version)
+        self.pktSB = mcpackets_sb.Packets(self.version)
+        self.pktCB = mcpackets_cb.Packets(self.version)
         self.parse_cb = ParseCB(self, self.packet)
         self._define_parsers()
 
-        if self.version > mcpackets.PROTOCOL_1_7:
+        if self.version > PROTOCOL_1_7:
             # used by ban code to enable wrapper group help display for ban items.
             self.wrapper.api.registerPermission("mc1.7.6", value=True)
 
@@ -107,6 +105,7 @@ class ServerConnection:
         :lobby_return: determines whether the client should be aborted too.
         :return:
         """
+        print(reason)  # todo remove this and fix reason code
         if lobby_return:
             self.state = self.proxy.LOBBY  # stop parsing PLAY packets to prevent further "disconnects"
         self.log.debug("Disconnecting proxy server socket connection. %s", self.infos_debug)
@@ -192,7 +191,7 @@ class ServerConnection:
         sent = self.proxy.shared["sent"]  # if true, this is a multiworld (child wrapper instance)
         state = self.state
 
-        if self.version < mcpackets.PROTOCOL_1_8START:
+        if self.version < PROTOCOL_1_8START:
             self.packet.sendpkt(self.pktCB.PLUGIN_MESSAGE, [STRING, SHORT, BOOL, BOOL, BYTE],
                                 [channel, 3, received, sent, state])
         else:
@@ -268,8 +267,8 @@ class ServerConnection:
             self.proxy.PLAY: {
                 self.pktCB.COMBAT_EVENT: self.parse_cb.parse_play_combat_event,
                 self.pktCB.KEEP_ALIVE[PKT]: self._parse_keep_alive,
-                self.pktCB.CHAT_MESSAGE: self.parse_cb.parse_play_chat_message,
-                self.pktCB.JOIN_GAME: self.parse_cb.parse_play_join_game,
+                self.pktCB.CHAT_MESSAGE[PKT]: self.parse_cb.parse_play_chat_message,
+                self.pktCB.JOIN_GAME[PKT]: self.parse_cb.parse_play_join_game,
                 self.pktCB.TIME_UPDATE: self.parse_cb.parse_play_time_update,
                 self.pktCB.SPAWN_POSITION: self.parse_cb.parse_play_spawn_position,
                 self.pktCB.RESPAWN: self.parse_cb.parse_play_respawn,
@@ -290,7 +289,7 @@ class ServerConnection:
                 self.pktCB.ENTITY_PROPERTIES: self.parse_cb.parse_play_entity_properties,
                 self.pktCB.PLAYER_LIST_ITEM: self.parse_cb.parse_play_player_list_item,
                 self.pktCB.DISCONNECT: self.parse_cb.parse_play_disconnect,
-                self.pktCB.ENTITY_METADATA: self.parse_cb.parse_entity_metadata,
+                self.pktCB.ENTITY_METADATA[PKT]: self.parse_cb.parse_entity_metadata,
                 },
             self.proxy.LOBBY: {
                 self.pktCB.DISCONNECT: self._parse_lobby_disconnect,

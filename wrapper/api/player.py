@@ -10,7 +10,11 @@ import time
 import fnmatch
 import json
 import threading
-import proxy.mcpackets as mcpackets
+
+from proxy.mcpackets_cb import Packets as Packets_cb
+from proxy.mcpackets_sb import Packets as Packets_sb
+
+from proxy.constants import *
 from core.storage import Storage
 from api.helpers import processoldcolorcodes
 
@@ -85,8 +89,8 @@ class Player:
         self.loginposition = [0, 0, 0]
 
         self.client = None
-        self.clientboundPackets = mcpackets.ClientBound(self.javaserver.protocolVersion)
-        self.serverboundPackets = mcpackets.ServerBound(self.javaserver.protocolVersion)
+        self.clientboundPackets = Packets_cb(self.javaserver.protocolVersion)
+        self.serverboundPackets = Packets_sb(self.javaserver.protocolVersion)
         self.clientgameversion = self.javaserver.protocolVersion
 
         self.playereid = None
@@ -181,7 +185,7 @@ class Player:
         try:
             self.client.chat_to_server("/%s" % string)
         except AttributeError:
-            if self.javaserver.protocolVersion > mcpackets.PROTOCOL_1_7_9:
+            if self.javaserver.protocolVersion > PROTOCOL_1_7_9:
                 self.wrapper.javaserver.console("execute %s ~ ~ ~ %s" % (self.username, string))
             else:
                 self.log.warning("could not run player.execute - wrapper not in proxy mode and minecraft version "
@@ -284,7 +288,7 @@ class Player:
         resource packs, the user will be prompted to change to the specified resource pack.
         Probably broken right now.
         """
-        if self.getClient().version < mcpackets.PROTOCOL_1_8START:
+        if self.getClient().version < PROTOCOL_1_8START:
             self.client.packet.sendpkt(0x3f, [_STRING, _BYTEARRAY], ("MC|RPack", url))  # "string|bytearray"
         else:
             self.client.packet.sendpkt(self.clientboundPackets.RESOURCE_PACK_SEND,
@@ -334,7 +338,7 @@ class Player:
             pass
 
     def actionMessage(self, message=""):
-        if self.getClient().version < mcpackets.PROTOCOL_1_8START:
+        if self.getClient().version < PROTOCOL_1_8START:
             parsing = [_STRING, _NULL]  # "string|null (nothing sent)"
             data = [message]
         else:
@@ -355,7 +359,7 @@ class Player:
         Returns:
 
         """
-        if self.getClient().version > mcpackets.PROTOCOL_1_8START:
+        if self.getClient().version > PROTOCOL_1_8START:
             self.getClient().packet.sendpkt(self.clientboundPackets.SET_EXPERIENCE, [_FLOAT, _VARINT, _VARINT],
                                             (progress, level, total))
         else:
@@ -396,7 +400,7 @@ class Player:
         if self.getClient().windowCounter > 200:
             self.getClient().windowCounter = 2
         # TODO Test what kind of field title is (json or text)
-        if self.getClient().version > mcpackets.PROTOCOL_1_8START:
+        if self.getClient().version > PROTOCOL_1_8START:
             self.getClient().packet.sendpkt(
                 self.clientboundPackets.OPEN_WINDOW, [_UBYTE, _STRING, _JSON, _UBYTE], (
                     self.getClient().windowCounter, windowtype, {"text": title}, slots))
@@ -467,7 +471,7 @@ class Player:
         x = (position[0])
         y = (position[1])
         z = (position[2])
-        if self.clientgameversion > mcpackets.PROTOCOL_1_7_9:
+        if self.clientgameversion > PROTOCOL_1_7_9:
             if sendblock:
                 iddata = blockid << 4 | blockdata
                 self.getClient().packet.sendpkt(pkt_blockchange, [_POSITION, _VARINT], (position, iddata))
@@ -475,7 +479,7 @@ class Player:
                 self.getClient().packet.sendpkt(
                     pkt_particle, [_INT, _BOOL, _FLOAT, _FLOAT, _FLOAT, _FLOAT, _FLOAT, _FLOAT, _FLOAT, _INT],
                     (blockid, True, x + .5, y + .5, z + .5, 0, 0, 0, partdata, numparticles))
-        if self.clientgameversion < mcpackets.PROTOCOL_1_8START:
+        if self.clientgameversion < PROTOCOL_1_8START:
             if sendblock:
                 self.getClient().packet.sendpkt(pkt_blockchange, [_INT, _UBYTE, _INT, _VARINT, _UBYTE],
                                                 (x, y, x, blockid, blockdata))
