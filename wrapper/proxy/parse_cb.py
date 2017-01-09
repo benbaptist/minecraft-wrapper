@@ -28,7 +28,7 @@ class ParseCB:
         self.server = server
         self.client = server.client
         self.pktCB = self.server.pktCB
-        self.pktCB = self.server.pktSB
+        self.pktSB = self.server.pktSB
         self.wrapper = server.client.wrapper
         self.proxy = server.client.proxy
         self.log = server.client.wrapper.log
