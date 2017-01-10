@@ -204,15 +204,30 @@ class Wrapper:
         # wrapper execution ends here.  handle_server ends when wrapper.halt is True.
 
     def signals(self):
-        signal.signal(signal.SIGINT, self.sigint)  # CTRL-C
-        signal.signal(signal.SIGTERM, self.sigint)  # (I dont think wrapper will actually be allowed to stop SIGTERM)
+        signal.signal(signal.SIGINT, self.sigint)
+        signal.signal(signal.SIGTERM, self.sigterm)
+        signal.signal(signal.SIGTSTP, self.sigtstp)
 
     def sigint(*args):
+        print("Wrapper.py received SIGINT; halting...\n\n")
+        self = args[0]  # We are only interested in the self component
+        os.system("kill -SIGTERM %d" % self.javaserver.proc.pid)
+        self._halt()
+
+    def sigterm(*args):
+        print("Wrapper.py received SIGTERM; halting...\n\n")
         self = args[0]  # We are only interested in the self component
         self._halt()
 
+    def sigtstp(*args):
+        print("Wrapper.py received SIGTSTP; NO sleep support! Wrapper halting...\n")
+        self = args[0]  # We are only interested in the self component
+        os.system("kill -CONT %d" % self.javaserver.proc.pid)
+        self.javaserver.console('fg')
+        self._halt()
+
     def _halt(self):
-        self.javaserver.stop("Halting server...")
+        self.javaserver.stop("Halting server...", restart_the_server=False)
         self.halt = True
 
     def shutdown(self):
