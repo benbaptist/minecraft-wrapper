@@ -1,5 +1,5 @@
 Build 181
-- try fix bug in shutdowns SIGINT, SIGTERM, SIGTSTP
+- Fix bugs with shutdowns SIGINT, SIGTERM, SIGTSTP
 
 Build 180 Version [0.10.0]
 - packet API is changed (pre-release 'major' version increased).  Packet constants
