@@ -168,7 +168,11 @@ class MCServer:
             self.changestate(STARTING)
             self.log.info("Starting server...")
             self.reloadproperties()
-            self.proc = subprocess.Popen(self.args, cwd=self.serverpath, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            command = '2>&1'
+            self.args.append(command)
+            command2 = self.args
+            # print("args:\n%s\n" % command2)
+            self.proc = subprocess.Popen(command2, cwd=self.serverpath, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                          stdin=subprocess.PIPE, universal_newlines=True)
             self.players = {}
             self.accepteula()  # Auto accept eula
