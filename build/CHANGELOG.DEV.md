@@ -1,3 +1,6 @@
+Build 181
+- Fix bugs with shutdowns SIGINT, SIGTERM, SIGTSTP
+
 Build 180 Version [0.10.0]
 - packet API is changed (pre-release 'major' version increased).  Packet constants
     now have two fields (and are a list). The first field is the packet constant

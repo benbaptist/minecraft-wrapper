@@ -100,6 +100,7 @@ class Wrapper:
         self.input_buff = ""
         self.last_input_line = ["/help", ]
         self.last_input_line_index = 0
+        self.sig_int = False
 
         # init items that are set up later (or opted out of/ not set up.)
         self.javaserver = None
@@ -202,17 +203,35 @@ class Wrapper:
         self.log.info("Wrapper Storages closed and saved.")
 
         # wrapper execution ends here.  handle_server ends when wrapper.halt is True.
+        if self.sig_int:
+            print("Ending threads, please wait...")
+            time.sleep(5)
+            os.system("reset")
 
     def signals(self):
-        signal.signal(signal.SIGINT, self.sigint)  # CTRL-C
-        signal.signal(signal.SIGTERM, self.sigint)  # (I dont think wrapper will actually be allowed to stop SIGTERM)
+        signal.signal(signal.SIGINT, self.sigint)
+        signal.signal(signal.SIGTERM, self.sigterm)
+        signal.signal(signal.SIGTSTP, self.sigtstp)
 
     def sigint(*args):
+        print("Wrapper.py received SIGINT; halting...\n")
+        self = args[0]  # We are only interested in the self component
+        self.sig_int = True
+        self._halt()
+
+    def sigterm(*args):
+        print("Wrapper.py received SIGTERM; halting...\n")
         self = args[0]  # We are only interested in the self component
         self._halt()
 
+    def sigtstp(*args):
+        print("Wrapper.py received SIGTSTP; NO sleep support! Wrapper halting...\n")
+        self = args[0]  # We are only interested in the self component
+        os.system("kill -CONT %d" % self.javaserver.proc.pid)
+        self._halt()
+
     def _halt(self):
-        self.javaserver.stop("Halting server...")
+        self.javaserver.stop("Halting server...", restart_the_server=False)
         self.halt = True
 
     def shutdown(self):
