@@ -39,7 +39,7 @@ NEWCONFIG = {
         "thinning-frequency": 30,  # how often thinning of mobs runs, in seconds.  a large difference between this and
                                    # the entity update frequency will ensure no 'overkill" occurs.
         "thinning-activation-threshhold": 100,  # when mobs < this number, thinning is inactive (server or player)
-        "thin-Cow": 40,  # Example, starts thinning Cow > 40.  Name must match exactly.  Overrides 'thin-any-mob'.
+        "thin-Cow": 40,  # Example, starts thinning Cow > 40.  Name must match exactly.
         "thin-Sheep": 40,  # another example
         "thin-Chicken": 30  # because they are especially annoying
     },
@@ -55,8 +55,8 @@ NEWCONFIG = {
         "reboot-message": "Server is conducting a scheduled reboot. The server will be back momentarily!",
         "default-restart-message": "Server restarting...",
         "stop-message": "Stopping The Minecraft Server",
-        "use-readline": False  # using readline is likely to be more-cross platform, but does not use wrapper's ability
-                               # to keep console keystroke entries visually intact while server produces output.
+        "use-readline": True  # using readline is likely to be more-cross platform, but does not use wrapper's ability
+                              # to keep console keystroke entries visually intact while server produces output.
     },
     "General": {
         "auto-restart": True,
@@ -68,10 +68,11 @@ NEWCONFIG = {
                                   # this to another folder to keep the wrapper and server folders separate.
                                   # Do not use a trailing slash.
                                   # '/full/pathto/the/server'
-        "server-name": "Minecraft Server",
+        "server-name": "deprecated",  # moved to Web (used only by web module in code)
         "shell-scripts": False,
         "timed-reboot": False,
-        "timed-reboot-seconds": "86400",
+        "timed-reboot-seconds": "deprecated",  # deprecated for consistency with timed reboot warning 'minutes'
+        "timed-reboot-minutes": 1440,
         "timed-reboot-warning-minutes": 5,
         "auto-update-branch": "deprecated",  # moved to group "Updates"
         "auto-update-dev-build": "deprecated",  # no separate item for wrapper/dev-build.
@@ -113,7 +114,7 @@ NEWCONFIG = {
         # for fewer issues.
         # _________________________________
         "convert-player-files": False,
-        "max-players": 1024,
+        "max-players": 1024,  # todo - re-implement this somewhere? perhaps in the server JSON response?
         "online-mode": True,  # the wrapper's online mode, NOT the server.
         "proxy-bind": "0.0.0.0",
         "proxy-enabled": False,
@@ -135,7 +136,8 @@ NEWCONFIG = {
         "web-bind": "0.0.0.0",
         "web-enabled": False,
         "web-password": "password",
-        "web-port": 8070
+        "web-port": 8070,
+        "server-name": "Minecraft Server",
     }
 }
 

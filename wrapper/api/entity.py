@@ -155,9 +155,14 @@ class EntityControl:
 
     def _entity_processor(self):
         self._log.debug("_entityprocessor thread started.")
+        timer = float(0)
         while self._javaserver.state in (1, 2, 4) and not self._abortep:  # server is running
-
-            sleep(self.entityProcessorFrequency)  # timer for removing stale entities
+            timer += .1
+            sleep(.1)
+            # we want a FAST response to server shutdowns (activate while loop frequently
+            if timer < float(self.entityProcessorFrequency):  # timer for removing stale entities
+                continue
+            timer = float(0)
 
             # start looking for stale client entities
             players = self._javaserver.players
@@ -178,9 +183,16 @@ class EntityControl:
     # noinspection PyTypeChecker
     def _entity_thinner(self):
         self._log.debug("_entity_thinner thread started.")
+        timer = float(0)
         while self._javaserver.state in (1, 2, 4) and not self._abortep:  # server is running
 
-            sleep(self.thiningFrequency)  # timer
+            timer += .1
+            sleep(.1)
+            # we want a FAST response to server shutdowns (activate while loop frequently
+            if timer < float(self.thiningFrequency):  # timer
+                continue
+            timer = float(0)
+
             if self.countActiveEntities() < self.serverStartThinningThreshshold:
                 continue  # don't bother, server load is light.
 

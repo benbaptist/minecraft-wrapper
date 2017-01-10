@@ -51,6 +51,8 @@ class MCServer:
         self.stop_message = self.config["Misc"]["stop-message"]
         self.reboot_message = self.config["Misc"]["reboot-message"]
         self.restart_message = self.config["Misc"]["default-restart-message"]
+        self.reboot_minutes = self.config["General"]["timed-reboot-minutes"]
+        self.reboot_warning_minutes = self.config["General"]["timed-reboot-warning-minutes"]
 
         # These will be used to auto-detect the number of prepend items in the server output.
         self.prepends_offset = 0
@@ -186,6 +188,7 @@ class MCServer:
                 time.sleep(0.1)
                 if self.proc.poll() is not None:
                     self.changestate(OFF)
+                    trystart = 0
                     self.boot_server = self.server_autorestart
                     # break back out to `while not self.wrapper.halt:` loop to (possibly) connect to server again.
                     break
@@ -733,15 +736,15 @@ class MCServer:
     # mcserver.py onsecond Event Handler
     def eachsecond(self, payload):
         if self.config["General"]["timed-reboot"]:
-            if time.time() - self.bootTime > self.config["General"]["timed-reboot-seconds"]:
+            if time.time() - self.bootTime > (self.reboot_minutes * 60):
                 if self.config["General"]["timed-reboot-warning-minutes"] > 0:
-                    if self.rebootWarnings - 1 < self.config["General"]["timed-reboot-warning-minutes"]:
-                        l = (time.time() - self.bootTime - self.config["General"]["timed-reboot-seconds"]) / 60
+                    if self.rebootWarnings <= self.reboot_warning_minutes:
+                        l = (time.time() - self.bootTime - self.reboot_minutes * 60)
                         if l > self.rebootWarnings:
                             self.rebootWarnings += 1
-                            if int(self.config["General"]["timed-reboot-warning-minutes"] - l + 1) > 0:
+                            if int(self.reboot_warning_minutes - l + 1) > 0:
                                 self.broadcast("&cServer will be rebooting in %d minute(s)!"
-                                               % int(self.config["General"]["timed-reboot-warning-minutes"] - l + 1))
+                                               % int(self.reboot_warning_minutes - l + 1))
                         return
                 self.restart(self.reboot_message)
                 self.bootTime = time.time()
