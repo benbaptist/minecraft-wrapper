@@ -1,4 +1,10 @@
-Build 181
+Build 182
+- make `use-readline` default to True in the wrapper.config.json
+- Bugfix server auto-restart options
+- Clean up config some.
+- Make entity tracker code more responsive to shutdowns (close threads quicker)
+
+Build 181 Version [0.10.1]
 - Fix bugs with shutdowns SIGINT, SIGTERM, SIGTSTP
 
 Build 180 Version [0.10.0]

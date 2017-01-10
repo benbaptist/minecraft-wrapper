@@ -483,7 +483,7 @@ class WebClient:
                 "server_version": self.wrapper.javaserver.version,
                 "motd": self.wrapper.javaserver.motd,
                 "refresh_time": time.time(),
-                "server_name": self.wrapper.config["General"]["server-name"],
+                "server_name": self.wrapper.config["Web"]["server-name"],
                 "server_memory": self.wrapper.javaserver.getmemoryusage(),
                 "server_memory_graph": memorygraph,
                 "world_size": self.wrapper.javaserver.worldSize,
