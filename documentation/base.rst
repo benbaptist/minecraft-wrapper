@@ -135,32 +135,76 @@
 
 
 
-**def getStorage(self, name, world=False)**
+**def getStorage(self, name, world=False, formatting="pickle")**
 
-        Return a storage object for storing configurations, player data, and any other data your
-        plugin will need to remember across reboots.
+        :NOTE: **This method is somewhat different after Wrapper version 0.10.1 (build 182).  The
+            storage object is no longer a data object itself; It is a manager used for controlling the
+            saving of the object data.  The actual data is contained in Dictionary subitem 'Data'**
 
-        :name:  The name of the storage.
+        - Returns a storage object manager.  The manager contains the storage object, `Data` (a dictionary).
+
+        - `Data` contains the data your plugin will remember across reboots.
+
+        :name:  The name of the storage (on disk).
 
         :world:
 
-            "False" sets the storages location to `/wrapper-data/plugins`.
+            "False" sets the storage's location to `/wrapper-data/plugins`.
 
             "True" sets the storage path to `<serverpath>/<worldname>/plugins`.
 
+        :formatting:  Pickle formatting is the default. pickling is less strict than json formats nd leverages
+            binary storage.  Use of json (or future implemented formats) can result in errors if your keys or
+            data do not conform to json standards (like use of string keys).  However, pickle is not generally
+            human-readable, whereas json is human readable. If you need a human-readable copy (for debugging),
+            consider using self.api.helpers.putjsonfile() to write a copy to disk in Json.
+
         :sample methods:
+
+            The new method:
 
             .. code:: python
 
                 # to start a storage:
-                self.data = self.api.getStorage("worldly", True)
+                self.homes = self.api.getStorage("homes", True)
+
+                # access the data:
+                for player in self.homes.Data:  # note upper case `D`
+                    print("player %s has a home at: %s" % (player, self.homes.Data[player]))
 
                 # to save:
-                self.data.save()  # storages also do periodic saves every minute.
+                self.homes.save()  # storages also do periodic saves every minute.
 
                 # to close (and save):
                 def onDisable(self):
-                    self.data.close()
+                    self.homes.close()
+            ..
+
+            the key difference is here (under the old Storage API):
+
+            .. code:: python
+
+                # access the data:
+                for player in self.homes:  # it differs here because "self.homes" is no longer a data set.
+                    print("player %s has a home at: %s" % (player, self.homes[player]))
+            ..
+
+            **tip**
+            *to make the transition easier for existing code, redefine your storage statements like this to
+            re-write as few lines as possible (and avoid problems with other plugins that link to your plugins
+            data)*:
+
+            .. code:: python
+
+                # change your `start a storage` to:
+                self.homestorage = self.api.getStorage("homes", True)
+                self.homes = homestorage.Data
+
+                # Now the only other change you need to make is to any .save() or .close() statements:
+
+                def onDisable(self):
+                    # self.homes.close()  # change to -
+                    self.homestorage.close()
             ..
 
         

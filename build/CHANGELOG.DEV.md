@@ -1,3 +1,18 @@
+Build 183 Version [0.11.0]
+- plugin-breaking change made to getStorage API:
+    - Had to do it!  The Storages were really a bad implementation that tried to
+      follow both Dict and json rules.  However, the implementation limits our
+      ability to leverage the full capabilities of a Dict class, including being a
+      fully compliant iterator object.  Further, by  implementing pickle methods,
+      saving the storages can be much more reliable without being limited by the
+      constraints of json formatting.  I have implemented the pickling (off by
+      default for back-wards compatibility) with cPickle for Python 2 (Pickle is
+      already C-implemented for Python 3).
+    - This changes the use of Storages some.  The close() and save() methods are
+      used as before. `data.save()`, `data.close()` ('data' being the Storage object)
+    - The data component is accessed as `data.Data`.  Data is a fully compliant
+      Python dictionary.
+
 Build 182
 - make `use-readline` default to True in the wrapper.config.json
 - Bugfix server auto-restart options

@@ -47,7 +47,7 @@ class Main:
             player.message("&cSorry, but you can do this only in Surival gamemode.")
             return False
         bmname = args[0]
-        if player.username not in self.data:
+        if player.username not in self.data.Data:
             if cmd in ["bmgo", "bmdel"]:
                 player.message({"text": "You haven't used bookmarks yet.\n", "color": "red", "extra": [
                     {"text": " Use ", "color": "gray"},
@@ -56,12 +56,12 @@ class Main:
                 ]})
                 return False
             elif cmd in ["bmset"]:
-                self.data[player.username] = {}
+                self.data.Data[player.username] = {}
                 return True
             else:
                 return False
         else:
-            if bmname in self.data[player.username]:
+            if bmname in self.data.Data[player.username]:
                 if cmd in ["bmgo", "bmdel"]:
                     return True
                 elif cmd in ["bmset"]:
@@ -88,7 +88,7 @@ class Main:
                     ]})
                     return False
                 elif cmd in ["bmset"]:
-                    if len(self.data[player.username]) >= 5:
+                    if len(self.data.Data[player.username]) >= 5:
                         player.message({"text": "Maximum number of bookmarks already in use.\n",
                                         "color": "red", "extra":
                                             [
@@ -112,7 +112,7 @@ class Main:
         if not self._isallowed("bmset", player, args):
             return
         bmname = args[0]
-        self.data[player.username][bmname] = player.getPosition()
+        self.data.Data[player.username][bmname] = player.getPosition()
         player.message({"text": "Bookmark ", "color": "green", "extra": [
             {"text": bmname, "color": "dark_green"},
             {"text": " set.\n", "color": "green"},
@@ -132,16 +132,16 @@ class Main:
             {"text": bmname, "color": "dark_green"},
             {"text": ".", "color": "green"},
         ]})
-        self.api.minecraft.console("tp %s %d %d %d" % (player.username, self.data[player.username][bmname][0],
-                                                       self.data[player.username][bmname][1],
-                                                       self.data[player.username][bmname][2]))
+        self.api.minecraft.console("tp %s %d %d %d" % (player.username, self.data.Data[player.username][bmname][0],
+                                                       self.data.Data[player.username][bmname][1],
+                                                       self.data.Data[player.username][bmname][2]))
 
     def bookmarkdel(self, player, args):
         """ Delete existing bookmark """
         if not self._isallowed("bmdel", player, args):
             return
         bmname = args[0]
-        del self.data[player.username][bmname]
+        del self.data.Data[player.username][bmname]
         player.message({"text": "Bookmark ", "color": "green", "extra": [
             {"text": bmname, "color": "dark_green"},
             {"text": " deleted.", "color": "green"},
@@ -155,14 +155,14 @@ class Main:
                 {"text": "/bmlist", "color": "gold", "clickEvent": {"action": "run_command", "value": "/bmlist"}},
             ]})
             return
-        if player.username not in self.data:
+        if player.username not in self.data.Data:
             player.message({"text": "You haven't used bookmarks yet.\n", "color": "red", "extra": [
                 {"text": " Use ", "color": "gray"},
                 {"text": "/bmset", "color": "gold", "clickEvent": {"action": "suggest_command", "value": "/bmset"}},
                 {"text": " <name>", "color": "gold", "italic": True}
             ]})
             return
-        if len(self.data[player.username]) == 0:
+        if len(self.data.Data[player.username]) == 0:
             player.message({"text": "You don't have any bookmarks.\n", "color": "red", "extra": [
                 {"text": " Use ", "color": "gray"},
                 {"text": "/bmset", "color": "gold", "clickEvent": {"action": "suggest_command", "value": "/bmset"}},
@@ -170,7 +170,7 @@ class Main:
             ]})
             return
         bmlist = []
-        for bmname in self.data[player.username].keys():
+        for bmname in self.data.Data[player.username].keys():
             bmlist.append({"text": " %s" % bmname, "color": "gold", "clickEvent": {"action": "run_command",
                                                                                    "value": "/bmgo %s" % bmname}})
         player.message({"text": "Your bookmarks are:", "color": "green", "extra": bmlist})

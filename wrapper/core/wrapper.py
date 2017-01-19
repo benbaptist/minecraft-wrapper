@@ -86,9 +86,12 @@ class Wrapper:
         self.use_readline = self.config["Misc"]["use-readline"]
 
         # Storages
-        self.storage = Storage("wrapper", encoding=self.encoding)
-        self.permissions = Storage("permissions", encoding=self.encoding)
-        self.usercache = Storage("usercache", encoding=self.encoding)
+        self.wrapper_storage = Storage("wrapper", encoding=self.encoding)
+        self.wrapper_permissions = Storage("permissions", encoding=self.encoding, pickle=False)
+        self.wrapper_usercache = Storage("usercache", encoding=self.encoding, pickle=False)
+        self.storage = self.wrapper_storage.Data
+        self.permissions = self.wrapper_permissions.Data
+        self.usercache = self.wrapper_usercache.Data
 
         # core functions and datasets
         self.uuids = UUIDS(self)
@@ -126,9 +129,9 @@ class Wrapper:
     def __del__(self):
         if self.storage:  # prevent error message on very first wrapper starts when wrapper exits after creating
             # new wrapper.properties file.
-            self.storage.close()
-            self.permissions.close()
-            self.usercache.close()
+            self.wrapper_storage.close()
+            self.wrapper_permissions.close()
+            self.wrapper_usercache.close()
 
     def start(self):
         """ wrapper should only start ONCE... old code made it restart over when only a server needed restarting"""
@@ -197,9 +200,9 @@ class Wrapper:
 
         self.plugins.disableplugins()
         self.log.info("Plugins disabled")
-        self.storage.close()
-        self.permissions.close()
-        self.usercache.close()
+        self.wrapper_storage.close()
+        self.wrapper_permissions.close()
+        self.wrapper_usercache.close()
         self.log.info("Wrapper Storages closed and saved.")
 
         # wrapper execution ends here.  handle_server ends when wrapper.halt is True.

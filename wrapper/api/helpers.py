@@ -402,16 +402,15 @@ def processoldcolorcodes(message):
     return message
 
 
-def putjsonfile(data, filename, directory=".", indent_spaces=2, sort=False):
+def putjsonfile(data, filename, directory=".", indent_spaces=2, sort=True):
     """
     writes entire data to a json file.
-    This is not for appending items to an existing file!
 
     :data: json dictionary to write
 
     :filename: filename without extension.
 
-    :directory: by default, wrapper script directory.
+    :directory: by default, current directory.
 
     :indent_spaces: indentation level. Pass None for no indents. 2 is the default.
 
@@ -732,7 +731,9 @@ def py_test():
     print(read_timestr(str(x)))
     print(time.time())
 
+
 if __name__ == "__main__":
+
     # py_test()
     pass
 
