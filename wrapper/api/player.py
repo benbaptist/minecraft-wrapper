@@ -129,12 +129,12 @@ class Player:
             self.permissions["users"][self.mojangUuid.string] = {"groups": [], "permissions": {}}
 
         # Process login data
-        self.data = Storage(self.clientUuid.string, root="wrapper-data/players")
-        if "firstLoggedIn" not in self.data:
-            self.data["firstLoggedIn"] = (time.time(), time.tzname)
-        if "logins" not in self.data:
-            self.data["logins"] = {}
-        self.data["lastLoggedIn"] = (self.loggedIn, time.tzname)
+        self.data = Storage(self.clientUuid.string, root="wrapper-data/players", pickle=False)
+        if "firstLoggedIn" not in self.data.Data:
+            self.data.Data["firstLoggedIn"] = (time.time(), time.tzname)
+        if "logins" not in self.data.Data:
+            self.data.Data["logins"] = {}
+        self.data.Data["lastLoggedIn"] = (self.loggedIn, time.tzname)
         self.data.save()
 
         # start player logged in time tracking thread
@@ -161,11 +161,11 @@ class Player:
         internal tracking that updates a player's server play time. Not intended as a part of the public
         player object API
         """
-        self.data["logins"][int(self.loggedIn)] = time.time()
+        self.data.Data["logins"][int(self.loggedIn)] = time.time()
         while not self.abort:
             timeupdate = time.time()
             if timeupdate % 60:  # Just update every 60 seconds
-                self.data["logins"][int(self.loggedIn)] = int(time.time())
+                self.data.Data["logins"][int(self.loggedIn)] = int(time.time())
             time.sleep(.5)  # this needs a fast response to ensure the storage closes immediately on player logoff
         self.data.close()
 
@@ -663,7 +663,7 @@ class Player:
     def getFirstLogin(self):
         """ Returns a tuple containing the timestamp of when the user first logged in for the first time,
         and the timezone (same as time.tzname). """
-        return self.data["firstLoggedIn"]
+        return self.data.Data["firstLoggedIn"]
     # Cross-server commands
 
     def connect(self, address, port):

@@ -208,7 +208,7 @@ class MCServer:
 
     def _toggle_server_started(self, server_started=True):
         self.wrapper.storage["ServerStarted"] = server_started
-        self.wrapper.storage.save()
+        self.wrapper.wrapper_storage.save()
 
     def start(self):
         """

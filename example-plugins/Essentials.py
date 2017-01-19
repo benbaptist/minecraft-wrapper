@@ -13,7 +13,7 @@ class Main:
         self.minecraft = api.minecraft
         self.log = log
         self.powertool = []
-#		if "warps" not in self.data: self.data["warps"] = {}
+#		if "warps" not in self.data.Data: self.data.Data["warps"] = {}
     def onEnable(self):
         self.data = self.api.getStorage("worldly", True)
 
@@ -35,8 +35,8 @@ class Main:
         ])
 
         # DEFAULTS
-        if "warps" not in self.data: self.data["warps"] = {}
-        if "motd" not in self.data: self.data["motd"] = {"msg": "&aWelcome to the server, [[name]]!", "enabled": True}
+        if "warps" not in self.data.Data: self.data.Data["warps"] = {}
+        if "motd" not in self.data.Data: self.data.Data["motd"] = {"msg": "&aWelcome to the server, [[name]]!", "enabled": True}
 
         # api.registerPermission() is used to set these permissions to ON by default, rather than off
         self.api.registerPermission("essentials.warp", True) # I need to do essentials.listwarps too
@@ -68,7 +68,7 @@ class Main:
     def deny(self, player):
         player.message({"text": "Permission denied for this command.", "color": "red"})
     def getMOTD(self, name):
-        return self.data["motd"]["msg"].replace("[[name]]", name)
+        return self.data.Data["motd"]["msg"].replace("[[name]]", name)
     # events
     def login(self, payload):
         self.motd(payload["player"], None)
@@ -93,13 +93,13 @@ class Main:
             self.powertool.append(player.username)
             player.message("&aPowertool enabled!")
     def motd(self, player, args):
-        if "motd" not in self.data:
-            self.data["motd"] = {"msg": "&aWelcome to the server, [[name]]!", "enabled": True}
+        if "motd" not in self.data.Data:
+            self.data.Data["motd"] = {"msg": "&aWelcome to the server, [[name]]!", "enabled": True}
         player.message(self.getMOTD(player.username))
     def setmotd(self, player, args):
         if player.isOp():
             if len(args) > 0:
-                self.data["motd"]["msg"] = " ".join(args)
+                self.data.Data["motd"]["msg"] = " ".join(args)
                 player.message("&aSet MOTD to message: &r%s" % " ".join(args))
         else:
             self.deny(player)
@@ -111,7 +111,7 @@ class Main:
             warp = args[0]
             player.message({"text": "Created warp '%s'." % warp, "color": "green"})
             x, y, z, yaw, pitch = player.getPosition()
-            self.data["warps"][warp] = (x, y, z)
+            self.data.Data["warps"][warp] = (x, y, z)
         else:
             player.message({"text": "Usage: /setwarp [name]", "color": "red"})
     def blowblowblow(self, player, args):
@@ -127,13 +127,13 @@ class Main:
     def warp(self, player, args):
         if len(args) == 1:
             warp = args[0]
-            if warp not in self.data["warps"]:
+            if warp not in self.data.Data["warps"]:
                 player.message({"text": "Warp '%s' doesn't exist." % warp, "color": "red"})
                 return False
             player.message({"text": "Teleporting you to '%s'." % warp, "color": "green"})
-            self.api.minecraft.console("tp %s %d %d %d" % (player.username, self.data["warps"][warp][0], self.data["warps"][warp][1], self.data["warps"][warp][2]))
+            self.api.minecraft.console("tp %s %d %d %d" % (player.username, self.data.Data["warps"][warp][0], self.data.Data["warps"][warp][1], self.data.Data["warps"][warp][2]))
         else:
-            player.message({"text": "List of warps: %s" % ", ".join(self.data["warps"]), "color": "red"})
+            player.message({"text": "List of warps: %s" % ", ".join(self.data.Data["warps"]), "color": "red"})
     def killall(self, player, args):
         if not player.isOp():
             self.deny(player)

@@ -31,16 +31,17 @@ class Main:
             player.message({"text": "Sorry, but you can't do this from the Nether or End.", "color": "red"})
             return
         player.message({"text": "Home location set. Use /home to return here", "color": "green"})
-        self.data[player.username] = player.getPosition()
+        self.data.Data[player.username] = player.getPosition()
 
     def home(self, player, args):
         if not player.getDimension() == 0:
             player.message({"text": "Sorry, but you can't do this from the Nether or End.", "color": "red"})
             return
         username = player.username
-        if username not in self.data:
+        if username not in self.data.Data:
             player.message({"text": "Home is not set. Use /sethome.", "color": "red"})
             return
         player.message({"text": "Teleporting you to your home.", "color": "green"})
-        self.api.minecraft.console("tp %s %d %d %d" % (username, self.data[username][0], self.data[username][1],
-                                                       self.data[username][2]))
+        self.api.minecraft.console("tp %s %d %d %d" % (username, self.data.Data[username][0],
+                                                       self.data.Data[username][1],
+                                                       self.data.Data[username][2]))

@@ -113,16 +113,15 @@
     Just replaces text containing the (&) ampersand with section signs instead (§).
     
 
-**def putjsonfile(data, filename, directory=".", indent_spaces=2, sort=False)**
+**def putjsonfile(data, filename, directory=".", indent_spaces=2, sort=True)**
 
     writes entire data to a json file.
-    This is not for appending items to an existing file!
 
     :data: json dictionary to write
 
     :filename: filename without extension.
 
-    :directory: by default, wrapper script directory.
+    :directory: by default, current directory.
 
     :indent_spaces: indentation level. Pass None for no indents. 2 is the default.
 

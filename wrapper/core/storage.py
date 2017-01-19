@@ -9,116 +9,112 @@
 # from __future__ import unicode_literals
 
 import os
+import sys
 import time
 import logging
 from api.helpers import mkdir_p, putjsonfile, getjsonfile
 from core.config import Config
 import threading
 
-try:
+version = sys.version_info
+PY3 = version[0] > 2
+
+if PY3:
+    str2 = str
+    # noinspection PyUnresolvedReferences
+    import pickle as Pickle
+else:
     # noinspection PyUnresolvedReferences
     str2 = unicode
-except NameError:
-    str2 = str
+    # noinspection PyUnresolvedReferences
+    import cPickle as Pickle
 
 
 class Storage:
 
-    def __init__(self, name, root="wrapper-data/json", encoding="default"):
+    def __init__(self, name, root="wrapper-data/json", encoding="default", pickle=True):
+        self.Data = {}
         self.name = name
         self.root = root
+        self.pickle = pickle
         self.configManager = Config()
         self.configManager.loadconfig()
+        self.log = logging.getLogger('Storage.py')
 
         if encoding == "default":
             self.encoding = self.configManager.config["General"]["encoding"]
         else:
             self.encoding = encoding
 
-        self.log = logging.getLogger('Wrapper.py')
+        if self.pickle:
+            self.file_ext = "pkl"
+        else:
+            self.file_ext = "json"
 
-        self.data = {}
         self.load()
-        self.time = time.time()
+        self.timer = time.time()
         self.abort = False
 
         t = threading.Thread(target=self.periodicsave, args=())
         t.daemon = True
         t.start()
 
-    def __getitem__(self, index):
-        if not type(index) in (str, str2):
-            raise Exception("A string must be passed - got %s" % type(index))
-        try:
-            return self.data[index]
-        except KeyError:
-            self.log.debug("failed to get key: <%s> out of data:\n%s", index, self.data)
-
-    def __setitem__(self, index, value):
-        if not type(index) in (str, str2):
-            raise Exception("A string must be passed - got %s" % type(index))
-        self.data[index] = value
-        return self.data[index]
-
-    def __delattr__(self, index):
-        if not type(index) in (str, str2):
-            raise Exception("A string must be passed - got %s" % type(index))
-        del self.data[index]
-
-    def __delitem__(self, index):
-        if not type(index) in (str, str2):
-            raise Exception("A string must be passed - got %s" % type(index))
-        del self.data[index]
-
-    def __iter__(self):
-        if self.data is None:
-            self.data = {}
-        # noinspection PyTypeChecker
-        for i in self.data:
-            yield i
-
-    def periodicsave(self):  # EAFTP
+    def periodicsave(self):
+        # doing it this way (versus just sleeping for 60 seconds), allows faster shutdown response
         while not self.abort:
-            if time.time() - self.time > 60:
+            if time.time() - self.timer > 60:
                 self.save()
-                self.time = time.time()
+                self.timer = time.time()
             time.sleep(1)
 
     def load(self):
         mkdir_p(self.root)
-        if not os.path.exists("%s/%s.json" % (self.root, self.name)):
-            self.save()
-        self.data = getjsonfile(self.name, self.root, encodedas=self.encoding)
-        if self.data is False:
-            self.log.exception("bad directory or filename '%s/%s.json'", self.root, self.name,)
+        if not os.path.exists("%s/%s.%s" % (self.root, self.name, self.file_ext)):
+            # load old json storages if there is no pickled file (and if storage is using pickle)
+            if self.pickle:
+                self.Data = self.json_load()
+            self.save()  # save to the selected file mode (json or pkl)
+        if self.pickle:
+            self.pickle_load()
+        else:
+            self.json_load()
 
     def save(self):
         if not os.path.exists(self.root):
             mkdir_p(self.root)
-        putcode = putjsonfile(self.data, self.name, self.root)
+        if self.pickle:
+            self.pickle_save()
+        else:
+            self.json_save()
+
+    def pickle_save(self):
+        if "human" in self.encoding.lower():
+            _protocol = 0
+        else:
+            _protocol = 0  # TODO DEBUGGING  Pickle.HIGHEST_PROTOCOL
+
+        with open("%s/%s.%s" % (self.root, self.name, self.file_ext), "wb") as f:
+            Pickle.dump(self.Data, f, protocol=_protocol)
+
+    def json_save(self):
+        putcode = putjsonfile(self.Data, self.name, self.root)
         if not putcode:
-            self.log.exception("TypeError or non-existent path: '%s/%s.json'\nData Dump:\n%s",
-                               self.root, self.name, self.data)
+            self.log.exception("Error encoutered while saving json data:\n"
+                               "'%s/%s.%s'\nData Dump:\ns",
+                               self.root, self.name, self.file_ext, self.Data)
+
+    def pickle_load(self):
+        with open("%s/%s.%s" % (self.root, self.name, self.file_ext), "rb") as f:
+            return Pickle.load(f)
+
+    def json_load(self):
+        try_load = getjsonfile(self.name, self.root, encodedas=self.encoding)
+        if try_load in (None, False):
+            self.log.exception("bad/non-existent file or data '%s/%s.%s'", self.root, self.name, self.file_ext)
+            return {}
+        else:
+            return try_load
 
     def close(self):
-        self.save()
         self.abort = True
-
-    def key(self, key, value=None):
-        if value is None:
-            return self.getkey(key)
-        else:
-            self.setkey(key, value)
-
-    def getkey(self, key):
-        if key in self.data:
-            return self.data[key]
-        else:
-            return None
-
-    def setkey(self, key, value=None):
-        if value is None:
-            if key in self.data:
-                del self.data[key]
-        else:
-            self.data[key] = value
+        self.save()

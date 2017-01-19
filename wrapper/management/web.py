@@ -40,15 +40,14 @@ class Web:
         self.config = wrapper.config
         self.serverpath = self.config["General"]["server-directory"]
         self.socket = False
-        # self.data = Storage("web", self.log)  # Eeek! You can't pass a logger instance into a storage object!
         self.data = Storage("web")
 
-        if "keys" not in self.data:
-            self.data["keys"] = []
+        if "keys" not in self.data.Data:
+            self.data.Data["keys"] = []
         # if not self.config["Web"]["web-password"] == None:
         #   self.log.info("Changing web-mode password because web-password was changed in wrapper.properties")
         #  ***** change code to hashlib if this gets uncommented
-        #   self.data["password"] = md5.md5(self.config["Web"]["web-password"]).hexdigest()
+        #   self.data.Data["password"] = md5.md5(self.config["Web"]["web-password"]).hexdigest()
         #   self.config["Web"]["web-password"] = None
         #   self.wrapper.configManager.save()
 
@@ -155,11 +154,11 @@ class Web:
             # a += chr(random.randrange(97, 122))
         if rememberme:
             print("Will remember!")
-        self.data["keys"].append([a, time.time(), rememberme])
+        self.data.Data["keys"].append([a, time.time(), rememberme])
         return a
 
     def validateKey(self, key):
-        for i in self.data["keys"]:
+        for i in self.data.Data["keys"]:
             expiretime = 2592000
             if len(i) > 2:
                 if not i[2]:
@@ -171,9 +170,11 @@ class Web:
         return False
 
     def removeKey(self, key):
-        for i, v in enumerate(self.data["keys"]):
+        # we dont want to do things like this.  Never delete or insert while iterating over a dictionary
+        #  because dictionaries change order as the hashtables are changed during insert and delete operations...
+        for i, v in enumerate(self.data.Data["keys"]):
             if v[0] == key:
-                del self.data["keys"][i]
+                del self.data.Data["keys"][i]
 
     def wrap(self):
         while not self.wrapper.halt:

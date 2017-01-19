@@ -54,8 +54,8 @@ class Web:
         self.add_decorators()
 
         self.data = Storage("dash")
-        if "keys" not in self.data:
-            self.data["keys"] = []
+        if "keys" not in self.data.Data:
+            self.data.Data["keys"] = []
 
         self.loginAttempts = 0
         self.lastAttempt = 0
@@ -85,7 +85,7 @@ class Web:
         chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@-_"
         a = "".join([random.choice(chars) for i in range(64)])
 
-        self.data["keys"].append([a, time.time(), rememberme])
+        self.data.Data["keys"].append([a, time.time(), rememberme])
         return a
 
     def validateKey(self):
@@ -93,7 +93,7 @@ class Web:
             return False
 
         key = request.cookie["__wrapper_cookie"]
-        for i in self.data["keys"]:
+        for i in self.data.Data["keys"]:
             expiretime = 7884000  # Three weeks old
             if len(i) > 2:
                 if not i[2]:
@@ -105,9 +105,9 @@ class Web:
         return False
 
     def removeKey(self, key):
-        for i, v in enumerate(self.data["keys"]):
+        for i, v in enumerate(self.data.Data["keys"]):
             if v[0] == key:
-                del self.data["keys"][i]
+                del self.data.Data["keys"][i]
 
     # Dectorators and misc.
     def add_decorators(self):

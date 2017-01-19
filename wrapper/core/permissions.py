@@ -15,6 +15,7 @@ class Permissions:
         self.wrapper = wrapper
         self.config = wrapper.config
         # self.permissions = storage.Storage("permissions")
+        # recall - use self.permissions.Data to access
 
     def creategroup(self, groupname):
         if groupname in self.wrapper.permissions["groups"]:
