@@ -4,7 +4,7 @@
 
 # **this is the default config file.  Changes here are inserted or deleted from the the wrapper config.**
 
-NEWCONFIG = {
+CONFIG = {
 
     "Backups":
 

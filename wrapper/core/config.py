@@ -31,7 +31,7 @@ class Config:
 
         # Create new config if none exists
         if not os.path.exists("wrapper.properties.json"):
-            putjsonfile(NEWCONFIG, "wrapper.properties", sort=True)
+            putjsonfile(CONFIG, "wrapper.properties", sort=True)
             self.exit = True
 
         # Read existing configuration
@@ -49,17 +49,17 @@ class Config:
         deprecated_entries = []
         new_sections = []
         new_entries = []
-        for section in NEWCONFIG:
+        for section in CONFIG:
             if section not in self.config:
                 self.log.debug("Adding section [%s] to configuration", section)
                 new_sections.append(section)
                 changesmade = True
 
-            for configitem in NEWCONFIG[section]:
+            for configitem in CONFIG[section]:
                 if section in self.config:
                     # mark deprecated items for deletion
                     if configitem in self.config[section]:
-                        if NEWCONFIG[section][configitem] == "deprecated":
+                        if CONFIG[section][configitem] == "deprecated":
                             self.log.debug("Deprecated item '%s' in section '%s'. - removing it from"
                                            " wrapper properties", configitem, section)
                             deprecated_entries.append([section, configitem])
@@ -67,7 +67,7 @@ class Config:
                     # mark new items for addition
                     else:
                         # handle new items in an existing section
-                        if NEWCONFIG[section][configitem] != "deprecated":  # avoid re-adding deprecated items
+                        if CONFIG[section][configitem] != "deprecated":  # avoid re-adding deprecated items
                             self.log.debug("Item '%s' in section '%s' not in wrapper properties - adding it!",
                                            configitem, section)
                             new_entries.append([section, configitem])
@@ -94,7 +94,7 @@ class Config:
             # Add new entries
             if len(new_entries) > 0:
                 for added in new_entries:
-                    self.config[added[0]][added[1]] = NEWCONFIG[added[0]][added[1]]
+                    self.config[added[0]][added[1]] = CONFIG[added[0]][added[1]]
 
             self.save()
             self.exit = True
