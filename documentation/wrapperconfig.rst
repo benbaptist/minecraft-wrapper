@@ -4,231 +4,271 @@
 # ## this is the default config file.  Changes here are inserted or deleted from the the wrapper config.
 
 NEWCONFIG = {
-    "Backups": {
 
-        # Automatic backups with automatic backup pruning. Interval is in seconds.
-        "backup-compression": False,
-
-        # Specify files and folders you want backed up.  Items must be in your server folder (see 'General' section)
-        "backup-folders":
-
-            [
-                "server.properties",
-    
-                "world"
-            ],
-
-
-        "backup-interval": 3600,
-
-        "backup-location": "backup-directory",  # this location will be inside wrapper's directory
-
-        "backup-notification": True,
-
-        "backups-keep": 10,
-
-        "enabled": False
-
-    },
-    "Gameplay":
+    "Backups":
         {
 
-        "use-timer-tick-event": False,  # not recommended.  1/20th of a second timer option for plugin use. May
-                                        # impact wrapper performance negatively.
-    },
+            # Automatic backups with automatic backup pruning. Interval is in seconds.
+
+            "backup-compression": False,
+
+            # Specify files and folders you want backed up.  Items must be in your server folder (see 'General' section)
+
+            "backup-folders":
+
+                [
+                    "server.properties",
+
+                    "world"
+
+                ],
+
+
+            "backup-interval": 3600,
+
+            "backup-location": "backup-directory",  # this location will be inside wrapper's directory
+
+            "backup-notification": True,
+
+            "backups-keep": 10,
+
+            "enabled": False
+
+        },
+
+    "Gameplay":
+
+        {
+
+            "use-timer-tick-event": False,  # not recommended.  1/20th of a second timer option for plugin use. May
+
+                                            # impact wrapper performance negatively.
+
+        },
 
     "Entities":
+
         {
 
-        "enable-entity-controls": False,  # enable entity controls.
+            "enable-entity-controls": False,  # enable entity controls.
 
-        "entity-update-frequency": 4,  # how often the entity processor updates world entity counts
+            "entity-update-frequency": 4,  # how often the entity processor updates world entity counts
 
-        "thinning-frequency": 30,  # how often thinning of mobs runs, in seconds.  a large difference between this and
-                                   # the entity update frequency will ensure no 'overkill" occurs.
+            "thinning-frequency": 30,  # how often thinning of mobs runs, in seconds.  a large difference between this
 
-        "thinning-activation-threshhold": 100,  # when mobs < this number, thinning is inactive (server or player)
+                                       # and the entity update frequency will ensure no 'overkill" occurs.
 
-        "thin-Cow": 40,  # Example, starts thinning Cow > 40.  Name must match exactly.
+            "thinning-activation-threshhold": 100,  # when mobs < this number, thinning is inactive (server or player)
 
-        "thin-Sheep": 40,  # another example
+            "thin-Cow": 40,  # Example, starts thinning Cow > 40.  Name must match exactly.
 
-        "thin-Chicken": 30  # because they are especially annoying
+            "thin-Sheep": 40,  # another example
 
-    },
+            "thin-Chicken": 30  # because they are especially annoying
+
+        },
 
     "Updates":
+
         {
 
-        "auto-update-branch": None,  # Use one of the names listed herein (i.e. 'stable-branch')
+            "auto-update-branch": None,  # Use one of the names listed herein (i.e. 'stable-branch')
 
-        "auto-update-wrapper": False,  # If True, an "auto-update-branch" must be specified.
+            "auto-update-wrapper": False,  # If True, an "auto-update-branch" must be specified.
 
-        # You can point these to another branch, if desired.
-        "stable-branch": "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master/build/version.json",
+            # You can point these to another branch, if desired.
 
-        "dev-branch": "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/build/version.json",
+            "stable-branch": "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master/build/version.json",
 
-    },
+            "dev-branch":
+                "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/build/version.json",
+
+        },
 
     "Misc":
-        {  # look 'n' feel type customizations
 
-        "command-prefix": "/",  # if you change this, no minecraft command will work. Bug or feature? TODO not sure.
+        {
 
-        "reboot-message": "Server is conducting a scheduled reboot. The server will be back momentarily!",
+            # look 'n' feel type customizations
 
-        "default-restart-message": "Server restarting...",
+            "command-prefix": "/",  # if you change this, no minecraft command will work. Bug or feature? TODO not sure.
 
-        "stop-message": "Stopping The Minecraft Server",
+            "reboot-message": "Server is conducting a scheduled reboot. The server will be back momentarily!",
 
-        "use-readline": True  # using readline is likely to be more-cross platform, but does not use wrapper's ability
-                              # to keep console keystroke entries visually intact while server produces output.
+            "default-restart-message": "Server restarting...",
 
-    },
+            "stop-message": "Stopping The Minecraft Server",
+
+            "use-readline": True  # readline is likely to be more-cross platform, but does not use wrapper's ability
+
+                                  # to keep console keystroke entries visually intact while server produces output.
+
+        },
 
     "General":
+
         {
 
-        "auto-restart": True,
+            "auto-restart": True,
 
-        # You will need to update this to your particular server start command line.
-        "command": "java -jar -Xmx2G -Xms1G server.jar nogui",
+            # You will need to update this to your particular server start command line.
 
-        "encoding": "UTF-8",
+            "command": "java -jar -Xmx2G -Xms1G server.jar nogui",
 
-        "pre-1.7-mode": "deprecated",  # wrapper detects server version and adjusts accordingly now
+            "encoding": "UTF-8",
 
-        "server-directory": ".",  # Using the default '.' roots the server in the same folder with wrapper. Change
-                                  # this to another folder to keep the wrapper and server folders separate.
-                                  # Do not use a trailing slash.
-                                  # '/full/pathto/the/server'
+            "pre-1.7-mode": "deprecated",  # wrapper detects server version and adjusts accordingly now
 
-        "server-name": "deprecated",  # moved to Web (used only by web module in code)
+            "server-directory": ".",  # Using the default '.' roots the server in the same folder with wrapper. Change
 
-        "shell-scripts": False,
+                                      # this to another folder to keep the wrapper and server folders separate
 
-        "timed-reboot": False,
+                                      # Do not use a trailing slash.
 
-        "timed-reboot-seconds": "deprecated",  # deprecated for consistency with timed reboot warning 'minutes'
+                                      # '/full/pathto/the/server'
 
-        "timed-reboot-minutes": 1440,
+            "server-name": "deprecated",  # moved to Web (used only by web module in code)
 
-        "timed-reboot-warning-minutes": 5,
+            "shell-scripts": False,
 
-        "auto-update-branch": "deprecated",  # moved to group "Updates"
+            "timed-reboot": False,
 
-        "auto-update-dev-build": "deprecated",  # no separate item for wrapper/dev-build.
+            "timed-reboot-seconds": "deprecated",  # deprecated for consistency with timed reboot warning 'minutes'
 
-        "auto-update-wrapper": "deprecated",  # moved to group "Updates"
+            "timed-reboot-minutes": 1440,
 
-        "stable-branch":  "deprecated",  # moved to group "Updates"
+            "timed-reboot-warning-minutes": 5,
 
-        "dev-branch":  "deprecated",  # moved to group "Updates"
+            "auto-update-branch": "deprecated",  # moved to group "Updates"
 
-    },
+            "auto-update-dev-build": "deprecated",  # no separate item for wrapper/dev-build.
+
+            "auto-update-wrapper": "deprecated",  # moved to group "Updates"
+
+            "stable-branch":  "deprecated",  # moved to group "Updates"
+
+            "dev-branch":  "deprecated",  # moved to group "Updates"
+
+        },
 
     "IRC":
+
         {
 
-        # This allows your users to communicate to and from the server via IRC and vise versa.
-        # _________________________________
-        "autorun-irc-commands":
-            [
-                "COMMAND 1",
-                "COMMAND 2"
-            ],
+            # This allows your users to communicate to and from the server via IRC and vise versa.
 
-        "channels":
-            [
-                "#wrapper"
-            ],
+            "autorun-irc-commands":
 
-        "command-character": ".",
+                [
+                    "COMMAND 1",
+                    "COMMAND 2"
+                ],
 
-        "control-from-irc": False,
+            "channels":
 
-        "control-irc-pass": "password",
+                [
+                    "#wrapper"
+                ],
 
-        "irc-enabled": False,
+            "command-character": ".",
 
-        "nick": "MinecraftWrap",
+            "control-from-irc": False,
 
-        "obstruct-nicknames": False,
+            "control-irc-pass": "password",
 
-        "password": None,
+            "irc-enabled": False,
 
-        "port": 6667,
+            "nick": "MinecraftWrap",
 
-        "server": "benbaptist.com",
+            "obstruct-nicknames": False,
 
-        "show-channel-server": True,
+            "password": None,
 
-        "show-irc-join-part": True
+            "port": 6667,
 
-    },
+            "server": "benbaptist.com",
+
+            "show-channel-server": True,
+
+            "show-irc-join-part": True
+
+        },
 
     "Proxy":
+
         {
 
-        # This is a man-in-the-middle proxy similar to BungeeCord, which is used for extra plugin functionality.
-        # online-mode must be set to False in server.properties. Make sure that the server is not accessible directly
-        # from the outside world.
-        # _________________________________
-        # Note: the online-mode option here refers to the proxy only, not to the server's offline mode.  Each server's
-        # online mode will depend on its setting in server.properties
-        # _________________________________
-        # It is recommended that you turn network-compression-threshold to -1 (off) in server.properties
-        # for fewer issues.
-        # _________________________________
+            # This is a man-in-the-middle proxy similar to BungeeCord, which is used for extra plugin functionality.
 
-        "convert-player-files": False,
+            # online-mode must be set to False in server.properties. Make sure that the server is not accessible
 
-        "max-players": 1024,  # todo - re-implement this somewhere? perhaps in the server JSON response?
+            # directly from the outside world.
 
-        "online-mode": True,  # the wrapper's online mode, NOT the server.
+            # Note: the online-mode option here refers to the proxy only, not to the server's offline mode.  Each
 
-        "proxy-bind": "0.0.0.0",
+            # server's online mode will depend on its setting in server.properties
 
-        "proxy-enabled": False,
+            # It is recommended that you turn network-compression-threshold to -1 (off) in server.properties
 
-        "proxy-sub-world": False,  # this wrapper is a sub world (wrapper needs to do extra work to spawn the player).
+            # for fewer issues.
 
-        "proxy-port": 25565,  # the wrapper's proxy port that accepts client connections from the internet. This
-                              # port is exposed to the internet via your port forwards.
+            "convert-player-files": False,
 
-        "server-port": "deprecated",  # This port is autoconfigured from server console output now.
+            "max-players": 1024,  # todo - re-implement this somewhere? perhaps in the server JSON response?
 
-        "spigot-mode": False,
+            "online-mode": True,  # the wrapper's online mode, NOT the server.
 
-        "silent-ipban": True,  # silent bans cause your server to ignore sockets from that IP (for IP bans)
-                              #  The idea is to cause your server to appear offline and avoid possible confrontations.
+            "proxy-bind": "0.0.0.0",
 
-        "hidden-ops":
-            [         # these players do no appear in the sample server player list pings.
-                "SurestTexas00",
-                "BenBaptist"
-            ]
-    },
+            "proxy-enabled": False,
+
+            "proxy-sub-world": False,  # if wrapper is a sub world (wrapper needs to do extra work to spawn the player).
+
+            "proxy-port": 25565,  # the wrapper's proxy port that accepts client connections from the internet. This
+
+                                  # port is exposed to the internet via your port forwards.
+
+            "server-port": "deprecated",  # This port is autoconfigured from server console output now.
+
+            "spigot-mode": False,
+
+            "silent-ipban": True,  # silent bans cause your server to ignore sockets from that IP (for IP bans)
+
+                                   # This will cause your server to appear offline and avoid possible confrontations.
+
+            "hidden-ops":
+
+                [
+
+                    # these players do not appear in the sample server player list pings.
+
+                    "SurestTexas00",
+
+                    "BenBaptist"
+
+                ]
+
+        },
 
     "Web":
+
         {
 
-        "public-stats": True,
+            "public-stats": True,
 
-        "web-allow-file-management": True,
+            "web-allow-file-management": True,
 
-        "web-bind": "0.0.0.0",
+            "web-bind": "0.0.0.0",
 
-        "web-enabled": False,
+            "web-enabled": False,
 
-        "web-password": "password",
+            "web-password": "password",
 
-        "web-port": 8070,
+            "web-port": 8070,
 
-        "server-name": "Minecraft Server",
+            "server-name": "Minecraft Server",
 
-    }
+        }
 
 }
 
