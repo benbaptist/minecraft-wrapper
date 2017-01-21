@@ -15,6 +15,7 @@
 NEWCONFIG = {
 
     "Backups":
+
         {
 
             # Automatic backups with automatic backup pruning. Interval is in seconds.
@@ -87,9 +88,12 @@ NEWCONFIG = {
 
             # You can point these to another branch, if desired.
 
-            "stable-branch": "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master/build/version.json",
+            "stable-branch":
+
+                "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master/build/version.json",
 
             "dev-branch":
+            
                 "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/build/version.json",
 
         },
