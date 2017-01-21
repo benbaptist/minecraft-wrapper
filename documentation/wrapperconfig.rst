@@ -1,8 +1,8 @@
 
-**def Default Config file
+**def Default Config file**
 # **
 
-#this is the default config file.  Changes here are inserted or deleted from the the wrapper config.
+# **this is the default config file.  Changes here are inserted or deleted from the the wrapper config.**
 
 NEWCONFIG = {
 
