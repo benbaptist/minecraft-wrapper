@@ -13,6 +13,8 @@
 # """
 # **this is the default config file.  Changes here are inserted or deleted from the the wrapper config.**
 
+# **Items marked as *"deprecated"* are removed from the wrapper config at wrapper's start.**
+
 CONFIG = {
 
     "Backups":
