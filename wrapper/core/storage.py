@@ -91,7 +91,7 @@ class Storage:
         if "human" in self.encoding.lower():
             _protocol = 0
         else:
-            _protocol = 0  # TODO DEBUGGING  Pickle.HIGHEST_PROTOCOL
+            _protocol = Pickle.HIGHEST_PROTOCOL
 
         with open("%s/%s.%s" % (self.root, self.name, self.file_ext), "wb") as f:
             Pickle.dump(self.Data, f, protocol=_protocol)
