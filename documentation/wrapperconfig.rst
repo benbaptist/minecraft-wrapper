@@ -1,7 +1,7 @@
 
 **def Default_Config_file # **
 
-# ## this is the default config file.  Changes here are inserted or deleted from the the wrapper config.
+# #this is the default config file.  Changes here are inserted or deleted from the the wrapper config.
 
 NEWCONFIG = {
 
@@ -84,7 +84,7 @@ NEWCONFIG = {
                 "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master/build/version.json",
 
             "dev-branch":
-            
+
                 "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/build/version.json",
 
         },
