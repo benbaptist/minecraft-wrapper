@@ -168,7 +168,7 @@ class MCServer:
             self.changestate(STARTING)
             self.log.info("Starting server...")
             self.reloadproperties()
-            command = '2>&1'
+            command = '-fdiagnostics-color=always'
             self.args.append(command)
             command2 = self.args
             # print("args:\n%s\n" % command2)
