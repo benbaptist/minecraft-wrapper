@@ -9,7 +9,8 @@
 # Default Configuration File
 # Config items with values of "deprecated" get removed if they exist in an active config file
 
-# def Default_Config_file # """
+# def Default Config file ()
+# """
 # #this is the default config file.  Changes here are inserted or deleted from the the wrapper config.
 
 NEWCONFIG = {
