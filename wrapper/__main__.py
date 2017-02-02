@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2016, 2017 - BenBaptist and minecraft-wrapper (AKA 'Wrapper.py')
-#  developer(s).
+# Copyright (C) 2016, 2017 - BenBaptist and Wrapper.py developer(s).
 # https://github.com/benbaptist/minecraft-wrapper
-# This program is distributed under the terms of the GNU General Public License,
-#  version 3 or later.
+# This program is distributed under the terms of the GNU
+# General Public License, version 3 or later.
 
 import os
 import sys
@@ -34,15 +33,16 @@ def main():
 
     # noinspection PyBroadException
     try:
-        configuration = getjsonfile("wrapper.properties", ".", encodedas=encoding)
+        config = getjsonfile("wrapper.properties", ".", encodedas=encoding)
     except:
-        configuration = False
-    if configuration:
-        if "Misc" in configuration:
+        config = False
+    if config:
+        if "Misc" in config:
             # noinspection PyUnresolvedReferences
-            if "use-readline" in configuration["Misc"]:
+            if "use-readline" in config["Misc"]:
+                # use readline = not using better_console
                 # noinspection PyUnresolvedReferences
-                better_console = not(configuration["Misc"]["use-readline"])  # use readline = not using better_console
+                better_console = not(config["Misc"]["use-readline"])
 
     configure_logger(betterconsole=better_console)
 
