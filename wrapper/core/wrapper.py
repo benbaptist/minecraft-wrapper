@@ -60,6 +60,9 @@ STARTED = 2
 STOPPING = 3
 FROZEN = 4
 
+# define the player slot holder once here and not at each
+# clients Instantiation:
+INV_SLOTS = range(46)
 
 class Wrapper:
 

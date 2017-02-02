@@ -54,11 +54,13 @@ def main():
     # check python version compatibilities
     log.info("Wrapper.py started - Version %s", wrapper.getbuildstring())
     if not PY3 and SUBVER < 7:
-        log.warning("You are using python 2.%s.  wrapper uses 2.7.x contructs and imports that may not be"
-                    " backwards compatible.  You may encounter errors", SUBVER)
+        log.warning("You are using python 2.%s.  wrapper uses 2.7.x contructs"
+                    " and imports that may not be backwards compatible.  "
+                    "You may encounter errors", SUBVER)
     if PY3 and SUBVER < 4:
-        log.warning("You are using python 3.%s.  wrapper only guarantees support with 3.4 and later."
-                    "  You may encounter errors", SUBVER)
+        log.warning("You are using python 3.%s.  wrapper only guarantees "
+                    "support with 3.4 and later.  You may encounter errors",
+                    SUBVER)
 
     # start wrapper
     try:
@@ -67,17 +69,22 @@ def main():
         if not wrapper.configManager.exit:
             os.system("reset")
         wrapper.plugins.disableplugins()
-        wrapper.javaserver.console("save-all flush")  # required to have a flush argument
+
+        # save-all is required to have a flush argument
+        wrapper.javaserver.console("save-all flush")
         wrapper.javaserver.stop("Wrapper.py received shutdown signal - bye")
         wrapper.halt = True
     except Exception as ex:
-        log.critical("Wrapper.py crashed - stopping server to be safe (%s)", ex, exc_info=True)
+        log.critical("Wrapper.py crashed - stopping server to be safe (%s)",
+                     ex, exc_info=True)
         wrapper.halt = True
         wrapper.plugins.disableplugins()
         try:
-            wrapper.javaserver.stop("Wrapper.py crashed - please contact the server host as soon as possible")
+            wrapper.javaserver.stop("Wrapper.py crashed - please contact the "
+                                    "server host as soon as possible")
         except AttributeError as exc:
-            log.critical("Wrapper has no server instance. Server is likely killed but could still be running, or it "
+            log.critical("Wrapper has no server instance. Server is likely "
+                         "killed but could still be running, or it "
                          "might be corrupted! (%s)", exc, exc_info=True)
 
 if __name__ == "__main__":

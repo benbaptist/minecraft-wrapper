@@ -14,7 +14,8 @@ Ways to reference packets by names and not hard-coded numbers.
 
 This attempts to follow the wiki as much as possible.
 
-the ServerBound and ClientBound classes take a protocol argument to determine the packet values.
+the ServerBound and ClientBound classes take an integer protocol argument
+to determine the packet values.
 
 Protocol constants are named as follows:
     first two digits are major version, third digit in minor version.
@@ -34,11 +35,16 @@ class Packets:
 
         # Login, Status, and Ping packets
         # -------------------------------
-        self.HANDSHAKE = 0x00  # set server to STATUS(1) or LOGIN(2) mode.
-        self.REQUEST = 0x00  # Server sends server json list data in response packet
-        self.STATUS_PING = 0x01  # server responds with a PONG
-        self.LOGIN_START = 0x00  # contains the "name" of user.  Sent after handshake for LOGIN
-        self.LOGIN_ENCR_RESPONSE = 0x01  # client response to ENCR_REQUEST
+        # set server to STATUS(1) or LOGIN(2) mode.
+        self.HANDSHAKE = 0x00
+        # Server sends server json list data in response packet
+        self.REQUEST = 0x00
+        # server responds with a PONG
+        self.STATUS_PING = 0x01
+        # contains the "name" of user.  Sent after handshake for LOGIN
+        self.LOGIN_START = 0x00
+        # client response to ENCR_REQUEST
+        self.LOGIN_ENCR_RESPONSE = 0x01
 
         # Play packets
         # -------------------------------

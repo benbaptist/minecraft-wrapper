@@ -14,7 +14,8 @@ Ways to reference packets by names and not hard-coded numbers.
 
 This attempts to follow the wiki as much as possible.
 
-the ServerBound and ClientBound classes take a protocol argument to determine the packet values.
+the ServerBound and ClientBound classes take an integer protocol argument
+to determine the packet values.
 
 Protocol constants are named as follows:
     first two digits are major version, third digit in minor version.
@@ -39,47 +40,51 @@ class Packets:
         self.LOGIN_SUCCESS = 0x02
         self.LOGIN_SET_COMPRESSION = 0X03
 
-        self.PING_JSON_RESPONSE = 0x00  # the json data represented as a string
-        self.PING_PONG = 0x01  # PONG sent in response to Client PING
+        # the json data represented as a string
+        self.PING_JSON_RESPONSE = 0x00
+        # PONG sent in response to Client PING
+        self.PING_PONG = 0x01
 
         # play mode packets
         # -------------------------------
-        # Base set 1.7 - 1.8.9 - The packet numbers were the same, although parsing differed amongst versions
+        # Base set 1.7 - 1.8.9 - The packet numbers were the same,
+        # although parsing differed amongst versions
         self.KEEP_ALIVE = [0x00, [INT]]
         self.JOIN_GAME = [0x01, [INT, UBYTE, BYTE, UBYTE, UBYTE, STRING]]
         self.CHAT_MESSAGE = [0x02, [STRING, NULL]]
         self.TIME_UPDATE = 0x03
-        self.ENTITY_EQUIPMENT = 0x04  # TODO - never parsed by wrapper before
+        self.ENTITY_EQUIPMENT = 0x04  # TODO - never parsed by wrapper
         self.SPAWN_POSITION = 0x05
-        self.UPDATE_HEALTH = 0x06  # TODO - never parsed by wrapper before
+        self.UPDATE_HEALTH = 0x06  # TODO - never parsed by wrapper
         self.RESPAWN = 0x07
         self.PLAYER_POSLOOK = 0x08
-        self.HELD_ITEM_CHANGE = 0x09  # TODO - never parsed by wrapper before
+        self.HELD_ITEM_CHANGE = 0x09  # TODO - never parsed by wrapper
         self.USE_BED = 0x0a
         self.ANIMATION = 0x0b
         self.SPAWN_PLAYER = 0x0c
-        self.COLLECT_ITEM = 0x0d  # TODO - never parsed by wrapper before
+        self.COLLECT_ITEM = 0x0d  # TODO - never parsed by wrapper
         self.SPAWN_OBJECT = 0x0e
         self.SPAWN_MOB = 0x0f
-        self.SPAWN_PAINTING = 0x10  # TODO - never parsed by wrapper before
-        self.SPAWN_EXPERIENCE_ORB = 0x11  # TODO - never parsed by wrapper before
+        self.SPAWN_PAINTING = 0x10  # TODO - never parsed by wrapper
+        self.SPAWN_EXPERIENCE_ORB = 0x11  # TODO - never parsed by wrapper
         self.ENTITY_VELOCITY = 0x12  # TODO - never parsed by wrapper before
         self.DESTROY_ENTITIES = 0x13
         self.ENTITY = 0x14
         self.ENTITY_RELATIVE_MOVE = 0x15
         self.ENTITY_LOOK = 0x16  # TODO - never parsed by wrapper before
-        self.ENTITY_LOOK_AND_RELATIVE_MOVE = 0x17  # TODO - never parsed by wrapper before
+        self.ENTITY_LOOK_AND_RELATIVE_MOVE = 0x17  # TODO - never parsed by wrapper
         self.ENTITY_TELEPORT = 0x18
         self.ENTITY_HEAD_LOOK = 0x19
         self.ENTITY_STATUS = 0x1a
         self.ATTACH_ENTITY = 0x1b
-        self.ENTITY_METADATA = [0x1c, [VARINT, RAW]]  # [VARINT, METADATA]  This one and NBT things are broke in 1.7
+        # [VARINT, METADATA]  This one and NBT things are broke in 1.7
+        self.ENTITY_METADATA = [0x1c, [VARINT, RAW]]
         self.ENTITY_EFFECT = 0x1d
         self.REMOVE_ENTITY_EFFECT = 0x1e
         self.SET_EXPERIENCE = 0x1f
         self.ENTITY_PROPERTIES = 0x20
         self.CHUNK_DATA = 0x21
-        self.MULTI_BLOCK_CHANGE = 0x22  # TODO - never parsed by wrapper before (well, a long time ago..)
+        self.MULTI_BLOCK_CHANGE = 0x22  # TODO - never parsed by wrapper before
         self.BLOCK_CHANGE = 0x23
         self.BLOCK_ACTION = 0x24  # TODO - never parsed by wrapper before
         self.BLOCK_BREAK_ANIMATION = 0x25  # TODO - never parsed by wrapper before
@@ -121,8 +126,9 @@ class Packets:
         self.UPDATE_ENTITY_NBT = 0x49  # TODO - never parsed by wrapper before
 
         # NEW to 1.9
-        self.PACKET_THAT_EXISTS_IN_FUTURE_PROTOCOL_BUT_NOT_THIS_ONE = 0xee
-        self.UNLOAD_CHUNK = 0xee  # ALL VERSIONS handle chunk unloading DIFFERENTLY - CAVEAT EMPTOR!
+        self.PACKET_THAT_EXISTS_IN_OTHER_PROTOCOLS_BUT_NOT_THIS_ONE = 0xee
+        # ALL VERSIONS handle chunk unloading DIFFERENTLY - CAVEAT EMPTOR!
+        self.UNLOAD_CHUNK = 0xee
         self.NAMED_SOUND_EFFECT = 0xee
         self.BOSS_BAR = 0xee
         self.SET_COOLDOWN = 0xee
@@ -167,7 +173,8 @@ class Packets:
             self.DISCONNECT = 0x1a
             self.ENTITY_STATUS = 0x1b
             self.EXPLOSION = 0x1c
-            self.UNLOAD_CHUNK = 0x1d  # TODO NEW  # ALL VERSIONS handle chunk unloading DIFFERENTLY - CAVEAT EMPTOR!
+            # ALL VERSIONS handle chunk unloading DIFFERENTLY - CAVEAT EMPTOR!
+            self.UNLOAD_CHUNK = 0x1d  # TODO NEW
             self.CHANGE_GAME_STATE = 0x1e
             self.KEEP_ALIVE[PKT] = 0x1f
             self.CHUNK_DATA = 0x20
@@ -224,7 +231,8 @@ class Packets:
             # parsing changes
             self.JOIN_GAME[PARSER] = [INT, UBYTE, INT, UBYTE, UBYTE, STRING]
 
-        # 1.9.4 - 1.11 changes  http://wiki.vg/index.php?title=Protocol&oldid=7819#Entity_Properties
+        # 1.9.4 - 1.11 changes
+        # http://wiki.vg/index.php?title=Protocol&oldid=7819#Entity_Properties
         # still good packet numbers through protocol 315
         if protocol > PROTOCOL_1_9_4:
             self.UPDATE_SIGN = 0xee

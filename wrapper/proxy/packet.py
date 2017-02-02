@@ -70,8 +70,8 @@ class Packet:
         self.compressThreshold = -1
         self.abort = False
 
-        # this is set by the calling class/method.  Not presently used here, but could be. maybe to decide
-        #  which metadata parser to use?
+        # this is set by the calling class/method.  Not presently used here,
+        #  but could be. maybe to decide which metadata parser to use?
         self.version = -1
         self.buffer = io.BytesIO()  # Py3
         # self.buffer = StringIO.StringIO()
@@ -168,9 +168,11 @@ class Packet:
         length = self.unpack_varint()  # first field - entire raw packet Length
         datalength = 0  # if 0, an uncompressed packet
         if self.compressThreshold != -1:  # if compressed:
-            datalength = self.unpack_varint()  # length of the uncompressed (Packet ID + Data)
-            # using augmented assignment in the next line will BREAK this
-            length = length - len(self.pack_varint(datalength))  # find the len of the datalength field and subtract it
+            # length of the uncompressed (Packet ID + Data)
+            datalength = self.unpack_varint()
+            # find the len of the datalength field and subtract it
+            # using augmented assignment in the next line seems to BREAK this
+            length = length - len(self.pack_varint(datalength))
         payload = self.recv(length)
 
         if datalength > 0:  # it is compressed, unpack it
@@ -216,8 +218,9 @@ class Packet:
             packet = packet_tuple[1]
             if packet_tuple[0] > -1:
                 if len(packet) > self.compressThreshold:
-                    packetcompressed = self.pack_varint(len(packet)) + zlib.compress(packet)
-                    packet = self.pack_varint(len(packetcompressed)) + packetcompressed
+                    pktcomp = self.pack_varint(len(packet)) + zlib.compress(
+                        packet)
+                    packet = self.pack_varint(len(pktcomp)) + pktcomp
                 else:
                     packet = self.pack_varint(0) + packet
                     packet = self.pack_varint(len(packet)) + packet
@@ -230,18 +233,22 @@ class Packet:
 
     def send_raw(self, payload):
         if not self.abort:
-            self.queue.append((self.compressThreshold, payload))  # [(-1, "payload"), ..., ... ]
+            # [(-1, "payload"), ..., ... ]
+            self.queue.append((self.compressThreshold, payload))
 
     def read(self, expression):
         """
         a readpkt() wrapper.  This is not as fast as calling readpkt(), but
-        makes a nice abstraction and is back-wards compatible.  It is also nice because it gives you a dictionary back.
+        makes a nice abstraction and is back-wards compatible.  It is also
+        nice because it gives you a dictionary back.
 
         Args:
-            expression: Something like "double:x|double:y|double:z|bool:on_ground"
+            expression: Something like "double:x|double:y|double:z|
+                bool:on_ground"
 
         Returns:
-            the original-style dict of returned values - {"x": double, "y": double, "z": double, "on_ground": bool}
+            the original-style dict of returned values - {"x": double,
+                "y": double, "z": double, "on_ground": bool}
 
         """
 
@@ -249,12 +256,15 @@ class Packet:
         args = []
         results = {}
 
-        # create a list of variable names and a list of constants representing datatypes to pass to readpkt().
+        # create a list of variable names and a list of constants
+        # representing datatypes to pass to readpkt().
         for combo in expression.split("|"):
             type_ = combo.split(":")[0]
             name = combo.split(":")[1]
-            names.append(name)  # goal - create a list of the user-desired variable names
-            args.append(_CODERS[type_])  # goal: create list of integers to pass as arguments/"constants"
+            # goal - create a list of the user-desired variable names
+            names.append(name)
+            # goal: create list of integers to pass as arguments/"constants"
+            args.append(_CODERS[type_])
 
         # obtain a list of returned arguments
         result = self.readpkt(args)
@@ -267,19 +277,22 @@ class Packet:
     def readpkt(self, args):
         """
         Usage like:
-            `data = packet.readpkt(_DOUBLE, _DOUBLE, _DOUBLE, _BOOL)`  # abstracts of integer constants
+            # abstracts of integer constants
+            `data = packet.readpkt(_DOUBLE, _DOUBLE, _DOUBLE, _BOOL)`
             `x, y, z, on_ground = data`
 
-        proposed as an alternative to all the string operations used by the old (and new wrapper form of..)
-        read().
+        proposed as an alternative to all the string operations used by
+        the old (and new wrapper form of..) read().
 
         Args:
-            args: a list of integers representing the type of read operation.  Special _NULL (100) type
-                    argument allows an extra "padding" argument to be appended.  To see how this is useful,
-                    look at serverconnection.py parsing of packet 'self.pktCB.SPAWN_OBJECT'
+            args: a list of integers representing the type of read operation.
+                    Special _NULL (100) type argument allows an extra "padding"
+                    argument to be appended.  To see how this is useful, look
+                    at serverconnection.py parsing of packet
+                    'self.pktCB.SPAWN_OBJECT'
 
-        Returns:  A list of those read results (not a dictionary) in the same order the args
-                    were passed.
+        Returns:  A list of those read results (not a dictionary) in the
+                    same order the args were passed.
 
         """
         result = []
@@ -290,8 +303,9 @@ class Packet:
 
     def send(self, pkid, expression, payload):
         """
-        This is deprecated. It functions as a sendpkt() wrapper.  This is not as fast as calling sendpkt(),
-        is back-wards compatible, but not really any easier to use.
+        This is deprecated. It functions as a sendpkt() wrapper.
+        This is not as fast as calling sendpkt(), is back-wards compatible,
+        but not really any easier to use.
 
         Args:
             pkid: packet id (int or hex - usually as an abstracted constant)
@@ -303,12 +317,15 @@ class Packet:
 
         """
 
-        # we are not going to change the payload argument any.. just the expression values.
+        # we are not going to change the payload argument
+        #  any.. just the expression values.
         args = []
-        # create a list of variable names and a list of constants representing datatypes to pass to sendpkt().
+        # create a list of variable names and a list of constants
+        # representing datatypes to pass to sendpkt().
         if len(payload) > 0:
             for type_ in expression.split("|"):
-                args.append(_CODERS[type_])  # goal: create list of integers to pass as arguments/"constants"
+                # goal: create list of integers to pass as arguments
+                args.append(_CODERS[type_])
 
         # obtain a list of returned arguments
         result = self.sendpkt(pkid, args, payload)
@@ -383,10 +400,13 @@ class Packet:
 
     def send_position(self, payload):
         x, y, z = payload
-        return struct.pack(">Q", ((x & 0x3FFFFFF) << 38) | ((y & 0xFFF) << 26) | (z & 0x3FFFFFF))
+        return struct.pack(">Q", ((x & 0x3FFFFFF) << 38)
+                           | ((y & 0xFFF) << 26)
+                           | (z & 0x3FFFFFF))
 
     def send_slot(self, slot):
-        """Sending slots, such as {"id":98,"count":64,"damage":0,"nbt":None}"""
+        """Sending slots, such as
+        {"id":98,"count":64,"damage":0,"nbt":None}"""
         r = self.send_short(slot["id"])
         if slot["id"] == -1:
             return r
@@ -402,15 +422,17 @@ class Packet:
         return payload.bytes
 
     def send_metadata_1_9(self, meta_data):
-        """ payload is a dictionary of entity metadata items, keyed by index number."""
+        """ payload is a dictionary of entity metadata items,
+        keyed by index number."""
         b = b""
         for index in meta_data:
-            b += self.send_ubyte(index)  # Index
-
-            value_type = meta_data[index][0]  # Type
+            # Index
+            b += self.send_ubyte(index)
+            # Type
+            value_type = meta_data[index][0]
             b += self.send_byte(value_type)
-
-            value = meta_data[index][1]  # value
+            # value
+            value = meta_data[index][1]
 
             if value_type == 0:
                 b += self.send_byte(value)
@@ -452,7 +474,8 @@ class Packet:
                 b += self.send_varint(value)
 
             else:
-                print("Unsupported data type '%d' for send_metadata()  (Class Packet)" % value_type)
+                print("Unsupported data type '%d' for send_metadata()  "
+                      "(Class Packet)" % value_type)
                 raise ValueError
         b += self.send_ubyte(0xff)
         return b
@@ -464,7 +487,8 @@ class Packet:
         for index in payload:
             type_ = payload[index][0]
             value = payload[index][1]
-            # "To create the byte, you can use this: (Type << 5 | Index & 0x1F) & 0xFF"
+            # "To create the byte, you can use this:
+            # (Type << 5 | Index & 0x1F) & 0xFF"
             header = (type_ << 5) | index
             # header = (type_ << 5 | index & 0x1F) & 0xFF
             b += self.send_ubyte(header)
@@ -489,7 +513,8 @@ class Packet:
                 b += self.send_float(value[1])
                 b += self.send_float(value[2])
             else:
-                print("Unsupported data type '%d' for send_metadata()  (Class Packet)" % type_)
+                print("Unsupported data type '%d' for send_metadata()  "
+                      "(Class Packet)" % type_)
                 raise ValueError
         b += self.send_ubyte(0x7f)
         # print("\n\n%s\n\n\n" % b)
@@ -521,17 +546,24 @@ class Packet:
                 # raise Exception("Types in list dosn't match!")
                 return b''
         # If ok, then continue
-        r += self.send_byte(typeslist[0])  # items type
-        r += self.send_int(len(tag))  # lenght
-        for e in tag:  # send every tag
+
+        # items type
+        r += self.send_byte(typeslist[0])
+        # length
+        r += self.send_int(len(tag))
+        # send every tag
+        for e in tag:
             r += self._ENCODERS[typeslist[0]](e["value"])
         return r
 
     def send_comp(self, tag):
         r = ""
-        for i in tag:  # Send every tag
+
+        # Send every tag
+        for i in tag:
             r += self.send_tag(i)
-        r += "\x00"  # close compbound
+        # close compound
+        r += "\x00"
         return r
 
     def send_int_array(self, values):
@@ -539,10 +571,14 @@ class Packet:
         return r + struct.pack(">%di" % len(values), *values)
 
     def send_tag(self, tag):
-        r = self.send_byte(tag['type'])  # send type indicator
-        r += self.send_short(len(tag["name"]))  # send lenght prefix
-        r += tag["name"].encode("utf8")  # send name
-        r += self._ENCODERS[tag["type"]](tag["value"])  # send tag
+        # send type indicator
+        r = self.send_byte(tag['type'])
+        # send length prefix
+        r += self.send_short(len(tag["name"]))
+        # send name
+        r += tag["name"].encode("utf8")
+        # send tag value
+        r += self._ENCODERS[tag["type"]](tag["value"])
         return r
 
     # -- READING Methods  -- #
@@ -566,7 +602,8 @@ class Packet:
     def read_data(self, length):
         d = self.buffer.read(length)
         if len(d) == 0 and length is not 0:
-            self.obj.close_server()  # "Received no data or less data than expected - connection closed"
+            # "Received no data or less data than expected - connection closed"
+            self.obj.close_server()
             return b""
         return d
 
@@ -654,7 +691,8 @@ class Packet:
     def read_metadata_1_9(self):
         meta_data = {}
         while True:
-            index = self.read_ubyte()  # index keys the meaning ( base class 0-5, 6 extending, etc)
+            # index keys the meaning ( base class 0-5, 6 extending, etc)
+            index = self.read_ubyte()
             if index == 0xff:
                 return meta_data
             data_type = self.read_byte()  # a byte coding the data type
@@ -666,53 +704,70 @@ class Packet:
                 meta_data[index] = (data_type, self.read_float())
             elif data_type == 3:
                 meta_data[index] = (data_type, self.read_string())
+
+            # old 'thinkofdeath' chat spec:
+            # http://wayback.archive.org/web/20160306101755/http://wiki.vg/Chat
             elif data_type == 4:
-                # old 'thinkofdeath' chat spec: http://wayback.archive.org/web/20160306101755/http://wiki.vg/Chat
                 meta_data[index] = (data_type, self.read_json())
+
             elif data_type == 5:
                 meta_data[index] = (data_type, self.read_slot())
             elif data_type == 6:
                 meta_data[index] = (data_type, self.read_bool())
 
-            elif data_type == 7:  # "vector3F" 3 floats: rotation on x, rotation on y, rotation on z
-                meta_data[index] = (data_type, (self.read_float(), self.read_float(), self.read_float()))
+            # "vector3F" 3 floats: rotation on x, rotation on y, rotation on z
+            elif data_type == 7:
+                meta_data[index] = (data_type, (
+                    self.read_float(), self.read_float(), self.read_float()))
+
             elif data_type == 8:
                 meta_data[index] = (data_type, self.read_position())
 
-            elif data_type == 9:  # OptPosition (Bool + Optional Position) Position present if Boolean is set to true
+            # OptPosition (Bool + Optional Position) Position present if
+            #  Boolean is set to true
+            elif data_type == 9:
                 bool_option = self.read_bool()
                 if bool_option:
-                    meta_data[index] = (data_type, (bool_option, self.read_position()))
+                    meta_data[index] = (data_type, (
+                        bool_option, self.read_position()))
                 else:
                     meta_data[index] = (data_type, (bool_option, ))
 
-            elif data_type == 10:  # Direction (VarInt) (Down = 0, Up = 1, North = 2, South = 3, West = 4, East = 5)
+            # Direction (VarInt) (Down = 0, Up = 1, North = 2, South = 3,
+            #   West = 4, East = 5)
+            elif data_type == 10:
                 meta_data[index] = (data_type, self.read_varint())
 
-            elif data_type == 11:  # OptUUID (Boolean + Optional UUID) UUID is present if the Boolean is set to true
+            # OptUUID (Boolean + Optional UUID) UUID is present if the
+            #  Boolean is set to true
+            elif data_type == 11:
                 bool_option = self.read_bool()
                 if bool_option:
                     meta_data[index] = (data_type, self.read_uuid())
                 else:
                     meta_data[index] = (data_type, (bool_option, ))
 
-            elif data_type == 12:  # BlockID (VarInt)  notes: id << 4 | data - 0 for absent otherwise, id << 4 | data
+            # BlockID (VarInt)  notes: id << 4 | data - 0 for absent;
+            #  otherwise, id << 4 | data
+            elif data_type == 12:
                 meta_data[index] = (data_type, self.read_varint())
 
             else:
-                print("Unsupported data type '%d' for read_metadata_1_9()  (Class Packet)", data_type)
+                print("Unsupported data type '%d' for read_metadata_1_9()  "
+                      "(Class Packet)", data_type)
                 raise ValueError
 
     def read_metadata(self):
         """
         /* Prior to 1.9 only! */
-        Sept 3, 2012 in the wayback machine, this was valid for whatever the MC version was.
-        This changed March 6th 2016 with 1.9:
+        Sept 3, 2012 in the wayback machine, this was valid for whatever
+        the MC version was.  This changed March 6th 2016 with 1.9:
         http://wayback.archive.org/web/20160306082342/http://wiki.vg/Entities
         """
         meta_data = {}
         while True:
-            # "To create the byte, you can use this: (Type << 5 | Index & 0x1F) & 0xFF"
+            # "To create the byte, you can use this:
+            #  (Type << 5 | Index & 0x1F) & 0xFF"
             lead_ubyte = self.read_ubyte()
             if lead_ubyte == 0x7f:
                 return meta_data
@@ -731,18 +786,22 @@ class Packet:
             elif data_type == 5:
                 meta_data[index] = (data_type, self.read_slot())
             elif data_type == 6:
-                meta_data[index] = (data_type, (self.read_int(), self.read_int(), self.read_int()))
+                meta_data[index] = (data_type, (
+                    self.read_int(), self.read_int(), self.read_int()))
 
             # Sept 2014, this was added (MC 1.7.2 protocol 4?)  Oct 22 2015
             elif data_type == 7:
-                meta_data[index] = (data_type, (self.read_float(), self.read_float(), self.read_float()))
+                meta_data[index] = (data_type, (
+                    self.read_float(), self.read_float(), self.read_float()))
 
             else:
-                print("Unsupported data type '%d' for read_metadata()  (Class Packet)", data_type)
+                print("Unsupported data type '%d' for read_metadata()  "
+                      "(Class Packet)", data_type)
                 raise ValueError
 
     def read_slot_nbtless(self):
-        """Temporary? solution for parsing pre- 1.8 slots"""
+        """Temporary(?) solution for parsing pre-1.8 slots because
+        reading NBT fails for 1.7 NBT items"""
         sid = self.read_short()
         if sid != -1:
             count = self.read_ubyte()
@@ -772,7 +831,8 @@ class Packet:
         r = []
         btype = self.read_byte()
         length = self.read_int()
-        for _ in xrange(length):  # _ signifies throwaway variable whose values is not used
+        # _ signifies throwaway variable whose value is not used
+        for _ in xrange(length):
             b = {"type": btype,
                  "name": "",
                  "value": self._DECODERS[btype]()}
