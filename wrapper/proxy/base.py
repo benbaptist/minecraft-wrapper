@@ -47,32 +47,44 @@ class Proxy:
         self.skinTextures = {}
         self.uuidTranslate = {}
 
-        # Constants used in client and server connections:
-        self.HANDSHAKE = 0  # this is the default mode of a server awaiting packets from a client out in the ether..
-        # client will send a handshake (a 0x00 packet WITH payload) asking for STATUS or LOGIN mode
-        # N/a to serverconnection.py, which starts in LOGIN mode
+        # Constants used in client and server connections
+
+        # Handshake is the default mode of a server awaiting packets from a
+        # client.  Client will send a handshake (a 0x00 packet WITH payload)
+        # asking for STATUS or LOGIN mode.  This mode is n/a to
+        # serverconnection.py, which starts in LOGIN mode
+        self.HANDSHAKE = 0
         self.OFFLINE = 0  # an alias of Handshake.
-        # MOTD = 1  # not used. clientconnection.py handles PING/MOTD functions
-        self.STATUS = 1  # not used by server. clientconnection.py handles PING/MOTD functions
-        # Status mode will await either a ping (0x01) containing a unique long int and will respond with same integer.
-        #     ... OR if it receives a 0x00 packet (with no payload), that signals server (client.py) to send
-        #         the MOTD json response packet.
-        #         The ping will follow the 0x00 request for json response.  The ping will set wrapper/server
-        #         back to HANDSHAKE mode (to await next handshake).
+
+        # Not used by serverconnection.py. clientconnection.py handles
+        # PING/MOTD functions  Status mode will await either a ping (0x01)
+        # containing a unique long int and will respond with same integer...
+        #  OR if it receives a 0x00 packet (with no payload), that signals
+        # server (client.py) to send the MOTD json response packet.  The
+        # ping will follow the 0x00 request for json response.  The ping
+        # will set wrapper/server back to HANDSHAKE mode (to await
+        # the next handshake).
+        self.MOTD = 1
+        self.STATUS = 1
+
         self.LOGIN = 2  # login state
         self.PLAY = 3  # play state
         self.LOBBY = 4  # lobby state (remote server)
         self.IDLE = 5  # no parsing at all; just keeping client suspended
 
-        # various contructions for non-standard client/servers (forge?) and wrapper's own channel
+        # various contructions for non-standard
+        # client/servers (forge?) and wrapper's own channel
         self.mod_info = {}
         self.forge = False
         self.forge_login_packet = None
         self.registered_channels = ["WRAPPER.PY|", "WRAPPER.PY|PING", ]
         self.pinged = False
+
+        # trace variables
         self.trace = False
         self.ignoredSB = [0xe, 0xc, 0x0, 0xd, ]
-        self.ignoredCB = [0x44, 0x49, 0x34, 0x25, 0x26, 0x3b, 0x2e, 0x39, 0x30, 0x3, 0x4a, 0x3c, 0x20, 0x1b, ]
+        self.ignoredCB = [0x44, 0x49, 0x34, 0x25, 0x26, 0x3b, 0x2e, 0x39,
+                          0x30, 0x3, 0x4a, 0x3c, 0x20, 0x1b, ]
 
         # removed deprecated proxy-data.json
 
@@ -81,7 +93,8 @@ class Proxy:
 
         # requests is required wrapper-wide now, so no checks here for that...
         if not encryption and self.wrapper.proxymode:
-            raise Exception("You must have the pycryto installed to run in proxy mode!")
+            raise Exception("You must have the pycryto installed "
+                            "to run in proxy mode!")
 
     def host(self):
         # get the protocol version from the server
@@ -89,29 +102,35 @@ class Proxy:
             time.sleep(.2)
 
         if self.wrapper.javaserver.version_compute < 10702:
-            self.log.warning("\nProxy mode cannot start because the server is a pre-Netty version:\n\n"
-                             "http://wiki.vg/Protocol_version_numbers#Versions_before_the_Netty_rewrite\n\n"
+            self.log.warning("\nProxy mode cannot start because the "
+                             "server is a pre-Netty version:\n\n"
+                             "http://wiki.vg/Protocol_version_numbers"
+                             "#Versions_before_the_Netty_rewrite\n\n"
                              "Server will continue in non-proxy mode.")
             self.wrapper.disable_proxymode()
             return
 
         if self.proxy_port == self.wrapper.javaserver.server_port:
-            self.log.warning("Proxy mode cannot start because the wrapper port is identical to the server port.")
+            self.log.warning("Proxy mode cannot start because the wrapper"
+                             " port is identical to the server port.")
             self.wrapper.disable_proxymode()
             return
 
         try:
             self.pollserver()
         except Exception as e:
-            self.log.exception("Proxy could not poll the Minecraft server - check server/wrapper configs? (%s)", e)
+            self.log.exception("Proxy could not poll the Minecraft server - "
+                               "check server/wrapper configs? (%s)", e)
 
         # open proxy port to accept client connections
         while not self.usingSocket:
-            self.proxy_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            self.proxy_socket.setsockopt(socket.SOL_SOCKET,
+                                         socket.SO_REUSEADDR, 1)
             try:
                 self.proxy_socket.bind((self.proxy_bind, self.proxy_port))
             except Exception as e:
-                self.log.exception("Proxy mode could not bind - retrying in ten seconds (%s)", e)
+                self.log.exception("Proxy mode could not bind - retrying"
+                                   " in ten seconds (%s)", e)
                 self.usingSocket = False
                 time.sleep(10)
             self.usingSocket = True
@@ -122,7 +141,8 @@ class Proxy:
             try:
                 sock, addr = self.proxy_socket.accept()
             except Exception as e:
-                self.log.exception("An error has occured while trying to accept a socket connection \n(%s)", e)
+                self.log.exception("An error has occured while trying to "
+                                   "accept a socket connection \n(%s)", e)
                 continue
 
             banned_ip = self.isipbanned(addr)
@@ -164,7 +184,8 @@ class Proxy:
             pkid, original = packet.grabpacket()
             if pkid == 0x00:
                 data = json.loads(packet.read("string:response")["response"])
-                self.wrapper.javaserver.protocolVersion = data["version"]["protocol"]
+                self.wrapper.javaserver.protocolVersion = data["version"][
+                    "protocol"]
                 self.wrapper.javaserver.version = data["version"]["name"]
                 if "modinfo" in data and data["modinfo"]["type"] == "FML":
                     self.forge = True
@@ -176,16 +197,17 @@ class Proxy:
     def getplayerby_username(self, username):
         """
         :rtype: var
-        this is only to quiet complaints PyCharm makes because in places like this we return booleans
-        sometimes when we can't get valid data and our calling methods check for these booleans.
+        this is only to quiet complaints PyCharm makes because in places
+         like this we return booleans sometimes when we can't get valid data
+         and our calling methods check for these booleans.
         """
         for client in self.clients:
             if client.username == username:
                 try:
                     return self.wrapper.javaserver.players[client.username]
                 except Exception as e:
-                    self.log.error("getplayerby_username failed to get player %s: \n%s",
-                                   username, e)
+                    self.log.error("getplayerby_username failed to get "
+                                   "player %s: \n%s", username, e)
                     return False
         self.log.debug("Failed to get any player by name of: %s", username)
         return False
@@ -198,7 +220,8 @@ class Proxy:
         attempts = ["Search: %s" % str(uuid)]
         for client in self.clients:
             attempts.append("try: client-%s uuid-%s serveruuid-%s name-%s" %
-                            (client, client.uuid.string, client.serveruuid.string, client.username))
+                            (client, client.uuid.string,
+                             client.serveruuid.string, client.username))
             if client.serveruuid.string == str(uuid):
                 self.uuidTranslate[uuid] = client.uuid.string
                 return client
@@ -209,31 +232,35 @@ class Proxy:
     def getplayerby_eid(self, eid):
         """
         :rtype: var
-        this is only to quiet complaints PyCharm makes because in places like this we return booleans
-        sometimes when we can't get valid data and our calling methods check for these booleans.
+        this is only to quiet complaints PyCharm makes because in places
+         like this we return booleans sometimes when we can't get valid data
+         and our calling methods check for these booleans.
         """
         for client in self.clients:
             if client.server_eid == eid:
                 try:
                     return self.wrapper.javaserver.players[client.username]
                 except Exception as e:
-                    self.log.error("getplayerby_eid failed to get player %s: \n%s",
-                                   client.username, e)
+                    self.log.error("getplayerby_eid failed to get "
+                                   "player %s: \n%s", client.username, e)
                     return False
         self.log.debug("Failed to get any player by client Eid: %s", eid)
         return False
 
-    def banplayer(self, playername, reason="Banned by an operator", source="Wrapper", expires="forever"):
+    def banplayer(self, playername, reason="Banned by an operator",
+                  source="Wrapper", expires="forever"):
         """
-        * placeholder code for future feature* - This will be the pre-1.7.6 ban method (name only).
-        This is not used by code yet... for banning by username only for pre-uuid servers
+        * placeholder code for future feature* - This will be the
+        pre-1.7.6 ban method (name only).  This is not used by code yet...
+        for banning by username only for pre-uuid servers
         :param playername:
         :param reason:
         :param source:
         :param expires:
         :return:
         """
-        print(" # TODO - legacy server support (pre-1.7.6) %s%s%s%s%s" % (self, reason, source, expires, playername))
+        print(" # TODO - legacy server support (pre-1.7.6) %s%s%s%s%s" %
+              (self, reason, source, expires, playername))
 
     def getuuidbanreason(self, uuid):
         """
@@ -241,19 +268,22 @@ class Proxy:
         :return: string representing ban reason
         """
         banlist = getjsonfile("banned-players", self.serverpath)
-        if banlist:  # in this case we just care if banlist exits in any fashion
+        if banlist:
             banrecord = find_in_json(banlist, "uuid", uuid)
             return "%s by %s" % (banrecord["reason"], banrecord["source"])
         return "Banned by server"
 
-    def banuuid(self, uuid, reason="The Ban Hammer has spoken!", source="Wrapper", expires=False):
+    def banuuid(self, uuid, reason="The Ban Hammer has spoken!",
+                source="Wrapper", expires=False):
         """
         Ban someone by UUID  This is the 1.7.6 way to ban..
         :param uuid - uuid to ban (MCUUID)
         :param reason - text reason for ban
         :param source - source (author/op) of ban.
-        :param expires - expiration in seconds from epoch time.  Field exits but not used by the vanilla server
-        - implement it for tempbans in future?  Gets converted to string representation in the ban file.
+        :param expires - expiration in seconds from epoch time.  Field exists
+         but not used by the vanilla server
+        - implement it for tempbans in future?
+          Gets converted to string representation in the ban file.
 
         This probably only works on 1.7.10 servers or later
         """
@@ -280,21 +310,25 @@ class Proxy:
                                 "expires": expiration,
                                 "reason": reason})
                 if putjsonfile(banlist, "banned-players", self.serverpath):
-                    self.wrapper.javaserver.console("kick %s Banned: %s" % (name, reason))
+                    self.wrapper.javaserver.console("kick %s Banned: %s" %
+                                                    (name, reason))
                     return "Banned %s: %s" % (name, reason)
                 return "Could not write banlist to disk"
         else:
             return "Banlist not found on disk"
 
-    def banuuidraw(self, uuid, username, reason="The Ban Hammer has spoken!", source="Wrapper", expires=False):
+    def banuuidraw(self, uuid, username, reason="The Ban Hammer has spoken!",
+                   source="Wrapper", expires=False):
         """
         Ban a raw uuid/name combination with no mojang error checks
         :param uuid - uuid to ban (MCUUID)
         :param username - Name of player to ban
         :param reason - text reason for ban
         :param source - source (author/op) of ban.
-        :param expires - expiration in seconds from epoch time.  Field exits but not used by the vanilla server
-        - implement it for tempbans in future?  Gets converted to string representation in the ban file.
+        :param expires - expiration in seconds from epoch time.  Field exists
+         but not used by the vanilla server
+        - implement it for tempbans in future?
+          Gets converted to string representation in the ban file.
 
         This probably only works on 1.7.10 servers or later
         """
@@ -321,20 +355,24 @@ class Proxy:
                                 "reason": reason})
                 if putjsonfile(banlist, "banned-players", self.serverpath):
                     self.log.info("kicking %s... %s", username, reason)
-                    self.wrapper.javaserver.console("kick %s Banned: %s" % (username, reason))
+                    self.wrapper.javaserver.console("kick %s Banned: %s" %
+                                                    (username, reason))
                     return "Banned %s: %s - %s" % (username, uuid, reason)
                 return "Could not write banlist to disk"
         else:
             return "Banlist not found on disk"
 
-    def banip(self, ipaddress, reason="The Ban Hammer has spoken!", source="Wrapper", expires=False):
+    def banip(self, ipaddress, reason="The Ban Hammer has spoken!",
+              source="Wrapper", expires=False):
         """
         Ban an IP address (IPV-4)
         :param ipaddress - ip address to ban
         :param reason - text reason for ban
         :param source - source (author/op) of ban.
-        :param expires - expiration in seconds from epoch time.  Field exits but not used by the vanilla server
-        - implement it for tempbans in future?  Gets converted to string representation in the ban file.
+        :param expires - expiration in seconds from epoch time.  Field exists
+        but not used by the vanilla server.
+        - implement it for tempbans in future?
+        - Gets converted to string representation in the ban file.
 
         This probably only works on 1.7.10 servers or later
         """
@@ -365,9 +403,11 @@ class Proxy:
                     for i in self.wrapper.javaserver.players:
                         player = self.wrapper.javaserver.players[i]
                         if str(player.client.ip) == str(ipaddress):
-                            self.wrapper.javaserver.console("kick %s Your IP is Banned!" % player.username)
+                            self.wrapper.javaserver.console(
+                                "kick %s Your IP is Banned!" % player.username)
                             banned += "\n%s" % player.username
-                    return "Banned ip address: %s\nPlayers kicked as a result:%s" % (ipaddress, banned)
+                    return "Banned ip address: %s\nPlayers kicked as " \
+                           "a result:%s" % (ipaddress, banned)
                 return "Could not write banlist to disk"
         else:
             return "Banlist not found on disk"
@@ -432,23 +472,27 @@ class Proxy:
 
     def isuuidbanned(self, uuid):  # Check if the UUID of the user is banned
         banlist = getjsonfile("banned-players", self.serverpath)
-        if banlist:  # in this case we just care if banlist exits in any fashion
+        if banlist:  # make sure banlist exists
             banrecord = find_in_json(banlist, "uuid", str(uuid))
             if banrecord:
-                if read_timestr(banrecord["expires"]) < int(time.time()):  # if ban has expired
+                # if ban has expired
+                if read_timestr(banrecord["expires"]) < int(time.time()):
                     pardoning = self.pardonuuid(str(uuid))
                     if pardoning[:8] == "pardoned":
-                        self.log.info("UUID: %s was pardoned (expired ban)", str(uuid))
+                        self.log.info("UUID: %s was pardoned "
+                                      "(expired ban)", str(uuid))
                         return False  # player is "NOT" banned (anymore)
                     else:
-                        self.log.warning("isuuidbanned attempted a pardon of uuid: %s (expired ban), "
-                                         "but it failed:\n %s", uuid, pardoning)
+                        self.log.warning("isuuidbanned attempted a pardon of"
+                                         " uuid: %s (expired ban), "
+                                         "but it failed:\n %s",
+                                         uuid, pardoning)
                 return True  # player is still banned
         return False  # banlist empty or record not found
 
     def isipbanned(self, ipaddress):  # Check if the IP address is banned
         banlist = getjsonfile("banned-ips", self.serverpath)
-        if banlist:  # in this case we just care if banlist exits in any fashion
+        if banlist:  # make sure banlist exists
             for record in banlist:
                 _ip = record["ip"]
                 if _ip in ipaddress:
@@ -456,11 +500,14 @@ class Proxy:
                     if _expires < int(time.time()):  # if ban has expired
                         pardoning = self.pardonip(ipaddress)
                         if pardoning[:8] == "pardoned":
-                            self.log.info("IP: %s was pardoned (expired ban)", ipaddress)
+                            self.log.info("IP: %s was pardoned "
+                                          "(expired ban)", ipaddress)
                             return False  # IP is "NOT" banned (anymore)
                         else:
-                            self.log.warning("isipbanned attempted a pardon of IP: %s (expired ban), "
-                                             "but it failed:\n %s", ipaddress, pardoning)
+                            self.log.warning("isipbanned attempted a pardon "
+                                             "of IP: %s (expired ban),  but"
+                                             " it failed:\n %s",
+                                             ipaddress, pardoning)
                     return True  # IP is still banned
         return False  # banlist empty or record not found
 
@@ -480,14 +527,17 @@ class Proxy:
         if uuid in self.skinTextures:
             return self.skinTextures[uuid]
         skinblob = json.loads(self.skins[uuid].decode("base64"))
-        if "SKIN" not in skinblob["textures"]:  # Player has no skin, so set to Alex [fix from #160]
+        # Player has no skin, so set to Alex [fix from #160]
+        if "SKIN" not in skinblob["textures"]:
             skinblob["textures"]["SKIN"] = {
-                "url": "http://hydra-media.cursecdn.com/minecraft.gamepedia.com/f/f2/Alex_skin.png"
+                "url": "http://hydra-media.cursecdn.com/mine"
+                       "craft.gamepedia.com/f/f2/Alex_skin.png"
             }
         r = requests.get(skinblob["textures"]["SKIN"]["url"])
         if r.status_code == 200:
             self.skinTextures[uuid] = r.content.encode("base64")
             return self.skinTextures[uuid]
         else:
-            self.log.warning("Could not fetch skin texture! (status code %d)", r.status_code)
+            self.log.warning("Could not fetch skin texture! "
+                             "(status code %d)", r.status_code)
             return False

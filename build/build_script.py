@@ -102,7 +102,7 @@ def build_wrapper(buildargs):
         f.write(filetext)
 
     with open("build/version.json", "w") as f:
-        f.write(json.dumps(version))
+        f.write(json.dumps(version, indent=4, sort_keys=True))
 
     if os.path.exists("Wrapper.py"):
         os.remove("Wrapper.py")  # Time to start with a clean Wrapper.py!

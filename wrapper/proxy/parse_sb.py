@@ -27,9 +27,11 @@ class ParseSB:
 
     def parse_play_player_poslook(self):  # player position and look
         if self.client.clientversion < PROTOCOL_1_8START:
-            data = self.packet.readpkt([DOUBLE, DOUBLE, DOUBLE, DOUBLE, FLOAT, FLOAT, BOOL])
+            data = self.packet.readpkt(
+                [DOUBLE, DOUBLE, DOUBLE, DOUBLE, FLOAT, FLOAT, BOOL])
         else:
-            data = self.packet.readpkt([DOUBLE, DOUBLE, DOUBLE, FLOAT, FLOAT, BOOL])
+            data = self.packet.readpkt(
+                [DOUBLE, DOUBLE, DOUBLE, FLOAT, FLOAT, BOOL])
         # ("double:x|double:y|double:z|float:yaw|float:pitch|bool:on_ground")
         self.client.position = (data[0], data[1], data[4])
         self.client.head = (data[4], data[5])
@@ -52,26 +54,33 @@ class ParseSB:
         if payload is False:
             return False  # ..reject the packet (by returning False)
 
-        # This is here for compatibility.  older plugins may attempt to send a string back
+        # This is here for compatibility.  older plugins
+        #  may attempt to send a string back
         if type(payload) == str:  # or, if it can return a substitute payload
             chatmsg = payload
 
-        # Newer plugins return a modified version of the original payload (i.e., a dictionary).
-        if type(payload) == dict and "message" in payload:  # or, if it can return a substitute payload
+        # Newer plugins return a modified version of the original
+        # payload (i.e., a dictionary).
+
+        # or, if it can return a substitute payload
+        if type(payload) == dict and "message" in payload:
             chatmsg = payload["message"]
 
         # determine if this is a command. act appropriately
-        if chatmsg[0:self.command_prefix_len] == self.command_prefix:  # it IS a command of some kind
+        if chatmsg[0:self.command_prefix_len] == self.command_prefix:
+            # it IS a command of some kind
             if self.wrapper.events.callevent(
                     "player.runCommand", {
                         "player": self.client.getplayerobject(),
                         "command": chatmsg.split(" ")[0][1:].lower(),
                         "args": chatmsg.split(" ")[1:]}):
 
-                return False  # wrapper processed this command.. it goes no further
+                # wrapper processed this command.. it goes no further
+                return False
 
         if chatmsg[0] == "/" and self.command_prefix_non_standard:
-            chatmsg = chatmsg[1:]  # strip out any leading slash if using a non-slash command  prefix
+            # strip leading slash if using a non-slash command  prefix
+            chatmsg = chatmsg[1:]
 
         # NOW we can send it (possibly modded) on to server...
         self.client.chat_to_server(chatmsg)
@@ -86,11 +95,13 @@ class ParseSB:
             # ("double:x|double:y|double:z|bool:on_ground")
         else:
             data = [0, 0, 0, 0]
-        self.client.position = (data[0], data[1], data[3])  # skip 1.7.10 and lower protocol yhead args
+        # skip 1.7.10 and lower protocol yhead args
+        self.client.position = (data[0], data[1], data[3])
         return True
 
     def parse_play_teleport_confirm(self):
-        # don't interfere with this and self.pktSB.PLAYER_POSLOOK... doing so will glitch the client
+        # don't interfere with this and self.pktSB.PLAYER_POSLOOK...
+        # doing so will glitch the client
         # data = self.packet.readpkt([VARINT])
         return True
 
@@ -165,8 +176,10 @@ class ParseSB:
             position = data
 
         elif PROTOCOL_1_7 <= self.client.clientversion < PROTOCOL_1_8START:
-            data = self.packet.readpkt([INT, UBYTE, INT, BYTE, SLOT_NO_NBT, REST])
-            # "int:x|ubyte:y|int:z|byte:face|slot:item")  REST includes cursor positions x-y-z
+            data = self.packet.readpkt(
+                [INT, UBYTE, INT, BYTE, SLOT_NO_NBT, REST])
+            # "int:x|ubyte:y|int:z|byte:face|slot:item")
+            #  REST includes cursor positions x-y-z
             position = (data[0], data[1], data[2])
 
             # just FYI, notchian servers have been ignoring this field ("item")
@@ -174,15 +187,20 @@ class ParseSB:
             helditem = data[4]  # "item" - SLOT
 
         elif PROTOCOL_1_8START <= self.client.clientversion < PROTOCOL_1_9REL1:
-            data = self.packet.readpkt([POSITION, NULL, NULL, BYTE, SLOT, REST])
-            # "position:Location|byte:face|slot:item|byte:CurPosX|byte:CurPosY|byte:CurPosZ")
-            # helditem = data["item"]  -available in packet, but server ignores it (we should too)!
+            data = self.packet.readpkt(
+                [POSITION, NULL, NULL, BYTE, SLOT, REST])
+            # "position:Location|byte:face|slot:item|byte:CurPosX|
+            #     byte:CurPosY|byte:CurPosZ")
+            # helditem = data["item"]  -available in packet, but server
+            # ignores it (we should too)!
             # starting with 1.8, the server maintains inventory also.
             position = data[0]
 
         else:  # self.clientversion >= PROTOCOL_1_9REL1:
-            data = self.packet.readpkt([POSITION, NULL, NULL, VARINT, VARINT, BYTE, BYTE, BYTE])
-            # "position:Location|varint:face|varint:hand|byte:CurPosX|byte:CurPosY|byte:CurPosZ")
+            data = self.packet.readpkt(
+                [POSITION, NULL, NULL, VARINT, VARINT, BYTE, BYTE, BYTE])
+            # "position:Location|varint:face|varint:hand|byte:CurPosX|
+            #     byte:CurPosY|byte:CurPosZ")
             hand = data[4]  # used to be the spot occupied by "slot"
             position = data[0]
 
@@ -216,11 +234,20 @@ class ParseSB:
 
         # block placement event
         self.client.lastplacecoords = position
-        if not self.wrapper.events.callevent("player.place", {"player": player,
-                                                              "position": position,  # where new block goes
-                                                              "clickposition": clickposition,  # block clicked
-                                                              "hand": hand,
-                                                              "item": helditem}):
+        # position is where new block goes
+        # clickposition is the block actually clicked
+        if not self.wrapper.events.callevent(
+                "player.place",
+                {"player": player, "position": position,
+                 "clickposition": clickposition,
+                 "hand": hand, "item": helditem}):
+            '''
+            :decription: When player places a block or item.  "position"
+             is where new block or item will go (corrected for "face".
+             "clickposition" is the cooridinates actually clicked on.
+
+            :Event: Block placement can be rejected by returning False.
+            '''
             return False
         return True
 
@@ -237,6 +264,13 @@ class ParseSB:
                     "action": "useitem",
                     "origin": "pktSB.USE_ITEM"
                 }):
+                    '''
+                    :decription: When player places a block or item. "position"
+                    is where new block or item will go (corrected for "face".
+                    "clickposition" is the cooridinates actually clicked on.
+
+                    :Event: Block placement can be rejected by returning False.
+                    '''
                     return False
         return True
 
@@ -251,13 +285,17 @@ class ParseSB:
 
     def parse_play_player_update_sign(self):
         if self.client.clientversion < PROTOCOL_1_8START:
-            data = self.packet.readpkt([INT, SHORT, INT, STRING, STRING, STRING, STRING])
-            # "int:x|short:y|int:z|string:line1|string:line2|string:line3|string:line4")
+            data = self.packet.readpkt(
+                [INT, SHORT, INT, STRING, STRING, STRING, STRING])
+            # "int:x|short:y|int:z|string:line1|string:line2|string:line3|
+            #   string:line4")
             position = (data[0], data[1], data[2])
             pre_18 = True
         else:
-            data = self.packet.readpkt([POSITION, NULL, NULL, STRING, STRING, STRING, STRING])
-            # "position:position|string:line1|string:line2|string:line3|string:line4")
+            data = self.packet.readpkt(
+                [POSITION, NULL, NULL, STRING, STRING, STRING, STRING])
+            # "position:position|string:line1|string:line2|string:line3|
+            #   string:line4")
             position = data[0]
             pre_18 = False
 
@@ -273,10 +311,13 @@ class ParseSB:
             "line3": l3,
             "line4": l4
         })
-        if not payload:  # plugin can reject sign entirely
+
+        # plugin can reject sign entirely
+        if not payload:
             return False
 
-        if type(payload) == dict:  # send back edits
+        # send back edits
+        if type(payload) == dict:
             if "line1" in payload:
                 l1 = payload["line1"]
             if "line2" in payload:
@@ -292,19 +333,26 @@ class ParseSB:
     def parse_play_client_settings(self):  # read Client Settings
         """ This is read for later sending to servers we connect to """
         self.client.clientSettings = self.packet.readpkt([RAW])[0]
-        self.client.clientSettingsSent = True  # the packet is not stopped, sooo...
+        self.client.clientSettingsSent = True
+        # the packet is not stopped, sooo...
         return True
 
     def parse_play_click_window(self):  # click window
         if self.client.clientversion < PROTOCOL_1_8START:
-            data = self.packet.readpkt([BYTE, SHORT, BYTE, SHORT, BYTE, SLOT_NO_NBT])
-            # ("byte:wid|short:slot|byte:button|short:action|byte:mode|slot:clicked")
+            data = self.packet.readpkt(
+                [BYTE, SHORT, BYTE, SHORT, BYTE, SLOT_NO_NBT])
+            # ("byte:wid|short:slot|byte:button|short:action|byte:mode|
+            #   slot:clicked")
         elif PROTOCOL_1_8START < self.client.clientversion < PROTOCOL_1_9START:
-            data = self.packet.readpkt([UBYTE, SHORT, BYTE, SHORT, BYTE, SLOT])
-            # ("ubyte:wid|short:slot|byte:button|short:action|byte:mode|slot:clicked")
+            data = self.packet.readpkt(
+                [UBYTE, SHORT, BYTE, SHORT, BYTE, SLOT])
+            # ("ubyte:wid|short:slot|byte:button|short:action|byte:mode|
+            #   slot:clicked")
         elif PROTOCOL_1_9START <= self.client.clientversion < PROTOCOL_MAX:
-            data = self.packet.readpkt([UBYTE, SHORT, BYTE, SHORT, VARINT, SLOT])
-            # ("ubyte:wid|short:slot|byte:button|short:action|varint:mode|slot:clicked")
+            data = self.packet.readpkt(
+                [UBYTE, SHORT, BYTE, SHORT, VARINT, SLOT])
+            # ("ubyte:wid|short:slot|byte:button|short:action|varint:mode|
+            #   slot:clicked")
         else:
             data = [False, 0, 0, 0, 0, 0, 0]
 
@@ -321,51 +369,75 @@ class ParseSB:
         if not self.wrapper.events.callevent("player.slotClick", datadict):
             return False
 
-        # for inventory control, the most straightforward way to update wrapper's inventory is
-        # to use the data from each click.  The server will make other updates and corrections
-        # via SET_SLOT
+        # for inventory control, the most straightforward way to update
+        # wrapper's inventory is to use the data from each click.  The
+        # server will make other updates and corrections via SET_SLOT
 
-        # yes, this probably breaks for double clicks that send the item to who-can-guess what slot
-        # we can fix that in a future update... this gets us 98% fixed (versus 50% before)
-        # another source of breakage is if lagging causes server to deny the changes.  Our code
-        # is not checking if the server accepted these changes with a CONFIRM_TRANSACTION.
+        # yes, this probably breaks for double clicks that send the item
+        # to who-can-guess what slot. We can fix that in a future update...
+        # this gets us 98% fixed (versus 50% before) another source of
+        # breakage is if lagging causes server to deny the changes.  Our
+        # code does not check if the server accepted these changes with
+        # a CONFIRM_TRANSACTION.
 
-        if data[0] == 0 and data[2] in (0, 1):  # window 0 (inventory) and right or left click
-            if self.client.lastitem is None and data[5] is None:  # player first clicks on an empty slot - mark empty.
+        # window 0 (inventory) and right or left click
+        if data[0] == 0 and data[2] in (0, 1):
+            # player first clicks on an empty slot - mark empty.
+            if self.client.lastitem is None and data[5] is None:
                 self.client.inventory[data[1]] = None
 
-            if self.client.lastitem is None:  # player first clicks on a slot where there IS some data..
-                # having clicked on it puts the slot into NONE status (since it can now be moved)
-                self.client.inventory[data[1]] = None  # we set the current slot to empty/none
-                self.client.lastitem = data[5]  # ..and we cache the new slot data to see where it goes
+            # player first clicks on a slot where there IS some data..
+            if self.client.lastitem is None:
+                # having clicked on it puts the slot into NONE
+                # status (since it can now be moved).
+                # So we set the current slot to empty/none
+                self.client.inventory[data[1]] = None
+                # ..and we cache the new slot data to see where it goes
+                self.client.lastitem = data[5]
                 return True
 
             # up to this point, there was not previous item
-            if self.client.lastitem is not None and data[5] is None:  # now we have a previous item to process
-                self.client.inventory[data[1]] = self.client.lastitem  # that previous item now goes into the new slot.
-                self.client.lastitem = None  # since the slot was empty, there is no newer item to cache.
+            if self.client.lastitem is not None and data[5] is None:
+                # now we have a previous item to process
+
+                # that previous item now goes into the new slot.
+                self.client.inventory[data[1]] = self.client.lastitem
+                # since the slot was empty, there is no newer item to cache.
+                self.client.lastitem = None
                 return True
 
             if self.client.lastitem is not None and data[5] is not None:
-                # our last item now occupies the space clicked and the new item becomes the cached item.
-                self.client.inventory[data[1]] = self.client.lastitem  # set the cached item into the clicked slot.
-                self.client.lastitem = data[5]  # put the item that was in the clicked slot into the cache now.
+                # our last item now occupies the space clicked and the new
+                # item becomes the cached item.
+
+                # set the cached item into the clicked slot.
+                self.client.inventory[data[1]] = self.client.lastitem
+                # put the item that was in the clicked slot into the cache now.
+                self.client.lastitem = data[5]
                 return True
         return True
 
-    def parse_play_spectate(self):  # Spectate - convert packet to local server UUID
-        # !? WHAT!?
-        # ___________
-        # "Teleports the player to the given entity. The player must be in spectator mode.
-        # The Notchian client only uses this to teleport to players, but it appears to accept
-        #  any type of entity. The entity does not need to be in the same dimension as the
-        # player; if necessary, the player will be respawned in the right world."
+    def parse_play_spectate(self):
+        # Spectate - convert packet to local server UUID
+
+        # "Teleports the player to the given entity. The player must be in
+        # spectator mode. The Notchian client only uses this to teleport to
+        # players, but it appears to accept any type of entity. The entity
+        # does not need to be in the same dimension as the player; if
+        # necessary, the player will be respawned in the right world."
+
         """ Inter-dimensional player-to-player TP ! """  # TODO !
 
-        data = self.packet.readpkt([UUID, NULL])  # solves the uncertainty of dealing with what gets returned.
+        # solves the uncertainty of dealing with what gets returned.
+        data = self.packet.readpkt([UUID, NULL])
+
         # ("uuid:target_player")
         for client in self.wrapper.proxy.clients:
             if data[0] == client.uuid:
-                self.client.server_connection.packet.sendpkt(self.client.pktSB.SPECTATE, [UUID], [client.serveruuid])
+                self.client.server_connection.packet.sendpkt(
+                    self.client.pktSB.SPECTATE,
+                    [UUID],
+                    [client.serveruuid])
+
                 return False
         return True

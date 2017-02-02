@@ -1,1 +1,12 @@
-{"__build__": 185, "__branch__": "dev", "repotype": "dev", "build": 112, "release_time": 1486057774.009266, "__version__": [0, 11, 0]}
+{
+    "__branch__": "dev", 
+    "__build__": 186, 
+    "__version__": [
+        0, 
+        11, 
+        0
+    ], 
+    "build": 112, 
+    "release_time": 1486072820.449078, 
+    "repotype": "dev"
+}
