@@ -43,7 +43,8 @@ def build_the_docs():
                  "**\n\nThe API is divided into modules.  Click on each " \
                  "module to see it's documentation.\n\n\n"
 
-    api_files = ["base", "wrapperconfig"]
+    api_files = ["wrapperconfig", "base", "minecraft", "world", "player",
+                 "entity", "backups", "helpers"]
     processed = {}
 
     for files in api_files:
