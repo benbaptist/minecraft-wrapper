@@ -39,10 +39,11 @@ def build_the_docs():
     """
 
     sep = '"""'
-    index_file = "**Welcome to the Wrapper.py Plugin API documentation!**\n\n" \
-                 "The API is divided into modules.  Click on each module to see it's documentation.\n\n\n"
+    index_file = "**Welcome to the Wrapper.py Plugin API documentation!" \
+                 "**\n\nThe API is divided into modules.  Click on each " \
+                 "module to see it's documentation.\n\n\n"
 
-    api_files = ["base", "minecraft", "world", "player", "entity", "backups", "helpers", "wrapperconfig"]
+    api_files = ["base", "wrapperconfig"]
     processed = {}
 
     for files in api_files:
@@ -53,17 +54,23 @@ def build_the_docs():
         item_count = len(all_items) - 1
         total_items = range(0, item_count, 2)
         for each_item in total_items:
-            item = all_items[each_item + 1]  # each_item.split(endsep)[0]
+            # each_item.split(endsep)[0]
+            item = all_items[each_item + 1]
             header = "****\n"
             if "class " in all_items[each_item]:
-                header = "**class%s**\n" % all_items[each_item].split("class")[1].split(":")[0]
+                header = "**class%s**\n" % all_items[each_item].split(
+                    "class")[1].split(":")[0]
+
             if "def " in all_items[each_item]:
                 defs = all_items[each_item].split("def")
                 number_of_defs = len(defs) - 1
-                header = "**def%s**\n" % all_items[each_item].split("def")[number_of_defs].split(":")[0]
+                header = "**def%s**\n" % all_items[each_item].split(
+                    "def")[number_of_defs].split(":")[0]
 
-            if "def _" not in header:  # dont create documentation for private functions
+            # dont create documentation for private functions
+            if "def _" not in header:
                 complete_doc = "%s\n%s%s\n" % (complete_doc, header, item)
+
         processed[files] = complete_doc
 
     for files in processed:
