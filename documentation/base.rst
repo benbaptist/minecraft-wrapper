@@ -150,17 +150,21 @@
         :returns:  Raises wrapper exception `exceptions.NonExistentPlugin`
          if the specified plugin does not exist.
 
-
+        
 
 **def getStorage(self, name, world=False, formatting="pickle")**
 
-        :NOTE: **This method is somewhat different after Wrapper version 0.10.1 (build 182).  The
-            storage object is no longer a data object itself; It is a manager used for controlling the
-            saving of the object data.  The actual data is contained in Dictionary subitem 'Data'**
+        :NOTE: **This method is somewhat different after Wrapper
+         version 0.10.1 (build 182).  The storage object is no longer
+         a data object itself; It is a manager used for controlling
+         the saving of the object data.  The actual data is contained
+         in Dictionary subitem 'Data'**
 
-        - Returns a storage object manager.  The manager contains the storage object, `Data` (a dictionary).
+        - Returns a storage object manager.  The manager contains the
+         storage object, `Data` (a dictionary).
 
-        - `Data` contains the data your plugin will remember across reboots.
+        - `Data` contains the data your plugin will remember across
+         reboots.
 
         :name:  The name of the storage (on disk).
 
@@ -170,12 +174,16 @@
 
             "True" sets the storage path to `<serverpath>/<worldname>/plugins`.
 
-        :formatting:  Pickle formatting is the default. pickling is less strict than json formats and leverages
-            binary storage.  Use of json (or future implemented formats) can result in errors if your keys or
-            data do not conform to json standards (like use of string keys).  However, pickle is not generally
-            human-readable, whereas json is human readable. If you need a human-readable copy (for debugging),
-            consider using self.api.helpers.putjsonfile(<yourDictionary>) to write a copy to disk in Json.  if
-            you do so, check the return status of `putjsonfile` to make sure it was written.
+        :formatting:  Pickle formatting is the default. pickling is
+         less strict than json formats and leverages binary storage.
+         Use of json (or future implemented formats) can result in
+         errors if your keys or data do not conform to json standards
+         (like use of string keys).  However, pickle is not generally
+         human-readable, whereas json is human readable. If you need
+         a human-readable copy (for debugging), consider using
+         self.api.helpers.putjsonfile(<yourDictionary>) to write a
+         copy to disk in Json.  if you do so, check the return status
+         of `putjsonfile` to make sure it was written.
 
         :sample methods:
 
@@ -208,18 +216,22 @@
             ..
 
             **tip**
-            *to make the transition easier for existing code, redefine your storage statements like this to
-            re-write as few lines as possible (and avoid problems with other plugins that link to your plugins
-            data)*:
+            *to make the transition easier for existing code, redefine
+            your storage statements like this to re-write as few lines
+            as possible (and avoid problems with other plugins that
+            link to your plugins data)*:
 
             .. code:: python
 
-                # change your `start a storage` to:
+                # change your storage setup from:
+                self.homes = self.api.getStorage("homes", True)
+
+                # to:
                 self.homestorage = self.api.getStorage("homes", True)
                 self.homes = homestorage.Data
 
-                # Now the only other change you need to make is to any .save() or .close() statements:
-
+                # Now the only other change you need to make is to any
+                # .save() or .close() statements:
                 def onDisable(self):
                     # self.homes.close()  # change to -
                     self.homestorage.close()
@@ -229,13 +241,15 @@
 
 **def wrapperHalt(self)**
 
-        Shuts wrapper down entirely.  To use this as a wrapper-restart method, use some code like this in a shell
-        file to start wrapper (Linux example).  This code will restart wrapper after every shutdown until the
-        console user ends it with CTRL-C.
+        Shuts wrapper down entirely.  To use this as a wrapper-restart
+        method, use some code like this in a shell file to start
+        wrapper (Linux example).  This code will restart wrapper
+        after every shutdown until the console user ends it with CTRL-C.
 
         .. caution::
-            (using CTRL-C will allow Wrapper.py to close gracefully, saving it's Storages, and shutting down plugins.
-            Don't use CTRL-Z unless absolutely necessary!)
+            (using CTRL-C will allow Wrapper.py to close gracefully,
+            saving it's Storages, and shutting down plugins. Don't use
+            CTRL-Z unless absolutely necessary!)
         ..
 
         :./start.sh:
