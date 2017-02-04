@@ -298,10 +298,10 @@ class API:
          in Dictionary subitem 'Data'**
 
         - Returns a storage object manager.  The manager contains the
-         storage object, `Data` (a dictionary).
+        storage object, `Data` (a dictionary).
 
         - `Data` contains the data your plugin will remember across
-         reboots.
+        reboots.
 
         :name:  The name of the storage (on disk).
 
