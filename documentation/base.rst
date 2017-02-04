@@ -1,4 +1,26 @@
 
+**def  - Definately not not following PEP-8 naming of functions- why!?**
+
+
+    backups was one of the newer api modules and some thought was given
+    to making the those methods snake_case when it was first being written.
+
+    Wrapper's orginal convention throughout the codebase was mixed
+    camelCase.  (After all, Ben started in javascript!)  The
+    internal code is being converted (going forward) to snake_case
+    per PEP-8. However, PEP-8 acknowledges that:
+
+    'mixedCase [... is allowed ...] in contexts where that's already the
+    prevailing style (e.g. threading.py), to retain backwards
+    compatibility.'
+
+    This is also the case with the wrapper plugin API.  Converting
+    the entire plugin API to snake_case will break everyone's plugins.
+    Implementing the API in snake_case will create an inconsitent
+    'look and feel' within wrapper's plugin API.
+
+
+
 **class API**
 
     The API class contains methods for basic plugin functionality,
@@ -16,12 +38,12 @@
                     self.api = api
 
                 def onEnable(self):
-                    self.api.minecraft.registerHelp("Home", "Commands from the Home plugin", [
-                        ("/sethome", "Save curremt position as home", None),
-                        ("/home", "Teleports you to your home set by /sethome", None),
-                    ])
-
-                    self.api.minecraft.registerCommand("sethome", self.sethome)
+                    self.api.minecraft.registerHelp(
+                        "Home", "Commands from the Home plugin",
+                        [("/sethome", "Save curremt position as home", None),
+                         ("/home",
+                          "Teleports you to your home set by /sethome",
+                          None),])
         ..
 
     
@@ -62,7 +84,8 @@
 **def registerEvent(self, eventname, callback)**
 
         Register an event and a callback function. See
-         https://docs.google.com/spreadsheets/d/1Sxli0mpN3Aib-aejjX7VRlcN2HZkak_wIqPFJ6mtVIk/edit?usp=sharing
+         https://docs.google.com/spreadsheets/d/1Sxli0mpN3Aib-aejjX7VRl
+         cN2HZkak_wIqPFJ6mtVIk/edit?usp=sharing
          for a list of events.
 
         :eventname:  A text name from the list of built-in events,
@@ -144,7 +167,8 @@
                 essentials_id = "com.benbaptist.plugins.essentials"
                 running_essentials = api.getPluginContext(essentials_id)
                 warps = running_essentials.data["warps"]
-                print("Warps data currently being used by essentials: \\n %s" % warps)
+                print("Warps data currently being used by essentials: \\n %s" %
+                      warps)
             ..
 
         :returns:  Raises wrapper exception `exceptions.NonExistentPlugin`
@@ -155,7 +179,7 @@
 **def getStorage(self, name, world=False, formatting="pickle")**
 
         Returns a storage object manager.  The manager contains the
-        storage object, `Data` (a dictionary). `Data` contains the
+        storage object, 'Data' (a dictionary). 'Data' contains the
         data your plugin will remember across reboots.
 
         :NOTE: This method is somewhat different from previous Wrapper
@@ -213,7 +237,7 @@
             .. code:: python
 
                 # This used to work under the former API
-                # however, this will produce and exception
+                # however, this will produce an exception
                 # because "self.homes" is no longer an
                 # iterable data set:
                 for player in self.homes:  <= Exception!
