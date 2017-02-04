@@ -212,18 +212,20 @@
 
             .. code:: python
 
-                # access the data:
-                # it differs here because "self.homes" is no longer a data set.
-                for player in self.homes:
+                # This used to work under the former API
+                # however, this will produce and exception
+                # because "self.homes" is no longer an
+                # iterable data set:
+                for player in self.homes:  <= Exception!
                     print("player %s has a home at: %s" % (
                         player, self.homes[player]))
             ..
 
             **tip**
             *to make the transition easier for existing code, redefine
-            your storage statements like this to re-write as few lines
-            as possible (and avoid problems with other plugins that
-            link to your plugins data)*:
+            your the storage statements above like this to re-write as
+            few lines as possible (and avoid problems with other
+            plugins that might link to your plugin's data)*:
 
             .. code:: python
 
