@@ -292,18 +292,16 @@ class API:
     def getStorage(self, name, world=False, formatting="pickle"):
         """
         Returns a storage object manager.  The manager contains the
-        storage object, `Data` (a dictionary).
+        storage object, `Data` (a dictionary). `Data` contains the
+        data your plugin will remember across reboots.
 
-            :NOTE: **This method is somewhat different after Wrapper
-            version 0.10.1 (build 182).  The storage object is no longer
-            a data object itself; It is a manager used for controlling
-            the saving of the object data.  The actual data is contained
-            in Dictionary subitem 'Data'**
+        :NOTE: This method is somewhat different after Wrapper
+        version 0.10.1 (build 182).  The storage object is no longer
+        a data object itself; It is a manager used for controlling
+        the saving of the object data.  The actual data is contained
+        in Dictionary subitem 'Data'
 
-            ..
-
-        `Data` contains the data your plugin will remember across
-        reboots.
+        ..
 
 
         :name:  The name of the storage (on disk).
