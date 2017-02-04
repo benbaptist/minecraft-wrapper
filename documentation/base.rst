@@ -196,10 +196,11 @@
 
                 # access the data:
                 for player in self.homes.Data:  # note upper case `D`
-                    print("player %s has a home at: %s" % (player, self.homes.Data[player]))
+                    print("player %s has a home at: %s" % (
+                        player, self.homes.Data[player]))
 
-                # to save:
-                self.homes.save()  # storages also do periodic saves every minute.
+                # to save (storages also do periodic saves every minute):
+                self.homes.save()
 
                 # to close (and save):
                 def onDisable(self):
@@ -211,8 +212,10 @@
             .. code:: python
 
                 # access the data:
-                for player in self.homes:  # it differs here because "self.homes" is no longer a data set.
-                    print("player %s has a home at: %s" % (player, self.homes[player]))
+                # it differs here because "self.homes" is no longer a data set.
+                for player in self.homes:
+                    print("player %s has a home at: %s" % (
+                        player, self.homes[player]))
             ..
 
             **tip**
