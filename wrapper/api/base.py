@@ -297,10 +297,10 @@ class API:
          the saving of the object data.  The actual data is contained
          in Dictionary subitem 'Data'**
 
-        - Returns a storage object manager.  The manager contains the
+            Returns a storage object manager.  The manager contains the
             storage object, `Data` (a dictionary).
 
-        - `Data` contains the data your plugin will remember across
+            `Data` contains the data your plugin will remember across
             reboots.
 
         :name:  The name of the storage (on disk).
