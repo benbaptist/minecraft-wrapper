@@ -5,11 +5,12 @@
 # This program is distributed under the terms of the GNU
 # General Public License, version 3 or later.
 
+
+# def  - Definately not not following PEP-8 naming of functions!?:
 """
-    **The API does not follow PEP-8 naming of functions!?**
 
     backups was one of the newer api modules and some thought was given
-    to making those methods snake_case when it was first being written.
+    to making the those methods snake_case when it was first being written.
 
     Wrapper's orginal convention throughout the codebase was mixed
     camelCase.  After, Ben started as a javascript programmer!  The
