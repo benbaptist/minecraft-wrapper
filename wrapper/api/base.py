@@ -33,15 +33,16 @@ class API:
                     self.api = api
 
                 def onEnable(self):
-                    self.api.minecraft.registerHelp("Home", "Commands from the Home plugin", [
-                        ("/sethome", "Save curremt position as home", None),
-                        ("/home", "Teleports you to your home set by /sethome", None),
-                    ])
-
-                    self.api.minecraft.registerCommand("sethome", self.sethome)
+                    self.api.minecraft.registerHelp(
+                        "Home", "Commands from the Home plugin",
+                        [("/sethome", "Save curremt position as home", None),
+                         ("/home",
+                          "Teleports you to your home set by /sethome",
+                          None),])
         ..
 
     """
+
     statuseffects = {
         "speed": 1,
         "slowness": 2,
@@ -158,7 +159,8 @@ class API:
     def registerEvent(self, eventname, callback):
         """
         Register an event and a callback function. See
-         https://docs.google.com/spreadsheets/d/1Sxli0mpN3Aib-aejjX7VRlcN2HZkak_wIqPFJ6mtVIk/edit?usp=sharing
+         https://docs.google.com/spreadsheets/d/1Sxli0mpN3Aib-aejjX7VRl
+         cN2HZkak_wIqPFJ6mtVIk/edit?usp=sharing
          for a list of events.
 
         :eventname:  A text name from the list of built-in events,
@@ -276,7 +278,8 @@ class API:
                 essentials_id = "com.benbaptist.plugins.essentials"
                 running_essentials = api.getPluginContext(essentials_id)
                 warps = running_essentials.data["warps"]
-                print("Warps data currently being used by essentials: \\n %s" % warps)
+                print("Warps data currently being used by essentials: \\n %s" %
+                      warps)
             ..
 
         :returns:  Raises wrapper exception `exceptions.NonExistentPlugin`
@@ -292,7 +295,7 @@ class API:
     def getStorage(self, name, world=False, formatting="pickle"):
         """
         Returns a storage object manager.  The manager contains the
-        storage object, `Data` (a dictionary). `Data` contains the
+        storage object, 'Data' (a dictionary). 'Data' contains the
         data your plugin will remember across reboots.
 
         :NOTE: This method is somewhat different from previous Wrapper
@@ -350,7 +353,7 @@ class API:
             .. code:: python
 
                 # This used to work under the former API
-                # however, this will produce and exception
+                # however, this will produce an exception
                 # because "self.homes" is no longer an
                 # iterable data set:
                 for player in self.homes:  <= Exception!
