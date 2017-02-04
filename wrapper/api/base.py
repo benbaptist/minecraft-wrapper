@@ -18,10 +18,11 @@ from api import helpers
 # noinspection PyPep8Naming
 class API:
     """
-    The API class contains methods for basic plugin functionality, such as handling events,
-    registering commands, and more. Most methods aren't related to gameplay, aside from commands
-    and events, but for core stuff. See the Minecraft class (accessible at self.api.minecraft)
-    for gameplay-related methods.
+    The API class contains methods for basic plugin functionality,
+    such as handling events, registering commands, and more. Most
+    methods aren't related to gameplay, aside from commands and
+    events, but for core stuff. See the Minecraft class (accessible
+    at self.api.minecraft) for gameplay-related methods.
 
     :sample usage:
 
@@ -158,17 +159,20 @@ class API:
          https://docs.google.com/spreadsheets/d/1Sxli0mpN3Aib-aejjX7VRlcN2HZkak_wIqPFJ6mtVIk/edit?usp=sharing
          for a list of events.
 
-        :eventname:  A text name from the list of built-in events, for example, "player.place".
+        :eventname:  A text name from the list of built-in events,
+         for example, "player.place".
 
-        :callback: the plugin method you want to be called when the event occurs. The contents of the payload that is
-         passed back to your method varies between events.
+        :callback: the plugin method you want to be called when the
+         event occurs. The contents of the payload that is passed
+         back to your method varies between events.
 
 
         :returns:  None/Nothing
 
         """
         if not self.internal:
-            self.wrapper.log.debug("[%s] Registered event '%s'", self.name, eventname)
+            self.wrapper.log.debug("[%s] Registered event '%s'",
+                                   self.name, eventname)
         if self.id not in self.wrapper.events:
             self.wrapper.events[self.id] = {}
         self.wrapper.events[self.id][eventname] = callback
@@ -176,11 +180,13 @@ class API:
     def registerPermission(self, permission=None, value=False):
         """
         Used to set a default for a specific permission node.
-        Note: You do not need to run this function unless you want certain permission nodes
-        to be granted by default.  i.e. `essentials.list` should be on by default, so players
+        Note: You do not need to run this function unless you want
+        certain permission nodes to be granted by default.  i.e.
+        `essentials.list` should be on by default, so players
         can run /list without having any permissions.
 
-        :permission:  String argument for the permission node; e.g. "essentials.list"
+        :permission:  String argument for the permission node; e.g.
+         "essentials.list"
 
         :value:  Set to True to make a permission default to True.
 
@@ -188,8 +194,9 @@ class API:
 
         """
         if not self.internal:
-            self.wrapper.log.debug("[%s] Registered permission '%s' with default value: %s",
-                                   self.name, permission, value)
+            self.wrapper.log.debug(
+                "[%s] Registered permission '%s' with default value: %s",
+                self.name, permission, value)
         if self.id not in self.wrapper.registered_permissions:
             self.wrapper.registered_permissions[self.id] = {}
         self.wrapper.registered_permissions[self.id][permission] = value
@@ -198,8 +205,9 @@ class API:
         """
         Used to create a help group for the /help command.
 
-        :groupname: The name of the help group (usually the plugin name). The groupname is the name you'll see
-         in the list when you run '/help'.
+        :groupname: The name of the help group (usually the plugin
+         name). The groupname is the name you'll see in the list
+         when you run '/help'.
 
         :summary: The text that you'll see next next to the help group's name.
 
@@ -289,11 +297,12 @@ class API:
 
             "True" sets the storage path to `<serverpath>/<worldname>/plugins`.
 
-        :formatting:  Pickle formatting is the default. pickling is less strict than json formats nd leverages
+        :formatting:  Pickle formatting is the default. pickling is less strict than json formats and leverages
             binary storage.  Use of json (or future implemented formats) can result in errors if your keys or
             data do not conform to json standards (like use of string keys).  However, pickle is not generally
             human-readable, whereas json is human readable. If you need a human-readable copy (for debugging),
-            consider using self.api.helpers.putjsonfile() to write a copy to disk in Json.
+            consider using self.api.helpers.putjsonfile(<yourDictionary>) to write a copy to disk in Json.  if
+            you do so, check the return status of `putjsonfile` to make sure it was written.
 
         :sample methods:
 
