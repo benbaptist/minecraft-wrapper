@@ -5,6 +5,28 @@
 # This program is distributed under the terms of the GNU
 # General Public License, version 3 or later.
 
+"""
+* The API does not follow PEP-8 naming of functions!? *
+
+ backups was one of the newer api modules and some thought was given
+ to making those methods snake_case when it was first being written.
+
+Wrapper's orginal convention throughout the codebase was mixed
+camelCase.  After, Ben started as a javascript programmer!  The
+internal code is being converted (going forward) to  snake_case
+per PEP-8. However, PEP-8 acknowledges that:
+
+'mixedCase [... is allowed ...] in contexts where that's already the
+prevailing style (e.g. threading.py), to retain backwards
+compatibility.'
+
+This is also the case with the wrapper plugin API.  Converting
+the entire plugin API to snake_case will break everyone's plugins.
+Implementing the API in snake_case will create an inconsitent
+'look and feel' within wrapper's plugin API.
+
+"""
+
 import time
 
 import core.exceptions as exceptions
