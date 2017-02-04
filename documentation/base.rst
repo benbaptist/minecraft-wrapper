@@ -1,13 +1,13 @@
 
-**def  - Definately not not following PEP-8 naming of functions!?**
+**def  - Definately not not following PEP-8 naming of functions- why!?**
 
 
     backups was one of the newer api modules and some thought was given
     to making the those methods snake_case when it was first being written.
 
     Wrapper's orginal convention throughout the codebase was mixed
-    camelCase.  After, Ben started as a javascript programmer!  The
-    internal code is being converted (going forward) to  snake_case
+    camelCase.  (After all, Ben started in javascript!)  The
+    internal code is being converted (going forward) to snake_case
     per PEP-8. However, PEP-8 acknowledges that:
 
     'mixedCase [... is allowed ...] in contexts where that's already the

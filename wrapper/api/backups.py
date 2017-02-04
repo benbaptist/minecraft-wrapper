@@ -78,8 +78,11 @@ class Backups:
     def adjustBackupInterval(self, desired_interval):
         """
         Adjust the backup interval for automatic backups.
-        :param desired_interval: interval in seconds for regular backups
+
+        :desired_interval: interval in seconds for regular backups
+
         :return:
+
         """
         interval = int(desired_interval)
         self.wrapper.backups.config["Backups"]["backup-interval"] = interval
@@ -89,8 +92,11 @@ class Backups:
     def adjustBackupsKept(self, desired_number):
         """
         Adjust the number of backups kept.
-        :param desired_number: number of desired backups
+
+        :desired_number: number of desired backups
+
         :return:
+
         """
         num_kept = int(desired_number)
         self.wrapper.backups.config["Backups"]["backups-keep"] = num_kept
