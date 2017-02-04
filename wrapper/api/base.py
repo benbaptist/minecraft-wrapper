@@ -109,18 +109,25 @@ class API:
 
     def registerCommand(self, command, callback, permission=None):
         """
-        This registers a command that, when entered by the Minecraft client, will execute `callback(player, args)`.
-        permission is an optional attribute if you want your command to only be executable if the player
-        has a specified permission node.
+        This registers a command that, when entered by the Minecraft
+        client, will execute `callback(player, args)`. permission is
+        an optional attribute if you want your command to only be
+        executable if the player has a specified permission node.
 
-        :command:  The command the client enters (without the slash).  using a slash will mean two slashes will have
+        :command:  The command the client enters (without the
+         slash).  using a slash will mean two slashes will have
          to be typed (e.g. "/region" means the user must type "//region".
 
-        :callback:  The plugin method you want to call when the command is typed. Expected arguments are 1) the player
-         object, 2) a list of the arguments (words after the command, stripped of whitespace).
+        :callback:  The plugin method you want to call when the
+         command is typed. Expected arguments that will be returned
+         to your function will be: 1) the player  object, 2) a list
+         of the arguments (words after the command, stripped of
+         whitespace).
 
-        :permission:  A string item of your choosing, such as "essentials.home".  Can be (type) None to require no
-         permission.  (See also `api.registerPermission` for another way to set permission defaults.)
+        :permission:  A string item of your choosing, such as
+         "essentials.home".  Can be (type) None to require no
+         permission.  (See also `api.registerPermission` for another
+         way to set permission defaults.)
 
         :sample usage:
 
