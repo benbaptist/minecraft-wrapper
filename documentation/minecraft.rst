@@ -6,10 +6,9 @@
 
     
 
-**def configWrapper(self, section, config_item, new_value,
-                      reload_file=False)**
+**def configWrapper(self, section, config_item, new_value, reload_file=False)**
 
-        **New feature starting in version 0.8.12**
+        *New feature starting in version 0.8.12*
 
         Edits the Wrapper.Properties.json file
 
@@ -90,12 +89,14 @@
 
         :These variables affect entity processing:
 
-            :self.entityControl: from config["Entities"]["enable-entity-controls"]
+            :self.entityControl: from
+             config["Entities"]["enable-entity-controls"]
 
             :self.entityProcessorFrequency: from
              config["Entities"]["entity-update-frequency"]
 
-            :self.thiningFrequency: from config["Entities"]["thinning-frequency"]
+            :self.thiningFrequency: from
+             config["Entities"]["thinning-frequency"]
 
             :self.serverStartThinningThreshshold: from
              config["Entities"]["thinning-activation-threshhold"]
@@ -223,8 +224,7 @@
 
         
 
-**def setBlock(self, x, y, z, tilename, datavalue=0,
-                 oldblockhandling="replace", datatag=None)**
+**def setBlock(self, x, y, z, tilename, datavalue=0, oldblockhandling="replace", datatag=None)**
 
         Sets a block at the specified coordinates with the specific
         details. Will fail if the chunk is not loaded.
@@ -355,8 +355,7 @@
 
         
 
-**def banUUID(self, playeruuid, reason="by wrapper api.",
-                source="minecraft.api", expires=False)**
+**def banUUID(self, playeruuid, reason="by wrapper api.", source="minecraft.api", expires=False)**
 
         Ban a player using the wrapper proxy system.
 
@@ -377,8 +376,7 @@
 
         
 
-**def banName(self, playername, reason="by wrapper api.",
-                source="minecraft.api", expires=False)**
+**def banName(self, playername, reason="by wrapper api.", source="minecraft.api", expires=False)**
 
         Ban a player using the wrapper proxy system.  Will attempt to
         poll or read cache for name. If no valid name is found, does a

@@ -35,10 +35,9 @@ class Minecraft:
         blockdata = Items()
         self.blocks = blockdata.itemslist
 
-    def configWrapper(self, section, config_item, new_value,
-                      reload_file=False):
+    def configWrapper(self, section, config_item, new_value, reload_file=False):
         """
-        **New feature starting in version 0.8.12**
+        *New feature starting in version 0.8.12*
 
         Edits the Wrapper.Properties.json file
 
@@ -156,14 +155,18 @@ class Minecraft:
         else:
             try:
                 effectconverted = int(effect)
-            except:  # a non-number was passed, so we'll figure out what status effect it was in word form
+            # a non-number was passed, so we'll figure out what status
+            # effect it was in word form
+            except:
                 if effect in self.wrapper.api.statusEffects:
-                    effectconverted = str(self.wrapper.api.statusEffects[effect])
+                    effectconverted = str(
+                        self.wrapper.api.statusEffects[effect])
                 else:
                     raise Exception("Invalid status effect given!")
         if int(effectconverted) > 24 or int(effectconverted) < 1:
             raise Exception("Invalid status effect given!")
-        self.console("effect %s %s %d %d" % (player, effectconverted, duration, amplifier))
+        self.console("effect %s %s %d %d" % (player, effectconverted,
+                                             duration, amplifier))
 
     def getAllPlayers(self):
         """
@@ -192,7 +195,8 @@ class Minecraft:
                 os.remove("wrapper-data/players/%s" % uuid_file_found)
                 continue
 
-            # if the server is in online mode and the player's offline and regular uuid are the same...
+            # if the server is in online mode and the player's offline
+            # and regular uuid are the same...
             if online:
                 if player_uuid == self.wrapper.uuids.getuuidfromname(username):
                     continue
@@ -222,12 +226,14 @@ class Minecraft:
 
         :These variables affect entity processing:
 
-            :self.entityControl: from config["Entities"]["enable-entity-controls"]
+            :self.entityControl: from
+             config["Entities"]["enable-entity-controls"]
 
             :self.entityProcessorFrequency: from
              config["Entities"]["entity-update-frequency"]
 
-            :self.thiningFrequency: from config["Entities"]["thinning-frequency"]
+            :self.thiningFrequency: from
+             config["Entities"]["thinning-frequency"]
 
             :self.serverStartThinningThreshshold: from
              config["Entities"]["thinning-activation-threshhold"]
@@ -428,8 +434,8 @@ class Minecraft:
         except Exception:
             pass
 
-    def setBlock(self, x, y, z, tilename, datavalue=0,
-                 oldblockhandling="replace", datatag=None):
+    # functions must all be on one line to import to the documentation
+    def setBlock(self, x, y, z, tilename, datavalue=0, oldblockhandling="replace", datatag=None):
         """
         Sets a block at the specified coordinates with the specific
         details. Will fail if the chunk is not loaded.
@@ -476,9 +482,12 @@ class Minecraft:
         Returns: Nothing - console executes command.
 
         """
-        if not datatag:  # should not use mutable default arguments like dataTag={}
+
+        # should not use mutable default arguments like dataTag={}
+        if not datatag:
             datatag = {}
-        self.console("summon %s %d %d %d %s" % (entity, x, y, z, json.dumps(datatag, self._encoding)))
+        self.console("summon %s %d %d %d %s" % (
+            entity, x, y, z, json.dumps(datatag, self._encoding)))
 
     def teleportAllEntities(self, entity, x, y, z):
         """
@@ -540,7 +549,8 @@ class Minecraft:
         :Returns: Returns the spawn point of the current world.
 
         """
-        return (int(str(self.getLevelInfo()["SpawnX"])), int(str(self.getLevelInfo()["SpawnY"])),
+        return (int(str(self.getLevelInfo()["SpawnX"])),
+                int(str(self.getLevelInfo()["SpawnY"])),
                 int(str(self.getLevelInfo()["SpawnZ"])))
 
     def getTime(self):
@@ -597,8 +607,9 @@ class Minecraft:
         return self.wrapper.usercache
 
     # Ban related items - These wrap the proxy base methods
-    def banUUID(self, playeruuid, reason="by wrapper api.",
-                source="minecraft.api", expires=False):
+
+    # functions must all be on one line to import to the documentation
+    def banUUID(self, playeruuid, reason="by wrapper api.", source="minecraft.api", expires=False):
         """
         Ban a player using the wrapper proxy system.
 
@@ -620,8 +631,7 @@ class Minecraft:
         """
         return self.wrapper.proxy.banuuid(playeruuid, reason, source, expires)
 
-    def banName(self, playername, reason="by wrapper api.",
-                source="minecraft.api", expires=False):
+    def banName(self, playername, reason="by wrapper api.", source="minecraft.api", expires=False):
         """
         Ban a player using the wrapper proxy system.  Will attempt to
         poll or read cache for name. If no valid name is found, does a
@@ -645,9 +655,11 @@ class Minecraft:
         """
         useruuid = self.wrapper.uuids.getuuidbyusername(playername)
         if not useruuid:
-            return self.wrapper.proxy.banuuidraw(useruuid, playername, reason, source, expires)
+            return self.wrapper.proxy.banuuidraw(useruuid, playername,
+                                                 reason, source, expires)
         else:
-            return self.wrapper.proxy.banuuid(playername, reason, source, expires)
+            return self.wrapper.proxy.banuuid(playername, reason,
+                                              source, expires)
 
     def banIp(self, ipaddress, reason="by wrapper api.", source="minecraft.api", expires=False):
         """
