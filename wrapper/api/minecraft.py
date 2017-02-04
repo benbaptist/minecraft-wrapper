@@ -20,8 +20,9 @@ from proxy.mcpackets_sb import Packets as ServerBound
 # noinspection PyBroadException
 class Minecraft:
     """
-    This class contains functions related to in-game features directly. These methods are
-    accessed using 'self.api.minecraft'
+    This class contains functions related to in-game features
+    directly. These methods are accessed using 'self.api.minecraft'
+
     """
 
     def __init__(self, wrapper):
@@ -34,20 +35,29 @@ class Minecraft:
         blockdata = Items()
         self.blocks = blockdata.itemslist
 
-    def configWrapper(self, section, config_item, new_value, reload_file=False):
-        """  **New feature version 0.8.12**
+    def configWrapper(self, section, config_item, new_value,
+                      reload_file=False):
+        """
+        **New feature starting in version 0.8.12**
+
         Edits the Wrapper.Properties.json file
-        :param section:
-        :param config_item:
-        :param new_value:
-        :param reload_file:
-        :return: True or False, indicating Success or Failure
+
+        :section:
+
+        :config_item:
+
+        :new_value:
+
+        :reload_file: True to reload the config
+
+        :returns: True or False, indicating Success or Failure
+
         """
 
         # detect and correct lists
         try:
             if len(new_value.split(',')) > 1:
-                new_value = new_value.split(",")  # may need additional quote stripping?
+                new_value = new_value.split(",")
         except:
             pass
         # correct any string to boolean or integer
@@ -64,7 +74,8 @@ class Minecraft:
     def isServerStarted(self):
         """
 
-        Returns: Returns a boolean if the server is fully booted or not.
+        Returns: Returns a boolean indicating if the server is
+         fully booted or not.
 
         """
         if self.getServer():
@@ -86,12 +97,14 @@ class Minecraft:
 
     def getTimeofDay(self, dttmformat=0):
         """
-        Returns the "virtual" world time of day on the server.
+        get the "virtual" world time of day on the server.
 
-        Args:
-            dttmformat: 0 = ticks, 1 = Military, (else = civilian AM/PM). Ticks are useful for
-                timebased- events (like spawing your own mobs at night, etc). Miliary or civilian
-                is useful for player displays.
+        :dttmformat: 0 = ticks, 1 = Military, (else = civilian AM/PM).
+
+            :ticks: are useful for timebased- events (like spawing
+             your own mobs at night, etc).
+
+            :Miliary/civilian: is useful for player displays.
 
         Returns: The appropriately formatted time string
 
@@ -123,11 +136,17 @@ class Minecraft:
         """
         Gives the specified status effect to the specified target.
 
-        Args:
-            player: A player name or any valid string target selector (@p/e/a) with arguments ([r=...], etc)
-            effect:
-            duration:
-            amplifier:
+        :Arguments: (self explanatory?)
+
+            :player: A player name or any valid string target
+             selector (@p/e/a) with arguments ([r=...], etc)
+
+            :effect:
+
+            :duration:
+
+            :amplifier:
+
 
         Returns: Nothing; runs in console
 
@@ -148,14 +167,13 @@ class Minecraft:
 
     def getAllPlayers(self):
         """
-
-        Returns: Returns a dict containing the uuids and associated login data of all
-        players ever connected to the server.
+        Returns a dict containing the uuids and associated
+        login data of all players ever connected to the server.
 
         """
         alluuidfiles = os.listdir("wrapper-data/players")
 
-        # do this now so we don't re-run the function in each 'for .. in ..' loop
+        # do this now so we don't re-run it in each 'for .. in ..' loop
         if self.wrapper.isonlinemode():
             online = True
         else:
@@ -190,41 +208,55 @@ class Minecraft:
 
     def getPlayers(self):  # returns a list of players
         """
-
-        Returns: Returns a list of the currently connected players.
+        Returns a list of the currently connected players.
 
         """
         return self.getServer().players
 
     def getEntityControl(self):
         """
-        Returns the server's entity controls context.  Will be None if the server is not up.
+        Returns the server's entity controls context.  Will be None if
+        the server is not up.
+
         Supported varaibles and methods:
 
-        These variables affect entity processing:
-        self.entityControl from config["Entities"]["enable-entity-controls"]
-        self.entityProcessorFrequency from config["Entities"]["entity-update-frequency"]
-        self.thiningFrequency from config["Entities"]["thinning-frequency"]
-        self.serverStartThinningThreshshold from config["Entities"]["thinning-activation-threshhold"]
+        :These variables affect entity processing:
 
-        def killEntityByEID(self, eid, dropitems=False, count=1)
-        def existsEntityByEID(self, eid)
-        def getEntityInfo(self, eid)
-        def countEntitiesInPlayer(self, playername)
-        def countActiveEntities(self)
-        def getEntityByEID(self, eid)
+            :self.entityControl: from config["Entities"]["enable-entity-controls"]
+
+            :self.entityProcessorFrequency: from
+             config["Entities"]["entity-update-frequency"]
+
+            :self.thiningFrequency: from config["Entities"]["thinning-frequency"]
+
+            :self.serverStartThinningThreshshold: from
+             config["Entities"]["thinning-activation-threshhold"]
+
+        :See api.entity for more about these methods:
+
+                def killEntityByEID(self, eid, dropitems=False, count=1)
+
+                def existsEntityByEID(self, eid)
+
+                def getEntityInfo(self, eid)
+
+                def countEntitiesInPlayer(self, playername)
+
+                def countActiveEntities(self)
+
+                def getEntityByEID(self, eid)
 
         """
         return self.wrapper.javaserver.entity_control
 
     def getPlayer(self, username=""):
         """
-        Returns the player object of the specified logged-in player. Will raise an exception if
-        the player is not logged in.
-        Args:
-            username: playername
+        Returns the player object of the specified logged-in player.
+        Will raise an exception if the player is not logged in.
 
-        Returns: The Player Class object for "playername".
+        :username: playername
+
+        :Returns: The Player Class object for "playername".
 
         """
         try:
@@ -238,21 +270,25 @@ class Minecraft:
 
     def getOfflineUUID(self, name):
         """
-        :param name: gets UUID object based on "OfflinePlayer:<playername>"
-        :return: a MCUUID object based on the name
+
+        :name: gets UUID object based on "OfflinePlayer:<name>"
+
+        :returns: a MCUUID object based on the name
+
         """
         return self.wrapper.uuids.getuuidfromname(name)
 
     def lookupUUID(self, uuid):
         """
-        Returns a dictionary of {"uuid: the-uuid-of-the-player, "name": playername}.
-        legacy function from the old 0.7.7 API
-        lookupbyUUID() is a better and more direct way to get the name from a uuid.
+        Returns a dictionary of {"uuid: the-uuid-of-the-player,
+        "name": playername}. legacy function from the old 0.7.7 API.
 
-        Args:
-            uuid:  player uuid
+        lookupbyUUID() is a better and more direct way to get the
+        name from a uuid.
 
-        Returns: a dictionary of hte two items, uuid and name.
+        :uuid:  player uuid
+
+        :Returns: a dictionary of hte two items, uuid and name.
 
         """
         name = self.lookupbyUUID(uuid)
@@ -260,30 +296,30 @@ class Minecraft:
         dictitem = {"uuid": uuid, "name": name}
         return dictitem
 
-    def lookupbyUUID(self, uuid):  # This function is just part of the API for plugin devs/users.
+    def lookupbyUUID(self, uuid):
         """
         Returns the username from the specified UUID.
-        If the player has never logged in before and isn't in the user cache, it will poll Mojang's API.
-        The function will return False if the UUID is invalid.
+        If the player has never logged in before and isn't in the user
+        cache, it will poll Mojang's API.  The function will return
+        False if the UUID is invalid.
 
-        Args:
-            uuid: string uuid with dashes
+        :uuid: string uuid with dashes
 
-        Returns: username
+        :Returns: username
 
         """
         return self.wrapper.uuids.getusernamebyuuid(uuid)
 
-    def lookupbyName(self, name):  # This function is just part of the API for plugin devs/users.
+    def lookupbyName(self, name):
         """
         Returns the UUID from the specified username.
-        If the player has never logged in before and isn't in the user cache, it will poll Mojang's API.
-        The function will return False if the name is invalid.
+        If the player has never logged in before and isn't in the
+        user cache, it will poll Mojang's API.  The function will
+        return False if the name is invalid.
 
-        Args:
-            name:  player name
+        :name:  player name
 
-        Returns: a UUID object (wrapper type MCUUID)
+        :Returns: a UUID object (wrapper type MCUUID)
 
         """
         return self.wrapper.uuids.getuuidbyusername(name)
@@ -291,13 +327,18 @@ class Minecraft:
     # World and console interaction
 
     def setLocalName(self, MojangUUID, desired_name, kick=True):
-        """ set the local name on the server.  Understand that this will cause a vanilla server UUID change and
-        loss of player data from the old name's offline uuid"""
+        """
+        Set the local name on the server.  Understand that this
+        may cause a vanilla server UUID change and loss of player
+        data from the old name's offline uuid.
+
+        """
 
         cache = self.getUuidCache()
         proper_name_spelling = self.lookupbyUUID(MojangUUID)
         if not proper_name_spelling:
-            self.log.error("incorrect UUID %s supplied to api.minecraft.setLocalName()", MojangUUID)
+            self.log.error("incorrect UUID %s supplied to"
+                           " api.minecraft.setLocalName()", MojangUUID)
             return False
 
         orig_server_uuid = self.getOfflineUUID(proper_name_spelling)
@@ -315,7 +356,8 @@ class Minecraft:
 
         # kicking them is needed to complete the process
         if kick:
-            self.console("kick %s Wrapper is changing your name..." % proper_name_spelling)
+            self.console("kick %s Wrapper is changing your name..." %
+                         proper_name_spelling)
 
         if not os.path.exists(sourcedir):
             self.log.error("(setLocalName): No such directory: %s", sourcedir)
@@ -336,10 +378,10 @@ class Minecraft:
     def console(self, string):
         """
         Run a command in the Minecraft server's console.
-        Args:
-            string: Full command text(without slash)
 
-        Returns: Nothing
+        :string: Full command text(without slash)
+
+        :Returns: Nothing
 
         """
         try:
@@ -351,27 +393,29 @@ class Minecraft:
         """
         Used to message some specific target.
 
-        Args:
-            destination: playername or target selector '@a', 'suresttexas00' etc
-            jsonmessage: strict json chat message
+        :destination: playername or target selector '@a', 'suresttexas00' etc
 
-        Returns: Nothing; succeeds or fails with no programmatic indication.
+        :jsonmessage: strict json chat message
+
+
+        :Returns: Nothing; succeeds or fails with no programmatic indication.
 
         """
         self.getServer().broadcast(self, jsonmessage, who=destination)
 
     def broadcast(self, message="", irc=False):
         """
-        Broadcasts the specified message to all clients connected. message can be a JSON chat object,
-        or a string with formatting codes using the & as a prefix. Setting irc=True will also broadcast
-        the specified message on IRC channels that Wrapper.py is connected to. Formatting might not
-        work properly.
+        Broadcasts the specified message to all clients connected.
+        message can be a JSON chat object, or a string with formatting
+        codes using the & as a prefix. Setting irc=True will also
+        broadcast the specified message on IRC channels that Wrapper.py
+        is connected to. Formatting might not work properly.
 
-        Args:
-            message:
-            irc: Also broadcast to IRC if set to True.
+        :message:  The message
 
-        Returns:
+        :irc: Also broadcast to IRC if set to True.
+
+        Returns:  Nothing
 
         """
         if irc:
@@ -384,20 +428,29 @@ class Minecraft:
         except Exception:
             pass
 
-    def setBlock(self, x, y, z, tilename, datavalue=0, oldblockhandling="replace", datatag=None):
+    def setBlock(self, x, y, z, tilename, datavalue=0,
+                 oldblockhandling="replace", datatag=None):
         """
-        Sets a block at the specified coordinates with the specific details. Will fail if the
-         chunk is not loaded.
-        Args:  See wiki for setblock
-            x:
-            y:
-            z:
-            tilename:
-            datavalue:
-            oldblockhandling:
-            datatag:
+        Sets a block at the specified coordinates with the specific
+        details. Will fail if the chunk is not loaded.
 
-        Returns: Nothing.
+        :Args:  See the minecraft command wiki for these setblock arguments:
+
+                :x:
+
+                :y:
+
+                :z:
+
+                :tilename:
+
+                :datavalue:
+
+                :datatag:
+
+                :oldblockhandling:
+
+        :Returns: Nothing.
 
         """
         if not datatag:
@@ -408,13 +461,17 @@ class Minecraft:
 
     def summonEntity(self, entity, x=0, y=0, z=0, datatag=None):
         """
-        Summons an entity at the specified coordinates with the specified data tag.
-        Args:
-            entity: string entity name type (capitalized correctly!)
-            x: coords
-            y:
-            z:
-            datatag: strict json text datatag
+        Summons an entity at the specified coordinates with the
+        specified data tag.
+
+        :Args:
+
+                :entity: string entity name type (capitalized correctly!)
+                :x: coords
+                :y:
+                :z:
+                :datatag: strict json text datatag
+
 
         Returns: Nothing - console executes command.
 
@@ -427,11 +484,11 @@ class Minecraft:
         """
         Teleports all of the specific entity type to the specified coordinates.
 
-        Args:
-            entity: string entity name type (capitalized correctly!)
-            x: coords
-            y:
-            z:
+        :Args:
+                :entity: string entity name type (capitalized correctly!)
+                :x: coords
+                :y:
+                :z:
 
         Returns: Nothing - console executes command.
 
@@ -442,11 +499,12 @@ class Minecraft:
 
     def getLevelInfo(self, worldname=False):
         """
+        Get the world level.dat.
 
-        Args:
-            worldname: optional world name.  If not specified, Wrapper looks up the server worldname.
+        :worldname: optional world name.  If not specified, Wrapper
+         looks up the server worldname.
 
-        Returns: Return an NBT object of the world's level.dat.
+        :Returns: Return an NBT object of the world's level.dat.
 
         """
         if not worldname:
@@ -458,8 +516,9 @@ class Minecraft:
 
     def getGameRules(self):
         """
+        Get the server gamerules.
 
-        returns: a dictionary of gamerules.
+        :returns: a dictionary of the gamerules.
 
         """
         game_rules = self.getLevelInfo()["GameRules"]
@@ -476,8 +535,9 @@ class Minecraft:
 
     def getSpawnPoint(self):
         """
+        Get the spawn point of the current world.
 
-        Returns: Returns the spawn point of the current world.
+        :Returns: Returns the spawn point of the current world.
 
         """
         return (int(str(self.getLevelInfo()["SpawnX"])), int(str(self.getLevelInfo()["SpawnY"])),
@@ -485,6 +545,8 @@ class Minecraft:
 
     def getTime(self):
         """
+        Gets the world time in ticks.  This is total ticks since
+        the server started! modulus the value by 24000 to get the time.
 
         Returns: Returns the time of the world in ticks.
 
@@ -494,21 +556,26 @@ class Minecraft:
     def getServer(self):
         """
 
-        Returns: Returns the server context.  Use at own risk - items in server are private.
+        :Returns: Returns the server context.  Use at own risk - items
+         in server are generally private or subject to change (you are
+         messing with an undefined API!)
 
         """
         return self.wrapper.javaserver
 
     def getServerPath(self):
         """
-        Returns: Returns the server's path.
+        Gets the server's path.
+
         """
         return self.wrapper.javaserver.serverpath
 
     def getWorld(self):
         """
+        Get the world context
 
-        Returns: Returns the world context of 'api.world, class World' for the running server instance
+        :Returns: Returns the world context of 'api.world, class World'
+         for the running server instance
 
         """
         return self.getServer().world
@@ -516,48 +583,65 @@ class Minecraft:
     def getWorldName(self):
         """
 
-        Returns: Returns the world's name.
+        :Returns: the world's name.
 
         """
         return self.getServer().worldname
 
     def getUuidCache(self):
         """
-        gets the wrapper uuid cache.  This is as far as the API goes.  The format of the cache's contents are private.
+        Gets the wrapper uuid cache.  This is as far as the API goes.
+        The format of the cache's contents are undefined by this API.
+
         """
         return self.wrapper.usercache
 
     # Ban related items - These wrap the proxy base methods
-    def banUUID(self, playeruuid, reason="by wrapper api.", source="minecraft.api", expires=False):
+    def banUUID(self, playeruuid, reason="by wrapper api.",
+                source="minecraft.api", expires=False):
         """
         Ban a player using the wrapper proxy system.
 
-        Args:
-            playeruuid: Player's uuid... specify the mojangUuid for online ban and offlineUuid
-                for offline bans.
-            reason: Optional text reason.
-            source: Source (author/op) of ban.
-            expires: Optional expiration in time.time() format.  Expirations only work when wrapper
-                handles the login (proxy mode).. and only for online bans.
+        :args:
 
-        Returns: String describing the operation's outcome.
+                :playeruuid: Player's uuid... specify the mojangUuid
+                 for online ban and offlineUuid for offline bans.
+
+                :reason: Optional text reason.
+
+                :source: Source (author/op) of ban.
+
+                :expires: Optional expiration in time.time() format.
+                 Expirations only work when wrapper handles the login
+                 (proxy mode).. and only for online bans.
+
+        :Returns: String describing the operation's outcome.
+
         """
         return self.wrapper.proxy.banuuid(playeruuid, reason, source, expires)
 
-    def banName(self, playername, reason="by wrapper api.", source="minecraft.api", expires=False):
+    def banName(self, playername, reason="by wrapper api.",
+                source="minecraft.api", expires=False):
         """
-        Ban a player using the wrapper proxy system.  Will attempt to poll or read cache for name. If
-        no valid name is found, does a name-only ban with offline-hashed uuid
+        Ban a player using the wrapper proxy system.  Will attempt to
+        poll or read cache for name. If no valid name is found, does a
+        name-only ban with offline-hashed uuid
 
-        Args:
-            playername: Player's name... specify the mojangUuid for online ban and offlineUuid
-                for offline bans.
-            reason: Optional text reason
-            source: Source (author/op) of ban.
-            expires: Optional expiration in time.time() format.  Expirations only work when wrapper
-                handles the login (proxy mode).. and only for online bans.
+        :args:
 
-        Returns: String describing the operation's outcome.
+                :playername: Player's name... specify the mojangUuid for online
+                 ban and offlineUuid for offline bans.
+
+                :reason: Optional text reason.
+
+                :source: Source (author/op) of ban.
+
+                :expires: Optional expiration in time.time() format.
+                 Expirations only work when wrapper handles the login
+                 (proxy mode).. and only for online bans.
+
+        :Returns: String describing the operation's outcome.
+
         """
         useruuid = self.wrapper.uuids.getuuidbyusername(playername)
         if not useruuid:
@@ -567,73 +651,76 @@ class Minecraft:
 
     def banIp(self, ipaddress, reason="by wrapper api.", source="minecraft.api", expires=False):
         """
-        Ban an ip address using the wrapper proxy system. Messages generated by process can be directed to
-        a particular player's client or to the Console (default). Ban will fail if it is not a valid ip4
-        address.
+        Ban an ip address using the wrapper proxy system. Messages
+        generated by process can be directed to a particular player's
+        client or to the Console (default). Ban will fail if it is not
+        a valid ip4 address.
 
-        Args:
-            ipaddress: IP address to ban
-            reason: Optional text reason
-            source: Source (author/op) of ban.
-            expires: Optional expiration in time.time() format.
+        :args:
 
-        Returns: String describing the operation's outcome.
+                :ipaddress: IP address to ban
+                :reason: Optional text reason
+                :source: Source (author/op) of ban.
+                :expires: Optional expiration in time.time() format.
+
+        :Returns: String describing the operation's outcome.
+
         """
         return self.wrapper.proxy.banip(ipaddress, reason, source, expires)
 
     def pardonName(self, playername):
         """
+        Pardon a player.
 
-        Args:
-            playername:
+        :playername:  Name to pardon.
 
-        Returns: String describing the operation's outcome.
+        :Returns: String describing the operation's outcome.
 
         """
         return self.wrapper.proxy.pardonname(playername)
 
     def pardonUUID(self, playeruuid):
         """
+        Pardon a player by UUID.
 
-        Args:
-            playeruuid:
+        :playeruuid:  UUID to pardon
 
-        Returns: String describing the operation's outcome.
+        :Returns: String describing the operation's outcome.
 
         """
         return self.wrapper.proxy.pardonuuid(playeruuid)
 
     def pardonIp(self, ipaddress):
         """
+        Pardon an IP.
 
-        Args:
-            ipaddress:
+        :ipaddress: a valid IPV4 address to pardon.
 
-        Returns:  String describing the operation's outcome.
+        :Returns:  String describing the operation's outcome.
 
         """
         return self.wrapper.proxy.pardonip(ipaddress)
 
     def isUUIDBanned(self, uuid):
         """
-        Check if a uuid is banned.  Using this method also refreshes any expired bans and unbans them.
+        Check if a uuid is banned.  Using this method also refreshes
+        any expired bans and unbans them.
 
-        Args:
-            uuid: Check if the UUID of the user is banned
+        :uuid: Check if the UUID of the user is banned
 
-        Returns: True or False (banned or not banned)
+        :Returns: True or False (banned or not banned)
 
         """
         return self.wrapper.proxy.isuuidbanned(uuid)
 
     def isIpBanned(self, ipaddress):
         """
-        Check if a ipaddress is banned.  Using this method also refreshes any expired bans and unbans them.
+        Check if a ipaddress is banned.  Using this method also
+        refreshes any expired bans and unbans them.
 
-        Args:
-            ipaddress: Check if an ipaddress is banned
+        :ipaddress: Check if an ipaddress is banned
 
-        Returns: True or False (banned or not banned)
+        :Returns: True or False (banned or not banned)
 
         """
         return self.wrapper.proxy.isipbanned(ipaddress)
