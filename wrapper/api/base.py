@@ -236,7 +236,8 @@ class API:
     def blockForEvent(self, eventtype):
         # TODO this event's purpose/functionality and
         # use cases are unknown at this time
-        """Blocks until the specified event is called. """
+        """
+        Blocks until the specified event is called. """
         sock = []
         self.wrapper.events.listeners.append(sock)  #
         while True:
@@ -250,19 +251,23 @@ class API:
             time.sleep(0.05)
 
     def callEvent(self, event, payload):
-        # TODO this event's purpose/functionality and use cases are unknown at this time
+        # TODO this event's purpose/functionality and
+        # use cases are unknown at this time
         """
-        Invokes the specific event. Payload is extra information relating to the event. Errors
-        may occur if you don't specify the right payload information.
+        Invokes the specific event. Payload is extra information
+        relating to the event. Errors may occur if you don't specify
+        the right payload information.
         """
         return self.wrapper.callevent(event, payload)
 
     def getPluginContext(self, plugin_id):
         """
-        Returns the instance (content) of another running wrapper plugin with the specified ID.
+        Returns the instance (content) of another running wrapper
+        plugin with the specified ID.
 
-        :plugin_id:  The `ID` of the plugin from the plugin's header .  if no `ID` was specified by the plugin, then
-         the file name (without the .py extension) is used as the `ID`.
+        :plugin_id:  The `ID` of the plugin from the plugin's header.
+         if no `ID` was specified by the plugin, then the file name
+         (without the .py extension) is used as the `ID`.
 
         :sample usage:
 
@@ -274,7 +279,8 @@ class API:
                 print("Warps data currently being used by essentials: \\n %s" % warps)
             ..
 
-        :returns:  Raises wrapper exception `exceptions.NonExistentPlugin` if the specified plugin does not exist.
+        :returns:  Raises wrapper exception `exceptions.NonExistentPlugin`
+         if the specified plugin does not exist.
 
 """
         if plugin_id in self.wrapper.plugins:

@@ -118,20 +118,24 @@
         
 
 **def blockForEvent(self, eventtype)**
-Blocks until the specified event is called. 
+
+        Blocks until the specified event is called. 
 
 **def callEvent(self, event, payload)**
 
-        Invokes the specific event. Payload is extra information relating to the event. Errors
-        may occur if you don't specify the right payload information.
+        Invokes the specific event. Payload is extra information
+        relating to the event. Errors may occur if you don't specify
+        the right payload information.
         
 
 **def getPluginContext(self, plugin_id)**
 
-        Returns the instance (content) of another running wrapper plugin with the specified ID.
+        Returns the instance (content) of another running wrapper
+        plugin with the specified ID.
 
-        :plugin_id:  The `ID` of the plugin from the plugin's header .  if no `ID` was specified by the plugin, then
-         the file name (without the .py extension) is used as the `ID`.
+        :plugin_id:  The `ID` of the plugin from the plugin's header.
+         if no `ID` was specified by the plugin, then the file name
+         (without the .py extension) is used as the `ID`.
 
         :sample usage:
 
@@ -143,7 +147,8 @@ Blocks until the specified event is called.
                 print("Warps data currently being used by essentials: \\n %s" % warps)
             ..
 
-        :returns:  Raises wrapper exception `exceptions.NonExistentPlugin` if the specified plugin does not exist.
+        :returns:  Raises wrapper exception `exceptions.NonExistentPlugin`
+         if the specified plugin does not exist.
 
 
 
