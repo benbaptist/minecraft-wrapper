@@ -148,10 +148,12 @@ class API:
             commands = [command]
         for name in commands:
             if not self.internal:
-                self.wrapper.log.debug("[%s] Registered command '%s'", self.name, name)
+                self.wrapper.log.debug("[%s] Registered command '%s'",
+                                       self.name, name)
             if self.id not in self.wrapper.commands:
                 self.wrapper.commands[self.id] = {}
-            self.wrapper.commands[self.id][name] = {"callback": callback, "permission": permission}
+            self.wrapper.commands[self.id][name] = {"callback": callback,
+                                                    "permission": permission}
 
     def registerEvent(self, eventname, callback):
         """
@@ -224,16 +226,17 @@ class API:
 
         """
         if not self.internal:
-            self.wrapper.log.debug("[%s] Registered help group '%s' with %d commands",
-                                   self.name, groupname, len(commands))
+            self.wrapper.log.debug(
+                "[%s] Registered help group '%s' with %d commands",
+                self.name, groupname, len(commands))
         if self.id not in self.wrapper.help:
             self.wrapper.help[self.id] = {}
         self.wrapper.help[self.id][groupname] = (summary, commands)
 
     def blockForEvent(self, eventtype):
-        # TODO this event's purpose/functionality and use cases are unknown at this time
-        """
-        Blocks until the specified event is called. """
+        # TODO this event's purpose/functionality and
+        # use cases are unknown at this time
+        """Blocks until the specified event is called. """
         sock = []
         self.wrapper.events.listeners.append(sock)  #
         while True:

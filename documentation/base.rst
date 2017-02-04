@@ -118,8 +118,7 @@
         
 
 **def blockForEvent(self, eventtype)**
-
-        Blocks until the specified event is called. 
+Blocks until the specified event is called. 
 
 **def callEvent(self, event, payload)**
 
