@@ -7,12 +7,15 @@
 here are inserted or deleted from the the wrapper config
 each time wrapper starts.*
 
-*items marked as "deprecated" get removed from the wrapper
+*Items marked as "deprecated" get removed from the wrapper
 config when wrapper starts.  These are are not valid items.
 they only exist so that they will get removed from older
 wrapper versions.  This is intended to keep the actual
 wrapper.config.json file from getting cluttered with old
 unused items.*
+
+*The wrapper.config.json file contents will look like this,
+but without all the comment lines.*
 
 '''
 
@@ -153,11 +156,11 @@ CONFIG = {
 
             "pre-1.7-mode": "deprecated",
 
-         # Using the default '.' roots the server in the same folder with wrapper. Change this to another folder to keep the wrapper and server folders separate Do not use a trailing slash.  e.g. - '/full/pathto/the/server'
+         # Using the default '.' roots the server in the same folder with wrapper. Change this to another folder to keep the wrapper and server folders separate.  Do not use a trailing slash...  e.g. - '/full/pathto/the/server'
 
             "server-directory": ".",
 
-         # server-name moved to Web (it is used only by web module in code)
+         # server-name was moved to Web (it is used only by web module in code)
 
             "server-name": "deprecated",
 
@@ -165,7 +168,7 @@ CONFIG = {
 
             "timed-reboot": False,
 
-         # deprecated for consistency with timed reboot warning 'minutes'
+         # Deprecated for consistency with timed reboot warning 'minutes'
 
             "timed-reboot-seconds": "deprecated",
 
