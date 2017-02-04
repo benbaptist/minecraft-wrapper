@@ -19,11 +19,16 @@ parsers.
 # """
 '''
 
-*wrapperconfig.py is the default config file.  Changes here are inserted*
-*or deleted from the the wrapper config.*
+*wrapperconfig.py is the default config file.  Changes made
+here are inserted or deleted from the the wrapper config
+each time wrapper starts.*
 
-*items marked as "deprecated" are removed from the wrapper config*
-*at wrapper's start are are not valid items.*
+*items marked as "deprecated" get removed from the wrapper
+config when wrapper starts.  These are are not valid items.
+they only exist so that they will get removed from older
+wrapper versions.  This is intended to keep the actual
+wrapper.config.json file from getting cluttered with old
+unused items.*
 
 '''
 
