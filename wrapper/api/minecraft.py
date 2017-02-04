@@ -73,7 +73,7 @@ class Minecraft:
     def isServerStarted(self):
         """
 
-        Returns: Returns a boolean indicating if the server is
+        :Returns: Returns a boolean indicating if the server is
          fully booted or not.
 
         """
