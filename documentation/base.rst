@@ -1,7 +1,7 @@
 
 ****
 
-    *The API does not follow PEP-8 naming of functions!?*
+    **The API does not follow PEP-8 naming of functions!?**
 
     backups was one of the newer api modules and some thought was given
     to making those methods snake_case when it was first being written.
