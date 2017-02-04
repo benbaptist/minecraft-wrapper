@@ -43,7 +43,7 @@ def build_the_docs():
                  "**\n\nThe API is divided into modules.  Click on each " \
                  "module to see it's documentation.\n\n\n"
 
-    api_files = ["wrapperconfig", "base", "minecraft", "world", "player",
+    api_files = ["wrapperconfig", "base", "minecraft", "player", "world",
                  "entity", "backups", "helpers"]
     processed = {}
 
@@ -74,10 +74,11 @@ def build_the_docs():
 
         processed[files] = complete_doc
 
-    for files in processed:
+    for files in api_files:
         with open("documentation/%s.rst" % files, "w") as f:
             f.write(processed[files])
-        index_file = "%s[%s](/documentation/%s.rst)\n\n" % (index_file, files, files)
+        index_file = "%s[%s](/documentation/%s.rst)\n\n" % (
+            index_file, files, files)
 
     with open("documentation/index.md", "w") as f:
             f.write(index_file)

@@ -5,17 +5,17 @@ The API is divided into modules.  Click on each module to see it's documentation
 
 [wrapperconfig](/documentation/wrapperconfig.rst)
 
-[entity](/documentation/entity.rst)
+[base](/documentation/base.rst)
+
+[minecraft](/documentation/minecraft.rst)
 
 [player](/documentation/player.rst)
 
-[base](/documentation/base.rst)
-
-[helpers](/documentation/helpers.rst)
-
 [world](/documentation/world.rst)
+
+[entity](/documentation/entity.rst)
 
 [backups](/documentation/backups.rst)
 
-[minecraft](/documentation/minecraft.rst)
+[helpers](/documentation/helpers.rst)
 
