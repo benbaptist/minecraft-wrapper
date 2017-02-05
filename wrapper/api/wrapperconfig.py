@@ -15,7 +15,7 @@ sentence or paragraph.  Double CR's are treated as a single CR by ReST
 parsers.
 '''
 
-# def  - default Config file items and layout:
+# def Config file items and layout:
 # """
 '''
 
