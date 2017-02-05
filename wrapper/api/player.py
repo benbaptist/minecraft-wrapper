@@ -279,9 +279,9 @@ class Player:
         :arg string: message/command sent to the server as the player.
 
         Beware: *in proxy mode, the message string is sent directly to*
-         *the server without wrapper filtering,so it could be used to*
-         *execute minecraft commands as the player if the string is*
-         *prefixed with a slash.*
+        *the server without wrapper filtering,so it could be used to*
+        *execute minecraft commands as the player if the string is*
+        *prefixed with a slash.*
 
         """
         try:
@@ -364,15 +364,15 @@ class Player:
         """
         return self.getClient().dimension
 
-    def setGamemode(self, gm=0):
+    def setGamemode(self, gamemode=0):
         """
-        :param gm: desired gamemode, as a value 0-3
+        :arg gamemode: desired gamemode, as a value 0-3
         Sets the user's gamemode.
         """
-        if gm in (0, 1, 2, 3):
-            self.client.gamemode = gm
+        if gamemode in (0, 1, 2, 3):
+            self.client.gamemode = gamemode
             self.wrapper.javaserver.console(
-                "gamemode %d %s" % (gm, self.username))
+                "gamemode %d %s" % (gamemode, self.username))
 
     def setResourcePack(self, url, hashrp=""):
         """
@@ -380,8 +380,8 @@ class Player:
         user hasn't already allowed resource packs, the user will
         be prompted to change to the specified resource pack.
         Probably broken right now.
-        :Args:
 
+        :Args:
             :url: URL of resource pack
             :hashrp: resource pack hash
 
@@ -412,8 +412,8 @@ class Player:
         is set).
 
         Note: *If a player has been opped since the last server start,*
-         *make sure that you run refreshOpsList() to ensure that*
-         *wrapper will acknowlege them as OP.*
+        *make sure that you run refreshOpsList() to ensure that*
+        *wrapper will acknowlege them as OP.*
 
         :arg strict: True - use ONLY the UUID as verification
 
