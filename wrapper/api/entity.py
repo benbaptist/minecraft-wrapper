@@ -14,6 +14,12 @@ from core.entities import Objects as Objecttypes
 # noinspection PyPep8Naming
 class EntityControl:
     """
+    .. code:: python
+
+        def __init__(self, mcserver)
+
+    ..
+
     This class is accessed using
             .. code:: python
 

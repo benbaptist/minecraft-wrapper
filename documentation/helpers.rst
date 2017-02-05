@@ -1,19 +1,40 @@
 
-**def config_to_dict_read(filename, filepath)**
+**< class Helpers >**
+
+This is not actually a class at all, but a module collection of
+Wrapper's helpful utilities.
+
+This module is imported with the core API and is accessible
+using 'self.api.helpers'
+
+    .. code:: python
+
+        # can be accessed directly:
+        self.api.helpers.getargs(args, 2)
+
+        # or a local reference to the module in your plugin:
+        <yourobject> = self.api.helpers
+        <yourobject>.getargs(args, 2)
+
+    ..
+
+
+
+-  config_to_dict_read(filename, filepath)
 
     reads a disk file with '=' lines (like server.properties) and
     returns a keyed dictionary.
 
     
 
-**def scrub_item_value(item)**
+-  scrub_item_value(item)
 
     Takes a text item value and determines if it should be a boolean,
     integer, or text.. and returns it as the type.
 
     
 
-**def epoch_to_timestr(epoch_time)**
+-  epoch_to_timestr(epoch_time)
 
     takes a time represented as integer/string which you supply and
     converts it to a formatted string.
@@ -25,7 +46,7 @@
 
     
 
-**def getargs(arginput, i)**
+-  getargs(arginput, i)
 
     returns a certain index of argument (without producting an
     error if out of range, etc).
@@ -39,7 +60,7 @@
 
     
 
-**def getargsafter(arginput, i)**
+-  getargsafter(arginput, i)
 
     returns all arguments starting at position. (positions start
     at '0', of course.)
@@ -52,7 +73,7 @@
 
     
 
-**def getjsonfile(filename, directory=".", encodedas="UTF-8")**
+-  getjsonfile(filename, directory=".", encodedas="UTF-8")
 
     Read a json file and return its contents as a dictionary.
 
@@ -68,7 +89,7 @@
 
     
 
-**def getfileaslines(filename, directory=".")**
+-  getfileaslines(filename, directory=".")
 
     Reads a file with lines and turns it into a list containing
     those lines.
@@ -87,7 +108,7 @@
 
     
 
-**def mkdir_p(path)**
+-  mkdir_p(path)
 
     A simple way to recursively make a directory under any Python.
 
@@ -97,7 +118,7 @@
 
     
 
-**def get_int(s)**
+-  get_int(s)
 
     returns an integer representations of a string, no matter what
     the input value.
@@ -108,7 +129,7 @@
 
     
 
-**def isipv4address(addr)**
+-  isipv4address(addr)
 
     Returns a Boolean indicating if the address is a valid IPv4
     address.
@@ -119,7 +140,7 @@
 
     
 
-**def processcolorcodes(messagestring)**
+-  processcolorcodes(messagestring)
 
     Mostly used internally to process old-style color-codes with
     the & symbol, and returns a JSON chat object. message received
@@ -131,14 +152,14 @@
 
     
 
-**def processoldcolorcodes(message)**
+-  processoldcolorcodes(message)
 
     Just replaces text containing the (&) ampersand with section
     signs instead (§).
 
     
 
-**def putjsonfile(data, filename, directory=".", indent_spaces=2, sort=True)**
+-  putjsonfile(data, filename, directory=".", indent_spaces=2, sort=True)
 
     Writes entire data dictionary to a json file.
 
@@ -160,7 +181,7 @@
 
     
 
-**def read_timestr(mc_time_string)**
+-  read_timestr(mc_time_string)
 
     The Minecraft server (or wrapper, using epoch_to_timestr) creates
     a string like this:
@@ -173,13 +194,13 @@
     :arg mc_time_string: minecraft time string.
 
     :returns:
-        :Integer: regular seconds from epoch (integer)
-        :Invalid data (like "forever"): returns 9999999999 symbolizing
-         forever.
+        :regular seconds from epoch: Integer
+        :9999999999 symbolizing forever: For invalid data
+         (like "forever").
 
     
 
-**def readout(commandtext, description, separator=" - ", pad=15, command_text_fg="magenta", command_text_opts=("bold",), description_text_fg="yellow", usereadline=True)**
+-  readout(commandtext, description, separator=" - ", pad=15, command_text_fg="magenta", command_text_opts=("bold",), description_text_fg="yellow", usereadline=True)
 
     display console text only with no logging - useful for displaying
     pretty console-only messages.
@@ -206,7 +227,7 @@
 
     
 
-**def set_item(item, string_val, filename, path='.')**
+-  set_item(item, string_val, filename, path='.')
 
     Reads a file with "item=" lines and looks for 'item'. If
     found, it replaces the existing value with 'item=string_val'.

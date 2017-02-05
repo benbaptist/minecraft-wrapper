@@ -1,35 +1,34 @@
 
-**def  - Definately not not following PEP-8 naming of functions- why!?**
+**< class API >**
 
-
-    backups was one of the newer api modules and some thought was given
-    to making the those methods snake_case when it was first being written.
-
-    Wrapper's orginal convention throughout the codebase was mixed
-    camelCase.  (After all, Ben started in javascript!)  The
-    internal code is being converted (going forward) to snake_case
-    per PEP-8. However, PEP-8 acknowledges that:
-
-    'mixedCase [... is allowed ...] in contexts where that's already the
-    prevailing style (e.g. threading.py), to retain backwards
-    compatibility.'
-
-    This is also the case with the wrapper plugin API.  Converting
-    the entire plugin API to snake_case will break everyone's plugins.
-    Implementing the API in snake_case will create an inconsitent
-    'look and feel' within wrapper's plugin API.
-
-
-
-**class API**
-
-    The API class contains methods for basic plugin functionality,
+    The API (base) class contains methods for basic plugin functionality,
     such as handling events, registering commands, and more. Most
     methods aren't related to gameplay, aside from commands and
     events, but for core stuff. See the Minecraft class (accessible
     at self.api.minecraft) for gameplay-related methods.
 
-    :sample usage:
+        :Plugin Function Names: Most of the Wrapper plugin api is
+         implemented with the java/javascript type conventions of
+         mixedCamelCase. (BenBaptist's first programming language being
+         javascript...)  Not very pythonic, but we have good reason
+         to retain this convention.
+
+    backups was one of the newer api modules and some thought was given
+    to making the those methods snake_case when it was first being written.
+
+    However, PEP-8 acknowledges that 'mixedCase [... is allowed
+    ...] in contexts where that's already the prevailing style
+    (e.g. threading.py), to retain backwards compatibility.'
+
+    This is the case with the wrapper plugin API.  Converting
+    the entire plugin API to snake_case will break everyone's plugins.
+    To maintain a consitent'look and feel' within wrapper's plugin
+    API, we have elected to retain this convention *in the*
+    *public Plugin API only*!
+
+    Wrapper's internals will follow standard PEP-8 conventions.
+
+    :sample Plugin snippet:
 
         .. code:: python
 
@@ -48,7 +47,7 @@
 
     
 
-**def registerCommand(self, command, callback, permission=None)**
+-  registerCommand(self, command, callback, permission=None)
 
         This registers a command that, when entered by the Minecraft
         client, will execute `callback(player, args)`. permission is
@@ -82,7 +81,7 @@
 
         
 
-**def registerEvent(self, eventname, callback)**
+-  registerEvent(self, eventname, callback)
 
         Register an event and a callback function. See
          https://docs.google.com/spreadsheets/d/1Sxli0mpN3Aib-aejjX7VRlcN2HZkak_wIqPFJ6mtVIk/edit?usp=sharing
@@ -99,14 +98,14 @@
 
         
 
-**def registerPermission(self, permission=None, value=False)**
+-  registerPermission(self, permission=None, value=False)
 
         Used to set a default for a specific permission node.
 
         Note: *You do not need to run this function unless you want*
-         *certain permission nodes to be granted by default.*
-         *i.e., 'essentials.list' should be on by default, so players*
-         *can run /list without having any permissions*
+        *certain permission nodes to be granted by default.*
+        *i.e., 'essentials.list' should be on by default, so players*
+        *can run /list without having any permissions*
 
         :Args:
             :permission:  String argument for the permission node; e.g.
@@ -117,7 +116,7 @@
 
         
 
-**def registerHelp(self, groupname, summary, commands)**
+-  registerHelp(self, groupname, summary, commands)
 
         Used to create a help group for the /help command.
 
@@ -126,7 +125,8 @@
              name). The groupname is the name you'll see in the list
              when you run '/help'.
 
-            :summary: The text that you'll see next next to the help group's name.
+            :summary: The text that you'll see next next to the help
+             group's name.
 
             :commands: a list of tuples in the following example format;
 
@@ -141,18 +141,18 @@
 
         
 
-**def blockForEvent(self, eventtype)**
+-  blockForEvent(self, eventtype)
 
         Blocks until the specified event is called. 
 
-**def callEvent(self, event, payload)**
+-  callEvent(self, event, payload)
 
         Invokes the specific event. Payload is extra information
         relating to the event. Errors may occur if you don't specify
         the right payload information.
         
 
-**def getPluginContext(self, plugin_id)**
+-  getPluginContext(self, plugin_id)
 
         Returns the instance (content) of another running wrapper
         plugin with the specified ID.
@@ -168,7 +168,7 @@
                 essentials_id = "com.benbaptist.plugins.essentials"
                 running_essentials = api.getPluginContext(essentials_id)
                 warps = running_essentials.data["warps"]
-                print("Warps data currently being used by essentials: \\n %s" %
+                print("Warps data currently being used by essentials: \n %s" %
                       warps)
             ..
 
@@ -177,7 +177,7 @@
 
         
 
-**def getStorage(self, name, world=False, formatting="pickle")**
+-  getStorage(self, name, world=False, formatting="pickle")
 
         Returns a storage object manager.  The manager contains the
         storage object, 'Data' (a dictionary). 'Data' contains the
@@ -271,7 +271,7 @@
 
         
 
-**def wrapperHalt(self)**
+-  wrapperHalt(self)
 
         Shuts wrapper down entirely.  To use this as a wrapper-restart
         method, use some code like this in a shell file to start

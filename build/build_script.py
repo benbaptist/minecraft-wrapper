@@ -59,17 +59,17 @@ def build_the_docs():
             item = all_items[each_item + 1]
             header = "****\n"
             if "class " in all_items[each_item]:
-                header = "**class%s**\n" % all_items[each_item].split(
+                header = "**< class%s >**\n" % all_items[each_item].split(
                     "class")[1].split(":")[0]
 
             if "def " in all_items[each_item]:
                 defs = all_items[each_item].split("def")
                 number_of_defs = len(defs) - 1
-                header = "**def%s**\n" % all_items[each_item].split(
+                header = "- %s\n" % all_items[each_item].split(
                     "def")[number_of_defs].split(":")[0]
 
             # dont create documentation for private functions
-            if "def _" not in header:
+            if "-  _" not in header:
                 complete_doc = "%s\n%s%s\n" % (complete_doc, header, item)
 
         processed[files] = complete_doc

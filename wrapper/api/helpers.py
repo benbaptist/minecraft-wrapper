@@ -41,6 +41,27 @@ COLORCODES = {
     "o": "\xc2\xa7o",  # italic,
 }
 
+# class Helpers:
+"""
+This is not actually a class at all, but a module collection of
+Wrapper's helpful utilities.
+
+This module is imported with the core API and is accessible
+using 'self.api.helpers'
+
+    .. code:: python
+
+        # can be accessed directly:
+        self.api.helpers.getargs(args, 2)
+
+        # or a local reference to the module in your plugin:
+        <yourobject> = self.api.helpers
+        <yourobject>.getargs(args, 2)
+
+    ..
+
+"""
+
 
 def _addgraphics(text='', foreground='white', background='black', options=()):
     """
@@ -489,9 +510,9 @@ def read_timestr(mc_time_string):
     :arg mc_time_string: minecraft time string.
 
     :returns:
-        :Integer: regular seconds from epoch (integer)
-        :Invalid data (like "forever"): returns 9999999999 symbolizing
-         forever.
+        :regular seconds from epoch: Integer
+        :9999999999 symbolizing forever: For invalid data
+         (like "forever").
 
     """
 

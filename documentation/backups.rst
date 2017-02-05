@@ -1,15 +1,28 @@
 
-**class Backups**
+**< class Backups >**
+
+    .. code:: python
+
+        def __init__(self, wrapper)
+
+    ..
 
     These methods are accessed using 'self.api.backups'
 
-     This class wraps the wrapper.backups functions.  Wrapper starts
-     starts core.backups.py class Backups (as .backups).  This API
-     class manipulates the backups instance within core.wrapper
+    .. code:: python
+
+        <yourobject> = self.api.backups
+        <yourobject>.<backups_method>
+
+    ..
+
+    This class wraps the wrapper.backups functions.  Wrapper starts
+    core.backups.py class Backups (as .backups).  This API
+    class manipulates the backups instance within core.wrapper
 
     
 
-**def verifyTarInstalled(self)**
+-  verifyTarInstalled(self)
 
         checks for tar on users system.
 
@@ -18,7 +31,7 @@
 
         
 
-**def performBackup(self)**
+-  performBackup(self)
 
         Perform an immediate backup
 
@@ -26,7 +39,7 @@
 
         
 
-**def pruneBackups(self)**
+-  pruneBackups(self)
 
         prune backups according to wrapper properties settings.
 
@@ -34,7 +47,7 @@
 
         
 
-**def disableBackups(self)**
+-  disableBackups(self)
 
         Allow plugin to temporarily shut off backups (only during
         this wrapper session).
@@ -43,7 +56,7 @@
 
         
 
-**def enableBackups(self)**
+-  enableBackups(self)
 
         Allow plugin to re-enable disabled backups or enable backups
         during this wrapper session.
@@ -54,7 +67,7 @@
 
         
 
-**def adjustBackupInterval(self, desired_interval)**
+-  adjustBackupInterval(self, desired_interval)
 
         Adjust the backup interval for automatic backups.
 
@@ -64,7 +77,7 @@
 
         
 
-**def adjustBackupsKept(self, desired_number)**
+-  adjustBackupsKept(self, desired_number)
 
         Adjust the number of backups kept.
 
