@@ -207,10 +207,11 @@ class API:
     def registerPermission(self, permission=None, value=False):
         """
         Used to set a default for a specific permission node.
-        Note: You do not need to run this function unless you want
-        certain permission nodes to be granted by default.  i.e.
-        `essentials.list` should be on by default, so players
-        can run /list without having any permissions.
+
+        Note: *You do not need to run this function unless you want*
+         *certain permission nodes to be granted by default.*
+         *i.e., 'essentials.list' should be on by default, so players*
+         *can run /list without having any permissions*
 
         :permission:  String argument for the permission node; e.g.
          "essentials.list"
@@ -327,27 +328,28 @@ class API:
          controlling the saving of the object data.  The actual data
          is contained in Dictionary subitem 'Data'
 
-        ..
+        ___
 
+        :Args:
+            :name:  The name of the storage (on disk).
+            :world:
+                :False: set the storage's location to
+                 '/wrapper-data/plugins'.
+                :True: set the storage path to
+                 '<serverpath>/<worldname>/plugins'.
 
-        :name:  The name of the storage (on disk).
+            :formatting:  Pickle formatting is the default. pickling is
+             less strict than json formats and leverages binary storage.
+             Use of json (or future implemented formats) can result in
+             errors if your keys or data do not conform to json standards
+             (like use of string keys).  However, pickle is not generally
+             human-readable, whereas json is human readable. If you need
+             a human-readable copy (for debugging), consider using
+             self.api.helpers.putjsonfile(<yourDictionary>) to write a
+             copy to disk in Json.  if you do so, check the return status
+             of `putjsonfile` to make sure it was written.
 
-        :world:
-
-            "False" sets the storage's location to `/wrapper-data/plugins`.
-
-            "True" sets the storage path to `<serverpath>/<worldname>/plugins`.
-
-        :formatting:  Pickle formatting is the default. pickling is
-         less strict than json formats and leverages binary storage.
-         Use of json (or future implemented formats) can result in
-         errors if your keys or data do not conform to json standards
-         (like use of string keys).  However, pickle is not generally
-         human-readable, whereas json is human readable. If you need
-         a human-readable copy (for debugging), consider using
-         self.api.helpers.putjsonfile(<yourDictionary>) to write a
-         copy to disk in Json.  if you do so, check the return status
-         of `putjsonfile` to make sure it was written.
+        ___
 
         :sample methods:
 

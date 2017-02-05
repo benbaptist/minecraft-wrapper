@@ -41,15 +41,16 @@ class Minecraft:
 
         Edits the Wrapper.Properties.json file
 
-        :section:
+        :Args:
+            :section:
 
-        :config_item:
+            :config_item:
 
-        :new_value:
+            :new_value:
 
-        :reload_file: True to reload the config
+            :reload_file: True to reload the config
 
-        :returns: True or False, indicating Success or Failure
+         :returns: True or False, indicating Success or Failure
 
         """
 
@@ -71,10 +72,10 @@ class Minecraft:
         return False
 
     def isServerStarted(self):
+        # should this be a property (one-liner doc string suggests so..)
         """
-
-        :Returns: Returns a boolean indicating if the server is
-         fully booted or not.
+        Return a boolean indicating if the server is
+        fully booted or not.
 
         """
         if self.getServer():
@@ -206,7 +207,8 @@ class Minecraft:
             try:
                 players[player_uuid] = json.loads(data, self._encoding)
             except Exception as e:
-                self.log.error("Failed to load player data '%s':\n%s", player_uuid, e)
+                self.log.error("Failed to load player data"
+                               " '%s':\n%s", player_uuid, e)
                 os.remove("wrapper-data/players/" + uuid_file_found)
         return players
 
@@ -222,7 +224,7 @@ class Minecraft:
         Returns the server's entity controls context.  Will be None if
         the server is not up.
 
-        Supported varaibles and methods:
+        Supported variables and methods:
 
         :These variables affect entity processing:
 
@@ -260,9 +262,9 @@ class Minecraft:
         Returns the player object of the specified logged-in player.
         Will raise an exception if the player is not logged in.
 
-        :username: playername
+        :arg username: playername
 
-        :Returns: The Player Class object for "playername".
+        :returns: The Player Class object for "playername".
 
         """
         try:
@@ -277,7 +279,7 @@ class Minecraft:
     def getOfflineUUID(self, name):
         """
 
-        :name: gets UUID object based on "OfflinePlayer:<name>"
+        :arg name: gets UUID object based on "OfflinePlayer:<name>"
 
         :returns: a MCUUID object based on the name
 
@@ -292,9 +294,10 @@ class Minecraft:
         lookupbyUUID() is a better and more direct way to get the
         name from a uuid.
 
-        :uuid:  player uuid
+        :arg uuid:  player uuid
 
-        :Returns: a dictionary of hte two items, uuid and name.
+        :returns: a dictionary of two items, {"uuid: <player-uuid>,
+         "name": <playername>}
 
         """
         name = self.lookupbyUUID(uuid)
@@ -309,9 +312,9 @@ class Minecraft:
         cache, it will poll Mojang's API.  The function will return
         False if the UUID is invalid.
 
-        :uuid: string uuid with dashes
+        :arg uuid: string uuid with dashes
 
-        :Returns: username
+        :returns: username
 
         """
         return self.wrapper.uuids.getusernamebyuuid(uuid)
@@ -323,9 +326,9 @@ class Minecraft:
         user cache, it will poll Mojang's API.  The function will
         return False if the name is invalid.
 
-        :name:  player name
+        :arg name:  player name
 
-        :Returns: a UUID object (wrapper type MCUUID)
+        :returns: a UUID object (wrapper type MCUUID)
 
         """
         return self.wrapper.uuids.getuuidbyusername(name)
@@ -385,9 +388,9 @@ class Minecraft:
         """
         Run a command in the Minecraft server's console.
 
-        :string: Full command text(without slash)
+        :argstring: Full command text(without slash)
 
-        :Returns: Nothing
+        :returns: Nothing
 
         """
         try:
@@ -399,12 +402,12 @@ class Minecraft:
         """
         Used to message some specific target.
 
-        :destination: playername or target selector '@a', 'suresttexas00' etc
+        :Args:
+            :destination: playername or target
+             selector '@a', 'suresttexas00' etc
+            :jsonmessage: strict json chat message
 
-        :jsonmessage: strict json chat message
-
-
-        :Returns: Nothing; succeeds or fails with no programmatic indication.
+        :returns: Nothing; succeeds or fails with no programmatic indication.
 
         """
         self.getServer().broadcast(self, jsonmessage, who=destination)
@@ -417,11 +420,11 @@ class Minecraft:
         broadcast the specified message on IRC channels that Wrapper.py
         is connected to. Formatting might not work properly.
 
-        :message:  The message
+        :Args:
+            :message:  The message
+            :irc: Also broadcast to IRC if set to True.
 
-        :irc: Also broadcast to IRC if set to True.
-
-        Returns:  Nothing
+        :returns:  Nothing
 
         """
         if irc:
@@ -443,20 +446,14 @@ class Minecraft:
         :Args:  See the minecraft command wiki for these setblock arguments:
 
                 :x:
-
                 :y:
-
                 :z:
-
                 :tilename:
-
                 :datavalue:
-
                 :datatag:
-
                 :oldblockhandling:
 
-        :Returns: Nothing.
+         :returns: Nothing.
 
         """
         if not datatag:
@@ -479,7 +476,7 @@ class Minecraft:
                 :datatag: strict json text datatag
 
 
-        Returns: Nothing - console executes command.
+        :returns: Nothing - console executes command.
 
         """
 
@@ -499,7 +496,7 @@ class Minecraft:
                 :y:
                 :z:
 
-        Returns: Nothing - console executes command.
+        :returns: Nothing - console executes command.
 
         """
         self.console("tp @e[type=%s] %d %d %d" % (entity, x, y, z))
@@ -510,10 +507,11 @@ class Minecraft:
         """
         Get the world level.dat.
 
-        :worldname: optional world name.  If not specified, Wrapper
-         looks up the server worldname.
+        :arg worldname:
+            optional world name.  If not
+            specified, Wrapper looks up the server worldname.
 
-        :Returns: Return an NBT object of the world's level.dat.
+        :returns: Return an NBT object of the world's level.dat.
 
         """
         if not worldname:
@@ -546,7 +544,7 @@ class Minecraft:
         """
         Get the spawn point of the current world.
 
-        :Returns: Returns the spawn point of the current world.
+        :returns: Returns the spawn point of the current world.
 
         """
         return (int(str(self.getLevelInfo()["SpawnX"])),
@@ -558,17 +556,19 @@ class Minecraft:
         Gets the world time in ticks.  This is total ticks since
         the server started! modulus the value by 24000 to get the time.
 
-        Returns: Returns the time of the world in ticks.
+        :returns: Returns the time of the world in ticks.
 
         """
         return int(str(self.getLevelInfo()["Time"]))
 
     def getServer(self):
         """
+        Returns the server context.  Use at own risk - items
+        in server are generally private or subject to change (you are
+        working with an undefined API!)... what works in this wrapper
+        version may not work in the next.
 
-        :Returns: Returns the server context.  Use at own risk - items
-         in server are generally private or subject to change (you are
-         messing with an undefined API!)
+        :returns: The server context that this wrapper is running.
 
         """
         return self.wrapper.javaserver
@@ -584,7 +584,7 @@ class Minecraft:
         """
         Get the world context
 
-        :Returns: Returns the world context of 'api.world, class World'
+        :returns: Returns the world context of 'api.world, class World'
          for the running server instance
 
         """
@@ -592,8 +592,7 @@ class Minecraft:
 
     def getWorldName(self):
         """
-
-        :Returns: the world's name.
+        Returns the world's name.
 
         """
         return self.getServer().worldname
@@ -626,7 +625,7 @@ class Minecraft:
                  Expirations only work when wrapper handles the login
                  (proxy mode).. and only for online bans.
 
-        :Returns: String describing the operation's outcome.
+        :returns: String describing the operation's outcome.
 
         """
         return self.wrapper.proxy.banuuid(playeruuid, reason, source, expires)
@@ -650,7 +649,7 @@ class Minecraft:
                  Expirations only work when wrapper handles the login
                  (proxy mode).. and only for online bans.
 
-        :Returns: String describing the operation's outcome.
+        :returns: String describing the operation's outcome.
 
         """
         useruuid = self.wrapper.uuids.getuuidbyusername(playername)
@@ -675,7 +674,7 @@ class Minecraft:
                 :source: Source (author/op) of ban.
                 :expires: Optional expiration in time.time() format.
 
-        :Returns: String describing the operation's outcome.
+        :returns: String describing the operation's outcome.
 
         """
         return self.wrapper.proxy.banip(ipaddress, reason, source, expires)
@@ -684,9 +683,9 @@ class Minecraft:
         """
         Pardon a player.
 
-        :playername:  Name to pardon.
+        :arg playername:  Name to pardon.
 
-        :Returns: String describing the operation's outcome.
+        :returns: String describing the operation's outcome.
 
         """
         return self.wrapper.proxy.pardonname(playername)
@@ -695,9 +694,9 @@ class Minecraft:
         """
         Pardon a player by UUID.
 
-        :playeruuid:  UUID to pardon
+        :arg playeruuid:  UUID to pardon
 
-        :Returns: String describing the operation's outcome.
+        :returns: String describing the operation's outcome.
 
         """
         return self.wrapper.proxy.pardonuuid(playeruuid)
@@ -706,9 +705,9 @@ class Minecraft:
         """
         Pardon an IP.
 
-        :ipaddress: a valid IPV4 address to pardon.
+        :arg ipaddress: a valid IPV4 address to pardon.
 
-        :Returns:  String describing the operation's outcome.
+        :returns:  String describing the operation's outcome.
 
         """
         return self.wrapper.proxy.pardonip(ipaddress)
@@ -718,9 +717,9 @@ class Minecraft:
         Check if a uuid is banned.  Using this method also refreshes
         any expired bans and unbans them.
 
-        :uuid: Check if the UUID of the user is banned
+        :arg uuid: Check if the UUID of the user is banned
 
-        :Returns: True or False (banned or not banned)
+        :returns: True or False (banned or not banned)
 
         """
         return self.wrapper.proxy.isuuidbanned(uuid)
@@ -730,9 +729,9 @@ class Minecraft:
         Check if a ipaddress is banned.  Using this method also
         refreshes any expired bans and unbans them.
 
-        :ipaddress: Check if an ipaddress is banned
+        :arg ipaddress: Check if an ipaddress is banned
 
-        :Returns: True or False (banned or not banned)
+        :returns: True or False (banned or not banned)
 
         """
         return self.wrapper.proxy.isipbanned(ipaddress)

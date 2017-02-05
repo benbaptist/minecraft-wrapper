@@ -12,23 +12,23 @@
 
         Edits the Wrapper.Properties.json file
 
-        :section:
+        :Args:
+            :section:
 
-        :config_item:
+            :config_item:
 
-        :new_value:
+            :new_value:
 
-        :reload_file: True to reload the config
+            :reload_file: True to reload the config
 
-        :returns: True or False, indicating Success or Failure
+         :returns: True or False, indicating Success or Failure
 
         
 
 **def isServerStarted(self)**
 
-
-        :Returns: Returns a boolean indicating if the server is
-         fully booted or not.
+        Return a boolean indicating if the server is
+        fully booted or not.
 
         
 
@@ -85,7 +85,7 @@
         Returns the server's entity controls context.  Will be None if
         the server is not up.
 
-        Supported varaibles and methods:
+        Supported variables and methods:
 
         :These variables affect entity processing:
 
@@ -122,16 +122,16 @@
         Returns the player object of the specified logged-in player.
         Will raise an exception if the player is not logged in.
 
-        :username: playername
+        :arg username: playername
 
-        :Returns: The Player Class object for "playername".
+        :returns: The Player Class object for "playername".
 
         
 
 **def getOfflineUUID(self, name)**
 
 
-        :name: gets UUID object based on "OfflinePlayer:<name>"
+        :arg name: gets UUID object based on "OfflinePlayer:<name>"
 
         :returns: a MCUUID object based on the name
 
@@ -145,9 +145,10 @@
         lookupbyUUID() is a better and more direct way to get the
         name from a uuid.
 
-        :uuid:  player uuid
+        :arg uuid:  player uuid
 
-        :Returns: a dictionary of hte two items, uuid and name.
+        :returns: a dictionary of two items, {"uuid: <player-uuid>,
+         "name": <playername>}
 
         
 
@@ -158,9 +159,9 @@
         cache, it will poll Mojang's API.  The function will return
         False if the UUID is invalid.
 
-        :uuid: string uuid with dashes
+        :arg uuid: string uuid with dashes
 
-        :Returns: username
+        :returns: username
 
         
 
@@ -171,9 +172,9 @@
         user cache, it will poll Mojang's API.  The function will
         return False if the name is invalid.
 
-        :name:  player name
+        :arg name:  player name
 
-        :Returns: a UUID object (wrapper type MCUUID)
+        :returns: a UUID object (wrapper type MCUUID)
 
         
 
@@ -189,9 +190,9 @@
 
         Run a command in the Minecraft server's console.
 
-        :string: Full command text(without slash)
+        :argstring: Full command text(without slash)
 
-        :Returns: Nothing
+        :returns: Nothing
 
         
 
@@ -199,12 +200,12 @@
 
         Used to message some specific target.
 
-        :destination: playername or target selector '@a', 'suresttexas00' etc
+        :Args:
+            :destination: playername or target
+             selector '@a', 'suresttexas00' etc
+            :jsonmessage: strict json chat message
 
-        :jsonmessage: strict json chat message
-
-
-        :Returns: Nothing; succeeds or fails with no programmatic indication.
+        :returns: Nothing; succeeds or fails with no programmatic indication.
 
         
 
@@ -216,11 +217,11 @@
         broadcast the specified message on IRC channels that Wrapper.py
         is connected to. Formatting might not work properly.
 
-        :message:  The message
+        :Args:
+            :message:  The message
+            :irc: Also broadcast to IRC if set to True.
 
-        :irc: Also broadcast to IRC if set to True.
-
-        Returns:  Nothing
+        :returns:  Nothing
 
         
 
@@ -232,20 +233,14 @@
         :Args:  See the minecraft command wiki for these setblock arguments:
 
                 :x:
-
                 :y:
-
                 :z:
-
                 :tilename:
-
                 :datavalue:
-
                 :datatag:
-
                 :oldblockhandling:
 
-        :Returns: Nothing.
+         :returns: Nothing.
 
         
 
@@ -263,7 +258,7 @@
                 :datatag: strict json text datatag
 
 
-        Returns: Nothing - console executes command.
+        :returns: Nothing - console executes command.
 
         
 
@@ -277,7 +272,7 @@
                 :y:
                 :z:
 
-        Returns: Nothing - console executes command.
+        :returns: Nothing - console executes command.
 
         
 
@@ -285,10 +280,11 @@
 
         Get the world level.dat.
 
-        :worldname: optional world name.  If not specified, Wrapper
-         looks up the server worldname.
+        :arg worldname:
+            optional world name.  If not
+            specified, Wrapper looks up the server worldname.
 
-        :Returns: Return an NBT object of the world's level.dat.
+        :returns: Return an NBT object of the world's level.dat.
 
         
 
@@ -304,7 +300,7 @@
 
         Get the spawn point of the current world.
 
-        :Returns: Returns the spawn point of the current world.
+        :returns: Returns the spawn point of the current world.
 
         
 
@@ -313,16 +309,18 @@
         Gets the world time in ticks.  This is total ticks since
         the server started! modulus the value by 24000 to get the time.
 
-        Returns: Returns the time of the world in ticks.
+        :returns: Returns the time of the world in ticks.
 
         
 
 **def getServer(self)**
 
+        Returns the server context.  Use at own risk - items
+        in server are generally private or subject to change (you are
+        working with an undefined API!)... what works in this wrapper
+        version may not work in the next.
 
-        :Returns: Returns the server context.  Use at own risk - items
-         in server are generally private or subject to change (you are
-         messing with an undefined API!)
+        :returns: The server context that this wrapper is running.
 
         
 
@@ -336,15 +334,14 @@
 
         Get the world context
 
-        :Returns: Returns the world context of 'api.world, class World'
+        :returns: Returns the world context of 'api.world, class World'
          for the running server instance
 
         
 
 **def getWorldName(self)**
 
-
-        :Returns: the world's name.
+        Returns the world's name.
 
         
 
@@ -372,7 +369,7 @@
                  Expirations only work when wrapper handles the login
                  (proxy mode).. and only for online bans.
 
-        :Returns: String describing the operation's outcome.
+        :returns: String describing the operation's outcome.
 
         
 
@@ -395,7 +392,7 @@
                  Expirations only work when wrapper handles the login
                  (proxy mode).. and only for online bans.
 
-        :Returns: String describing the operation's outcome.
+        :returns: String describing the operation's outcome.
 
         
 
@@ -413,7 +410,7 @@
                 :source: Source (author/op) of ban.
                 :expires: Optional expiration in time.time() format.
 
-        :Returns: String describing the operation's outcome.
+        :returns: String describing the operation's outcome.
 
         
 
@@ -421,9 +418,9 @@
 
         Pardon a player.
 
-        :playername:  Name to pardon.
+        :arg playername:  Name to pardon.
 
-        :Returns: String describing the operation's outcome.
+        :returns: String describing the operation's outcome.
 
         
 
@@ -431,9 +428,9 @@
 
         Pardon a player by UUID.
 
-        :playeruuid:  UUID to pardon
+        :arg playeruuid:  UUID to pardon
 
-        :Returns: String describing the operation's outcome.
+        :returns: String describing the operation's outcome.
 
         
 
@@ -441,9 +438,9 @@
 
         Pardon an IP.
 
-        :ipaddress: a valid IPV4 address to pardon.
+        :arg ipaddress: a valid IPV4 address to pardon.
 
-        :Returns:  String describing the operation's outcome.
+        :returns:  String describing the operation's outcome.
 
         
 
@@ -452,9 +449,9 @@
         Check if a uuid is banned.  Using this method also refreshes
         any expired bans and unbans them.
 
-        :uuid: Check if the UUID of the user is banned
+        :arg uuid: Check if the UUID of the user is banned
 
-        :Returns: True or False (banned or not banned)
+        :returns: True or False (banned or not banned)
 
         
 
@@ -463,8 +460,8 @@
         Check if a ipaddress is banned.  Using this method also
         refreshes any expired bans and unbans them.
 
-        :ipaddress: Check if an ipaddress is banned
+        :arg ipaddress: Check if an ipaddress is banned
 
-        :Returns: True or False (banned or not banned)
+        :returns: True or False (banned or not banned)
 
         

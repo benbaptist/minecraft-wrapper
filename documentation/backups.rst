@@ -48,7 +48,9 @@
         Allow plugin to re-enable disabled backups or enable backups
         during this wrapper session.
 
-        :returns: True.  returns False if tar is not installed
+        :returns:
+            :True: tar is installed
+            :False: tar is not installed
 
         
 
@@ -56,9 +58,9 @@
 
         Adjust the backup interval for automatic backups.
 
-        :desired_interval: interval in seconds for regular backups
+        :arg desired_interval: interval in seconds for regular backups
 
-        :return:
+        :returns:
 
         
 
@@ -66,8 +68,8 @@
 
         Adjust the number of backups kept.
 
-        :desired_number: number of desired backups
+        :arg desired_number: number of desired backups
 
-        :return:
+        :returns:
 
         
