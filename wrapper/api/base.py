@@ -31,19 +31,19 @@ class API:
          javascript...)  Not very pythonic, but we have good reason
          to retain this convention.
 
-     - backups was one of the newer api modules and some thought was given
-      to making the those methods snake_case when it was first being written.
+    backups was one of the newer api modules and some thought was given
+    to making the those methods snake_case when it was first being written.
 
-     -However, PEP-8 acknowledges that 'mixedCase [... is allowed
-      ...] in contexts where that's already the prevailing style
-      (e.g. threading.py), to retain backwards compatibility.'
+    However, PEP-8 acknowledges that 'mixedCase [... is allowed
+    ...] in contexts where that's already the prevailing style
+    (e.g. threading.py), to retain backwards compatibility.'
 
-     This is the case with the wrapper plugin API.  Converting
-     the entire plugin API to snake_case will break everyone's plugins.
-     To maintain a consitent'look and feel' within wrapper's plugin
-     API, we have elected to retain this convention *in the*
-     *public Plugin API*  Wrapper's internals will follow standard
-     PEP-8 conventions.
+    This is the case with the wrapper plugin API.  Converting
+    the entire plugin API to snake_case will break everyone's plugins.
+    To maintain a consitent'look and feel' within wrapper's plugin
+    API, we have elected to retain this convention *in the*
+    *public Plugin API*  Wrapper's internals will follow standard
+    PEP-8 conventions.
 
     :sample Plugin snippet:
 
