@@ -385,7 +385,7 @@ class Minecraft:
         """
         Run a command in the Minecraft server's console.
 
-        :argstring: Full command text(without slash)
+        :arg string: Full command text(without slash)
 
         :returns: Nothing
 

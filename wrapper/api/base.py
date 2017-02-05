@@ -208,9 +208,9 @@ class API:
         Used to set a default for a specific permission node.
 
         Note: *You do not need to run this function unless you want*
-         *certain permission nodes to be granted by default.*
-         *i.e., 'essentials.list' should be on by default, so players*
-         *can run /list without having any permissions*
+        *certain permission nodes to be granted by default.*
+        *i.e., 'essentials.list' should be on by default, so players*
+        *can run /list without having any permissions*
 
         :Args:
             :permission:  String argument for the permission node; e.g.
@@ -237,7 +237,8 @@ class API:
              name). The groupname is the name you'll see in the list
              when you run '/help'.
 
-            :summary: The text that you'll see next next to the help group's name.
+            :summary: The text that you'll see next next to the help
+             group's name.
 
             :commands: a list of tuples in the following example format;
 
@@ -302,7 +303,7 @@ class API:
                 essentials_id = "com.benbaptist.plugins.essentials"
                 running_essentials = api.getPluginContext(essentials_id)
                 warps = running_essentials.data["warps"]
-                print("Warps data currently being used by essentials: \\n %s" %
+                print("Warps data currently being used by essentials: \n %s" %
                       warps)
             ..
 

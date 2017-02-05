@@ -1,5 +1,5 @@
 
-**class EntityControl**
+**< class EntityControl >**
 
     This class is accessed using
             .. code:: python
@@ -15,7 +15,7 @@
 
     
 
-**def getEntityByEID(self, eid)**
+** getEntityByEID(self, eid)**
 
         Returns the entity context or False if the specified entity
         ID doesn't exist.
@@ -26,13 +26,13 @@
 
         
 
-**def countActiveEntities(self)**
+** countActiveEntities(self)**
 
         return an integer count of all entities.
 
         
 
-**def countEntitiesInPlayer(self, playername)**
+** countEntitiesInPlayer(self, playername)**
 
         returns a list of entity info dictionaries
 
@@ -55,7 +55,7 @@
 
         
 
-**def getEntityInfo(self, eid)**
+** getEntityInfo(self, eid)**
 
         Get a dictionary of info on the specified EID.  Returns
         None if fails
@@ -90,13 +90,13 @@
 
         
 
-**def existsEntityByEID(self, eid)**
+** existsEntityByEID(self, eid)**
 
         Test whether the specified eid is valid
 
         
 
-**def killEntityByEID(self, eid, dropitems=False, count=1)**
+** killEntityByEID(self, eid, dropitems=False, count=1)**
 
         Takes the entity by eid and kills the first entity of
         that type centered at the coordinates where that entity is.

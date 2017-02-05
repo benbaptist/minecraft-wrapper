@@ -1,12 +1,12 @@
 
-**class Minecraft**
+**< class Minecraft >**
 
     This class contains functions related to in-game features
     directly. These methods are accessed using 'self.api.minecraft'
 
     
 
-**def configWrapper(self, section, config_item, new_value, reload_file=False)**
+** configWrapper(self, section, config_item, new_value, reload_file=False)**
 
         *New feature starting in version 0.8.12*
 
@@ -25,14 +25,14 @@
 
         
 
-**def isServerStarted(self)**
+** isServerStarted(self)**
 
         Return a boolean indicating if the server is
         fully booted or not.
 
         
 
-**def getTimeofDay(self, dttmformat=0)**
+** getTimeofDay(self, dttmformat=0)**
 
         get the "virtual" world time of day on the server.
 
@@ -46,7 +46,7 @@
 
         
 
-**def giveStatusEffect(self, player, effect, duration=30, amplifier=30)**
+** giveStatusEffect(self, player, effect, duration=30, amplifier=30)**
 
         Gives the specified status effect to the specified target.
 
@@ -62,20 +62,20 @@
 
         
 
-**def getAllPlayers(self)**
+** getAllPlayers(self)**
 
         Returns a dict containing the uuids and associated
         login data of all players ever connected to the server.
 
         
 
-**def getPlayers(self)**
+** getPlayers(self)**
 
         Returns a list of the currently connected players.
 
         
 
-**def getEntityControl(self)**
+** getEntityControl(self)**
 
         Returns the server's entity controls context.  Will be None if
         the server is not up.
@@ -114,7 +114,7 @@
 
         
 
-**def getPlayer(self, username="")**
+** getPlayer(self, username="")**
 
         Returns the player object of the specified logged-in player.
         Will raise an exception if the player is not logged in.
@@ -125,7 +125,7 @@
 
         
 
-**def getOfflineUUID(self, name)**
+** getOfflineUUID(self, name)**
 
 
         :arg name: gets UUID object based on "OfflinePlayer:<name>"
@@ -134,7 +134,7 @@
 
         
 
-**def lookupUUID(self, uuid)**
+** lookupUUID(self, uuid)**
 
         Returns a dictionary of {"uuid: the-uuid-of-the-player,
         "name": playername}. legacy function from the old 0.7.7 API.
@@ -149,7 +149,7 @@
 
         
 
-**def lookupbyUUID(self, uuid)**
+** lookupbyUUID(self, uuid)**
 
         Returns the username from the specified UUID.
         If the player has never logged in before and isn't in the user
@@ -162,7 +162,7 @@
 
         
 
-**def lookupbyName(self, name)**
+** lookupbyName(self, name)**
 
         Returns the UUID from the specified username.
         If the player has never logged in before and isn't in the
@@ -175,7 +175,7 @@
 
         
 
-**def setLocalName(self, MojangUUID, desired_name, kick=True)**
+** setLocalName(self, MojangUUID, desired_name, kick=True)**
 
         Set the local name on the server.  Understand that this
         may cause a vanilla server UUID change and loss of player
@@ -183,17 +183,17 @@
 
         
 
-**def console(self, string)**
+** console(self, string)**
 
         Run a command in the Minecraft server's console.
 
-        :argstring: Full command text(without slash)
+        :arg string: Full command text(without slash)
 
         :returns: Nothing
 
         
 
-**def message(self, destination="", jsonmessage="")**
+** message(self, destination="", jsonmessage="")**
 
         Used to message some specific target.
 
@@ -206,7 +206,7 @@
 
         
 
-**def broadcast(self, message="", irc=False)**
+** broadcast(self, message="", irc=False)**
 
         Broadcasts the specified message to all clients connected.
         message can be a JSON chat object, or a string with formatting
@@ -222,14 +222,14 @@
 
         
 
-**def refreshOpsList(self)**
+** refreshOpsList(self)**
 
         OPs list is read from disk at startup.  Use this method
         to refresh the in-memory list from disk.
 
         
 
-**def setBlock(self, x, y, z, tilename, datavalue=0, oldblockhandling="replace", datatag=None)**
+** setBlock(self, x, y, z, tilename, datavalue=0, oldblockhandling="replace", datatag=None)**
 
         Sets a block at the specified coordinates with the specific
         details. Will fail if the chunk is not loaded.
@@ -248,7 +248,7 @@
 
         
 
-**def summonEntity(self, entity, x=0, y=0, z=0, datatag=None)**
+** summonEntity(self, entity, x=0, y=0, z=0, datatag=None)**
 
         Summons an entity at the specified coordinates with the
         specified data tag.
@@ -266,7 +266,7 @@
 
         
 
-**def teleportAllEntities(self, entity, x, y, z)**
+** teleportAllEntities(self, entity, x, y, z)**
 
         Teleports all of the specific entity type to the specified coordinates.
 
@@ -280,7 +280,7 @@
 
         
 
-**def getLevelInfo(self, worldname=False)**
+** getLevelInfo(self, worldname=False)**
 
         Get the world level.dat.
 
@@ -292,7 +292,7 @@
 
         
 
-**def getGameRules(self)**
+** getGameRules(self)**
 
         Get the server gamerules.
 
@@ -300,7 +300,7 @@
 
         
 
-**def getSpawnPoint(self)**
+** getSpawnPoint(self)**
 
         Get the spawn point of the current world.
 
@@ -308,7 +308,7 @@
 
         
 
-**def getTime(self)**
+** getTime(self)**
 
         Gets the world time in ticks.  This is total ticks since
         the server started! modulus the value by 24000 to get the time.
@@ -317,7 +317,7 @@
 
         
 
-**def getServer(self)**
+** getServer(self)**
 
         Returns the server context.  Use at own risk - items
         in server are generally private or subject to change (you are
@@ -328,13 +328,13 @@
 
         
 
-**def getServerPath(self)**
+** getServerPath(self)**
 
         Gets the server's path.
 
         
 
-**def getWorld(self)**
+** getWorld(self)**
 
         Get the world context
 
@@ -343,20 +343,20 @@
 
         
 
-**def getWorldName(self)**
+** getWorldName(self)**
 
         Returns the world's name.
 
         
 
-**def getUuidCache(self)**
+** getUuidCache(self)**
 
         Gets the wrapper uuid cache.  This is as far as the API goes.
         The format of the cache's contents are undefined by this API.
 
         
 
-**def banUUID(self, playeruuid, reason="by wrapper api.", source="minecraft.api", expires=False)**
+** banUUID(self, playeruuid, reason="by wrapper api.", source="minecraft.api", expires=False)**
 
         Ban a player using the wrapper proxy system.
 
@@ -377,7 +377,7 @@
 
         
 
-**def banName(self, playername, reason="by wrapper api.", source="minecraft.api", expires=False)**
+** banName(self, playername, reason="by wrapper api.", source="minecraft.api", expires=False)**
 
         Ban a player using the wrapper proxy system.  Will attempt to
         poll or read cache for name. If no valid name is found, does a
@@ -400,7 +400,7 @@
 
         
 
-**def banIp(self, ipaddress, reason="by wrapper api.", source="minecraft.api", expires=False)**
+** banIp(self, ipaddress, reason="by wrapper api.", source="minecraft.api", expires=False)**
 
         Ban an ip address using the wrapper proxy system. Messages
         generated by process can be directed to a particular player's
@@ -418,7 +418,7 @@
 
         
 
-**def pardonName(self, playername)**
+** pardonName(self, playername)**
 
         Pardon a player.
 
@@ -428,7 +428,7 @@
 
         
 
-**def pardonUUID(self, playeruuid)**
+** pardonUUID(self, playeruuid)**
 
         Pardon a player by UUID.
 
@@ -438,7 +438,7 @@
 
         
 
-**def pardonIp(self, ipaddress)**
+** pardonIp(self, ipaddress)**
 
         Pardon an IP.
 
@@ -448,7 +448,7 @@
 
         
 
-**def isUUIDBanned(self, uuid)**
+** isUUIDBanned(self, uuid)**
 
         Check if a uuid is banned.  Using this method also refreshes
         any expired bans and unbans them.
@@ -459,7 +459,7 @@
 
         
 
-**def isIpBanned(self, ipaddress)**
+** isIpBanned(self, ipaddress)**
 
         Check if a ipaddress is banned.  Using this method also
         refreshes any expired bans and unbans them.
