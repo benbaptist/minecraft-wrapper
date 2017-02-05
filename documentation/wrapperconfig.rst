@@ -1,5 +1,5 @@
 
-- ault Config file items and layout
+-  Config file items and layout
 
 '''
 
