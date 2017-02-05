@@ -237,12 +237,19 @@ class Minecraft:
              config["Entities"]["thinning-activation-threshhold"]
 
         :See api.entity for more about these methods:
-                :def killEntityByEID(self, eid, dropitems=False, count=1):
-                :def existsEntityByEID(self, eid):
-                :def getEntityInfo(self, eid):
-                :def countEntitiesInPlayer(self, playername):
-                :def countActiveEntities(self):
-                :def getEntityByEID(self, eid):
+
+                def killEntityByEID(self, eid, dropitems=False, count=1)
+
+                def existsEntityByEID(self, eid)
+
+                def getEntityInfo(self, eid)
+
+                def countEntitiesInPlayer(self, playername)
+
+                def countActiveEntities(self)
+
+                def getEntityByEID(self, eid)
+
 
         """
         return self.wrapper.javaserver.entity_control
