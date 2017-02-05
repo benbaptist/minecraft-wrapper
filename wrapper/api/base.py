@@ -25,11 +25,11 @@ class API:
     events, but for core stuff. See the Minecraft class (accessible
     at self.api.minecraft) for gameplay-related methods.
 
-    :Plugin Function Names: Most of the Wrapper plugin api is
-     implemented with the java/javascript type conventions of
-     mixedCamelCase. (BenBaptist's first programming language being
-     javascript...)  Not very pythonic, but we have good reason
-     to retain this convention.
+        :Plugin Function Names: Most of the Wrapper plugin api is
+         implemented with the java/javascript type conventions of
+         mixedCamelCase. (BenBaptist's first programming language being
+         javascript...)  Not very pythonic, but we have good reason
+         to retain this convention.
 
      - backups was one of the newer api modules and some thought was given
       to making the those methods snake_case when it was first being written.
