@@ -49,12 +49,19 @@ _NULL = 100
 # noinspection PyPep8Naming
 class Player:
     """
-    This class is accessed either as a passed argument, or can be
-    called using getPlayer(username).
+    This class is normally passed argument as an event callback\
+    argument, but can be also be called using getPlayer(username):
+
+    .. code:: python
+
+        player = self.api.getPlayer(<username>)
+
+    ..
 
     Player objects contains methods and data of a currently
     logged-in player. This object is destroyed
-    upon logging off.
+    upon logging off.  Most features are tied heavily to
+    proxy mode implementations and the proxy client instance.
 
     """
 
@@ -543,7 +550,7 @@ class Player:
 
         this will set 'is flying' and 'can fly' to true for the player.
         these flags/settings will be set according to the players
-        properties, which you can set just prior ot calling this
+        properties, which you can set just prior to calling this
         method:
 
             :getPlayer().godmode:  Hex or integer (see chart below)
