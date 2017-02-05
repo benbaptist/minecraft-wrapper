@@ -434,6 +434,18 @@ class Minecraft:
         except Exception:
             pass
 
+    def refreshOpsList(self):
+        """
+        OPs list is read from disk at startup.  Use this method
+        to refresh the in-memory list from disk.
+
+        """
+        try:
+            self.wrapper.javaserver.refresh_ops()
+        except:
+            # server is probably not up, so it will refresh at startup
+            pass
+
     # functions must all be on one line to import to the documentation
     def setBlock(self, x, y, z, tilename, datavalue=0, oldblockhandling="replace", datatag=None):
         """

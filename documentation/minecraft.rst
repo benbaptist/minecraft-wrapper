@@ -222,6 +222,13 @@
 
         
 
+**def refreshOpsList(self)**
+
+        OPs list is read from disk at startup.  Use this method
+        to refresh the in-memory list from disk.
+
+        
+
 **def setBlock(self, x, y, z, tilename, datavalue=0, oldblockhandling="replace", datatag=None)**
 
         Sets a block at the specified coordinates with the specific

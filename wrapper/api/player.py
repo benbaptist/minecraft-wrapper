@@ -397,14 +397,6 @@ class Player:
                 [_STRING, _STRING],
                 (url, hashrp))
 
-    def refreshOpsList(self):
-        """
-        OPs list is read from disk at startup.  Use this method
-        to refresh the in-memory list from disk.
-
-        """
-        self.javaserver.refresh_ops()
-
     def isOp(self, strict=False):
         """
         Check if player has Operator status. Accepts player as OP
