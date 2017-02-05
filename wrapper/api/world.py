@@ -34,9 +34,17 @@ class World:
             x, y, z, tilename, damage, mode, json.dumps(data)))
 
     def fill(self, position1, position2, tilename, damage=0, mode="destroy", data=None):
-        """ Fill a 3D cube with a certain block.
+        """
+        Fill a 3D cube with a certain block.
 
-        Modes: destroy, hollow, keep, outline"""
+        :Args:
+            :position1: tuple x, y, z
+            :position2: tuple x, y, z
+            :damage: see minecraft Wiki
+            :mode: destroy, hollow, keep, outline
+            :data: see minecraft Wiki
+
+        """
         if not data:
             data = {}
         if mode not in ("destroy", "hollow", "keep", "outline"):
@@ -44,25 +52,39 @@ class World:
         x1, y1, z1 = position1
         x2, y2, z2 = position2
         if self.javaserver.protocolVersion < 6:
-            raise Exception("Must be running Minecraft 1.8 or above to use the world.fill() method.")
+            raise Exception("Must be running Minecraft 1.8 or above"
+                            " to use the world.fill() method.")
         else:
-            self.javaserver.console("fill %d %d %d %d %d %d %s %d %s %s" % (
-                x1, y1, z1, x2, y2, z2, tilename, damage, mode, json.dumps(data)))
+            self.javaserver.console(
+                "fill %d %d %d %d %d %d %s %d %s %s" % (
+                 x1, y1, z1, x2, y2, z2,
+                 tilename, damage, mode, json.dumps(data)))
 
     def replace(self, position1, position2, tilename1, damage1, tilename2, damage2=0):
-        """ Replace specified blocks within a 3D cube with another specified block. """
+        """
+        Replace specified blocks within a 3D cube with another specified block.
+
+        :Args: see minecraft Wiki
+
+        """
         x1, y1, z1 = position1
         x2, y2, z2 = position2
         if self.javaserver.protocolVersion < 6:
             raise Exception(
-                "Must be running Minecraft 1.8 or above to use the world.replace() method.")
+                "Must be running Minecraft 1.8 or above"
+                " to use the world.replace() method.")
         else:
-            self.javaserver.console("fill %d %d %d %d %d %d %s %d replace %s %d" % (
-                x1, y1, z1, x2, y2, z2, tilename2, damage2, tilename1, damage1))
+            self.javaserver.console(
+                "fill %d %d %d %d %d %d %s %d replace %s %d" % (
+                 x1, y1, z1, x2, y2, z2,
+                 tilename2, damage2, tilename1, damage1))
         return
 
     def getBlock(self, pos):
-        """ not implemented """
+        """
+        not implemented
+
+        """
         x, y, z = pos
         chunkx, chunkz = int(x / 16), int(z / 16)
         localx, localz = (x / 16.0 - x / 16) * 16, (z / 16.0 - z / 16) * 16
@@ -78,7 +100,10 @@ class World:
 
 # noinspection PyPep8Naming
 class Chunk:
-    """ not implemented """
+    """
+    not implemented
+
+    """
     def __init__(self, bytesarray, x, z):
         self.ids = struct.unpack("<" + ("H" * (len(bytesarray) / 2)), bytesarray)
         self.x = x

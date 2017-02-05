@@ -94,7 +94,7 @@
             :self.thiningFrequency:
              config["Entities"]["thinning-frequency"]
 
-            :self.serverStartThinningThreshshold:
+            :self.startThinningThreshshold:
              config["Entities"]["thinning-activation-threshhold"]
 
         :See api.entity for more about these methods:
