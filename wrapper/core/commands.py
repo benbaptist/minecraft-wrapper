@@ -11,7 +11,7 @@ import time
 import json
 
 # noinspection PyProtectedMember
-from api.helpers import _format_bytes, getargs, getargsafter, _secondstohuman, _showpage, _readout
+from api.helpers import _format_bytes, getargs, getargsafter, _secondstohuman, _showpage, readout
 
 
 # noinspection PyBroadException
@@ -264,8 +264,8 @@ class Commands:
             entitycontrol = self.wrapper.javaserver.entity_control
             if not entitycontrol:
                 # only console could be the source:
-                _readout("ERROR - ", "No entity code found. (no proxy/server started?)", separator="",
-                         pad=10, usereadline=self.wrapper.use_readline)
+                readout("ERROR - ", "No entity code found. (no proxy/server started?)", separator="",
+                        pad=10, usereadline=self.wrapper.use_readline)
                 return
             commargs = payload["args"]
             if len(commargs) < 1:

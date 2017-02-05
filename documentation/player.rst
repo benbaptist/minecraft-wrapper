@@ -284,9 +284,6 @@
              sending pre-1.8 particles this is a string not a number...
              the valid values are found here
 
-                http://wayback.archive.org/web/20151023030926/https:\
-                //gist.github.com/thinkofdeath/5110835
-
             :blockdata: additional block meta (a number specifying a subtype).
 
             :sendblock: True for sending a block.
@@ -295,6 +292,9 @@
 
             :partdata: if particles; particle data.  Particles with
              additional ID cannot be used ("Ironcrack").
+
+        :Valid 'blockid' values:
+         http://wayback.archive.org/web/20151023030926/https://gist.github.com/thinkofdeath/5110835
 
         
 
