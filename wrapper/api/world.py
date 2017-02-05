@@ -20,6 +20,12 @@ class World:
 
     This class is accessed via getWorld().  Requires a running server.
 
+    .. code:: python
+
+        <object> = self.api.minecraft.getWorld()
+        <object>.<World_method>
+    ..
+
     World is established by console when wrapper reads "preparing ...."
 
     """
