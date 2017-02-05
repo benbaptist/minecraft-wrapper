@@ -21,7 +21,7 @@
 
             :reload_file: True to reload the config
 
-         :returns: True or False, indicating Success or Failure
+        :returns: True or False, indicating Success or Failure
 
         
 
@@ -36,14 +36,13 @@
 
         get the "virtual" world time of day on the server.
 
-        :dttmformat: 0 = ticks, 1 = Military, (else = civilian AM/PM).
+        :arg dttmformat: 0 = ticks, 1 = Military, (else = civilian AM/PM).
 
             :ticks: are useful for timebased- events (like spawing
              your own mobs at night, etc).
-
             :Miliary/civilian: is useful for player displays.
 
-        Returns: The appropriately formatted time string
+        :returns: The appropriately formatted time string
 
         
 
@@ -51,19 +50,15 @@
 
         Gives the specified status effect to the specified target.
 
-        :Arguments: (self explanatory?)
+        :Args: (self explanatory? -see official Minecraft Wiki)
 
             :player: A player name or any valid string target
              selector (@p/e/a) with arguments ([r=...], etc)
-
             :effect:
-
             :duration:
-
             :amplifier:
 
-
-        Returns: Nothing; runs in console
+         :returns: Nothing; runs in console
 
         
 

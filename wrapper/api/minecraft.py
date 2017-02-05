@@ -50,7 +50,7 @@ class Minecraft:
 
             :reload_file: True to reload the config
 
-         :returns: True or False, indicating Success or Failure
+        :returns: True or False, indicating Success or Failure
 
         """
 
@@ -72,7 +72,7 @@ class Minecraft:
         return False
 
     def isServerStarted(self):
-        # should this be a property (one-liner doc string suggests so..)
+        # should this be a property? (one-liner doc string suggests so..)
         """
         Return a boolean indicating if the server is
         fully booted or not.
@@ -99,14 +99,13 @@ class Minecraft:
         """
         get the "virtual" world time of day on the server.
 
-        :dttmformat: 0 = ticks, 1 = Military, (else = civilian AM/PM).
+        :arg dttmformat: 0 = ticks, 1 = Military, (else = civilian AM/PM).
 
             :ticks: are useful for timebased- events (like spawing
              your own mobs at night, etc).
-
             :Miliary/civilian: is useful for player displays.
 
-        Returns: The appropriately formatted time string
+        :returns: The appropriately formatted time string
 
         """
         # 0 = ticks, 1 = Military, else = civilian AM/PM, return -1 if no one
@@ -136,19 +135,15 @@ class Minecraft:
         """
         Gives the specified status effect to the specified target.
 
-        :Arguments: (self explanatory?)
+        :Args: (self explanatory? -see official Minecraft Wiki)
 
             :player: A player name or any valid string target
              selector (@p/e/a) with arguments ([r=...], etc)
-
             :effect:
-
             :duration:
-
             :amplifier:
 
-
-        Returns: Nothing; runs in console
+         :returns: Nothing; runs in console
 
         """
         if type(effect) == int:
