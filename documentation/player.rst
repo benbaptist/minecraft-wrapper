@@ -10,31 +10,7 @@
 
     
 
-** _track(self)**
-
-        internal tracking that updates a player's server play time.
-        Not a part of the public player object API.
-
-        Sample ReST formattings -
-
-        # emphasized notes
-        Note: *You do not need to run this function unless you want*
-         *certain permission nodes to be granted by default.*
-         *i.e., 'essentials.list' should be on by default, so players*
-         *can run /list without having any permissions*
-
-        # code samples
-            :sample usage:
-
-                .. code:: python
-
-                    < code here >
-
-                ..
-
-        
-
-** execute(self, string)**
+def execute(self, string)
 
         Run a command as this player. If proxy mode is not enabled,
         it simply falls back to using the 1.8 'execute' command. To 
@@ -49,7 +25,7 @@
 
         
 
-** sendCommand(self, command, args)**
+def sendCommand(self, command, args)
 
         Sends a command to the wrapper interface as the player instance.
         This would find a nice application with a '\sudo' plugin command.
@@ -74,7 +50,7 @@
 
         
 
-** say(self, string)**
+def say(self, string)
 
         Send a message as a player.
 
@@ -87,7 +63,7 @@
 
         
 
-** getClient(self)**
+def getClient(self)
 
         Returns the player client context.  Use at your own risk - items
         in client are generally private or subject to change (you are
@@ -98,7 +74,7 @@
 
         
 
-** getPosition(self)**
+def getPosition(self)
 
         Get the players position
         
@@ -113,7 +89,7 @@
         
         
 
-** getGamemode(self)**
+def getGamemode(self)
 
         Get the player's current gamemode.
         
@@ -127,7 +103,7 @@
 
         
 
-** getDimension(self)**
+def getDimension(self)
 
         Get the player's current dimension.
 
@@ -145,7 +121,7 @@
 
         
 
-** setGamemode(self, gamemode=0)**
+def setGamemode(self, gamemode=0)
 
         Sets the user's gamemode.
 
@@ -153,7 +129,7 @@
 
         
 
-** setResourcePack(self, url, hashrp="")**
+def setResourcePack(self, url, hashrp="")
 
         Sets the player's resource pack to a different URL. If the
         user hasn't already allowed resource packs, the user will
@@ -166,7 +142,7 @@
 
         
 
-** isOp(self, strict=False)**
+def isOp(self, strict=False)
 
         Check if player has Operator status. Accepts player as OP
         based on either the username OR server UUID (unless 'strict'
@@ -185,7 +161,7 @@
 
         
 
-** message(self, message="")**
+def message(self, message="")
 
         Sends a message to the player.
 
@@ -193,7 +169,7 @@
 
         
 
-** setVisualXP(self, progress, level, total)**
+def setVisualXP(self, progress, level, total)
 
          Change the XP bar on the client's side only. Does not
          affect actual XP levels.
@@ -207,7 +183,7 @@
 
         
 
-** openWindow(self, windowtype, title, slots)**
+def openWindow(self, windowtype, title, slots)
 
         Opens an inventory window on the client side.  EntityHorse
         is not supported due to further EID requirement.  *1.8*
@@ -251,7 +227,7 @@
 
         
 
-** setPlayerAbilities(self, fly)**
+def setPlayerAbilities(self, fly)
 
         *based on old playerSetFly (which was an unfinished function)*
 
@@ -286,7 +262,7 @@
 
         
 
-** sendBlock(self, position, blockid, blockdata, sendblock=True, numparticles=1, partdata=1)**
+def sendBlock(self, position, blockid, blockdata, sendblock=True, numparticles=1, partdata=1)
 
         Used to make phantom blocks visible ONLY to the client.  Sends
         either a particle or a block to the minecraft player's client.
@@ -322,19 +298,19 @@
 
         
 
-** getItemInSlot(self, slot)**
+def getItemInSlot(self, slot)
 
         Returns the item object of an item currently being held.
 
         
 
-** getHeldItem(self)**
+def getHeldItem(self)
 
         Returns the item object of an item currently being held.
 
         
 
-** hasPermission(self, node, another_player=False)**
+def hasPermission(self, node, another_player=False)
 
         If the player has the specified permission node (either
         directly, or inherited from a group that the player is in),
@@ -352,7 +328,7 @@
 
         
 
-** setPermission(self, node, value=True)**
+def setPermission(self, node, value=True)
 
         Adds the specified permission node and optionally a value
         to the player.
@@ -367,7 +343,7 @@
 
         
 
-** removePermission(self, node)**
+def removePermission(self, node)
 
         Completely removes a permission node from the player. They
         will inherit this permission from their groups or from
@@ -384,7 +360,7 @@
 
     
 
-** hasGroup(self, group)**
+def hasGroup(self, group)
 
         Returns a boolean of whether or not the player is in
         the specified permission group.
@@ -395,7 +371,7 @@
 
         
 
-** getGroups(self)**
+def getGroups(self)
 
         Returns a list of permission groups that the player is in.
 
@@ -403,7 +379,7 @@
 
         
 
-** setGroup(self, group)**
+def setGroup(self, group)
 
         Adds the player to a specified group.  Returns False if
         group does not exist (set debiug to see error).
@@ -415,7 +391,7 @@
 
         
 
-** removeGroup(self, group)**
+def removeGroup(self, group)
 
         Removes the player to a specified group.
 
@@ -430,7 +406,7 @@
 
         
 
-** getFirstLogin(self)**
+def getFirstLogin(self)
 
         Returns a tuple containing the timestamp of when the user
         first logged in for the first time, and the timezone (same
@@ -438,7 +414,7 @@
 
         
 
-** connect(self, address, port)**
+def connect(self, address, port)
 
         Upon calling, the player object will become defunct and
         the client will be transferred to another server or wrapper

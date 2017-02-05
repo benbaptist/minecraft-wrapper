@@ -1,5 +1,5 @@
 
-**ault Config file items and layout**
+default Config file items and layout
 
 '''
 
