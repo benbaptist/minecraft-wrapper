@@ -1,45 +1,54 @@
 
 **def config_to_dict_read(filename, filepath)**
 
-    reads a disk file with '=' lines (like server.properties) and returns a keyed dictionary.
+    reads a disk file with '=' lines (like server.properties) and
+    returns a keyed dictionary.
+
     
 
 **def scrub_item_value(item)**
 
-    Takes a text item value and determines if it should be a boolean, integer, or text.. and returns it as the type.
+    Takes a text item value and determines if it should be a boolean,
+    integer, or text.. and returns it as the type.
+
     
 
 **def epoch_to_timestr(epoch_time)**
 
-    takes a time represented as integer/string which you supply and converts it to a formatted string.
+    takes a time represented as integer/string which you supply and
+    converts it to a formatted string.
 
-    :epoch_time: string or integer (in seconds) of epoch time
+    :arg epoch_time: string or integer (in seconds) of epoch time
 
-    :returns: the string version like "2016-04-14 22:05:13 -0400", suitable in ban files.
+    :returns: the string version like "2016-04-14 22:05:13 -0400",
+     suitable in ban files.
 
     
 
 **def getargs(arginput, i)**
 
-    returns a certain index of argument (without producting an error if our of range, etc).
+    returns a certain index of argument (without producting an
+    error if out of range, etc).
 
-    :arginput: A list of arguments.
+    :Args:
+        :arginput: A list of arguments.
+        :i:  index of a desired argument.
 
-    :i:  index of a desired argument
-
-    :return:  return the 'i'th argument.  if item does not exist, returns ""
+    :returns:  return the 'i'th argument.  If item does not
+     exist, returns ""
 
     
 
 **def getargsafter(arginput, i)**
 
-    returns all arguments starting at position. (positions start at '0', of course.)
+    returns all arguments starting at position. (positions start
+    at '0', of course.)
 
-    :arginput: A list of arguments.
+    :Args:
+        :arginput: A list of arguments.
+        :i: Starting index of argument list.
 
-    :i: Starting index of argument list
-
-    :return: sub list of arguments
+    :returns: sub list of arguments
 
     
 
@@ -47,29 +56,34 @@
 
     Read a json file and return its contents as a dictionary.
 
-    :filename: filename without extension
+    :Args:
+        :filename: filename without extension.
+        :directory: by default, wrapper script directory.
+        :encodedas: the encoding
 
-    :directory: by default, wrapper script directory.
-
-    :encodedas: the encoding
-
-    Returns: a dictionary if successful. If unsuccessful; None/no data or False (if file/directory not found)
+    :returns:
+        :if successful: a dictionary
+        :if unsuccessful:  None/{}
+        :File/directory not found: False
 
     
 
 **def getfileaslines(filename, directory=".")**
 
-    Reads a file with lines and turns it into a list containing those lines.
+    Reads a file with lines and turns it into a list containing
+    those lines.
 
-    :filename: Complete filename
+    :Args:
+        :filename: Complete filename
+        :directory: by default, wrapper script directory.
 
-    :directory: by default, wrapper script directory.
+    :returns:
+        :if successful: a list of lines in the file.
+        :if unsuccessful:  None/no data
+        :File/directory not found: False
 
+    (Pycharm return definition)
     :rtype: list
-
-    returns a list of lines in the file if successful.
-
-        If unsuccessful; None/no data or False (if file/directory not found)
 
     
 
@@ -77,97 +91,135 @@
 
     A simple way to recursively make a directory under any Python.
 
-    :path: The desired path to create.
+    :arg path: The desired path to create.
 
-    :returns: Nothing - Raises exception if it fails
+    :returns: Nothing - Raises Exception if it fails
 
     
 
 **def get_int(s)**
 
-    returns an integer representations of a string, no matter what the input value.
-    returns 0 for values it can't convert
+    returns an integer representations of a string, no matter what
+    the input value.
 
-    :s: Any string value.
+    :arg s: Any string value.
+
+    :returns: Applicable value (or 0 for values it can't convert)
 
     
 
 **def isipv4address(addr)**
 
-    Returns a Boolean indicating if the address is a valid IPv4 address.
+    Returns a Boolean indicating if the address is a valid IPv4
+    address.
 
-    :addr: Address to validate.
+    :arg addr: Address to validate.
 
-    :return: True or False
+    :returns: True or False
 
     
 
 **def processcolorcodes(messagestring)**
 
-    Mostly used internally to process old-style color-codes with the & symbol, and returns a JSON chat object.
-    message received should be string
+    Mostly used internally to process old-style color-codes with
+    the & symbol, and returns a JSON chat object. message received
+    should be string.
+
+    :arg messagestring: String argument with "&" codings.
+
+    :returns: Json dumps() string.
+
     
 
 **def processoldcolorcodes(message)**
 
-    Just replaces text containing the (&) ampersand with section signs instead (§).
+    Just replaces text containing the (&) ampersand with section
+    signs instead (§).
+
     
 
 **def putjsonfile(data, filename, directory=".", indent_spaces=2, sort=True)**
 
-    writes entire data to a json file.
+    Writes entire data dictionary to a json file.
 
-    :data: json dictionary to write
+    :Args:
+        :data: Dictionary to write as Json file.
+        :filename: filename without extension.
+        :directory: by default, current directory.
+        :indent_spaces: indentation level. Pass None for no
+         indents. 2 is the default.
+        :sort: whether or not to sort the records for readability.
 
-    :filename: filename without extension.
+    *There is no encodedas argument: This was removed for Python3*
+    *compatibility.  Python 3 has no encoding argument for json.dumps.*
 
-    :directory: by default, current directory.
-
-    :indent_spaces: indentation level. Pass None for no indents. 2 is the default.
-
-    :sort: whether or not to sort the records for readability.
-
-    :encodedas: This was removed for Python3 compatibility.  Python 3 has no encoding argument for json.dumps.
-
-    :returns: True if successful.
-
-        If unsuccessful;
-         None = TypeError,
-
-         False = file/directory not found/accessible
+    :returns:
+            :True: Successful write
+            :None: TypeError
+            :False: File/directory not found / not accessible:
 
     
 
 **def read_timestr(mc_time_string)**
 
-    The Minecraft server (or wrapper, using epoch_to_timestr) creates a string like this:
+    The Minecraft server (or wrapper, using epoch_to_timestr) creates
+    a string like this:
 
          "2016-04-15 16:52:15 -0400"
 
-         This method reads out the date and returns the epoch time (well, really the server local time, I suppose)
+    This method reads out the date and returns the epoch time (well,
+    really the server local time, I suppose)
 
-    :mc_time_string: minecraft time string.
+    :arg mc_time_string: minecraft time string.
 
-    :returns: regular seconds from epoch (integer).
-            Invalid data (like "forever"), returns 9999999999 (what forever is).
+    :returns:
+        :Integer: regular seconds from epoch (integer)
+        :Invalid data (like "forever"): returns 9999999999 symbolizing
+         forever.
+
+    
+
+**def readout(commandtext, description, separator=" - ", pad=15, command_text_fg="magenta", command_text_opts=("bold",), description_text_fg="yellow", usereadline=True)**
+
+    display console text only with no logging - useful for displaying
+    pretty console-only messages.
+
+    Args:
+        :commandtext: The first text field (magenta)
+        :description: third text field (green)
+        :separator: second (middle) field (white text)
+        :pad: minimum number of characters the command text is padded to
+        :command_text_fg: Foreground color, magenta by default
+        :command_text_opts: Tuple of ptions, '(bold,)' by default)
+        :description_text_fg: description area foreground color
+        :usereadline: Use default readline  (or 'False', use
+         readchar/readkey (with anti- scroll off capabilities))
+
+    :returns: Nothing. Just prints to stdout/console for console
+     operator readout:
+
+    :DISPLAYS:
+        .. code:: python
+
+            '[commandtext](padding->)[separator][description]'
+        ..
 
     
 
 **def set_item(item, string_val, filename, path='.')**
 
-    Reads a file with "item=" lines and looks for 'item'.
+    Reads a file with "item=" lines and looks for 'item'. If
+    found, it replaces the existing value with 'item=string_val'.
 
-    If found, it replaces the existing value
-    with 'item=string_val'.
+    :Args:
+        :item: the config item in the file.  Will search the file
+         for occurences of 'item='.
+        :string_val: must have a valid __str__ representation (if
+         not an actual string).
+        :filename: full filename, including extension.
+        :path: defaults to wrappers path.
 
-    :item: the config item in the file.  Will search the file for occurences of 'item='.
-
-    :string_val: must have a valid __str__ representation (if not an actual string).
-
-    :filename: full filename, including extension.
-
-    :path: defaults to wrappers path.
-
-    :returns:  Boolean indication of success or failure.  None if no item was found.
+    :returns:  Boolean indication of success or failure.  None
+     if no item was found.
 
     

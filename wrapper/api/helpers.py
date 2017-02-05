@@ -59,11 +59,14 @@ def _addgraphics(text='', foreground='white', background='black', options=()):
 
     """
     resetcode = '0'
-    fore = {'blue': '34', 'yellow': '33', 'green': '32', 'cyan': '36', 'black': '30',
+    fore = {'blue': '34', 'yellow': '33', 'green': '32',
+            'cyan': '36', 'black': '30',
             'magenta': '35', 'white': '37', 'red': '31'}
-    back = {'blue': '44', 'yellow': '43', 'green': '42', 'cyan': '46', 'black': '40',
+    back = {'blue': '44', 'yellow': '43', 'green': '42',
+            'cyan': '46', 'black': '40',
             'magenta': '45', 'white': '47', 'red': '41'}
-    optioncodes = {'bold': '1', 'italic': '3', 'underscore': '4', 'blink': '5', 'reverse': '7', 'conceal': '8'}
+    optioncodes = {'bold': '1', 'italic': '3', 'underscore': '4',
+                   'blink': '5', 'reverse': '7', 'conceal': '8'}
 
     codes = []
     if text == '' and len(options) == 1 and options[0] == 'reset':
@@ -84,7 +87,9 @@ def _addgraphics(text='', foreground='white', background='black', options=()):
 
 def config_to_dict_read(filename, filepath):
     """
-    reads a disk file with '=' lines (like server.properties) and returns a keyed dictionary.
+    reads a disk file with '=' lines (like server.properties) and
+    returns a keyed dictionary.
+
     """
     config_dict = {}
     if os.path.exists("%s/%s" % (filepath, filename)):
@@ -103,7 +108,9 @@ def config_to_dict_read(filename, filepath):
 
 def scrub_item_value(item):
     """
-    Takes a text item value and determines if it should be a boolean, integer, or text.. and returns it as the type.
+    Takes a text item value and determines if it should be a boolean,
+    integer, or text.. and returns it as the type.
+
     """
     if not item or len(item) < 1:
         return ""
@@ -118,17 +125,22 @@ def scrub_item_value(item):
 
 def epoch_to_timestr(epoch_time):
     """
-    takes a time represented as integer/string which you supply and converts it to a formatted string.
+    takes a time represented as integer/string which you supply and
+    converts it to a formatted string.
 
-    :epoch_time: string or integer (in seconds) of epoch time
+    :arg epoch_time: string or integer (in seconds) of epoch time
 
-    :returns: the string version like "2016-04-14 22:05:13 -0400", suitable in ban files.
+    :returns: the string version like "2016-04-14 22:05:13 -0400",
+     suitable in ban files.
 
     """
-    tm = int(float(epoch_time))  # allow argument to be passed as a string or integer
+    # allow argument to be passed as a string or integer
+    tm = int(float(epoch_time))
     t = datetime.datetime.fromtimestamp(tm)
     pattern = "%Y-%m-%d %H:%M:%S %z"
-    return "%s-0100" % t.strftime(pattern)  # the %z does not work below py3.2 - we just create a fake offset.
+
+    # the %z does not work below py3.2 - we just create a fake offset.
+    return "%s-0100" % t.strftime(pattern)
 
 
 def find_in_json(jsonlist, keyname, searchvalue):
@@ -141,7 +153,9 @@ def find_in_json(jsonlist, keyname, searchvalue):
 
 def _format_bytes(number_raw_bytes):
     """
-    takes number of bytes and converts to Kbtye, MiB, GiB, etc... using 4 most significant digits.
+    takes number of bytes and converts to Kbtye, MiB, GiB,
+    etc... using 4 most significant digits.
+
     """
     large_bytes = number_raw_bytes / (1024*1024*1024*1024*1024)
     units = "PiB"
@@ -163,13 +177,15 @@ def _format_bytes(number_raw_bytes):
 
 def getargs(arginput, i):
     """
-    returns a certain index of argument (without producting an error if our of range, etc).
+    returns a certain index of argument (without producting an
+    error if out of range, etc).
 
-    :arginput: A list of arguments.
+    :Args:
+        :arginput: A list of arguments.
+        :i:  index of a desired argument.
 
-    :i:  index of a desired argument
-
-    :return:  return the 'i'th argument.  if item does not exist, returns ""
+    :returns:  return the 'i'th argument.  If item does not
+     exist, returns ""
 
     """
     if not i >= len(arginput):
@@ -180,13 +196,14 @@ def getargs(arginput, i):
 
 def getargsafter(arginput, i):
     """
-    returns all arguments starting at position. (positions start at '0', of course.)
+    returns all arguments starting at position. (positions start
+    at '0', of course.)
 
-    :arginput: A list of arguments.
+    :Args:
+        :arginput: A list of arguments.
+        :i: Starting index of argument list.
 
-    :i: Starting index of argument list
-
-    :return: sub list of arguments
+    :returns: sub list of arguments
 
     """
     return " ".join(arginput[i:])
@@ -196,13 +213,15 @@ def getjsonfile(filename, directory=".", encodedas="UTF-8"):
     """
     Read a json file and return its contents as a dictionary.
 
-    :filename: filename without extension
+    :Args:
+        :filename: filename without extension.
+        :directory: by default, wrapper script directory.
+        :encodedas: the encoding
 
-    :directory: by default, wrapper script directory.
-
-    :encodedas: the encoding
-
-    Returns: a dictionary if successful. If unsuccessful; None/no data or False (if file/directory not found)
+    :returns:
+        :if successful: a dictionary
+        :if unsuccessful:  None/{}
+        :File/directory not found: False
 
     """
     if not os.path.exists(directory):
@@ -220,17 +239,20 @@ def getjsonfile(filename, directory=".", encodedas="UTF-8"):
 
 def getfileaslines(filename, directory="."):
     """
-    Reads a file with lines and turns it into a list containing those lines.
+    Reads a file with lines and turns it into a list containing
+    those lines.
 
-    :filename: Complete filename
+    :Args:
+        :filename: Complete filename
+        :directory: by default, wrapper script directory.
 
-    :directory: by default, wrapper script directory.
+    :returns:
+        :if successful: a list of lines in the file.
+        :if unsuccessful:  None/no data
+        :File/directory not found: False
 
+    (Pycharm return definition)
     :rtype: list
-
-    returns a list of lines in the file if successful.
-
-        If unsuccessful; None/no data or False (if file/directory not found)
 
     """
     if not os.path.exists(directory):
@@ -240,7 +262,9 @@ def getfileaslines(filename, directory="."):
             try:
                 return f.read().splitlines()
             except Exception as e:
-                print(_addgraphics("Exception occured while running 'getfileaslines': \n", foreground="red"), e)
+                print(_addgraphics(
+                    "Exception occured while running"
+                    " 'getfileaslines': \n", foreground="red"), e)
                 return None
     else:
         return False
@@ -250,27 +274,32 @@ def mkdir_p(path):
     """
     A simple way to recursively make a directory under any Python.
 
-    :path: The desired path to create.
+    :arg path: The desired path to create.
 
-    :returns: Nothing - Raises exception if it fails
+    :returns: Nothing - Raises Exception if it fails
 
     """
     try:
-        os.makedirs(path, exist_ok=True)  # Python > 3.2
+        # Python > 3.2
+        os.makedirs(path, exist_ok=True)
     except TypeError:
         try:
-            os.makedirs(path)  # Python > 2.5
-        except OSError as exc:  # Guard against race condition
+            # Python > 2.5
+            os.makedirs(path)
+        except OSError as exc:
+            # Guard against race condition
             if exc.errno != errno.EEXIST:
                 raise
 
 
 def get_int(s):
     """
-    returns an integer representations of a string, no matter what the input value.
-    returns 0 for values it can't convert
+    returns an integer representations of a string, no matter what
+    the input value.
 
-    :s: Any string value.
+    :arg s: Any string value.
+
+    :returns: Applicable value (or 0 for values it can't convert)
 
     """
     try:
@@ -282,30 +311,40 @@ def get_int(s):
 
 def isipv4address(addr):
     """
-    Returns a Boolean indicating if the address is a valid IPv4 address.
+    Returns a Boolean indicating if the address is a valid IPv4
+    address.
 
-    :addr: Address to validate.
+    :arg addr: Address to validate.
 
-    :return: True or False
+    :returns: True or False
 
     """
     try:
-        socket.inet_aton(addr)  # Attempts to convert to an IPv4 address
-    except socket.error:  # If it fails, the ip is not in a valid format
+        # Attempts to convert to an IPv4 address
+        socket.inet_aton(addr)
+    except socket.error:
+        # If it fails, the ip is not in a valid format
         return False
     return True
 
 
 def processcolorcodes(messagestring):
     """
-    Mostly used internally to process old-style color-codes with the & symbol, and returns a JSON chat object.
-    message received should be string
+    Mostly used internally to process old-style color-codes with
+    the & symbol, and returns a JSON chat object. message received
+    should be string.
+
+    :arg messagestring: String argument with "&" codings.
+
+    :returns: Json dumps() string.
+
     """
     py3 = sys.version_info > (3,)
     if not py3:
         message = messagestring.encode('ascii', 'ignore')
     else:
-        message = messagestring  # .encode('ascii', 'ignore')  # encode to bytes
+        # .encode('ascii', 'ignore')  # encode to bytes
+        message = messagestring
 
     extras = []
     bold = False
@@ -394,7 +433,9 @@ def processcolorcodes(messagestring):
 
 def processoldcolorcodes(message):
     """
-    Just replaces text containing the (&) ampersand with section signs instead (§).
+    Just replaces text containing the (&) ampersand with section
+    signs instead (§).
+
     """
     for i in COLORCODES:
         message = message.replace("&" + i, "\xc2\xa7" + i)
@@ -403,26 +444,23 @@ def processoldcolorcodes(message):
 
 def putjsonfile(data, filename, directory=".", indent_spaces=2, sort=True):
     """
-    writes entire data to a json file.
+    Writes entire data dictionary to a json file.
 
-    :data: json dictionary to write
+    :Args:
+        :data: Dictionary to write as Json file.
+        :filename: filename without extension.
+        :directory: by default, current directory.
+        :indent_spaces: indentation level. Pass None for no
+         indents. 2 is the default.
+        :sort: whether or not to sort the records for readability.
 
-    :filename: filename without extension.
+    *There is no encodedas argument: This was removed for Python3*
+    *compatibility.  Python 3 has no encoding argument for json.dumps.*
 
-    :directory: by default, current directory.
-
-    :indent_spaces: indentation level. Pass None for no indents. 2 is the default.
-
-    :sort: whether or not to sort the records for readability.
-
-    :encodedas: This was removed for Python3 compatibility.  Python 3 has no encoding argument for json.dumps.
-
-    :returns: True if successful.
-
-        If unsuccessful;
-         None = TypeError,
-
-         False = file/directory not found/accessible
+    :returns:
+            :True: Successful write
+            :None: TypeError
+            :False: File/directory not found / not accessible:
 
     """
     if not os.path.exists(directory):
@@ -430,7 +468,8 @@ def putjsonfile(data, filename, directory=".", indent_spaces=2, sort=True):
     if os.path.exists(directory):
         with open("%s/%s.json" % (directory, filename), "w") as f:
             try:
-                f.write(json.dumps(data, ensure_ascii=False, indent=indent_spaces, sort_keys=sort))
+                f.write(json.dumps(data, ensure_ascii=False,
+                                   indent=indent_spaces, sort_keys=sort))
             except TypeError:
                 return None
             return True
@@ -439,23 +478,30 @@ def putjsonfile(data, filename, directory=".", indent_spaces=2, sort=True):
 
 def read_timestr(mc_time_string):
     """
-    The Minecraft server (or wrapper, using epoch_to_timestr) creates a string like this:
+    The Minecraft server (or wrapper, using epoch_to_timestr) creates
+    a string like this:
 
          "2016-04-15 16:52:15 -0400"
 
-         This method reads out the date and returns the epoch time (well, really the server local time, I suppose)
+    This method reads out the date and returns the epoch time (well,
+    really the server local time, I suppose)
 
-    :mc_time_string: minecraft time string.
+    :arg mc_time_string: minecraft time string.
 
-    :returns: regular seconds from epoch (integer).
-            Invalid data (like "forever"), returns 9999999999 (what forever is).
+    :returns:
+        :Integer: regular seconds from epoch (integer)
+        :Invalid data (like "forever"): returns 9999999999 symbolizing
+         forever.
 
     """
 
     # create the time for file:
     # time.strftime("%Y-%m-%d %H:%M:%S %z")
 
-    pattern = "%Y-%m-%d %H:%M:%S"  # ' %z' - strptime() function does not the support %z for READING timezones D:
+    # ' %z' - strptime() function does not the support %z for
+    # READING timezones D:
+    pattern = "%Y-%m-%d %H:%M:%S"
+
     try:
         epoch = int(time.mktime(time.strptime(mc_time_string[:19], pattern)))
     except ValueError:
@@ -463,33 +509,44 @@ def read_timestr(mc_time_string):
     return epoch
 
 
-def _readout(commandtext, description, separator=" - ", pad=15,
-             command_text_fg="magenta", command_text_opts=("bold",),
-             description_text_fg="yellow", usereadline=True):
+# Single line required by documentation creator (at this time)
+def readout(commandtext, description, separator=" - ", pad=15, command_text_fg="magenta", command_text_opts=("bold",), description_text_fg="yellow", usereadline=True):
     """
-    display console text only with no logging - useful for displaying pretty console-only messages.
-    Args:
-        commandtext: The first text field (magenta)
-        description: third text field (green)
-        separator: second (middle) field (white text)
-        pad: minimum number of characters the command text is padded to
-        command_text_fg: Foreground color, magenta by default
-        command_text_opts: Tuple of ptions, '(bold,)' by default)
-        description_text_fg: description area foreground color
-        usereadline: Use default readline  (or 'False', use readchar/readkey (with anti- scroll off capabilities))
+    display console text only with no logging - useful for displaying
+    pretty console-only messages.
 
-    Returns: Just prints to stdout/console for console operator _readout:
-      DISPLAYS:
-      '[commandtext](padding->)[separator][description]'
+    Args:
+        :commandtext: The first text field (magenta)
+        :description: third text field (green)
+        :separator: second (middle) field (white text)
+        :pad: minimum number of characters the command text is padded to
+        :command_text_fg: Foreground color, magenta by default
+        :command_text_opts: Tuple of ptions, '(bold,)' by default)
+        :description_text_fg: description area foreground color
+        :usereadline: Use default readline  (or 'False', use
+         readchar/readkey (with anti- scroll off capabilities))
+
+    :returns: Nothing. Just prints to stdout/console for console
+     operator readout:
+
+    :DISPLAYS:
+        .. code:: python
+
+            '[commandtext](padding->)[separator][description]'
+        ..
+
     """
-    commstyle = _use_style(foreground=command_text_fg, options=command_text_opts)
+    commstyle = _use_style(foreground=command_text_fg,
+                           options=command_text_opts)
     descstyle = _use_style(foreground=description_text_fg)
     x = '{0: <%d}' % pad
     commandtextpadded = x.format(commandtext)
     if usereadline:
-        print("%s%s%s" % (commstyle(commandtextpadded), separator, descstyle(description)))
+        print("%s%s%s" % (commstyle(commandtextpadded),
+                          separator, descstyle(description)))
     else:
-        print("\033[1A%s%s%s\n" % (commstyle(commandtextpadded), separator, descstyle(description)))
+        print("\033[1A%s%s%s\n" % (commstyle(commandtextpadded),
+                                   separator, descstyle(description)))
 
 
 def _secondstohuman(seconds):
@@ -514,20 +571,19 @@ def _secondstohuman(seconds):
 
 def set_item(item, string_val, filename, path='.'):
     """
-    Reads a file with "item=" lines and looks for 'item'.
+    Reads a file with "item=" lines and looks for 'item'. If
+    found, it replaces the existing value with 'item=string_val'.
 
-    If found, it replaces the existing value
-    with 'item=string_val'.
+    :Args:
+        :item: the config item in the file.  Will search the file
+         for occurences of 'item='.
+        :string_val: must have a valid __str__ representation (if
+         not an actual string).
+        :filename: full filename, including extension.
+        :path: defaults to wrappers path.
 
-    :item: the config item in the file.  Will search the file for occurences of 'item='.
-
-    :string_val: must have a valid __str__ representation (if not an actual string).
-
-    :filename: full filename, including extension.
-
-    :path: defaults to wrappers path.
-
-    :returns:  Boolean indication of success or failure.  None if no item was found.
+    :returns:  Boolean indication of success or failure.  None
+     if no item was found.
 
     """
 
@@ -537,7 +593,8 @@ def set_item(item, string_val, filename, path='.'):
 
         searchitem = "%s=" % item
         if searchitem in file_contents:
-            current_value = str(file_contents.split(searchitem)[1].splitlines()[0])
+            current_value = str(
+                file_contents.split(searchitem)[1].splitlines()[0])
             replace_item = "%s%s" % (searchitem, current_value)
             new_item = '%s%s' % (searchitem, string_val)
             new_file = file_contents.replace(replace_item, new_item)
@@ -580,21 +637,24 @@ def _showpage(player, page, items, command, perpage, command_prefix='/'):
         if page > 0:
             prevbutton = {
                 "text": "Prev", "underlined": True, "clickEvent":
-                    {"action": "run_command", "value": "%s %d" % (fullcommand, page)}
+                    {"action": "run_command", "value": "%s %d" % (
+                        fullcommand, page)}
                 }
         else:
             prevbutton = {"text": "Prev", "italic": True, "color": "gray"}
         if page <= pagecount:
             nextbutton = {
                 "text": "Next", "underlined": True, "clickEvent":
-                    {"action": "run_command", "value": "%s %d" % (fullcommand, page + 2)}
+                    {"action": "run_command", "value": "%s %d" % (
+                        fullcommand, page + 2)}
                 }
         else:
             nextbutton = {"text": "Next", "italic": True, "color": "gray"}
-        player.message({
-                           "text": "--- ", "color": "dark_green", "extra": [prevbutton, {"text": " | "},
-                                                                            nextbutton, {"text": " ---"}]
-                           })
+        player.message(
+            {"text": "--- ", "color": "dark_green",
+             "extra": [prevbutton, {"text": " | "},
+                       nextbutton, {"text": " ---"}
+                       ]})
 
 
 def _use_style(foreground='white', background='black', options=()):
@@ -642,12 +702,17 @@ def _getcolorcode(color):
     return ""
 
 
-def _create_chat(translateable="death.attack.outOfWorld", insertion="<playername>",
-                 click_event_action="suggest_command", click_event_value="/msg <playername> ",
-                 hov_event_action="show_entity",
-                 hov_event_text_value="{name:\"<playername>\", id:\"3269fd15-5be9-3c2a-af6c-0000000000000\"}",
-                 with_text="<playername>", plain_dict_chat=""):
+def _create_chat(
+        translateable="death.attack.outOfWorld", insertion="<playername>",
+        click_event_action="suggest_command",
+        click_event_value="/msg <playername> ",
+        hov_event_action="show_entity",
+        hov_event_text_value="{name:\"<playername>\","
+                             "id:\"3269fd15-5be9-3c2a-af6c-0000000000000\"}",
+        with_text="<playername>", plain_dict_chat=""):
+
     """
+    Internal for now.
     Creates a json minecraft chat object string (for sending over Protocol).
 
     :param translateable:
@@ -695,7 +760,7 @@ def get_req(something, request):
     return ""
 
 
-def py_test():
+def _test():
 
     banlist = getjsonfile("banned-players", "/home/surest/Desktop/server")
     x = find_in_json(banlist, "uuid", "d2a44ac6-6427-4f3a-98b8-33441c263cd4")
@@ -709,7 +774,8 @@ def py_test():
     print(x)
     print(x['pvp'])
     new_pvp = not(x['pvp'])
-    set_item('pvp', new_pvp, "server.properties", "/home/surest/Desktop/server")
+    set_item('pvp', new_pvp, "server.properties",
+             "/home/surest/Desktop/server")
     x = config_to_dict_read("server.properties", "/home/surest/Desktop/server")
     print(x['pvp'])
 
@@ -733,7 +799,5 @@ def py_test():
 
 if __name__ == "__main__":
 
-    # py_test()
+    _test()
     pass
-
-
