@@ -1,4 +1,25 @@
 
+**< class Helpers >**
+
+Not actually class at all;  This is a module collection of
+Wrapper's helpful utilities.
+
+They are imported with the core API and are accessible
+using 'self.api.helpers'
+
+    .. code:: python
+
+        # can be accessed directly:
+        self.api.helpers.getargs(args, 2)
+
+        # or a local reference to the module in your plugin:
+        <yourobject> = self.api.helpers
+        <yourobject>.getargs(args, 2)
+
+    ..
+
+
+
 -  config_to_dict_read(filename, filepath)
 
     reads a disk file with '=' lines (like server.properties) and

@@ -9,7 +9,6 @@
 # noinspection PyPep8Naming
 class Backups:
     """
-
     .. code:: python
 
         def __init__(self, wrapper)
@@ -18,9 +17,16 @@ class Backups:
 
     These methods are accessed using 'self.api.backups'
 
-     This class wraps the wrapper.backups functions.  Wrapper starts
-     starts core.backups.py class Backups (as .backups).  This API
-     class manipulates the backups instance within core.wrapper
+    .. code:: python
+
+        <yourobject> = self.api.backups
+        <yourobject>.<backups_method>
+
+    ..
+
+    This class wraps the wrapper.backups functions.  Wrapper starts
+    core.backups.py class Backups (as .backups).  This API
+    class manipulates the backups instance within core.wrapper
 
     """
 
