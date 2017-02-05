@@ -123,8 +123,10 @@
 
 **def setGamemode(self, gamemode=0)**
 
-        :arg gamemode: desired gamemode, as a value 0-3
         Sets the user's gamemode.
+
+        :arg gamemode: desired gamemode, as a value 0-3
+
         
 
 **def setResourcePack(self, url, hashrp="")**
