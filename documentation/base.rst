@@ -55,20 +55,21 @@
         an optional attribute if you want your command to only be
         executable if the player has a specified permission node.
 
-        :command:  The command the client enters (without the
-         slash).  using a slash will mean two slashes will have
-         to be typed (e.g. "/region" means the user must type "//region".
+        :Args:
+            :command:  The command the client enters (without the
+             slash).  using a slash will mean two slashes will have
+             to be typed (e.g. "/region" means the user must type "//region".
 
-        :callback:  The plugin method you want to call when the
-         command is typed. Expected arguments that will be returned
-         to your function will be: 1) the player  object, 2) a list
-         of the arguments (words after the command, stripped of
-         whitespace).
+            :callback:  The plugin method you want to call when the
+             command is typed. Expected arguments that will be returned
+             to your function will be: 1) the player  object, 2) a list
+             of the arguments (words after the command, stripped of
+             whitespace).
 
-        :permission:  A string item of your choosing, such as
-         "essentials.home".  Can be (type) None to require no
-         permission.  (See also `api.registerPermission` for another
-         way to set permission defaults.)
+            :permission:  A string item of your choosing, such as
+             "essentials.home".  Can be (type) None to require no
+             permission.  (See also `api.registerPermission` for another
+             way to set permission defaults.)
 
         :sample usage:
 
@@ -84,17 +85,15 @@
 **def registerEvent(self, eventname, callback)**
 
         Register an event and a callback function. See
-         https://docs.google.com/spreadsheets/d/1Sxli0mpN3Aib-aejjX7VRl
-         cN2HZkak_wIqPFJ6mtVIk/edit?usp=sharing
+         https://docs.google.com/spreadsheets/d/1Sxli0mpN3Aib-aejjX7VRlcN2HZkak_wIqPFJ6mtVIk/edit?usp=sharing
          for a list of events.
 
-        :eventname:  A text name from the list of built-in events,
-         for example, "player.place".
-
-        :callback: the plugin method you want to be called when the
-         event occurs. The contents of the payload that is passed
-         back to your method varies between events.
-
+        :Args:
+            :eventname:  A text name from the list of built-in events,
+             for example, "player.place".
+            :callback: the plugin method you want to be called when the
+             event occurs. The contents of the payload that is passed
+             back to your method varies between events.
 
         :returns:  None/Nothing
 
@@ -109,10 +108,10 @@
          *i.e., 'essentials.list' should be on by default, so players*
          *can run /list without having any permissions*
 
-        :permission:  String argument for the permission node; e.g.
-         "essentials.list"
-
-        :value:  Set to True to make a permission default to True.
+        :Args:
+            :permission:  String argument for the permission node; e.g.
+             "essentials.list"
+            :value:  Set to True to make a permission default to True.
 
         :returns:  None/Nothing
 
@@ -122,20 +121,21 @@
 
         Used to create a help group for the /help command.
 
-        :groupname: The name of the help group (usually the plugin
-         name). The groupname is the name you'll see in the list
-         when you run '/help'.
+        :Args:
+            :groupname: The name of the help group (usually the plugin
+             name). The groupname is the name you'll see in the list
+             when you run '/help'.
 
-        :summary: The text that you'll see next next to the help group's name.
+            :summary: The text that you'll see next next to the help group's name.
 
-        :commands: a list of tuples in the following example format;
+            :commands: a list of tuples in the following example format;
 
-            .. code:: python
+                .. code:: python
 
-                     [("/command <argument>, [optional_argument]", "description", "permission.node"),
-                     ("/summon <EntityName> [x] [y] [z]", "Summons an entity", None),
-                     ("/suicide", "Kills you - beware of losing your stuff!", "essentials.suicide")]
-            ..
+                    [("/command <argument>, [optional_argument]", "description", "permission.node"),
+                    ("/summon <EntityName> [x] [y] [z]", "Summons an entity", None),
+                    ("/suicide", "Kills you - beware of losing your stuff!", "essentials.suicide")]
+                ..
 
         :returns:  None/Nothing
 
@@ -157,7 +157,7 @@
         Returns the instance (content) of another running wrapper
         plugin with the specified ID.
 
-        :plugin_id:  The `ID` of the plugin from the plugin's header.
+        :arg plugin_id:  The `ID` of the plugin from the plugin's header.
          if no `ID` was specified by the plugin, then the file name
          (without the .py extension) is used as the `ID`.
 
