@@ -8,9 +8,9 @@
     at self.api.minecraft) for gameplay-related methods.
 
         :Plugin Function Names: Most of the Wrapper plugin api is
-         implemented with the java/javascript type conventions of
-         mixedCamelCase. (BenBaptist's first programming language being
-         javascript...)  Not very pythonic, but we have good reason
+         implemented with the java/javascript mixedCamelCase
+         convention. (BenBaptist's first programming language being
+         javascript...)  Not very Pythonic, but we have good reason
          to retain this convention.
 
     backups was one of the newer api modules and some thought was given
@@ -20,8 +20,12 @@
     ...] in contexts where that's already the prevailing style
     (e.g. threading.py), to retain backwards compatibility.'
 
-    This is the case with the wrapper plugin API.  Converting
-    the entire plugin API to snake_case will break everyone's plugins.
+    This is the case with the wrapper plugin API.  Even though
+    there has been no 'official' release candidate before 1.0.0,
+    Wrapper.py has been around for a while now and converting
+    the entire plugin API to snake_case will break lots of people's
+    plugins. 
+
     To maintain a consitent'look and feel' within wrapper's plugin
     API, we have elected to retain this convention *in the*
     *public Plugin API only*!
