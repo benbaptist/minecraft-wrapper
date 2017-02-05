@@ -9,7 +9,7 @@
 
     
 
- verifyTarInstalled(self)
+-  verifyTarInstalled(self)
 
         checks for tar on users system.
 
@@ -18,7 +18,7 @@
 
         
 
- performBackup(self)
+-  performBackup(self)
 
         Perform an immediate backup
 
@@ -26,7 +26,7 @@
 
         
 
- pruneBackups(self)
+-  pruneBackups(self)
 
         prune backups according to wrapper properties settings.
 
@@ -34,7 +34,7 @@
 
         
 
- disableBackups(self)
+-  disableBackups(self)
 
         Allow plugin to temporarily shut off backups (only during
         this wrapper session).
@@ -43,7 +43,7 @@
 
         
 
- enableBackups(self)
+-  enableBackups(self)
 
         Allow plugin to re-enable disabled backups or enable backups
         during this wrapper session.
@@ -54,7 +54,7 @@
 
         
 
- adjustBackupInterval(self, desired_interval)
+-  adjustBackupInterval(self, desired_interval)
 
         Adjust the backup interval for automatic backups.
 
@@ -64,7 +64,7 @@
 
         
 
- adjustBackupsKept(self, desired_number)
+-  adjustBackupsKept(self, desired_number)
 
         Adjust the number of backups kept.
 

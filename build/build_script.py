@@ -65,7 +65,7 @@ def build_the_docs():
             if "def " in all_items[each_item]:
                 defs = all_items[each_item].split("def")
                 number_of_defs = len(defs) - 1
-                header = "%s\n" % all_items[each_item].split(
+                header = "- %s\n" % all_items[each_item].split(
                     "def")[number_of_defs].split(":")[0]
 
             # dont create documentation for private functions
