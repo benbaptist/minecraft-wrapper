@@ -43,10 +43,10 @@ COLORCODES = {
 
 # class Helpers:
 """
-Not actually class at all;  This is a module collection of
+This is not actually a class at all, but a module collection of
 Wrapper's helpful utilities.
 
-They are imported with the core API and are accessible
+This module is imported with the core API and is accessible
 using 'self.api.helpers'
 
     .. code:: python
@@ -510,9 +510,9 @@ def read_timestr(mc_time_string):
     :arg mc_time_string: minecraft time string.
 
     :returns:
-        :Integer: regular seconds from epoch (integer)
-        :Invalid data (like "forever"): returns 9999999999 symbolizing
-         forever.
+        :regular seconds from epoch: Integer
+        :9999999999 symbolizing forever: For invalid data
+         (like "forever").
 
     """
 
