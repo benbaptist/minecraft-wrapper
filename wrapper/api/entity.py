@@ -14,8 +14,14 @@ from core.entities import Objects as Objecttypes
 # noinspection PyPep8Naming
 class EntityControl:
     """
-    This class is accessed using self.api.minecraft.getEntityControl()
-    since it is tied to a functioning server only.
+    This class is accessed using
+            .. code:: python
+
+                <object> = self.api.minecraft.getEntityControl()
+                <object>.<class_method>
+            ..
+
+    Valid only with a functioning server.
 
     Entity controls are established by console when wrapper
     reads "preparing ...."
@@ -86,7 +92,7 @@ class EntityControl:
 
     def countActiveEntities(self):
         """
-        return a count of all entities.
+        return an integer count of all entities.
 
         """
         return len(self.entities)
@@ -101,10 +107,10 @@ class EntityControl:
                 .. code:: python
 
                     [
-                        {getEntityInfo(eid#1)},
-                        {getEntityInfo(eid#2)},
-                        {getEntityInfo(eid#3)},
-                        {getEntityInfo(...)}
+                        {<getEntityInfo(eid#1)>},
+                        {<getEntityInfo(eid#2)>},
+                        {<getEntityInfo(eid#3)>},
+                        {<getEntityInfo(...)>}
                     ]
 
                 ..
@@ -124,7 +130,8 @@ class EntityControl:
 
     def getEntityInfo(self, eid):
         """
-        Get dictionary of info on the specified EID.  Returns None if fails
+        Get a dictionary of info on the specified EID.  Returns
+        None if fails
 
         :Sample item:
             .. code:: python
@@ -135,9 +142,9 @@ class EntityControl:
                     "rodeBy": False,
                     # eid of entity - if two or more players share
                     # chunks, this could be the same creeper in
-                    # both player's world/client
-                    # would be in the other player's client under
-                    # another eid, of course
+                    # both player's world/client. It would be in the
+                    # other player's client under  another eid, of
+                    # course...
                     "eid": 126,
                     "name": "Creeper",
                     "Riding": False,
@@ -297,7 +304,6 @@ class EntityControl:
         self._log.debug("_entity_thinner thread closed.")
 
     def _kill_around_player(self, position, entity_name, count):
-
         pos = position
         # send those creatures away
         self._log.debug("killing %d %s" % (count, entity_name))
