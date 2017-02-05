@@ -10,30 +10,6 @@
 
     
 
--  _track(self)
-
-        internal tracking that updates a player's server play time.
-        Not a part of the public player object API.
-
-        Sample ReST formattings -
-
-        # emphasized notes
-        Note: *You do not need to run this function unless you want*
-         *certain permission nodes to be granted by default.*
-         *i.e., 'essentials.list' should be on by default, so players*
-         *can run /list without having any permissions*
-
-        # code samples
-            :sample usage:
-
-                .. code:: python
-
-                    < code here >
-
-                ..
-
-        
-
 -  execute(self, string)
 
         Run a command as this player. If proxy mode is not enabled,

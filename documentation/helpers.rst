@@ -1,21 +1,4 @@
 
--  _addgraphics(text='', foreground='white', background='black', options=())
-
-    encodes text with ANSI graphics codes.
-    https://en.wikipedia.org/wiki/ANSI_escape_code#Non-CSI_codes
-    options - a tuple of options.
-        valid options:
-            'bold'
-            'italic'
-            'underscore'
-            'blink'
-            'reverse'
-            'conceal'
-            'reset' - return reset code only
-            'no-reset' - don't terminate string with a RESET code
-
-    
-
 -  config_to_dict_read(filename, filepath)
 
     reads a disk file with '=' lines (like server.properties) and
@@ -39,13 +22,6 @@
 
     :returns: the string version like "2016-04-14 22:05:13 -0400",
      suitable in ban files.
-
-    
-
--  _format_bytes(number_raw_bytes)
-
-    takes number of bytes and converts to Kbtye, MiB, GiB,
-    etc... using 4 most significant digits.
 
     
 
@@ -245,43 +221,5 @@
 
     :returns:  Boolean indication of success or failure.  None
      if no item was found.
-
-    
-
--  _use_style(foreground='white', background='black', options=())
-
-    Returns a function with default parameters for addgraphics()
-    options - a tuple of options.
-        valid options:
-            'bold'
-            'italic'
-            'underscore'
-            'blink'
-            'reverse'
-            'conceal'
-            'reset' - return reset code only
-            'no-reset' - don't terminate string with a RESET code
-
-    
-
--  _create_chat(
-        translateable="death.attack.outOfWorld", insertion="<playername>",
-        click_event_action="suggest_command",
-        click_event_value="/msg <playername> ",
-        hov_event_action="show_entity",
-        hov_event_text_value="{name
-
-    Internal for now.
-    Creates a json minecraft chat object string (for sending over Protocol).
-
-    :param translateable:
-    :param insertion:
-    :param click_event_action:
-    :param click_event_value:
-    :param hov_event_action:
-    :param hov_event_text_value:
-    :param with_text:
-    :param plain_dict_chat:
-    :return:
 
     

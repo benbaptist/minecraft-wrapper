@@ -69,7 +69,7 @@ def build_the_docs():
                     "def")[number_of_defs].split(":")[0]
 
             # dont create documentation for private functions
-            if "def _" not in header:
+            if "-  _" not in header:
                 complete_doc = "%s\n%s%s\n" % (complete_doc, header, item)
 
         processed[files] = complete_doc
