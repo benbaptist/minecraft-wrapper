@@ -58,7 +58,7 @@
             :duration:
             :amplifier:
 
-         :returns: Nothing; runs in console
+        :returns: Nothing; runs in console
 
         
 
@@ -83,32 +83,27 @@
         Supported variables and methods:
 
         :These variables affect entity processing:
+            :Property: Config Location
 
-            :self.entityControl: from
+            :self.entityControl:
              config["Entities"]["enable-entity-controls"]
 
-            :self.entityProcessorFrequency: from
+            :self.entityProcessorFrequency:
              config["Entities"]["entity-update-frequency"]
 
-            :self.thiningFrequency: from
+            :self.thiningFrequency:
              config["Entities"]["thinning-frequency"]
 
-            :self.serverStartThinningThreshshold: from
+            :self.serverStartThinningThreshshold:
              config["Entities"]["thinning-activation-threshhold"]
 
         :See api.entity for more about these methods:
-
-                def killEntityByEID(self, eid, dropitems=False, count=1)
-
-                def existsEntityByEID(self, eid)
-
-                def getEntityInfo(self, eid)
-
-                def countEntitiesInPlayer(self, playername)
-
-                def countActiveEntities(self)
-
-                def getEntityByEID(self, eid)
+                :def killEntityByEID(self, eid, dropitems=False, count=1):
+                :def existsEntityByEID(self, eid):
+                :def getEntityInfo(self, eid):
+                :def countEntitiesInPlayer(self, playername):
+                :def countActiveEntities(self):
+                :def getEntityByEID(self, eid):
 
         
 
