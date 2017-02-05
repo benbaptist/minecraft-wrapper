@@ -41,7 +41,7 @@ from api import helpers
 # noinspection PyPep8Naming
 class API:
     """
-    The API class contains methods for basic plugin functionality,
+    The API (base) class contains methods for basic plugin functionality,
     such as handling events, registering commands, and more. Most
     methods aren't related to gameplay, aside from commands and
     events, but for core stuff. See the Minecraft class (accessible

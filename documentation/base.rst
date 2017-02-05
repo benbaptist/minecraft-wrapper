@@ -1,5 +1,5 @@
 
-def  - Definately not not following PEP-8 naming of functions- why!?
+  - Definately not not following PEP-8 naming of functions- why!?
 
 
     backups was one of the newer api modules and some thought was given
@@ -23,7 +23,7 @@ def  - Definately not not following PEP-8 naming of functions- why!?
 
 **< class API >**
 
-    The API class contains methods for basic plugin functionality,
+    The API (base) class contains methods for basic plugin functionality,
     such as handling events, registering commands, and more. Most
     methods aren't related to gameplay, aside from commands and
     events, but for core stuff. See the Minecraft class (accessible
@@ -48,7 +48,7 @@ def  - Definately not not following PEP-8 naming of functions- why!?
 
     
 
-def registerCommand(self, command, callback, permission=None)
+ registerCommand(self, command, callback, permission=None)
 
         This registers a command that, when entered by the Minecraft
         client, will execute `callback(player, args)`. permission is
@@ -82,7 +82,7 @@ def registerCommand(self, command, callback, permission=None)
 
         
 
-def registerEvent(self, eventname, callback)
+ registerEvent(self, eventname, callback)
 
         Register an event and a callback function. See
          https://docs.google.com/spreadsheets/d/1Sxli0mpN3Aib-aejjX7VRlcN2HZkak_wIqPFJ6mtVIk/edit?usp=sharing
@@ -99,7 +99,7 @@ def registerEvent(self, eventname, callback)
 
         
 
-def registerPermission(self, permission=None, value=False)
+ registerPermission(self, permission=None, value=False)
 
         Used to set a default for a specific permission node.
 
@@ -117,7 +117,7 @@ def registerPermission(self, permission=None, value=False)
 
         
 
-def registerHelp(self, groupname, summary, commands)
+ registerHelp(self, groupname, summary, commands)
 
         Used to create a help group for the /help command.
 
@@ -142,18 +142,18 @@ def registerHelp(self, groupname, summary, commands)
 
         
 
-def blockForEvent(self, eventtype)
+ blockForEvent(self, eventtype)
 
         Blocks until the specified event is called. 
 
-def callEvent(self, event, payload)
+ callEvent(self, event, payload)
 
         Invokes the specific event. Payload is extra information
         relating to the event. Errors may occur if you don't specify
         the right payload information.
         
 
-def getPluginContext(self, plugin_id)
+ getPluginContext(self, plugin_id)
 
         Returns the instance (content) of another running wrapper
         plugin with the specified ID.
@@ -178,7 +178,7 @@ def getPluginContext(self, plugin_id)
 
         
 
-def getStorage(self, name, world=False, formatting="pickle")
+ getStorage(self, name, world=False, formatting="pickle")
 
         Returns a storage object manager.  The manager contains the
         storage object, 'Data' (a dictionary). 'Data' contains the
@@ -272,7 +272,7 @@ def getStorage(self, name, world=False, formatting="pickle")
 
         
 
-def wrapperHalt(self)
+ wrapperHalt(self)
 
         Shuts wrapper down entirely.  To use this as a wrapper-restart
         method, use some code like this in a shell file to start
