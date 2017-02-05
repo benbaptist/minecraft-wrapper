@@ -450,7 +450,7 @@ class Minecraft:
                 :datatag:
                 :oldblockhandling:
 
-         :returns: Nothing.
+        :returns: Nothing.
 
         """
         if not datatag:
