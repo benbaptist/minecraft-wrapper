@@ -24,8 +24,9 @@
     the entire plugin API to snake_case will break everyone's plugins.
     To maintain a consitent'look and feel' within wrapper's plugin
     API, we have elected to retain this convention *in the*
-    *public Plugin API*  Wrapper's internals will follow standard
-    PEP-8 conventions.
+    *public Plugin API only*!
+
+    Wrapper's internals will follow standard PEP-8 conventions.
 
     :sample Plugin snippet:
 
