@@ -1,6 +1,12 @@
 
 **< class EntityControl >**
 
+    .. code:: python
+
+        def __init__(self, mcserver)
+
+    ..
+
     This class is accessed using
             .. code:: python
 

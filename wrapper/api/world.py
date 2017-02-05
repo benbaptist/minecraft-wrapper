@@ -12,6 +12,12 @@ import json
 # noinspection PyPep8Naming
 class World:
     """
+    .. code:: python
+
+        def __init__(self, name, mcserver)
+
+    ..
+
     This class is accessed via getWorld().  Requires a running server.
 
     World is established by console when wrapper reads "preparing ...."

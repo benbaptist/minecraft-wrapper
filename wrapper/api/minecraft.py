@@ -20,6 +20,12 @@ from proxy.mcpackets_sb import Packets as ServerBound
 # noinspection PyBroadException
 class Minecraft:
     """
+    .. code:: python
+
+        def __init__(self, wrapper)
+
+    ..
+
     This class contains functions related to in-game features
     directly. These methods are accessed using 'self.api.minecraft'
 

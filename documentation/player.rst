@@ -1,8 +1,14 @@
 
 **< class Player >**
 
-    This class is normally passed argument as an event callback\
-    argument, but can be also be called using getPlayer(username):
+    .. code:: python
+
+        def __init__(self, username, wrapper)
+
+    ..
+
+    This class is normally passed as an argument to an event
+    callback, but can be also be called using getPlayer(username):
 
     .. code:: python
 
