@@ -77,7 +77,7 @@ def build_the_events():
                     0].strip("\n").lstrip(" ").rstrip(" ")
 
                 eventname, pay = eventargs.split(", ")[:2]
-                eventname = ":event name: %s" % eventname.split(",")[0]
+                eventname = ":%s:" % eventname.split(",")[0]
                 pay = "{%s}" % pay
 
                 # use alternate payload text

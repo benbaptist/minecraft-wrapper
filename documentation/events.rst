@@ -1,4 +1,4 @@
-    :event name: "player.runCommand"
+    :"player.runCommand":
 
         :description: When player runs a command.
         :payload:
@@ -8,7 +8,7 @@
             :"args": what he said
         :abortable: Can cancel or modify by returning new value
 
-    :event name: "player.place"
+    :"player.place":
 
         :description: When player runs a command.
         :payload:
