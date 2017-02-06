@@ -50,13 +50,6 @@ def build_the_events():
         "args": what he said}
         :payload:
 
-        # omitted if not specified
-        :args:
-            :"position":
-             Where new block or item will go (corrected for "face".
-            :"clickposition": The cooridinates actually clicked on.
-        :args:
-
     '''
     all_events = ""
     codefiles = [
@@ -75,10 +68,14 @@ def build_the_events():
                 # get callevent name and payload, newlines removed...
                 eventargs = event.split("):")[
                     0].strip("\n").lstrip(" ").rstrip(" ")
-
+                print(eventargs)
                 eventname, pay = eventargs.split(", ")[:2]
                 eventname = ":%s:" % eventname.split(",")[0]
+
                 pay = "{%s}" % pay
+                invalid_payload = False
+                if "{None)" in pay:
+                    invalid_payload = True
 
                 # use alternate payload text
                 if ":payload:" in event:
@@ -86,7 +83,7 @@ def build_the_events():
 
                 aborthandling = event.split("<abortable>\n")[
                     1].lstrip().rstrip()
-                print(pay)
+
                 payload = pay.replace(
                     "  ", "").replace("\n", "").replace(
                     "{\"", "\n            :\"").replace(
@@ -94,7 +91,9 @@ def build_the_events():
                     ",\"", "\n            :\"").replace(
                     ", \"", ",\n            :\"")
 
-                print(payload)
+                if invalid_payload:
+                    payload = "            None\n"
+
                 # groupname is for sorting
                 groupname = event.split(" <gr> ")[1]
                 description = ":description: %s" % event.split(" <desc> ")[1]

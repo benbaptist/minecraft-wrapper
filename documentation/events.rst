@@ -1,3 +1,11 @@
+    :"timer.second":
+
+        :description: timer event called each second.
+        :payload:
+            None
+
+        :abortable: No
+
     :"player.runCommand":
 
         :description: When player runs a command.
