@@ -615,10 +615,20 @@ class Wrapper:
         while not self.halt:
             if time.time() - t > 1:
                 self.events.callevent("timer.second", None)
+                ''' EventDoc
+                        Required items-
+                        <gr> wrapper <gr> group
+                        <desc> timer event called each second. <desc> description
+                        <abortable>
+                        No
+                        <abortable>
+
+                    '''
                 t = time.time()
             time.sleep(0.05)
             if self.use_timer_tick_event:
-                self.events.callevent("timer.tick", None)  # don't really advise the use of this timer
+                # don't really advise the use of this timer
+                self.events.callevent("timer.tick", None)
 
     def _pause_console(self, pause_time):
         if not self.javaserver:
