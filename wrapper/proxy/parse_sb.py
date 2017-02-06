@@ -76,6 +76,22 @@ class ParseSB:
                         "args": chatmsg.split(" ")[1:]}):
 
                 # wrapper processed this command.. it goes no further
+                ''' EventDoc
+                        <gr> player <gr> group
+                        <desc> When player runs a command. <desc> description
+                        <abortable>
+                        Can cancel or modify by returning new value
+                        <abortable>
+
+                        Optional items-
+                        # uses the call event payload if not specified.
+                        :payload:
+                        {"player": the player,
+                        "command": what he was up to,
+                        "args": what he said}
+                        :payload:
+
+                '''
                 return False
 
         if chatmsg[0] == "/" and self.command_prefix_non_standard:
@@ -241,13 +257,14 @@ class ParseSB:
                 {"player": player, "position": position,
                  "clickposition": clickposition,
                  "hand": hand, "item": helditem}):
-            '''
-            :decription: When player places a block or item.  "position"
-             is where new block or item will go (corrected for "face".
-             "clickposition" is the cooridinates actually clicked on.
+            ''' EventDoc
+                        <gr> player <gr> group
+                        <desc> When player runs a command. <desc> description
+                        <abortable>
+                        Yes
+                        <abortable>
 
-            :Event: Block placement can be rejected by returning False.
-            '''
+                '''
             return False
         return True
 

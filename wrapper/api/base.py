@@ -25,8 +25,8 @@ class API:
     events, but for core stuff. See the Minecraft class (accessible
     at self.api.minecraft) for gameplay-related methods.
 
-        :Plugin Function Names: Most of the Wrapper plugin api is
-         implemented with the java/javascript mixedCamelCase
+        :Plugin Names, Events and such..: Most of the Wrapper plugin
+         api is implemented with the java/javascript mixedCamelCase
          convention. (BenBaptist's first programming language being
          javascript...)  Not very Pythonic, but we have good reason
          to retain this convention.
@@ -42,7 +42,7 @@ class API:
     there has been no 'official' release candidate before 1.0.0,
     Wrapper.py has been around for a while now and converting
     the entire plugin API to snake_case will break lots of people's
-    plugins. 
+    plugins.
 
     To maintain a consitent'look and feel' within wrapper's plugin
     API, we have elected to retain this convention *in the*
