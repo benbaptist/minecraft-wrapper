@@ -782,7 +782,6 @@ def get_req(something, request):
 
 
 def _test():
-
     banlist = getjsonfile("banned-players", "/home/surest/Desktop/server")
     x = find_in_json(banlist, "uuid", "d2a44ac6-6427-4f3a-98b8-33441c263cd4")
     print(x)
@@ -819,6 +818,4 @@ def _test():
 
 
 if __name__ == "__main__":
-
     _test()
-    pass

@@ -30,149 +30,14 @@ parser.add_argument('--verbose', '-v', action='store_true',
 args = parser.parse_args()
 
 
-def build_the_events():
-    """Build a Rst table(s) describing wrapper events"""
-
-    # Sample event doc
-    ''' EventDoc
-        Required items-
-        <gr> player <gr> group
-        <desc> When player places a block or item. <desc> description
-        <abortable>
-        Block placement can be rejected by returning False.
-        <abortable>
-
-        Optional items-
-        # uses the call event payload if not specified.
-        :payload:
-        {"player": the player,
-        "command": what he was up to,
-        "args": what he said}
-        :payload:
-
-    '''
-    all_events = ""
-    codefiles = [
-        y for x in walk("wrapper") for y in glob(path.join(x[0], '*.py'))]
-    # so that they are always in the same order..
-    codefiles.sort()
-
-    for filenames in codefiles:
-        with open(filenames) as f:
-            file = f.read()
-
-        eventlist = file.split("events.callevent(")
-        for event in eventlist:
-            # has a document
-            if "''' EventDoc" in event:
-                # get callevent name and payload, newlines removed...
-                eventargs = event.split("):")[
-                    0].strip("\n").lstrip(" ").rstrip(" ")
-                print(eventargs)
-                eventname, pay = eventargs.split(", ")[:2]
-                eventname = ":%s:" % eventname.split(",")[0]
-
-                pay = "{%s}" % pay
-                invalid_payload = False
-                if "{None)" in pay:
-                    invalid_payload = True
-
-                # use alternate payload text
-                if ":payload:" in event:
-                    pay = event.split(":payload:")[1]
-
-                aborthandling = event.split("<abortable>\n")[
-                    1].lstrip().rstrip()
-
-                payload = pay.replace(
-                    "  ", "").replace("\n", "").replace(
-                    "{\"", "\n            :\"").replace(
-                    "}", "").replace(
-                    ",\"", "\n            :\"").replace(
-                    ", \"", ",\n            :\"")
-
-                if invalid_payload:
-                    payload = "            None\n"
-
-                # groupname is for sorting
-                groupname = event.split(" <gr> ")[1]
-                description = ":description: %s" % event.split(" <desc> ")[1]
-                event_item = "    %s\n\n        %s\n" \
-                             "        :payload:\n%s\n" \
-                             "        :abortable: %s\n\n" % \
-                             (eventname, description,
-                              payload, aborthandling)
-                all_events += event_item
-    return all_events
-
-
-def build_the_docs(events):
-    """
-
-    Simple docs builder.  creates 'ReStructured Text' files from the
-    docstrings. Rst format based on spec:
-
-    http://docutils.sourceforge.net/docs/ref/rst/restructuredtext.html
-
-    """
-
-    sep = '"""'
-    index_file = "**Welcome to the Wrapper.py Plugin API documentation!" \
-                 "**\n\nThe API is divided into modules.  Click on each " \
-                 "module to see it's documentation.\n\n\n"
-
-    api_files = ["wrapperconfig", "base", "minecraft", "player", "world",
-                 "entity", "backups", "helpers"]
-    processed = {}
-
-    for files in api_files:
-        with open("wrapper/api/%s.py" % files) as f:
-            data = f.read()
-        all_items = data.split(sep)
-        complete_doc = ""
-        item_count = len(all_items) - 1
-        total_items = range(0, item_count, 2)
-        for each_item in total_items:
-            # each_item.split(endsep)[0]
-            item = all_items[each_item + 1]
-            header = "****\n"
-            if "class " in all_items[each_item]:
-                header = "**< class%s >**\n" % all_items[each_item].split(
-                    "class")[1].split(":")[0]
-
-            if "def " in all_items[each_item]:
-                defs = all_items[each_item].split("def")
-                number_of_defs = len(defs) - 1
-                header = "- %s\n" % all_items[each_item].split(
-                    "def")[number_of_defs].split(":")[0]
-
-            # dont create documentation for private functions
-            if "-  _" not in header:
-                complete_doc = "%s\n%s%s\n" % (complete_doc, header, item)
-
-        processed[files] = complete_doc
-
-    for files in api_files:
-        with open("documentation/%s.rst" % files, "w") as f:
-            f.write(processed[files])
-        index_file = "%s[%s](/documentation/%s.rst)\n\n" % (
-            index_file, files, files)
-
-    with open("documentation/index.md", "w") as f:
-        f.write(index_file)
-
-    with open("documentation/events.rst", "w") as f:
-        f.write("%s\n\n" % events)
-
-
 def build_wrapper(buildargs):
     chdir(buildargs.source)
 
     # build the events
-    events = build_the_events()
+    build_the_events()
 
     # build the docs
-    build_the_docs(events)
+    build_the_docs()
 
     with open("build/version.json", "r") as f:
         version = json.loads(f.read())
@@ -227,6 +92,232 @@ def build_wrapper(buildargs):
         subprocess.Popen("git push", shell=True).wait()
     print("Built version %d (%s build)" % (
         version["__build__"], buildargs.branch))
+
+
+# Main documentation builder
+def build_the_docs():
+    """
+
+    Simple docs builder.  creates 'ReStructured Text' files from the
+    docstrings. Rst format based on spec:
+
+    http://docutils.sourceforge.net/docs/ref/rst/restructuredtext.html
+
+    """
+
+    sep = '"""'
+    index_file = "**Welcome to the Wrapper.py Plugin API documentation!" \
+                 "**\n\nThe API is divided into modules.  Click on each " \
+                 "module to see it's documentation.\n\n\n"
+
+    events_footer = "<br>**Click here for a list of Wrapper's events**<br>" \
+                    "[Wrapper.py Events](/documentation/events.rst)<br>"
+
+    api_files = ["wrapperconfig", "base", "minecraft", "player", "world",
+                 "entity", "backups", "helpers"]
+    processed = {}
+
+    for files in api_files:
+        with open("wrapper/api/%s.py" % files) as f:
+            data = f.read()
+        all_items = data.split(sep)
+        complete_doc = ""
+        item_count = len(all_items) - 1
+        total_items = range(0, item_count, 2)
+        for each_item in total_items:
+            # each_item.split(endsep)[0]
+            item = all_items[each_item + 1]
+            header = "****\n"
+            if "class " in all_items[each_item]:
+                header = "**< class%s >**\n" % all_items[each_item].split(
+                    "class")[1].split(":")[0]
+
+            if "def " in all_items[each_item]:
+                defs = all_items[each_item].split("def")
+                number_of_defs = len(defs) - 1
+                header = "- %s\n" % all_items[each_item].split(
+                    "def")[number_of_defs].split(":")[0]
+
+            # dont create documentation for private functions
+            if "-  _" not in header:
+                complete_doc = "%s\n%s%s\n" % (complete_doc, header, item)
+
+        processed[files] = complete_doc
+
+    for files in api_files:
+        with open("documentation/%s.rst" % files, "w") as f:
+            f.write(processed[files])
+        index_file = "%s[%s](/documentation/%s.rst)\n\n" % (
+            index_file, files, files)
+    index_file += events_footer
+
+    with open("documentation/index.md", "w") as f:
+        f.write(index_file)
+
+
+# process a file possibly containing events
+def process_file(filetext, filename, data):
+    # preserve intentional single space in quotes from stripping
+    strippedtext = filetext.replace("\" \"", "<__SPACE__>")
+    # strip all embedded whitespace
+    strippedtext = ''.join(strippedtext.split())
+    strippedtext = strippedtext.replace("<__SPACE__>", "\" \"")
+
+    eventsections = strippedtext.split(".events.callevent",)
+    print("building %s events list" % filename)
+    for eachsection in eventsections:
+        if eachsection[0] != "(":
+            # it is not a function (probably the part before the 1st one)
+            continue
+        time.sleep(.1)
+        # all events have a name
+        eventname = eachsection.split("(")[1].split(",")[0]
+
+        rest = "".join(eachsection.split("%s," % eventname)[1:])
+        arguments = get_the_args(rest)
+        raw_event = filetext.split("%s," % eventname)
+        myeventonly = raw_event[1].split(".events.callevent")
+
+        event_doc = myeventonly[0].split("\"\"\"")
+
+        if len(event_doc) > 2 and "eventdoc" in event_doc[1].lower():
+            doc_area = event_doc[1]
+        else:
+            doc_area = None
+
+        # initialize groups
+        if "groups" not in data:
+            data["groups"] = {}
+
+        # basic doc
+        doc_item = {
+            "file": filename.split("/")[-1:][0] or filename,
+            "group": "/".join(filename.split("/")[-2:]) or filename,
+            "module": "/".join(filename.split("/")[-2:]) or filename,
+            "event": eventname.strip("\""),
+            "payload": "\n".join(arguments.lstrip("{").rstrip("}").replace(
+                "\":", "\": ").split(",")) or None,
+            "abortable": "",
+            "comments": "",
+            "description": ""
+        }
+
+        # enhanced doc (has a docstring with <sections> some data <section>)
+        if doc_area:
+            for items in doc_item:
+                area = "<%s>" % items
+                target = doc_area.split(area)
+                if len(target) > 1:
+                    alllines = []
+                    itemslines = target[1].splitlines()
+                    for eachline in itemslines:
+                        alllines.append(eachline.rstrip().lstrip())
+                    # support <br> and <t> for line break and tabs
+                    doc_item[items] = "\n".join(alllines).strip(
+                        ).replace("<br>", "\n").replace("<t>", "    ")
+
+        # ensure group list exists
+        if doc_item["group"] not in data["groups"]:
+            data["groups"][doc_item["group"]] = []
+
+        # append this item
+        data["groups"][doc_item["group"]].append(doc_item)
+
+
+# get the payload arguments for an event
+def get_the_args(stringsection):
+
+    toparse = "(%s" % stringsection
+    counter = 0
+    index = 0
+    for counter, character in enumerate(toparse):
+        if character == "(":
+            index += 1
+        if character == ")":
+            index -= 1
+        if index == 0:
+            break
+    return toparse[1:counter]
+
+
+def format_to_rst(data):
+    """take dictionary data and return a text Rst file"""
+    textfile = ""
+    indent = "    "
+
+    for group in data["groups"]:
+        textfile += "**< Group '%s' >**\n\n" % group
+        for group_item in data["groups"][group]:
+
+            # Event name
+            textfile += ":Event: \"%s\"\n\n" % group_item["event"]
+
+            # module code name
+            textfile += "%s:Module: %s (%s)\n\n" % (
+                indent, group_item["file"], group_item["module"])
+
+            # description - indented just like payload args
+            # use <br> (line break) and <t> (tab/4space) for
+            # additional formatting inside comment
+            if group_item["description"] != "":
+                textfile += "%s:Description:\n" % indent
+                for lines in group_item["description"].splitlines():
+                    textfile += "%s%s%s\n" % (indent, indent, lines)
+                textfile += "\n"
+            else:
+                textfile += "%s:Description: %s\n\n" % (
+                    indent, group_item["event"])
+
+            # No payload lines
+            if group_item["payload"] != "None":
+                textfile += "%s:Payload:\n" % indent
+                for lines in group_item["payload"].splitlines():
+                    textfile += "%s%s:%s\n" % (indent, indent, lines)
+                textfile += "\n"
+            else:
+                textfile += "%s:Payload: None\n\n" % indent
+
+            # abortable
+            textfile += "%s:Can be aborted/modified: %s\n" % (
+                indent, group_item["abortable"])
+
+            # Comments - are indented just like payload args
+            # use <br> (line break) and <t> (tab/4space) for
+            # additional formatting inside comment
+            if group_item["comments"] != "":
+                textfile += "%s:Comments:\n" % indent
+                for lines in group_item["comments"].splitlines():
+                    textfile += "%s%s:%s\n" % (indent, indent, lines)
+                textfile += "\n"
+            else:
+                textfile += "\n"
+    return textfile
+
+
+def build_the_events():
+    """Build a Rst table(s) describing wrapper events"""
+
+    # make list of all source code modules
+    codefiles = [
+        y for x in walk("wrapper") for y in glob(path.join(x[0], '*.py'))]
+
+    # so that they are always in the same order..
+    codefiles.sort()
+
+    all_events = {}
+
+    # get all items
+    for filenames in codefiles:
+        with open(filenames) as f:
+            filecontent = f.read()
+        # process_file changes the contexts of all_events without
+        # an explicit return
+        process_file(filecontent, filenames, all_events)
+
+    # write the finished file
+    with open("documentation/events.rst", "w") as f:
+        f.write(format_to_rst(all_events))
+
 
 # Don't try-except here (just hides errors)
 build_wrapper(args)

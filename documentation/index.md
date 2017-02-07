@@ -19,3 +19,4 @@ The API is divided into modules.  Click on each module to see it's documentation
 
 [helpers](/documentation/helpers.rst)
 
+<br>**Click here for a list of Wrapper's events**<br>[Wrapper.py Events](/documentation/events.rst)<br>
