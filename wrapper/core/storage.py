@@ -90,7 +90,26 @@ class Storage:
         if "human" in self.encoding.lower():
             _protocol = 0
         else:
-            _protocol = Pickle.HIGHEST_PROTOCOL
+            # using something less than HIGHEST allows both Pythons 2/3
+            # to use the files interchangeably.  It should also allow
+            # moving files between machines with different configurations
+            # with fewer issues.
+            #
+            # Python 2 cPickle does not have a DEFAULT_PROTOCOL
+            # constant like Python 3 pickle (else I would just
+            # use the Default (currently 3, I believe).
+            #
+            # This will probably use either 1 or 2 depending on
+            # which python you use.
+            #
+            # We imported either pickle (Py3) or cPickle (Py2) depending
+            # on what wrapper detected.  Both are implemented in C for
+            # speed.
+            #
+            # The MAIN POINT:
+            # I wanted the code to use something better/faster than
+            # Human-readable (unless that is what you specify).
+            _protocol = Pickle.HIGHEST_PROTOCOL // 2
 
         with open("%s/%s.%s" % (self.root, self.name, self.file_ext), "wb") as f:
             Pickle.dump(self.Data, f, protocol=_protocol)
