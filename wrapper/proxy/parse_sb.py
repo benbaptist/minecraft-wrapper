@@ -49,7 +49,23 @@ class ParseSB:
             "player": self.client.getplayerobject(),
             "message": chatmsg
         })
+        """ eventdoc
+            <group> Proxy <group>
 
+            <description> Raw message from client to server.
+            Contains the "/", if present.
+            <description>
+
+            <abortable> Yes <abortable>
+
+            <comments>
+            Can be aborted by returning False. Can be modified before
+            passing to server.  'chatmsg' accepts both raw string
+            or a dictionary payload containing ["message"] item.
+            <comments>
+
+
+        """
         # This part allows the player plugin event "player.rawMessage" to...
         if payload is False:
             return False  # ..reject the packet (by returning False)
@@ -76,22 +92,29 @@ class ParseSB:
                         "args": chatmsg.split(" ")[1:]}):
 
                 # wrapper processed this command.. it goes no further
-                ''' EventDoc
-                        <gr> player <gr> group
-                        <desc> When player runs a command. <desc> description
-                        <abortable>
-                        Can cancel or modify by returning new value
-                        <abortable>
+                """ eventdoc
+                    <group> Proxy <group>
 
-                        Optional items-
-                        # uses the call event payload if not specified.
-                        :payload:
-                        {"player": the player,
-                        "command": what he was up to,
-                        "args": what he said}
-                        :payload:
+                    <description> When a player runs a command. Do not use
+                    for registering commands.
+                    <description>
 
-                '''
+                    <abortable> Registered commands ARE aborted... <abortable>
+
+                    <comments>
+                    Called AFTER player.rawMessage event if rawMessage
+                    does not reject it.  However, rawMessage could have
+                    modified it before this point.
+                    <comments>
+
+                    <payload>
+                    "player": playerobject()
+                    "command": slash command (or whatever is set in wrapper's
+                    config as the command cursor).
+                    "args": the remaining words/args
+                    <payload>
+
+                """
                 return False
 
         if chatmsg[0] == "/" and self.command_prefix_non_standard:
@@ -320,7 +343,7 @@ class ParseSB:
         l2 = data[4]
         l3 = data[5]
         l4 = data[6]
-        payload = self.wrapper.events.callevent("player.createsign", {
+        payload = self.wrapper.events.callevent("player.createSign", {
             "player": self.client.getplayerobject(),
             "position": position,
             "line1": l1,
@@ -343,7 +366,31 @@ class ParseSB:
                 l3 = payload["line3"]
             if "line4" in payload:
                 l4 = payload["line4"]
+        """ eventdoc
+            <group> Proxy <group>
 
+            <description> When a player creates a sign and finishes editing it
+            <description>
+
+            <abortable> Yes <abortable>
+
+            <comments>
+            Can be aborted by returning False.
+            Any of the four line arguments can be changed by
+            returning a dictionary payload containing "lineX":
+            "what you want"
+            <comments>
+
+            <payload>
+            "player": playerobject()
+            "position": position of sign
+            "line1": l1
+            "line2": l2
+            "line3": l3
+            "line4": l4
+            <payload>
+
+        """
         self.client.editsign(position, l1, l2, l3, l4, pre_18)
         return False
 
@@ -385,7 +432,30 @@ class ParseSB:
 
         if not self.wrapper.events.callevent("player.slotClick", datadict):
             return False
+        """ eventdoc
+            <group> Proxy <group>
 
+            <description> When a player clicks a window slot
+            <description>
+
+            <abortable> Yes <abortable>
+
+            <comments>
+            Can be aborted by returning False. Aborting is not recommended
+            since that is how wrapper keeps tabs on inventory.
+            <comments>
+
+            <payload>
+            "player": playerobject()
+            "wid": window id ... always 0 for inventory
+            "slot": slot number
+            "button": mouse / key button
+            "action": unique action id - incrementing counter
+            "mode": varint:mode - see the wiki?
+            "clicked": item data
+            <payload>
+
+        """
         # for inventory control, the most straightforward way to update
         # wrapper's inventory is to use the data from each click.  The
         # server will make other updates and corrections via SET_SLOT

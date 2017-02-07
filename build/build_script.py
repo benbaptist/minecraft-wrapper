@@ -202,19 +202,22 @@ def process_file(filetext, filename, data):
             "description": ""
         }
 
-        # enhanced doc (has a docstring with <sections> some data <section>)
+        # enhanced doc (has a docstring with <marker> some data <marker>)
         if doc_area:
             for items in doc_item:
                 area = "<%s>" % items
                 target = doc_area.split(area)
-                if len(target) > 1:
+                # should be greater than 2 to ensure closing <marker> exists
+                if len(target) > 2:
                     alllines = []
                     itemslines = target[1].splitlines()
                     for eachline in itemslines:
                         alllines.append(eachline.rstrip().lstrip())
                     # support <br> and <t> for line break and tabs
+                    # ... and spaces (<sp>) -sometimes needed for rst
                     doc_item[items] = "\n".join(alllines).strip(
-                        ).replace("<br>", "\n").replace("<t>", "    ")
+                        ).replace("<br>", "\n").replace(
+                        "<t>", "    ").replace("<sp>", " ")
 
         # ensure group list exists
         if doc_item["group"] not in data["groups"]:
@@ -253,7 +256,7 @@ def format_to_rst(data):
             textfile += ":Event: \"%s\"\n\n" % group_item["event"]
 
             # module code name
-            textfile += "%s:Module: %s (%s)\n\n" % (
+            textfile += "%s:Module: %s *(%s)*\n\n" % (
                 indent, group_item["file"], group_item["module"])
 
             # description - indented just like payload args
@@ -272,7 +275,12 @@ def format_to_rst(data):
             if group_item["payload"] != "None":
                 textfile += "%s:Payload:\n" % indent
                 for lines in group_item["payload"].splitlines():
-                    textfile += "%s%s:%s\n" % (indent, indent, lines)
+                    # if a start line (begins with quoted item)
+                    if lines[0] == "\"":
+                        textfile += "%s%s:%s\n" % (indent, indent, lines)
+                    # likely a continuation line
+                    else:
+                        textfile += "%s%s %s\n" % (indent, indent, lines)
                 textfile += "\n"
             else:
                 textfile += "%s:Payload: None\n\n" % indent
@@ -282,12 +290,12 @@ def format_to_rst(data):
                 indent, group_item["abortable"])
 
             # Comments - are indented just like payload args
-            # use <br> (line break) and <t> (tab/4space) for
-            # additional formatting inside comment
+            # use <br> (line break), <t> (tab/4space), <sp>
+            # (one space) for additional formatting inside comment
             if group_item["comments"] != "":
                 textfile += "%s:Comments:\n" % indent
                 for lines in group_item["comments"].splitlines():
-                    textfile += "%s%s:%s\n" % (indent, indent, lines)
+                    textfile += "%s%s%s\n" % (indent, indent, lines)
                 textfile += "\n"
             else:
                 textfile += "\n"

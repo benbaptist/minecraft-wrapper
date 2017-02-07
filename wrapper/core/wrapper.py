@@ -615,20 +615,35 @@ class Wrapper:
         while not self.halt:
             if time.time() - t > 1:
                 self.events.callevent("timer.second", None)
-                ''' EventDoc
-                        Required items-
-                        <gr> wrapper <gr> group
-                        <desc> timer event called each second. <desc> description
-                        <abortable>
-                        No
-                        <abortable>
+                """ eventdoc
+                    <group> wrapper <group>
 
-                    '''
-                t = time.time()
+                    <description> a timer that is called each second.
+                    <description>
+
+                    <abortable> No <abortable>
+
+                """
+            t = time.time()
             time.sleep(0.05)
             if self.use_timer_tick_event:
                 # don't really advise the use of this timer
                 self.events.callevent("timer.tick", None)
+                """ eventdoc
+                    <group> wrapper <group>
+
+                    <description> a timer that is called each 1/20th
+                    <sp> of a second, like a minecraft tick.
+                    <description>
+
+                    <abortable> No <abortable>
+
+                    <comments>
+                    Use of this timer is not suggested and is turned off
+                    <sp> by default in the wrapper.config.json file
+                    <comments>
+
+                """
 
     def _pause_console(self, pause_time):
         if not self.javaserver:
