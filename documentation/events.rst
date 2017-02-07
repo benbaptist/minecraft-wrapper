@@ -2,7 +2,7 @@
 
 :Event: "player.login"
 
-    :Module: mcserver.py (core/mcserver.py)
+    :Module: mcserver.py *(core/mcserver.py)*
 
     :Description: player.login
 
@@ -13,18 +13,18 @@
 
 :Event: "player.logout"
 
-    :Module: mcserver.py (core/mcserver.py)
+    :Module: mcserver.py *(core/mcserver.py)*
 
     :Description: player.logout
 
     :Payload:
-        :self.getplayer(players_name)
+         self.getplayer(players_name)
 
     :Can be aborted/modified: 
 
 :Event: "server.stopped"
 
-    :Module: mcserver.py (core/mcserver.py)
+    :Module: mcserver.py *(core/mcserver.py)*
 
     :Description: server.stopped
 
@@ -35,7 +35,7 @@
 
 :Event: "server.starting"
 
-    :Module: mcserver.py (core/mcserver.py)
+    :Module: mcserver.py *(core/mcserver.py)*
 
     :Description: server.starting
 
@@ -46,7 +46,7 @@
 
 :Event: "server.started"
 
-    :Module: mcserver.py (core/mcserver.py)
+    :Module: mcserver.py *(core/mcserver.py)*
 
     :Description: server.started
 
@@ -57,7 +57,7 @@
 
 :Event: "server.stopping"
 
-    :Module: mcserver.py (core/mcserver.py)
+    :Module: mcserver.py *(core/mcserver.py)*
 
     :Description: server.stopping
 
@@ -68,7 +68,7 @@
 
 :Event: "server.state"
 
-    :Module: mcserver.py (core/mcserver.py)
+    :Module: mcserver.py *(core/mcserver.py)*
 
     :Description: server.state
 
@@ -80,7 +80,7 @@
 
 :Event: "server.consoleMessage"
 
-    :Module: mcserver.py (core/mcserver.py)
+    :Module: mcserver.py *(core/mcserver.py)*
 
     :Description: server.consoleMessage
 
@@ -91,7 +91,7 @@
 
 :Event: "player.message"
 
-    :Module: mcserver.py (core/mcserver.py)
+    :Module: mcserver.py *(core/mcserver.py)*
 
     :Description: player.message
 
@@ -104,7 +104,7 @@
 
 :Event: "player.action"
 
-    :Module: mcserver.py (core/mcserver.py)
+    :Module: mcserver.py *(core/mcserver.py)*
 
     :Description: player.action
 
@@ -116,7 +116,7 @@
 
 :Event: "player.achievement"
 
-    :Module: mcserver.py (core/mcserver.py)
+    :Module: mcserver.py *(core/mcserver.py)*
 
     :Description: player.achievement
 
@@ -128,7 +128,7 @@
 
 :Event: "server.say"
 
-    :Module: mcserver.py (core/mcserver.py)
+    :Module: mcserver.py *(core/mcserver.py)*
 
     :Description: server.say
 
@@ -141,20 +141,20 @@
 
 :Event: "player.death"
 
-    :Module: mcserver.py (core/mcserver.py)
+    :Module: mcserver.py *(core/mcserver.py)*
 
     :Description: player.death
 
     :Payload:
         :"player": self.getplayer(name)
         :"death": getargsafter(line_words
-        :1)
+         1)
 
     :Can be aborted/modified: 
 
 :Event: "server.lagged"
 
-    :Module: mcserver.py (core/mcserver.py)
+    :Module: mcserver.py *(core/mcserver.py)*
 
     :Description: server.lagged
 
@@ -167,7 +167,7 @@
 
 :Event: "wrapper.backupDelete"
 
-    :Module: backups.py (core/backups.py)
+    :Module: backups.py *(core/backups.py)*
 
     :Description: wrapper.backupDelete
 
@@ -178,7 +178,7 @@
 
 :Event: "wrapper.backupFailure"
 
-    :Module: backups.py (core/backups.py)
+    :Module: backups.py *(core/backups.py)*
 
     :Description: wrapper.backupFailure
 
@@ -190,7 +190,7 @@
 
 :Event: "wrapper.backupBegin"
 
-    :Module: backups.py (core/backups.py)
+    :Module: backups.py *(core/backups.py)*
 
     :Description: wrapper.backupBegin
 
@@ -201,7 +201,7 @@
 
 :Event: "wrapper.backupFailure"
 
-    :Module: backups.py (core/backups.py)
+    :Module: backups.py *(core/backups.py)*
 
     :Description: wrapper.backupFailure
 
@@ -213,7 +213,7 @@
 
 :Event: "wrapper.backupEnd"
 
-    :Module: backups.py (core/backups.py)
+    :Module: backups.py *(core/backups.py)*
 
     :Description: wrapper.backupEnd
 
@@ -225,7 +225,7 @@
 
 :Event: "wrapper.backupFailure"
 
-    :Module: backups.py (core/backups.py)
+    :Module: backups.py *(core/backups.py)*
 
     :Description: wrapper.backupFailure
 
@@ -237,14 +237,14 @@
 
 :Event: "wrapper.backupFailure"
 
-    :Module: backups.py (core/backups.py)
+    :Module: backups.py *(core/backups.py)*
 
     :Description: wrapper.backupFailure
 
     :Payload:
         :"reasonCode": 4
         :"reasonText": "backups.jsoniscorrupted.Pleasecontactanadministerinstantly
-        :asthis""maybecritical."
+         asthis""maybecritical."
 
     :Can be aborted/modified: 
 
@@ -252,7 +252,7 @@
 
 :Event: "player.chatbox"
 
-    :Module: parse_cb.py (proxy/parse_cb.py)
+    :Module: parse_cb.py *(proxy/parse_cb.py)*
 
     :Description: player.chatbox
 
@@ -264,7 +264,7 @@
 
 :Event: "player.spawned"
 
-    :Module: parse_cb.py (proxy/parse_cb.py)
+    :Module: parse_cb.py *(proxy/parse_cb.py)*
 
     :Description: player.spawned
 
@@ -276,7 +276,7 @@
 
 :Event: "player.usebed"
 
-    :Module: parse_cb.py (proxy/parse_cb.py)
+    :Module: parse_cb.py *(proxy/parse_cb.py)*
 
     :Description: player.usebed
 
@@ -288,7 +288,7 @@
 
 :Event: "player.unmount"
 
-    :Module: parse_cb.py (proxy/parse_cb.py)
+    :Module: parse_cb.py *(proxy/parse_cb.py)*
 
     :Description: player.unmount
 
@@ -301,7 +301,7 @@
 
 :Event: "player.mount"
 
-    :Module: parse_cb.py (proxy/parse_cb.py)
+    :Module: parse_cb.py *(proxy/parse_cb.py)*
 
     :Description: player.mount
 
@@ -312,11 +312,39 @@
 
     :Can be aborted/modified: 
 
+**< Group 'wrapper' >**
+
+:Event: "timer.second"
+
+    :Module: wrapper.py *(core/wrapper.py)*
+
+    :Description:
+        a timer that is called each second.
+
+    :Payload: None
+
+    :Can be aborted/modified: No
+
+:Event: "timer.tick"
+
+    :Module: wrapper.py *(core/wrapper.py)*
+
+    :Description:
+        a timer that is called each 1/20th
+          of a second, like a minecraft tick.
+
+    :Payload: None
+
+    :Can be aborted/modified: No
+    :Comments:
+        Use of this timer is not suggested and is turned off
+          by default in the wrapper.config.json file
+
 **< Group 'core/irc.py' >**
 
 :Event: "irc.join"
 
-    :Module: irc.py (core/irc.py)
+    :Module: irc.py *(core/irc.py)*
 
     :Description: irc.join
 
@@ -328,7 +356,7 @@
 
 :Event: "irc.part"
 
-    :Module: irc.py (core/irc.py)
+    :Module: irc.py *(core/irc.py)*
 
     :Description: irc.part
 
@@ -340,7 +368,7 @@
 
 :Event: "irc.quit"
 
-    :Module: irc.py (core/irc.py)
+    :Module: irc.py *(core/irc.py)*
 
     :Description: irc.quit
 
@@ -353,7 +381,7 @@
 
 :Event: "irc.action"
 
-    :Module: irc.py (core/irc.py)
+    :Module: irc.py *(core/irc.py)*
 
     :Description: irc.action
 
@@ -361,13 +389,13 @@
         :"nick": nick
         :"channel": channel
         :"action": getargsafter(message.split(" ")
-        :1)[:-1]
+         1)[:-1]
 
     :Can be aborted/modified: 
 
 :Event: "irc.message"
 
-    :Module: irc.py (core/irc.py)
+    :Module: irc.py *(core/irc.py)*
 
     :Description: irc.message
 
@@ -378,36 +406,94 @@
 
     :Can be aborted/modified: 
 
-**< Group 'proxy/parse_sb.py' >**
+**< Group 'Proxy' >**
 
 :Event: "player.rawMessage"
 
-    :Module: parse_sb.py (proxy/parse_sb.py)
+    :Module: parse_sb.py *(proxy/parse_sb.py)*
 
-    :Description: player.rawMessage
+    :Description:
+        Raw message from client to server.
+        Contains the "/", if present.
 
     :Payload:
         :"player": self.client.getplayerobject()
         :"message": chatmsg
 
-    :Can be aborted/modified: 
+    :Can be aborted/modified: Yes
+    :Comments:
+        Can be aborted by returning False. Can be modified before
+        passing to server.  'chatmsg' accepts both raw string
+        or a dictionary payload containing ["message"] item.
 
 :Event: "player.runCommand"
 
-    :Module: parse_sb.py (proxy/parse_sb.py)
+    :Module: parse_sb.py *(proxy/parse_sb.py)*
 
-    :Description: player.runCommand
+    :Description:
+        When a player runs a command. Do not use
+        for registering commands.
 
     :Payload:
-        :"player": self.client.getplayerobject()
-        :"command": chatmsg.split(" ")[0][1:].lower()
-        :"args": chatmsg.split(" ")[1:]
+        :"player": playerobject()
+        :"command": slash command (or whatever is set in wrapper's
+         config as the command cursor).
+        :"args": the remaining words/args
 
-    :Can be aborted/modified: 
+    :Can be aborted/modified: Registered commands ARE aborted...
+    :Comments:
+        Called AFTER player.rawMessage event if rawMessage
+        does not reject it.  However, rawMessage could have
+        modified it before this point.
+
+:Event: "player.createSign"
+
+    :Module: parse_sb.py *(proxy/parse_sb.py)*
+
+    :Description:
+        When a player creates a sign and finishes editing it
+
+    :Payload:
+        :"player": playerobject()
+        :"position": position of sign
+        :"line1": l1
+        :"line2": l2
+        :"line3": l3
+        :"line4": l4
+
+    :Can be aborted/modified: Yes
+    :Comments:
+        Can be aborted by returning False.
+        Any of the four line arguments can be changed by
+        returning a dictionary payload containing "lineX":
+        "what you want"
+
+:Event: "player.slotClick"
+
+    :Module: parse_sb.py *(proxy/parse_sb.py)*
+
+    :Description:
+        When a player clicks a window slot
+
+    :Payload:
+        :"player": playerobject()
+        :"wid": window id ... always 0 for inventory
+        :"slot": slot number
+        :"button": mouse / key button
+        :"action": unique action id - incrementing counter
+        :"mode": varint:mode - see the wiki?
+        :"clicked": item data
+
+    :Can be aborted/modified: Yes
+    :Comments:
+        Can be aborted by returning False. Aborting is not recommended
+        since that is how wrapper keeps tabs on inventory.
+
+**< Group 'proxy/parse_sb.py' >**
 
 :Event: "player.dig"
 
-    :Module: parse_sb.py (proxy/parse_sb.py)
+    :Module: parse_sb.py *(proxy/parse_sb.py)*
 
     :Description: player.dig
 
@@ -421,7 +507,7 @@
 
 :Event: "player.dig"
 
-    :Module: parse_sb.py (proxy/parse_sb.py)
+    :Module: parse_sb.py *(proxy/parse_sb.py)*
 
     :Description: player.dig
 
@@ -435,7 +521,7 @@
 
 :Event: "player.dig"
 
-    :Module: parse_sb.py (proxy/parse_sb.py)
+    :Module: parse_sb.py *(proxy/parse_sb.py)*
 
     :Description: player.dig
 
@@ -449,7 +535,7 @@
 
 :Event: "player.interact"
 
-    :Module: parse_sb.py (proxy/parse_sb.py)
+    :Module: parse_sb.py *(proxy/parse_sb.py)*
 
     :Description: player.interact
 
@@ -462,7 +548,7 @@
 
 :Event: "player.interact"
 
-    :Module: parse_sb.py (proxy/parse_sb.py)
+    :Module: parse_sb.py *(proxy/parse_sb.py)*
 
     :Description: player.interact
 
@@ -476,7 +562,7 @@
 
 :Event: "player.place"
 
-    :Module: parse_sb.py (proxy/parse_sb.py)
+    :Module: parse_sb.py *(proxy/parse_sb.py)*
 
     :Description: player.place
 
@@ -491,7 +577,7 @@
 
 :Event: "player.interact"
 
-    :Module: parse_sb.py (proxy/parse_sb.py)
+    :Module: parse_sb.py *(proxy/parse_sb.py)*
 
     :Description: player.interact
 
@@ -503,60 +589,11 @@
 
     :Can be aborted/modified: 
 
-:Event: "player.createsign"
-
-    :Module: parse_sb.py (proxy/parse_sb.py)
-
-    :Description: player.createsign
-
-    :Payload:
-        :"player": self.client.getplayerobject()
-        :"position": position
-        :"line1": l1
-        :"line2": l2
-        :"line3": l3
-        :"line4": l4
-
-    :Can be aborted/modified: 
-
-:Event: "player.slotClick"
-
-    :Module: parse_sb.py (proxy/parse_sb.py)
-
-    :Description: player.slotClick
-
-    :Payload:
-        :datadict
-
-    :Can be aborted/modified: 
-
-**< Group 'core/wrapper.py' >**
-
-:Event: "timer.second"
-
-    :Module: wrapper.py (core/wrapper.py)
-
-    :Description: timer.second
-
-    :Payload: None
-
-    :Can be aborted/modified: 
-
-:Event: "timer.tick"
-
-    :Module: wrapper.py (core/wrapper.py)
-
-    :Description: timer.tick
-
-    :Payload: None
-
-    :Can be aborted/modified: 
-
 **< Group 'proxy/clientconnection.py' >**
 
 :Event: "player.preLogin"
 
-    :Module: clientconnection.py (proxy/clientconnection.py)
+    :Module: clientconnection.py *(proxy/clientconnection.py)*
 
     :Description: player.preLogin
 
