@@ -458,7 +458,7 @@ class Client:
         #  xrange/range PY2 difference is not needed.
         # there are 46 items 0-45 in 1.9 (shield) versus
         #  45 (0-44) in 1.8 and below.
-        for i in self.wrapper.INV_SLOTS:
+        for i in self.wrapper.inv_slots:
             self.inventory[i] = None
         self.time_server_pinged = time.time()
         self.time_client_responded = time.time()

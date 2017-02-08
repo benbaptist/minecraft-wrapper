@@ -1,3 +1,14 @@
+Build 184-196 [0.11.2]
+- Build 196:
+    - Fix load_json and load_pickle functions which returned the values
+      without actually updating the Data dictionary.
+    - Clean up wrapper `__main__` code and add argument parsing to
+      wrapper startup.  Added '--betterconsole' and '--encoding'.
+    - changed build script to make incrementing builds an option.
+Builds 184-196:
+- Created new documentation system to document the API and
+  the Wrapper.py events.
+
 Build 183 Version [0.11.0]
 - plugin-breaking change made to getStorage API:
     - Had to do it!  The Storages were really a bad implementation that tried to

@@ -172,10 +172,13 @@ def find_in_json(jsonlist, keyname, searchvalue):
     return None
 
 
-def _format_bytes(number_raw_bytes):
+def format_bytes(number_raw_bytes):
     """
-    takes number of bytes and converts to Kbtye, MiB, GiB,
-    etc... using 4 most significant digits.
+    Internal wrapper function that takes number of bytes
+    and converts to Kbtye, MiB, GiB, etc... using 4 most
+    significant digits.
+
+    :returns: Tuple - (string repr of 4 digits, string units)
 
     """
     large_bytes = number_raw_bytes / (1024*1024*1024*1024*1024)
@@ -696,7 +699,7 @@ def _use_style(foreground='white', background='black', options=()):
     return lambda text: _addgraphics(text, foreground, background, options)
 
 
-def _chattocolorcodes(jsondata):
+def chattocolorcodes(jsondata):
 
     total = _handle_extras(jsondata)
     if "extra" in jsondata:
@@ -799,12 +802,12 @@ def _test():
     x = config_to_dict_read("server.properties", "/home/surest/Desktop/server")
     print(x['pvp'])
 
-    print(_format_bytes(1024))
-    print(_format_bytes(1048576*2))
-    print(_format_bytes(1073741824.0))
-    print(_format_bytes(1234234230000))
-    print(_format_bytes(1234234230000000))
-    print(_format_bytes(123423423000000000))
+    print(format_bytes(1024))
+    print(format_bytes(1048576 * 2))
+    print(format_bytes(1073741824.0))
+    print(format_bytes(1234234230000))
+    print(format_bytes(1234234230000000))
+    print(format_bytes(123423423000000000))
 
     print(isipv4address("123.123.123.123"))
     print(isipv4address("honkin"))
