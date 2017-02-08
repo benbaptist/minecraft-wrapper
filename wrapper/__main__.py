@@ -5,7 +5,7 @@
 # This program is distributed under the terms of the GNU
 # General Public License, version 3 or later.
 
-# import os
+import os
 import sys
 from core.wrapper import Wrapper
 from api.helpers import getjsonfile
@@ -76,35 +76,27 @@ def main(wrapper_start_args):
     # noinspection PyBroadException
     try:
         wrapper.start()
-    except Exception as e:
-        log.critical("Wrapper.py crashed - please report this. (%s)", e)
+    except SystemExit:
+        if not wrapper.configManager.exit:
+            os.system("reset")
+        wrapper.plugins.disableplugins()
 
-    # lets test this without all the extras here.  Wrapper should be
-    # robust enough at this point to handle it inside it's own code.
-    #
-    # try:
-    #     pass
-    # except SystemExit:
-    #     if not wrapper.configManager.exit:
-    #         os.system("reset")
-    #     wrapper.plugins.disableplugins()
-    #
-    #     # save-all is required to have a flush argument
-    #     wrapper.javaserver.console("save-all flush")
-    #     wrapper.javaserver.stop("Wrapper.py received shutdown signal - bye")
-    #     wrapper.halt = True
-    # except Exception as ex:
-    #     log.critical("Wrapper.py crashed - stopping server to be safe (%s)",
-    #                  ex, exc_info=True)
-    #     wrapper.halt = True
-    #     wrapper.plugins.disableplugins()
-    #     try:
-    #         wrapper.javaserver.stop("Wrapper.py crashed - please contact"
-    #                                 " the server host as soon as possible")
-    #     except AttributeError as exc:
-    #         log.critical("Wrapper has no server instance. Server is likely "
-    #                      "killed but could still be running, or it "
-    #                      "might be corrupted! (%s)", exc, exc_info=True)
+        # save-all is required to have a flush argument
+        wrapper.javaserver.console("save-all flush")
+        wrapper.javaserver.stop("Wrapper.py received shutdown signal - bye")
+        wrapper.halt = True
+    except Exception as ex:
+        log.critical("Wrapper.py crashed - stopping server to be safe (%s)",
+                     ex, exc_info=True)
+        wrapper.halt = True
+        wrapper.plugins.disableplugins()
+        try:
+            wrapper.javaserver.stop("Wrapper.py crashed - please contact"
+                                    " the server host as soon as possible")
+        except AttributeError as exc:
+            log.critical("Wrapper has no server instance. Server is likely "
+                         "killed but could still be running, or it "
+                         "might be corrupted! (%s)", exc, exc_info=True)
 
 if __name__ == "__main__":
     main(args)

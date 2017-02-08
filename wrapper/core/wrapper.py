@@ -242,7 +242,11 @@ class Wrapper:
     def signals(self):
         signal.signal(signal.SIGINT, self.sigint)
         signal.signal(signal.SIGTERM, self.sigterm)
-        signal.signal(signal.SIGTSTP, self.sigtstp)
+        # noinspection PyBroadException
+        try:
+            signal.signal(signal.SIGTSTP, self.sigtstp)
+        except:
+            pass
 
     def sigint(*args):
         print("Wrapper.py received SIGINT; halting...\n")
