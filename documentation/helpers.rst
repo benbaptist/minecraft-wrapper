@@ -47,7 +47,8 @@ using 'self.api.helpers'
     
 
 -  format_bytes(number_raw_bytes)
-Internal wrapper function that takes number of bytes
+
+    Internal wrapper function that takes number of bytes
     and converts to Kbtye, MiB, GiB, etc... using 4 most
     significant digits.
 
