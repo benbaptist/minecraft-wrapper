@@ -2,7 +2,6 @@
 
 The API is divided into modules.  Click on each module to see it's documentation.
 
-
 [wrapperconfig](/documentation/wrapperconfig.rst)
 
 [base](/documentation/base.rst)

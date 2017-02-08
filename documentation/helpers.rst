@@ -46,6 +46,15 @@ using 'self.api.helpers'
 
     
 
+-  format_bytes(number_raw_bytes)
+Internal wrapper function that takes number of bytes
+    and converts to Kbtye, MiB, GiB, etc... using 4 most
+    significant digits.
+
+    :returns: Tuple - (string repr of 4 digits, string units)
+
+    
+
 -  getargs(arginput, i)
 
     returns a certain index of argument (without producting an

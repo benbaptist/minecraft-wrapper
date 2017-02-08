@@ -11,7 +11,7 @@ import time
 import json
 
 # noinspection PyProtectedMember
-from api.helpers import _format_bytes, getargs, getargsafter, _secondstohuman, _showpage, readout
+from api.helpers import format_bytes, getargs, getargsafter, _secondstohuman, _showpage, readout
 
 
 # noinspection PyBroadException
@@ -335,7 +335,7 @@ class Commands:
             elif subcommand in ("mem", "memory"):
                 server_bytes = self.wrapper.javaserver.getmemoryusage()
                 if server_bytes:
-                    amount, units = _format_bytes(server_bytes)
+                    amount, units = format_bytes(server_bytes)
                     player.message("&cServer Memory: %s %s (%s bytes)" % (amount, units, server_bytes))
                 else:
                     player.message("&cError: Couldn't retrieve memory usage for an unknown reason")

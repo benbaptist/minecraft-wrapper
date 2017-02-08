@@ -22,6 +22,10 @@ parser.add_argument('branch', type=str, choices=('dev', 'stable'),
                     default='dev', help='branch to commit changes to')
 parser.add_argument('--commit', '-c', action='store_true',
                     help='commit changes to specified branch')
+parser.add_argument('--incrementbuild', '-i', action='store_true',
+                    help='increment the build number (for final builds)')
+parser.add_argument('--docbuild', '-d', action='store_true',
+                    help='Re-build Wrapper.py documentation')
 parser.add_argument('--message', '-m', type=str, default='build revision',
                     help='commit message')
 parser.add_argument('--verbose', '-v', action='store_true',
@@ -33,17 +37,18 @@ args = parser.parse_args()
 def build_wrapper(buildargs):
     chdir(buildargs.source)
 
-    # build the events
-    build_the_events()
-
-    # build the docs
-    build_the_docs()
+    if buildargs.docbuild:
+        # build the events
+        build_the_events()
+        # build the docs
+        build_the_docs()
 
     with open("build/version.json", "r") as f:
         version = json.loads(f.read())
         if "__build__" not in version:
-            version["__build__"] = version["build"] + 1
-        else:
+            version["__build__"] = version["build"]
+
+        if buildargs.incrementbuild:
             version["__build__"] += 1
         version["__branch__"] = buildargs.branch
         version["release_time"] = time.time()
@@ -65,8 +70,8 @@ def build_wrapper(buildargs):
         f.write(json.dumps(version, indent=4, sort_keys=True))
 
     if path.exists("Wrapper.py"):
-        remove("Wrapper.py")  # Time to start with a clean Wrapper.py!
-    # subprocess.Popen("zip Wrapper.py -r . -x *~ -x *pyc", shell=True).wait()
+        # Time to start with a clean Wrapper.py!
+        remove("Wrapper.py")
 
     # from the master branch (this works properly)
     # Hooray for calling zip from system() instead of using proper
@@ -96,19 +101,16 @@ def build_wrapper(buildargs):
 
 # Main documentation builder
 def build_the_docs():
-    """
-
-    Simple docs builder.  creates 'ReStructured Text' files from the
+    """Simple docs builder.  creates 'ReStructured Text' files from the
     docstrings. Rst format based on spec:
 
     http://docutils.sourceforge.net/docs/ref/rst/restructuredtext.html
-
     """
 
     sep = '"""'
     index_file = "**Welcome to the Wrapper.py Plugin API documentation!" \
                  "**\n\nThe API is divided into modules.  Click on each " \
-                 "module to see it's documentation.\n\n\n"
+                 "module to see it's documentation.\n\n"
 
     events_footer = "<br>**Click here for a list of Wrapper's events**<br>" \
                     "[Wrapper.py Events](/documentation/events.rst)<br>"
@@ -326,6 +328,5 @@ def build_the_events():
     with open("documentation/events.rst", "w") as f:
         f.write(format_to_rst(all_events))
 
-
-# Don't try-except here (just hides errors)
-build_wrapper(args)
+if __name__ == "__main__":
+    build_wrapper(args)

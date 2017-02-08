@@ -20,7 +20,7 @@ PY3 = version[0] > 2
 
 if PY3:
     str2 = str
-    # noinspection PyUnresolvedReferences
+    # noinspection PyPep8Naming
     import pickle as Pickle
 else:
     # noinspection PyUnresolvedReferences
@@ -31,7 +31,8 @@ else:
 
 class Storage:
 
-    def __init__(self, name, root="wrapper-data/json", encoding="default", pickle=True):
+    def __init__(self, name, root="wrapper-data/json",
+                 encoding="default", pickle=True):
         self.Data = {}
         self.name = name
         self.root = root
@@ -59,7 +60,8 @@ class Storage:
         t.start()
 
     def periodicsave(self):
-        # doing it this way (versus just sleeping for 60 seconds), allows faster shutdown response
+        # doing it this way (versus just sleeping for 60 seconds),
+        # allows faster shutdown response
         while not self.abort:
             if time.time() - self.timer > 60:
                 self.save()
@@ -68,15 +70,18 @@ class Storage:
 
     def load(self):
         mkdir_p(self.root)
-        if not os.path.exists("%s/%s.%s" % (self.root, self.name, self.file_ext)):
-            # load old json storages if there is no pickled file (and if storage is using pickle)
+        if not os.path.exists(
+                        "%s/%s.%s" % (self.root, self.name, self.file_ext)):
+            # load old json storages if there is no pickled
+            # file (and if storage is using pickle)
             if self.pickle:
                 self.Data = self.json_load()
-            self.save()  # save to the selected file mode (json or pkl)
+            # save to the selected file mode (json or pkl)
+            self.save()
         if self.pickle:
-            self.pickle_load()
+            self.Data = self.pickle_load()
         else:
-            self.json_load()
+            self.Data = self.json_load()
 
     def save(self):
         if not os.path.exists(self.root):
@@ -108,10 +113,12 @@ class Storage:
             #
             # The MAIN POINT:
             # I wanted the code to use something better/faster than
-            # Human-readable (unless that is what you specify).
+            # Human-readable (unless that is what you specify), while
+            # still permitting some portability of the final files
             _protocol = Pickle.HIGHEST_PROTOCOL // 2
 
-        with open("%s/%s.%s" % (self.root, self.name, self.file_ext), "wb") as f:
+        with open("%s/%s.%s" % (
+                self.root, self.name, self.file_ext), "wb") as f:
             Pickle.dump(self.Data, f, protocol=_protocol)
 
     def json_save(self):
@@ -122,13 +129,15 @@ class Storage:
                                self.root, self.name, self.file_ext, self.Data)
 
     def pickle_load(self):
-        with open("%s/%s.%s" % (self.root, self.name, self.file_ext), "rb") as f:
+        with open("%s/%s.%s" % (
+                self.root, self.name, self.file_ext), "rb") as f:
             return Pickle.load(f)
 
     def json_load(self):
         try_load = getjsonfile(self.name, self.root, encodedas=self.encoding)
         if try_load in (None, False):
-            self.log.exception("bad/non-existent file or data '%s/%s.%s'", self.root, self.name, self.file_ext)
+            self.log.exception("bad/non-existent file or data '%s/%s.%s'",
+                               self.root, self.name, self.file_ext)
             return {}
         else:
             return try_load
