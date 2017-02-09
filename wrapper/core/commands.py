@@ -132,7 +132,8 @@ class Commands:
         return False
 
     def command_setconfig(self, player, payload):
-        if player.isOp() < 4:  # only allowed for console and high level OP
+        # only allowed for console and high level OP
+        if player.isOp() < 4:
             player.message({"text": "Unknown command. Try /help for a list of commands", "color": "red"})
             return
         commargs = payload["args"]
@@ -169,143 +170,157 @@ class Commands:
         self.wrapper.api.minecraft.configWrapper(section, item, newvalue, reloadfile)
 
     def command_banplayer(self, player, payload):
-        if player.isOp() > 2:  # specify an op level for the command.
-            commargs = payload["args"]
-            playername = getargs(commargs, 0)
-            banexpires = False
-            reason = "the Ban Hammer has Spoken"
-            timeunit = 86400  # days is default
-            lookupuuid = self.wrapper.uuids.getuuidbyusername(playername)
-            if not lookupuuid:
-                player.message({"text": "Not a valid Username!", "color": "red"})
-                return False
-            if len(commargs) > 1:
-                # check last argument for "d:<days>
-                unitsare = commargs[len(commargs) - 1][0:2].lower()
-                if unitsare in ("d:", "h:"):
-                    if unitsare == "h:":
-                        timeunit /= 24
-                    units = int(float(commargs[len(commargs) - 1][2:]))
-                    if units > 0:
-                        banexpires = time.time() + (units * timeunit)
-                reason = getargsafter(commargs, 1)
+        if not player.isOp() > 2:
+            player.message("&cPermission Denied")
+            return False
+        commargs = payload["args"]
+        playername = getargs(commargs, 0)
+        banexpires = False
+        reason = "the Ban Hammer has Spoken"
+        timeunit = 86400  # days is default
+        lookupuuid = self.wrapper.uuids.getuuidbyusername(playername)
+        if not lookupuuid:
+            player.message({"text": "Not a valid Username!", "color": "red"})
+            return False
+        if len(commargs) > 1:
+            # check last argument for "d:<days>
+            unitsare = commargs[len(commargs) - 1][0:2].lower()
+            if unitsare in ("d:", "h:"):
+                if unitsare == "h:":
+                    timeunit /= 24
+                units = int(float(commargs[len(commargs) - 1][2:]))
+                if units > 0:
+                    banexpires = time.time() + (units * timeunit)
+            reason = getargsafter(commargs, 1)
 
-            returnmessage = self.wrapper.proxy.banuuid(lookupuuid, reason, player.username, banexpires)
-            if returnmessage[:6] == "Banned":
-                player.message({"text": "%s" % returnmessage, "color": "yellow"})
-            else:
-                player.message({"text": "UUID ban failed!", "color": "red"})
-                player.message(returnmessage)
-            return returnmessage
+        returnmessage = self.wrapper.proxy.banuuid(lookupuuid, reason, player.username, banexpires)
+        if returnmessage[:6] == "Banned":
+            player.message({"text": "%s" % returnmessage, "color": "yellow"})
+        else:
+            player.message({"text": "UUID ban failed!", "color": "red"})
+            player.message(returnmessage)
+        return returnmessage
 
     def command_banip(self, player, payload):
-        if player.isOp() > 2:
-            commargs = payload["args"]
-            ipaddress = getargs(commargs, 0)
-            banexpires = False
-            reason = "the Ban Hammer has Spoken"
-            if len(commargs) > 1:
-                # check last argument for "d:<days>
-                if commargs[len(commargs)-1][0:2].lower() == "d:":
-                    days = int(float(commargs[len(commargs)-1][2:]))
-                    if days > 0:
-                        banexpires = time.time() + (days * 86400)
-                reason = getargsafter(commargs, 1)
+        if not player.isOp() > 2:
+            player.message("&cPermission Denied")
+            return False
+        commargs = payload["args"]
+        ipaddress = getargs(commargs, 0)
+        banexpires = False
+        reason = "the Ban Hammer has Spoken"
+        if len(commargs) > 1:
+            # check last argument for "d:<days>
+            if commargs[len(commargs)-1][0:2].lower() == "d:":
+                days = int(float(commargs[len(commargs)-1][2:]))
+                if days > 0:
+                    banexpires = time.time() + (days * 86400)
+            reason = getargsafter(commargs, 1)
 
-            returnmessage = self.wrapper.proxy.banip(ipaddress, reason, player.username, banexpires)
-            if returnmessage[:6] == "Banned":
-                player.message({"text": "%s" % returnmessage, "color": "yellow"})
-            else:
-                player.message({"text": "IP ban failed!", "color": "red"})
-                player.message(returnmessage)
-            return returnmessage
+        returnmessage = self.wrapper.proxy.banip(ipaddress, reason, player.username, banexpires)
+        if returnmessage[:6] == "Banned":
+            player.message({"text": "%s" % returnmessage, "color": "yellow"})
+        else:
+            player.message({"text": "IP ban failed!", "color": "red"})
+            player.message(returnmessage)
+        return returnmessage
 
     def command_pardon(self, player, payload):
-        if player.isOp() > 2:  # see http://minecraft.gamepedia.com/Server.properties#Minecraft_server_properties
-            commargs = payload["args"]
-            playername = getargs(commargs, 0)
-            byuuid = True
-            if str(getargs(commargs, -1))[-5:].lower() == "false":  # last five letters of last argument
-                byuuid = False
-            lookupuuid = self.wrapper.uuids.getuuidbyusername(playername)
-            if not lookupuuid and byuuid:
-                player.message({"text": "Not a valid Username!", "color": "red"})
-                return False
-            if byuuid:
-                returnmessage = self.wrapper.proxy.pardonuuid(lookupuuid)
-            else:
-                returnmessage = self.wrapper.proxy.pardonname(playername)
+        # see http://minecraft.gamepedia.com/Server.properties#Minecraft_server_properties
+        if not player.isOp() > 2:
+            player.message("&cPermission Denied")
+            return False
+        commargs = payload["args"]
+        playername = getargs(commargs, 0)
+        byuuid = True
+        if str(getargs(commargs, -1))[-5:].lower() == "false":  # last five letters of last argument
+            byuuid = False
+        lookupuuid = self.wrapper.uuids.getuuidbyusername(playername)
+        if not lookupuuid and byuuid:
+            player.message({"text": "Not a valid Username!", "color": "red"})
+            return False
+        if byuuid:
+            returnmessage = self.wrapper.proxy.pardonuuid(lookupuuid)
+        else:
+            returnmessage = self.wrapper.proxy.pardonname(playername)
 
-            if returnmessage[:8] == "pardoned":
-                player.message({"text": "player %s unbanned!" % playername, "color": "yellow"})
-            else:
-                player.message({"text": "player unban %s failed!" % playername, "color": "red"})
-            player.message(returnmessage)
-            return returnmessage
+        if returnmessage[:8] == "pardoned":
+            player.message({"text": "player %s unbanned!" % playername, "color": "yellow"})
+        else:
+            player.message({"text": "player unban %s failed!" % playername, "color": "red"})
+        player.message(returnmessage)
+        return returnmessage
 
     def command_pardonip(self, player, payload):
-        if player.isOp() > 2:  # see http://minecraft.gamepedia.com/Server.properties#Minecraft_server_properties
-            commargs = payload["args"]
-            ipaddress = getargs(commargs, 0)
+        # see http://minecraft.gamepedia.com/Server.properties#Minecraft_server_properties
+        if not player.isOp() > 2:
+            player.message("&cPermission Denied")
+            return False
+        commargs = payload["args"]
+        ipaddress = getargs(commargs, 0)
 
-            returnmessage = self.wrapper.proxy.pardonip(ipaddress)
-            if returnmessage[:8] == "pardoned":
-                player.message({"text": "IP address %s unbanned!" % ipaddress, "color": "yellow"})
-            else:
-                player.message({"text": "IP unban %s failed!" % ipaddress, "color": "red"})
-            player.message(returnmessage)
-            return returnmessage
+        returnmessage = self.wrapper.proxy.pardonip(ipaddress)
+        if returnmessage[:8] == "pardoned":
+            player.message({"text": "IP address %s unbanned!" % ipaddress, "color": "yellow"})
+        else:
+            player.message({"text": "IP unban %s failed!" % ipaddress, "color": "red"})
+        player.message(returnmessage)
+        return returnmessage
 
     def command_entities(self, player, payload):
-        if player.isOp() > 2:
-            if not self.wrapper.proxymode:
-                player.message("&cProxy mode is off - Entity control is not enabled.")
+        if not player.isOp() > 2:
+            player.message("&cPermission Denied")
+            return False
 
-            entitycontrol = self.wrapper.javaserver.entity_control
-            if not entitycontrol:
-                # only console could be the source:
-                readout("ERROR - ", "No entity code found. (no proxy/server started?)", separator="",
-                        pad=10, usereadline=self.wrapper.use_readline)
-                return
-            commargs = payload["args"]
-            if len(commargs) < 1:
-                pass
-            elif commargs[0].lower() in ("c", "count", "s", "sum", "summ", "summary"):
-                player.message("Entities loaded: %d" % entitycontrol.countActiveEntities())
-                return
-            elif commargs[0].lower() in ("k", "kill"):
-                eid = getargs(commargs, 1)
-                count = getargs(commargs, 2)
-                if count < 1:
-                    count = 1
-                    entitycontrol.killEntityByEID(eid, dropitems=False, finishstateof_domobloot=True, count=count)
-                return
-            elif commargs[0].lower() in ("l", "list", "sh", "show" "all"):
-                nice_list = {}
-                for ent in entitycontrol.entities:
-                    nice_list[entitycontrol.entities[ent].eid] = entitycontrol.entities[ent].entityname
-                player.message("Entities: \n%s" % nice_list)
-                return
-            elif commargs[0].lower() in ("p", "player", "name"):
-                if len(commargs) < 3:
-                    player.message("&c/entity player <name> count/list")
-                    return
-                them = entitycontrol.countEntitiesInPlayer(commargs[1])
-                if commargs[2].lower() in ("l", "list", "sh", "show" "all"):
-                    player.message("Entities: \n%s" % json.dumps(them, indent=2))
-                else:
-                    player.message("%d entities exist in %s's client." % (len(them), commargs[1]))
-                return
+        if not self.wrapper.proxymode:
+            player.message("&cProxy mode is off - Entity control is not enabled.")
 
-            player.message("&cUsage: /entity count")
-            player.message("&c       /entity list")
-            player.message("&c       /entity player <name> count")
-            player.message("&c       /entity player <name> list")
-            player.message("&c       /entity kill <EIDofEntity> [count]")
+        entitycontrol = self.wrapper.javaserver.entity_control
+        if not entitycontrol:
+            # only console could be the source:
+            readout("ERROR - ", "No entity code found. (no proxy/server started?)", separator="",
+                    pad=10, usereadline=self.wrapper.use_readline)
+            return
+        commargs = payload["args"]
+        if len(commargs) < 1:
+            pass
+        elif commargs[0].lower() in ("c", "count", "s", "sum", "summ", "summary"):
+            player.message("Entities loaded: %d" % entitycontrol.countActiveEntities())
+            return
+        elif commargs[0].lower() in ("k", "kill"):
+            eid = getargs(commargs, 1)
+            count = getargs(commargs, 2)
+            if count < 1:
+                count = 1
+                entitycontrol.killEntityByEID(eid, dropitems=False, finishstateof_domobloot=True, count=count)
+            return
+        elif commargs[0].lower() in ("l", "list", "sh", "show" "all"):
+            nice_list = {}
+            for ent in entitycontrol.entities:
+                nice_list[entitycontrol.entities[ent].eid] = entitycontrol.entities[ent].entityname
+            player.message("Entities: \n%s" % nice_list)
+            return
+        elif commargs[0].lower() in ("p", "player", "name"):
+            if len(commargs) < 3:
+                player.message("&c/entity player <name> count/list")
+                return
+            them = entitycontrol.countEntitiesInPlayer(commargs[1])
+            if commargs[2].lower() in ("l", "list", "sh", "show" "all"):
+                player.message("Entities: \n%s" % json.dumps(them, indent=2))
+            else:
+                player.message("%d entities exist in %s's client." % (len(them), commargs[1]))
+            return
+
+        player.message("&cUsage: /entity count")
+        player.message("&c       /entity list")
+        player.message("&c       /entity player <name> count")
+        player.message("&c       /entity player <name> list")
+        player.message("&c       /entity kill <EIDofEntity> [count]")
 
     def command_wrapper(self, player, payload):
-        if not player.isOp():
-            return
+        if not player.isOp() > 3:
+            player.message("&cPermission Denied")
+            return False
         buildstring = self.wrapper.getbuildstring()
         if len(getargs(payload["args"], 0)) > 0:
             subcommand = getargs(payload["args"], 0)
@@ -346,22 +361,24 @@ class Commands:
         return
 
     def command_reload(self, player, payload):
-        if player.isOp():
-            if getargs(payload["args"], 0) == "server":
-                return
-            try:
-                self.wrapper.plugins.reloadplugins()
-                player.message({"text": "Plugins reloaded.", "color": "green"})
-                if self.wrapper.javaserver.getservertype() != "vanilla":
-                    player.message({"text": "Note: If you meant to reload the server's plugins and not "
-                                            "Wrapper.py's plugins, run `/reload server` or "
-                                            "from the console, use `/raw /reload` or `reload` (with no "
-                                            "slash).", "color": "gold"})
-            except Exception as e:
-                self.log.exception("Failure to reload plugins:\n%s" % e)
-                player.message({"text": "An error occurred while reloading plugins. Please check the console "
-                                        "immediately for a traceback.", "color": "red"})
+        if not player.isOp() > 3:
+            player.message("&cPermission Denied")
             return False
+        if getargs(payload["args"], 0) == "server":
+            return
+        try:
+            self.wrapper.plugins.reloadplugins()
+            player.message({"text": "Plugins reloaded.", "color": "green"})
+            if self.wrapper.javaserver.getservertype() != "vanilla":
+                player.message({"text": "Note: If you meant to reload the server's plugins and not "
+                                        "Wrapper.py's plugins, run `/reload server` or "
+                                        "from the console, use `/raw /reload` or `reload` (with no "
+                                        "slash).", "color": "gold"})
+        except Exception as e:
+            self.log.exception("Failure to reload plugins:\n%s" % e)
+            player.message({"text": "An error occurred while reloading plugins. Please check the console "
+                                    "immediately for a traceback.", "color": "red"})
+        return False
 
     def command_help(self, player, payload):
         helpgroups = [{"name": "Minecraft", "description": "List regular server commands"}]
@@ -470,37 +487,39 @@ class Commands:
 
     def command_playerstats(self, player, payload):
         subcommand = getargs(payload["args"], 0)
-        if player.isOp():
-            totalplaytime = {}
-            players = self.wrapper.api.minecraft.getAllPlayers()
-            for each_uuid in players:
-                if "logins" not in players[each_uuid]:
-                    continue
-                playername = self.wrapper.uuids.getusernamebyuuid(each_uuid)
-                totalplaytime[playername] = [0, 0]
-                for i in players[each_uuid]["logins"]:
-                    totalplaytime[playername][0] += players[each_uuid]["logins"][i] - int(i)
-                    totalplaytime[playername][1] += 1
+        if not player.isOp() > 3:
+            player.message("&cPermission Denied")
+            return False
+        totalplaytime = {}
+        players = self.wrapper.api.minecraft.getAllPlayers()
+        for each_uuid in players:
+            if "logins" not in players[each_uuid]:
+                continue
+            playername = self.wrapper.uuids.getusernamebyuuid(each_uuid)
+            totalplaytime[playername] = [0, 0]
+            for i in players[each_uuid]["logins"]:
+                totalplaytime[playername][0] += players[each_uuid]["logins"][i] - int(i)
+                totalplaytime[playername][1] += 1
 
-            if subcommand == "all":
-                player.message("&6----- All Players' Playtime -----")
-                for name in totalplaytime:
-                    seconds = totalplaytime[name][0]
-                    result = _secondstohuman(seconds)
-                    player.message("&e%s:&6 %s (%d logins)" % (name, result, totalplaytime[name][1]))  # 86400.0
-            else:
-                topplayers = []
-                for username in totalplaytime:
-                    topplayers.append((totalplaytime[username][0], username))
-                topplayers.sort()
-                topplayers.reverse()
-                player.message("&6----- Top 10 Players' Playtime -----")
-                for i, p in enumerate(topplayers):
-                    result = _secondstohuman(p[0])
-                    player.message("&7%d. &e%s:&6 %s" % (i + 1, p[1], result))
-                    if i == 9:
-                        break
-            return
+        if subcommand == "all":
+            player.message("&6----- All Players' Playtime -----")
+            for name in totalplaytime:
+                seconds = totalplaytime[name][0]
+                result = _secondstohuman(seconds)
+                player.message("&e%s:&6 %s (%d logins)" % (name, result, totalplaytime[name][1]))  # 86400.0
+        else:
+            topplayers = []
+            for username in totalplaytime:
+                topplayers.append((totalplaytime[username][0], username))
+            topplayers.sort()
+            topplayers.reverse()
+            player.message("&6----- Top 10 Players' Playtime -----")
+            for i, p in enumerate(topplayers):
+                result = _secondstohuman(p[0])
+                player.message("&7%d. &e%s:&6 %s" % (i + 1, p[1], result))
+                if i == 9:
+                    break
+        return
 
     def command_perms(self, player, payload):
         if "groups" not in self.wrapper.permissions:
@@ -509,169 +528,173 @@ class Commands:
             self.wrapper.permissions["users"] = {}
         if "Default" not in self.wrapper.permissions["groups"]:
             self.wrapper.permissions["groups"]["Default"] = {"permissions": {}}
-        if player.isOp():
-            def usage(l):
-                player.message("&cUsage: /%s %s" % (payload["command"], l))
-            command = getargs(payload["args"], 0)
-            if command == "groups":
-                group = getargs(payload["args"], 1)
-                subcommand = getargs(payload["args"], 2)
-                if subcommand == "new":
-                    self.wrapper.permissions["groups"][group] = {"permissions": {}}
-                    player.message("&aCreated a new permissions group '%s'!" % group)
-                elif subcommand == "delete":
-                    if group not in self.wrapper.permissions["groups"]:
-                        player.message("&cGroup '%s' does not exist!" % group)
-                        return
-                    del self.wrapper.permissions["groups"][group]
-                    player.message("&aDeleted permissions group '%s'." % group)
-                elif subcommand == "set":
-                    if group not in self.wrapper.permissions["groups"]:
-                        player.message("&cGroup '%s' does not exist!" % group)
-                        return
-                    node = getargs(payload["args"], 3)
-                    value = getargsafter(payload["args"], 4)
-                    if len(value) == 0:
-                        value = True
-                    if value in ("True", "False"):
-                        value = ast.literal_eval(value)
-                    if len(node) > 0:
-                        self.wrapper.permissions["groups"][group]["permissions"][node] = value
-                        player.message("&aAdded permission node '%s' to group '%s'!" % (node, group))
-                    else:
-                        usage("groups %s set <permissionNode> [value]" % group)
-                elif subcommand == "remove":
-                    if group not in self.wrapper.permissions["groups"]:
-                        player.message("&cGroup '%s' does not exist!" % group)
-                        return
-                    node = getargs(payload["args"], 3)
-                    if node in self.wrapper.permissions["groups"][group]["permissions"]:
-                        del self.wrapper.permissions["groups"][group]["permissions"][node]
-                        player.message("&aRemoved permission node '%s' from group '%s'." % (node, group))
-                elif subcommand == "info":
-                    if group not in self.wrapper.permissions["groups"]:
-                        player.message("&cGroup '%s' does not exist!" % group)
-                        return
-                    player.message("&aUsers in the group '%s':" % group)
-                    for uuid in self.wrapper.permissions["users"]:
-                        if group in self.wrapper.permissions["users"][uuid]["groups"]:
-                            player.message("%s: &2%s" % (self.wrapper.uuids.getusernamebyuuid(uuid), uuid))
-                    player.message("&aPermissions for the group '%s':" % group)
-                    for node in self.wrapper.permissions["groups"][group]["permissions"]:
-                        value = self.wrapper.permissions["groups"][group]["permissions"][node]
-                        if value:
-                            player.message("- %s: &2%s" % (node, value))
-                        elif not value:
-                            player.message("- %s: &4%s" % (node, value))
-                        else:
-                            player.message("- %s: &7%s" % (node, value))
-                else:
-                    player.message("&cList of groups: %s" % ", ".join(self.wrapper.permissions["groups"]))
-                    usage("groups <groupName> [new/delete/set/remove/info]")
-            elif command == "users":
-                username = getargs(payload["args"], 1)
-                subcommand = getargs(payload["args"], 2)
-                uuid = self.wrapper.uuids.getuuidbyusername(username).string
-                if not uuid:
-                    player.message("&cNo valid UUID exists for '%s'." % username)
-                    return False
-                if len(username) > 0:
-                    if uuid not in self.wrapper.permissions["users"]:
-                        self.wrapper.permissions["users"][uuid] = {"groups": [], "permissions": {}}
-                if subcommand == "group":
-                    group = getargs(payload["args"], 3)
-                    if len(group) > 0:
-                        if group not in self.wrapper.permissions["groups"]:
-                            player.message("&cGroup '%s' does not exist!" % group)
-                            return
-                        if group not in self.wrapper.permissions["users"][uuid]["groups"]:
-                            self.wrapper.permissions["users"][uuid]["groups"].append(group)
-                            player.message("&aAdded user '%s' to group '%s'!" % (username, group))
-                        else:
-                            self.wrapper.permissions["users"][uuid]["groups"].remove(group)
-                            player.message("&aRemoved user '%s' from group '%s'!" % (username, group))
-                    else:
-                        usage("users <username> group <groupName>")
-                elif subcommand == "set":
-                    node = getargs(payload["args"], 3)
-                    value = getargsafter(payload["args"], 4)
-                    if len(value) == 0:
-                        value = True
-                    if value in ("True", "False"):
-                        value = ast.literal_eval(value)
-                    if len(node) > 0:
-                        self.wrapper.permissions["users"][uuid]["permissions"][node] = value
-                        player.message("&aAdded permission node '%s' to player '%s'!" % (node, username))
-                    else:
-                        usage("users %s set <permissionNode> [value]" % username)
-                elif subcommand == "remove":
-                    node = getargs(payload["args"], 3)
-                    if node not in self.wrapper.permissions["users"][uuid]["permissions"]:
-                        player.message("&cPlayer '%s' never had permission '%s'!" % (username, node))
-                        return
-                    if node in self.wrapper.permissions["users"][uuid]["permissions"]:
-                        del self.wrapper.permissions["users"][uuid]["permissions"][node]
-                        player.message("&aRemoved permission node '%s' from player '%s'." % (node, username))
-                        return
-                elif subcommand == "info":
-                    player.message("&aUser '%s' is in these groups: " % username)
-                    for group in self.wrapper.permissions["users"][uuid]["groups"]:
-                        player.message("- %s" % group)
-                    player.message("&aUser '%s' is granted these individual permissions "
-                                   "(not including permissions inherited from groups): " % username)
-                    for node in self.wrapper.permissions["users"][uuid]["permissions"]:
-                        value = self.wrapper.permissions["users"][uuid]["permissions"][node]
-                        if value:
-                            player.message("- %s: &2%s" % (node, value))
-                        elif not value:
-                            player.message("- %s: &4%s" % (node, value))
-                        else:
-                            player.message("- %s: &7%s" % (node, value))
-                else:
-                    usage("users <username> <group/set/remove/info>")
-            else:
-                usage("<groups/users/RESET> (Note: RESET is case-sensitive!)")
-                player.message("&cAlias commands: /perms, /perm, /super")
+        if not player.isOp() > 3:
+            player.message("&cPermission Denied")
             return False
+        def usage(l):
+            player.message("&cUsage: /%s %s" % (payload["command"], l))
+        command = getargs(payload["args"], 0)
+        if command == "groups":
+            group = getargs(payload["args"], 1)
+            subcommand = getargs(payload["args"], 2)
+            if subcommand == "new":
+                self.wrapper.permissions["groups"][group] = {"permissions": {}}
+                player.message("&aCreated a new permissions group '%s'!" % group)
+            elif subcommand == "delete":
+                if group not in self.wrapper.permissions["groups"]:
+                    player.message("&cGroup '%s' does not exist!" % group)
+                    return
+                del self.wrapper.permissions["groups"][group]
+                player.message("&aDeleted permissions group '%s'." % group)
+            elif subcommand == "set":
+                if group not in self.wrapper.permissions["groups"]:
+                    player.message("&cGroup '%s' does not exist!" % group)
+                    return
+                node = getargs(payload["args"], 3)
+                value = getargsafter(payload["args"], 4)
+                if len(value) == 0:
+                    value = True
+                if value in ("True", "False"):
+                    value = ast.literal_eval(value)
+                if len(node) > 0:
+                    self.wrapper.permissions["groups"][group]["permissions"][node] = value
+                    player.message("&aAdded permission node '%s' to group '%s'!" % (node, group))
+                else:
+                    usage("groups %s set <permissionNode> [value]" % group)
+            elif subcommand == "remove":
+                if group not in self.wrapper.permissions["groups"]:
+                    player.message("&cGroup '%s' does not exist!" % group)
+                    return
+                node = getargs(payload["args"], 3)
+                if node in self.wrapper.permissions["groups"][group]["permissions"]:
+                    del self.wrapper.permissions["groups"][group]["permissions"][node]
+                    player.message("&aRemoved permission node '%s' from group '%s'." % (node, group))
+            elif subcommand == "info":
+                if group not in self.wrapper.permissions["groups"]:
+                    player.message("&cGroup '%s' does not exist!" % group)
+                    return
+                player.message("&aUsers in the group '%s':" % group)
+                for uuid in self.wrapper.permissions["users"]:
+                    if group in self.wrapper.permissions["users"][uuid]["groups"]:
+                        player.message("%s: &2%s" % (self.wrapper.uuids.getusernamebyuuid(uuid), uuid))
+                player.message("&aPermissions for the group '%s':" % group)
+                for node in self.wrapper.permissions["groups"][group]["permissions"]:
+                    value = self.wrapper.permissions["groups"][group]["permissions"][node]
+                    if value:
+                        player.message("- %s: &2%s" % (node, value))
+                    elif not value:
+                        player.message("- %s: &4%s" % (node, value))
+                    else:
+                        player.message("- %s: &7%s" % (node, value))
+            else:
+                player.message("&cList of groups: %s" % ", ".join(self.wrapper.permissions["groups"]))
+                usage("groups <groupName> [new/delete/set/remove/info]")
+        elif command == "users":
+            username = getargs(payload["args"], 1)
+            subcommand = getargs(payload["args"], 2)
+            uuid = self.wrapper.uuids.getuuidbyusername(username).string
+            if not uuid:
+                player.message("&cNo valid UUID exists for '%s'." % username)
+                return False
+            if len(username) > 0:
+                if uuid not in self.wrapper.permissions["users"]:
+                    self.wrapper.permissions["users"][uuid] = {"groups": [], "permissions": {}}
+            if subcommand == "group":
+                group = getargs(payload["args"], 3)
+                if len(group) > 0:
+                    if group not in self.wrapper.permissions["groups"]:
+                        player.message("&cGroup '%s' does not exist!" % group)
+                        return
+                    if group not in self.wrapper.permissions["users"][uuid]["groups"]:
+                        self.wrapper.permissions["users"][uuid]["groups"].append(group)
+                        player.message("&aAdded user '%s' to group '%s'!" % (username, group))
+                    else:
+                        self.wrapper.permissions["users"][uuid]["groups"].remove(group)
+                        player.message("&aRemoved user '%s' from group '%s'!" % (username, group))
+                else:
+                    usage("users <username> group <groupName>")
+            elif subcommand == "set":
+                node = getargs(payload["args"], 3)
+                value = getargsafter(payload["args"], 4)
+                if len(value) == 0:
+                    value = True
+                if value in ("True", "False"):
+                    value = ast.literal_eval(value)
+                if len(node) > 0:
+                    self.wrapper.permissions["users"][uuid]["permissions"][node] = value
+                    player.message("&aAdded permission node '%s' to player '%s'!" % (node, username))
+                else:
+                    usage("users %s set <permissionNode> [value]" % username)
+            elif subcommand == "remove":
+                node = getargs(payload["args"], 3)
+                if node not in self.wrapper.permissions["users"][uuid]["permissions"]:
+                    player.message("&cPlayer '%s' never had permission '%s'!" % (username, node))
+                    return
+                if node in self.wrapper.permissions["users"][uuid]["permissions"]:
+                    del self.wrapper.permissions["users"][uuid]["permissions"][node]
+                    player.message("&aRemoved permission node '%s' from player '%s'." % (node, username))
+                    return
+            elif subcommand == "info":
+                player.message("&aUser '%s' is in these groups: " % username)
+                for group in self.wrapper.permissions["users"][uuid]["groups"]:
+                    player.message("- %s" % group)
+                player.message("&aUser '%s' is granted these individual permissions "
+                               "(not including permissions inherited from groups): " % username)
+                for node in self.wrapper.permissions["users"][uuid]["permissions"]:
+                    value = self.wrapper.permissions["users"][uuid]["permissions"][node]
+                    if value:
+                        player.message("- %s: &2%s" % (node, value))
+                    elif not value:
+                        player.message("- %s: &4%s" % (node, value))
+                    else:
+                        player.message("- %s: &7%s" % (node, value))
+            else:
+                usage("users <username> <group/set/remove/info>")
+        else:
+            usage("<groups/users/RESET> (Note: RESET is case-sensitive!)")
+            player.message("&cAlias commands: /perms, /perm, /super")
+        return False
 
     def command_plugins(self, player):
         # CONSOLE should use the pretty version designed for console.
-        if player.isOp():
-            player.message({
-                "text": "List of plugins installed:",
-                "color": "red",
-                "italic": True
-            })
-            for pid in self.wrapper.plugins:
-                plugin = self.wrapper.plugins[pid]
-                name = plugin["name"]
-                version = ".".join([str(_) for _ in plugin["version"]])
-                summary = plugin["summary"]
-                description = plugin["description"]
-                if description is None:
-                    description = "No description is available for this plugin"
-                if summary is None:
-                    summary = "Plugin %s" % name
-                summary = {
-                    "text": summary,
-                    "color": "white",
-                    "hoverEvent": {
-                        "action": "show_text",
-                        "value": description
-                    }
+        if not player.isOp() > 3:
+            player.message("&cPermission Denied")
+            return False
+        player.message({
+            "text": "List of plugins installed:",
+            "color": "red",
+            "italic": True
+        })
+        for pid in self.wrapper.plugins:
+            plugin = self.wrapper.plugins[pid]
+            name = plugin["name"]
+            version = ".".join([str(_) for _ in plugin["version"]])
+            summary = plugin["summary"]
+            description = plugin["description"]
+            if description is None:
+                description = "No description is available for this plugin"
+            if summary is None:
+                summary = "Plugin %s" % name
+            summary = {
+                "text": summary,
+                "color": "white",
+                "hoverEvent": {
+                    "action": "show_text",
+                    "value": description
                 }
-                player.message({
-                    "text": name,
-                    "color": "dark_green",
-                    "hoverEvent": {
-                        "action": "show_text",
-                        "value": "Filename: %s | ID: %s" % (plugin["filename"], pid)
-                    },
-                    "extra": [{
-                        "text": " v%s" % version,
-                        "color": "dark_gray"
-                    }, {
-                        "text": " - ",
-                        "color": "white"
-                    }, summary]
-                })
+            }
+            player.message({
+                "text": name,
+                "color": "dark_green",
+                "hoverEvent": {
+                    "action": "show_text",
+                    "value": "Filename: %s | ID: %s" % (plugin["filename"], pid)
+                },
+                "extra": [{
+                    "text": " v%s" % version,
+                    "color": "dark_gray"
+                }, {
+                    "text": " - ",
+                    "color": "white"
+                }, summary]
+            })
