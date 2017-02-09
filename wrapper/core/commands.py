@@ -114,7 +114,7 @@ class Commands:
             if commandname in self.commands[pluginID]:
                 try:
                     command = self.commands[pluginID][commandname]
-                    if player.hasPermission(command["permission"]):
+                    if player.hasPermission(command["permission"]) or player.isOp() >= 4:
                         command["callback"](payload["player"], payload["args"])
                     else:
                         player.message({"translate": "commands.generic.permission", "color": "red"})
