@@ -186,7 +186,7 @@ class API:
     def registerEvent(self, eventname, callback):
         """
         Register an event and a callback function. See
-         https://docs.google.com/spreadsheets/d/1Sxli0mpN3Aib-aejjX7VRlcN2HZkak_wIqPFJ6mtVIk/edit?usp=sharing
+         https://github.com/benbaptist/minecraft-wrapper/blob/development/documentation/events.rst
          for a list of events.
 
         :Args:
