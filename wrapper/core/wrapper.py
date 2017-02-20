@@ -46,7 +46,7 @@ from core.config import Config
 from core.backups import Backups
 from core.consoleuser import ConsolePlayer
 from core.exceptions import UnsupportedOSException, InvalidServerStartedError
-
+from core.permissions import Permissions
 # optional API type stuff
 import proxy.base as proxy
 from api.base import API
@@ -105,6 +105,7 @@ class Wrapper:
         self.usercache = self.wrapper_usercache.Data
 
         # core functions and datasets
+        self.perms = Permissions(self)
         self.uuids = UUIDS(self)
         self.plugins = Plugins(self)
         self.commands = Commands(self)

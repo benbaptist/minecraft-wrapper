@@ -167,10 +167,20 @@
 
         :arg strict: True - use ONLY the UUID as verification
 
-        :returns:  A 1-4 op level if the player is currently a
-         server operator.  Can be treated, as before, like a
-         boolean - 'if player.isOp():', but now also adds ability
-         to granularize with the OP level
+        :returns:  A 1-10 (or more?) op level if the player is currently
+         a server operator.
+
+        Can be treated, as before, like a
+        boolean - 'if player.isOp():', but now also adds ability
+        to granularize with the OP level.  Levels above 4 are
+        reserved for wrapper.  10 indicates owner. 5-9 are
+        reserved for future minecraft or wrapper levels.  pre-1.8
+        servers return 1.  levels above 4 are based on name only
+        from the file "superops.txt" in the wrapper folder.
+        To assign levels, change the lines of <PlayerName>=<oplevel>
+        to your desired names.  Player must be an actual OP before
+        the superops.txt will have any effect.  Op level of 10 is
+        be required to operate permissions commands.
 
         
 
@@ -323,12 +333,18 @@
 
         
 
--  hasPermission(self, node, another_player=False)
+-  hasPermission(self, node, another_player=False, group_match=True, find_child_groups=True)
 
         If the player has the specified permission node (either
         directly, or inherited from a group that the player is in),
         it will return the value (usually True) of the node.
-        Otherwise, it returns False.
+        Otherwise, it returns False.  Using group_match and
+        find_child_groups are enabled by default.  Permissions
+        can be sped up by disabling child inheritance or even
+        group matching entirely (for high speed loops, for
+        instance).  Normally, permissions are related to
+        commands the player typed, so the 'cost' of child
+        inheritance is not a concern.
 
         :Args:
             :node: Permission node (string)
@@ -336,6 +352,15 @@
              will check THAT PLAYER's permission instead! Useful for
              checking a player's permission for someone who is not
              logged in and has no player object.
+            :group_match: return a permission for any group the player
+             is a member of.  If False, will only return permissions
+             player has directly.
+            :find_child_groups: If group matching, this will
+             additionally locate matches when a group contains
+             a permission that is another group's name.  So if group
+             'admin' contains a permission called 'moderator', anyone
+             with group admin will also have group moderator's
+             permissions as well.
 
         :returns:  Boolean indicating whether player has permission or not.
 
@@ -371,7 +396,7 @@
         :returns:  Boolean; True if operation succeeds, False if
          it fails (set debug mode to see/log error).
 
-    
+        
 
 -  hasGroup(self, group)
 
@@ -392,12 +417,19 @@
 
         
 
--  setGroup(self, group)
+-  setGroup(self, group, creategroup=True)
 
         Adds the player to a specified group.  Returns False if
-        group does not exist (set debiug to see error).
+        the command fails (set debiug to see error).  Failure
+        is only normally expected if the group does not exist
+        and creategroup is False.
 
-        :arg group: Group node (string)
+        :Args:
+            :group: Group node (string)
+            :creategroup: If True (by default), will create the
+             group if it does not exist already.  This WILL
+             generate a warning log since it is not an expected
+             condition.
 
         :returns:  Boolean; True if operation succeeds, False
          if it fails (set debug mode to see/log error).

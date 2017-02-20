@@ -317,6 +317,8 @@ class Permissions:
         group = group.lower()
         if group not in self.permissions["groups"]:
             if creategroup:
+                self.log.warning("No group with the name '%s' exists-"
+                                 " creating a new group!", group)
                 self.group_create(group)
             else:
                 self.log.debug("No group with the name '%s' exists", group)
@@ -372,7 +374,7 @@ def _test():
     perms.set_group("83799ba6-bbac-4d8e-9930-af051cc193a5", "Nubile", True)
 
     x = perms.has_permission("83799ba6-bbac-4d8e-9930-af051cc193a5",
-                             "goofygOOber")
+                             "goofygOOber", )
 
     print("Is that nub a goofygoober?: %s" % x)
 

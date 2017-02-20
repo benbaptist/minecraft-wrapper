@@ -28,7 +28,6 @@ class ConsolePlayer:
         self.username = "*Console*"
         self.loggedIn = time.time()
         self.wrapper = wrapper
-        self.permissions = wrapper.permissions
         self.log = wrapper.log
         self.abort = wrapper.halt
 
