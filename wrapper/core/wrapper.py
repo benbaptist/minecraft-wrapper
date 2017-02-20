@@ -244,6 +244,7 @@ class Wrapper:
         signal.signal(signal.SIGTERM, self.sigterm)
         # noinspection PyBroadException
         try:
+            # lacking in Windows
             signal.signal(signal.SIGTSTP, self.sigtstp)
         except:
             pass

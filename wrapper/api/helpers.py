@@ -822,5 +822,3 @@ def _test():
 
 if __name__ == "__main__":
     _test()
-    if not 4 > 3:
-        print("not an OP")
