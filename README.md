@@ -33,12 +33,12 @@ You only need to download Wrapper.py.  The 'wrapper' folder is the source code a
 The original stable branch "master" is version 0.7.6, build 83.  This version is considered to be the working
 standard version for now.  However, it is quite old at this point and the development version has far outpaced it.
 
-The current "development" branch version (0.9.x) is now at a point where it is probably a much better choice to use.
+The current "development" branch version (0.11.x) is now at a point where it is probably a much better choice to use.
 
-- If you are running proxymode with a 1.9 or newer server, you _must_ use the development version.
+- If you are running proxymode with a Minecraft version 1.9 or newer server, you _must_ use the development version.
 - The master version 0.7.6 may be a better choice if you require web mode and possibly IRC, as those have not been tested on development.
 - If you experience serious errors with IRC or web mode in the master branch, you should switch to development (unless you are able to create a pull request to fix the master).
-- The features/advantages of the 0.9.x version are presently too numerous to list.
+- The features/advantages of the 0.11.x version are presently too numerous to list.
 
 
 
@@ -46,8 +46,7 @@ The current "development" branch version (0.9.x) is now at a point where it is p
 
 *Wrapper is only designed to be compatible with Python 2.7+ and python 3.4+ versions
 
-*It may run under 2.6, but this may cause problems with some dependencies.*
-
+*It may run under 2.6, but this may cause problems with some dependencies.  Certain Linux distros with Python 2.7 also have known issues with the requests module.  Whether that affects wrapper or not is uncertain*
 
 
 **LINUX download and setup**
@@ -56,7 +55,7 @@ if you have wget installed, You can run the following command to download the st
 
 `wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master/Wrapper.py`
 
-or the following to download the development version (0.9.x) of Wrapper.py:
+or the following to download the development version (0.11.x) of Wrapper.py:
 
 `wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/Wrapper.py`
 
@@ -94,7 +93,6 @@ pip install pycrypto
 ```
 
 Download the Wrapper.py file and place it in the desired folder.
-
 
 
 ###  **Start Up**
@@ -179,9 +177,21 @@ Wrapper.py supports the following features:
 - Colorized console output.
 
 # API #
-The documentation for Wrapper.py is not complete, but you can find a reference on the plugin API here:
+The documentation for Wrapper.py is not complete, but you can find a reference on the wrapper plugin API here:
 [Wrapper.py Plugin API](/documentation/index.md)
 
+####New Permissions System####
+
+A file in the wrapper root directory "superOPs.txt" now augments the "Ops.json" file.  Operators in the ops.json file can be assigned a higher (wrapper) OP level.  The contents of the file are laid out just like server.properties (lines of \<something\>=\<value\>).
+
+Sample `superops.txt`:
+```
+Suresttexas00=5
+BenBaptist=9
+```
+Higher op levels are required to run sensitive wrapper commands like `/perms`.
+
+####Plugins####
 
 Wrapper continues to be a work in progress and changes often happen faster than they
  get documented, but this should help give you an idea of the methods that can be used.
@@ -191,7 +201,6 @@ Wrapper continues to be a work in progress and changes often happen faster than 
 
 Here is an updated list of the events:
 [Wrapper events](https://docs.google.com/spreadsheets/d/1Sxli0mpN3Aib-aejjX7VRlcN2HZkak_wIqPFJ6mtVIk/edit?usp=sharing)
-
 
 Check the 'example-plugins' folder to see some example plugins.  These are very useful for seeing hwo the API functions.
 
