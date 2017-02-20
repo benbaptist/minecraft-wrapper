@@ -94,8 +94,10 @@ class Wrapper:
 
         # Storages
         self.wrapper_storage = Storage("wrapper", encoding=self.encoding)
+
         self.wrapper_permissions = Storage(
             "permissions", encoding=self.encoding, pickle=False)
+
         self.wrapper_usercache = Storage(
             "usercache", encoding=self.encoding, pickle=False)
 

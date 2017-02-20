@@ -9,7 +9,6 @@
 import ast
 import fnmatch
 import copy
-import logging
 import json
 
 
@@ -27,19 +26,12 @@ class Permissions:
 
     """
 
-    def __init__(self, wrapper, test_permission_set=None):
+    def __init__(self, wrapper):
         self.wrapper = wrapper
+        self.log = self.wrapper.log
 
-        if not test_permission_set:
-            self.log = self.wrapper.log
-            # permissions storage Data object
-            self.permissions = wrapper.permissions
-            self.registered_perms = self.wrapper.registered_permissions
-        else:
-            # test mode
-            self.log = logging.getLogger("wrapper")
-            self.permissions = test_permission_set
-            self.registered_perms = {}
+        # permissions storage Data object
+        self.permissions = wrapper.permissions
 
         # populate dictionary items to prevent errors due to missing items
         if "groups" not in self.permissions:
@@ -63,12 +55,15 @@ class Permissions:
         self.empty_user = {"groups": [], "permissions": {}}
         self.clean_perms_data()
 
+    def fill_user(self, uuid):
+        self.permissions["users"][uuid] = copy.deepcopy(self.empty_user)
+
     def clean_perms_data(self):
 
         deletes = []
         for user in self.permissions["users"]:
             if self.permissions[
-                    "users"][user] == copy.deepcopy(self.empty_user):
+                    "users"][user] == self.empty_user:
                 deletes.append(user)
         for stale_user in deletes:
             del self.permissions["users"][stale_user]
@@ -184,7 +179,7 @@ class Permissions:
         Otherwise, it returns False.
         """
         if uuid not in self.permissions["users"]:
-            self.permissions["users"][uuid] = copy.deepcopy(self.empty_user)
+            self.fill_user(uuid)
             return False
 
         if node is None:
@@ -200,9 +195,9 @@ class Permissions:
                     "users"][uuid]["permissions"][perm]
 
         # return a registered permission;
-        for pid in self.registered_perms:
-            if node in self.registered_perms[pid]:
-                return self.registered_perms[pid][node]
+        for pid in self.wrapper.registered_perms:
+            if node in self.wrapper.registered_perms[pid]:
+                return self.wrapper.registered_perms[pid][node]
 
         # an optional way out because group processing can be expensive
         if not group_match:
@@ -247,7 +242,7 @@ class Permissions:
         value = bool(value) or False
 
         if uuid not in self.permissions["users"]:
-            self.permissions["users"][uuid] = copy.deepcopy(self.empty_user)
+            self.fill_user(uuid)
 
         self.permissions["users"][uuid]["permissions"][node.lower()] = value
 
@@ -257,7 +252,7 @@ class Permissions:
         plugin defaults.  Returns True/False success."""
 
         if uuid not in self.permissions["users"]:
-            self.permissions["users"][uuid] = copy.deepcopy(self.empty_user)
+            self.fill_user(uuid)
             # Since the user did not even have a permission, return.
             return True
         node = node.lower()
@@ -282,7 +277,7 @@ class Permissions:
 
         # user had no permission data
         if uuid not in self.permissions["users"]:
-            self.permissions["users"][uuid] = copy.deepcopy(self.empty_user)
+            self.fill_user(uuid)
             return False
 
         # user has this group ...
@@ -298,7 +293,7 @@ class Permissions:
         """
 
         if uuid not in self.permissions["users"]:
-            self.permissions["users"][uuid] = copy.deepcopy(self.empty_user)
+            self.fill_user(uuid)
             # Had not permissions set at all..
             return []
         return self.permissions["users"][uuid]["groups"]
@@ -325,7 +320,7 @@ class Permissions:
                 return False
 
         if uuid not in self.permissions["users"]:
-            self.permissions["users"][uuid] = copy.deepcopy(self.empty_user)
+            self.fill_user(uuid)
         self.permissions["users"][uuid]["groups"].append(group)
 
         # return the resulting change (as verification)
@@ -336,7 +331,7 @@ class Permissions:
 
         group = group.lower()
         if uuid not in self.permissions["users"]:
-            self.permissions["users"][uuid] = copy.deepcopy(self.empty_user)
+            self.fill_user(uuid)
             return True
 
         if group in self.permissions["users"][uuid]["groups"]:
@@ -349,72 +344,7 @@ class Permissions:
 
 
 def _test():
-    from helpers import putjsonfile  # ,getjsonfile
-    # permsdata = getjsonfile("permsdata", "/home/surest/Desktop")
-    permsdata = {"empty": True, }
-    perms = Permissions("wrapper", permsdata)
-
-    x = perms.group_create("nubs")
-    print("created nubs: %s" % x)
-
-    x = perms.group_exists("nubs")
-    print("do nubs exist? %s" % x)
-
-    perms.group_set_permission("nubs", "GooFYGOOBer", True)
-    perms.group_set_permission("nubs", "bDATplacemat", True)
-
-    perms.set_group("83799ba6-bbac-4d8e-9930-af051cc193a5", "helper", True)
-
-    perms.set_group("83799ba6-bbac-4d8e-9930-af051cc193a5", "jhzigou", True)
-
-    perms.set_group("83799ba6-bbac-4d8e-9930-af051cc193a5", "fongding", True)
-
-    perms.group_set_permission("helper", "nubs", True)
-
-    perms.set_group("83799ba6-bbac-4d8e-9930-af051cc193a5", "Nubile", True)
-
-    x = perms.has_permission("83799ba6-bbac-4d8e-9930-af051cc193a5",
-                             "goofygOOber", )
-
-    print("Is that nub a goofygoober?: %s" % x)
-
-    ifhehas = perms.has_group("83799ba6-bbac-4d8e-9930-af051cc193a5", "OWNeR")
-    print(ifhehas)
-
-    ifhehas = perms.has_permission("83799ba6-bbac-4d8e-9930-af051cc193a5",
-                                   "vclaims.use")
-    print(ifhehas)
-
-    x = perms.has_group("4f953255-6775-4dc6-a612-fb4230588eff", "owNer")
-    print(x)
-
-    perms.set_permission("4f953255-6775-4dc6-a612-fb4230588eff",
-                         "vclaims.admin", True)
-    perms.remove_permission("4f953255-6775-4dc6-a612-fb4230588eff",
-                            "vclaims")
-    x = perms.has_permission("4f953255-6775-4dc6-a612-fb4230588eff",
-                             "vclaims.admin")
-    print(x)
-
-    # x = perms.group_delete_permission("nubs", "goofYGOOber")
-    # x = perms.group_delete("nubs")
-    print("deleted GG from nubs: %s" % x)
-
-    x = perms.group_exists("nubs")
-    print("do they exist? %s" % x)
-
-    x = perms.has_permission(
-        "83799ba6-bbac-4d8e-9930-af051cc193a5", "Bdatplacemat")
-
-    print("Is dat nub my placemat?: %s" % x)
-    perms.remove_group("83799ba6-bbac-4d8e-9930-af051cc193a5", "jhzigou")
-
-    perms.remove_group("83799ba6-bbac-4d8e-9930-af051cc193a5", "fongding")
-
-    x = perms.get_groups("83799ba6-bbac-4d8e-9930-af051cc193a5")
-    print(x)
-
-    putjsonfile(perms.permissions, "permsdata_", "/home/surest/Desktop")
+    pass
 
 
 if __name__ == "__main__":

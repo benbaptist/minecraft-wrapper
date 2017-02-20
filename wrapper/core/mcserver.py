@@ -590,7 +590,7 @@ class MCServer:
         # Grant "owner" an op level above 4. required for some wrapper commands
         for eachop in ops:
             if eachop["name"] in self.ownernames:
-                eachop["level"] = self.ownernames["name"]
+                eachop["level"] = self.ownernames[eachop["name"]]
         return ops
 
     def refresh_ops(self):

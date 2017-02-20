@@ -124,9 +124,10 @@ class Storage:
     def json_save(self):
         putcode = putjsonfile(self.Data, self.name, self.root)
         if not putcode:
-            self.log.exception("Error encoutered while saving json data:\n"
-                               "'%s/%s.%s'\nData Dump:\ns",
-                               self.root, self.name, self.file_ext, self.Data)
+            self.log.exception(
+                "Error encoutered while saving json data:\n'%s/%s.%s'"
+                "\nData Dump:\n%s" % (
+                    self.root, self.name, self.file_ext, self.Data))
 
     def pickle_load(self):
         with open("%s/%s.%s" % (
@@ -136,8 +137,8 @@ class Storage:
     def json_load(self):
         try_load = getjsonfile(self.name, self.root, encodedas=self.encoding)
         if try_load in (None, False):
-            self.log.exception("bad/non-existent file or data '%s/%s.%s'",
-                               self.root, self.name, self.file_ext)
+            self.log.exception("bad/non-existent file or data '%s/%s.%s'" %
+                               (self.root, self.name, self.file_ext))
             return {}
         else:
             return try_load

@@ -254,6 +254,10 @@
 
         *based on old playerSetFly (which was an unfinished function)*
 
+        NOTE - You are implementing these abilities on the client
+         side only.. if the player is in survival mode, the server
+         may think the client is hacking!
+
         this will set 'is flying' and 'can fly' to true for the player.
         these flags/settings will be set according to the players
         properties, which you can set just prior to calling this
@@ -285,7 +289,8 @@
 
         
 
--  sendBlock(self, position, blockid, blockdata, sendblock=True, numparticles=1, partdata=1)
+-  sendBlock(self, position, blockid, blockdata, sendblock=True,
+                  numparticles=1, partdata=1)
 
         Used to make phantom blocks visible ONLY to the client.  Sends
         either a particle or a block to the minecraft player's client.

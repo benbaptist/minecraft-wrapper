@@ -160,7 +160,7 @@ class Player:
 
         # Process login data
         self.data = Storage(
-            self.clientUuid.string, root="wrapper-data/players", pickle=False)
+            self.clientUuid.string, root="wrapper-data/players")
         if "firstLoggedIn" not in self.data.Data:
             self.data.Data["firstLoggedIn"] = (time.time(), time.tzname)
         if "logins" not in self.data.Data:
@@ -551,6 +551,10 @@ class Player:
         """
         *based on old playerSetFly (which was an unfinished function)*
 
+        NOTE - You are implementing these abilities on the client
+         side only.. if the player is in survival mode, the server
+         may think the client is hacking!
+
         this will set 'is flying' and 'can fly' to true for the player.
         these flags/settings will be set according to the players
         properties, which you can set just prior to calling this
@@ -605,7 +609,8 @@ class Player:
             [_BYTE, _FLOAT, _FLOAT],
             (bitfield, self.fly_speed, self.field_of_view))
 
-    def sendBlock(self, position, blockid, blockdata, sendblock=True, numparticles=1, partdata=1):
+    def sendBlock(self, position, blockid, blockdata, sendblock=True,
+                  numparticles=1, partdata=1):
         """
         Used to make phantom blocks visible ONLY to the client.  Sends
         either a particle or a block to the minecraft player's client.
@@ -649,6 +654,7 @@ class Player:
             iddata = blockid << 4 | blockdata
 
             # [1.8pos/1.7x | 1.7y | 1.7z | 1.7BlockID/1.8iddata | 1.7blockdata]
+            # these are whitespaced this way to line up visually
             blockparser = [_POSITION, _NULL, _NULL, _VARINT,  _NULL]
 
             particleparser = [_INT,    _BOOL, _FLOAT, _FLOAT, _FLOAT, _FLOAT,

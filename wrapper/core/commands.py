@@ -632,15 +632,13 @@ class Commands:
         elif command == "users":
             username = getargs(payload["args"], 1)
             subcommand = getargs(payload["args"], 2)
-            uuid = self.wrapper.uuids.getuuidbyusername(username).string
-            if not uuid:
-                player.message("&cNo valid UUID exists for '%s'." % username)
-                return False
-
+            uuid = self.wrapper.uuids.getuuidbyusername(username)
+            if str(uuid) not in self.wrapper.permissions:
+                self.perms.fill_user(str(uuid))
             if subcommand == "group":
                 group = getargs(payload["args"], 3)
-                if len(group) > 0:
-                    call_result = self.perms.set_group(uuid, group)
+                if len(group) > 0 and len(uuid) > 0:
+                    call_result = self.perms.set_group(str(uuid), group)
                     if not call_result:
                         player.message(
                             "&ccommand failed, check wrapper log for info.")
@@ -651,7 +649,7 @@ class Commands:
                 node = getargs(payload["args"], 3)
                 value = getargsafter(payload["args"], 4)
                 if len(node) > 0:
-                    call_result = self.perms.set_permission(uuid, node, value)
+                    call_result = self.perms.set_permission(str(uuid), node, value)
                     player.message("&a%s" % call_result)
                 else:
                     usage("users %s set <permissionNode> [value]" % username)
@@ -659,27 +657,27 @@ class Commands:
             elif subcommand == "remove":
                 node = getargs(payload["args"], 3)
                 if len(node) > 0:
-                    call_result = self.perms.remove_permission(uuid, node)
+                    call_result = self.perms.remove_permission(str(uuid), node)
                     player.message("&a%s" % call_result)
                 else:
                     usage("users %s remove <permissionNode>" % username)
 
             elif subcommand == "info":
                 player.message("&aUser '%s' is in these groups: " % username)
-                for group in self.wrapper.permissions["users"][uuid]["groups"]:
+                for group in self.wrapper.permissions["users"][str(uuid)]["groups"]:
                     player.message("- %s" % group)
                 player.message(
                     "&aUser '%s' is granted these individual permissions (not including permissions inherited from groups): " % username)
                 for node in self.wrapper.permissions[
-                        "users"][uuid]["permissions"]:
+                        "users"][str(uuid)]["permissions"]:
                     value = self.wrapper.permissions[
-                        "users"][uuid]["permissions"][node]
+                        "users"][str(uuid)]["permissions"][node]
                     if value:
-                        player.message("- %s: &2%s" % (node, value))
+                        player.message("- %s: %s" % (node, value))
                     elif not value:
-                        player.message("- %s: &4%s" % (node, value))
+                        player.message("- %s: %s" % (node, value))
                     else:
-                        player.message("- %s: &7%s" % (node, value))
+                        player.message("- %s: %s" % (node, value))
             else:
                 usage("users <username> <group/set/remove/info>")
 
