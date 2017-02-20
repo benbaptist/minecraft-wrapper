@@ -123,6 +123,7 @@ class MCServer:
         self.timeofday = -1
         self.onlineMode = True
         self.serverIcon = None
+        self.ownernames = config_to_dict_read("superops.txt", ".")
         self.operatordict = self.read_ops_file()
 
         self.properties = {}
@@ -583,6 +584,10 @@ class MCServer:
                            "level": 1}
                 ops.append(indivop)
 
+        # Grant "owner" an op level above 4. required for some wrapper commands
+        for eachop in ops:
+            if eachop["name"] in self.ownernames:
+                eachop["level"] = self.ownernames["name"]
         return ops
 
     def refresh_ops(self):

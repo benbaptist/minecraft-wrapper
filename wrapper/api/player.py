@@ -424,10 +424,19 @@ class Player:
 
         :arg strict: True - use ONLY the UUID as verification
 
-        :returns:  A 1-4 op level if the player is currently a
-         server operator.  Can be treated, as before, like a
-         boolean - 'if player.isOp():', but now also adds ability
-         to granularize with the OP level
+        :returns:  A 1-10 (or more?) op level if the player is currently
+         a server operator.
+
+        Can be treated, as before, like a
+        boolean - 'if player.isOp():', but now also adds ability
+        to granularize with the OP level.  Levels above 4 are
+        reserved for wrapper.  10 indicates owner. 5-9 are
+        reserved for future minecraft or wrapper levels.  pre-1.8
+        servers return 1.  levels above 4 is based on name only
+        from the file "superops.txt" file in the wrapper folder.
+        To assign levels, enter lines of PlayerName=<oplevel>.
+        This file does not exist by default for your protection.
+        You must create it manually.
 
         """
 

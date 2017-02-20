@@ -10,7 +10,6 @@ Collection of Virtual player classes used elsewhere.
 """
 
 import time
-# noinspection PyProtectedMember
 from api.helpers import readout
 
 
@@ -18,7 +17,8 @@ from api.helpers import readout
 # noinspection PyUnresolvedReferences,PyPep8Naming,PyBroadException
 class ConsolePlayer:
     """
-    This class minimally represents the console as a player so that the console can use wrapper/plugin commands.
+    This class minimally represents the console as a player so
+    that the console can use wrapper/plugin commands.
 
     used by core.wrapper.py
 
@@ -32,7 +32,8 @@ class ConsolePlayer:
         self.log = wrapper.log
         self.abort = wrapper.halt
 
-        # these map minecraft color codes to "approximate" ANSI terminal color used by our color formatter.
+        # these map minecraft color codes to "approximate" ANSI
+        # terminal color used by our color formatter.
         self.message_number_coders = {'0': 'black',
                                       '1': 'blue',
                                       '2': 'green',
@@ -51,7 +52,8 @@ class ConsolePlayer:
                                       'f': 'white'
                                       }
 
-        # these do the same for color names (things like 'red', 'white', 'yellow, etc, not needing conversion...
+        # these do the same for color names (things like 'red',
+        # 'white', 'yellow, etc, not needing conversion...)
         self.messsage_color_coders = {'dark_blue': 'blue',
                                       'dark_green': 'green',
                                       'dark_aqua': 'cyan',
@@ -66,18 +68,21 @@ class ConsolePlayer:
 
     @staticmethod
     def isOp():
-        return 4
+        return 10
 
     def __str__(self):
         """
-        Permit the console to have a nice display instead of returning the object instance notation.
+        Permit the console to have a nice display instead of
+        returning the object instance notation.
         """
         return "CONSOLE OPERATOR"
 
     def message(self, message):
         """
-        This is a substitute for the player.message() that plugins and the command interface expect for player objects.
-        It translates chat type messages intended for a minecraft client into printed colorized console lines.
+        This is a substitute for the player.message() that plugins and
+        the command interface expect for player objects. It translates
+        chat type messages intended for a minecraft client into
+        printed colorized console lines.
         """
         displaycode, displaycolor = "5", "magenta"
         display = str(message)
@@ -85,7 +90,8 @@ class ConsolePlayer:
             jsondisplay = message
         else:
             jsondisplay = False
-        if display[0:1] == "&":  # format "&c" type color (roughly) to console formatters color
+        # format "&c" type color (roughly) to console formatters color
+        if display[0:1] == "&":
             displaycode = display[1:1]
             display = display[2:]
         if displaycode in self.message_number_coders:
@@ -97,7 +103,8 @@ class ConsolePlayer:
                 displaycolor = jsondisplay["color"]
                 if displaycolor in self.messsage_color_coders:
                     displaycolor = self.messsage_color_coders[displaycolor]
-        readout(display, "", "", pad=15, command_text_fg=displaycolor, usereadline=self.wrapper.use_readline)
+        readout(display, "", "", pad=15, command_text_fg=displaycolor,
+                usereadline=self.wrapper.use_readline)
 
     @staticmethod
     def hasPermission(*args):
