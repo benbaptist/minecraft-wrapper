@@ -5,8 +5,7 @@
 # This program is distributed under the terms of the GNU
 # General Public License, version 3 or later.
 
-"""This module is not used, but may be used in the future as a
- place for pulling out permissions logic."""
+
 import ast
 import fnmatch
 import copy
@@ -42,13 +41,13 @@ class Permissions:
             self.permissions = test_permission_set
             self.registered_perms = {}
 
-        # enforcing lowercase perms now, clean data up
-        self.empty_user = {"groups": [], "permissions": {}}
-        self.clean_perms_data()
-
         # populate dictionary items to prevent errors due to missing items
         if "groups" not in self.permissions:
             self.permissions["groups"] = {}
+        if "users" not in self.permissions:
+            self.permissions["users"] = {}
+
+        # Remove deprecated item
         if "default" in self.permissions["groups"]:
             if len(self.permissions["groups"]["default"]["permissions"]) > 0:
                 self.log.error(
@@ -60,9 +59,9 @@ class Permissions:
                     " make this error go away...")
             else:
                 self.group_delete("default")
-
-        if "users" not in self.permissions:
-            self.permissions["users"] = {}
+        # enforcing lowercase perms now, clean data up
+        self.empty_user = {"groups": [], "permissions": {}}
+        self.clean_perms_data()
 
     def clean_perms_data(self):
 
@@ -343,7 +342,8 @@ class Permissions:
 
 def _test():
     from helpers import getjsonfile, putjsonfile
-    permsdata = getjsonfile("permsdata", "/home/surest/Desktop")
+    # permsdata = getjsonfile("permsdata", "/home/surest/Desktop")
+    permsdata = {"empty": True, }
     perms = Permissions("wrapper", permsdata)
 
     x = perms.group_create("nubs")
@@ -384,6 +384,9 @@ def _test():
     print("Is that nub a goofygoober?: %s" % x)
 
     putjsonfile(perms.permissions, "permsdata_", "/home/surest/Desktop")
+
+
+    # TODO still has run-time error that assigns nubs group to surest texas
 
 if __name__ == "__main__":
     _test()
