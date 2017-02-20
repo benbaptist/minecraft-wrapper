@@ -6,7 +6,6 @@
 # General Public License, version 3 or later.
 
 import time
-import fnmatch
 import json
 import threading
 
@@ -75,7 +74,6 @@ class Player:
 
         self.wrapper = wrapper
         self.javaserver = wrapper.javaserver
-        self.permissions = wrapper.permissions
         self.log = wrapper.log
 
         self.username = username
@@ -126,7 +124,7 @@ class Player:
         self.playereid = None
 
         # some player properties associated with abilities
-
+        #
         # default is 1.  Should normally be congruent with speed.
         self.field_of_view = float(1)
         # Client set godmode is 0x01
@@ -160,20 +158,9 @@ class Player:
                                " your server port and not the wrapper"
                                " proxy port!")
 
-        # populate dictionary items to prevent errors due to missing items
-        if "groups" not in self.permissions:
-            self.permissions["groups"] = {}
-            self.permissions["groups"]["Default"] = {}
-            self.permissions["groups"]["Default"]["permissions"] = {}
-        if "users" not in self.permissions:
-            self.permissions["users"] = {}
-        if self.mojangUuid.string not in self.permissions["users"]:
-            self.permissions["users"][self.mojangUuid.string] = {
-                "groups": [], "permissions": {}}
-
         # Process login data
         self.data = Storage(
-            self.clientUuid.string, root="wrapper-data/players", pickle=False)
+            self.clientUuid.string, root="wrapper-data/players")
         if "firstLoggedIn" not in self.data.Data:
             self.data.Data["firstLoggedIn"] = (time.time(), time.tzname)
         if "logins" not in self.data.Data:
@@ -434,11 +421,10 @@ class Player:
         reserved for future minecraft or wrapper levels.  pre-1.8
         servers return 1.  levels above 4 are based on name only
         from the file "superops.txt" in the wrapper folder.
-        To assign levels, enter lines of <PlayerName>=<oplevel>.
-        This file does not exist by default for your protection.
-        You must create it manually.  Player must be an actual
-        OP before the superops.txt will have any effect.  Op level
-        of 10 will be required to operate permissions commands.
+        To assign levels, change the lines of <PlayerName>=<oplevel>
+        to your desired names.  Player must be an actual OP before
+        the superops.txt will have any effect.  Op level of 10 is
+        be required to operate permissions commands.
 
         """
 
@@ -565,6 +551,10 @@ class Player:
         """
         *based on old playerSetFly (which was an unfinished function)*
 
+        NOTE - You are implementing these abilities on the client
+         side only.. if the player is in survival mode, the server
+         may think the client is hacking!
+
         this will set 'is flying' and 'can fly' to true for the player.
         these flags/settings will be set according to the players
         properties, which you can set just prior to calling this
@@ -619,7 +609,8 @@ class Player:
             [_BYTE, _FLOAT, _FLOAT],
             (bitfield, self.fly_speed, self.field_of_view))
 
-    def sendBlock(self, position, blockid, blockdata, sendblock=True, numparticles=1, partdata=1):
+    def sendBlock(self, position, blockid, blockdata, sendblock=True,
+                  numparticles=1, partdata=1):
         """
         Used to make phantom blocks visible ONLY to the client.  Sends
         either a particle or a block to the minecraft player's client.
@@ -663,6 +654,7 @@ class Player:
             iddata = blockid << 4 | blockdata
 
             # [1.8pos/1.7x | 1.7y | 1.7z | 1.7BlockID/1.8iddata | 1.7blockdata]
+            # these are whitespaced this way to line up visually
             blockparser = [_POSITION, _NULL, _NULL, _VARINT,  _NULL]
 
             particleparser = [_INT,    _BOOL, _FLOAT, _FLOAT, _FLOAT, _FLOAT,
@@ -705,12 +697,18 @@ class Player:
         return self.getClient().inventory[36 + self.getClient().slot]
 
     # Permissions-related
-    def hasPermission(self, node, another_player=False):
+    def hasPermission(self, node, another_player=False, group_match=True, find_child_groups=True):
         """
         If the player has the specified permission node (either
         directly, or inherited from a group that the player is in),
         it will return the value (usually True) of the node.
-        Otherwise, it returns False.
+        Otherwise, it returns False.  Using group_match and
+        find_child_groups are enabled by default.  Permissions
+        can be sped up by disabling child inheritance or even
+        group matching entirely (for high speed loops, for
+        instance).  Normally, permissions are related to
+        commands the player typed, so the 'cost' of child
+        inheritance is not a concern.
 
         :Args:
             :node: Permission node (string)
@@ -718,83 +716,30 @@ class Player:
              will check THAT PLAYER's permission instead! Useful for
              checking a player's permission for someone who is not
              logged in and has no player object.
+            :group_match: return a permission for any group the player
+             is a member of.  If False, will only return permissions
+             player has directly.
+            :find_child_groups: If group matching, this will
+             additionally locate matches when a group contains
+             a permission that is another group's name.  So if group
+             'admin' contains a permission called 'moderator', anyone
+             with group admin will also have group moderator's
+             permissions as well.
 
         :returns:  Boolean indicating whether player has permission or not.
 
         """
-
-        # this might be a useful thing to implement into all
-        # permissions methods
         uuid_to_check = self.mojangUuid.string
-        if node is None:
-            return True
         if another_player:
             # get other player mojang uuid
-            other_uuid = self.wrapper.uuids.getuuidbyusername(another_player)
-
-            if other_uuid:
-                # make sure other player permission is initialized.
-                if self.mojangUuid.string not in self.permissions["users"]:
-                    self.permissions["users"][self.mojangUuid.string] = {
-                        "groups": [], "permissions": {}}
-            else:
+            uuid_to_check = str(
+                self.wrapper.uuids.getuuidbyusername(another_player))
+            if not uuid_to_check:
                 # probably a bad name provided.. No further check needed.
                 return False
 
-        # was self.clientUuid.string
-        if uuid_to_check in self.permissions["users"]:
-            for perm in self.permissions[
-                    "users"][uuid_to_check]["permissions"]:
-                if node in fnmatch.filter([node], perm):
-                    return self.permissions[
-                        "users"][uuid_to_check]["permissions"][perm]
-
-        if uuid_to_check not in self.permissions["users"]:
-            return False
-
-        # summary of groups, included children groups
-        allgroups = []
-
-        # get the parent groups
-        for group in self.permissions["users"][uuid_to_check]["groups"]:
-            if group not in allgroups:
-                allgroups.append(group)
-
-        # process and find child groups
-        itemstoprocess = allgroups[:]
-        while len(itemstoprocess) > 0:
-            parseparent = itemstoprocess.pop(0)
-            for groupPerm in self.permissions[
-                    "groups"][parseparent]["permissions"]:
-
-                if (groupPerm in self.permissions["groups"]) and \
-                        self.permissions["groups"][parseparent][
-                            "permissions"][groupPerm] and \
-                        (groupPerm not in allgroups):
-
-                    allgroups.append(groupPerm)
-                    itemstoprocess.append(groupPerm)
-
-        # return a group;
-        for group in allgroups:
-            for perm in self.permissions["groups"][group]["permissions"]:
-                if node in fnmatch.filter([node], perm):
-                    return self.permissions["groups"][group][
-                        "permissions"][perm]
-
-        # return a default permission;
-        for perm in self.permissions["groups"]["Default"]["permissions"]:
-            if node in fnmatch.filter([node], perm):
-                return self.permissions["groups"]["Default"][
-                    "permissions"][perm]
-
-        # return a registered permission;
-        for pid in self.wrapper.registered_permissions:
-            if node in self.wrapper.registered_permissions[pid]:
-                return self.wrapper.registered_permissions[pid][node]
-
-        # no permission;
-        return False
+        return self.wrapper.perms.has_permission(
+            uuid_to_check, node, group_match, find_child_groups)
 
     def setPermission(self, node, value=True):
         """
@@ -810,10 +755,7 @@ class Player:
         :returns: Nothing
 
         """
-        for uuid in self.permissions["users"]:
-            if uuid == self.mojangUuid.string:  # was self.clientUuid.string
-                self.permissions["users"][uuid]["permissions"][node] = value
-                return
+        self.wrapper.perms.set_permission(self.mojangUuid.string, node, value)
 
     def removePermission(self, node):
         """
@@ -830,20 +772,9 @@ class Player:
         :returns:  Boolean; True if operation succeeds, False if
          it fails (set debug mode to see/log error).
 
-    """
-
-        for uuid in self.permissions["users"]:
-            if uuid == self.mojangUuid.string:  # was self.clientUuid.string
-                if node in self.permissions["users"][uuid]["permissions"]:
-                    del self.permissions["users"][uuid]["permissions"][node]
-                    return True
-                else:
-                    self.log.debug("%s does not have permission node"
-                                   " '%s'", (self.username, node))
-                    return False
-        self.log.debug("Player %s uuid:%s does not have permission node '%s'",
-                       (self.username, self.mojangUuid.string, node))
-        return False
+        """
+        return self.wrapper.perms.remove_permission(
+            self.mojangUuid.string, node)
 
     def hasGroup(self, group):
         """
@@ -855,10 +786,7 @@ class Player:
         :returns:  Boolean of whether player has permission or not.
 
         """
-        for uuid in self.permissions["users"]:
-            if uuid == self.mojangUuid.string:  # was self.clientUuid.string
-                return group in self.permissions["users"][uuid]["groups"]
-        return False
+        return self.wrapper.perms.has_group(self.mojangUuid.string, group)
 
     def getGroups(self):
         """
@@ -867,33 +795,28 @@ class Player:
         :returns:  list of groups
 
         """
-        for uuid in self.permissions["users"]:
-            if uuid == self.mojangUuid.string:  # was self.clientUuid.string
-                return self.permissions["users"][uuid]["groups"]
-        # If the user is not in the permission database, return this
-        return []
+        return self.wrapper.perms.get_groups(self.mojangUuid.string)
 
-    def setGroup(self, group):
+    def setGroup(self, group, creategroup=True):
         """
         Adds the player to a specified group.  Returns False if
-        group does not exist (set debiug to see error).
+        the command fails (set debiug to see error).  Failure
+        is only normally expected if the group does not exist
+        and creategroup is False.
 
-        :arg group: Group node (string)
+        :Args:
+            :group: Group node (string)
+            :creategroup: If True (by default), will create the
+             group if it does not exist already.  This WILL
+             generate a warning log since it is not an expected
+             condition.
 
         :returns:  Boolean; True if operation succeeds, False
          if it fails (set debug mode to see/log error).
 
         """
-        if group not in self.permissions["groups"]:
-            self.log.debug("No group with the name '%s' exists", group)
-            return False
-        for uuid in self.permissions["users"]:
-            if uuid == self.mojangUuid.string:  # was self.clientUuid.string
-                self.permissions["users"][uuid]["groups"].append(group)
-                return True
-        self.log.debug("Player %s uuid:%s: Could not be added to group '%s'",
-                       (self.username, self.mojangUuid.string, group))
-        return False
+        return self.wrapper.perms.set_group(
+            self.mojangUuid.string, group, creategroup)
 
     def removeGroup(self, group):
         """
@@ -909,21 +832,10 @@ class Player:
             :False: player uuid not found!
 
         """
-        for uuid in self.permissions["users"]:
-            if uuid == self.mojangUuid.string:  # was self.clientUuid.string:
-                if group in self.permissions["users"][uuid]["groups"]:
-                    self.permissions["users"][uuid]["groups"].remove(group)
-                    return True
-                else:
-                    self.log.debug("%s is not part of the group"
-                                   " '%s'" % (self.username, group))
-                    return None
+        return self.wrapper.perms.remove_group(
+            self.mojangUuid.string, group)
 
-        self.log.debug("UUID %s was not found for group"
-                       " '%s'" % (self.mojangUuid.string, group))
-        return False
     # Player Information
-
     def getFirstLogin(self):
         """
         Returns a tuple containing the timestamp of when the user

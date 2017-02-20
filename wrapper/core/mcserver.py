@@ -123,8 +123,11 @@ class MCServer:
         self.timeofday = -1
         self.onlineMode = True
         self.serverIcon = None
-        self.ownernames = config_to_dict_read("superops.txt", ".")
-        self.operatordict = self.read_ops_file()
+
+        # get OPs
+        self.ownernames = {}
+        self.operatordict = {}
+        self.refresh_ops()
 
         self.properties = {}
 
@@ -587,10 +590,15 @@ class MCServer:
         # Grant "owner" an op level above 4. required for some wrapper commands
         for eachop in ops:
             if eachop["name"] in self.ownernames:
-                eachop["level"] = self.ownernames["name"]
+                eachop["level"] = self.ownernames[eachop["name"]]
         return ops
 
     def refresh_ops(self):
+        self.ownernames = config_to_dict_read("superops.txt", ".")
+        if self.ownernames == {}:
+            sample = "<op_player_1>=10\n<op_player_2>=9"
+            with open("superops.txt", "w") as f:
+                f.write(sample)
         self.operatordict = self.read_ops_file()
 
     def getmemoryusage(self):
