@@ -195,6 +195,12 @@ class ParseCB:
         return True
 
     def parse_play_spawn_object(self):
+        # TODO another memory leak?
+        return True
+        """Parsing this into our data structures with no
+        way to GC might be a BAD idea... unlike entities,
+        which has a `parse_play_destroy_entities` packet.
+        Plus, we don't use the data presently."""
         if not self.wrapper.javaserver.entity_control:
             return True  # return now if no object tracking
         if self.server.version < PROTOCOL_1_9START:

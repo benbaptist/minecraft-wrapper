@@ -74,7 +74,7 @@ CONFIG = {
 
         {
 
-         # Use of timer-tick is not recommended.  1/20th of a second timer option for plugin use. May impact wrapper performance negatively.
+        # Use of timer-tick is not recommended.  1/20th of a second timer option for plugin use. May impact wrapper performance negatively.
 
             "use-timer-tick-event": False,
 
@@ -103,6 +103,14 @@ CONFIG = {
          # The following items thin specific mobs over the stated count.  This only happens after the total mob count threshold above is met first.  For example, 'thin-Cow: 40` starts thinning cows > 40.  Entity names must match minecraft naming exactly as they would appear in the game.
 
             "thin-Cow": 40,
+
+         # 1.11 naming!  Check /wrapper-date/json/entities.json
+
+         # there are some surprising changes, like "PigZombie" is now zombie_pigman and EntityHorse is horse, etc
+
+            "thin-cow": 40,
+
+            "thin-zombie_pigman": 200,
 
             "thin-Sheep": 40,
 
