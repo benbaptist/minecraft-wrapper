@@ -8,7 +8,9 @@
 from time import sleep
 import threading
 from core.entities import Entities as Entitytypes
-from core.entities import Objects as Objecttypes
+
+# move to different future  objects module?
+# from core.entities import Objects as Objecttypes
 
 
 # noinspection PyPep8Naming
@@ -40,13 +42,17 @@ class EntityControl:
         self._log = mcserver.log
 
         # Entities - living beings (includes XP orbs!)
-        entitylistobject = Entitytypes()
+        pre1_11 = self._javaserver.protocolVersion < 315
+        entitylistobject = Entitytypes(pre1_11)
         self.entitytypes = entitylistobject.entitylist
 
         # objects.. non living entities, minecarts, falling sand,
         # primed TNT. armorstands, projectiles..
-        objectlistobject = Objecttypes()
-        self.objecttypes = objectlistobject.objectlist
+        # not directly used here.. but is referenced by parse_cb for
+        # 'parse_play_spawn_object'
+        # move to different future  objects module?
+        # objectlistobject = Objecttypes()
+        # self.objecttypes = objectlistobject.objectlist
 
         # load config settings
         self.entityControl = self._javaserver.config["Entities"][
