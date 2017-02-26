@@ -195,9 +195,9 @@ class Permissions:
                     "users"][uuid]["permissions"][perm]
 
         # return a registered permission;
-        for pid in self.wrapper.registered_perms:
-            if node in self.wrapper.registered_perms[pid]:
-                return self.wrapper.registered_perms[pid][node]
+        for pid in self.wrapper.registered_permissions:
+            if node in self.wrapper.registered_permissions[pid]:
+                return self.wrapper.registered_permissions[pid][node]
 
         # an optional way out because group processing can be expensive
         if not group_match:
