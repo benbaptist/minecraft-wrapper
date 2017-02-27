@@ -42,7 +42,7 @@ class EntityControl:
         self._log = mcserver.log
 
         # Entities - living beings (includes XP orbs!)
-        pre1_11 = self._javaserver.protocolVersion < 315
+        pre1_11 = self._javaserver.version_compute < 11100
         entitylistobject = Entitytypes(pre1_11)
         self.entitytypes = entitylistobject.entitylist
 

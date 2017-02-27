@@ -40,8 +40,8 @@ class Permissions:
             self.permissions["users"] = {}
 
         # Remove deprecated item
-        if "default" in self.permissions["groups"]:
-            if len(self.permissions["groups"]["default"]["permissions"]) > 0:
+        if "Default" in self.permissions["groups"]:
+            if len(self.permissions["groups"]["Default"]["permissions"]) > 0:
                 self.log.error(
                     "Your permissions structure contains a 'Default' group"
                     " item with some permissions in it.  This is now"
@@ -50,7 +50,9 @@ class Permissions:
                     " permissions.  Manually delete the 'Default' group to"
                     " make this error go away...")
             else:
-                self.group_delete("default")
+                result = self.group_delete("Default")
+                self.log.debug(result)
+
         # enforcing lowercase perms now, clean data up
         self.empty_user = {"groups": [], "permissions": {}}
         self.clean_perms_data()
@@ -87,11 +89,13 @@ class Permissions:
     def group_delete(self, groupname):
         """Will attempt to delete groupname, regardless of case."""
         deletename = groupname.lower()
-        if deletename not in self.permissions["groups"]:
-            return "Group '%s' does not exist!" % deletename
-
-        del self.permissions["groups"][deletename]
-        return "Deleted permissions group '%s'." % deletename
+        if deletename in self.permissions["groups"]:
+            self.permissions["groups"].pop(deletename)
+            return "Deleted permissions group '%s'." % deletename
+        if groupname in self.permissions["groups"]:
+            self.permissions["groups"].pop(groupname)
+            return "Deleted permissions group '%s'." % groupname
+        return "Group '%s' does not exist!" % deletename
 
     def group_set_permission(self, groupname, node="", value=True):
         """Sets a permission node for a group."""
@@ -180,7 +184,8 @@ class Permissions:
         """
         if uuid not in self.permissions["users"]:
             self.fill_user(uuid)
-            return False
+            # we dont just return false because it could be a first-
+            # time check for a default or None permission.
 
         if node is None:
             return True

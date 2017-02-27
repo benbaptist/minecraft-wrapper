@@ -466,16 +466,42 @@ class Commands:
                 # Padding, for the sake of making it look a bit nicer
                 player.message(" ")
                 for hid in self.wrapper.help:
-                    for groupName in self.wrapper.help[hid]:
+                    for groupname in self.wrapper.help[hid]:
                         #  if groupName.lower() == group:
-                        if groupName == group:
-                            group = self.wrapper.help[hid][groupName][1]
+                        if groupname == group:
+                            group = self.wrapper.help[hid][groupname][1]
                             items = []
+                            # i is each help item, like:
+                            # ('/bmlist', 'List bookmark names', None)
                             for i in group:
                                 command, args, permission = i[0].split(" ")[0], "", None
                                 if i[0].split(" ") > 1:
+                                    # if there are args after the command
                                     args = getargsafter(i[0].split(" "), 1)
+                                # TODO we should really base permission on the
+                                # actual command permission, and not a
+                                # (potentially inconsistent) help entry!
+
+                                # will only display is player has permission
+                                print(i[2], player.hasPermission(i[2]))
                                 if not player.hasPermission(i[2]):
+                                    permission = {
+                                        "text": "You do not have permission to"
+                                                " use this command.",
+                                        "color": "gray", "italic": True
+                                    }
+                                    items.append({
+                                        "text": "",
+                                        "extra": [{
+                                            "text": command,
+                                            "color": "gray",
+                                            "italic": True,
+                                            "hoverEvent": {
+                                                "action": "show_text",
+                                                "value": permission
+                                            }
+                                        }, ]
+                                    })
                                     continue
                                 if len(i) > 1 and player.isOp():
                                     permission = {"text": "Requires permission '%s'." % i[2],
@@ -501,7 +527,7 @@ class Commands:
                                         "text": " - %s " % i[1]
                                     }]
                                 })
-                            _showpage(player, page, items, "help %s" % groupName, 4,
+                            _showpage(player, page, items, "help %s" % groupname, 4,
                                       command_prefix=self.wrapper.command_prefix)
                             return
                 player.message("&cThe help group '%s' does not exist." % group)
