@@ -1,3 +1,14 @@
+Build 201
+Bugfixes!
+- Bugfix registered_permissions.
+- Bugfix group_delete method.
+- Bugfix entity renaming (was using pre-1.11 in call cases).
+- Correct bug in hasPermission that would set False the first time
+  a user permission was checked (even if it was a default or None)
+- Make help readout better.  Display the commands (but grayed out)
+  so that users don't get blank help pages when they have no
+  available commands on that page.
+
 Build 200 [0.11.4]
 - had to remove updates from grahamedgecombe.com because the website
   is not playing nice with our requests module.  This was a good thing
