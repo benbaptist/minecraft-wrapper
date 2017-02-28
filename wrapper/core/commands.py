@@ -483,7 +483,6 @@ class Commands:
                                 # (potentially inconsistent) help entry!
 
                                 # will only display is player has permission
-                                print(i[2], player.hasPermission(i[2]))
                                 if not player.hasPermission(i[2]):
                                     permission = {
                                         "text": "You do not have permission to"
