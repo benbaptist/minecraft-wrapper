@@ -37,6 +37,7 @@ class Backups:
         if self.enabled and self.dotarchecks():  # only register event if used and tar installed!
             self.api.registerEvent("timer.second", self.eachsecond)
             self.timerstarted = True
+            self.log.debug("Backups Enabled..")
 
     # noinspection PyUnusedLocal
     def eachsecond(self, payload):
@@ -77,10 +78,12 @@ class Backups:
             return True
 
     def dobackup(self):
+        self.log.debug("Backup starting.")
         self._settime()
         self._checkforbackupfolder()
         self._getbackups()  # populate self.backups
         self._performbackup()
+        self.log.debug("Backup cycle complete.")
 
     def _checkforbackupfolder(self):
         if not os.path.exists(self.config["Backups"]["backup-location"]):

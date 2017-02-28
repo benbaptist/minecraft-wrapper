@@ -677,8 +677,7 @@ class Wrapper:
                     <abortable> No <abortable>
 
                 """
-            t = time.time()
-            time.sleep(0.05)
+                t = time.time()
             if self.use_timer_tick_event:
                 # don't really advise the use of this timer
                 self.events.callevent("timer.tick", None)
@@ -697,6 +696,7 @@ class Wrapper:
                     <comments>
 
                 """
+            time.sleep(0.05)
 
     def _pause_console(self, pause_time):
         if not self.javaserver:
