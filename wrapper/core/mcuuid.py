@@ -5,8 +5,6 @@
 # This program is distributed under the terms of the GNU
 # General Public License, version 3 or later.
 
-from __future__ import print_function
-
 # system imports
 import uuid
 import hashlib
@@ -195,7 +193,9 @@ class UUIDS:
                 - otherwise, a list of names...
         """
 
-        r = requests.get("https://api.mojang.com/user/profiles/%s/names" % user_uuid.replace("-", ""))
+        r = requests.get(
+            "https://api.mojang.com/user/profiles/%s/names" %
+            str(user_uuid).replace("-", ""))
         if r.status_code == 200:
             return r.json()
         if r.status_code == 204:

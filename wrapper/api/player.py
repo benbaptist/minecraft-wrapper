@@ -428,9 +428,10 @@ class Player:
 
         """
 
-        if self.javaserver.operatordict in (False, None):
+        if self.javaserver.operator_list in (False, None):
             return False  # no ops in file
-        for ops in self.javaserver.operatordict:
+        # each op item is a dictionary
+        for ops in self.javaserver.operator_list:
             if ops["uuid"] == self.serverUuid.string:
                 return ops["level"]
             if ops["name"] == self.username and not strict:

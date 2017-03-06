@@ -1,6 +1,22 @@
-Build 203
-- Need to add wrapper "op" command Feature Request
-- player to player TP - Add inter-dimensional TP (1.8+) api Community Input enhancement proxy mode
+Build 204
+- player to player TP - Add inter-dimensional TP (1.8+) api
+  Community Input enhancement proxy mode
+
+Build 203 [0.11.5]
+- Add wrapper "op" command Feature Request:
+    - Added two API minecraft items to makeOP() and deOp()
+    - console and in-game command connections all use wrapper's
+      op/deop API.  See documention in api minecraft.
+- various bug fixes
+    - fix set_item to allow adding new entries to a file.
+    - tweaks here and there: converting to new classes, removing default
+     '-r' arguments for file reading, etc.
+    - clarify in code that what we called 'operatordict' in mcserver.py
+     is actually a list (and is now renamed 'operator_list').
+    - restore spawn object parsing (seems harmless since objects
+     are GC-ed as entities)
+    - remove some old debug and print statements.
+    - Fix small error in in-game /help command.
 
 Build 202
 - fix backups issue #445 caused by defective indent in timer routine.

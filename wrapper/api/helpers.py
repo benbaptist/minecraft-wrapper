@@ -251,7 +251,7 @@ def getjsonfile(filename, directory=".", encodedas="UTF-8"):
     if not os.path.exists(directory):
         mkdir_p(directory)
     if os.path.exists("%s/%s.json" % (directory, filename)):
-        with open("%s/%s.json" % (directory, filename), "r") as f:
+        with open("%s/%s.json" % (directory, filename)) as f:
             try:
                 return json.loads(f.read(), encoding=encodedas)
             except ValueError:
@@ -597,6 +597,7 @@ def set_item(item, string_val, filename, path='.'):
     """
     Reads a file with "item=" lines and looks for 'item'. If
     found, it replaces the existing value with 'item=string_val'.
+    Otherwise, it adds the entry, creating the file if need be.
 
     :Args:
         :item: the config item in the file.  Will search the file
@@ -606,16 +607,17 @@ def set_item(item, string_val, filename, path='.'):
         :filename: full filename, including extension.
         :path: defaults to wrappers path.
 
-    :returns:  Boolean indication of success or failure.  None
-     if no item was found.
+    :returns:  Nothing.  Writes the file with single entry if
+     the file is not found.  Adds the entry to end of file if
+     it is missing.
 
     """
-
+    new_file = ""
+    searchitem = "%s=" % item
     if os.path.isfile("%s/%s" % (path, filename)):
-        with open("%s/%s" % (path, filename), "r") as f:
+        with open("%s/%s" % (path, filename)) as f:
             file_contents = f.read()
 
-        searchitem = "%s=" % item
         if searchitem in file_contents:
             current_value = str(
                 file_contents.split(searchitem)[1].splitlines()[0])
@@ -625,9 +627,11 @@ def set_item(item, string_val, filename, path='.'):
             with open("%s/%s" % (path, filename), "w") as f:
                 f.write(new_file)
             return True
-        return None
-    else:
-        return False
+        else:
+            new_file = file_contents
+
+    with open("%s/%s" % (path, filename), "w") as f:
+        f.write("%s\n%s=%s" % (new_file.rstrip(), item, string_val))
 
 
 def _showpage(player, page, items, command, perpage, command_prefix='/'):
@@ -785,21 +789,21 @@ def get_req(something, request):
 
 
 def _test():
-    banlist = getjsonfile("banned-players", "/home/surest/Desktop/server")
+    testpath = "/home/surest/Desktop/testservers/server"
+    banlist = getjsonfile("banned-players", testpath)
     x = find_in_json(banlist, "uuid", "d2a44ac6-6427-4f3a-98b8-33441c263cd4")
     print(x)
 
-    banlist = getjsonfile("banned-ips", "/home/surest/Desktop/server")
+    banlist = getjsonfile("banned-ips", testpath)
     x = find_in_json(banlist, "ip", "127.0.0.8")
     print(x)
 
-    x = config_to_dict_read("server.properties", "/home/surest/Desktop/server")
+    x = config_to_dict_read("server.properties", testpath)
     print(x)
     print(x['pvp'])
     new_pvp = not(x['pvp'])
-    set_item('pvp', new_pvp, "server.properties",
-             "/home/surest/Desktop/server")
-    x = config_to_dict_read("server.properties", "/home/surest/Desktop/server")
+    set_item('pvp', new_pvp, "server.properties", testpath)
+    x = config_to_dict_read("server.properties", testpath)
     print(x['pvp'])
 
     print(format_bytes(1024))

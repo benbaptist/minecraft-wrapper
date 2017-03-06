@@ -238,7 +238,7 @@ class Wrapper:
         # wrapper execution ends here.  handle_server ends when
         # wrapper.halt is True.
         if self.sig_int:
-            print("Ending threads, please wait...")
+            self.log.info("Ending threads, please wait...")
             time.sleep(5)
             os.system("reset")
 
@@ -253,21 +253,21 @@ class Wrapper:
             pass
 
     def sigint(*args):
-        print("Wrapper.py received SIGINT; halting...\n")
         self = args[0]  # We are only interested in the self component
+        self.log.info("Wrapper.py received SIGINT; halting...\n")
         self.sig_int = True
         self._halt()
 
     def sigterm(*args):
-        print("Wrapper.py received SIGTERM; halting...\n")
         self = args[0]  # We are only interested in the self component
+        self.log.info("Wrapper.py received SIGTERM; halting...\n")
         self._halt()
 
     def sigtstp(*args):
-        print("Wrapper.py received SIGTSTP; NO sleep support!"
-              " Wrapper halting...\n")
         # We are only interested in the 'self' component
         self = args[0]
+        self.log.info("Wrapper.py received SIGTSTP; NO sleep support!"
+                      " Wrapper halting...\n")
         os.system("kill -CONT %d" % self.javaserver.proc.pid)
         self._halt()
 
@@ -397,6 +397,12 @@ class Wrapper:
                                      "/property", "/properties"):
                 self.runwrapperconsolecommand("config", allargs)
 
+            elif command.lower() in ("op", "/op"):
+                self.runwrapperconsolecommand("op", allargs)
+
+            elif command.lower() in ("deop", "/deop"):
+                self.runwrapperconsolecommand("deop", allargs)
+
             # TODO Add more commands below here, below the original items:
             # TODO __________________
 
@@ -425,14 +431,15 @@ class Wrapper:
                 try:
                     self.javaserver.console(consoleinput)
                 except Exception as e:
-                    print("[BREAK] Console input exception"
-                          " (nothing passed to server) \n%s" % e)
+                    self.log.error("[BREAK] Console input exception"
+                                   " (nothing passed to server) \n%s" % e)
                     break
                 continue
 
     def _registerwrappershelp(self):
         # All commands listed herein are accessible in-game
         # Also require player.isOp()
+        new_usage = "<player> [-s SUPER-OP] [-o OFFLINE] [-l <level>]"
         self.api.registerHelp(
             "Wrapper", "Internal Wrapper.py commands ",
             [
@@ -446,6 +453,8 @@ class Wrapper:
                 ("/plugins",
                  "Show a list of the installed plugins", None),
                 ("/reload", "Reload all plugins.", None),
+                ("/op %s" % new_usage, "This and deop are Wrapper commands.",
+                 None),
                 ("/permissions <groups/users/RESET>",
                  "Command used to manage permission groups and"
                  " users, add permission nodes, etc.",
@@ -603,7 +612,6 @@ class Wrapper:
         r = requests.get(self.config["Updates"][branch_key])
         if r.status_code == 200:
             data = r.json()
-            print(data)
             if data["__build__"] > core_buildinfo_version.__build__:
                 if repotype == "dev":
                     reponame = "development"

@@ -19,7 +19,7 @@ if PY3:
 
 
 # noinspection PyMethodMayBeStatic
-class ParseCB:
+class ParseCB(object):
     """
     ParseSB parses client bound packets that are coming from the server.
     """
@@ -59,6 +59,12 @@ class ParseCB:
         # position (1.8+ only)
         # 0: chat (chat box), 1: system message (chat box), 2: above hotbar
 
+        # Over-ride OP help display
+        if "/op <player>" in data:
+            new_usage = "player> [-s SUPER-OP] [-o OFFLINE] [-l <level>]"
+            message = data.replace("player>", new_usage)
+            data = message
+
         payload = self.wrapper.events.callevent(
             "player.chatbox", {"player": self.client.getplayerobject(),
                                "json": data})
@@ -69,30 +75,23 @@ class ParseCB:
         to change what is sent to client.
         '''
 
-        # reject the packet .. no chat gets sent to the client
+        # reject the packet outright .. no chat gets sent to the client
         if payload is False:
             return False
 
-        # if payload returns a dictionary, convert it to string and resend
+        # if payload returns a dictionary, convert it to string and
+        # substitute for data
         elif type(payload) == dict:
-            chatmsg = json.dumps(payload)
-            self.client.packet.sendpkt(self.pktCB.CHAT_MESSAGE[PKT],
-                                       self.pktCB.CHAT_MESSAGE[PARSER],
-                                       (chatmsg, position))
-            # reject the orginal packet (it will not reach the client)
-            return False
+            data = json.dumps(payload)
 
         # if payload (plugin dev) returns a string-only object...
         elif type(payload) == str:
-            self.client.packet.sendpkt(self.pktCB.CHAT_MESSAGE[PKT],
-                                       self.pktCB.CHAT_MESSAGE[PARSER],
-                                       (payload, position))
-            return False
+            data = payload
 
-        # no payload, nor was the packet rejected.. packet
-        # passes to the client (and his chat)
-        else:
-            return True
+        self.client.packet.sendpkt(self.pktCB.CHAT_MESSAGE[PKT],
+                                   self.pktCB.CHAT_MESSAGE[PARSER],
+                                   (data, position))
+        return False
 
     def parse_play_join_game(self):
         data = self.packet.readpkt(self.pktCB.JOIN_GAME[PARSER])
@@ -195,12 +194,7 @@ class ParseCB:
         return True
 
     def parse_play_spawn_object(self):
-        # TODO another memory leak?
-        return True
-        """Parsing this into our data structures with no
-        way to GC might be a BAD idea... unlike entities,
-        which has a `parse_play_destroy_entities` packet.
-        Plus, we don't use the data presently."""
+        # objects are entities and are GC-ed by detroy entities packet
         if not self.wrapper.javaserver.entity_control:
             return True  # return now if no object tracking
         if self.server.version < PROTOCOL_1_9START:
@@ -381,11 +375,9 @@ class ParseCB:
         for _ in range(entitycount):
             eid = self.packet.readpkt(parser)[0]
             # noinspection PyBroadException
-            try:
+            if eid in self.wrapper.javaserver.entity_control.entities:
                 self.wrapper.javaserver.entity_control.entities.pop(eid, None)
-            # todo - find out what our expected exception is
-            except:
-                pass
+
         return True
 
     def parse_play_map_chunk_bulk(self):  # (packet no longer exists in 1.9)
@@ -688,7 +680,7 @@ class ParseCB:
 
                         # print the data for reference
                         # see http://wiki.vg/Entities#Entity_Metadata_Format
-                        self.log.debug("EID: %s - %s", eid, metadata)
+                        # self.log.debug("EID: %s - %s", eid, metadata)
                         # name the baby and make tag visible (no index/type
                         # checking; accessing base entity class)
                         metadata[2] = (3, "Entity_%s" % eid)

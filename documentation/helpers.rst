@@ -241,6 +241,7 @@ using 'self.api.helpers'
 
     Reads a file with "item=" lines and looks for 'item'. If
     found, it replaces the existing value with 'item=string_val'.
+    Otherwise, it adds the entry, creating the file if need be.
 
     :Args:
         :item: the config item in the file.  Will search the file
@@ -250,7 +251,8 @@ using 'self.api.helpers'
         :filename: full filename, including extension.
         :path: defaults to wrappers path.
 
-    :returns:  Boolean indication of success or failure.  None
-     if no item was found.
+    :returns:  Nothing.  Writes the file with single entry if
+     the file is not found.  Adds the entry to end of file if
+     it is missing.
 
     

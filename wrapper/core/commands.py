@@ -9,13 +9,14 @@ import random
 import time
 import json
 
+from api.helpers import format_bytes, getargs, getargsafter, readout
+from api.helpers import get_int, set_item, putjsonfile
 # noinspection PyProtectedMember
-from api.helpers import \
-    format_bytes, getargs, getargsafter, _secondstohuman, _showpage, readout
+from api.helpers import _secondstohuman, _showpage
 
 
 # noinspection PyBroadException
-class Commands:
+class Commands(object):
 
     def __init__(self, wrapper):
         self.wrapper = wrapper
@@ -58,6 +59,14 @@ class Commands:
 
         if str(payload["command"]).lower() in ("plugins", "pl"):
             self.command_plugins(player)
+            return True
+
+        if str(payload["command"]).lower() == "op":
+            self.command_op(player, payload)
+            return True
+
+        if str(payload["command"]).lower() == "deop":
+            self.command_deop(player, payload)
             return True
 
         if payload["command"] == "wrapper":
@@ -152,10 +161,9 @@ class Commands:
 
     def command_setconfig(self, player, payload):
         # only allowed for console and SuperOP 10
-        if not player.isOp() > 9:
-            player.message({"text": "Unknown command. Try /help for"
-                                    " a list of commands", "color": "red"})
-            return
+        if not self._superop(player, 9):
+            return False
+
         commargs = payload["args"]
         section = getargs(commargs, 0)
         item = getargs(commargs, 1)
@@ -197,6 +205,7 @@ class Commands:
         if not player.isOp() > 2:
             player.message("&cPermission Denied")
             return False
+
         commargs = payload["args"]
         playername = getargs(commargs, 0)
         banexpires = False
@@ -230,6 +239,7 @@ class Commands:
         if not player.isOp() > 2:
             player.message("&cPermission Denied")
             return False
+
         commargs = payload["args"]
         ipaddress = getargs(commargs, 0)
         banexpires = False
@@ -255,6 +265,7 @@ class Commands:
         if not player.isOp() > 2:
             player.message("&cPermission Denied")
             return False
+
         commargs = payload["args"]
         playername = getargs(commargs, 0)
         byuuid = True
@@ -283,6 +294,7 @@ class Commands:
         if not player.isOp() > 2:
             player.message("&cPermission Denied")
             return False
+
         commargs = payload["args"]
         ipaddress = getargs(commargs, 0)
 
@@ -356,9 +368,9 @@ class Commands:
         player.message("&c       /entity kill <EIDofEntity> [count]")
 
     def command_wrapper(self, player, payload):
-        if not player.isOp() > 4:
-            player.message("&cPermission Denied - must be SuperOP")
+        if not self._superop(player):
             return False
+
         buildstring = self.wrapper.getbuildstring()
         if len(getargs(payload["args"], 0)) > 0:
             subcommand = getargs(payload["args"], 0)
@@ -402,6 +414,7 @@ class Commands:
         if not player.isOp() > 3:
             player.message("&cPermission Denied")
             return False
+
         if getargs(payload["args"], 0) == "server":
             return
         try:
@@ -475,7 +488,7 @@ class Commands:
                             # ('/bmlist', 'List bookmark names', None)
                             for i in group:
                                 command, args, permission = i[0].split(" ")[0], "", None
-                                if i[0].split(" ") > 1:
+                                if len(i[0].split(" ")) > 1:
                                     # if there are args after the command
                                     args = getargsafter(i[0].split(" "), 1)
                                 # TODO we should really base permission on the
@@ -555,10 +568,11 @@ class Commands:
         return False
 
     def command_playerstats(self, player, payload):
-        subcommand = getargs(payload["args"], 0)
         if not player.isOp() > 3:
             player.message("&cPermission Denied")
             return False
+
+        subcommand = getargs(payload["args"], 0)
         totalplaytime = {}
         players = self.wrapper.api.minecraft.getAllPlayers()
         for each_uuid in players:
@@ -592,10 +606,111 @@ class Commands:
                     break
         return
 
+    def command_deop(self, player, payload):
+        if player is None:
+            player = self.wrapper.xplayer
+        if not self._superop(player, 9):
+            return False
+        operator_name = getargs(payload["args"], 0)
+        if self.wrapper.javaserver.state == 2:
+            # deop from server
+            self.wrapper.javaserver.console("deop %s" % operator_name)
+
+            # deop from superops.txt
+            file_text = ""
+            owner_names = self.wrapper.javaserver.ownernames
+            for eachname in owner_names:
+                if eachname != operator_name:
+                    if eachname not in ("<op_player_1>", "<op_player_2>"):
+                        file_text += "%s=%s\n" % (
+                            eachname, owner_names[eachname])
+            with open("superops.txt", "w") as f:
+                f.write(file_text)
+            time.sleep(.1)
+            self.wrapper.javaserver.refresh_ops()
+            return True
+        else:
+            player.message("&cdeop requires a running server instance")
+            return "deop requires a running server instance"
+
+    def command_op(self, player, payload):
+        if player is None:
+            player = self.wrapper.xplayer
+        if not self._superop(player, 9):
+            return False
+
+        # get argument flags
+        flags = [x.lower() for x in payload["args"]]
+        superop = "-s" in flags
+        op_level = "-l" in flags
+        offline_mode = "-o" in flags
+
+        new_operator_name = getargs(payload["args"], 0)
+        valid_uuid = self.wrapper.uuids.getuuidbyusername(new_operator_name)
+
+        if not offline_mode and valid_uuid is None:
+            player.message(
+                "&c'%s' is not a valid player name!" % new_operator_name)
+            return False
+
+        if offline_mode:
+            name = new_operator_name
+            uuid = str(self.wrapper.uuids.getuuidfromname(name))
+        else:
+            uuid = str(valid_uuid)
+            name = self.wrapper.uuids.getusernamebyuuid(uuid)
+
+        superlevel = 4  # default
+
+        if op_level:
+            for index, x in enumerate(flags):
+                if x == "-l":
+                    break
+            # noinspection PyUnboundLocalVariable
+            arg_level = get_int(getargs(flags, index + 1))
+            superlevel = max(1, arg_level)
+
+        if superop and superlevel > 4:
+            superlevel = max(5, superlevel)
+
+        # 2 = make sure server STARTED
+        if self.wrapper.javaserver.state == 2:
+            self.wrapper.javaserver.console("op %s" % name)
+
+        # if not, wrapper makes ops.json edits
+        else:
+            self.wrapper.javaserver.refresh_ops(read_super_ops=False)
+            oplist = self.wrapper.javaserver.operator_list
+            newop_item = {
+                "uuid": uuid,
+                "name": name,
+                "level": min(4, superlevel),
+                "bypassesPlayerLimit": False
+            }
+            if oplist:
+                for op, ops in enumerate(oplist):
+                    # We don't expect it is already there, but if so...
+                    if uuid == ops["uuid"]:
+                        oplist.pop(op)
+                oplist.append(newop_item)
+            else:
+                oplist = [newop_item, ]
+            result = putjsonfile(oplist, "ops")
+            if result:
+                player.message("&6Ops.json file saved ok.")
+            else:
+                player.message("&cSomething went wrong writing ops.json.")
+
+        # update the superops.txt file
+        if superop:
+            set_item(name, superlevel, "superops.txt")
+            player.message("&6Updated as SuperOP.")
+
+        time.sleep(.5)
+        self.wrapper.javaserver.refresh_ops()
+
     def command_perms(self, player, payload):
-        if not player.isOp() > 4:
-            player.message("&cPermission Denied - reserved for"
-                           " SuperOPs (file 'superops.txt')")
+        if not self._superop(player):
             return False
 
         def usage(l):
@@ -716,6 +831,7 @@ class Commands:
         if not player.isOp() > 3:
             player.message("&cPermission Denied")
             return False
+
         player.message({
             "text": "List of plugins installed:",
             "color": "red",
@@ -755,3 +871,10 @@ class Commands:
                     "color": "white"
                 }, summary]
             })
+
+    def _superop(self, player, superoplevel=4):
+        if player.isOp() < superoplevel:
+            player.message("&cPermission Denied - reserved for"
+                           " SuperOPs (file 'superops.txt')")
+            return False
+        return True

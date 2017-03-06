@@ -128,7 +128,7 @@ class ServerConnection:
         """
 
         # todo remove this and fix reason code
-        print(reason)
+        # print(reason)
 
         if lobby_return:
             # stop parsing PLAY packets to prevent further "disconnects"

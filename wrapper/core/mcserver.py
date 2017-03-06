@@ -40,7 +40,7 @@ FROZEN = 4
 
 
 # noinspection PyBroadException,PyUnusedLocal
-class MCServer:
+class MCServer(object):
 
     def __init__(self, wrapper):
         self.log = wrapper.log
@@ -126,7 +126,7 @@ class MCServer:
 
         # get OPs
         self.ownernames = {}
-        self.operatordict = {}
+        self.operator_list = []
         self.refresh_ops()
 
         self.properties = {}
@@ -162,7 +162,7 @@ class MCServer:
 
         if os.path.isfile("%s/eula.txt" % self.serverpath):
             self.log.debug("Checking EULA agreement...")
-            with open("%s/eula.txt" % self.serverpath, "r") as f:
+            with open("%s/eula.txt" % self.serverpath) as f:
                 eula = f.read()
 
             # if forced, should be at info level since acceptance
@@ -561,7 +561,7 @@ class MCServer:
                 time.sleep(0.1)
                 continue
 
-    def read_ops_file(self):
+    def read_ops_file(self, read_super_ops=True):
         """Keep a list of ops in the server instance to stop
         reading the disk for it.
         :rtype: Dictionary
@@ -588,18 +588,19 @@ class MCServer:
                 ops.append(indivop)
 
         # Grant "owner" an op level above 4. required for some wrapper commands
-        for eachop in ops:
-            if eachop["name"] in self.ownernames:
-                eachop["level"] = self.ownernames[eachop["name"]]
+        if read_super_ops:
+            for eachop in ops:
+                if eachop["name"] in self.ownernames:
+                    eachop["level"] = self.ownernames[eachop["name"]]
         return ops
 
-    def refresh_ops(self):
+    def refresh_ops(self, read_super_ops=True):
         self.ownernames = config_to_dict_read("superops.txt", ".")
         if self.ownernames == {}:
             sample = "<op_player_1>=10\n<op_player_2>=9"
             with open("superops.txt", "w") as f:
                 f.write(sample)
-        self.operatordict = self.read_ops_file()
+        self.operator_list = self.read_ops_file(read_super_ops)
 
     def getmemoryusage(self):
         """Returns allocated memory in bytes. This command
@@ -610,7 +611,7 @@ class MCServer:
                 "Your current OS (%s) does not support"
                 " this command at this time." % os.name)
         try:
-            with open("/proc/%d/statm" % self.proc.pid, "r") as f:
+            with open("/proc/%d/statm" % self.proc.pid) as f:
                 getbytes = int(f.read().split(" ")[1]) * resource.getpagesize()
             return getbytes
         except Exception as e:
@@ -693,7 +694,16 @@ class MCServer:
             print('')
             return
 
-        # modify the server warning
+        # parse or modify the server output section
+        #
+        #
+
+        # Over-ride OP help console display
+        if "/op <player>" in buff:
+            new_usage = "player> [-s SUPER-OP] [-o OFFLINE] [-l <level>]"
+            message = buff.replace("player>", new_usage)
+            buff = message
+
         if "While this makes the game possible to play" in buff:
             prefix = " ".join(buff.split(' ')[:self.prepends_offset])
 
@@ -761,7 +771,7 @@ class MCServer:
 
         # confirm server start
         elif "Done (" in buff:
-            self._toggle_server_started(True)
+            self._toggle_server_started()
             self.changestate(STARTED)
             self.log.info("Server started")
             self.bootTime = time.time()
