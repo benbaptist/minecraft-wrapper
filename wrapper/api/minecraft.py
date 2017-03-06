@@ -440,6 +440,74 @@ class Minecraft:
         except Exception:
             pass
 
+    def deOp(self, name_to_deop, playerObj=None,):
+        """
+        De-ops player 'name_to_deop'.  If he is a super-op, the
+        name is removed from superops.txt also.  Case sensitive!
+
+        :Requires: Running server instance.
+
+        :Args:
+            :playerObj: This is the player that receives the command's
+             output.  Setting 'None' uses the console operator (and
+             permissions!). This player object must have OP level 10
+             permission.
+            :name_to_deop: The player to de-op.  Must match what is
+             in superops.txt to remove superOP perms, but may deop
+             the server ops.json file without case-sensitivity.
+
+        :returns: True if success, a text message on failure.
+
+        """
+        result = self.wrapper.commands.command_deop(
+            playerObj, (name_to_deop, ))
+        return result
+
+    def makeOp(self, nametoOP, argslist, playerObj=None):
+        """
+        Ops player 'nametoOP'.  Case sensitivity and other
+        bahaviors of the command vary with server status and
+        the arguments to 'argslist'
+
+        :nametoOP: Name of player to OP.
+
+        :playerObj: This is the player that receives the command's
+         output.  Setting 'None' uses the console operator (and
+         permissions!). This player object must have OP level 10
+         permission.
+
+        :Valid args for argslist:
+            :-s: make player superop.txt entry.  Player will still
+             not be superOP unless given appropriate level.
+            :-o: use offline name and uuid.  This option only
+             works if the server is not running!  Otherwise,
+             the server uses its' default (depending on server
+             mode).
+            :-l: Flag for next argument to be a number
+             corresponding to the desired level.  If the server is
+             running, this argument only superops.txt is updated.
+             if server is not running, the json.ops is also
+             updated (to a maximum level of 4).
+            :<number>: A number corresponding to the desired
+             '-l' level.  These are two separate arguments and
+             this number must be the next argument after -l in
+             the list.
+
+        :Notes:
+            - Json.ops controls minecraft server permissions.
+              This command CAN alter json.ops if the server is
+              not running.
+            - superops.txt controls wrapper commands, INCLUDING
+              proxy ban commands.
+
+        :returns: Nothing.  All output is directed to playerObj.
+
+        """
+        args = [nametoOP]
+        for arg in argslist:
+            args.append(arg)
+        self.wrapper.commands.command_op(self, playerObj, args)
+
     def refreshOpsList(self):
         """
         OPs list is read from disk at startup.  Use this method

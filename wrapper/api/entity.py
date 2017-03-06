@@ -10,11 +10,11 @@ import threading
 from core.entities import Entities as Entitytypes
 
 # move to different future  objects module?
-# from core.entities import Objects as Objecttypes
+from core.entities import Objects as Objecttypes
 
 
 # noinspection PyPep8Naming
-class EntityControl:
+class EntityControl(object):
     """
     .. code:: python
 
@@ -35,6 +35,7 @@ class EntityControl:
     reads "preparing ...."
 
     """
+
     def __init__(self, mcserver):
         self.chunks = {}
 
@@ -51,8 +52,8 @@ class EntityControl:
         # not directly used here.. but is referenced by parse_cb for
         # 'parse_play_spawn_object'
         # move to different future  objects module?
-        # objectlistobject = Objecttypes()
-        # self.objecttypes = objectlistobject.objectlist
+        objectlistobject = Objecttypes()
+        self.objecttypes = objectlistobject.objectlist
 
         # load config settings
         self.entityControl = self._javaserver.config["Entities"][

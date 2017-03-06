@@ -1,5 +1,5 @@
 
-**< class EntityControl >**
+**< class EntityControl(object) >**
 
     .. code:: python
 
