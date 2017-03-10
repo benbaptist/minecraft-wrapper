@@ -7,7 +7,7 @@
 
 
 # noinspection PyPep8Naming
-class Backups:
+class Backups(object):
     """
     .. code:: python
 

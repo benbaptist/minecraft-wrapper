@@ -9,7 +9,7 @@ from proxy.constants import *
 
 
 # noinspection PyMethodMayBeStatic
-class ParseSB:
+class ParseSB(object):
     """
     ParseSB parses server bound packets that are coming from the client.
     """

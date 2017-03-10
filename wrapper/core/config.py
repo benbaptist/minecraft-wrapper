@@ -12,7 +12,7 @@ from api.helpers import getjsonfile, putjsonfile
 from api.wrapperconfig import *
 
 
-class Config:
+class Config(object):
     def __init__(self):
         self.log = logging.getLogger('Config')
         self.config = {}

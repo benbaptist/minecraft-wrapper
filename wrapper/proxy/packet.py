@@ -61,7 +61,7 @@ _CODERS = {
 
 
 # noinspection PyMethodMayBeStatic,PyBroadException,PyAugmentAssignment
-class Packet:
+class Packet(object):
     def __init__(self, sock, obj):
         self.socket = sock
         self.obj = obj

@@ -15,7 +15,7 @@ from api.helpers import readout
 
 # - due to being refrerenced by the external wrapper API that is camelCase
 # noinspection PyUnresolvedReferences,PyPep8Naming,PyBroadException
-class ConsolePlayer:
+class ConsolePlayer(object):
     """
     This class minimally represents the console as a player so
     that the console can use wrapper/plugin commands.

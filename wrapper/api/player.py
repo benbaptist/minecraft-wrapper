@@ -46,7 +46,7 @@ _NULL = 100
 
 
 # noinspection PyPep8Naming
-class Player:
+class Player(object):
     """
     .. code:: python
 

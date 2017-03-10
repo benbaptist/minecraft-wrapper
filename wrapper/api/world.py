@@ -10,7 +10,7 @@ import json
 
 
 # noinspection PyPep8Naming
-class World:
+class World(object):
     """
     .. code:: python
 
@@ -111,7 +111,7 @@ class World:
 
 
 # noinspection PyPep8Naming
-class Chunk:
+class Chunk(object):
     """
     not implemented
 

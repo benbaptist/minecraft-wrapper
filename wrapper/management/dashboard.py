@@ -25,7 +25,7 @@ if Flask:
     from flask_socketio import send, emit, join_room, leave_room
 
 
-class Web:
+class Web(object):
 
     def __init__(self, wrapper):
         self.wrapper = wrapper

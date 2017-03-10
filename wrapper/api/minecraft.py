@@ -18,7 +18,7 @@ from proxy.mcpackets_sb import Packets as ServerBound
 
 # noinspection PyPep8Naming
 # noinspection PyBroadException
-class Minecraft:
+class Minecraft(object):
     """
     .. code:: python
 

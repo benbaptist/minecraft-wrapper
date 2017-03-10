@@ -19,7 +19,7 @@ from api.helpers import putjsonfile, getjsonfile, mkdir_p
 # MCserver.py and irc.py print messages themselves for the sake of consistency.
 
 
-class Backups:
+class Backups(object):
 
     def __init__(self, wrapper):
         self.wrapper = wrapper

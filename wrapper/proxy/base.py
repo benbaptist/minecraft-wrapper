@@ -29,7 +29,7 @@ else:
     Packet = False
 
 
-class Proxy:
+class Proxy(object):
     def __init__(self, wrapper):
         self.wrapper = wrapper
         self.javaserver = wrapper.javaserver

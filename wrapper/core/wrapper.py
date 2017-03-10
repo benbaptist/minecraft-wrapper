@@ -61,7 +61,7 @@ STOPPING = 3
 FROZEN = 4
 
 
-class Wrapper:
+class Wrapper(object):
 
     def __init__(self):
         # setup log and config
