@@ -79,7 +79,7 @@ def build_wrapper(buildargs):
     print(path.curdir)
     system("ls")
     chdir("wrapper")
-    system("zip ../Wrapper.py -r . -x *~ /.git* *.pyc")
+    system("zip ../Wrapper.py -r . -x *~ /.git* *.pyc *__pycache__* *test.py")
     chdir("..")
     system("zip Wrapper.py LICENSE.txt")
 
