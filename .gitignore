@@ -37,6 +37,10 @@ build/version.json
 *.idea
 test.py
 
+# python caches and bytecodes
+ __pycache__
+ *.pyc
+
 #local test server environment
 wrapper-plugins
 backups
