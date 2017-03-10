@@ -12,7 +12,7 @@ import time
 import requests
 
 
-class MCUUID (uuid.UUID):
+class MCUUID(uuid.UUID):
     """
     This class is currently not being used, but may be beneficial in regards to
     conforming UUIDs
@@ -27,7 +27,7 @@ class MCUUID (uuid.UUID):
         return str(self)
 
 
-class UUIDS:
+class UUIDS(object):
     def __init__(self, wrapper):
         self.wrapper = wrapper
         self.log = wrapper.log

@@ -31,7 +31,7 @@ from api.helpers import processcolorcodes
 
 
 # noinspection PyMethodMayBeStatic
-class Client:
+class Client(object):
     def __init__(self, proxy, clientsock, client_addr, banned=False):
         """
         Handle the client connection.

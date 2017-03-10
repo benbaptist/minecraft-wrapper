@@ -29,7 +29,7 @@ else:
     import cPickle as Pickle
 
 
-class Storage:
+class Storage(object):
 
     def __init__(self, name, root="wrapper-data/json",
                  encoding="default", pickle=True):

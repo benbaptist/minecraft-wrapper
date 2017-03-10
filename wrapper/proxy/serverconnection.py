@@ -21,7 +21,7 @@ from proxy.constants import *
 
 
 # noinspection PyMethodMayBeStatic
-class ServerConnection:
+class ServerConnection(object):
     def __init__(self, client, ip=None, port=None):
         """
         This class ServerConnection is a "fake" client connecting

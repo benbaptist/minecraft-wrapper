@@ -27,7 +27,7 @@ set something False/unimplemented using 0xEE
 """
 
 
-class Packets:
+class Packets(object):
     def __init__(self, protocol):
 
         if PROTOCOL_1_8END < protocol < PROTOCOL_1_9REL1:

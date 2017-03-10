@@ -82,7 +82,7 @@ OBJECTS = {
 }
 
 
-class Entities:
+class Entities(object):
     def __init__(self, apply_pre1_11=False):
         self.entitylist = ENTITIES
         if apply_pre1_11:
@@ -101,18 +101,18 @@ class Entities:
                 self.entitylist[entities]["name"] = concatenated
 
 
-class Items:
+class Items(object):
     def __init__(self):
         self.itemslist = BLOCKS
 
 
-class Objects:
+class Objects(object):
     """Objects are actually probably a part of entities"""
     def __init__(self):
         self.objectlist = OBJECTS
 
 
-class Entity:
+class Entity(object):
     def __init__(self, eid, uuid, entitytype, entityname, position, look, isobject, playerclientname):
         self.eid = eid  # Entity ID
         self.uuid = uuid  # Entity UUID

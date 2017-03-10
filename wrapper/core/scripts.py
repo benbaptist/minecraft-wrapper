@@ -32,7 +32,7 @@ scripts = {
 
 
 # noinspection PyMethodMayBeStatic,PyUnusedLocal
-class Scripts:
+class Scripts(object):
 
     def __init__(self, wrapper):
         self.api = API(wrapper, "Scripts", internal=True)

@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
-# This file is based on this gist:
-# http://code.activestate.com/recipes/134892/
-# So real authors are DannyYoo and company.
+# Copyright (c) 2014, 2015 Miguel Ángel García (@magmax9).
+# Based on previous work on gist getch()-like unbuffered character
+# reading from stdin on both Windows and Unix (Python recipe),
+# started by Danny Yoo. Licensed under the MIT license.
+
 from __future__ import absolute_import
 import sys
 from . import key
@@ -17,15 +19,7 @@ else:
     raise NotImplemented('The platform %s is not supported yet' % sys.platform)
 
 
-def readkey(getchar_fn=None):
+def readkey(getchar_fn=None, blocking=True):
     getchar = getchar_fn or readchar
-    buffer = getchar(True)
-
-    while True:
-        if buffer not in key.ESCAPE_SEQUENCES:
-            return buffer
-        c = getchar(False)
-        if c is None:
-            return buffer
-        buffer += c
-    return buffer
+    charbuffer = getchar(blocking)
+    return charbuffer

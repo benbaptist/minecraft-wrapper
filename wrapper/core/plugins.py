@@ -14,7 +14,7 @@ from api.base import API
 from api.helpers import mkdir_p
 
 
-class Plugins:
+class Plugins(object):
 
     def __init__(self, wrapper):
         self.wrapper = wrapper

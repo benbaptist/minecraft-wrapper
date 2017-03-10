@@ -31,7 +31,7 @@ except ImportError:
 
 
 # noinspection PyBroadException,PyUnusedLocal,PyPep8Naming
-class Web:
+class Web(object):
     def __init__(self, wrapper):
         self.wrapper = wrapper
         self.api = API(wrapper, "Web", internal=True)
@@ -213,7 +213,7 @@ class Web:
 
 
 # noinspection PyBroadException,PyUnusedLocal,PyMethodMayBeStatic,PyPep8Naming
-class WebClient:
+class WebClient(object):
 
     def __init__(self, sock, addr, web):
         self.web = web

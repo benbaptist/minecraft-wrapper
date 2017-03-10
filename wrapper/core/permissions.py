@@ -12,7 +12,7 @@ import copy
 import json
 
 
-class Permissions:
+class Permissions(object):
     """All permissions logic for wrapper. with 1.0.0 release (and
     all earlier dev versions), we will start enforcing the use of
     all lowercase groups and permissions.  The return items on

@@ -6,7 +6,7 @@
 # General Public License, version 3 or later.
 
 
-class Events:
+class Events(object):
 
     def __init__(self, wrapper):
         self.wrapper = wrapper

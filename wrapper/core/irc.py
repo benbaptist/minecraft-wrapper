@@ -27,7 +27,7 @@ if PY3:
 # due to self.socket being ducktyped as boolean when it is used later as a socket.
 # also, api uses mixedCase
 # noinspection PyUnresolvedReferences,PyPep8Naming,PyUnusedLocal
-class IRC:
+class IRC(object):
 
     def __init__(self, mcserver, log, wrapper):
         self.socket = False
