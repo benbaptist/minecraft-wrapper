@@ -1,5 +1,5 @@
 
-**< class Backups >**
+**< class Backups(object) >**
 
     .. code:: python
 

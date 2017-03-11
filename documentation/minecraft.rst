@@ -1,5 +1,5 @@
 
-**< class Minecraft >**
+**< class Minecraft(object) >**
 
     .. code:: python
 

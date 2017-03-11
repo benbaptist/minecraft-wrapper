@@ -1,5 +1,5 @@
 
-**< class Player >**
+**< class Player(object) >**
 
     .. code:: python
 

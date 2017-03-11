@@ -293,24 +293,29 @@ class Wrapper(object):
             while not self.halt:
                 keypress = readchar.readkey()
 
-                if keypress == readchar.key.BACKSPACE:
+                if keypress == "up":
                     self.input_buff = self.input_buff[:-1]
                     print("\033[0A%s         " % self.input_buff)
                     continue
 
-                if keypress != readchar.key.CR and len(keypress) < 2:
-                    self.input_buff = "%s%s" % (self.input_buff, keypress)
-                    # /wrapper commands receive special magenta coloring
-                    if self.input_buff[0:1] == '/':
-                        print("%s\033[0A\033[33m%s\033[0m" % (
-                            self.cursor, self.input_buff))
-                    else:
-                        print("%s\033[0A%s" % (
-                            self.cursor, self.input_buff))
+                if keypress == "backspace":
+                    self.input_buff = self.input_buff[:-1]
+                    print("\033[0A%s         " % self.input_buff)
                     continue
 
-                if keypress in (readchar.key.CR, readchar.key.CTRL_C):
+                if keypress in ("enter", "ctrl_c", "cr"):
                     break
+
+                # if len(keypress) < 2:
+                self.input_buff = "%s%s" % (self.input_buff, keypress)
+                # /wrapper commands receive special magenta coloring
+                if self.input_buff[0:1] == '/':
+                    print("%s\033[0A\033[33m%s\033[0m" % (
+                        self.cursor, self.input_buff))
+                else:
+                    print("%s\033[0A%s" % (
+                        self.cursor, self.input_buff))
+                #continue
 
             consoleinput = "%s" % self.input_buff
             self.input_buff = ""
@@ -528,7 +533,7 @@ class Wrapper(object):
                             " - v%s - " % ".".join([str(_) for _ in version])),
                         usereadline=self.use_readline)
             else:
-                readout("failed to load plugin", plugin, " - ", pad=25,
+                readout("failed to load plugin", plugin, pad=25,
                         usereadline=self.use_readline)
 
     def _startproxy(self):

@@ -1,8 +1,11 @@
-Build 205
+Build 206
 - player to player TP - Add inter-dimensional TP (1.8+) api
   Community Input enhancement proxy mode
 
 Build 205
+ - Another update to readchar package; now captures special keys.
+
+Build 204
  Nothing special:
  - update readchar package (hoping to get arrow keys working soon)
  - update wrapper's code to use modern new style python classes.
