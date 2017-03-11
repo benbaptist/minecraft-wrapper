@@ -1,5 +1,5 @@
 
-**< class World >**
+**< class World(object) >**
 
     .. code:: python
 
@@ -49,7 +49,7 @@
 -  setChunk(self, x, z, chunk)
  not implemented 
 
-**< class Chunk >**
+**< class Chunk(object) >**
 
     not implemented
 

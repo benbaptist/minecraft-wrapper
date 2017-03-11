@@ -1,5 +1,5 @@
 
-**< class API >**
+**< class API(object) >**
 
     The API (base) class contains methods for basic plugin functionality,
     such as handling events, registering commands, and more. Most
