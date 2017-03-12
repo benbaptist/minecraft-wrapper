@@ -1,6 +1,9 @@
-Build 206
+Build 207 (next build)
 - player to player TP - Add inter-dimensional TP (1.8+) api
   Community Input enhancement proxy mode
+
+Build 206
+- implement a remembered command history with up and down arrows
 
 Build 205
  - Another update to readchar package; now captures special keys.

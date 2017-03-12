@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+# Copyright (c) 2014, 2015 Miguel Ángel García (@magmax9).
+# Based on previous work on gist getch()-like unbuffered character
+# reading from stdin on both Windows and Unix (Python recipe),
+# started by Danny Yoo. Licensed under the MIT license.
+
 # These following keys are ones that have 2 meanings.
 # The first key command is the one that is not in the dict below:
 # ctrl_i is tab

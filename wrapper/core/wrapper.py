@@ -15,6 +15,7 @@ import time
 import os
 import logging
 import sys  # used to pass sys.argv to server
+from collections import deque
 
 # non standard library imports
 try:
@@ -60,6 +61,8 @@ STARTED = 2
 STOPPING = 3
 FROZEN = 4
 
+ESC = "\033["
+
 
 class Wrapper(object):
 
@@ -76,7 +79,7 @@ class Wrapper(object):
 
         # Read Config items
         # hard coded cursor for non-readline mode
-        self.cursor = "\033[5m>\033[0m"
+        self.cursor = "%s5m>%s0m" % (ESC, ESC)
         self.wrapper_ban_system = False
         # This was to allow alternate encodings
         self.encoding = self.config["General"]["encoding"]
@@ -118,6 +121,10 @@ class Wrapper(object):
         self.last_input_line = ["/help", ]
         self.last_input_line_index = 0
         self.sig_int = False
+        self.command_hist = deque()
+        self.command_hist.appendleft('/help')
+        self.command_hist.appendleft('help')
+        self.command_index = 0
 
         # init items that are set up later (or opted out of/ not set up.)
         self.javaserver = None
@@ -290,37 +297,69 @@ class Wrapper(object):
                 consoleinput = ""
 
         else:
+            arrow_index = 0
             while not self.halt:
+                print(readchar.key.UP)
                 keypress = readchar.readkey()
+                length = len(self.input_buff) - 1
+
+                if keypress == "right":
+                    arrow_index += 1
+                    if arrow_index > length:
+                        arrow_index = length
+
+                if keypress == "left":
+                    arrow_index -= 1
+                    if arrow_index < 1:
+                        arrow_index = 0
+
+                buff_left = self.input_buff[0:arrow_index]
+                buff_right = self.input_buff[arrow_index:]
 
                 if keypress == "up":
-                    self.input_buff = self.input_buff[:-1]
-                    print("\033[0A%s         " % self.input_buff)
-                    continue
+                    self.command_index += 1
+                    if self.command_index + 1 > len(self.command_hist):
+                        self.command_index = 0
+                    self.input_buff = self.command_hist[self.command_index]
+                    arrow_index = length
+
+                if keypress == "down":
+                    self.command_index -= 1
+                    if self.command_index < 1:
+                        self.command_index = len(self.command_hist) - 1
+                    self.input_buff = self.command_hist[self.command_index]
 
                 if keypress == "backspace":
                     self.input_buff = self.input_buff[:-1]
-                    print("\033[0A%s         " % self.input_buff)
+                    print("%s0A%s         " % (ESC, self.input_buff))
                     continue
 
                 if keypress in ("enter", "ctrl_c", "cr"):
                     break
 
-                # if len(keypress) < 2:
-                self.input_buff = "%s%s" % (self.input_buff, keypress)
+                # hide special key names like "page_up", etc if not used
+                if len(keypress) < 2:
+                    # TODO need to have a way to highlight insertion point
+                    self.input_buff = "%s%s%s" % (
+                        buff_left, keypress, buff_right)
+                    arrow_index += 1
                 # /wrapper commands receive special magenta coloring
+                whitespace = "                                  "
                 if self.input_buff[0:1] == '/':
-                    print("%s\033[0A\033[33m%s\033[0m" % (
-                        self.cursor, self.input_buff))
+                    print("%s%s0A%s33m%s%s0m%s" % (
+                        self.cursor, ESC, ESC,
+                        self.input_buff, ESC, whitespace))
                 else:
-                    print("%s\033[0A%s" % (
-                        self.cursor, self.input_buff))
-                #continue
+                    print("%s%s0A %s%s" % (
+                        self.cursor, ESC, self.input_buff, whitespace))
 
             consoleinput = "%s" % self.input_buff
             self.input_buff = ""
             # print a line so last typed line is not covered by new output
             print("")
+
+        self.command_hist.appendleft(consoleinput)
+        self.command_index = -1
         return consoleinput
 
     def parseconsoleinput(self):
