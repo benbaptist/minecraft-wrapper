@@ -30,7 +30,7 @@ except ImportError:
 # small feature and helpers
 # noinspection PyProtectedMember
 from api.helpers import format_bytes, getargs, getargsafter, readout, get_int
-from utils import readchar
+from utils import readkey
 
 # core items
 from core.mcserver import MCServer
@@ -60,6 +60,34 @@ STARTED = 2
 STOPPING = 3
 FROZEN = 4
 
+# http://wiki.bash-hackers.org/scripting/terminalcodes
+
+# start of escape sequence
+ESC = '\x1b'
+# Set foreground to color #5 - magenta
+FG_MAGENTA = ESC + '\x5b\x33\x35\x6d'  # "[35m"
+BOLD = ESC + '\x5b\x31\x6d'
+BOLD_MAGENTA = BOLD + FG_MAGENTA
+
+FG_YELLOW = ESC + '\x5b\x33\x33\x6d'
+BOLD_YELLOW = BOLD + FG_YELLOW
+
+REVERSED = ESC + '\x5b\x37\x6d'  # '[ 7 m'
+
+# Reset all attributes
+RESET = ESC + '\x5b\x30\x6d'  # "[0m"
+# move up one line
+UP_LINE = ESC + '\x5b\x31\x41'  # "[1A"
+# move cursor backwards
+BACKSPACE = ESC + '\x5b\x30\x41'  # "[0A"
+
+# clear all text from cursor to End of Line.
+CLEAR_EOL = ESC + '\x5b\x4b'
+# clear all text from cursor to beginning of Line.
+CLEAR_BOL = ESC + '\x5b\x31\x4b'
+# clear all text on Line (no cursor position change).
+CLEAR_LINE = ESC + '\x5b\x31\x4b'
+
 
 class Wrapper(object):
 
@@ -76,7 +104,7 @@ class Wrapper(object):
 
         # Read Config items
         # hard coded cursor for non-readline mode
-        self.cursor = "\033[5m>\033[0m"
+        self.cursor = ">"
         self.wrapper_ban_system = False
         # This was to allow alternate encodings
         self.encoding = self.config["General"]["encoding"]
@@ -115,9 +143,9 @@ class Wrapper(object):
         self.registered_permissions = {}
         self.help = {}
         self.input_buff = ""
-        self.last_input_line = ["/help", ]
-        self.last_input_line_index = 0
         self.sig_int = False
+        self.command_hist = ['/help', 'help']
+        self.command_index = 1
 
         # init items that are set up later (or opted out of/ not set up.)
         self.javaserver = None
@@ -278,7 +306,67 @@ class Wrapper(object):
     def shutdown(self):
         self._halt()
 
+    def write_stdout(self, message="", source="print"):
+        """
+        :param message: desired output line.  Default is wrapper.
+        :param source: "server", "wrapper", "print" or "log".  Default is
+         print.
+
+        """
+        cursor = self.cursor
+
+        if self.use_readline:
+            print(message)
+            return
+
+        def _wrapper(msg):
+            """_wrapper is normally displaying a live typing buffer.
+            Therefore, there is no cr/lf at end because it is 
+            constantly being re-printed in the same spot as the
+            user types."""
+            if msg != "":
+                # re-print what the console user was typing right below that.
+                # /wrapper commands receive special magenta coloring
+                if msg[0:1] == '/':
+                    print("{0}{1}{2}{3}{4}{5}".format(
+                        UP_LINE, cursor, FG_YELLOW,
+                        msg, RESET, CLEAR_EOL))
+                else:
+                    print("{0}{1}{2}{3}".format(
+                        BACKSPACE, cursor,
+                        msg, CLEAR_EOL))
+
+        def _server(msg):
+            # print server lines
+            print("{0}{1}{2}\r\n".format(UP_LINE, CLEAR_LINE, msg, CLEAR_EOL))
+
+        def _print(msg):
+            _server(msg)
+
+        parse = {
+            "server": _server,
+            "wrapper": _wrapper,
+            "print": _print,
+        }
+
+        # if this fails due to key error, we WANT that raised, as it is
+        #  a program code error, not a run-time error.
+        parse[source](message)
+
     def getconsoleinput(self):
+        """If wrapper is NOT using readline (self.use_readline == False),
+        then getconsoleinput manually implements our own character 
+        reading, parsing, arrow keys, command history, etc.  This 
+        is desireable because it allows the user to continue to see
+        their input and modify it, even if the server is producing
+        console line messages that would normally "carry away" the 
+        user's typing.
+        
+        Implemented in response to issue 326:
+        'Command being typed gets carried off by console every time
+         server generates output #326' by @Darkness3840:
+        https://github.com/benbaptist/minecraft-wrapper/issues/326 
+        """
         if self.use_readline:
             # Obtain a line of console input
             try:
@@ -290,37 +378,110 @@ class Wrapper(object):
                 consoleinput = ""
 
         else:
+            arrow_index = 0
+            # working buffer allows arrow use to restore what they
+            # were typing but did not enter as a command yet
+            working_buff = ''
             while not self.halt:
-                keypress = readchar.readkey()
+                keypress = readkey.getcharacter()
+                keycode = readkey.convertchar(keypress)
+                length = len(self.input_buff)
 
-                if keypress == "up":
-                    self.input_buff = self.input_buff[:-1]
-                    print("\033[0A%s         " % self.input_buff)
-                    continue
+                if keycode == "right":
+                    arrow_index += 1
+                    if arrow_index > length:
+                        arrow_index = length
 
-                if keypress == "backspace":
-                    self.input_buff = self.input_buff[:-1]
-                    print("\033[0A%s         " % self.input_buff)
-                    continue
+                if keycode == "left":
+                    arrow_index -= 1
+                    if arrow_index < 1:
+                        arrow_index = 0
 
-                if keypress in ("enter", "ctrl_c", "cr"):
+                if keycode == "up":
+                    # goes 'back' in command history time
+                    self.command_index -= 1
+                    if self.command_index < 1:
+                        self.command_index = 0
+                    self.input_buff = self.command_hist[self.command_index]
+                    arrow_index = len(self.input_buff)
+
+                if keycode == "down":
+                    # goes forward in command history time
+                    self.command_index += 1
+
+                    if self.command_index + 1 > len(self.command_hist):
+                        # These actions happen when at most recent typing
+                        self.command_index = len(self.command_hist)
+                        self.input_buff = '%s' % working_buff
+                        self.write_stdout(
+                            "%s " % self.input_buff, source="wrapper")
+                        arrow_index = len(self.input_buff)
+                        continue
+
+                    self.input_buff = self.command_hist[self.command_index]
+                    arrow_index = len(self.input_buff)
+
+                buff_left = "%s" % self.input_buff[:arrow_index]
+                buff_right = "%s" % self.input_buff[arrow_index:]
+
+                if keycode == "backspace":
+                    if len(buff_left) > 0:
+                        buff_left = buff_left[:-1]
+                        self.input_buff = "%s%s" % (buff_left, buff_right)
+                        working_buff = "%s" % self.input_buff
+                        arrow_index -= 1
+
+                if keycode == "delete":
+                    if len(buff_right) > 0:
+                        buff_right = buff_right[1:]
+                    self.input_buff = "%s%s" % (buff_left, buff_right)
+                    working_buff = "%s" % self.input_buff
+
+                if keycode in ("enter", "cr", "lf"):
+                    # scroll up (because cr is not added to buffer)
+                    # print("")
                     break
 
-                # if len(keypress) < 2:
-                self.input_buff = "%s%s" % (self.input_buff, keypress)
-                # /wrapper commands receive special magenta coloring
-                if self.input_buff[0:1] == '/':
-                    print("%s\033[0A\033[33m%s\033[0m" % (
-                        self.cursor, self.input_buff))
+                if keycode in ("ctrl-c", "ctrl-x"):
+                    self.sigterm()
+                    break
+
+                # hide special key codes like PAGE_UP, etc if not used
+                if not keycode:
+                    buff_left = "%s%s" % (buff_left, keypress)
+                    self.input_buff = "%s%s" % (buff_left, buff_right)
+                    working_buff = "%s" % self.input_buff
+                    arrow_index += 1
+
+                # with open('readout.txt', "w") as f:
+                #     f.write("left: '%s'\nright: '%s'\nbuff: '%s'" % (
+                #         buff_left, buff_right, self.input_buff))
+
+                if len(buff_right) > 0:
+                    self.write_stdout("{0}{1}{2}{3}".format(
+                        REVERSED, buff_left, RESET, buff_right),
+                        "wrapper")
                 else:
-                    print("%s\033[0A%s" % (
-                        self.cursor, self.input_buff))
-                #continue
+                    self.write_stdout(
+                        "%s " % self.input_buff, source="wrapper")
 
             consoleinput = "%s" % self.input_buff
             self.input_buff = ""
-            # print a line so last typed line is not covered by new output
-            print("")
+
+            if consoleinput in self.command_hist:
+                # if the command is already in the history somewhere,
+                # remove it and re-append to the end (most recent)
+                self.command_hist.remove(consoleinput)
+                self.command_hist.append(consoleinput)
+            else:
+                # or just add it.
+                self.command_hist.append(consoleinput)
+            self.command_index = len(self.command_hist)
+
+            # print the finished command to console
+            self.write_stdout(
+                "%s\r\n" % self.input_buff, source="wrapper")
+
         return consoleinput
 
     def parseconsoleinput(self):

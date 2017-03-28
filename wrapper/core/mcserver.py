@@ -737,29 +737,7 @@ class MCServer(object):
         # server_spaming setting does not stop it from being parsed below.
         if not server_spaming:
             if not self.server_muted:
-
-                if self.wrapper.use_readline:
-                    print(buff)
-                else:
-                    # Format the output to prevent a command that is
-                    # in-process of being typed get carried away.
-
-                    # input_buff built by parseconsoleinput() of core.wrapper.
-                    if self.wrapper.input_buff == "":
-                        print("\033[1A%s" % buff)
-                        print(self.wrapper.cursor)
-                    else:
-                        # print the server lines above and re-print what
-                        # the console user was typing right below that.
-                        print("\033[1A%s" % buff)
-                        # /wrapper commands receive special magenta coloring
-                        if self.wrapper.input_buff[0:1] == '/':
-                            print("%s\033[35m%s\033[0m" % (
-                                self.wrapper.cursor, self.wrapper.input_buff))
-                        else:
-                            print("%s%s" % (
-                                self.wrapper.cursor, self.wrapper.input_buff))
-
+                self.wrapper.write_stdout(buff, "server")
             else:
                 self.queued_lines.append(buff)
 

@@ -52,7 +52,7 @@ using 'self.api.helpers'
     and converts to Kbtye, MiB, GiB, etc... using 4 most
     significant digits.
 
-    :returns: Tuple - (string repr of 4 digits, string units)
+    :returns: tuple - (string repr of 4 digits, string units)
 
     
 
@@ -210,7 +210,9 @@ using 'self.api.helpers'
 
     
 
--  readout(commandtext, description, separator=" - ", pad=15, command_text_fg="magenta", command_text_opts=("bold",), description_text_fg="yellow", usereadline=True)
+-  readout(commandtext, description, separator=" - ", pad=15,
+            command_text_fg="magenta", command_text_opts=("bold",),
+            description_text_fg="yellow", usereadline=True)
 
     display console text only with no logging - useful for displaying
     pretty console-only messages.
