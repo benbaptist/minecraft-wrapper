@@ -3,7 +3,7 @@ Build 209 (next build)
   Community Input enhancement proxy mode
 
 Build 208
-- Remove readchar package an implement simpler (better IMHO)
+- Remove readchar package and implement simpler (better IMHO)
  readkey module.  Nothing functionally different from readchar
  package except that references and methods wrapper uses were
  updated accordingly. Implements all keys but ESC/F11/F12.

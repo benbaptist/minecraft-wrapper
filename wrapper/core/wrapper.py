@@ -470,8 +470,6 @@ class Wrapper(object):
             consoleinput = "%s" % self.input_buff
             self.input_buff = ""
 
-            # these had bad indent?
-
             if consoleinput in self.command_hist:
                 # if the command is already in the history somewhere,
                 # remove it and re-append to the end (most recent)
@@ -486,7 +484,7 @@ class Wrapper(object):
             self.write_stdout(
                 "%s\r\n" % self.input_buff, source="wrapper")
 
-            return consoleinput
+        return consoleinput
 
     def parseconsoleinput(self):
         while not self.halt:
@@ -614,7 +612,7 @@ class Wrapper(object):
             "Wrapper", "Internal Wrapper.py commands ",
             [
                 ("/wrapper [update/memory/halt]",
-                 "If no subcommanbuffd is provided, it will"
+                 "If no subcommand is provided, it will"
                  " show the Wrapper version.", None),
                 ("/playerstats [all]",
                  "Show the most active players. If no subcommand"
@@ -632,7 +630,7 @@ class Wrapper(object):
                 ("/entity <count/kill> [eid] [count]",
                  "/entity help/? for more help.. ", None),
                 ("/config", "Change wrapper.properties (type"
-                            " /confbuffig help for more..)", None),
+                            " /config help for more..)", None),
 
                 # Minimum server version for commands to appear is
                 # 1.7.6 (registers perm later in serverconnection.py)
