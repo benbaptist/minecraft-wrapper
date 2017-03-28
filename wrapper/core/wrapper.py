@@ -143,8 +143,6 @@ class Wrapper(object):
         self.registered_permissions = {}
         self.help = {}
         self.input_buff = ""
-        self.last_input_line = ["/help", ]
-        self.last_input_line_index = 0
         self.sig_int = False
         self.command_hist = ['/help', 'help']
         self.command_index = 1
