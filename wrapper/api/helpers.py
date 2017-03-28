@@ -79,19 +79,19 @@ def _addgraphics(text='', foreground='white', background='black', options=()):
             'no-reset' - don't terminate string with a RESET code
 
     """
-    resetcode = '0'
-    fore = {'blue': '34', 'yellow': '33', 'green': '32',
-            'cyan': '36', 'black': '30',
-            'magenta': '35', 'white': '37', 'red': '31'}
-    back = {'blue': '44', 'yellow': '43', 'green': '42',
-            'cyan': '46', 'black': '40',
-            'magenta': '45', 'white': '47', 'red': '41'}
-    optioncodes = {'bold': '1', 'italic': '3', 'underscore': '4',
-                   'blink': '5', 'reverse': '7', 'conceal': '8'}
+    resetcode = '\x1b\x5b\x30\x6d'
+    fore = {'blue': '\x33\x34', 'yellow': '\x33\x33', 'green': '\x33\x32',
+            'cyan': '\x33\x36', 'black': '\x33\x30',
+            'magenta': '\x33\x35', 'white': '\x33\x37', 'red': '\x33\x31'}
+    back = {'blue': '\x34\x34', 'yellow': '\x34\x33', 'green': '\x34\x32',
+            'cyan': '\x34\x36', 'black': '\x34\x30',
+            'magenta': '\x34\x35', 'white': '\x34\x37', 'red': '\x34\x31'}
+    optioncodes = {'bold': '\x31', 'italic': '\x33', 'underscore': '\x34',
+                   'blink': '\x35', 'reverse': '\x37', 'conceal': '\x38'}
 
     codes = []
     if text == '' and len(options) == 1 and options[0] == 'reset':
-        return '\x1b[%sm' % resetcode
+        return resetcode
 
     if foreground:
         codes.append(fore[foreground])
@@ -102,8 +102,8 @@ def _addgraphics(text='', foreground='white', background='black', options=()):
         if option in optioncodes:
             codes.append(optioncodes[option])
     if 'no-reset' not in options:
-        text = '%s\x1b[%sm' % (text, resetcode)
-    return '%s%s' % (('\x1b[%sm' % ';'.join(codes)), text)
+        text = '%s%s' % (text, resetcode)
+    return '%s%s' % (('\x1b\x5b%s\x6d' % '\x3b'.join(codes)), text)
 
 
 def config_to_dict_read(filename, filepath):
@@ -178,10 +178,10 @@ def format_bytes(number_raw_bytes):
     and converts to Kbtye, MiB, GiB, etc... using 4 most
     significant digits.
 
-    :returns: Tuple - (string repr of 4 digits, string units)
+    :returns: tuple - (string repr of 4 digits, string units)
 
     """
-    large_bytes = number_raw_bytes / (1024*1024*1024*1024*1024)
+    large_bytes = float(number_raw_bytes) / (1024*1024*1024*1024*1024)
     units = "PiB"
     if large_bytes < 1.0:
         large_bytes *= 1024
@@ -441,7 +441,12 @@ def processcolorcodes(messagestring):
             if sys.version_info > (3,):
                 next(it)
             else:
-                it.next()
+                try:
+                    # Py2-3
+                    # noinspection PyUnresolvedReferences
+                    it.next()
+                except AttributeError:
+                    it.__next__()
 
     extras.append({
         "text": current,
@@ -534,7 +539,9 @@ def read_timestr(mc_time_string):
 
 
 # Single line required by documentation creator (at this time)
-def readout(commandtext, description, separator=" - ", pad=15, command_text_fg="magenta", command_text_opts=("bold",), description_text_fg="yellow", usereadline=True):
+def readout(commandtext, description, separator=" - ", pad=15,
+            command_text_fg="magenta", command_text_opts=("bold",),
+            description_text_fg="yellow", usereadline=True):
     """
     display console text only with no logging - useful for displaying
     pretty console-only messages.
@@ -574,23 +581,22 @@ def readout(commandtext, description, separator=" - ", pad=15, command_text_fg="
 
 
 def _secondstohuman(seconds):
-    results = "None at all!"
-    plural = "s"
-    if seconds > 0:
-        results = "%d seconds" % seconds
+
+    divisor = seconds
+    if seconds < 1:
+        divisor = 1
+    unit = "seconds"
     if seconds > 59:
-        if (seconds / 60) == 1:
-            plural = ""
-        results = "%d minute%s" % (seconds / 60, plural)
+        unit = "minutes"
+        divisor = 60
     if seconds > 3599:
-        if (seconds / 3600) == 1:
-            plural = ""
-        results = "%d hour%s" % (seconds / 3600, plural)
-    if seconds > 86400:
-        if (seconds / 86400) == 1:
-            plural = ""
-        results = "%s day%s" % (str(seconds / 86400.0), plural)
-    return results
+        unit = "hours"
+        divisor = 3600
+    if seconds > 86399:
+        unit = "days"
+        divisor = 86400
+    value = float(seconds) / divisor
+    return "{0:.2f} {1}".format(value, unit)
 
 
 def set_item(item, string_val, filename, path='.'):
@@ -783,7 +789,8 @@ def get_req(something, request):
     # This is a private function used by management.web
     for a in request.split("/")[1:][1].split("?")[1].split("&"):
         if a[0:a.find("=")] == something:
-            # PY3 unquote not a urllib (py3) method - impacts: Web mode
+            # TODO PY3 unquote not a urllib (py3) method - impacts: Web mode
+            # noinspection PyUnresolvedReferences
             return urllib.unquote(a[a.find("=") + 1:])
     return ""
 
@@ -822,6 +829,8 @@ def _test():
     print(str(x))
     print(read_timestr(str(x)))
     print(time.time())
+    print(_secondstohuman(36986))
+    print(3698 // 3600)
 
 
 if __name__ == "__main__":

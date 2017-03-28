@@ -1,12 +1,25 @@
-Build 207 (next build)
+Build 209 (next build)
 - player to player TP - Add inter-dimensional TP (1.8+) api
   Community Input enhancement proxy mode
 
-Build 206
-- implement a remembered command history with up and down arrows
+Build 208
+- Remove readchar package an implement simpler (better IMHO)
+ readkey module.  Nothing functionally different from readchar
+ package except that references and methods wrapper uses were
+ updated accordingly. Implements all keys but ESC/F11/F12.
+- Some Py3/Py2 updates to helpers.py
+- move console output responsibility solely to core/wrapper to
+ centralize printing to the console.  Logging is still using
+ its own handler, though.
+- finally have a real working version of console imput that
+ fully supports a command history using up/down arrow keys
+ as well as properly implements delete and backspace keys.
 
-Build 205
- - Another update to readchar package; now captures special keys.
+Build 205 - 207
+These builds are all various experiments and re-writes of the
+Readchar package and my attempts with implementing arrow keys
+to have a command history, as well as improve or implement editing
+functions (including the delete and backspace keys).
 
 Build 204
  Nothing special:

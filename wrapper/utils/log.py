@@ -87,8 +87,9 @@ def loadconfig(betterconsole=False, configfile="logging.json"):
             else:
                 if betterconsole:
                     readcurrent = conf["formatters"]["standard"]["format"]
-                    conf["formatters"]["standard"]["format"] = ("\033[1A%s\n"
-                                                                % readcurrent)
+                    conf["formatters"]["standard"]["format"] = (
+                        # go up one line to print - '^[1A' (in hex ASCII)
+                        "\x1b\x5b\x31\x41%s\r\n" % readcurrent)
                 dictConfig(conf)
                 logging.info("Logging configuration file (%s) located and "
                              "loaded, logging configuration set!", configfile)
