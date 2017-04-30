@@ -17,7 +17,7 @@ import sys
 # import StringIO
 
 # local
-from core.mcuuid import MCUUID
+from proxy.mcuuid import MCUUID
 
 # Py3-2
 PY3 = sys.version_info > (3,)
@@ -534,7 +534,7 @@ class Packet(object):
         return self.send_int(len(payload)) + payload
 
     def send_short_string(self, string):
-        return self.send_short(len(string)) + str.encode("utf8")
+        return self.send_short(len(string)) + string.encode("utf8")
 
     def send_list(self, tag):
         # Check that all values are the same type
