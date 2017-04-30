@@ -118,9 +118,11 @@ class Player(object):
         self.loginposition = [0, 0, 0]
 
         self.client = None
-        self.clientboundPackets = Packets_cb(self.javaserver.protocolVersion)
-        self.serverboundPackets = Packets_sb(self.javaserver.protocolVersion)
-        self.clientgameversion = self.javaserver.protocolVersion
+        self.clientboundPackets = Packets_cb(
+            self.wrapper.proxy.protocol_version)
+        self.serverboundPackets = Packets_sb(
+            self.wrapper.proxy.protocol_version)
+        self.clientgameversion = self.wrapper.proxy.protocol_version
 
         self.playereid = None
 
@@ -146,7 +148,7 @@ class Player(object):
 
                     self.ipaddress = client.ip
 
-                    # pktSB already set to javaserver.protocolVerion
+                    # pktSB already set to self.wrapper.proxy.protocol_version
                     self.clientboundPackets = self.client.pktCB
                     self.clientgameversion = self.client.clientversion
                     gotclient = True
@@ -238,7 +240,7 @@ class Player(object):
         try:
             self.client.chat_to_server("/%s" % string)
         except AttributeError:
-            if self.javaserver.protocolVersion > PROTOCOL_1_7_9:
+            if self.wrapper.proxy.protocol_version > PROTOCOL_1_7_9:
                 self.wrapper.javaserver.console(
                     "execute %s ~ ~ ~ %s" % (self.username, string))
             else:

@@ -63,7 +63,8 @@ class World(object):
             raise Exception("Invalid mode: %s" % mode)
         x1, y1, z1 = position1
         x2, y2, z2 = position2
-        if self.javaserver.protocolVersion < 6:
+
+        if self.javaserver.version_compute < 10800:
             raise Exception("Must be running Minecraft 1.8 or above"
                             " to use the world.fill() method.")
         else:
@@ -81,7 +82,7 @@ class World(object):
         """
         x1, y1, z1 = position1
         x2, y2, z2 = position2
-        if self.javaserver.protocolVersion < 6:
+        if self.javaserver.version_compute < 10800:
             raise Exception(
                 "Must be running Minecraft 1.8 or above"
                 " to use the world.replace() method.")

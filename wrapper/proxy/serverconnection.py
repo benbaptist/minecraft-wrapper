@@ -29,7 +29,7 @@ class ServerConnection(object):
         server, parses them, and forards them on to the client.
 
         ServerConnection receives the parent client as it's argument.
-        It's wrapper and proxy instances are passed from the Client.
+        It receives the proxy instance from the Client.
         Therefore, a server instance does not really validly exist
         unless it has a valid parent client.
 
@@ -42,9 +42,8 @@ class ServerConnection(object):
 
         # basic __init__ items from passed arguments
         self.client = client
-        self.wrapper = client.wrapper
         self.proxy = client.proxy
-        self.log = client.wrapper.log
+        self.log = client.log
         self.ip = ip
         self.port = port
 
@@ -74,15 +73,11 @@ class ServerConnection(object):
     def _refresh_server_version(self):
         """Get serverversion for mcpackets use"""
 
-        self.version = self.wrapper.javaserver.protocolVersion
+        self.version = self.proxy.protocol_version
         self.pktSB = mcpackets_sb.Packets(self.version)
         self.pktCB = mcpackets_cb.Packets(self.version)
         self.parse_cb = ParseCB(self, self.packet)
         self._define_parsers()
-
-        if self.version > PROTOCOL_1_7:
-            # used by ban code to enable wrapper group help for ban items.
-            self.wrapper.api.registerPermission("mc1.7.6", value=True)
 
     def send(self, packetid, xpr, payload):
         """ Not supported. A wrapper of packet.send(), which is
@@ -99,12 +94,12 @@ class ServerConnection(object):
         """ This simply establishes the tcp socket connection and
         starts the flush loop, NOTHING MORE. """
         self.state = self.proxy.LOGIN
-        # Connect to this wrapper's javaserver (core/mcserver.py)
+        # Connect to a local server address
         if self.ip is None:
             self.server_socket.connect(("localhost",
-                                        self.wrapper.javaserver.server_port))
+                                        self.proxy.server_port))
 
-        # Connect to some other server (or an offline wrapper)
+        # Connect to some specific server address
         else:
             self.server_socket.connect((self.ip, self.port))
 

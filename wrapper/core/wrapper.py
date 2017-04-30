@@ -41,7 +41,7 @@ from core.storage import Storage
 from core.irc import IRC
 from core.scripts import Scripts
 import core.buildinfo as core_buildinfo_version
-from core.mcuuid import UUIDS
+from proxy.mcuuid import UUIDS
 from core.config import Config
 from core.backups import Backups
 from core.consoleuser import ConsolePlayer
@@ -114,6 +114,7 @@ class Wrapper(object):
         self.wrapper_ban_system = False
         # This was to allow alternate encodings
         self.encoding = self.config["General"]["encoding"]
+        self.serverpath = self.config["General"]["server-directory"]
         self.proxymode = self.config["Proxy"]["proxy-enabled"]
         self.wrapper_onlinemode = self.config["Proxy"]["online-mode"]
         self.wrapper_ban_system = self.proxymode and self.wrapper_ban_system
@@ -142,7 +143,7 @@ class Wrapper(object):
 
         # core functions and datasets
         self.perms = Permissions(self)
-        self.uuids = UUIDS(self)
+        self.uuids = UUIDS(self.log, self.usercache)
         self.plugins = Plugins(self)
         self.commands = Commands(self)
         self.events = Events(self)
@@ -175,8 +176,6 @@ class Wrapper(object):
         self.updated = False
         # future plan to expose this to api
         self.xplayer = ConsolePlayer(self)
-        # define the slot once here and not at each clients Instantiation:
-        self.inv_slots = range(46)
 
         # Error messages for non-standard import failures.
         if not readline and self.use_readline:
@@ -714,9 +713,28 @@ class Wrapper(object):
                         usereadline=self.use_readline)
 
     def _startproxy(self):
-        self.proxy = proxy.Proxy(self.halt, self)
+        serveroptions = {
+            "path": self.serverpath,
+            "port": self.javaserver.server_port,
+            "version_compute": self.javaserver.version_compute,
+        }
+        self.proxy = proxy.Proxy(self.halt, self.config["Proxy"], serveroptions, self.log, self.usercache, self, self.events)
+
         # requests will be set to False if requests or cryptography is missing.
         if proxy.requests:
+            if self.javaserver.version_compute < 10702:
+                self.log.warning("\nProxy mode cannot start because the "
+                                 "server is a pre-Netty version:\n\n"
+                                 "http://wiki.vg/Protocol_version_numbers"
+                                 "#Versions_before_the_Netty_rewrite\n\n"
+                                 "Server will continue in non-proxy mode.")
+                self.disable_proxymode()
+                return
+            if self.proxy.proxy_port == self.javaserver.server_port:
+                self.log.warning("Proxy mode cannot start because the wrapper"
+                                 " port is identical to the server port.")
+                self.disable_proxymode()
+                return
             proxythread = threading.Thread(target=self.proxy.host, args=())
             proxythread.daemon = True
             proxythread.start()

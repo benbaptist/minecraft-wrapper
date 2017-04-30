@@ -10,10 +10,14 @@ import threading
 import time
 import json
 import requests
+import os
+import base64
 
 from api.helpers import getjsonfile, putjsonfile, find_in_json
 from api.helpers import epoch_to_timestr, read_timestr
 from api.helpers import isipv4address
+
+from proxy import mcuuid
 
 try:
     import proxy.encryption as encryption
@@ -29,28 +33,59 @@ else:
     Packet = False
 
 
-class Proxy(object):
-    def __init__(self, termsignal, wrapper):
+class NullEventHandler(object):
+    def __init__(self):
+        pass
 
-        # self aliasing (just links variable name to object)
-        self.wrapper = wrapper  # instance
-        self.javaserver = wrapper.javaserver  # instance
-        self.log = wrapper.log  # instance
-        self.config = wrapper.config  # a dictionary of instance configmanager
+    def callevent(self, *args):
+        """An event handler must have this method that expects
+        two positional arguments:
+         :Arg1: The string name of the event.
+         :Arg2: A dictionary of items describing the event (varies 
+          with event.
+        """
+        pass
+
+
+class Proxy(object):
+    def __init__(self, termsignal, proxyopts, serveropts, loginstance,
+                 usercache, wrapper, eventhandler=NullEventHandler):
+
+        # TODO temp dependency!!!!!!!
+        self.wrapper = wrapper
+        self.javaserver = self.wrapper.javaserver
+        #
+        #
+        #
+        #
+        #
+        #
+
+        self.serverpath = serveropts["path"]
+        self.serverport = serveropts["port"]
+        self.config = proxyopts  # a dictionary of proxyoptions (from
+        #  wrapper.properties.json["Proxy"] )
+
+        # requests is required wrapper-wide now, so no checks here for that...
+        if not encryption and self.config["proxy-enabled"]:
+            raise Exception("You must have the pycryto installed "
+                            "to run in proxy mode!")
+
+        self.log = loginstance
+        self.usercache = usercache
+        self.eventhandler = eventhandler
+        self.uuids = mcuuid.UUIDS(self.log, self.usercache)
 
         # termsignal is an object with a `halt` property set to True/False
         # it represents the calling program's run status
         self.caller = termsignal
-
         # Proxy's run status (set True to shutdown/ end `host()` while loop
         self.abort = False
 
         # self assignments (gets specific values)
-        self.encoding = self.wrapper.encoding
-        self.serverpath = self.config["General"]["server-directory"]
-        self.proxy_bind = self.config["Proxy"]["proxy-bind"]
-        self.proxy_port = self.config["Proxy"]["proxy-port"]
-        self.silent_ip_banning = self.config["Proxy"]["silent-ipban"]
+        self.proxy_bind = self.config["proxy-bind"]
+        self.proxy_port = self.config["proxy-port"]
+        self.silent_ip_banning = self.config["silent-ipban"]
 
         # proxy internal workings
         #
@@ -58,10 +93,15 @@ class Proxy(object):
         #  happy.  The actual socket connection is created later.
         self.proxy_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.usingSocket = False
+        self.protocol_version = -1
+        self.version = ""
+
         self.clients = []
         self.skins = {}
         self.skinTextures = {}
         self.uuidTranslate = {}
+        # define the slot once here and not at each clients Instantiation:
+        self.inv_slots = range(46)
 
         # Constants used in client and server connections
 
@@ -107,31 +147,16 @@ class Proxy(object):
         self.privateKey = encryption.generate_key_pair()
         self.publicKey = encryption.encode_public_key(self.privateKey)
 
-        # requests is required wrapper-wide now, so no checks here for that...
-        if not encryption and self.wrapper.proxymode:
-            raise Exception("You must have the pycryto installed "
-                            "to run in proxy mode!")
+        if os.path.exists("%s/server-icon.png" % self.serverpath):
+            with open("%s/server-icon.png" % self.serverpath, "rb") as f:
+                theicon = f.read()
+                iconencoded = base64.standard_b64encode(theicon)
+                self.serverIcon = b"data:image/png;base64," + iconencoded
 
     def host(self):
+        """ the caller must ensure host() is not called before the 
+        server is fully up and running."""
         # get the protocol version from the server
-        while not self.javaserver.state == 2:
-            time.sleep(.2)
-
-        if self.javaserver.version_compute < 10702:
-            self.log.warning("\nProxy mode cannot start because the "
-                             "server is a pre-Netty version:\n\n"
-                             "http://wiki.vg/Protocol_version_numbers"
-                             "#Versions_before_the_Netty_rewrite\n\n"
-                             "Server will continue in non-proxy mode.")
-            self.wrapper.disable_proxymode()
-            return
-
-        if self.proxy_port == self.javaserver.server_port:
-            self.log.warning("Proxy mode cannot start because the wrapper"
-                             " port is identical to the server port.")
-            self.wrapper.disable_proxymode()
-            return
-
         try:
             self.pollserver()
         except Exception as e:
@@ -184,7 +209,7 @@ class Proxy(object):
 
     def pollserver(self, host="localhost", port=None):
         if port is None:
-            port = self.javaserver.server_port
+            port = self.serverport
         server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
         # server_sock = socket.socket()
@@ -195,14 +220,14 @@ class Proxy(object):
         packet.send(0x00, "varint|string|ushort|varint", (5, host, port, 1))
         packet.send(0x00, "", ())
         packet.flush()
-        self.javaserver.protocolVersion = -1
+        self.protocol_version = -1
         while True:
             pkid, original = packet.grabpacket()
             if pkid == 0x00:
                 data = json.loads(packet.read("string:response")["response"])
-                self.javaserver.protocolVersion = data["version"][
+                self.protocol_version = data["version"][
                     "protocol"]
-                self.javaserver.version = data["version"]["name"]
+                self.version = data["version"]["name"]
                 if "modinfo" in data and data["modinfo"]["type"] == "FML":
                     self.forge = True
                     self.mod_info["modinfo"] = data["modinfo"]
@@ -318,7 +343,7 @@ class Proxy(object):
                         return "expiration date invalid"  # error text
                 else:
                     expiration = "forever"
-                name = self.wrapper.uuids.getusernamebyuuid(uuid.string)
+                name = self.uuids.getusernamebyuuid(uuid.string)
                 banlist.append({"uuid": uuid.string,
                                 "name": name,
                                 "created": epoch_to_timestr(time.time()),
@@ -327,7 +352,7 @@ class Proxy(object):
                                 "reason": reason})
                 if putjsonfile(banlist, "banned-players", self.serverpath):
                     self.javaserver.console("kick %s Banned: %s" %
-                                                    (name, reason))
+                                            (name, reason))
                     return "Banned %s: %s" % (name, reason)
                 return "Could not write banlist to disk"
         else:
@@ -372,7 +397,7 @@ class Proxy(object):
                 if putjsonfile(banlist, "banned-players", self.serverpath):
                     self.log.info("kicking %s... %s", username, reason)
                     self.javaserver.console("kick %s Banned: %s" %
-                                                    (username, reason))
+                                            (username, reason))
                     return "Banned %s: %s - %s" % (username, uuid, reason)
                 return "Could not write banlist to disk"
         else:
@@ -460,7 +485,7 @@ class Proxy(object):
                     if x == banrecord:
                         banlist.remove(x)
                 if putjsonfile(banlist, "banned-players", self.serverpath):
-                    name = self.wrapper.uuids.getusernamebyuuid(str(uuid))
+                    name = self.uuids.getusernamebyuuid(str(uuid))
                     return "pardoned %s" % name
                 return "Could not write banlist to disk"
             else:

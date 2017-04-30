@@ -25,7 +25,6 @@ import os
 import json
 import ctypes
 import platform
-import base64
 
 try:
     import resource
@@ -107,9 +106,7 @@ class MCServer(object):
         self.worldSize = 0
         self.maxPlayers = 20
         # -1 until proxy mode checks the server's MOTD on boot
-        self.protocolVersion = -1
-        # this is string name of the version, collected by console output
-        self.version = None
+        self.protocolversion = -1
         # a comparable number = x0y0z, where x, y, z = release,
         #  major, minor, of version.
         self.version_compute = 0
@@ -426,13 +423,6 @@ class MCServer(object):
         return False
 
     def reloadproperties(self):
-        # Load server icon
-        if os.path.exists("%s/server-icon.png" % self.serverpath):
-            with open("%s/server-icon.png" % self.serverpath, "rb") as f:
-                theicon = f.read()
-                iconencoded = base64.standard_b64encode(theicon)
-                self.serverIcon = b"data:image/png;base64," + iconencoded
-
         # Read server.properties and extract some information out of it
         # the PY3.5 ConfigParser seems broken.  This way was much more
         # straightforward and works in both PY2 and PY3
@@ -568,7 +558,7 @@ class MCServer(object):
         """
         ops = False
         # (4 = PROTOCOL_1_7 ) - 1.7.6 or greater use ops.json
-        if self.protocolVersion > 4:
+        if self.protocolversion > 4:
             ops = getjsonfile("ops", self.serverpath, encodedas=self.encoding)
         if not ops:
             # try for an old "ops.txt" file instead.
@@ -674,16 +664,18 @@ class MCServer(object):
                     break
 
             line_words = buff.split(' ')[self.prepends_offset:]
-            self.version = getargs(line_words, 4)
-            semantics = self.version.split(".")
+            version = getargs(line_words, 4)
+            semantics = version.split(".")
             release = get_int(getargs(semantics, 0))
             major = get_int(getargs(semantics, 1))
             minor = get_int(getargs(semantics, 2))
             self.version_compute = minor + (major * 100) + (release * 10000)
 
             # 1.7.6 (protocol 5) is the cutoff where ops.txt became ops.json
-            if self.version_compute > 10705 and self.protocolVersion < 0:
-                self.protocolVersion = 5
+            if self.version_compute > 10705 and self.protocolversion < 0:
+                self.protocolversion = 5
+                self.wrapper.api.registerPermission("mc1.7.6", value=True)
+
             self.refresh_ops()
 
         if len(line_words) < 1:

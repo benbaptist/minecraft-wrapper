@@ -11,10 +11,6 @@ from api.helpers import putjsonfile
 from utils.entities import ENTITIES, PRE1_11_RENAMES
 from utils.items import BLOCKS
 
-try:
-    import requests
-except ImportError:
-    requests = False
 
 # Sample
 # ENTITIES = {
@@ -113,7 +109,8 @@ class Objects(object):
 
 
 class Entity(object):
-    def __init__(self, eid, uuid, entitytype, entityname, position, look, isobject, playerclientname):
+    def __init__(self, eid, uuid, entitytype, entityname, position, look,
+                 isobject, playerclientname):
         self.eid = eid  # Entity ID
         self.uuid = uuid  # Entity UUID
         self.entitytype = entitytype  # Type of Entity
@@ -121,7 +118,9 @@ class Entity(object):
         self.look = look  # Head Position
         self.rodeBy = False
         self.riding = False
-        self.isObject = isobject  # Boat/Minecart/other non-living Entities are objects
+
+        # Boat/Minecart/other non-living Entities are objects
+        self.isObject = isobject
         self.entityname = entityname
         self.active = currtime()
         self.clientname = playerclientname
