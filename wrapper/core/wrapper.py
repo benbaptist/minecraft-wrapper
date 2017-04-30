@@ -89,6 +89,12 @@ CLEAR_BOL = ESC + '\x5b\x31\x4b'
 CLEAR_LINE = ESC + '\x5b\x31\x4b'
 
 
+class HaltSig(object):
+
+    def __init__(self):
+        self.halt = False
+
+
 class Wrapper(object):
 
     def __init__(self):
@@ -155,7 +161,17 @@ class Wrapper(object):
         self.web = None
         self.proxy = None
         self.backups = None
-        self.halt = False
+
+        #  HaltSig - Why? ... because if self.halt was just `False`, passing
+        #  a self.halt would simply be passing `False` (immutable).  Changing
+        # the value of self.halt would not necessarily change the value of the
+        # passed parameter (unless it was specifically referenced back as
+        # `wrapper.halt`). Since the halt signal needs to be passed, possibly
+        # several layers deep, and into modules that it may be desireable to
+        # not have direct access to wrapper, using a HaltSig object is
+        # more desireable and reliable in behavior.
+        self.halt = HaltSig()
+
         self.updated = False
         # future plan to expose this to api
         self.xplayer = ConsolePlayer(self)
@@ -223,13 +239,13 @@ class Wrapper(object):
                     " the required modules installed: pkg_resources\n"
                     "Hint: http://stackoverflow.com/questions/7446187")
 
-        # Console Daemon runs while not wrapper.halt (here; self.halt)
+        # Console Daemon runs while not wrapper.halt.halt
         consoledaemon = threading.Thread(
             target=self.parseconsoleinput, args=())
         consoledaemon.daemon = True
         consoledaemon.start()
 
-        # Timer also runs while not wrapper.halt
+        # Timer also runs while not wrapper.halt.halt
         t = threading.Thread(target=self.event_timer, args=())
         t.daemon = True
         t.start()
@@ -264,7 +280,7 @@ class Wrapper(object):
         self.log.info("Wrapper Storages closed and saved.")
 
         # wrapper execution ends here.  handle_server ends when
-        # wrapper.halt is True.
+        # wrapper.halt.halt is True.
         if self.sig_int:
             self.log.info("Ending threads, please wait...")
             time.sleep(5)
@@ -301,7 +317,7 @@ class Wrapper(object):
 
     def _halt(self):
         self.javaserver.stop("Halting server...", restart_the_server=False)
-        self.halt = True
+        self.halt.halt = True
 
     def shutdown(self):
         self._halt()
@@ -382,7 +398,7 @@ class Wrapper(object):
             # working buffer allows arrow use to restore what they
             # were typing but did not enter as a command yet
             working_buff = ''
-            while not self.halt:
+            while not self.halt.halt:
                 keypress = readkey.getcharacter()
                 keycode = readkey.convertchar(keypress)
                 length = len(self.input_buff)
@@ -485,7 +501,7 @@ class Wrapper(object):
         return consoleinput
 
     def parseconsoleinput(self):
-        while not self.halt:
+        while not self.halt.halt:
             consoleinput = self.getconsoleinput()
             # No command (perhaps just a line feed or spaces?)
             if len(consoleinput) < 1:
@@ -698,7 +714,7 @@ class Wrapper(object):
                         usereadline=self.use_readline)
 
     def _startproxy(self):
-        self.proxy = proxy.Proxy(self)
+        self.proxy = proxy.Proxy(self.halt, self)
         # requests will be set to False if requests or cryptography is missing.
         if proxy.requests:
             proxythread = threading.Thread(target=self.proxy.host, args=())
@@ -735,7 +751,7 @@ class Wrapper(object):
                 core_buildinfo_version.__build__)
 
     def _auto_update_process(self):
-        while not self.halt:
+        while not self.halt.halt:
             time.sleep(3600)
             if self.updated:
                 self.log.info(
@@ -839,7 +855,7 @@ class Wrapper(object):
 
     def event_timer(self):
         t = time.time()
-        while not self.halt:
+        while not self.halt.halt:
             if time.time() - t > 1:
                 self.events.callevent("timer.second", None)
                 """ eventdoc

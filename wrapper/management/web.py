@@ -127,7 +127,7 @@ class Web(object):
         self.chatScrollback.append((time.time(), {"type": "irc", "payload": payload}))
 
     def updateGraph(self):
-        while not self.wrapper.halt:
+        while not self.wrapper.halt.halt:
             while len(self.memoryGraph) > 200:
                 del self.memoryGraph[0]
             if self.wrapper.javaserver.getmemoryusage():
@@ -176,7 +176,7 @@ class Web(object):
                 del self.data.Data["keys"][i]
 
     def wrap(self):
-        while not self.wrapper.halt:
+        while not self.wrapper.halt.halt:
             try:
                 if self.bind():
                     self.listen()
@@ -202,7 +202,7 @@ class Web(object):
     def listen(self):
         self.log.info("Web Interface bound to %s:%d",
                       self.config["Web"]["web-bind"], self.config["Web"]["web-port"])
-        while not self.wrapper.halt:
+        while not self.wrapper.halt.halt:
             # noinspection PyUnresolvedReferences
             sock, addr = self.socket.accept()
             # self.log.debug("(WEB) Connection %s started", str(addr))

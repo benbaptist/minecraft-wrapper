@@ -15,7 +15,7 @@ from socket import error as socket_error
 import requests
 
 # Local imports
-import utils.encryption as encryption
+import proxy.encryption as encryption
 
 from proxy.serverconnection import ServerConnection
 from proxy.packet import Packet

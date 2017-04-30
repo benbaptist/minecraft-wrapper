@@ -84,11 +84,11 @@ def main(wrapper_start_args):
         # save-all is required to have a flush argument
         wrapper.javaserver.console("save-all flush")
         wrapper.javaserver.stop("Wrapper.py received shutdown signal - bye")
-        wrapper.halt = True
+        wrapper.halt.halt = True
     except Exception as ex:
         log.critical("Wrapper.py crashed - stopping server to be safe (%s)",
                      ex, exc_info=True)
-        wrapper.halt = True
+        wrapper.halt.halt = True
         wrapper.plugins.disableplugins()
         try:
             wrapper.javaserver.stop("Wrapper.py crashed - please contact"

@@ -1,6 +1,17 @@
-Build 210 (next build)
+Build 211 (next build)
 - player to player TP - Add inter-dimensional TP (1.8+) api
   Community Input enhancement proxy mode
+
+Build 210 - Fully modularize and make Proxy an independent system:
+- group encryption with proxy package (the only place it is used!).
+- clean up wrapper halt signal system to support separation of
+ proxy from wrapper.  Also avert possible referencing errors in
+ other places in code, like:
+    - separate player.abort signal from the wrapper.halt.halt signal.
+- create separate Proxy abort signal, separate from wrapper halt (the
+ 'caller' halt signal).
+-
+
 
 Build 209
 - changed api/helpers _test() to use assertions for tests. Refactor helpers some.

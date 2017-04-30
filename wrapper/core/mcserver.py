@@ -183,7 +183,7 @@ class MCServer(object):
         output, and such.
         """
         trystart = 0
-        while not self.wrapper.halt:
+        while not self.wrapper.halt.halt:
             trystart += 1
             self.proc = None
 
@@ -219,7 +219,7 @@ class MCServer(object):
                     " from wrapper.properties:\n'%s'", " ".join(self.args))
                 self.changestate(OFF)
                 # halt wrapper
-                self.wrapper.halt = True
+                self.wrapper.halt.halt = True
                 # exit server_handle
                 break
 
@@ -231,7 +231,7 @@ class MCServer(object):
                     self.changestate(OFF)
                     trystart = 0
                     self.boot_server = self.server_autorestart
-                    # break back out to `while not self.wrapper.halt:` loop
+                    # break out to `while not self.wrapper.halt.halt:` loop
                     # to (possibly) connect to server again.
                     break
 
@@ -243,7 +243,7 @@ class MCServer(object):
                         self.log.exception(e)
                 self.console_output_data = []
 
-        # code ends here on wrapper.halt and execution returns to
+        # code ends here on wrapper.halt.halt and execution returns to
         # the end of wrapper.start()
 
     def _toggle_server_started(self, server_started=True):
@@ -532,7 +532,7 @@ class MCServer(object):
 
     def __stdout__(self):
         """handles server output, not lines typed in console."""
-        while not self.wrapper.halt:
+        while not self.wrapper.halt.halt:
             # noinspection PyBroadException,PyUnusedLocal
 
             # this reads the line and puts the line in the
@@ -551,7 +551,7 @@ class MCServer(object):
     def __stderr__(self):
         """like __stdout__, handles server output (not lines
         typed in console)."""
-        while not self.wrapper.halt:
+        while not self.wrapper.halt.halt:
             try:
                 data = self.proc.stderr.readline()
                 if len(data) > 0:

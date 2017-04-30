@@ -16,7 +16,7 @@ from api.helpers import epoch_to_timestr, read_timestr
 from api.helpers import isipv4address
 
 try:
-    import utils.encryption as encryption
+    import proxy.encryption as encryption
 except ImportError:
     encryption = False
 
@@ -30,16 +30,32 @@ else:
 
 
 class Proxy(object):
-    def __init__(self, wrapper):
-        self.wrapper = wrapper
-        self.javaserver = wrapper.javaserver
-        self.log = wrapper.log
-        self.config = wrapper.config
+    def __init__(self, termsignal, wrapper):
+
+        # self aliasing (just links variable name to object)
+        self.wrapper = wrapper  # instance
+        self.javaserver = wrapper.javaserver  # instance
+        self.log = wrapper.log  # instance
+        self.config = wrapper.config  # a dictionary of instance configmanager
+
+        # termsignal is an object with a `halt` property set to True/False
+        # it represents the calling program's run status
+        self.caller = termsignal
+
+        # Proxy's run status (set True to shutdown/ end `host()` while loop
+        self.abort = False
+
+        # self assignments (gets specific values)
         self.encoding = self.wrapper.encoding
         self.serverpath = self.config["General"]["server-directory"]
-        self.proxy_bind = self.wrapper.config["Proxy"]["proxy-bind"]
-        self.proxy_port = self.wrapper.config["Proxy"]["proxy-port"]
-        self.silent_ip_banning = self.wrapper.config["Proxy"]["silent-ipban"]
+        self.proxy_bind = self.config["Proxy"]["proxy-bind"]
+        self.proxy_port = self.config["Proxy"]["proxy-port"]
+        self.silent_ip_banning = self.config["Proxy"]["silent-ipban"]
+
+        # proxy internal workings
+        #
+        # proxy_socket in only defined here to make the IDE type checking
+        #  happy.  The actual socket connection is created later.
         self.proxy_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.usingSocket = False
         self.clients = []
@@ -98,10 +114,10 @@ class Proxy(object):
 
     def host(self):
         # get the protocol version from the server
-        while not self.wrapper.javaserver.state == 2:
+        while not self.javaserver.state == 2:
             time.sleep(.2)
 
-        if self.wrapper.javaserver.version_compute < 10702:
+        if self.javaserver.version_compute < 10702:
             self.log.warning("\nProxy mode cannot start because the "
                              "server is a pre-Netty version:\n\n"
                              "http://wiki.vg/Protocol_version_numbers"
@@ -110,7 +126,7 @@ class Proxy(object):
             self.wrapper.disable_proxymode()
             return
 
-        if self.proxy_port == self.wrapper.javaserver.server_port:
+        if self.proxy_port == self.javaserver.server_port:
             self.log.warning("Proxy mode cannot start because the wrapper"
                              " port is identical to the server port.")
             self.wrapper.disable_proxymode()
@@ -137,7 +153,7 @@ class Proxy(object):
             self.proxy_socket.listen(5)
 
         # accept clients and start their threads
-        while not self.wrapper.halt:
+        while not (self.abort or self.caller.halt):
             try:
                 sock, addr = self.proxy_socket.accept()
             except Exception as e:
@@ -163,7 +179,7 @@ class Proxy(object):
         """only removes aborted clients"""
         for i, client in enumerate(self.clients):
             if self.clients[i].abort:
-                if str(client.username) in self.wrapper.javaserver.players:
+                if str(client.username) in self.javaserver.players:
                     self.clients.pop(i)
 
     def pollserver(self, host="localhost", port=None):
@@ -179,14 +195,14 @@ class Proxy(object):
         packet.send(0x00, "varint|string|ushort|varint", (5, host, port, 1))
         packet.send(0x00, "", ())
         packet.flush()
-        self.wrapper.javaserver.protocolVersion = -1
+        self.javaserver.protocolVersion = -1
         while True:
             pkid, original = packet.grabpacket()
             if pkid == 0x00:
                 data = json.loads(packet.read("string:response")["response"])
-                self.wrapper.javaserver.protocolVersion = data["version"][
+                self.javaserver.protocolVersion = data["version"][
                     "protocol"]
-                self.wrapper.javaserver.version = data["version"]["name"]
+                self.javaserver.version = data["version"]["name"]
                 if "modinfo" in data and data["modinfo"]["type"] == "FML":
                     self.forge = True
                     self.mod_info["modinfo"] = data["modinfo"]
@@ -204,7 +220,7 @@ class Proxy(object):
         for client in self.clients:
             if client.username == username:
                 try:
-                    return self.wrapper.javaserver.players[client.username]
+                    return self.javaserver.players[client.username]
                 except Exception as e:
                     self.log.error("getplayerby_username failed to get "
                                    "player %s: \n%s", username, e)
@@ -239,7 +255,7 @@ class Proxy(object):
         for client in self.clients:
             if client.server_eid == eid:
                 try:
-                    return self.wrapper.javaserver.players[client.username]
+                    return self.javaserver.players[client.username]
                 except Exception as e:
                     self.log.error("getplayerby_eid failed to get "
                                    "player %s: \n%s", client.username, e)
@@ -310,7 +326,7 @@ class Proxy(object):
                                 "expires": expiration,
                                 "reason": reason})
                 if putjsonfile(banlist, "banned-players", self.serverpath):
-                    self.wrapper.javaserver.console("kick %s Banned: %s" %
+                    self.javaserver.console("kick %s Banned: %s" %
                                                     (name, reason))
                     return "Banned %s: %s" % (name, reason)
                 return "Could not write banlist to disk"
@@ -355,7 +371,7 @@ class Proxy(object):
                                 "reason": reason})
                 if putjsonfile(banlist, "banned-players", self.serverpath):
                     self.log.info("kicking %s... %s", username, reason)
-                    self.wrapper.javaserver.console("kick %s Banned: %s" %
+                    self.javaserver.console("kick %s Banned: %s" %
                                                     (username, reason))
                     return "Banned %s: %s - %s" % (username, uuid, reason)
                 return "Could not write banlist to disk"
@@ -400,10 +416,10 @@ class Proxy(object):
                                 "reason": reason})
                 if putjsonfile(banlist, "banned-ips", self.serverpath):
                     banned = ""
-                    for i in self.wrapper.javaserver.players:
-                        player = self.wrapper.javaserver.players[i]
+                    for i in self.javaserver.players:
+                        player = self.javaserver.players[i]
                         if str(player.client.ip) == str(ipaddress):
-                            self.wrapper.javaserver.console(
+                            self.javaserver.console(
                                 "kick %s Your IP is Banned!" % player.username)
                             banned += "\n%s" % player.username
                     return "Banned ip address: %s\nPlayers kicked as " \

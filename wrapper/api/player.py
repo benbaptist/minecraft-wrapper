@@ -79,10 +79,11 @@ class Player(object):
         self.username = username
         self.loggedIn = time.time()
 
+        # TODO - clean this out.  let player objects GC with their client?
         # mcserver will set this to false later to close the thread.
+        self.abort = False
         # meanwhile, it still needs to respect wrapper halts
-        # TODO - clean this out.  let player objects GC with their client
-        self.abort = self.wrapper.halt
+        self.wrapper_signal = self.wrapper.halt
 
         # these are all MCUUID objects.. I have separated out various
         #  uses of uuid to clarify for later refractoring
@@ -211,7 +212,7 @@ class Player(object):
 
         """
         self.data.Data["logins"][int(self.loggedIn)] = time.time()
-        while not self.abort:
+        while not (self.abort or self.wrapper_signal.halt):
             timeupdate = time.time()
             if timeupdate % 60:  # Just update every 60 seconds
                 self.data.Data["logins"][int(self.loggedIn)] = int(time.time())

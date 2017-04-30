@@ -29,6 +29,8 @@ class ConsolePlayer(object):
         self.loggedIn = time.time()
         self.wrapper = wrapper
         self.log = wrapper.log
+
+        # if self.abort is ever used, must follow `self.abort.halt`
         self.abort = wrapper.halt
 
         # these map minecraft color codes to "approximate" ANSI
