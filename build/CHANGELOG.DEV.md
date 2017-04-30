@@ -1,6 +1,9 @@
-Build 209 (next build)
+Build 210 (next build)
 - player to player TP - Add inter-dimensional TP (1.8+) api
   Community Input enhancement proxy mode
+
+Build 209
+- changed api/helpers _test() to use assertions for tests. Refactor helpers some.
 
 Build 208
 - Remove readchar package and implement simpler (better IMHO)
@@ -118,7 +121,7 @@ Build 180 Version [0.10.0]
     time now internally, anyway) by assigning a NULL type to the missing field.  For example,
     CHAT_MESSAGE is parsed using [JSON, BYTE] in 1.8 and later and [STRING, NULL]
     prior to 1.8.
-- slit proxy modules even more. mcpackets split into client-bound and server-bound.
+- split proxy modules even more. mcpackets split into client-bound and server-bound.
     moved (and renamed) wrapper/utils/pkt_datatypes.py to proxy/constants.py.
 
 Build 179
