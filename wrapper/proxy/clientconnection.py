@@ -78,7 +78,7 @@ class Client(object):
         # client will reset this later, if need be..
         self.clientversion = self.serverversion
         # default server port (to this wrapper's server)
-        self.server_port = self.proxy.server_port
+        self.serverport = self.proxy.serverport
         self.onlinemode = self.proxy.config["online-mode"]
 
         # packet stuff
@@ -391,7 +391,7 @@ class Client(object):
         self.server_connection.packet.sendpkt(
             self.server_connection.pktSB.HANDSHAKE,
             [VARINT, STRING, USHORT, VARINT],
-            (self.clientversion, server_addr, self.server_port,
+            (self.clientversion, server_addr, self.serverport,
              self.proxy.LOGIN))
 
         # send the login request (server is offline, so it will
@@ -863,8 +863,8 @@ class Client(object):
         }
 
         # add Favicon, if it exists
-        if self.proxy.serverIcon:
-            self.MOTD["favicon"] = self.proxy.serverIcon
+        if self.proxy.server_icon:
+            self.MOTD["favicon"] = self.proxy.server_icon
 
         # add Forge information, if applicable.
         if self.proxy.forge:

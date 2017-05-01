@@ -119,7 +119,6 @@ class MCServer(object):
         # -1 until a player logs on and server sends a time update
         self.timeofday = -1
         self.onlineMode = True
-        self.serverIcon = None
 
         # get OPs
         self.ownernames = {}
@@ -675,6 +674,14 @@ class MCServer(object):
             if self.version_compute > 10705 and self.protocolversion < 0:
                 self.protocolversion = 5
                 self.wrapper.api.registerPermission("mc1.7.6", value=True)
+            if self.version_compute < 10702 and self.wrapper.proxymode:
+                self.log.warning("\nProxy mode cannot run because the "
+                                 "server is a pre-Netty version:\n\n"
+                                 "http://wiki.vg/Protocol_version_numbers"
+                                 "#Versions_before_the_Netty_rewrite\n\n"
+                                 "Server will continue in non-proxy mode.")
+                self.wrapper.disable_proxymode()
+                return
 
             self.refresh_ops()
 

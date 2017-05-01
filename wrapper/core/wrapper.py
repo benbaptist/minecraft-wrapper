@@ -722,19 +722,27 @@ class Wrapper(object):
 
         # requests will be set to False if requests or cryptography is missing.
         if proxy.requests:
-            if self.javaserver.version_compute < 10702:
-                self.log.warning("\nProxy mode cannot start because the "
-                                 "server is a pre-Netty version:\n\n"
-                                 "http://wiki.vg/Protocol_version_numbers"
-                                 "#Versions_before_the_Netty_rewrite\n\n"
-                                 "Server will continue in non-proxy mode.")
-                self.disable_proxymode()
-                return
+
+            # wait for server to start
+            timer = 0
+            while self.javaserver.state < STARTED:
+                timer += 1
+                time.sleep(.1)
+                if timer > 1200:
+                    self.log.warning(
+                        "Proxy mode did not detect a started server within 2"
+                        " minutes.  Disabling proxy mode because something is"
+                        " wrong.")
+                    self.disable_proxymode()
+
+            self.proxy.serverport = self.javaserver.server_port
+
             if self.proxy.proxy_port == self.javaserver.server_port:
                 self.log.warning("Proxy mode cannot start because the wrapper"
                                  " port is identical to the server port.")
                 self.disable_proxymode()
                 return
+
             proxythread = threading.Thread(target=self.proxy.host, args=())
             proxythread.daemon = True
             proxythread.start()

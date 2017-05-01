@@ -146,12 +146,12 @@ class Proxy(object):
 
         self.privateKey = encryption.generate_key_pair()
         self.publicKey = encryption.encode_public_key(self.privateKey)
-
+        self.server_icon = None
         if os.path.exists("%s/server-icon.png" % self.serverpath):
             with open("%s/server-icon.png" % self.serverpath, "rb") as f:
                 theicon = f.read()
                 iconencoded = base64.standard_b64encode(theicon)
-                self.serverIcon = b"data:image/png;base64," + iconencoded
+                self.server_icon = b"data:image/png;base64," + iconencoded
 
     def host(self):
         """ the caller must ensure host() is not called before the 
@@ -209,7 +209,8 @@ class Proxy(object):
 
     def pollserver(self, host="localhost", port=None):
         if port is None:
-            port = self.serverport
+            port = int(self.serverport)
+        print(self.serverport)
         server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
         # server_sock = socket.socket()
