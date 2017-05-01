@@ -73,7 +73,7 @@ class ServerConnection(object):
     def _refresh_server_version(self):
         """Get serverversion for mcpackets use"""
 
-        self.version = self.proxy.protocol_version
+        self.version = self.client.wrapper.javaserver.protocolVersion
         self.pktSB = mcpackets_sb.Packets(self.version)
         self.pktCB = mcpackets_cb.Packets(self.version)
         self.parse_cb = ParseCB(self, self.packet)
@@ -96,8 +96,8 @@ class ServerConnection(object):
         self.state = self.proxy.LOGIN
         # Connect to a local server address
         if self.ip is None:
-            self.server_socket.connect(("localhost",
-                                        self.proxy.server_port))
+            self.server_socket.connect((
+                "localhost", self.client.wrapper.javaserver.server_port))
 
         # Connect to some specific server address
         else:

@@ -10,8 +10,6 @@ import threading
 import time
 import json
 import requests
-import os
-import base64
 
 from api.helpers import getjsonfile, putjsonfile, find_in_json
 from api.helpers import epoch_to_timestr, read_timestr
@@ -93,8 +91,6 @@ class Proxy(object):
         #  happy.  The actual socket connection is created later.
         self.proxy_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.usingSocket = False
-        self.protocol_version = -1
-        self.version = ""
 
         self.clients = []
         self.skins = {}
@@ -146,17 +142,14 @@ class Proxy(object):
 
         self.privateKey = encryption.generate_key_pair()
         self.publicKey = encryption.encode_public_key(self.privateKey)
-        self.server_icon = None
-        if os.path.exists("%s/server-icon.png" % self.serverpath):
-            with open("%s/server-icon.png" % self.serverpath, "rb") as f:
-                theicon = f.read()
-                iconencoded = base64.standard_b64encode(theicon)
-                self.server_icon = b"data:image/png;base64," + iconencoded
 
     def host(self):
         """ the caller must ensure host() is not called before the 
         server is fully up and running."""
         # get the protocol version from the server
+        while not self.javaserver.state == 2:
+            time.sleep(.2)
+
         try:
             self.pollserver()
         except Exception as e:
@@ -209,8 +202,8 @@ class Proxy(object):
 
     def pollserver(self, host="localhost", port=None):
         if port is None:
-            port = int(self.serverport)
-        print(self.serverport)
+            port = self.javaserver.server_port
+
         server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
         # server_sock = socket.socket()
@@ -221,14 +214,14 @@ class Proxy(object):
         packet.send(0x00, "varint|string|ushort|varint", (5, host, port, 1))
         packet.send(0x00, "", ())
         packet.flush()
-        self.protocol_version = -1
+        self.javaserver.protocolVersion = -1
         while True:
             pkid, original = packet.grabpacket()
             if pkid == 0x00:
                 data = json.loads(packet.read("string:response")["response"])
-                self.protocol_version = data["version"][
+                self.javaserver.protocolVersion = data["version"][
                     "protocol"]
-                self.version = data["version"]["name"]
+                self.javaserver.version = data["version"]["name"]
                 if "modinfo" in data and data["modinfo"]["type"] == "FML":
                     self.forge = True
                     self.mod_info["modinfo"] = data["modinfo"]

@@ -93,7 +93,8 @@ class Minecraft(object):
         if not self.wrapper.proxymode:
             return False
 
-        version = self.wrapper.proxy.protocol_version
+        server = self.getServer()
+        version = server.protocolVersion
 
         if packets == "CB":
             return ClientBound(version)

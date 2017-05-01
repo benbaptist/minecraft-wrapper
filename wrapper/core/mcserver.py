@@ -25,6 +25,7 @@ import os
 import json
 import ctypes
 import platform
+import base64
 
 try:
     import resource
@@ -105,8 +106,14 @@ class MCServer(object):
         self.worldname = None
         self.worldSize = 0
         self.maxPlayers = 20
+        self.serverIcon = None
+
         # -1 until proxy mode checks the server's MOTD on boot
-        self.protocolversion = -1
+        self.protocolVersion = -1
+
+        # this is string name of the version, collected by console output
+        self.version = None
+
         # a comparable number = x0y0z, where x, y, z = release,
         #  major, minor, of version.
         self.version_compute = 0
@@ -425,6 +432,14 @@ class MCServer(object):
         # Read server.properties and extract some information out of it
         # the PY3.5 ConfigParser seems broken.  This way was much more
         # straightforward and works in both PY2 and PY3
+
+        # Load server icon
+        if os.path.exists("%s/server-icon.png" % self.serverpath):
+            with open("%s/server-icon.png" % self.serverpath, "rb") as f:
+                theicon = f.read()
+                iconencoded = base64.standard_b64encode(theicon)
+                self.serverIcon = b"data:image/png;base64," + iconencoded
+
         self.properties = config_to_dict_read(
             "server.properties", self.serverpath)
 
@@ -557,7 +572,7 @@ class MCServer(object):
         """
         ops = False
         # (4 = PROTOCOL_1_7 ) - 1.7.6 or greater use ops.json
-        if self.protocolversion > 4:
+        if self.protocolVersion > 4:
             ops = getjsonfile("ops", self.serverpath, encodedas=self.encoding)
         if not ops:
             # try for an old "ops.txt" file instead.
@@ -663,16 +678,16 @@ class MCServer(object):
                     break
 
             line_words = buff.split(' ')[self.prepends_offset:]
-            version = getargs(line_words, 4)
-            semantics = version.split(".")
+            self.version = getargs(line_words, 4)
+            semantics = self.version.split(".")
             release = get_int(getargs(semantics, 0))
             major = get_int(getargs(semantics, 1))
             minor = get_int(getargs(semantics, 2))
             self.version_compute = minor + (major * 100) + (release * 10000)
 
             # 1.7.6 (protocol 5) is the cutoff where ops.txt became ops.json
-            if self.version_compute > 10705 and self.protocolversion < 0:
-                self.protocolversion = 5
+            if self.version_compute > 10705 and self.protocolVersion < 0:
+                self.protocolVersion = 5
                 self.wrapper.api.registerPermission("mc1.7.6", value=True)
             if self.version_compute < 10702 and self.wrapper.proxymode:
                 self.log.warning("\nProxy mode cannot run because the "

@@ -74,11 +74,12 @@ class Client(object):
         self.verifyToken = encryption.generate_challenge_token()
         self.serverID = encryption.generate_server_id().encode('utf-8')
         self.MOTD = {}
-        self.serverversion = self.proxy.protocol_version
+        self.serverversion = self.wrapper.javaserver.protocolVersion
+
         # client will reset this later, if need be..
         self.clientversion = self.serverversion
         # default server port (to this wrapper's server)
-        self.serverport = self.proxy.serverport
+        self.serverport = self.wrapper.javaserver.server_port
         self.onlinemode = self.proxy.config["online-mode"]
 
         # packet stuff
@@ -475,7 +476,7 @@ class Client(object):
     def _refresh_server_version(self):
         # Get serverversion for mcpackets use
         try:
-            self.serverversion = self.proxy.protocol_version
+            self.serverversion = self.wrapper.javaserver.protocolVersion
         except AttributeError:
             self.serverversion = -1
 
@@ -844,7 +845,7 @@ class Client(object):
             if len(sample) > 5:
                 break
         reported_version = self.serverversion
-        reported_name = self.proxy.version
+        reported_name = self.wrapper.javaserver.version
         motdtext = self.wrapper.javaserver.motd
         if self.clientversion >= PROTOCOL_1_8START:
             motdtext = json.loads(processcolorcodes(motdtext.replace(
@@ -863,8 +864,8 @@ class Client(object):
         }
 
         # add Favicon, if it exists
-        if self.proxy.server_icon:
-            self.MOTD["favicon"] = self.proxy.server_icon
+        if self.wrapper.javaserver.serverIcon:
+            self.MOTD["favicon"] = self.wrapper.javaserver.serverIcon
 
         # add Forge information, if applicable.
         if self.proxy.forge:
