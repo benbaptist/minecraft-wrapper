@@ -754,7 +754,7 @@ def _handle_chat_items(items):
     extras = ""
 
     # if "text" in items and len(items["text"]) > 0:
-        # only process codes it there is associated text
+    #  only process codes it there is associated text
     if "color" in items:
         extras += _getformatcode(items["color"])
 

@@ -1,6 +1,13 @@
-Build 211 (next build)
+Build 212 (next build)
 - player to player TP - Add inter-dimensional TP (1.8+) api
   Community Input enhancement proxy mode
+
+Build 211 (PROBABLY broke now due to references changing)
+- Monstrous refactor of proxy, separated proxy into several groups:
+ - base.py file for main Proxy class
+ - client, server, packets, utils, entity groups.
+- Entity control moved to Proxy, where it belongs
+- All wrapper and javaserver references finally removed.
 
 Build 210 - Fully modularize and make Proxy an independent system:
 - group encryption with proxy package (the only place it is used!).

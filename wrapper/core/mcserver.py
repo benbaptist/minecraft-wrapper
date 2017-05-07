@@ -13,9 +13,7 @@ from api.helpers import getjsonfile, getfileaslines, config_to_dict_read
 
 from api.base import API
 from api.world import World
-from api.entity import EntityControl
-
-from core.exceptions import UnsupportedOSException, InvalidServerStartedError
+from api.player import Player
 
 import time
 import threading
@@ -84,8 +82,7 @@ class MCServer(object):
         self.rebootWarnings = 0
         self.lastsizepoll = 0
         self.console_output_data = []
-        self.spammy_stuff = ["found nothing", "vehicle of", "Wrong location!",
-                             "Tried to add entity"]
+
         self.server_muted = False
         self.queued_lines = []
         self.server_stalled = False
@@ -116,6 +113,8 @@ class MCServer(object):
         if self.config["General"]["timed-reboot"] or self.config[
                 "Web"]["web-enabled"]:
             self.api.registerEvent("timer.second", self.eachsecond)
+
+        self.api.registerEvent("proxy.console", self._console_event)
 
     def init(self):
         """ Start up the listen threads for reading server console
@@ -286,6 +285,7 @@ class MCServer(object):
         """Forcefully kill the server. It will auto-restart if set
         in the configuration file.
         """
+        self.vitals.consolecommand = print
         if self.vitals.state in (STOPPING, OFF):
             self.log.warning("The server is already dead, my friend...")
             return
@@ -305,17 +305,18 @@ class MCServer(object):
         """
         if self.vitals.state != OFF:
             if os.name == "posix":
+                self.vitals.consolecommand = print
                 self.log.info("Freezing server with reason: %s", reason)
                 self.broadcast("&c%s" % reason)
                 time.sleep(0.5)
                 self.changestate(FROZEN)
                 os.system("kill -STOP %d" % self.proc.pid)
             else:
-                raise UnsupportedOSException(
+                raise OSError(
                     "Your current OS (%s) does not support this"
                     " command at this time." % os.name)
         else:
-            raise InvalidServerStartedError(
+            raise EnvironmentError(
                 "Server is not started. You may run '/start' to boot it up.")
 
     def unfreeze(self):
@@ -330,12 +331,13 @@ class MCServer(object):
                 self.broadcast("&aServer unfrozen.")
                 self.changestate(STARTED)
                 os.system("kill -CONT %d" % self.proc.pid)
+                self.vitals.consolecommand = self.console
             else:
-                raise UnsupportedOSException(
+                raise OSError(
                     "Your current OS (%s) does not support this command"
                     " at this time." % os.name)
         else:
-            raise InvalidServerStartedError(
+            raise EnvironmentError(
                 "Server is not started. Please run '/start' to boot it up.")
 
     def broadcast(self, message, who="@a"):
@@ -364,14 +366,15 @@ class MCServer(object):
 
         # place to store EID if proxy is not fully connected yet.
         self.vitals.player_eids[username] = [eid, location]
-        if username not in self.vitals.players:
-            self.vitals.players[username] = Player(username, self.wrapper)
+        if username not in self.wrapper.players:
+            self.wrapper.players[username] = Player(username, self.wrapper)
         if self.wrapper.proxy:
             playerclient = self.getplayer(username).getClient()
             if playerclient:
                 playerclient.server_connection.eid = eid
                 playerclient.position = location
-        self.vitals.players[username].loginposition = self.vitals.player_eids[username][1]
+        # TODO - print what this produces (self.vitals.player_eids[username][1])
+        self.wrapper.players[username].loginposition = self.vitals.player_eids[username][1]
         self.wrapper.events.callevent(
             "player.login",
             {"player": self.getplayer(username)})
@@ -387,16 +390,16 @@ class MCServer(object):
             self.wrapper.proxy.removestaleclients()
 
         # remove a hub player or not??
-        if players_name in self.vitals.players:
-            self.vitals.players[players_name].abort = True
+        if players_name in self.wrapper.players:
+            self.wrapper.players[players_name].abort = True
             del self.vitals.players[players_name]
 
     def getplayer(self, username):
         """Returns a player object with the specified name, or
         False if the user is not logged in/doesn't exist.
         """
-        if username in self.vitals.players:
-            return self.vitals.players[username]
+        if username in self.wrapper.players:
+            return self.wrapper.players[username]
         return False
 
     def reloadproperties(self):
@@ -582,7 +585,7 @@ class MCServer(object):
         currently only works for *NIX based systems.
         """
         if not resource or not os.name == "posix" or self.proc is None:
-            raise UnsupportedOSException(
+            raise OSError(
                 "Your current OS (%s) does not support"
                 " this command at this time." % os.name)
         try:
@@ -715,7 +718,7 @@ class MCServer(object):
 
         # check for server console spam before printing to wrapper console
         server_spaming = False
-        for things in self.spammy_stuff:
+        for things in self.vitals.spammy_stuff:
             if things in buff:
                 server_spaming = True
 
@@ -743,8 +746,7 @@ class MCServer(object):
         elif "Preparing level" in buff:
             self.vitals.worldname = getargs(line_words, 2).replace('"', "")
             self.world = World(self.vitals.worldname, self)
-            if self.wrapper.proxymode:
-                self.entity_control = EntityControl(self)
+
         # Player Message
         if getargs(line_words, 0)[0] == "<":
             name = self.stripspecial(getargs(line_words, 0)[1:-1])
@@ -854,3 +856,12 @@ class MCServer(object):
                     for f in os.listdir(i[0]):
                         size += os.path.getsize(os.path.join(i[0], f))
                 self.worldSize = size
+
+    def _console_event(self, payload):
+        # self.api.registerEvent("proxy.console", self._console_event)
+
+        # self.proxy.eventhandler.callevent(
+        #     "proxy.console", {"command": console_command})
+
+        command = payload["command"]
+        self.console(command)

@@ -156,6 +156,8 @@ using 'self.api.helpers'
     the & symbol, and returns a JSON chat object. message received
     should be string.
 
+    upgraded to allow inserting URLS by 
+
     :arg messagestring: String argument with "&" codings.
 
     :returns: Json dumps() string.
@@ -257,4 +259,12 @@ using 'self.api.helpers'
      the file is not found.  Adds the entry to end of file if
      it is missing.
 
+    
+
+-  chattocolorcodes(jsondata)
+ Convert a chat dictionary to a string with '§_' codes
+    
+    :jsondata: Dictionary of minecraft chat 
+    :returns: a string formatted with '§_' codes
+    
     

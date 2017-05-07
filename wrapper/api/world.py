@@ -118,7 +118,7 @@ class Chunk(object):
 
     """
     def __init__(self, bytesarray, x, z):
-        self.ids = struct.unpack("<" + ("H" * (len(bytesarray) / 2)), bytesarray)
+        self.ids = struct.unpack("<" + ("H" * (len(bytesarray) // 2)), bytesarray)
         self.x = x
         self.z = z
         # for i,v in enumerate(bytesarray):

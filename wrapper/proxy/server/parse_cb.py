@@ -25,13 +25,13 @@ class ParseCB(object):
     """
     def __init__(self, server, packet):
         self.server = server
+        self.log = self.server.log
         self.client = server.client
         self.pktCB = self.server.pktCB
         self.pktSB = self.server.pktSB
-        self.ent_control = self.server.client.wrapper.javaserver.entity_control
         self.proxy = server.client.proxy
-        self.log = self.proxy.log
         self.packet = packet
+        self.ent_control = self.proxy.entity_control
 
     def parse_play_combat_event(self):
         """ just parsed for testing for now """
@@ -66,7 +66,7 @@ class ParseCB(object):
             data = message
 
         payload = self.proxy.eventhandler.callevent(
-            "player.chatbox", {"player": self.client.getplayerobject(),
+            "player.chatbox", {"playername": self.client.username,
                                "json": data})
         '''
         :decription: Chat message sent from server to the client.
@@ -116,7 +116,7 @@ class ParseCB(object):
         data = self.packet.readpkt([POSITION])
         self.client.position = data[0]
         self.proxy.eventhandler.callevent(
-            "player.spawned", {"player": self.client.getplayerobject(),
+            "player.spawned", {"playername": self.client.username,
                                "position": data})
         '''
         :decription: When server advises the client of its' (player's)
@@ -156,10 +156,9 @@ class ParseCB(object):
         if data[0] == self.client.server_eid:
             self.proxy.eventhandler.callevent(
                 "player.usebed",
-                {"player": self.client.username, "position": data[1]})
+                {"playername": self.client.username, "position": data[1]})
             '''
             :decription: When server sends client to bed mode.
-             CHANGE! - does not send player object (just player name)
 
             :Event: Notification only.
             '''
@@ -312,15 +311,11 @@ class ParseCB(object):
                 leash = False
         entityeid = data[0]  # rider, leash holder, etc
         vehormobeid = data[1]  # vehicle, leashed entity, etc
-        player = self.proxy.getplayerby_eid(entityeid)
-
-        if player is None:
-            return True
 
         if entityeid == self.client.server_eid:
             if not leash:
                 self.proxy.eventhandler.callevent(
-                    "player.unmount", {"player": player,
+                    "entity.unmount", {"playername": self.client.username,
                                        "vehicle_id": vehormobeid,
                                        "leash": leash})
                 '''
@@ -328,11 +323,11 @@ class ParseCB(object):
 
                 :Event: Notification only.
                 '''
-                self.log.debug("player unmount called for %s", player.username)
+                self.log.debug("player unmount called for %s", self.client.username)
                 self.client.riding = None
             else:
                 self.proxy.eventhandler.callevent(
-                    "player.mount", {"player": player,
+                    "entity.mount", {"playername": self.client.username,
                                      "vehicle_id": vehormobeid,
                                      "leash": leash})
                 '''
@@ -342,7 +337,7 @@ class ParseCB(object):
                 '''
                 self.client.riding = vehormobeid
                 self.log.debug("player mount called for %s on eid %s",
-                               player.username, vehormobeid)
+                               self.client.username, vehormobeid)
                 if not self.ent_control:
                     return
                 entupd = self.ent_control.getEntityByEID(

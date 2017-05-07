@@ -317,7 +317,7 @@ class Commands(object):
             player.message(
                 "&cProxy mode is off - Entity control is not enabled.")
 
-        entitycontrol = self.wrapper.javaserver.entity_control
+        entitycontrol = self.wrapper.proxy.entity_control
         if not entitycontrol:
             # only console could be the source:
             readout("ERROR - ",

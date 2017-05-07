@@ -701,8 +701,9 @@ class Client(object):
         #                             "name": self.username})
         #                        with open("whitelist.json", "w") as f:
         #                            f.write(json.dumps(jsonwhitelistdata))
-        #                        self.servervitals.console(
-        #                            "whitelist reload")
+        #                        ##self.XXXservervitalsXXX.console(
+        #                            "##whitelist reload")
+        #                        => self.proxy.eventhandler.callevent("proxy.console", {"command": "whitelist reload"})
         #                        with open("%s/.wrapper-proxy-whitelist-"
         #                                  "migrate" % worldname, "a") as f:
         #                            f.write("%s %s\n" % (

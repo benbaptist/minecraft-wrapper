@@ -15,6 +15,7 @@ from api.helpers import epoch_to_timestr, read_timestr
 from api.helpers import isipv4address
 
 from proxy.utils import mcuuid
+from proxy.entity.entitycontrol import EntityControl
 
 try:
     import requests
@@ -36,11 +37,11 @@ class NullEventHandler(object):
     def __init__(self):
         pass
 
-    def callevent(self, *args):
+    def callevent(self, event, payload):
         """An event handler must have this method that expects
         two positional arguments:
-         :Arg1: The string name of the event.
-         :Arg2: A dictionary of items describing the event (varies 
+         :event: The string name of the event.
+         :payload: A dictionary of items describing the event (varies 
           with event.
         """
         pass
@@ -62,6 +63,7 @@ class ServerVitals(object):
     """This class permits sharing of server information between
     the caller (such as a Wrapper instance) and proxy."""
     def __init__(self):
+
         # operational info
         self.serverpath = ""
         self.state = 0
@@ -74,6 +76,8 @@ class ServerVitals(object):
         self.entity_control = None
         # -1 until a player logs on and server sends a time update
         self.timeofday = -1
+        self.spammy_stuff = ["found nothing", "vehicle of", "Wrong location!",
+                             "Tried to add entity"]
 
         # PROPOSE
         self.clients = []
@@ -97,9 +101,6 @@ class ServerVitals(object):
         # a comparable number = x0y0z, where x, y, z = release,
         #  major, minor, of version.
         self.version_compute = 0
-
-    def console(self):
-        pass
 
 
 class ProxyConfig(object):
@@ -131,7 +132,7 @@ class ProxyConfig(object):
 
 class Proxy(object):
     def __init__(self, termsignal, config, servervitals, loginstance,
-                 usercache, eventhandler=NullEventHandler):
+                 usercache, eventhandler):
 
         self.srv_data = servervitals
         self.config = config.proxy
@@ -212,6 +213,8 @@ class Proxy(object):
         self.privateKey = encryption.generate_key_pair()
         self.publicKey = encryption.encode_public_key(self.privateKey)
 
+        self.entity_control = None
+
     def host(self):
         """ the caller should ensure host() is not called before the 
         server is fully up and running."""
@@ -241,6 +244,9 @@ class Proxy(object):
             self.usingSocket = True
             self.proxy_socket.listen(5)
 
+        # proxy now up and running, bound to server port.
+        self.entity_control = EntityControl(self)
+
         # accept clients and start their threads
         while not (self.abort or self.caller.halt):
             try:
@@ -263,6 +269,9 @@ class Proxy(object):
             t.start()
             # self.srv_data.clients.append(client)  # append later (login)
             self.removestaleclients()
+
+        # received self.abort or caller.halt signal...
+        self.entity_control._abortep = True
 
     def removestaleclients(self):
         """only removes aborted clients"""
@@ -299,25 +308,6 @@ class Proxy(object):
                 break
         server_sock.close()
 
-    def getplayerby_username(self, username):
-        # TODO - move out of proxy and into api.player
-        """
-        :rtype: var
-        this is only to quiet complaints PyCharm makes because in places
-         like this we return booleans sometimes when we can't get valid data
-         and our calling methods check for these booleans.
-        """
-        for client in self.srv_data.clients:
-            if client.username == username:
-                try:
-                    return self.srv_data.players[client.username]
-                except Exception as e:
-                    self.log.error("getplayerby_username failed to get "
-                                   "player %s: \n%s", username, e)
-                    return False
-        self.log.debug("Failed to get any player by name of: %s", username)
-        return False
-
     def getclientbyofflineserveruuid(self, uuid):
         """
         :param uuid: - MCUUID
@@ -334,25 +324,6 @@ class Proxy(object):
         self.log.debug("getclientbyofflineserveruuid failed: \n %s", attempts)
         self.log.debug("POSSIBLE CLIENTS: \n %s", self.srv_data.clients)
         return False  # no client
-
-    def getplayerby_eid(self, eid):
-        # TODO - move out of proxy and into api.player
-        """
-        :rtype: var
-        this is only to quiet complaints PyCharm makes because in places
-         like this we return booleans sometimes when we can't get valid data
-         and our calling methods check for these booleans.
-        """
-        for client in self.srv_data.clients:
-            if client.server_eid == eid:
-                try:
-                    return self.srv_data.players[client.username]
-                except Exception as e:
-                    self.log.error("getplayerby_eid failed to get "
-                                   "player %s: \n%s", client.username, e)
-                    return False
-        self.log.debug("Failed to get any player by client Eid: %s", eid)
-        return False
 
     def banplayer(self, playername, reason="Banned by an operator",
                   source="Wrapper", expires="forever"):
@@ -417,7 +388,11 @@ class Proxy(object):
                                 "expires": expiration,
                                 "reason": reason})
                 if putjsonfile(banlist, "banned-players", self.srv_data.serverpath):
-                    self.srv_data.console("kick %s Banned: %s" % (name, reason))
+
+                    console_command = "kick %s Banned: %s" % (name, reason)
+                    self.eventhandler.callevent("proxy.console",
+                                                {"command": console_command})
+
                     return "Banned %s: %s" % (name, reason)
                 return "Could not write banlist to disk"
         else:
@@ -461,7 +436,11 @@ class Proxy(object):
                                 "reason": reason})
                 if putjsonfile(banlist, "banned-players", self.srv_data.serverpath):
                     self.log.info("kicking %s... %s", username, reason)
-                    self.srv_data.console("kick %s Banned: %s" % (username, reason))
+
+                    console_command = "kick %s Banned: %s" % (username, reason)
+                    self.eventhandler.callevent("proxy.console",
+                                                {"command": console_command})
+
                     return "Banned %s: %s - %s" % (username, uuid, reason)
                 return "Could not write banlist to disk"
         else:
@@ -508,8 +487,10 @@ class Proxy(object):
                     for client in self.srv_data.clients:
                         if client.ip == str(ipaddress):
 
-                            self.srv_data.console(
-                                "kick %s Your IP is Banned!" % client.username)
+                            console_command = "kick %s Your IP is Banned!" % client.username
+                            self.eventhandler.callevent("proxy.console",
+                                                {"command": console_command})
+
                             banned += "\n%s" % client.username
                     return "Banned ip address: %s\nPlayers kicked as " \
                            "a result:%s" % (ipaddress, banned)

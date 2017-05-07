@@ -10,10 +10,10 @@ from __future__ import unicode_literals
 import json
 import os
 from core.nbt import NBTFile
-from core.entities import Items
+from proxy.entity.entityclasses import Items
 from api.helpers import scrub_item_value
-from proxy.mcpackets_cb import Packets as ClientBound
-from proxy.mcpackets_sb import Packets as ServerBound
+from proxy.packets.mcpackets_cb import Packets as ClientBound
+from proxy.packets.mcpackets_sb import Packets as ServerBound
 
 
 # noinspection PyPep8Naming
@@ -40,6 +40,14 @@ class Minecraft(object):
 
         blockdata = Items()
         self.blocks = blockdata.itemslist
+
+    @property
+    def isServerStarted(self):
+        """
+        Return a boolean indicating if the server is
+        fully booted or not.
+        """
+        return self.wrapper.servervitals.state == 2
 
     def configWrapper(self, section, config_item, new_value, reload_file=False):
         """
@@ -77,24 +85,11 @@ class Minecraft(object):
         self.log.error("API.Minecraft configWrapper failed.")
         return False
 
-    def isServerStarted(self):
-        # should this be a property? (one-liner doc string suggests so..)
-        """
-        Return a boolean indicating if the server is
-        fully booted or not.
-
-        """
-        if self.getServer():
-            if self.getServer().state == 2:
-                return True
-        return False
-
     def getServerPackets(self, packets="CB"):
         if not self.wrapper.proxymode:
             return False
 
-        server = self.getServer()
-        version = server.protocolVersion
+        version = self.wrapper.proxy.srv_data.protocolVersion
 
         if packets == "CB":
             return ClientBound(version)
@@ -116,8 +111,8 @@ class Minecraft(object):
         """
         # 0 = ticks, 1 = Military, else = civilian AM/PM, return -1 if no one
         # on or server not started
-        if self.isServerStarted() is True:
-            servertimeofday = self.getServer().timeofday
+        if self.isServerStarted is True and self.wrapper.proxymode:
+            servertimeofday = self.wrapper.proxy.srv_data.timeofday
             ticktime = servertimeofday % 24000
             if dttmformat == 0 or ticktime == -1:
                 return ticktime
@@ -218,7 +213,7 @@ class Minecraft(object):
         Returns a list of the currently connected players.
 
         """
-        return self.getServer().players
+        return self.wrapper.players
 
     def getEntityControl(self):
         """
@@ -258,7 +253,10 @@ class Minecraft(object):
 
 
         """
-        return self.wrapper.javaserver.entity_control
+        if self.wrapper.proxymode:
+            return self.wrapper.proxy.entity_control
+
+        return None
 
     def getPlayer(self, username=""):
         """
@@ -271,9 +269,30 @@ class Minecraft(object):
 
         """
         try:
-            return self.wrapper.javaserver.players[str(username)]
+            return self.wrapper.players[str(username)]
         except Exception as e:
             self.log.error("No such player %s is logged in:\n%s", username, e)
+
+    def getplayerby_eid(self, eid):
+        """
+        Returns the player object of the specified logged-in player.
+        Will raise an exception if the player is not logged in.
+
+        :arg eid: EID of the player
+
+        :returns: The Player Class object for the specified EID.
+         If the EID is not a player or is not found, returns False
+        """
+        for client in self.wrapper.servervitals.clients:
+            if client.server_eid == eid:
+                try:
+                    return self.wrapper.players[client.username]
+                except Exception as e:
+                    self.log.debug("getplayerby_eid failed to get "
+                                   "player %s: \n%s", client.username, e)
+                    return False
+        self.log.debug("Failed to get any player by client Eid: %s", eid)
+        return False
 
     def getPlayerDat(self, name):
         pass
@@ -598,7 +617,7 @@ class Minecraft(object):
 
         """
         if not worldname:
-            worldname = self.wrapper.javaserver.worldname
+            worldname = self.wrapper.servervitals.worldname
         if not worldname:
             raise Exception("Server Uninitiated")
         f = NBTFile("%s/%s/level.dat" % (self.serverpath, worldname), "rb")
@@ -661,7 +680,7 @@ class Minecraft(object):
         Gets the server's path.
 
         """
-        return self.wrapper.javaserver.serverpath
+        return self.wrapper.servervitals.serverpath
 
     def getWorld(self):
         """
@@ -678,7 +697,7 @@ class Minecraft(object):
         Returns the world's name.
 
         """
-        return self.getServer().worldname
+        return self.wrapper.servervitals.worldname
 
     def getUuidCache(self):
         """
@@ -709,9 +728,11 @@ class Minecraft(object):
                  (proxy mode).. and only for online bans.
 
         :returns: String describing the operation's outcome.
+         If there is no proxy instance, nothing is returned.
 
         """
-        return self.wrapper.proxy.banuuid(playeruuid, reason, source, expires)
+        if self.wrapper.proxy:
+            return self.wrapper.proxy.banuuid(playeruuid, reason, source, expires)
 
     def banName(self, playername, reason="by wrapper api.", source="minecraft.api", expires=False):
         """
@@ -733,8 +754,11 @@ class Minecraft(object):
                  (proxy mode).. and only for online bans.
 
         :returns: String describing the operation's outcome.
+         If there is no proxy instance, nothing is returned.
 
         """
+        if not self.wrapper.proxy:
+            return
         useruuid = self.wrapper.uuids.getuuidbyusername(playername)
         if not useruuid:
             return self.wrapper.proxy.banuuidraw(useruuid, playername,
@@ -758,9 +782,11 @@ class Minecraft(object):
                 :expires: Optional expiration in time.time() format.
 
         :returns: String describing the operation's outcome.
+         If there is no proxy instance, nothing is returned.
 
         """
-        return self.wrapper.proxy.banip(ipaddress, reason, source, expires)
+        if self.wrapper.proxy:
+            return self.wrapper.proxy.banip(ipaddress, reason, source, expires)
 
     def pardonName(self, playername):
         """
@@ -769,9 +795,11 @@ class Minecraft(object):
         :arg playername:  Name to pardon.
 
         :returns: String describing the operation's outcome.
+         If there is no proxy instance, nothing is returned.
 
         """
-        return self.wrapper.proxy.pardonname(playername)
+        if self.wrapper.proxy:
+            return self.wrapper.proxy.pardonname(playername)
 
     def pardonUUID(self, playeruuid):
         """
@@ -780,9 +808,11 @@ class Minecraft(object):
         :arg playeruuid:  UUID to pardon
 
         :returns: String describing the operation's outcome.
+         If there is no proxy instance, nothing is returned.
 
         """
-        return self.wrapper.proxy.pardonuuid(playeruuid)
+        if self.wrapper.proxy:
+            return self.wrapper.proxy.pardonuuid(playeruuid)
 
     def pardonIp(self, ipaddress):
         """
@@ -791,9 +821,11 @@ class Minecraft(object):
         :arg ipaddress: a valid IPV4 address to pardon.
 
         :returns:  String describing the operation's outcome.
+         If there is no proxy instance, nothing is returned.
 
         """
-        return self.wrapper.proxy.pardonip(ipaddress)
+        if self.wrapper.proxy:
+            return self.wrapper.proxy.pardonip(ipaddress)
 
     def isUUIDBanned(self, uuid):
         """
@@ -803,9 +835,12 @@ class Minecraft(object):
         :arg uuid: Check if the UUID of the user is banned
 
         :returns: True or False (banned or not banned)
+         If there is no proxy instance, None is returned.
 
         """
-        return self.wrapper.proxy.isuuidbanned(uuid)
+        if self.wrapper.proxy:
+            return self.wrapper.proxy.isuuidbanned(uuid)
+        return None
 
     def isIpBanned(self, ipaddress):
         """
@@ -814,7 +849,11 @@ class Minecraft(object):
 
         :arg ipaddress: Check if an ipaddress is banned
 
-        :returns: True or False (banned or not banned)
+        :returns: True or False (banned or not banned).
+         If there is no proxy instance, nothing is returned.
 
         """
-        return self.wrapper.proxy.isipbanned(ipaddress)
+        if self.wrapper.proxy:
+            return self.wrapper.proxy.isipbanned(ipaddress)
+        return None
+

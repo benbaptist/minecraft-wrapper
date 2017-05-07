@@ -9,10 +9,10 @@ import time
 import json
 import threading
 
-from proxy.mcpackets_cb import Packets as Packets_cb
-from proxy.mcpackets_sb import Packets as Packets_sb
+from proxy.packets.mcpackets_cb import Packets as Packets_cb
+from proxy.packets.mcpackets_sb import Packets as Packets_sb
 
-from proxy.constants import *
+from proxy.utils.constants import *
 from core.storage import Storage
 from api.helpers import processoldcolorcodes
 
@@ -118,9 +118,9 @@ class Player(object):
         self.loginposition = [0, 0, 0]
 
         self.client = None
-        self.clientboundPackets = Packets_cb(self.javaserver.protocolVersion)
-        self.serverboundPackets = Packets_sb(self.javaserver.protocolVersion)
-        self.clientgameversion = self.javaserver.protocolVersion
+        self.clientgameversion = self.wrapper.servervitals.protocolVersion
+        self.clientboundPackets = Packets_cb(self.clientgameversion)
+        self.serverboundPackets = Packets_sb(self.clientgameversion)
 
         self.playereid = None
 
@@ -137,7 +137,7 @@ class Player(object):
 
         if self.wrapper.proxy:
             gotclient = False
-            for client in self.wrapper.proxy.clients:
+            for client in self.wrapper.servervitals.clients:
                 if client.username == self.username:
                     self.client = client
                     # Both MCUUID objects
@@ -146,7 +146,7 @@ class Player(object):
 
                     self.ipaddress = client.ip
 
-                    # pktSB already set to self.javaserver.protocolVersion
+                    # pktSB already set to self.wrapper.servervitals.protocolVersion
                     self.clientboundPackets = self.client.pktCB
                     self.clientgameversion = self.client.clientversion
                     gotclient = True
@@ -238,7 +238,7 @@ class Player(object):
         try:
             self.client.chat_to_server("/%s" % string)
         except AttributeError:
-            if self.javaserver.protocolVersion > PROTOCOL_1_7_9:
+            if self.wrapper.servervitals.protocolVersion > PROTOCOL_1_7_9:
                 self.wrapper.javaserver.console(
                     "execute %s ~ ~ ~ %s" % (self.username, string))
             else:
@@ -299,19 +299,20 @@ class Player(object):
         working with an undefined API!)... what works in this wrapper
         version may not work in the next.
 
-        :returns: player client object
+        :returns: player client object (and possibly sets self.client
+         to the matching client).
 
         """
         if self.client is None:
-            for client in self.wrapper.proxy.clients:
-                try:
-                    if client.username == self.username:
-                        self.client = client
-                        return self.client
-                except Exception as e:
-                    self.log.warning(
-                        "getClient could not return a client for:%s"
-                        " \nException:%s", (self.username, e))
+            for client in self.wrapper.servervitals.clients:
+                if client.username == self.username:
+                    self.client = client
+                    return client
+            self.log.warning("getClient could not return a client for:%s"
+                             " \nThe usual cause of this condition"
+                             " is that no client instance exists because"
+                             " proxy is not enabled.", self.username)
+            return None
         else:
             return self.client
 
@@ -329,7 +330,12 @@ class Player(object):
          and yaw, pitch of head.
         
         """
-        return self.getClient().position + self.getClient().head
+        try:
+            return self.client.position + self.client.head
+        except AttributeError:
+            # TODO return a last TP position from console output?
+            # Non-proxy mode:
+            pass
 
     def getGamemode(self):
         """
@@ -344,7 +350,11 @@ class Player(object):
         :returns:  An Integer of the the player's current gamemode.
 
         """
-        return self.getClient().gamemode
+        try:
+            return self.client.gamemode
+        except AttributeError:
+            # Non-proxy mode:
+            pass
 
     def getDimension(self):
         """
@@ -363,7 +373,11 @@ class Player(object):
              :End: 1
 
         """
-        return self.getClient().dimension
+        try:
+            return self.client.dimension
+        except AttributeError:
+            # Non-proxy mode:
+            pass
 
     def setGamemode(self, gamemode=0):
         """
@@ -373,7 +387,11 @@ class Player(object):
 
         """
         if gamemode in (0, 1, 2, 3):
-            self.client.gamemode = gamemode
+            try:
+                self.client.gamemode = gamemode
+            except AttributeError:
+                # Non-proxy mode:
+                pass
             self.wrapper.javaserver.console(
                 "gamemode %d %s" % (gamemode, self.username))
 
@@ -387,11 +405,17 @@ class Player(object):
         :Args:
             :url: URL of resource pack
             :hashrp: resource pack hash
-
+        :return: False if not in proxy mode.
+        
         """
-        if self.getClient().version < PROTOCOL_1_8START:
+        try:
+            version = self.wrapper.proxy.srv_data.protocolVersion
+        except AttributeError:
+            # Non proxy mode
+            return False
+        if version < PROTOCOL_1_8START:
             self.client.packet.sendpkt(
-                0x3f,
+                self.clientboundPackets.PLUGIN_MESSAGE,
                 [_STRING, _BYTEARRAY],
                 ("MC|RPack", url))
         else:
@@ -429,10 +453,10 @@ class Player(object):
 
         """
 
-        if self.javaserver.operator_list in (False, None):
+        if self.wrapper.servervitals.operator_list in (False, None):
             return False  # no ops in file
         # each op item is a dictionary
-        for ops in self.javaserver.operator_list:
+        for ops in self.wrapper.servervitals.operator_list:
             if ops["uuid"] == self.serverUuid.string:
                 return ops["level"]
             if ops["name"] == self.username and not strict:
@@ -453,14 +477,20 @@ class Player(object):
             pass
 
     def actionMessage(self, message=""):
-        if self.getClient().version < PROTOCOL_1_8START:
+        try:
+            version = self.wrapper.proxy.srv_data.protocolVersion
+        except AttributeError:
+            # Non proxy mode
+            return False
+
+        if version < PROTOCOL_1_8START:
             parsing = [_STRING, _NULL]
             data = [message]
         else:
             parsing = [_STRING, _BYTE]
             data = (json.dumps({"text": processoldcolorcodes(message)}), 2)
 
-        self.getClient().packet.sendpkt(
+        self.client.packet.sendpkt(
             self.clientboundPackets.CHAT_MESSAGE,
             parsing,  # "string|byte"
             data)
@@ -478,12 +508,18 @@ class Player(object):
         :returns: Nothing
 
         """
-        if self.getClient().version > PROTOCOL_1_8START:
+        try:
+            version = self.wrapper.proxy.srv_data.protocolVersion
+        except AttributeError:
+            # Non proxy mode
+            return False
+
+        if version > PROTOCOL_1_8START:
             parsing = [_FLOAT, _VARINT, _VARINT]
         else:
             parsing = [_FLOAT, _SHORT, _SHORT]
 
-        self.getClient().packet.sendpkt(
+        self.client.packet.sendpkt(
             self.clientboundPackets.SET_EXPERIENCE,
             parsing,
             (progress, level, total))
@@ -531,20 +567,25 @@ class Player(object):
         :EntityHorse: Horse, donkey, or mule
 
         """
-
-        self.getClient().windowCounter += 1
-        if self.getClient().windowCounter > 200:
-            self.getClient().windowCounter = 2
+        try:
+            version = self.wrapper.proxy.srv_data.protocolVersion
+        except AttributeError:
+            # Non proxy mode
+            return False
+        client = self.client
+        client.windowCounter += 1
+        if client.windowCounter > 200:
+            client.windowCounter = 2
 
         # TODO Test what kind of field title is (json or text)
 
-        if not self.getClient().version > PROTOCOL_1_8START:
+        if not version > PROTOCOL_1_8START:
             return False
 
-        self.getClient().packet.sendpkt(
+        client.packet.sendpkt(
             self.clientboundPackets.OPEN_WINDOW,
             [_UBYTE, _STRING, _JSON, _UBYTE],
-            (self.getClient().windowCounter, windowtype, {"text": title},
+            (client.windowCounter, windowtype, {"text": title},
              slots))
 
         return None  # return a Window object soon
@@ -587,6 +628,12 @@ class Player(object):
         :returns: Nothing
 
         """
+        try:
+            sendclient = self.client.packet.sendpkt
+            sendserver = self.client.server.packet.sendpkt
+        except AttributeError:
+            # Non proxy mode
+            return False
 
         # TODO later add and keep track of godmode and creative- code
         # will currently unset them.
@@ -601,15 +648,13 @@ class Player(object):
         # Note in versions before 1.8, field of view is the
         # walking speed for client (still a float) Server
         # field of view is still walking speed
-        self.getClient().packet.sendpkt(
-            self.clientboundPackets.PLAYER_ABILITIES,
-            [_BYTE, _FLOAT, _FLOAT],
-            (bitfield, self.fly_speed, self.field_of_view))
+        sendclient(self.clientboundPackets.PLAYER_ABILITIES,
+                   [_BYTE, _FLOAT, _FLOAT],
+                   (bitfield, self.fly_speed, self.field_of_view))
 
-        self.getClient().server.packet.sendpkt(
-            self.serverboundPackets.PLAYER_ABILITIES,
-            [_BYTE, _FLOAT, _FLOAT],
-            (bitfield, self.fly_speed, self.field_of_view))
+        sendserver(self.serverboundPackets.PLAYER_ABILITIES,
+                   [_BYTE, _FLOAT, _FLOAT],
+                   (bitfield, self.fly_speed, self.field_of_view))
 
     def sendBlock(self, position, blockid, blockdata, sendblock=True,
                   numparticles=1, partdata=1):
@@ -647,6 +692,12 @@ class Player(object):
          http://wayback.archive.org/web/20151023030926/https://gist.github.com/thinkofdeath/5110835
 
         """
+        try:
+            sendclient = self.client.packet.sendpkt
+        except AttributeError:
+            # Non proxy
+            return False
+
         posx = position
         x = (position[0])
         y = (position[1])
@@ -672,16 +723,14 @@ class Player(object):
                               _FLOAT, _FLOAT, _FLOAT, _INT]
 
         if sendblock:
-            self.getClient().packet.sendpkt(
-                self.clientboundPackets.BLOCK_CHANGE,
-                blockparser,
-                (posx, y, x, iddata, blockdata))
+            sendclient(self.clientboundPackets.BLOCK_CHANGE,
+                       blockparser,
+                       (posx, y, x, iddata, blockdata))
         else:
-            self.getClient().packet.sendpkt(
-                self.clientboundPackets.PARTICLE,
-                particleparser,
-                (blockid, True, x + .5, y + .5, z + .5, 0, 0, 0,
-                 partdata, numparticles))
+            sendclient(self.clientboundPackets.PARTICLE,
+                       particleparser,
+                       (blockid, True, x + .5, y + .5, z + .5, 0, 0, 0,
+                        partdata, numparticles))
 
     # Inventory-related actions.
     def getItemInSlot(self, slot):
@@ -689,14 +738,22 @@ class Player(object):
         Returns the item object of an item currently being held.
 
         """
-        return self.getClient().inventory[slot]
+        try:
+            return self.client.inventory[slot]
+        except AttributeError:
+            # Non proxy
+            return False
 
     def getHeldItem(self):
         """
         Returns the item object of an item currently being held.
 
         """
-        return self.getClient().inventory[36 + self.getClient().slot]
+        try:
+            return self.client.inventory[36 + self.client.slot]
+        except AttributeError:
+            # Non proxy
+            return False
 
     # Permissions-related
     def hasPermission(self, node, another_player=False, group_match=True, find_child_groups=True):
@@ -849,6 +906,7 @@ class Player(object):
 
     # Cross-server commands
     def connect(self, address, port):
+        # TODO - WORK IN PROGRESS
         """
         Upon calling, the player object will become defunct and
         the client will be transferred to another server or wrapper

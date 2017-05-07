@@ -33,12 +33,13 @@ class EntityControl(object):
 
     """
 
-    def __init__(self, mcserver):
+    def __init__(self, proxy):
         self.chunks = {}
 
-        self._javaserver = mcserver
-        self.srvr_data = mcserver.vitals
-        self._log = mcserver.log
+        self.proxy = proxy
+        self.ent_config = self.proxy.ent_config
+        self.srvr_data = self.proxy.srv_data
+        self._log = self.proxy.log
 
         # Entities - living beings (includes XP orbs!)
         pre1_11 = self.srvr_data.version_compute < 11100
@@ -54,13 +55,13 @@ class EntityControl(object):
         self.objecttypes = objectlistobject.objectlist
 
         # load config settings
-        self.entityControl = self._javaserver.config["Entities"][
+        self.entityControl = self.ent_config[
             "enable-entity-controls"]
-        self.entityProcessorFrequency = self._javaserver.config["Entities"][
+        self.entityProcessorFrequency = self.ent_config[
             "entity-update-frequency"]
-        self.thiningFrequency = self._javaserver.config["Entities"][
+        self.thiningFrequency = self.ent_config[
             "thinning-frequency"]
-        self.startThinningThreshshold = self._javaserver.config["Entities"][
+        self.startThinningThreshshold = self.ent_config[
             "thinning-activation-threshhold"]
         # self.kill_aura_radius = self.javaserver.config["Entities"][
         #   "player-thinning-radius"]
@@ -209,14 +210,15 @@ class EntityControl(object):
         entitydesc = entityinfo["name"]
         if dropitems:
             # kill them (get loots if server has doMobDrops set to true)
-            self.srvr_data.console(
-                "kill @e[type=%s,x=%d,y=%d,z=%d,c=%s]" % (
-                    entitydesc, pos[0], pos[1], pos[2], count))
+            console_command = "kill @e[type=%s,x=%d,y=%d,z=%d,c=%s]" % (
+                    entitydesc, pos[0], pos[1], pos[2], count)
         else:
             # send them into void (no loots)
-            self.srvr_data.console(
-                "tp @e[type=%s,x=%d,y=%d,z=%d,c=%s] ~ -500 ~" % (
-                    entitydesc, pos[0], pos[1], pos[2], count))
+            console_command = "tp @e[type=%s,x=%d,y=%d,z=%d,c=%s] ~ -500 ~" % (
+                    entitydesc, pos[0], pos[1], pos[2], count)
+
+        self.proxy.eventhandler.callevent(
+            "proxy.console", {"command": console_command})
 
     def _entity_processor(self):
         self._log.debug("_entityprocessor thread started.")
@@ -232,10 +234,9 @@ class EntityControl(object):
             timer = float(0)
 
             # start looking for stale client entities
-            players = self.srvr_data.players
             playerlist = []
-            for player in players:
-                playerlist.append(player)
+            for player in self.srvr_data.clients:
+                playerlist.append(player.username)
             entity_eids = list(self.entities.keys())
             for eid in entity_eids:
                 if self.getEntityByEID(eid).clientname not in playerlist:
@@ -267,17 +268,12 @@ class EntityControl(object):
                 # don't bother, server load is light.
                 continue
 
-            # gather player list
-            players = self.srvr_data.players
-            playerlist = []
-            for player in players:
-                playerlist.append(player)
-
+            # gather client list
+            playerlist = self.srvr_data.clients
             # loop through playerlist
             for playerclient in playerlist:
-                players_position = self._javaserver.getplayer(
-                    playerclient).getPosition()
-                his_entities = self.countEntitiesInPlayer(playerclient)
+                players_position = playerclient.position
+                his_entities = self.countEntitiesInPlayer(playerclient.username)
                 if len(his_entities) < self.startThinningThreshshold:
                     # don't worry with this player, his load is light.
                     continue
@@ -291,16 +287,14 @@ class EntityControl(object):
                         counts[entity["name"]] = 1  # like {"Cow": 1}
 
                 for mob_type in counts:
-                    if "thin-%s" % mob_type in self._javaserver.config[
-                            "Entities"]:
-                        maxofthiskind = self._javaserver.config[
-                            "Entities"]["thin-%s" % mob_type]
+                    if "thin-%s" % mob_type in self.ent_config:
+                        maxofthiskind = self.ent_config["thin-%s" % mob_type]
                         if counts[mob_type] >= maxofthiskind:
 
                             # turn off console_spam
                             server_msg = "Teleported %s to" % mob_type
-                            if server_msg not in self._javaserver.spammy_stuff:
-                                self._javaserver.spammy_stuff.append(
+                            if server_msg not in self.srvr_data.spammy_stuff:
+                                self.srvr_data.spammy_stuff.append(
                                     "Teleported %s to" % mob_type)
 
                             # can't be too agressive with killing because
@@ -318,6 +312,9 @@ class EntityControl(object):
         pos = position
         # send those creatures away
         self._log.debug("killing %d %s" % (count, entity_name))
-        self.srvr_data.console(
-            "tp @e[type=%s,x=%d,y=%d,z=%d,c=%s] ~ -500 ~" %
-            (entity_name, pos[0], pos[1], pos[2], count))
+
+        console_command = "tp @e[type=%s,x=%d,y=%d,z=%d,c=%s] ~ -500 ~" % (
+            entity_name, pos[0], pos[1], pos[2], count)
+
+        self.proxy.eventhandler.callevent(
+                 "proxy.console", {"command": console_command})

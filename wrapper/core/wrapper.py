@@ -45,7 +45,6 @@ from proxy.utils.mcuuid import UUIDS
 from core.config import Config
 from core.backups import Backups
 from core.consoleuser import ConsolePlayer
-from core.exceptions import UnsupportedOSException, InvalidServerStartedError
 from core.permissions import Permissions
 # optional API type stuff
 from proxy.base import Proxy, ProxyConfig, HaltSig, ServerVitals
@@ -105,13 +104,11 @@ class Wrapper(object):
         # Read Config items
         # hard coded cursor for non-readline mode
         self.cursor = ">"
-        self.wrapper_ban_system = False
         # This was to allow alternate encodings
         self.encoding = self.config["General"]["encoding"]
         self.serverpath = self.config["General"]["server-directory"]
         self.proxymode = self.config["Proxy"]["proxy-enabled"]
         self.wrapper_onlinemode = self.config["Proxy"]["online-mode"]
-        self.wrapper_ban_system = self.proxymode and self.wrapper_ban_system
         self.auto_update_wrapper = self.config[
             "Updates"]["auto-update-wrapper"]
         self.auto_update_branch = self.config[
@@ -140,6 +137,7 @@ class Wrapper(object):
         self.plugins = Plugins(self)
         self.commands = Commands(self)
         self.events = Events(self)
+        self.players = {}
         self.registered_permissions = {}
         self.help = {}
         self.input_buff = ""
@@ -690,7 +688,7 @@ class Wrapper(object):
             # if wrapper is using proxy mode (which should be set to online)
             return self.config["Proxy"]["online-mode"]
         if self.javaserver is not None:
-            if self.javaserver.onlineMode:
+            if self.servervitals.onlineMode:
                 # if local server is online-mode
                 return True
         return False
@@ -725,7 +723,7 @@ class Wrapper(object):
 
         # wait for server to start
         timer = 0
-        while self.javaserver.state < STARTED:
+        while self.servervitals.state < STARTED:
             timer += 1
             time.sleep(.1)
             if timer > 1200:
@@ -735,9 +733,9 @@ class Wrapper(object):
                     " wrong.")
                 self.disable_proxymode()
 
-        self.proxy.serverport = self.javaserver.server_port
+        self.servervitals.consolecommand = self.servervitals.console
 
-        if self.proxy.proxy_port == self.javaserver.server_port:
+        if self.proxy.proxy_port == self.servervitals.server_port:
             self.log.warning("Proxy mode cannot start because the wrapper"
                              " port is identical to the server port.")
             self.disable_proxymode()
@@ -939,10 +937,10 @@ class Wrapper(object):
     def _freeze(self):
         try:
             self.javaserver.freeze()
-        except InvalidServerStartedError as e:
-            self.log.warning(e)
-        except UnsupportedOSException as ex:
+        except OSError as ex:
             self.log.error(ex)
+        except EnvironmentError as e:
+            self.log.warning(e)
         except Exception as exc:
             self.log.exception(
                 "Something went wrong when trying to freeze the"
@@ -951,7 +949,7 @@ class Wrapper(object):
     def _memory(self):
         try:
             get_bytes = self.javaserver.getmemoryusage()
-        except UnsupportedOSException as e:
+        except OSError as e:
             self.log.error(e)
         except Exception as ex:
             self.log.exception(
@@ -964,22 +962,24 @@ class Wrapper(object):
                     amount, units, get_bytes))
 
     def _raw(self, console_input):
+        if self.servervitals.console == print:
+            print("No console present. simply printing...")
         try:
             if len(getargsafter(console_input[1:].split(" "), 1)) > 0:
-                self.javaserver.console(
+                self.servervitals.console(
                     getargsafter(console_input[1:].split(" "), 1))
             else:
                 self.log.info("Usage: /raw [command]")
-        except InvalidServerStartedError as e:
+        except EnvironmentError as e:
             self.log.warning(e)
 
     def _unfreeze(self):
         try:
             self.javaserver.unfreeze()
-        except InvalidServerStartedError as e:
-            self.log.warning(e)
-        except UnsupportedOSException as ex:
+        except OSError as ex:
             self.log.error(ex)
+        except EnvironmentError as e:
+            self.log.warning(e)
         except Exception as exc:
             self.log.exception(
                 "Something went wrong when trying to unfreeze"

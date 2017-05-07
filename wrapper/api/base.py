@@ -8,8 +8,6 @@
 
 import time
 
-import core.exceptions as exceptions
-
 from api.minecraft import Minecraft
 from core.storage import Storage
 from api.backups import Backups
@@ -310,15 +308,13 @@ class API(object):
                       warps)
             ..
 
-        :returns:  Raises wrapper exception `exceptions.NonExistentPlugin`
-         if the specified plugin does not exist.
+        :returns:  Raises exception if the specified plugin does not exist.
 
         """
         if plugin_id in self.wrapper.plugins:
             return self.wrapper.plugins[plugin_id]["main"]
         else:
-            raise exceptions.NonExistentPlugin("Plugin %s does not exist!" %
-                                               plugin_id)
+            raise LookupError("Plugin %s does not exist!" % plugin_id)
 
     def getStorage(self, name, world=False, formatting="pickle"):
         """

@@ -32,7 +32,7 @@ PROTOCOL_1_9REL1 = 107
 
 # Between 49-106, the protocol is incredibly unstable.
 # Packet numbers changed almost weekly.  using a version in this range
-# will raise as UnsupportedMinecraftProtocol Exception
+# is not supported
 
 # start of 1.9 snapshots
 PROTOCOL_1_9START = 48

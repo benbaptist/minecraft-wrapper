@@ -1,6 +1,14 @@
+# -*- coding: utf-8 -*-
 
-**< class EntityControl(object) >**
+# Copyright (C) 2016, 2017 - BenBaptist and Wrapper.py developer(s).
+# https://github.com/benbaptist/minecraft-wrapper
+# This program is distributed under the terms of the GNU
+# General Public License, version 3 or later.
 
+
+# noinspection PyPep8Naming
+class EntityControl(object):
+    """
     .. code:: python
 
         def __init__(self, mcserver)
@@ -18,10 +26,15 @@
 
     Entity controls are established by the proxy
 
-    
+    """
 
--  getEntityByEID(self, eid)
+    # entire class is a duplicate of proxy's entity control (
+    # we are using this for the docs).
+    def __init__(self, wrapper):
+        pass
 
+    def getEntityByEID(self, eid):
+        """
         Returns the entity context or False if the specified entity
         ID doesn't exist.
 
@@ -29,16 +42,18 @@
         entity object you get could be modified or even deleted
         at any time!
 
-        
+        """
+        pass
 
--  countActiveEntities(self)
-
+    def countActiveEntities(self):
+        """
         return an integer count of all entities.
 
-        
+        """
+        pass
 
--  countEntitiesInPlayer(self, playername)
-
+    def countEntitiesInPlayer(self, playername):
+        """
         returns a list of entity info dictionaries
 
             see getEntityInfo(self, eid)
@@ -58,10 +73,11 @@
             (Pycharm return definition)
             @:type Dict
 
-        
+        """
+        pass
 
--  getEntityInfo(self, eid)
-
+    def getEntityInfo(self, eid):
+        """
         Get a dictionary of info on the specified EID.  Returns
         None if fails
 
@@ -93,16 +109,18 @@
                 }
             ..
 
-        
+        """
+        pass
 
--  existsEntityByEID(self, eid)
-
+    def existsEntityByEID(self, eid):
+        """
         Test whether the specified eid is valid
 
-        
+        """
+        pass
 
--  killEntityByEID(self, eid, dropitems=False, count=1)
-
+    def killEntityByEID(self, eid, dropitems=False, count=1):
+        """
         Takes the entity by eid and kills the first entity of
         that type centered at the coordinates where that entity is.
 
@@ -113,4 +131,5 @@
             :count: used to specify more than one entity; again,
              centers on the specified eid location.
 
-        
+        """
+        pass
