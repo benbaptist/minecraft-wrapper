@@ -8,7 +8,7 @@
 
 from time import time as currtime
 from api.helpers import putjsonfile
-from utils.entities import ENTITIES, PRE1_11_RENAMES
+from entity.entityconsts import ENTITIES, PRE1_11_RENAMES
 from utils.items import BLOCKS
 
 

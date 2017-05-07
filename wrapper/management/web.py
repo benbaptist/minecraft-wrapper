@@ -475,7 +475,7 @@ class WebClient(object):
                 "playerCount": [len(self.wrapper.javaserver.players), self.wrapper.javaserver.maxPlayers],
                 "players": players,
                 "plugins": plugins,
-                "server_state": self.wrapper.javaserver.state,
+                "server_state": self.wrapper.servervitals.state,
                 "wrapper_build": self.wrapper.getbuildstring(),
                 "console": consolescrollback,
                 "chat": chatscrollback,

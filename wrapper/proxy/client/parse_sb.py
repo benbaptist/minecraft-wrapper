@@ -5,7 +5,7 @@
 # This program is distributed under the terms of the GNU
 # General Public License, version 3 or later.
 
-from proxy.constants import *
+from proxy.utils.constants import *
 
 
 # noinspection PyMethodMayBeStatic
@@ -16,12 +16,10 @@ class ParseSB(object):
     def __init__(self, client, packet):
         self.client = client
         self.proxy = client.proxy
-        self.wrapper = client.proxy.wrapper
-        self.log = client.proxy.wrapper.log
-        self.config = client.proxy.wrapper.config
+        self.log = client.log
         self.packet = packet
 
-        self.command_prefix = self.wrapper.command_prefix
+        self.command_prefix = self.proxy.srv_data.command_prefix
         self.command_prefix_non_standard = self.command_prefix != "/"
         self.command_prefix_len = len(self.command_prefix)
 
@@ -45,7 +43,7 @@ class ParseSB(object):
         # Get the packet chat message contents
         chatmsg = data[0]
 
-        payload = self.wrapper.events.callevent("player.rawMessage", {
+        payload = self.proxy.eventhandler.callevent("player.rawMessage", {
             "player": self.client.getplayerobject(),
             "message": chatmsg
         })
@@ -85,7 +83,7 @@ class ParseSB(object):
         # determine if this is a command. act appropriately
         if chatmsg[0:self.command_prefix_len] == self.command_prefix:
             # it IS a command of some kind
-            if self.wrapper.events.callevent(
+            if self.proxy.eventhandler.callevent(
                     "player.runCommand", {
                         "player": self.client.getplayerobject(),
                         "command": chatmsg.split(" ")[0][1:].lower(),
@@ -168,7 +166,7 @@ class ParseSB(object):
 
         # finished digging
         if data[0] == 2:
-            if not self.wrapper.events.callevent("player.dig", {
+            if not self.proxy.eventhandler.callevent("player.dig", {
                 "player": self.client.getplayerobject(),
                 "position": position,
                 "action": "end_break",
@@ -179,7 +177,7 @@ class ParseSB(object):
         # started digging
         if data[0] == 0:
             if self.client.gamemode != 1:
-                if not self.wrapper.events.callevent("player.dig", {
+                if not self.proxy.eventhandler.callevent("player.dig", {
                     "player": self.client.getplayerobject(),
                     "position": position,
                     "action": "begin_break",
@@ -187,7 +185,7 @@ class ParseSB(object):
                 }):
                     return False
             else:
-                if not self.wrapper.events.callevent("player.dig", {
+                if not self.proxy.eventhandler.callevent("player.dig", {
                     "player": self.client.getplayerobject(),
                     "position": position,
                     "action": "end_break",
@@ -197,7 +195,7 @@ class ParseSB(object):
         if data[0] == 5 and data[4] == 255:
             if self.client.position != (0, 0, 0):
                 playerpos = self.client.position
-                if not self.wrapper.events.callevent("player.interact", {
+                if not self.proxy.eventhandler.callevent("player.interact", {
                     "player": self.client.getplayerobject(),
                     "position": playerpos,
                     "action": "finish_using"
@@ -263,7 +261,7 @@ class ParseSB(object):
         if helditem is None:
             # if no item, treat as interaction (according to wrappers
             # inventory :(, return False  )
-            if not self.wrapper.events.callevent("player.interact", {
+            if not self.proxy.eventhandler.callevent("player.interact", {
                 "player": player,
                 "position": position,
                 "action": "useitem",
@@ -275,7 +273,7 @@ class ParseSB(object):
         self.client.lastplacecoords = position
         # position is where new block goes
         # clickposition is the block actually clicked
-        if not self.wrapper.events.callevent(
+        if not self.proxy.eventhandler.callevent(
                 "player.place",
                 {"player": player, "position": position,
                  "clickposition": clickposition,
@@ -298,7 +296,7 @@ class ParseSB(object):
         position = self.client.lastplacecoords
         if "pack" in data:
             if data[0] == '\x00':
-                if not self.wrapper.events.callevent("player.interact", {
+                if not self.proxy.eventhandler.callevent("player.interact", {
                     "player": player,
                     "position": position,
                     "action": "useitem",
@@ -343,7 +341,7 @@ class ParseSB(object):
         l2 = data[4]
         l3 = data[5]
         l4 = data[6]
-        payload = self.wrapper.events.callevent("player.createSign", {
+        payload = self.proxy.eventhandler.callevent("player.createSign", {
             "player": self.client.getplayerobject(),
             "position": position,
             "line1": l1,
@@ -430,7 +428,7 @@ class ParseSB(object):
             "clicked": data[5]  # item data
         }
 
-        if not self.wrapper.events.callevent("player.slotClick", datadict):
+        if not self.proxy.eventhandler.callevent("player.slotClick", datadict):
             return False
         """ eventdoc
             <group> Proxy <group>
@@ -519,7 +517,7 @@ class ParseSB(object):
         data = self.packet.readpkt([UUID, NULL])
 
         # ("uuid:target_player")
-        for client in self.wrapper.proxy.clients:
+        for client in self.proxy.clients:
             if data[0] == client.uuid:
                 self.client.server_connection.packet.sendpkt(
                     self.client.pktSB.SPECTATE,

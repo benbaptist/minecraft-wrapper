@@ -9,24 +9,25 @@ import socket
 import threading
 import time
 import json
-import requests
 
 from api.helpers import getjsonfile, putjsonfile, find_in_json
 from api.helpers import epoch_to_timestr, read_timestr
 from api.helpers import isipv4address
 
-from proxy import mcuuid
+from proxy.utils import mcuuid
 
 try:
-    import proxy.encryption as encryption
+    import requests
+    # noinspection PyUnresolvedReferences
+    import proxy.utils.encryption as encryption
 except ImportError:
-    encryption = False
+    requests = False
 
-if encryption:
-    from proxy.clientconnection import Client
-    from proxy.packet import Packet
+try:
+    from proxy.client.clientconnection import Client
+    from proxy.packets.packet import Packet
 
-else:
+except ImportError:
     Client = False
     Packet = False
 
@@ -45,29 +46,100 @@ class NullEventHandler(object):
         pass
 
 
+class HaltSig(object):
+    """HaltSig is simply a sort of dummy class created for the
+    proxy.  proxy expects this object with a self.halt property
+    that tells proxy to shutdown.  The caller maintains control
+    of the Haltsig object and uses it to signal the proxy to 
+    shut down.  The caller will import this class, instantiate 
+    it, and then pass the object to proxy as the argument for
+    termsignal."""
+    def __init__(self):
+        self.halt = False
+
+
+class ServerVitals(object):
+    """This class permits sharing of server information between
+    the caller (such as a Wrapper instance) and proxy."""
+    def __init__(self):
+        # operational info
+        self.serverpath = ""
+        self.state = 0
+        self.server_port = "25564"
+        self.onlineMode = True
+        self.command_prefix = "/"
+
+        # Shared data structures and run-time
+        self.player_eids = {}
+        self.entity_control = None
+        # -1 until a player logs on and server sends a time update
+        self.timeofday = -1
+
+        # PROPOSE
+        self.clients = []
+
+        # owner/op info
+        self.ownernames = {}
+        self.operator_list = []
+
+        # server properties and folder infos
+        self.properties = {}
+        self.worldname = None
+        self.maxPlayers = 20
+        self.motd = None
+        self.serverIcon = None
+
+        # # Version information
+        # -1 until proxy mode checks the server's MOTD on boot
+        self.protocolVersion = -1
+        # this is string name of the version, collected by console output
+        self.version = ""
+        # a comparable number = x0y0z, where x, y, z = release,
+        #  major, minor, of version.
+        self.version_compute = 0
+
+    def console(self):
+        pass
+
+
+class ProxyConfig(object):
+    def __init__(self):
+        self.proxy = {
+            "convert-player-files": False,
+            "hidden-ops": [],
+            "max-players": 1024,
+            "online-mode": True,
+            "proxy-bind": "0.0.0.0",
+            "proxy-enabled": True,
+            "proxy-port": 25570,
+            "proxy-sub-world": False,
+            "silent-ipban": True,
+            "spigot-mode": False
+        }
+        self.entity = {
+            "enable-entity-controls": False,
+            "entity-update-frequency": 4,
+            "thin-Chicken": 30,
+            "thin-Cow": 40,
+            "thin-Sheep": 40,
+            "thin-cow": 40,
+            "thin-zombie_pigman": 200,
+            "thinning-activation-threshhold": 100,
+            "thinning-frequency": 30
+          }
+
+
 class Proxy(object):
-    def __init__(self, termsignal, proxyopts, serveropts, loginstance,
-                 usercache, wrapper, eventhandler=NullEventHandler):
+    def __init__(self, termsignal, config, servervitals, loginstance,
+                 usercache, eventhandler=NullEventHandler):
 
-        # TODO temp dependency!!!!!!!
-        self.wrapper = wrapper
-        self.javaserver = self.wrapper.javaserver
-        #
-        #
-        #
-        #
-        #
-        #
+        self.srv_data = servervitals
+        self.config = config.proxy
+        self.ent_config = config.entity
 
-        self.serverpath = serveropts["path"]
-        self.serverport = serveropts["port"]
-        self.config = proxyopts  # a dictionary of proxyoptions (from
-        #  wrapper.properties.json["Proxy"] )
-
-        # requests is required wrapper-wide now, so no checks here for that...
-        if not encryption and self.config["proxy-enabled"]:
-            raise Exception("You must have the pycryto installed "
-                            "to run in proxy mode!")
+        if not requests and self.config["proxy-enabled"]:
+            raise Exception("You must have requests and pycrypto installed "
+                            "to run the Proxy!")
 
         self.log = loginstance
         self.usercache = usercache
@@ -87,12 +159,11 @@ class Proxy(object):
 
         # proxy internal workings
         #
-        # proxy_socket in only defined here to make the IDE type checking
+        # proxy_socket is only defined here to make the IDE type checking
         #  happy.  The actual socket connection is created later.
         self.proxy_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.usingSocket = False
 
-        self.clients = []
         self.skins = {}
         self.skinTextures = {}
         self.uuidTranslate = {}
@@ -138,18 +209,18 @@ class Proxy(object):
         self.ignoredCB = [0x44, 0x49, 0x34, 0x25, 0x26, 0x3b, 0x2e, 0x39,
                           0x30, 0x3, 0x4a, 0x3c, 0x20, 0x1b, ]
 
-        # removed deprecated proxy-data.json
-
         self.privateKey = encryption.generate_key_pair()
         self.publicKey = encryption.encode_public_key(self.privateKey)
 
     def host(self):
-        """ the caller must ensure host() is not called before the 
+        """ the caller should ensure host() is not called before the 
         server is fully up and running."""
-        # get the protocol version from the server
-        while not self.javaserver.state == 2:
+
+        # loops while server is not started (STARTED = 2)
+        while not self.srv_data.state == 2:
             time.sleep(.2)
 
+        # get the protocol version from the server
         try:
             self.pollserver()
         except Exception as e:
@@ -190,19 +261,18 @@ class Proxy(object):
             t = threading.Thread(target=client.handle, args=())
             t.daemon = True
             t.start()
-            # self.clients.append(client)  # append later (login)
+            # self.srv_data.clients.append(client)  # append later (login)
             self.removestaleclients()
 
     def removestaleclients(self):
         """only removes aborted clients"""
-        for i, client in enumerate(self.clients):
-            if self.clients[i].abort:
-                if str(client.username) in self.javaserver.players:
-                    self.clients.pop(i)
+        for i, client in enumerate(self.srv_data.clients):
+            if self.srv_data.clients[i].abort:
+                self.srv_data.clients.pop(i)
 
     def pollserver(self, host="localhost", port=None):
         if port is None:
-            port = self.javaserver.server_port
+            port = self.srv_data.server_port
 
         server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -214,14 +284,14 @@ class Proxy(object):
         packet.send(0x00, "varint|string|ushort|varint", (5, host, port, 1))
         packet.send(0x00, "", ())
         packet.flush()
-        self.javaserver.protocolVersion = -1
+        self.srv_data.protocolVersion = -1
         while True:
             pkid, original = packet.grabpacket()
             if pkid == 0x00:
                 data = json.loads(packet.read("string:response")["response"])
-                self.javaserver.protocolVersion = data["version"][
+                self.srv_data.protocolVersion = data["version"][
                     "protocol"]
-                self.javaserver.version = data["version"]["name"]
+                self.srv_data.version = data["version"]["name"]
                 if "modinfo" in data and data["modinfo"]["type"] == "FML":
                     self.forge = True
                     self.mod_info["modinfo"] = data["modinfo"]
@@ -230,16 +300,17 @@ class Proxy(object):
         server_sock.close()
 
     def getplayerby_username(self, username):
+        # TODO - move out of proxy and into api.player
         """
         :rtype: var
         this is only to quiet complaints PyCharm makes because in places
          like this we return booleans sometimes when we can't get valid data
          and our calling methods check for these booleans.
         """
-        for client in self.clients:
+        for client in self.srv_data.clients:
             if client.username == username:
                 try:
-                    return self.javaserver.players[client.username]
+                    return self.srv_data.players[client.username]
                 except Exception as e:
                     self.log.error("getplayerby_username failed to get "
                                    "player %s: \n%s", username, e)
@@ -253,7 +324,7 @@ class Proxy(object):
         :return: the matching client
         """
         attempts = ["Search: %s" % str(uuid)]
-        for client in self.clients:
+        for client in self.srv_data.clients:
             attempts.append("try: client-%s uuid-%s serveruuid-%s name-%s" %
                             (client, client.uuid.string,
                              client.serveruuid.string, client.username))
@@ -261,20 +332,21 @@ class Proxy(object):
                 self.uuidTranslate[uuid] = client.uuid.string
                 return client
         self.log.debug("getclientbyofflineserveruuid failed: \n %s", attempts)
-        self.log.debug("POSSIBLE CLIENTS: \n %s", self.clients)
+        self.log.debug("POSSIBLE CLIENTS: \n %s", self.srv_data.clients)
         return False  # no client
 
     def getplayerby_eid(self, eid):
+        # TODO - move out of proxy and into api.player
         """
         :rtype: var
         this is only to quiet complaints PyCharm makes because in places
          like this we return booleans sometimes when we can't get valid data
          and our calling methods check for these booleans.
         """
-        for client in self.clients:
+        for client in self.srv_data.clients:
             if client.server_eid == eid:
                 try:
-                    return self.javaserver.players[client.username]
+                    return self.srv_data.players[client.username]
                 except Exception as e:
                     self.log.error("getplayerby_eid failed to get "
                                    "player %s: \n%s", client.username, e)
@@ -302,7 +374,7 @@ class Proxy(object):
         :param uuid: uuid of player as string
         :return: string representing ban reason
         """
-        banlist = getjsonfile("banned-players", self.serverpath)
+        banlist = getjsonfile("banned-players", self.srv_data.serverpath)
         if banlist:
             banrecord = find_in_json(banlist, "uuid", uuid)
             return "%s by %s" % (banrecord["reason"], banrecord["source"])
@@ -322,7 +394,7 @@ class Proxy(object):
 
         This probably only works on 1.7.10 servers or later
         """
-        banlist = getjsonfile("banned-players", self.serverpath)
+        banlist = getjsonfile("banned-players", self.srv_data.serverpath)
         if banlist is not False:  # file and directory exist.
             if banlist is None:  # file was empty or not valid
                 banlist = dict()  # ensure valid dict before operating on it
@@ -344,9 +416,8 @@ class Proxy(object):
                                 "source": source,
                                 "expires": expiration,
                                 "reason": reason})
-                if putjsonfile(banlist, "banned-players", self.serverpath):
-                    self.javaserver.console("kick %s Banned: %s" %
-                                            (name, reason))
+                if putjsonfile(banlist, "banned-players", self.srv_data.serverpath):
+                    self.srv_data.console("kick %s Banned: %s" % (name, reason))
                     return "Banned %s: %s" % (name, reason)
                 return "Could not write banlist to disk"
         else:
@@ -367,7 +438,7 @@ class Proxy(object):
 
         This probably only works on 1.7.10 servers or later
         """
-        banlist = getjsonfile("banned-players", self.serverpath)
+        banlist = getjsonfile("banned-players", self.srv_data.serverpath)
         if banlist is not False:  # file and directory exist.
             if banlist is None:  # file was empty or not valid
                 banlist = dict()  # ensure valid dict before operating on it
@@ -388,10 +459,9 @@ class Proxy(object):
                                 "source": source,
                                 "expires": expiration,
                                 "reason": reason})
-                if putjsonfile(banlist, "banned-players", self.serverpath):
+                if putjsonfile(banlist, "banned-players", self.srv_data.serverpath):
                     self.log.info("kicking %s... %s", username, reason)
-                    self.javaserver.console("kick %s Banned: %s" %
-                                            (username, reason))
+                    self.srv_data.console("kick %s Banned: %s" % (username, reason))
                     return "Banned %s: %s - %s" % (username, uuid, reason)
                 return "Could not write banlist to disk"
         else:
@@ -413,7 +483,7 @@ class Proxy(object):
         """
         if not isipv4address(ipaddress):
             return "Invalid IPV4 address: %s" % ipaddress
-        banlist = getjsonfile("banned-ips", self.serverpath)
+        banlist = getjsonfile("banned-ips", self.srv_data.serverpath)
         if banlist is not False:  # file and directory exist.
             if banlist is None:  # file was empty or not valid
                 banlist = dict()  # ensure valid dict before operating on it
@@ -433,14 +503,14 @@ class Proxy(object):
                                 "source": source,
                                 "expires": expiration,
                                 "reason": reason})
-                if putjsonfile(banlist, "banned-ips", self.serverpath):
+                if putjsonfile(banlist, "banned-ips", self.srv_data.serverpath):
                     banned = ""
-                    for i in self.javaserver.players:
-                        player = self.javaserver.players[i]
-                        if str(player.client.ip) == str(ipaddress):
-                            self.javaserver.console(
-                                "kick %s Your IP is Banned!" % player.username)
-                            banned += "\n%s" % player.username
+                    for client in self.srv_data.clients:
+                        if client.ip == str(ipaddress):
+
+                            self.srv_data.console(
+                                "kick %s Your IP is Banned!" % client.username)
+                            banned += "\n%s" % client.username
                     return "Banned ip address: %s\nPlayers kicked as " \
                            "a result:%s" % (ipaddress, banned)
                 return "Could not write banlist to disk"
@@ -450,7 +520,7 @@ class Proxy(object):
     def pardonip(self, ipaddress):
         if not isipv4address(ipaddress):
             return "Invalid IPV4 address: %s" % ipaddress
-        banlist = getjsonfile("banned-ips", self.serverpath)
+        banlist = getjsonfile("banned-ips", self.srv_data.serverpath)
         if banlist is not False:  # file and directory exist.
             if banlist is None:  # file was empty or not valid
                 return "No IP bans have ever been recorded."
@@ -459,7 +529,7 @@ class Proxy(object):
                 for x in banlist:
                     if x == banrecord:
                         banlist.remove(x)
-                if putjsonfile(banlist, "banned-ips", self.serverpath):
+                if putjsonfile(banlist, "banned-ips", self.srv_data.serverpath):
                     return "pardoned %s" % ipaddress
                 return "Could not write banlist to disk"
             else:
@@ -469,7 +539,7 @@ class Proxy(object):
             return "Banlist not found on disk"  # error text
 
     def pardonuuid(self, uuid):
-        banlist = getjsonfile("banned-players", self.serverpath)
+        banlist = getjsonfile("banned-players", self.srv_data.serverpath)
         if banlist is not False:  # file and directory exist.
             if banlist is None:  # file was empty or not valid
                 return "No bans have ever been recorded..?"
@@ -478,7 +548,7 @@ class Proxy(object):
                 for x in banlist:
                     if x == banrecord:
                         banlist.remove(x)
-                if putjsonfile(banlist, "banned-players", self.serverpath):
+                if putjsonfile(banlist, "banned-players", self.srv_data.serverpath):
                     name = self.uuids.getusernamebyuuid(str(uuid))
                     return "pardoned %s" % name
                 return "Could not write banlist to disk"
@@ -488,7 +558,7 @@ class Proxy(object):
             return "Banlist not found on disk"  # error text
 
     def pardonname(self, username):
-        banlist = getjsonfile("banned-players", self.serverpath)
+        banlist = getjsonfile("banned-players", self.srv_data.serverpath)
         if banlist is not False:  # file and directory exist.
             if banlist is None:  # file was empty or not valid
                 return "No bans have ever been recorded..?"
@@ -497,7 +567,7 @@ class Proxy(object):
                 for x in banlist:
                     if x == banrecord:
                         banlist.remove(x)
-                if putjsonfile(banlist, "banned-players", self.serverpath):
+                if putjsonfile(banlist, "banned-players", self.srv_data.serverpath):
                     return "pardoned %s" % username
                 return "Could not write banlist to disk"
             else:
@@ -506,7 +576,7 @@ class Proxy(object):
             return "Banlist not found on disk"  # error text
 
     def isuuidbanned(self, uuid):  # Check if the UUID of the user is banned
-        banlist = getjsonfile("banned-players", self.serverpath)
+        banlist = getjsonfile("banned-players", self.srv_data.serverpath)
         if banlist:  # make sure banlist exists
             banrecord = find_in_json(banlist, "uuid", str(uuid))
             if banrecord:
@@ -526,7 +596,7 @@ class Proxy(object):
         return False  # banlist empty or record not found
 
     def isipbanned(self, ipaddress):  # Check if the IP address is banned
-        banlist = getjsonfile("banned-ips", self.serverpath)
+        banlist = getjsonfile("banned-ips", self.srv_data.serverpath)
         if banlist:  # make sure banlist exists
             for record in banlist:
                 _ip = record["ip"]

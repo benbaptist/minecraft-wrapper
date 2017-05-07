@@ -12,7 +12,6 @@ from api.helpers import processcolorcodes, chattocolorcodes
 from api.helpers import getjsonfile, getfileaslines, config_to_dict_read
 
 from api.base import API
-from api.player import Player
 from api.world import World
 from api.entity import EntityControl
 
@@ -42,12 +41,12 @@ FROZEN = 4
 # noinspection PyBroadException,PyUnusedLocal
 class MCServer(object):
 
-    def __init__(self, wrapper):
+    def __init__(self, wrapper, servervitals):
         self.log = wrapper.log
         self.config = wrapper.config
-        self.encoding = self.config["General"]["encoding"]
-        self.serverpath = self.config["General"]["server-directory"]
+        self.vitals = servervitals
 
+        self.encoding = self.config["General"]["encoding"]
         self.stop_message = self.config["Misc"]["stop-message"]
         self.reboot_message = self.config["Misc"]["reboot-message"]
         self.restart_message = self.config["Misc"]["default-restart-message"]
@@ -67,7 +66,7 @@ class MCServer(object):
 
         for part in commargs:
             if part[-4:] == ".jar":
-                self.args.append("%s/%s" % (self.serverpath, part))
+                self.args.append("%s/%s" % (self.vitals.serverpath, part))
             else:
                 self.args.append(part)
 
@@ -76,7 +75,6 @@ class MCServer(object):
         if "ServerStarted" not in self.wrapper.storage:
             self._toggle_server_started(False)
 
-        self.state = OFF
         self.bootTime = time.time()
         # False/True - whether server will attempt boot
         self.boot_server = self.wrapper.storage["ServerStarted"]
@@ -101,38 +99,11 @@ class MCServer(object):
                 " running. To start the server, run /start.")
 
         # Server Information
-        self.players = {}
-        self.player_eids = {}
-        self.worldname = None
         self.worldSize = 0
-        self.maxPlayers = 20
-        self.serverIcon = None
-
-        # -1 until proxy mode checks the server's MOTD on boot
-        self.protocolVersion = -1
-
-        # this is string name of the version, collected by console output
-        self.version = None
-
-        # a comparable number = x0y0z, where x, y, z = release,
-        #  major, minor, of version.
-        self.version_compute = 0
-        # this port should be hidden from outside traffic.
-        self.server_port = "25564"
-
         self.world = None
-        self.entity_control = None
-        self.motd = None
-        # -1 until a player logs on and server sends a time update
-        self.timeofday = -1
-        self.onlineMode = True
 
         # get OPs
-        self.ownernames = {}
-        self.operator_list = []
         self.refresh_ops()
-
-        self.properties = {}
 
         # This will be redone on server start. However, it
         # has to be done immediately to get worldname; otherwise a
@@ -159,13 +130,13 @@ class MCServer(object):
         capturethread.start()
 
     def __del__(self):
-        self.state = 0
+        self.vitals.state = 0
 
     def accepteula(self):
 
-        if os.path.isfile("%s/eula.txt" % self.serverpath):
+        if os.path.isfile("%s/eula.txt" % self.vitals.serverpath):
             self.log.debug("Checking EULA agreement...")
-            with open("%s/eula.txt" % self.serverpath) as f:
+            with open("%s/eula.txt" % self.vitals.serverpath) as f:
                 eula = f.read()
 
             # if forced, should be at info level since acceptance
@@ -174,7 +145,7 @@ class MCServer(object):
                 self.log.warning(
                     "EULA agreement was not accepted, accepting on"
                     " your behalf...")
-                set_item("eula", "true", "eula.txt", self.serverpath)
+                set_item("eula", "true", "eula.txt", self.vitals.serverpath)
 
             self.log.debug("EULA agreement has been accepted.")
             return True
@@ -209,10 +180,10 @@ class MCServer(object):
             # print("args:\n%s\n" % command2)
 
             self.proc = subprocess.Popen(
-                command2, cwd=self.serverpath, stdout=subprocess.PIPE,
+                command2, cwd=self.vitals.serverpath, stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE, stdin=subprocess.PIPE,
                 universal_newlines=True)
-            self.players = {}
+            self.vitals.players = {}
             self.accepteula()  # Auto accept eula
 
             if self.proc.poll() is None and trystart > 3:
@@ -258,7 +229,7 @@ class MCServer(object):
         Start the Minecraft server
         """
         self.server_autorestart = self.config["General"]["auto-restart"]
-        if self.state in (STARTED, STARTING):
+        if self.vitals.state in (STARTED, STARTING):
             self.log.warning("The server is already running!")
             return
         if not self.boot_server:
@@ -274,7 +245,7 @@ class MCServer(object):
         """
         if reason == "":
             reason = self.restart_message
-        if self.state in (STOPPING, OFF):
+        if self.vitals.state in (STOPPING, OFF):
             self.log.warning(
                 "The server is not already running... Just use '/start'.")
             return
@@ -286,7 +257,7 @@ class MCServer(object):
         """
         self.log.info("Stopping Minecraft server with reason: %s", reason)
         self.changestate(STOPPING, reason)
-        for player in self.players:
+        for player in self.vitals.players:
             self.console("kick %s %s" % (player, reason))
         self.console("stop")
 
@@ -300,10 +271,10 @@ class MCServer(object):
         """
         if reason == "":
             reason = self.stop_message
-        if self.state == OFF:
+        if self.vitals.state == OFF:
             self.log.warning("The server is not running... :?")
             return
-        if self.state == FROZEN:
+        if self.vitals.state == FROZEN:
             self.log.warning("The server is currently frozen.\n"
                              "To stop it, you must /unfreeze it first")
             return
@@ -315,7 +286,7 @@ class MCServer(object):
         """Forcefully kill the server. It will auto-restart if set
         in the configuration file.
         """
-        if self.state in (STOPPING, OFF):
+        if self.vitals.state in (STOPPING, OFF):
             self.log.warning("The server is already dead, my friend...")
             return
         self.log.info("Killing Minecraft server with reason: %s", reason)
@@ -332,7 +303,7 @@ class MCServer(object):
         specify None.  This command currently only works for
         *NIX based systems.
         """
-        if self.state != OFF:
+        if self.vitals.state != OFF:
             if os.name == "posix":
                 self.log.info("Freezing server with reason: %s", reason)
                 self.broadcast("&c%s" % reason)
@@ -352,7 +323,7 @@ class MCServer(object):
         to .freeze(reason) This command currently only works
         for *NIX based systems.
         """
-        if self.state != OFF:
+        if self.vitals.state != OFF:
             if os.name == "posix":
                 self.log.info("Unfreezing server (ignore any"
                               " messages to type /start)...")
@@ -373,14 +344,14 @@ class MCServer(object):
         string with formatting codes using the § as a prefix.
         """
         if isinstance(message, dict):
-            if self.version_compute < 10700:
+            if self.vitals.version_compute < 10700:
                 self.console("say %s %s" % (who, chattocolorcodes(message)))
             else:
                 encoding = self.wrapper.encoding
                 self.console("tellraw %s %s" % (
                     who, json.dumps(message, ensure_ascii=False)))
         else:
-            if self.version_compute < 10700:
+            if self.vitals.version_compute < 10700:
                 temp = processcolorcodes(message)
                 self.console("say %s %s" % (
                     who, chattocolorcodes(json.loads(temp))))
@@ -392,15 +363,15 @@ class MCServer(object):
         """Called when a player logs in."""
 
         # place to store EID if proxy is not fully connected yet.
-        self.player_eids[username] = [eid, location]
-        if username not in self.players:
-            self.players[username] = Player(username, self.wrapper)
+        self.vitals.player_eids[username] = [eid, location]
+        if username not in self.vitals.players:
+            self.vitals.players[username] = Player(username, self.wrapper)
         if self.wrapper.proxy:
             playerclient = self.getplayer(username).getClient()
             if playerclient:
                 playerclient.server_connection.eid = eid
                 playerclient.position = location
-        self.players[username].loginposition = self.player_eids[username][1]
+        self.vitals.players[username].loginposition = self.vitals.player_eids[username][1]
         self.wrapper.events.callevent(
             "player.login",
             {"player": self.getplayer(username)})
@@ -416,16 +387,16 @@ class MCServer(object):
             self.wrapper.proxy.removestaleclients()
 
         # remove a hub player or not??
-        if players_name in self.players:
-            self.players[players_name].abort = True
-            del self.players[players_name]
+        if players_name in self.vitals.players:
+            self.vitals.players[players_name].abort = True
+            del self.vitals.players[players_name]
 
     def getplayer(self, username):
         """Returns a player object with the specified name, or
         False if the user is not logged in/doesn't exist.
         """
-        if username in self.players:
-            return self.players[username]
+        if username in self.vitals.players:
+            return self.vitals.players[username]
         return False
 
     def reloadproperties(self):
@@ -434,38 +405,38 @@ class MCServer(object):
         # straightforward and works in both PY2 and PY3
 
         # Load server icon
-        if os.path.exists("%s/server-icon.png" % self.serverpath):
-            with open("%s/server-icon.png" % self.serverpath, "rb") as f:
+        if os.path.exists("%s/server-icon.png" % self.vitals.serverpath):
+            with open("%s/server-icon.png" % self.vitals.serverpath, "rb") as f:
                 theicon = f.read()
                 iconencoded = base64.standard_b64encode(theicon)
-                self.serverIcon = b"data:image/png;base64," + iconencoded
+                self.vitals.serverIcon = b"data:image/png;base64," + iconencoded
 
-        self.properties = config_to_dict_read(
-            "server.properties", self.serverpath)
+        self.vitals.properties = config_to_dict_read(
+            "server.properties", self.vitals.serverpath)
 
-        if self.properties == {}:
+        if self.vitals.properties == {}:
             self.log.warning("File 'server.properties' not found.")
             return False
 
-        if "level-name" in self.properties:
-            self.worldname = self.properties["level-name"]
+        if "level-name" in self.vitals.properties:
+            self.vitals.worldname = self.vitals.properties["level-name"]
         else:
             self.log.warning("No 'level-name=(worldname)' was"
                              " found in the server.properties.")
             return False
-        self.motd = self.properties["motd"]
-        if "max-players" in self.properties:
-            self.maxPlayers = self.properties["max-players"]
+        self.vitals.motd = self.vitals.properties["motd"]
+        if "max-players" in self.vitals.properties:
+            self.vitals.maxPlayers = self.vitals.properties["max-players"]
         else:
             self.log.warning(
                 "No 'max-players=(count)' was found in the"
                 " server.properties. The default of '20' will be used.")
-            self.maxPlayers = 20
-        self.onlineMode = self.properties["online-mode"]
+            self.vitals.maxPlayers = 20
+        self.vitals.onlineMode = self.vitals.properties["online-mode"]
 
     def console(self, command):
         """Execute a console command on the server."""
-        if self.state in (STARTING, STARTED, STOPPING) and self.proc:
+        if self.vitals.state in (STARTING, STARTED, STOPPING) and self.proc:
             self.proc.stdin.write("%s\n" % command)
             self.proc.stdin.flush()
         else:
@@ -476,17 +447,17 @@ class MCServer(object):
         """Change the boot state indicator of the server, with a
         reason message.
         """
-        self.state = state
-        if self.state == OFF:
+        self.vitals.state = state
+        if self.vitals.state == OFF:
             self.wrapper.events.callevent(
                 "server.stopped", {"reason": reason})
-        elif self.state == STARTING:
+        elif self.vitals.state == STARTING:
             self.wrapper.events.callevent(
                 "server.starting", {"reason": reason})
-        elif self.state == STARTED:
+        elif self.vitals.state == STARTED:
             self.wrapper.events.callevent(
                 "server.started", {"reason": reason})
-        elif self.state == STOPPING:
+        elif self.vitals.state == STOPPING:
             self.wrapper.events.callevent(
                 "server.stopping", {"reason": reason})
         self.wrapper.events.callevent(
@@ -507,7 +478,7 @@ class MCServer(object):
         is in proxy mode, it will reconnect all clients to the
         serverconnection.
         """
-        if self.state in (STOPPING, OFF):
+        if self.vitals.state in (STOPPING, OFF):
             self.log.warning(
                 "The server is not already running... Just use '/start'.")
             return
@@ -572,12 +543,12 @@ class MCServer(object):
         """
         ops = False
         # (4 = PROTOCOL_1_7 ) - 1.7.6 or greater use ops.json
-        if self.protocolVersion > 4:
-            ops = getjsonfile("ops", self.serverpath, encodedas=self.encoding)
+        if self.vitals.protocolVersion > 4:
+            ops = getjsonfile("ops", self.vitals.serverpath, encodedas=self.encoding)
         if not ops:
             # try for an old "ops.txt" file instead.
             ops = []
-            opstext = getfileaslines("ops.txt", self.serverpath)
+            opstext = getfileaslines("ops.txt", self.vitals.serverpath)
             if not opstext:
                 return False
             for op in opstext:
@@ -594,17 +565,17 @@ class MCServer(object):
         # Grant "owner" an op level above 4. required for some wrapper commands
         if read_super_ops:
             for eachop in ops:
-                if eachop["name"] in self.ownernames:
-                    eachop["level"] = self.ownernames[eachop["name"]]
+                if eachop["name"] in self.vitals.ownernames:
+                    eachop["level"] = self.vitals.ownernames[eachop["name"]]
         return ops
 
     def refresh_ops(self, read_super_ops=True):
-        self.ownernames = config_to_dict_read("superops.txt", ".")
-        if self.ownernames == {}:
+        self.vitals.ownernames = config_to_dict_read("superops.txt", ".")
+        if self.vitals.ownernames == {}:
             sample = "<op_player_1>=10\n<op_player_2>=9"
             with open("superops.txt", "w") as f:
                 f.write(sample)
-        self.operator_list = self.read_ops_file(read_super_ops)
+        self.vitals.operator_list = self.read_ops_file(read_super_ops)
 
     def getmemoryusage(self):
         """Returns allocated memory in bytes. This command
@@ -678,18 +649,18 @@ class MCServer(object):
                     break
 
             line_words = buff.split(' ')[self.prepends_offset:]
-            self.version = getargs(line_words, 4)
-            semantics = self.version.split(".")
+            self.vitals.version = getargs(line_words, 4)
+            semantics = self.vitals.version.split(".")
             release = get_int(getargs(semantics, 0))
             major = get_int(getargs(semantics, 1))
             minor = get_int(getargs(semantics, 2))
-            self.version_compute = minor + (major * 100) + (release * 10000)
+            self.vitals.version_compute = minor + (major * 100) + (release * 10000)
 
             # 1.7.6 (protocol 5) is the cutoff where ops.txt became ops.json
-            if self.version_compute > 10705 and self.protocolVersion < 0:
-                self.protocolVersion = 5
+            if self.vitals.version_compute > 10705 and self.vitals.protocolVersion < 0:
+                self.vitals.protocolVersion = 5
                 self.wrapper.api.registerPermission("mc1.7.6", value=True)
-            if self.version_compute < 10702 and self.wrapper.proxymode:
+            if self.vitals.version_compute < 10702 and self.wrapper.proxymode:
                 self.log.warning("\nProxy mode cannot run because the "
                                  "server is a pre-Netty version:\n\n"
                                  "http://wiki.vg/Protocol_version_numbers"
@@ -730,14 +701,14 @@ class MCServer(object):
                     " (I.e., this wrapper is a multiworld for a hub server, or"
                     " you are doing your own authorization via a plugin)." % (
                         prefix, prefix, prefix,
-                        self.server_port, self.wrapper.proxy.proxy_port))
+                        self.vitals.server_port, self.wrapper.proxy.proxy_port))
             else:
                 message = (
                     "%s Since you are running Wrapper in proxy mode, this"
                     " should be ok because Wrapper is handling the"
                     " authenication, PROVIDED no one can access port"
                     " %s from outside your network." % (
-                        prefix, self.server_port))
+                        prefix, self.vitals.server_port))
 
             if self.wrapper.proxymode:
                 buff = message
@@ -759,7 +730,7 @@ class MCServer(object):
 
         # read port of server
         if "Starting Minecraft server" in buff:
-            self.server_port = get_int(buff.split('on *:')[1])
+            self.vitals.server_port = get_int(buff.split('on *:')[1])
 
         # confirm server start
         elif "Done (" in buff:
@@ -770,8 +741,8 @@ class MCServer(object):
 
         # Getting world name
         elif "Preparing level" in buff:
-            self.worldname = getargs(line_words, 2).replace('"', "")
-            self.world = World(self.worldname, self)
+            self.vitals.worldname = getargs(line_words, 2).replace('"', "")
+            self.world = World(self.vitals.worldname, self)
             if self.wrapper.proxymode:
                 self.entity_control = EntityControl(self)
         # Player Message
@@ -874,12 +845,12 @@ class MCServer(object):
         # only used by web management module
         if self.config["Web"]["web-enabled"]:
             if time.time() - self.lastsizepoll > 120:
-                if self.worldname is None:
+                if self.vitals.worldname is None:
                     return True
                 self.lastsizepoll = time.time()
                 size = 0
                 # os.scandir not in standard library on early py2.7.x systems
-                for i in os.walk("%s/%s" % (self.serverpath, self.worldname)):
+                for i in os.walk("%s/%s" % (self.vitals.serverpath, self.vitals.worldname)):
                     for f in os.listdir(i[0]):
                         size += os.path.getsize(os.path.join(i[0], f))
                 self.worldSize = size

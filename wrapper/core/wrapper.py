@@ -41,14 +41,14 @@ from core.storage import Storage
 from core.irc import IRC
 from core.scripts import Scripts
 import core.buildinfo as core_buildinfo_version
-from proxy.mcuuid import UUIDS
+from proxy.utils.mcuuid import UUIDS
 from core.config import Config
 from core.backups import Backups
 from core.consoleuser import ConsolePlayer
 from core.exceptions import UnsupportedOSException, InvalidServerStartedError
 from core.permissions import Permissions
 # optional API type stuff
-import proxy.base as proxy
+from proxy.base import Proxy, ProxyConfig, HaltSig, ServerVitals
 from api.base import API
 import management.web as manageweb
 # from management.dashboard import Web as Managedashboard  # presently unused
@@ -89,12 +89,6 @@ CLEAR_BOL = ESC + '\x5b\x31\x4b'
 CLEAR_LINE = ESC + '\x5b\x31\x4b'
 
 
-class HaltSig(object):
-
-    def __init__(self):
-        self.halt = False
-
-
 class Wrapper(object):
 
     def __init__(self):
@@ -124,7 +118,6 @@ class Wrapper(object):
             "Updates"]["auto-update-branch"]
         self.use_timer_tick_event = self.config[
             "Gameplay"]["use-timer-tick-event"]
-        self.command_prefix = self.config["Misc"]["command-prefix"]
         self.use_readline = self.config["Misc"]["use-readline"]
 
         # Storages
@@ -193,6 +186,17 @@ class Wrapper(object):
             sys.stdin.readline()
             self._halt()
 
+        # create server/proxy vitals and config objects
+        self.servervitals = ServerVitals()
+        self.servervitals.serverpath = self.config[
+            "General"]["server-directory"]
+        self.servervitals.state = OFF
+        self.servervitals.command_prefix = self.config[
+            "Misc"]["command-prefix"]
+        self.proxyconfig = ProxyConfig()
+        self.proxyconfig.proxy = self.config["Proxy"]
+        self.proxyconfig.entity = self.config["Entities"]
+
     def __del__(self):
         """prevent error message on very first wrapper starts when
         wrapper exits after creating new wrapper.properties file.
@@ -214,7 +218,7 @@ class Wrapper(object):
 
         # This is not the actual server... the MCServer
         # class is a console wherein the server is started
-        self.javaserver = MCServer(self)
+        self.javaserver = MCServer(self, self.servervitals)
         self.javaserver.init()
 
         # load plugins
@@ -713,45 +717,35 @@ class Wrapper(object):
                         usereadline=self.use_readline)
 
     def _startproxy(self):
-        serveroptions = {
-            "path": self.serverpath,
-            "port": self.javaserver.server_port,
-            "version_compute": self.javaserver.version_compute,
-        }
-        self.proxy = proxy.Proxy(self.halt, self.config["Proxy"], serveroptions, self.log, self.usercache, self, self.events)
 
-        # requests will be set to False if requests or cryptography is missing.
-        if proxy.requests:
+        # error will raise if requests or cryptography is missing.
+        self.proxy = Proxy(self.halt, self.config["Proxy"],
+                           self.servervitals, self.log,
+                           self.usercache, self.events)
 
-            # wait for server to start
-            timer = 0
-            while self.javaserver.state < STARTED:
-                timer += 1
-                time.sleep(.1)
-                if timer > 1200:
-                    self.log.warning(
-                        "Proxy mode did not detect a started server within 2"
-                        " minutes.  Disabling proxy mode because something is"
-                        " wrong.")
-                    self.disable_proxymode()
-
-            self.proxy.serverport = self.javaserver.server_port
-
-            if self.proxy.proxy_port == self.javaserver.server_port:
-                self.log.warning("Proxy mode cannot start because the wrapper"
-                                 " port is identical to the server port.")
+        # wait for server to start
+        timer = 0
+        while self.javaserver.state < STARTED:
+            timer += 1
+            time.sleep(.1)
+            if timer > 1200:
+                self.log.warning(
+                    "Proxy mode did not detect a started server within 2"
+                    " minutes.  Disabling proxy mode because something is"
+                    " wrong.")
                 self.disable_proxymode()
-                return
 
-            proxythread = threading.Thread(target=self.proxy.host, args=())
-            proxythread.daemon = True
-            proxythread.start()
-        else:
+        self.proxy.serverport = self.javaserver.server_port
+
+        if self.proxy.proxy_port == self.javaserver.server_port:
+            self.log.warning("Proxy mode cannot start because the wrapper"
+                             " port is identical to the server port.")
             self.disable_proxymode()
-            self.log.error(
-                "Proxy mode has been disabled because you do not have one"
-                " or more of the following modules installed:"
-                " \npycrypto and requests")
+            return
+
+        proxythread = threading.Thread(target=self.proxy.host, args=())
+        proxythread.daemon = True
+        proxythread.start()
 
     def disable_proxymode(self):
         self.proxymode = False

@@ -15,17 +15,16 @@ from socket import error as socket_error
 import requests
 
 # Local imports
-import proxy.encryption as encryption
+import proxy.utils.encryption as encryption
 
-from proxy.serverconnection import ServerConnection
-from proxy.packet import Packet
-from proxy.parse_sb import ParseSB
-from proxy import mcpackets_sb
-from proxy import mcpackets_cb
-from proxy.constants import *
+from proxy.server.serverconnection import ServerConnection
+from proxy.packets.packet import Packet
+from proxy.client.parse_sb import ParseSB
+from proxy.packets import mcpackets_sb
+from proxy.packets import mcpackets_cb
+from proxy.utils.constants import *
 
-from api.player import Player
-from proxy.mcuuid import MCUUID
+from proxy.utils.mcuuid import MCUUID
 
 from api.helpers import processcolorcodes
 
@@ -50,15 +49,7 @@ class Client(object):
         self.proxy = proxy
         self.publicKey = self.proxy.publicKey
         self.privateKey = self.proxy.privateKey
-
-        # TODO temp dependency!!!!!!!
-        self.wrapper = self.proxy.wrapper
-        #
-        #
-        #
-        #
-        #
-        #
+        self.servervitals = self.proxy.srv_data
 
         self.log = self.proxy.log
         self.ipbanned = banned
@@ -74,12 +65,11 @@ class Client(object):
         self.verifyToken = encryption.generate_challenge_token()
         self.serverID = encryption.generate_server_id().encode('utf-8')
         self.MOTD = {}
-        self.serverversion = self.wrapper.javaserver.protocolVersion
 
         # client will reset this later, if need be..
-        self.clientversion = self.serverversion
+        self.clientversion = self.servervitals.protocolVersion
         # default server port (to this wrapper's server)
-        self.serverport = self.wrapper.javaserver.server_port
+        self.serverport = self.servervitals.server_port
         self.onlinemode = self.proxy.config["online-mode"]
 
         # packet stuff
@@ -194,7 +184,7 @@ class Client(object):
 
             # send packet if server available and parsing passed.
             # already tested - Python will not attempt eval of
-            # self.server.state if self.server is False
+            # self.server_connection.state if self.server_connection is False
             if self.parse(pkid) and \
                     self.server_connection and \
                     self.server_connection.state in (
@@ -253,7 +243,7 @@ class Client(object):
                           self.username, self.uuid.string,
                           self.ip, self.onlinemode)
 
-            self._add_player_and_client_objects_to_wrapper()
+            self._add_client()
 
         # TODO whatever respawn stuff works
         # send these right quick to client
@@ -328,7 +318,7 @@ class Client(object):
                       self.username, self.uuid.string,
                       self.ip, self.onlinemode)
 
-        self._add_player_and_client_objects_to_wrapper()
+        self._add_client()
 
         # start keep alives
         if start_keep_alives:
@@ -471,14 +461,6 @@ class Client(object):
             self.inventory[i] = None
         self.time_server_pinged = time.time()
         self.time_client_responded = time.time()
-        self._refresh_server_version()
-
-    def _refresh_server_version(self):
-        # Get serverversion for mcpackets use
-        try:
-            self.serverversion = self.wrapper.javaserver.protocolVersion
-        except AttributeError:
-            self.serverversion = -1
 
     def _getclientpacketset(self):
         # Determine packet types  - in this context, pktSB/pktCB is
@@ -491,11 +473,11 @@ class Client(object):
     # api related
     # -----------------------------
     def getplayerobject(self):
-        if self.username in self.wrapper.javaserver.players:
-            return self.wrapper.javaserver.players[self.username]
+        if self.username in self.servervitals.players:
+            return self.servervitals.players[self.username]
         self.log.error("In playerlist:\n%s\nI could not locate player: %s\n"
                        "This resulted in setting the player object to FALSE!",
-                       self.wrapper.javaserver.players, self.username)
+                       self.servervitals.players, self.username)
         return False
 
     def editsign(self, position, line1, line2, line3, line4, pre18=False):
@@ -615,15 +597,15 @@ class Client(object):
         if self.clientversion > 26:
             self.packet.setcompression(256)
 
-    def _add_player_and_client_objects_to_wrapper(self):
-        # Put player object and client into server. (player login
+    def _add_client(self):
+        # Put XXXplayer_object_andXXX client into server data. (player login
         #  will be called later by mcserver.py)
-        if self not in self.proxy.clients:
-            self.proxy.clients.append(self)
+        if self not in self.proxy.srv_data.clients:
+            self.proxy.srv_data.clients.append(self)
 
-        if self.username not in self.wrapper.javaserver.players:
-            self.wrapper.javaserver.players[self.username] = Player(
-                self.username, self.wrapper)
+        # if self.username not in self.servervitals.players:
+        #     self.servervitals.players[self.username] = Player(
+        #         self.username, self.wrapper)
 
         self._inittheplayer()  # set up inventory and stuff
 
@@ -689,7 +671,7 @@ class Client(object):
         #    if self.config["Proxy"]["online-mode"]:
         #        # Check player files, and rename them accordingly
         #        #  to offline-mode UUID
-        #        worldname = self.wrapper.javaserver.worldname
+        #        worldname = self.servervitals.worldname
         #        if not os.path.exists("%s/playerdata/%s.dat" % (
         #                worldname, self.serveruuid.string)):
         #            if os.path.exists("%s/playerdata/%s.dat" % (
@@ -719,7 +701,7 @@ class Client(object):
         #                             "name": self.username})
         #                        with open("whitelist.json", "w") as f:
         #                            f.write(json.dumps(jsonwhitelistdata))
-        #                        self.wrapper.javaserver.console(
+        #                        self.servervitals.console(
         #                            "whitelist reload")
         #                        with open("%s/.wrapper-proxy-whitelist-"
         #                                  "migrate" % worldname, "a") as f:
@@ -797,12 +779,12 @@ class Client(object):
             # TODO - coming soon: allow client connections
             # despite lack of server connection
 
-            if self.serverversion == -1:
+            if self.servervitals.protocolVersion == -1:
                 #  ... returns -1 to signal no server
                 self.disconnect("The server is not started.")
                 return False
 
-            if not self.wrapper.javaserver.state == 2:
+            if not self.servervitals.state == 2:
                 self.disconnect("Server has not finished booting. Please try"
                                 " connecting again in a few seconds")
                 return False
@@ -812,7 +794,7 @@ class Client(object):
                                 " (protocol: %s)!" % self.clientversion)
                 return False
 
-            if self.serverversion == self.clientversion:
+            if self.servervitals.protocolVersion == self.clientversion:
                 # login start...
                 self.state = self.proxy.LOGIN
                 # packet passes to server, which will also switch to Login
@@ -837,24 +819,24 @@ class Client(object):
     def _parse_status_request(self):
         self.log.debug("SB -> STATUS REQUEST")
         sample = []
-        for player in self.wrapper.javaserver.players:
-            playerobj = self.wrapper.javaserver.players[player]
+        for player in self.servervitals.players:
+            playerobj = self.servervitals.players[player]
             if playerobj.username not in self.hidden_ops:
                 sample.append({"name": playerobj.username,
                                "id": str(playerobj.mojangUuid)})
             if len(sample) > 5:
                 break
-        reported_version = self.serverversion
-        reported_name = self.wrapper.javaserver.version
-        motdtext = self.wrapper.javaserver.motd
+        reported_version = self.servervitals.protocolVersion
+        reported_name = self.servervitals.version
+        motdtext = self.servervitals.motd
         if self.clientversion >= PROTOCOL_1_8START:
             motdtext = json.loads(processcolorcodes(motdtext.replace(
                 "\\", "")))
         self.MOTD = {
             "description": motdtext,
             "players": {
-                "max": int(self.wrapper.javaserver.maxPlayers),
-                "online": len(self.wrapper.javaserver.players),
+                "max": int(self.servervitals.maxPlayers),
+                "online": len(self.servervitals.players),
                 "sample": sample
             },
             "version": {
@@ -864,8 +846,8 @@ class Client(object):
         }
 
         # add Favicon, if it exists
-        if self.wrapper.javaserver.serverIcon:
-            self.MOTD["favicon"] = self.wrapper.javaserver.serverIcon
+        if self.servervitals.serverIcon:
+            self.MOTD["favicon"] = self.servervitals.serverIcon
 
         # add Forge information, if applicable.
         if self.proxy.forge:
@@ -893,7 +875,7 @@ class Client(object):
             # Wrapper sends client a login encryption request
 
             # 1.7.x versions
-            if self.serverversion < 6:
+            if self.servervitals.protocolVersion < 6:
                 # send to client 1.7
                 self.packet.sendpkt(
                     self.pktCB.LOGIN_ENCR_REQUEST,
@@ -933,7 +915,7 @@ class Client(object):
 
         # read response Tokens - "shared_secret|verify_token"
         self.log.debug("SB -> LOGIN ENCR RESPONSE")
-        if self.serverversion < 6:
+        if self.servervitals.protocolVersion < 6:
             data = self.packet.readpkt([BYTEARRAY_SHORT, BYTEARRAY_SHORT])
         else:
             data = self.packet.readpkt([BYTEARRAY, BYTEARRAY])

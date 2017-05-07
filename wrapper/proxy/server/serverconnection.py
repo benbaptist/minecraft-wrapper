@@ -12,12 +12,12 @@ import time
 import traceback
 
 # local
-from proxy.packet import Packet
-from proxy.parse_cb import ParseCB
-from proxy import mcpackets_sb
-from proxy import mcpackets_cb
+from proxy.packets.packet import Packet
+from proxy.server.parse_cb import ParseCB
+from proxy.packets import mcpackets_sb
+from proxy.packets import mcpackets_cb
 
-from proxy.constants import *
+from proxy.utils.constants import *
 
 
 # noinspection PyMethodMayBeStatic
@@ -73,7 +73,7 @@ class ServerConnection(object):
     def _refresh_server_version(self):
         """Get serverversion for mcpackets use"""
 
-        self.version = self.client.wrapper.javaserver.protocolVersion
+        self.version = self.proxy.srv_data.protocolVersion
         self.pktSB = mcpackets_sb.Packets(self.version)
         self.pktCB = mcpackets_cb.Packets(self.version)
         self.parse_cb = ParseCB(self, self.packet)
@@ -97,7 +97,7 @@ class ServerConnection(object):
         # Connect to a local server address
         if self.ip is None:
             self.server_socket.connect((
-                "localhost", self.client.wrapper.javaserver.server_port))
+                "localhost", self.proxy.srv_data.server_port))
 
         # Connect to some specific server address
         else:
@@ -123,7 +123,7 @@ class ServerConnection(object):
         """
 
         # todo remove this and fix reason code
-        # print(reason)
+        print(reason)
 
         if lobby_return:
             # stop parsing PLAY packets to prevent further "disconnects"
@@ -263,7 +263,7 @@ class ServerConnection(object):
 
     def _parse_login_encr_request(self):
         self.close_server("Server is in online mode. Please turn it off "
-                          "in server.properties and allow wrapper to "
+                          "in server.properties and allow Proxy to "
                           "handle the authetication.")
         return False
 

@@ -9,7 +9,7 @@ from time import sleep
 import threading
 from core.entities import Entities as Entitytypes
 
-# move to different future  objects module?
+# move to different future objects module?
 from core.entities import Objects as Objecttypes
 
 
@@ -40,10 +40,11 @@ class EntityControl(object):
         self.chunks = {}
 
         self._javaserver = mcserver
+        self.srvr_data = mcserver.vitals
         self._log = mcserver.log
 
         # Entities - living beings (includes XP orbs!)
-        pre1_11 = self._javaserver.version_compute < 11100
+        pre1_11 = self.srvr_data.version_compute < 11100
         entitylistobject = Entitytypes(pre1_11)
         self.entitytypes = entitylistobject.entitylist
 
@@ -211,12 +212,12 @@ class EntityControl(object):
         entitydesc = entityinfo["name"]
         if dropitems:
             # kill them (get loots if server has doMobDrops set to true)
-            self._javaserver.console(
+            self.srvr_data.console(
                 "kill @e[type=%s,x=%d,y=%d,z=%d,c=%s]" % (
                     entitydesc, pos[0], pos[1], pos[2], count))
         else:
             # send them into void (no loots)
-            self._javaserver.console(
+            self.srvr_data.console(
                 "tp @e[type=%s,x=%d,y=%d,z=%d,c=%s] ~ -500 ~" % (
                     entitydesc, pos[0], pos[1], pos[2], count))
 
@@ -224,7 +225,7 @@ class EntityControl(object):
         self._log.debug("_entityprocessor thread started.")
         timer = float(0)
         # server is running
-        while self._javaserver.state in (1, 2, 4) and not self._abortep:
+        while self.srvr_data.state in (1, 2, 4) and not self._abortep:
             timer += .1
             sleep(.1)
             # timer for removing stale entities we want a FAST response
@@ -234,7 +235,7 @@ class EntityControl(object):
             timer = float(0)
 
             # start looking for stale client entities
-            players = self._javaserver.players
+            players = self.srvr_data.players
             playerlist = []
             for player in players:
                 playerlist.append(player)
@@ -255,7 +256,7 @@ class EntityControl(object):
         timer = float(0)
 
         # while server is running
-        while self._javaserver.state in (1, 2, 4) and not self._abortep:
+        while self.srvr_data.state in (1, 2, 4) and not self._abortep:
 
             timer += .1
             sleep(.1)
@@ -270,7 +271,7 @@ class EntityControl(object):
                 continue
 
             # gather player list
-            players = self._javaserver.players
+            players = self.srvr_data.players
             playerlist = []
             for player in players:
                 playerlist.append(player)
@@ -320,6 +321,6 @@ class EntityControl(object):
         pos = position
         # send those creatures away
         self._log.debug("killing %d %s" % (count, entity_name))
-        self._javaserver.console(
+        self.srvr_data.console(
             "tp @e[type=%s,x=%d,y=%d,z=%d,c=%s] ~ -500 ~" %
             (entity_name, pos[0], pos[1], pos[2], count))

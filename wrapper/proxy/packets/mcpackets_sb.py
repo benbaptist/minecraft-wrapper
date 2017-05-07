@@ -5,9 +5,8 @@
 # This program is distributed under the terms of the GNU
 # General Public License, version 3 or later.
 
-from core.exceptions import UnsupportedMinecraftProtocol
-
-from proxy.constants import *
+from __future__ import print_function
+from proxy.utils.constants import *
 
 """
 Ways to reference packets by names and not hard-coded numbers.
@@ -31,7 +30,8 @@ class Packets(object):
     def __init__(self, protocol):
 
         if PROTOCOL_1_8END < protocol < PROTOCOL_1_9REL1:
-            raise UnsupportedMinecraftProtocol
+            print("Protocol version not supported:", protocol)
+            raise ValueError
 
         # Login, Status, and Ping packets
         # -------------------------------
