@@ -717,7 +717,7 @@ class Wrapper(object):
     def _startproxy(self):
 
         # error will raise if requests or cryptography is missing.
-        self.proxy = Proxy(self.halt, self.config["Proxy"],
+        self.proxy = Proxy(self.halt, self.proxyconfig,
                            self.servervitals, self.log,
                            self.usercache, self.events)
 
@@ -732,8 +732,6 @@ class Wrapper(object):
                     " minutes.  Disabling proxy mode because something is"
                     " wrong.")
                 self.disable_proxymode()
-
-        self.servervitals.consolecommand = self.servervitals.console
 
         if self.proxy.proxy_port == self.servervitals.server_port:
             self.log.warning("Proxy mode cannot start because the wrapper"
@@ -962,11 +960,9 @@ class Wrapper(object):
                     amount, units, get_bytes))
 
     def _raw(self, console_input):
-        if self.servervitals.console == print:
-            print("No console present. simply printing...")
         try:
             if len(getargsafter(console_input[1:].split(" "), 1)) > 0:
-                self.servervitals.console(
+                self.javaserver.console(
                     getargsafter(console_input[1:].split(" "), 1))
             else:
                 self.log.info("Usage: /raw [command]")

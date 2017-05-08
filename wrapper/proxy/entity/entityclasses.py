@@ -8,8 +8,8 @@
 
 from time import time as currtime
 from api.helpers import putjsonfile
-from entity.entityconsts import ENTITIES, PRE1_11_RENAMES
-from utils.items import BLOCKS
+from proxy.entity.entityconsts import ENTITIES, PRE1_11_RENAMES
+from proxy.utils.items import BLOCKS
 
 
 # Sample

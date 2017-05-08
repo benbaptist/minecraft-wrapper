@@ -334,13 +334,12 @@ class Commands(object):
                 "Entities loaded: %d" % entitycontrol.countActiveEntities())
             return
         elif commargs[0].lower() in ("k", "kill"):
-            eid = getargs(commargs, 1)
-            count = getargs(commargs, 2)
+            eid = get_int(getargs(commargs, 1))
+            count = get_int(getargs(commargs, 2))
             if count < 1:
                 count = 1
-                entitycontrol.killEntityByEID(
-                    eid, dropitems=False, finishstateof_domobloot=True,
-                    count=count)
+            entitycontrol.killEntityByEID(
+                eid, dropitems=False, count=count)
             return
         elif commargs[0].lower() in ("l", "list", "sh", "show" "all"):
             nice_list = {}

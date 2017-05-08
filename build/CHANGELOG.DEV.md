@@ -1,13 +1,25 @@
 Build 212 (next build)
+- Need to re-implement and fully debug player objects.  They are
+ now added by the mcserver.py (and not in proxy), but never removed.
+ Therefore, api.player calls are still functional after the player
+ logs off (producing errors).
 - player to player TP - Add inter-dimensional TP (1.8+) api
   Community Input enhancement proxy mode
 
-Build 211 (PROBABLY broke now due to references changing)
+Build 211
+- Proxy is an independent system, save for some api.helpers dependencies.
+ Proxy can now, in theory be used without Wrapper as a stand-alone
+ component for
 - Monstrous refactor of proxy, separated proxy into several groups:
  - base.py file for main Proxy class
  - client, server, packets, utils, entity groups.
 - Entity control moved to Proxy, where it belongs
 - All wrapper and javaserver references finally removed.
+- proxy passes information back to wrapper (or whatever system) via
+ the shared data (for server and player data) or by calling events.
+ The templates for these shared structures and API's are included as
+ small classes in wrapper/proxy/base.py.
+
 
 Build 210 - Fully modularize and make Proxy an independent system:
 - group encryption with proxy package (the only place it is used!).

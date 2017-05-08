@@ -3,7 +3,7 @@
 
     .. code:: python
 
-        def __init__(self, mcserver)
+        def __init__(self, proxy)
 
     ..
 

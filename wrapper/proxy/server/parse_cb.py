@@ -361,7 +361,9 @@ class ParseCB(object):
             entitycount = bytearray(self.packet.readpkt([BYTE])[0])[0]
             parser = [INT]
         else:
-            entitycount = bytearray(self.packet.readpkt([VARINT]))[0]
+            # TODO - error when more than 256 entities?
+            rawread = self.packet.readpkt([VARINT])
+            entitycount = rawread[0]
             parser = [VARINT]
 
         for _ in range(entitycount):

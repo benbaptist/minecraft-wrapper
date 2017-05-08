@@ -36,7 +36,7 @@ class Events(object):
 
     def callevent(self, event, payload):
         # create reference player object for payload, if needed.
-        if "playername" in payload and "player" not in payload:
+        if payload and ("playername" in payload) and ("player" not in payload):
             payload["player"] = self.wrapper.api.minecraft.getPlayer(
                 payload["playername"])
 

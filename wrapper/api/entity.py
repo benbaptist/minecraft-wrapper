@@ -11,7 +11,7 @@ class EntityControl(object):
     """
     .. code:: python
 
-        def __init__(self, mcserver)
+        def __init__(self, proxy)
 
     ..
 
@@ -30,7 +30,7 @@ class EntityControl(object):
 
     # entire class is a duplicate of proxy's entity control (
     # we are using this for the docs).
-    def __init__(self, wrapper):
+    def __init__(self, proxy):
         pass
 
     def getEntityByEID(self, eid):

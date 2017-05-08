@@ -175,7 +175,7 @@ class EntityControl(object):
 
         """
         try:
-            return self.getEntityByEID(eid).aboutEntity()
+            return self.getEntityByEID(eid).about_entity()
         except AttributeError:
             return None
 
@@ -315,6 +315,5 @@ class EntityControl(object):
 
         console_command = "tp @e[type=%s,x=%d,y=%d,z=%d,c=%s] ~ -500 ~" % (
             entity_name, pos[0], pos[1], pos[2], count)
-
         self.proxy.eventhandler.callevent(
                  "proxy.console", {"command": console_command})
