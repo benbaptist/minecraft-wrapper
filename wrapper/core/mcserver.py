@@ -182,7 +182,7 @@ class MCServer(object):
                 command2, cwd=self.vitals.serverpath, stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE, stdin=subprocess.PIPE,
                 universal_newlines=True)
-            self.vitals.players = {}
+            self.wrapper.players = {}
             self.accepteula()  # Auto accept eula
 
             if self.proc.poll() is None and trystart > 3:
@@ -256,7 +256,7 @@ class MCServer(object):
         """
         self.log.info("Stopping Minecraft server with reason: %s", reason)
         self.changestate(STOPPING, reason)
-        for player in self.vitals.players:
+        for player in self.wrapper.players:
             self.console("kick %s %s" % (player, reason))
         self.console("stop")
 
@@ -392,7 +392,7 @@ class MCServer(object):
         # remove a hub player or not??
         if players_name in self.wrapper.players:
             self.wrapper.players[players_name].abort = True
-            del self.vitals.players[players_name]
+            del self.wrapper.players[players_name]
 
     def getplayer(self, username):
         """Returns a player object with the specified name, or
