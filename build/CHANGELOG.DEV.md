@@ -1,16 +1,28 @@
-Build 212 (next build)
+Build 216 (next build)
 - Need to re-implement and fully debug player objects.  They are
  now added by the mcserver.py (and not in proxy), but never removed.
  Therefore, api.player calls are still functional after the player
  logs off (producing errors).
+- documentation generator needs fixed for api.entity (should just
+ point into the proxy/entity files where the actual code is).
+- mcserver.py still has player list references in the "vitals" code (player
+list was moved to core/wrapper.py).
+- references like `self.vitals.consolecommand = print` still exist in
+ mcserver.py too...
+- clientconnection.py `def getplayerobject(self):` contains
+ `self.servervitals.players` references.
+- ... '' `in _parse_status_request(self)`
 - player to player TP - Add inter-dimensional TP (1.8+) api
   Community Input enhancement proxy mode
 
+Build 215 [0.12.0]
+- update packet information to minecraft version 1.12
+
 Build 211
 - Proxy is an independent system, save for some api.helpers dependencies.
- Proxy can now, in theory be used without Wrapper as a stand-alone
- component for
-- Monstrous refactor of proxy, separated proxy into several groups:
+ Proxy can now, in theory, be used without Wrapper as a stand-alone
+ component for other uses.
+- proxy is entirely refactored, separated proxy into several groups:
  - base.py file for main Proxy class
  - client, server, packets, utils, entity groups.
 - Entity control moved to Proxy, where it belongs
@@ -19,6 +31,12 @@ Build 211
  the shared data (for server and player data) or by calling events.
  The templates for these shared structures and API's are included as
  small classes in wrapper/proxy/base.py.
+- Another goal of separation is to make the player api less confusing,
+ since the documentation is not clear on what player API methods are
+ available with/without proxy mode.  Hopefully, movement can be made
+ to offer similar functionality for non-proxy mode (versus just
+ generating errors when an attempt is made to access player
+ data from the proxy).
 
 
 Build 210 - Fully modularize and make Proxy an independent system:

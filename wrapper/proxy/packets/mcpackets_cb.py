@@ -28,8 +28,10 @@ set something False/unimplemented using 0xEE
 
 class Packets(object):
     def __init__(self, protocol):
-
-        if PROTOCOL_1_8END < protocol < PROTOCOL_1_9REL1:
+        # not supporting 1.9 and 1.12 snapshots due to high instability/changes
+        if PROTOCOL_1_8END < protocol < PROTOCOL_1_9REL1 or (
+            PROTOCOL_1_12START <= protocol < PROTOCOL_1_12
+        ):
             print("Protocol version not supported:", protocol)
             raise ValueError
 
@@ -134,6 +136,10 @@ class Packets(object):
         self.SET_COOLDOWN = 0xee
         self.VEHICLE_MOVE = 0xee
         self.SET_PASSENGERS = 0xee
+        # NEW to 1.12
+        self.UNLOCK_RECIPES = 0xee
+        self.SELECT_ADVANCEMENT_TAB = 0xee
+        self.ADVANCEMENTS = 0xee
 
         # 1.8 changes
         if protocol >= PROTOCOL_1_8START:
@@ -242,3 +248,42 @@ class Packets(object):
             self.ENTITY_TELEPORT = 0x49
             self.ENTITY_PROPERTIES = 0x4a
             self.ENTITY_EFFECT = 0x4b
+
+        # 1.12 changes
+        if protocol > PROTOCOL_1_12START:
+            # snapshots raise ValueError, so this is really >= PROTOCOL_1_12
+            self.ENTITY = 0x25
+            self.ENTITY_RELATIVE_MOVE = 0x26
+            self.ENTITY_LOOK_AND_RELATIVE_MOVE = 0x27
+            self.ENTITY_LOOK = 0x28
+            self.UNLOCK_RECIPES = 0x30
+            self.DESTROY_ENTITIES = 0x31
+            self.REMOVE_ENTITY_EFFECT = 0x32
+            self.RESOURCE_PACK_SEND = 0x33
+            self.RESPAWN = 0x34
+            self.ENTITY_HEAD_LOOK = 0x35
+            self.SELECT_ADVANCEMENT_TAB = 0x36
+            self.WORLD_BORDER = 0x37
+            self.CAMERA = 0x38
+            self.HELD_ITEM_CHANGE = 0x39
+            self.DISPLAY_SCOREBOARD = 0x3a
+            self.ENTITY_METADATA = [0x3b, [VARINT, METADATA_1_9]]
+            self.ATTACH_ENTITY = 0x3c
+            self.ENTITY_VELOCITY = 0x3d
+            self.ENTITY_EQUIPMENT = 0x3e
+            self.SET_EXPERIENCE = 0x3f
+            self.UPDATE_HEALTH = 0x40
+            self.SCOREBOARD_OBJECTIVE = 0x41
+            self.SET_PASSENGERS = 0x42  # TODO NEW
+            self.TEAMS = 0x43
+            self.UPDATE_SCORE = 0x44
+            self.SPAWN_POSITION = 0x45
+            self.TIME_UPDATE = 0x46
+            self.TITLE = 0x47  # did not change
+            self.SOUND_EFFECT = 0x48
+            self.PLAYER_LIST_HEADER_AND_FOOTER = 0x49
+            self.COLLECT_ITEM = 0x4a
+            self.ENTITY_TELEPORT = 0x4b
+            self.ADVANCEMENTS = 0x4c
+            self.ENTITY_PROPERTIES = 0x4d
+            self.ENTITY_EFFECT = 0x4e

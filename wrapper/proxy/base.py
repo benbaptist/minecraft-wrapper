@@ -73,6 +73,8 @@ class ServerVitals(object):
 
         # Shared data structures and run-time
         self.player_eids = {}
+
+        # TODO - I don't think this is used or needed (same name as proxy.entity_control!)
         self.entity_control = None
         # -1 until a player logs on and server sends a time update
         self.timeofday = -1
