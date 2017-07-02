@@ -285,7 +285,6 @@ class MCServer(object):
         """Forcefully kill the server. It will auto-restart if set
         in the configuration file.
         """
-        self.vitals.consolecommand = print
         if self.vitals.state in (STOPPING, OFF):
             self.log.warning("The server is already dead, my friend...")
             return
@@ -305,7 +304,6 @@ class MCServer(object):
         """
         if self.vitals.state != OFF:
             if os.name == "posix":
-                self.vitals.consolecommand = print
                 self.log.info("Freezing server with reason: %s", reason)
                 self.broadcast("&c%s" % reason)
                 time.sleep(0.5)
@@ -331,7 +329,6 @@ class MCServer(object):
                 self.broadcast("&aServer unfrozen.")
                 self.changestate(STARTED)
                 os.system("kill -CONT %d" % self.proc.pid)
-                self.vitals.consolecommand = self.console
             else:
                 raise OSError(
                     "Your current OS (%s) does not support this command"
@@ -366,15 +363,15 @@ class MCServer(object):
 
         # place to store EID if proxy is not fully connected yet.
         self.vitals.player_eids[username] = [eid, location]
-        if username not in self.wrapper.players:
-            self.wrapper.players[username] = Player(username, self.wrapper)
+        if username not in self.vitals.players:
+            self.vitals.players[username] = Player(username, self.wrapper)
         if self.wrapper.proxy:
             playerclient = self.getplayer(username).getClient()
             if playerclient:
                 playerclient.server_connection.eid = eid
                 playerclient.position = location
         # TODO - print what this produces (self.vitals.player_eids[username][1])
-        self.wrapper.players[username].loginposition = self.vitals.player_eids[username][1]
+        self.vitals.players[username].loginposition = self.vitals.player_eids[username][1]
         self.wrapper.events.callevent(
             "player.login",
             {"player": self.getplayer(username)})
@@ -390,16 +387,16 @@ class MCServer(object):
             self.wrapper.proxy.removestaleclients()
 
         # remove a hub player or not??
-        if players_name in self.wrapper.players:
-            self.wrapper.players[players_name].abort = True
-            del self.wrapper.players[players_name]
+        if players_name in self.vitals.players:
+            self.vitals.players[players_name].abort = True
+            del self.vitals.players[players_name]
 
     def getplayer(self, username):
         """Returns a player object with the specified name, or
         False if the user is not logged in/doesn't exist.
         """
-        if username in self.wrapper.players:
-            return self.wrapper.players[username]
+        if username in self.vitals.players:
+            return self.vitals.players[username]
         return False
 
     def reloadproperties(self):

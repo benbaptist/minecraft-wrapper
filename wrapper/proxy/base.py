@@ -62,7 +62,7 @@ class HaltSig(object):
 class ServerVitals(object):
     """This class permits sharing of server information between
     the caller (such as a Wrapper instance) and proxy."""
-    def __init__(self):
+    def __init__(self, playerobjects):
 
         # operational info
         self.serverpath = ""
@@ -73,6 +73,7 @@ class ServerVitals(object):
 
         # Shared data structures and run-time
         self.player_eids = {}
+        self.players = playerobjects
 
         # TODO - I don't think this is used or needed (same name as proxy.entity_control!)
         self.entity_control = None

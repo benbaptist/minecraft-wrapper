@@ -185,7 +185,7 @@ class Wrapper(object):
             self._halt()
 
         # create server/proxy vitals and config objects
-        self.servervitals = ServerVitals()
+        self.servervitals = ServerVitals(self.players)
         self.servervitals.serverpath = self.config[
             "General"]["server-directory"]
         self.servervitals.state = OFF

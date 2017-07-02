@@ -1,19 +1,18 @@
-Build 216 (next build)
+Build 217 (next build)
 - Need to re-implement and fully debug player objects.  They are
  now added by the mcserver.py (and not in proxy), but never removed.
  Therefore, api.player calls are still functional after the player
  logs off (producing errors).
 - documentation generator needs fixed for api.entity (should just
  point into the proxy/entity files where the actual code is).
-- mcserver.py still has player list references in the "vitals" code (player
-list was moved to core/wrapper.py).
-- references like `self.vitals.consolecommand = print` still exist in
- mcserver.py too...
-- clientconnection.py `def getplayerobject(self):` contains
- `self.servervitals.players` references.
-- ... '' `in _parse_status_request(self)`
 - player to player TP - Add inter-dimensional TP (1.8+) api
   Community Input enhancement proxy mode
+
+Build 216 [0.12.1]
+- (reminder) player list was moved to core/wrapper.py.
+-- however.. player list is passed back into servervitals for use
+   by clientconnection
+- Removed improper player references for self.servervitals
 
 Build 215 [0.12.0]
 - update packet information to minecraft version 1.12
