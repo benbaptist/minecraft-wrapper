@@ -268,10 +268,10 @@ class Minecraft(object):
         :returns: The Player Class object for "playername".
 
         """
-        #  try:
-        return self.wrapper.players[str(username)]
-        #  except Exception as e:
-        #      self.log.error("No such player %s is logged in:\n%s", username, e)
+        try:
+            return self.wrapper.players[str(username)]
+        except Exception as e:
+            self.log.error("No such player %s is logged in:\n%s", username, e)
 
     def getplayerby_eid(self, eid):
         """
