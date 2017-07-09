@@ -382,7 +382,7 @@ class MCServer(object):
         # self.wrapper.callEvent(
         #    "player.logout", {"player": self.getPlayer(username)})
         self.wrapper.events.callevent(
-            "player.logout", self.getplayer(players_name))
+            "player.logout", {"player": self.getplayer(players_name)})
         if self.wrapper.proxy:
             self.wrapper.proxy.removestaleclients()
 
