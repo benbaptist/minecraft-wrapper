@@ -752,6 +752,11 @@ class Packet(object):
             elif data_type == 12:
                 meta_data[index] = (data_type, self.read_varint())
 
+            elif data_type ==13:
+                print("1.9 metadata found data type 13 'nbt tag', which "
+                      "wrapper does not parse.. read as 'rest/raw'. "
+                      "Added in version 1.12 minecraft??")
+                meta_data[index] = (data_type, self.read_rest())
             else:
                 print("Unsupported data type '%d' for read_metadata_1_9()  "
                       "(Class Packet)", data_type)

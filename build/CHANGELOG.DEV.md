@@ -1,4 +1,4 @@
-Build 217 (next build)
+Build 218 (next build)
 - Need to re-implement and fully debug player objects.  They are
  now added by the mcserver.py (and not in proxy), but never removed.
  Therefore, api.player calls are still functional after the player
@@ -7,6 +7,10 @@ Build 217 (next build)
  point into the proxy/entity files where the actual code is).
 - player to player TP - Add inter-dimensional TP (1.8+) api
   Community Input enhancement proxy mode
+
+Build 216 [0.12.1]
+- more debugging with servervitals references.
+- found a new 1.12 metadata data type.. cant parse it yet ('13' - nbt tag)
 
 Build 216 [0.12.1]
 - (reminder) player list was moved to core/wrapper.py.

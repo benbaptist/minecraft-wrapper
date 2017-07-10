@@ -269,7 +269,7 @@ class Minecraft(object):
 
         """
         try:
-            return self.wrapper.players[str(username)]
+            return self.wrapper.servervitals.players[str(username)]
         except Exception as e:
             self.log.error("No such player %s is logged in:\n%s", username, e)
 
