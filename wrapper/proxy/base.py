@@ -492,7 +492,7 @@ class Proxy(object):
 
                             console_command = "kick %s Your IP is Banned!" % client.username
                             self.eventhandler.callevent("proxy.console",
-                                                {"command": console_command})
+                                                        {"command": console_command})
 
                             banned += "\n%s" % client.username
                     return "Banned ip address: %s\nPlayers kicked as " \

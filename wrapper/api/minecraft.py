@@ -376,7 +376,7 @@ class Minecraft(object):
         new_server_uuid = self.getOfflineUUID(desired_name)
 
         worldname = str(self.getWorldName())
-        statsdir = ("%s/stats" % worldname)
+        statsdir = "%s/stats" % worldname
         sourcedir = "%s/playerdata/%s.dat" % (worldname, orig_server_uuid)
         destdir = "%s/playerdata/%s.dat" % (worldname, new_server_uuid)
 
@@ -856,4 +856,3 @@ class Minecraft(object):
         if self.wrapper.proxy:
             return self.wrapper.proxy.isipbanned(ipaddress)
         return None
-

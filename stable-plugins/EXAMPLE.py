@@ -27,18 +27,29 @@ DISABLED = False  # DEFAULT = False
 #
 # even if there is only 1 dependency, it must be a 'list' type (enclosed in '[]').
 # NOTE - this plugin will not get imported because wrapper will not find these dependencies (except for 'home.py')
-DEPENDENCIES = ["home.py", "vault.py", "economy.py", "etc..."]  # DEFAULT = False
+DEPENDENCIES = ["home.py", "teleport.py",]  # DEFAULT = False
 
 
-# the Wrapper 1.0.0 rc release will maintain backwards compatibility with the pre-release plugin API except for:
+# The Wrapper 1.0.0 rc release is not backwards compatible with the pre-release plugin with respect to storages:
+#  * The original API returned a "storage object" which operated (but was not actually) similar to a 
+#    python dict(), but (incompletely/poorly) implemented dictionary protocols, but added a 
+#    periodic save method to store the data to disk every so many seconds in a json format (with
+#    associated json limitations on data types and field keys).
+#  * The newer API (still prerelease) removed the automatic periodic save methods and required the 
+#    plugin to call the storage's save() or close() method during the onDisable event.
+#  * The API now creates a "storage object" which CONTAINS a dictionary called "Data".  The object 
+#    still has a save() method, but no periodic save.  The save also uses Pickle formatting by default
+#    (although json formatting can be specified).
 # - Storages require a close() method to save their contents to disk. save() still works, but the storage can remain
 #   open after the plugin disables, resulting in memory leakages and inconsistent disk storage content.  close() also
 #   performs a save().
-# - items outside the formal API (accessing wrapper/server/proxy/etc methods directly) are not supported.  Wrapper's own
-#   internal classes and methods have been fully re-written and refactored with no support for the prior code.
+
+# Items outside the formal API (accessing wrapper/server/proxy/etc methods directly) are not supported.  Wrapper's own
+# internal classes and methods have been fully re-written and refactored with no support for the prior code.
 #
 # desiring to maintain backwards-compatibility in wrapper's API means maintaining the camelCase tradition for the API.
 # This reasoning is considered by PEP-8 to be a valid reason for non-compliance with the PEP.
+
 # noinspection PyPep8Naming
 class Main:
     """
@@ -87,7 +98,6 @@ class Main:
         # Sample registered events
         self.api.registerEvent("player.login", self.playerLogin)
         self.api.registerEvent("player.logout", self.playerLogout)
-
         self.log.info("example.py is loaded!")
         self.log.error("This is an error test.")
         self.log.debug("This'll only show up if you have debug mode on.")
@@ -104,7 +114,8 @@ class Main:
         pass
 
     def _command3(self, player, args):
-        player.message("You ran /topic3")
+        self.data.Data["message"] = "You ran /topic3"
+        player.message(self.data.Data["message"])
         player.message({"text": "Congratulations!", "color": "aqua"})
         self.api.minecraft.broadcast("%s ran /topic3; congratulate them!" % player.username)
 

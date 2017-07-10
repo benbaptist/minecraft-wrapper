@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 NAME = "home"
 AUTHOR = "Cougar"
 ID = "net.version6.minecraft.plugins.home"

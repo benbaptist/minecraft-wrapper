@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import time
 NAME = "Teleport"
 AUTHOR = "C0ugar"
