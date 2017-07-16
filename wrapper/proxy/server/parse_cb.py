@@ -663,6 +663,9 @@ class ParseCB(object):
         this is a pretty useless parse, unless we opt to pump this data
         into the entity API.
         """
+        # possible source of errors due to complexity of the parse and
+        # the changes between various versions of minecraft.
+        return True
         eid, metadata = self.packet.readpkt(self.pktCB.ENTITY_METADATA[PARSER])
         if self.client.version >= PROTOCOL_1_8START:
             # 12 means 'ageable'

@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
 
+# These must be specified to prevent wrapper import errors
 AUTHOR = ""
 WEBSITE = ""
 VERSION = (0, 1, 0)  # DEFAULT (0, 1)
+# NAME = "Template"
+# ID = "com.benbaptist.plugins.template"
 
 SUMMARY = "a short summary of the plugin seen in /plugins"
 DESCRIPTION = """This is a longer, more in-depth description about the plugin.
@@ -12,9 +15,11 @@ Descriptions will be used in some parts of Wrapper.py, such as when you
 hover over a plugin name when you run /plugins, or in the web interface. """
 
 # totally optional items
-# NAME = "Plugin name"  # DEFAULT = the filename without the '.py' extension
-# ID = "com.benbaptist.plugins.template"  # DEFAULT = the filename without the '.py' extension
+#
+# Disables plugin
 # DISABLED = True  # DEFAULT = False
+#
+# If you need another plugin to load first, add the plugin(s) to this list
 # DEPENDENCIES = [...]  # DEFAULT = False
 
 
@@ -29,10 +34,9 @@ class Main:
     def onEnable(self):
         self.api.registerCommand("", self._command, "permission.node")
 
-        self.api.registerHelp("Plugin Name", "description of plugin",
+        self.api.registerHelp("template", "description of plugin 'template'",
                               [  # help items
-                                  ("/command <argument>", "how to use topic1", "permission.node"),
-                                  (),
+                                  ("/command <argument>", "how to use command", "permission.node"),
                               ]
                               )
 

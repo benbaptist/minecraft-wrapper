@@ -87,7 +87,7 @@ class Main:
         self.api.registerCommand("topic3", self._command3, "third.permission")
 
         # Sample register help
-        self.api.registerHelp("Topic", "description of Topic plugin", [
+        self.api.registerHelp("Example", "description of Topic plugin", [
                         ("/topic1 <argument>", "how to use topic1", "permission.node"),
                         ("/topic2 <arg1> <arg2>", "talk about topic2", "another.permission"),
                         ("/topic3", "...", "third.permission")
@@ -98,6 +98,10 @@ class Main:
         # Sample registered events
         self.api.registerEvent("player.login", self.playerLogin)
         self.api.registerEvent("player.logout", self.playerLogout)
+
+        # Due to our self-implemented colorization of logs, text formatting
+        # must use old-stye ("variable = %s" % variable) formatting and not the
+        # newer ("variable = ", variable) style formatting.
         self.log.info("example.py is loaded!")
         self.log.error("This is an error test.")
         self.log.debug("This'll only show up if you have debug mode on.")

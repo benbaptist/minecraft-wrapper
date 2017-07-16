@@ -267,6 +267,7 @@ class ParseSB(object):
                 "action": "useitem",
                 "origin": "pktSB.PLAYER_BLOCK_PLACEMENT"
             }):
+                self.log.debug("player helditem was None. (playerblockplacement-SB)")
                 return False
 
         # block placement event
@@ -317,6 +318,7 @@ class ParseSB(object):
         if 9 > slot[0] > -1:
             self.client.slot = slot[0]
         else:
+            self.log.debug("held item change returned False (SB)")
             return False
         return True
 
@@ -428,6 +430,7 @@ class ParseSB(object):
         }
 
         if not self.proxy.eventhandler.callevent("player.slotClick", datadict):
+            self.log.debug("slotclick returned False (SB)")
             return False
         """ eventdoc
             <group> Proxy <group>
@@ -522,6 +525,6 @@ class ParseSB(object):
                     self.client.pktSB.SPECTATE,
                     [UUID],
                     [client.serveruuid])
-
+                self.log.debug("spectate returned False (SB)")
                 return False
         return True

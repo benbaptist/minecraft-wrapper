@@ -1,4 +1,4 @@
-Build 218 (next build)
+Build 220 (next build)
 - Need to re-implement and fully debug player objects.  They are
  now added by the mcserver.py (and not in proxy), but never removed.
  Therefore, api.player calls are still functional after the player
@@ -8,7 +8,19 @@ Build 218 (next build)
 - player to player TP - Add inter-dimensional TP (1.8+) api
   Community Input enhancement proxy mode
 
-Build 216 [0.12.1]
+Build 219
+- Issues with home and bookmark plugins not setting the location
+ correctly, sometimes causing the player to fall or be slightly
+ misplaced.  could be difference in data types?
+- need to fix various problems with parsing:
+ - dropped items are invisible
+
+Build 218
+- fix issues with a plugin called "Name" in help menus.
+- permissions issues with bookmarks plugin allowing commands.
+- Fix example and template plugins
+
+Build 217
 - more debugging with servervitals references.
 - found a new 1.12 metadata data type.. cant parse it yet ('13' - nbt tag)
 

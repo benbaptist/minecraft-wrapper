@@ -26,10 +26,13 @@ class Main:
             ("/bmlist", "List bookmark names", "bookmarks"),
         ])
 
-        self.api.registerCommand("bmset", self.bookmarkset)
-        self.api.registerCommand("bmgo", self.bookmarkgo)
-        self.api.registerCommand("bmdel", self.bookmarkdel)
-        self.api.registerCommand("bmlist", self.bookmarklist)
+        self.api.registerCommand("bmset", self.bookmarkset, "bookmarks")
+        self.api.registerCommand("bmgo", self.bookmarkgo, "bookmarks")
+        self.api.registerCommand("bmdel", self.bookmarkdel, "bookmarks")
+        self.api.registerCommand("bmlist", self.bookmarklist, "bookmarks")
+
+        # comment this line out to only allow players with permission
+        self.api.registerPermission("bookmarks", True)
 
     def onDisable(self):
         self.data.close()
