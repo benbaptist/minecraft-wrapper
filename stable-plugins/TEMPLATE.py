@@ -4,8 +4,6 @@
 AUTHOR = ""
 WEBSITE = ""
 VERSION = (0, 1, 0)  # DEFAULT (0, 1)
-# NAME = "Template"
-# ID = "com.benbaptist.plugins.template"
 
 SUMMARY = "a short summary of the plugin seen in /plugins"
 DESCRIPTION = """This is a longer, more in-depth description about the plugin.
@@ -15,6 +13,10 @@ Descriptions will be used in some parts of Wrapper.py, such as when you
 hover over a plugin name when you run /plugins, or in the web interface. """
 
 # totally optional items
+#
+# these default to filename or similar
+# NAME = "Template"
+# ID = "com.benbaptist.plugins.template"
 #
 # Disables plugin
 # DISABLED = True  # DEFAULT = False

@@ -174,31 +174,6 @@ class Proxy(object):
         # define the slot once here and not at each clients Instantiation:
         self.inv_slots = range(46)
 
-        # Constants used in client and server connections
-
-        # Handshake is the default mode of a server awaiting packets from a
-        # client.  Client will send a handshake (a 0x00 packet WITH payload)
-        # asking for STATUS or LOGIN mode.  This mode is n/a to
-        # serverconnection.py, which starts in LOGIN mode
-        self.HANDSHAKE = 0
-        self.OFFLINE = 0  # an alias of Handshake.
-
-        # Not used by serverconnection.py. clientconnection.py handles
-        # PING/MOTD functions  Status mode will await either a ping (0x01)
-        # containing a unique long int and will respond with same integer...
-        #  OR if it receives a 0x00 packet (with no payload), that signals
-        # server (client.py) to send the MOTD json response packet.  The
-        # ping will follow the 0x00 request for json response.  The ping
-        # will set wrapper/server back to HANDSHAKE mode (to await
-        # the next handshake).
-        self.MOTD = 1
-        self.STATUS = 1
-
-        self.LOGIN = 2  # login state
-        self.PLAY = 3  # play state
-        self.LOBBY = 4  # lobby state (remote server)
-        self.IDLE = 5  # no parsing at all; just keeping client suspended
-
         # various contructions for non-standard
         # client/servers (forge?) and wrapper's own channel
         self.mod_info = {}
@@ -209,9 +184,12 @@ class Proxy(object):
 
         # trace variables
         self.trace = False
-        self.ignoredSB = [0xe, 0xc, 0x0, 0xd, ]
-        self.ignoredCB = [0x44, 0x49, 0x34, 0x25, 0x26, 0x3b, 0x2e, 0x39,
-                          0x30, 0x3, 0x4a, 0x3c, 0x20, 0x1b, ]
+        self.ignoredSB = [0x05, 0x0a, 0x00, 0x0f, 0x1a, 0x0d, 0x0e, 0x10, 0x15,
+                          0x03]
+        self.ignoredCB = [0x23, 0x18, 0x0d, 0x2b, 0x39, 0x1b, 0x30, 0x2d, 0x2e,
+                          0x37, 0x46, 0x45, 0x14, 0x16, 0x20, 0x03, 0x3b, 0x4d,
+                          0x3e, 0x3f, 0x27, 0x35, 0x26, 0x4c, 0x40, 0x00, 0x3d,
+                          0x4b, 0x0b, 0x31, 0x48, 0x1d, 0x21, 0x28]
 
         self.privateKey = encryption.generate_key_pair()
         self.publicKey = encryption.encode_public_key(self.privateKey)

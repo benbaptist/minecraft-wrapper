@@ -79,6 +79,7 @@ class Packets(object):
         # new packets implemented after 1.7
         self.SPECTATE = 0xee  # 1.8
         self.RESOURCE_PACK_STATUS = 0xee  # 1.8
+
         self.TELEPORT_CONFIRM = 0xee  # 1.9
         self.USE_ITEM = 0xee  # 1.9
         self.VEHICLE_MOVE = 0xee  # 1.9

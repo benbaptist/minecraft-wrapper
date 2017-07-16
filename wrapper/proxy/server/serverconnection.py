@@ -49,7 +49,7 @@ class ServerConnection(object):
 
         # server setup and operating paramenters
         self.abort = False
-        self.state = self.proxy.HANDSHAKE
+        self.state = HANDSHAKE
         self.packet = None
         self.parse_cb = None
         self.buildmode = False
@@ -93,7 +93,7 @@ class ServerConnection(object):
     def connect(self):
         """ This simply establishes the tcp socket connection and
         starts the flush loop, NOTHING MORE. """
-        self.state = self.proxy.LOGIN
+        self.state = LOGIN
         # Connect to a local server address
         if self.ip is None:
             self.server_socket.connect((
@@ -127,7 +127,7 @@ class ServerConnection(object):
 
         if lobby_return:
             # stop parsing PLAY packets to prevent further "disconnects"
-            self.state = self.proxy.LOBBY
+            self.state = LOBBY
         self.log.debug("Disconnecting proxy server socket connection."
                        " %s", self.infos_debug)
 
@@ -190,7 +190,7 @@ class ServerConnection(object):
 
             # parse it
             if self.parse(pkid) and self.client.state in (
-                    self.proxy.PLAY, self.proxy.LOBBY):
+                    PLAY, LOBBY):
                 try:
                     self.client.packet.send_raw(original)
                     if self.proxy.trace:
@@ -208,7 +208,7 @@ class ServerConnection(object):
             self.log.warn("<=CB %s (%s)", hex(pkid), name)
 
     def _break_handle(self):
-        if self.state == self.proxy.LOBBY:
+        if self.state == LOBBY:
             self.log.info("%s is without a server now.", self.client.username)
             # self.close_server("%s server connection closing..." %
             #   self.client.username, lobby_return=True)
@@ -269,7 +269,7 @@ class ServerConnection(object):
 
     # Login Success - UUID & Username are sent in this packet as strings
     def _parse_login_success(self):
-        self.state = self.proxy.PLAY
+        self.state = PLAY
         # todo - we may not need to assign this to a variable.
         # (we supplied uuid/name anyway!)
         # noinspection PyUnusedLocal
@@ -312,8 +312,8 @@ class ServerConnection(object):
     def _define_parsers(self):
         # the packets we parse and the methods that parse them.
         self.parsers = {
-            self.proxy.HANDSHAKE: {},  # maps identically to OFFLINE ( '0' )
-            self.proxy.LOGIN: {
+            HANDSHAKE: {},  # maps identically to OFFLINE ( '0' )
+            LOGIN: {
                 self.pktCB.LOGIN_DISCONNECT:
                     self._parse_login_disconnect,
                 self.pktCB.LOGIN_ENCR_REQUEST:
@@ -323,7 +323,7 @@ class ServerConnection(object):
                 self.pktCB.LOGIN_SET_COMPRESSION:
                     self._parse_login_set_compression
             },
-            self.proxy.PLAY: {
+            PLAY: {
                 self.pktCB.COMBAT_EVENT:
                     self.parse_cb.parse_play_combat_event,
                 self.pktCB.KEEP_ALIVE[PKT]:
@@ -375,7 +375,7 @@ class ServerConnection(object):
                 self.pktCB.ENTITY_METADATA[PKT]:
                     self.parse_cb.parse_entity_metadata,
                 },
-            self.proxy.LOBBY: {
+            LOBBY: {
                 self.pktCB.DISCONNECT:
                     self._parse_lobby_disconnect,
                 self.pktCB.KEEP_ALIVE[PKT]:

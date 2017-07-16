@@ -666,25 +666,25 @@ class ParseCB(object):
         # possible source of errors due to complexity of the parse and
         # the changes between various versions of minecraft.
         return True
-        eid, metadata = self.packet.readpkt(self.pktCB.ENTITY_METADATA[PARSER])
-        if self.client.version >= PROTOCOL_1_8START:
-            # 12 means 'ageable'
-            if 12 in metadata:
-                # boolean isbaby
-                if 6 in metadata[12]:
-                    # it's a baby!
-                    if metadata[12][1] is True:
-
-                        # print the data for reference
-                        # see http://wiki.vg/Entities#Entity_Metadata_Format
-                        # self.log.debug("EID: %s - %s", eid, metadata)
-                        # name the baby and make tag visible (no index/type
-                        # checking; accessing base entity class)
-                        metadata[2] = (3, "Entity_%s" % eid)
-                        metadata[3] = (6, True)
-
-        self.client.packet.sendpkt(
-            self.pktCB.ENTITY_METADATA[PKT],
-            self.pktCB.ENTITY_METADATA[PARSER],
-            (eid, metadata))
-        return False
+        # eid, metadata = self.packet.readpkt(self.pktCB.ENTITY_METADATA[PARSER])
+        # if self.client.version >= PROTOCOL_1_8START:
+        #     # 12 means 'ageable'
+        #     if 12 in metadata:
+        #         # boolean isbaby
+        #         if 6 in metadata[12]:
+        #             # it's a baby!
+        #             if metadata[12][1] is True:
+        #
+        #                 # print the data for reference
+        #                 # see http://wiki.vg/Entities#Entity_Metadata_Format
+        #                 # self.log.debug("EID: %s - %s", eid, metadata)
+        #                 # name the baby and make tag visible (no index/type
+        #                 # checking; accessing base entity class)
+        #                 metadata[2] = (3, "Entity_%s" % eid)
+        #                 metadata[3] = (6, True)
+        #
+        # self.client.packet.sendpkt(
+        #     self.pktCB.ENTITY_METADATA[PKT],
+        #     self.pktCB.ENTITY_METADATA[PARSER],
+        #     (eid, metadata))
+        # return False

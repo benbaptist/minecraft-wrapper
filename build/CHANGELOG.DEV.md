@@ -11,7 +11,9 @@ Build 220 (next build)
 Build 219
 - Issues with home and bookmark plugins not setting the location
  correctly, sometimes causing the player to fall or be slightly
- misplaced.  could be difference in data types?
+ misplaced.  Due to specifying %d (and rounding 1/2 coords to change
+ the TP location to an adjoining block).  Fix similar error in
+ teleports.
 - need to fix various problems with parsing:
  - dropped items are invisible
 

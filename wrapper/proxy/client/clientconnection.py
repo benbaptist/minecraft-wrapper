@@ -90,7 +90,7 @@ class Client(object):
         self.abort = False
         # Proxy ServerConnection() (not the javaserver)
         self.server_connection = None
-        self.state = self.proxy.HANDSHAKE
+        self.state = HANDSHAKE
 
         # UUIDs - all should use MCUUID unless otherwise specified
         # --------------------------------------------------------
@@ -188,7 +188,7 @@ class Client(object):
             if self.parse(pkid) and \
                     self.server_connection and \
                     self.server_connection.state in (
-                            self.proxy.PLAY, self.proxy.LOBBY):
+                            PLAY, LOBBY):
 
                 # sending to the server only happens in
                 # PLAY/LOBBY (not IDLE, HANDSHAKE, or LOGIN)
@@ -219,12 +219,12 @@ class Client(object):
 
         # close current connection and start new one
         was_lobby = False
-        if self.state == self.proxy.LOBBY:
+        if self.state == LOBBY:
             was_lobby = True
         # get out of PLAY "NOW" to prevent second disconnect that kills client
-        self.state = self.proxy.IDLE
+        self.state = IDLE
         # keep server from sending disconnects
-        self.server_connection.state = self.proxy.IDLE
+        self.server_connection.state = IDLE
         self.server_connection.close_server(
             reason="Lobbification", lobby_return=True)
         time.sleep(1)
@@ -233,7 +233,7 @@ class Client(object):
         self.clientSettingsSent = False
 
         # connect to server
-        self.state = self.proxy.PLAY
+        self.state = PLAY
         self.connect_to_server(ip, port)
 
         # if the client was in LOBBY state (connected to remote server)
@@ -284,7 +284,7 @@ class Client(object):
                 [BOOL, ],
                 (True,))
 
-        self.state = self.proxy.LOBBY
+        self.state = LOBBY
 
     def client_logon(self, start_keep_alives=True, ip=None, port=None):
         """  When the client first logs in to wrapper """
@@ -295,7 +295,7 @@ class Client(object):
                 self.uuid.__str__())
             self.log.info("Banned player %s tried to"
                           " connect:\n %s" % (self.username, banreason))
-            self.state = self.proxy.HANDSHAKE
+            self.state = HANDSHAKE
             self.disconnect("Banned: %s" % banreason)
             return False
 
@@ -309,7 +309,7 @@ class Client(object):
                     "secure_connection": self.onlinemode
                 }):
 
-            self.state = self.proxy.HANDSHAKE
+            self.state = HANDSHAKE
             self.disconnect("Login denied by a Plugin.")
             return False
 
@@ -369,7 +369,7 @@ class Client(object):
         t.start()
 
         # switch server_connection to LOGIN to log in to (offline) server.
-        self.server_connection.state = self.proxy.LOGIN
+        self.server_connection.state = LOGIN
 
         # now we send it a handshake to request the server go to login mode
         server_addr = "localhost"
@@ -383,7 +383,7 @@ class Client(object):
             self.server_connection.pktSB.HANDSHAKE,
             [VARINT, STRING, USHORT, VARINT],
             (self.clientversion, server_addr, self.serverport,
-             self.proxy.LOGIN))
+             LOGIN))
 
         # send the login request (server is offline, so it will
         # accept immediately by sending login_success)
@@ -426,7 +426,7 @@ class Client(object):
         else:
             jsonmessage = message  # server packets are read as json
 
-        if self.state in (self.proxy.PLAY, self.proxy.LOBBY):
+        if self.state in (PLAY, LOBBY):
             self.packet.sendpkt(
                 self.pktCB.DISCONNECT,
                 [JSON],
@@ -443,7 +443,7 @@ class Client(object):
             self.log.debug("upon disconnect, state was 'other'"
                            " (sent LOGIN_DISCONNECT)")
         time.sleep(1)
-        self.state = self.proxy.HANDSHAKE
+        self.state = HANDSHAKE
         self.close_server()
 
     # internal init and properties
@@ -519,7 +519,7 @@ class Client(object):
 
         while not self.abort:
             time.sleep(1)
-            if self.state in (self.proxy.PLAY, self.proxy.LOBBY):
+            if self.state in (PLAY, LOBBY):
                 # client expects < 20sec
                 if time.time() - self.time_server_pinged > 10:
 
@@ -771,12 +771,12 @@ class Client(object):
         self.serverportplayerused = data[2]
         requestedstate = data[3]
 
-        if requestedstate == self.proxy.STATUS:
-            self.state = self.proxy.STATUS
+        if requestedstate == STATUS:
+            self.state = STATUS
             # wrapper will handle responses, so do not pass this to the server.
             return False
 
-        if requestedstate == self.proxy.LOGIN:
+        if requestedstate == LOGIN:
             # TODO - coming soon: allow client connections
             # despite lack of server connection
 
@@ -797,7 +797,7 @@ class Client(object):
 
             if self.servervitals.protocolVersion == self.clientversion:
                 # login start...
-                self.state = self.proxy.LOGIN
+                self.state = LOGIN
                 # packet passes to server, which will also switch to Login
                 return True
             else:
@@ -814,7 +814,7 @@ class Client(object):
         data = self.packet.readpkt([LONG])
         self.packet.sendpkt(self.pktCB.PING_PONG, [LONG], [data[0]])
         self.log.debug("CB (W)-> STATUS PING")
-        self.state = self.proxy.HANDSHAKE
+        self.state = HANDSHAKE
         return False
 
     def _parse_status_request(self):
@@ -907,7 +907,7 @@ class Client(object):
             self.serveruuid = self.uuid  # MCUUID object
 
             # log the client on
-            self.state = self.proxy.PLAY
+            self.state = PLAY
             self.client_logon()
 
     def _parse_login_encr_response(self):
@@ -947,7 +947,7 @@ class Client(object):
         if self.ipbanned:
             self.log.info("Player %s tried to connect from banned ip:"
                           " %s", self.username, self.ip)
-            self.state = self.proxy.HANDSHAKE
+            self.state = HANDSHAKE
             self.disconnect("Your address is IP-banned from this server!.")
             return False
 
@@ -959,7 +959,7 @@ class Client(object):
         # TODO Whitelist processing Here (or should it be at javaserver start?)
 
         # log the client on
-        self.state = self.proxy.PLAY
+        self.state = PLAY
         self.client_logon()
 
     # Lobby parsers
@@ -1002,13 +1002,13 @@ class Client(object):
     def _define_parsers(self):
         # the packets we parse and the methods that parse them.
         self.parsers = {
-            self.proxy.HANDSHAKE: {
+            HANDSHAKE: {
                 self.pktSB.HANDSHAKE:
                     self._parse_handshaking,
                 self.pktSB.PLUGIN_MESSAGE:
                     self._parse_plugin_message,
                 },
-            self.proxy.STATUS: {
+            STATUS: {
                 self.pktSB.STATUS_PING:
                     self._parse_status_ping,
                 self.pktSB.REQUEST:
@@ -1016,7 +1016,7 @@ class Client(object):
                 self.pktSB.PLUGIN_MESSAGE:
                     self._parse_plugin_message,
                 },
-            self.proxy.LOGIN: {
+            LOGIN: {
                 self.pktSB.LOGIN_START:
                     self._parse_login_start,
                 self.pktSB.LOGIN_ENCR_RESPONSE:
@@ -1024,7 +1024,7 @@ class Client(object):
                 self.pktSB.PLUGIN_MESSAGE:
                     self._parse_plugin_message,
                 },
-            self.proxy.PLAY: {
+            PLAY: {
                 self.pktSB.CHAT_MESSAGE:
                     self.parse_sb.parse_play_chat_message,
                 self.pktSB.CLICK_WINDOW:
@@ -1064,7 +1064,7 @@ class Client(object):
                 self.pktSB.PLUGIN_MESSAGE:
                     self._parse_plugin_message,
                 },
-            self.proxy.LOBBY: {
+            LOBBY: {
                 self.pktSB.KEEP_ALIVE[PKT]:
                     self._parse_keep_alive,
                 self.pktSB.CHAT_MESSAGE:
@@ -1072,7 +1072,7 @@ class Client(object):
                 self.pktSB.PLUGIN_MESSAGE:
                     self._parse_plugin_message,
                 },
-            self.proxy.IDLE: {
+            IDLE: {
                 self.pktSB.PLUGIN_MESSAGE:
                     self._parse_plugin_message,
             }

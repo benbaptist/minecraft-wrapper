@@ -137,7 +137,7 @@ class Main:
             {"text": bmname, "color": "dark_green"},
             {"text": ".", "color": "green"},
         ]})
-        self.api.minecraft.console("tp %s %d %d %d" % (player.username, self.data.Data[player.username][bmname][0],
+        self.api.minecraft.console("tp %s %s %s %s" % (player.username, self.data.Data[player.username][bmname][0],
                                                        self.data.Data[player.username][bmname][1],
                                                        self.data.Data[player.username][bmname][2]))
 
