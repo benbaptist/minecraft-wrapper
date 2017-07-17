@@ -7,6 +7,8 @@ Build 220 (next build)
  point into the proxy/entity files where the actual code is).
 - player to player TP - Add inter-dimensional TP (1.8+) api
   Community Input enhancement proxy mode
+- need to fix various problems with parsing:
+ - dropped items are invisible
 
 Build 219
 - Issues with home and bookmark plugins not setting the location
@@ -14,8 +16,11 @@ Build 219
  misplaced.  Due to specifying %d (and rounding 1/2 coords to change
  the TP location to an adjoining block).  Fix similar error in
  teleports.
-- need to fix various problems with parsing:
- - dropped items are invisible
+- fine tune and verify packets for client and serverbound use.
+- simplify constants for play states for proxy client and server.
+- pass a faux player object to player.preLogin to prevent errors in
+ trying to generate a playerobject before player is logged on.
+- submitted regions and SurestLib plugins (to test wrapper events).
 
 Build 218
 - fix issues with a plugin called "Name" in help menus.

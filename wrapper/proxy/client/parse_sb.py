@@ -262,7 +262,7 @@ class ParseSB(object):
             # if no item, treat as interaction (according to wrappers
             # inventory :(, return False  )
             if not self.proxy.eventhandler.callevent("player.interact", {
-                "playername": self.client.username,
+                "playername": player,
                 "position": position,
                 "action": "useitem",
                 "origin": "pktSB.PLAYER_BLOCK_PLACEMENT"
@@ -276,7 +276,7 @@ class ParseSB(object):
         # clickposition is the block actually clicked
         if not self.proxy.eventhandler.callevent(
                 "player.place",
-                {"player": player, "position": position,
+                {"playername": player, "position": position,
                  "clickposition": clickposition,
                  "hand": hand, "item": helditem}):
             ''' EventDoc

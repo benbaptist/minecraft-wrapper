@@ -302,7 +302,8 @@ class Client(object):
         # Run the pre-login event
         if not self.proxy.eventhandler.callevent(
                 "player.preLogin", {
-                    "player": self.username,
+                    "playername": self.username,
+                    "player": self.username,  # not a real player object!
                     "online_uuid": self.uuid.string,
                     "offline_uuid": self.serveruuid.string,
                     "ip": self.ip,
