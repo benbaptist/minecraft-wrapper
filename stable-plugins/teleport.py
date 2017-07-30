@@ -4,12 +4,12 @@ import time
 NAME = "Teleport"
 AUTHOR = "C0ugar"
 ID = "net.version6.minecraft.plugins.teleport"
-SUMMARY = "Teleport commands, similar to tpa commands in Bukkit Essentials."
-DESCRIPTION = """Teleport plugin.
+SUMMARY = "Teleport plugin"
+DESCRIPTION = """Teleport commands, similar to tpa commands in Bukkit Essentials.
 Permissions:
 teleport.tpa - use /tpa
 teleport.tpahere - use /tpahere
-teleport.deny - prevents people from sending tpa requests to a player with this permission node"""
+teleport.denied - prevents people from sending tpa requests to a player with this permission node"""
 WEBSITE = ""
 VERSION = (0, 2, 1)
 
@@ -26,14 +26,14 @@ class Main:
 
     def onEnable(self):
         self.api.registerHelp("Teleport", "Commands from the Teleport plugin", [
-            ("/tpa", "Request to teleport to the specified player.", "teleport"),
-            ("/tpahere", "Request that the specified player teleport to you.", "teleport"),
+            ("/tpa", "Request to teleport to the specified player.", "teleport.tpa"),
+            ("/tpahere", "Request that the specified player teleport to you.", "teleport.tpahere"),
             ("/tpaccept", "Accept a teleport request.", None),
             ("/tpdeny", "Reject a teleport request.", None),
         ])
 
-        self.api.registerCommand("tpa", self.tpa, "teleport")
-        self.api.registerCommand("tpahere", self.tpahere, "teleport")
+        self.api.registerCommand("tpa", self.tpa, "teleport.tpa")
+        self.api.registerCommand("tpahere", self.tpahere, "teleport.tpahere")
         self.api.registerCommand("tpaccept", self.tpaccept)
         self.api.registerCommand("tpdeny", self.tpdeny)
 
