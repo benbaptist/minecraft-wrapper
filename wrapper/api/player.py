@@ -70,6 +70,7 @@ class Player(object):
 
 
     Supported properties of the player:
+    
     .. code:: python
 
         self.username
