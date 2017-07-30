@@ -5,7 +5,7 @@
 # This program is distributed under the terms of the GNU
 # General Public License, version 3 or later.
 
-from proxy.constants import *
+from proxy.utils.constants import *
 
 
 # noinspection PyMethodMayBeStatic
@@ -16,12 +16,10 @@ class ParseSB(object):
     def __init__(self, client, packet):
         self.client = client
         self.proxy = client.proxy
-        self.wrapper = client.proxy.wrapper
-        self.log = client.proxy.wrapper.log
-        self.config = client.proxy.wrapper.config
+        self.log = client.log
         self.packet = packet
 
-        self.command_prefix = self.wrapper.command_prefix
+        self.command_prefix = self.proxy.srv_data.command_prefix
         self.command_prefix_non_standard = self.command_prefix != "/"
         self.command_prefix_len = len(self.command_prefix)
 
@@ -33,7 +31,7 @@ class ParseSB(object):
             data = self.packet.readpkt(
                 [DOUBLE, DOUBLE, DOUBLE, FLOAT, FLOAT, BOOL])
         # ("double:x|double:y|double:z|float:yaw|float:pitch|bool:on_ground")
-        self.client.position = (data[0], data[1], data[4])
+        self.client.position = (data[0], data[1], data[2])
         self.client.head = (data[4], data[5])
         return True
 
@@ -45,8 +43,8 @@ class ParseSB(object):
         # Get the packet chat message contents
         chatmsg = data[0]
 
-        payload = self.wrapper.events.callevent("player.rawMessage", {
-            "player": self.client.getplayerobject(),
+        payload = self.proxy.eventhandler.callevent("player.rawMessage", {
+            "playername": self.client.username,
             "message": chatmsg
         })
         """ eventdoc
@@ -85,9 +83,9 @@ class ParseSB(object):
         # determine if this is a command. act appropriately
         if chatmsg[0:self.command_prefix_len] == self.command_prefix:
             # it IS a command of some kind
-            if self.wrapper.events.callevent(
+            if self.proxy.eventhandler.callevent(
                     "player.runCommand", {
-                        "player": self.client.getplayerobject(),
+                        "playername": self.client.username,
                         "command": chatmsg.split(" ")[0][1:].lower(),
                         "args": chatmsg.split(" ")[1:]}):
 
@@ -168,8 +166,8 @@ class ParseSB(object):
 
         # finished digging
         if data[0] == 2:
-            if not self.wrapper.events.callevent("player.dig", {
-                "player": self.client.getplayerobject(),
+            if not self.proxy.eventhandler.callevent("player.dig", {
+                "playername": self.client.username,
                 "position": position,
                 "action": "end_break",
                 "face": data[4]
@@ -179,16 +177,16 @@ class ParseSB(object):
         # started digging
         if data[0] == 0:
             if self.client.gamemode != 1:
-                if not self.wrapper.events.callevent("player.dig", {
-                    "player": self.client.getplayerobject(),
+                if not self.proxy.eventhandler.callevent("player.dig", {
+                    "playername": self.client.username,
                     "position": position,
                     "action": "begin_break",
                     "face": data[4]
                 }):
                     return False
             else:
-                if not self.wrapper.events.callevent("player.dig", {
-                    "player": self.client.getplayerobject(),
+                if not self.proxy.eventhandler.callevent("player.dig", {
+                    "playername": self.client.username,
                     "position": position,
                     "action": "end_break",
                     "face": data[4]
@@ -197,8 +195,8 @@ class ParseSB(object):
         if data[0] == 5 and data[4] == 255:
             if self.client.position != (0, 0, 0):
                 playerpos = self.client.position
-                if not self.wrapper.events.callevent("player.interact", {
-                    "player": self.client.getplayerobject(),
+                if not self.proxy.eventhandler.callevent("player.interact", {
+                    "playername": self.client.username,
                     "position": playerpos,
                     "action": "finish_using"
                 }):
@@ -206,9 +204,9 @@ class ParseSB(object):
         return True
 
     def parse_play_player_block_placement(self):
-        player = self.client.getplayerobject()
+        player = self.client.username
         hand = 0  # main hand
-        helditem = player.getHeldItem()
+        helditem = self.client.inventory[36 + self.client.slot]
 
         if self.client.clientversion < PROTOCOL_1_7:
             data = None
@@ -263,21 +261,22 @@ class ParseSB(object):
         if helditem is None:
             # if no item, treat as interaction (according to wrappers
             # inventory :(, return False  )
-            if not self.wrapper.events.callevent("player.interact", {
-                "player": player,
+            if not self.proxy.eventhandler.callevent("player.interact", {
+                "playername": player,
                 "position": position,
                 "action": "useitem",
                 "origin": "pktSB.PLAYER_BLOCK_PLACEMENT"
             }):
+                self.log.debug("player helditem was None. (playerblockplacement-SB)")
                 return False
 
         # block placement event
         self.client.lastplacecoords = position
         # position is where new block goes
         # clickposition is the block actually clicked
-        if not self.wrapper.events.callevent(
+        if not self.proxy.eventhandler.callevent(
                 "player.place",
-                {"player": player, "position": position,
+                {"playername": player, "position": position,
                  "clickposition": clickposition,
                  "hand": hand, "item": helditem}):
             ''' EventDoc
@@ -294,12 +293,11 @@ class ParseSB(object):
     def parse_play_use_item(self):  # no 1.8 or prior packet
         data = self.packet.readpkt([REST])
         # "rest:pack")
-        player = self.client.getplayerobject()
         position = self.client.lastplacecoords
         if "pack" in data:
             if data[0] == '\x00':
-                if not self.wrapper.events.callevent("player.interact", {
-                    "player": player,
+                if not self.proxy.eventhandler.callevent("player.interact", {
+                    "playername": self.client.username,
                     "position": position,
                     "action": "useitem",
                     "origin": "pktSB.USE_ITEM"
@@ -320,6 +318,7 @@ class ParseSB(object):
         if 9 > slot[0] > -1:
             self.client.slot = slot[0]
         else:
+            self.log.debug("held item change returned False (SB)")
             return False
         return True
 
@@ -343,8 +342,8 @@ class ParseSB(object):
         l2 = data[4]
         l3 = data[5]
         l4 = data[6]
-        payload = self.wrapper.events.callevent("player.createSign", {
-            "player": self.client.getplayerobject(),
+        payload = self.proxy.eventhandler.callevent("player.createSign", {
+            "playername": self.client.username,
             "position": position,
             "line1": l1,
             "line2": l2,
@@ -421,7 +420,7 @@ class ParseSB(object):
             data = [False, 0, 0, 0, 0, 0, 0]
 
         datadict = {
-            "player": self.client.getplayerobject(),
+            "playername": self.client.username,
             "wid": data[0],  # window id ... always 0 for inventory
             "slot": data[1],  # slot number
             "button": data[2],  # mouse / key button
@@ -430,7 +429,8 @@ class ParseSB(object):
             "clicked": data[5]  # item data
         }
 
-        if not self.wrapper.events.callevent("player.slotClick", datadict):
+        if not self.proxy.eventhandler.callevent("player.slotClick", datadict):
+            self.log.debug("slotclick returned False (SB)")
             return False
         """ eventdoc
             <group> Proxy <group>
@@ -519,12 +519,12 @@ class ParseSB(object):
         data = self.packet.readpkt([UUID, NULL])
 
         # ("uuid:target_player")
-        for client in self.wrapper.proxy.clients:
+        for client in self.proxy.clients:
             if data[0] == client.uuid:
                 self.client.server_connection.packet.sendpkt(
                     self.client.pktSB.SPECTATE,
                     [UUID],
                     [client.serveruuid])
-
+                self.log.debug("spectate returned False (SB)")
                 return False
         return True

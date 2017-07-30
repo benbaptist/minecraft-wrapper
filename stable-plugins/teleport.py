@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import time
 NAME = "Teleport"
 AUTHOR = "C0ugar"
@@ -64,7 +66,7 @@ class Main:
                 where = otherPlayer
             who.message({"text": "Teleporting to %s." % where.username, "color": "yellow"})
             pos = where.getPosition()
-            self.minecraft.console("tp %s %d %d %d" % (who.username, pos[0], pos[1], pos[2]))
+            self.minecraft.console("tp %s %s %s %s" % (who.username, pos[0], pos[1], pos[2]))
         if player.username in self.data:
             del self.data[player.username]
 

@@ -35,6 +35,11 @@ class Events(object):
             yield i
 
     def callevent(self, event, payload):
+        # create reference player object for payload, if needed.
+        if payload and ("playername" in payload) and ("player" not in payload):
+            payload["player"] = self.wrapper.api.minecraft.getPlayer(
+                payload["playername"])
+
         if event == "player.runCommand":
             if not self.wrapper.commands.playercommand(payload):
                 return False

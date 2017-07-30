@@ -6,6 +6,7 @@
 # General Public License, version 3 or later.
 
 from __future__ import division
+from __future__ import print_function
 
 import os
 import errno
@@ -16,7 +17,35 @@ import datetime
 import socket
 import urllib
 
-COLORCODES = {
+VALID_CODES = list("0123456789abcdefrklmno")
+VALID_COLORS = list("0123456789abcdef")
+
+CODENAMES = {
+    "black": "0",
+    "dark_blue": "1",
+    "dark_green": "2",
+    "dark_aqua": "3",
+    "dark_red": "4",
+    "dark_purple": "5",
+    "gold": "6",
+    "gray": "7",
+    "dark_gray": "8",
+    "blue": "9",
+    "green": "a",
+    "aqua": "b",
+    "red": "c",
+    "light_purple": "d",
+    "yellow": "e",
+    "white": "f",
+    "reset": "r",
+    "obfuscated": "k",
+    "bold": "l",
+    "strikethrough": "m",
+    "underline": "n",
+    "italic": "o"
+}
+
+COLORS = {
     "0": "black",
     "1": "dark_blue",
     "2": "dark_green",
@@ -32,13 +61,7 @@ COLORCODES = {
     "c": "red",
     "d": "light_purple",
     "e": "yellow",
-    "f": "white",
-    "r": "\xc2\xa7r",
-    "k": "\xc2\xa7k",  # obfuscated
-    "l": "\xc2\xa7l",  # bold
-    "m": "\xc2\xa7m",  # strikethrough
-    "n": "\xc2\xa7n",  # underline
-    "o": "\xc2\xa7o",  # italic,
+    "f": "white"
 }
 
 # class Helpers:
@@ -358,6 +381,8 @@ def processcolorcodes(messagestring):
     the & symbol, and returns a JSON chat object. message received
     should be string.
 
+    upgraded to allow inserting URLS by 
+
     :arg messagestring: String argument with "&" codings.
 
     :returns: Json dumps() string.
@@ -384,9 +409,14 @@ def processcolorcodes(messagestring):
     for i in it:
         char = message[i]
 
+        # probably needed because some Py2 code may try to pass a byte string
         if char not in ("&", u'&'):
+
+            # Space is used to end any URL designation
             if char == " ":
                 url = False
+
+            # add normal characters to text buffer
             current += char
         else:
             if url:
@@ -413,11 +443,8 @@ def processcolorcodes(messagestring):
             except:
                 break
 
-            if code in "abcdef0123456789":
-                try:
-                    color = COLORCODES[code]
-                except KeyError:
-                    color = "white"
+            if code in VALID_COLORS:
+                color = COLORS[code]
 
             obfuscated = (code == "k")
             bold = (code == "l")
@@ -438,15 +465,12 @@ def processcolorcodes(messagestring):
                 url = False
                 color = "white"
 
-            if sys.version_info > (3,):
-                next(it)
-            else:
-                try:
-                    # Py2-3
-                    # noinspection PyUnresolvedReferences
-                    it.next()
-                except AttributeError:
-                    it.__next__()
+            # Py2-3
+            try:
+                # noinspection PyUnresolvedReferences
+                it.next()
+            except AttributeError:
+                it.__next__()
 
     extras.append({
         "text": current,
@@ -466,8 +490,8 @@ def processoldcolorcodes(message):
     signs instead (§).
 
     """
-    for i in COLORCODES:
-        message = message.replace("&" + i, "\xc2\xa7" + i)
+    for i in VALID_CODES:
+        message = message.replace("&" + i, "§" + i)
     return message
 
 
@@ -710,30 +734,52 @@ def _use_style(foreground='white', background='black', options=()):
 
 
 def chattocolorcodes(jsondata):
-
-    total = _handle_extras(jsondata)
+    """ Convert a chat dictionary to a string with '§_' codes
+    
+    :jsondata: Dictionary of minecraft chat 
+    :returns: a string formatted with '§_' codes
+    
+    """
+    total = _handle_chat_items(jsondata)
     if "extra" in jsondata:
         for extra in jsondata["extra"]:
-            total += _handle_extras(extra)
+            total += _handle_chat_items(extra)
     return total
 
 
-def _handle_extras(extra):
+def _handle_chat_items(items):
+    """ take dictionary of items and handle top-level items
+    :items: The chat dictionary or one of its extra items
+    """
     extras = ""
-    if "color" in extra:
-        extras += _getcolorcode(extra["color"])
-    if "text" in extra:
-        extras += extra["text"]
-    if "string" in extra:
-        extras += extra["string"]
+
+    # if "text" in items and len(items["text"]) > 0:
+    #  only process codes it there is associated text
+    if "color" in items:
+        extras += _getformatcode(items["color"])
+
+    formats = (
+        "italic", "bold", "obfuscated", "strikethrough", "underline")
+    for codes in formats:
+        if codes in items and items[codes] is True:
+            extras += _getformatcode(codes)
+
+    if "text" in items:
+        extras += items["text"]
+    if "string" in items:
+        extras += items["string"]
     return extras
 
 
-def _getcolorcode(color):
-    for code in COLORCODES:
-        if COLORCODES[code] == color:
-            return u"\xa7" + code
-    return ""
+def _getformatcode(name):
+    """
+    return the named code as a '§_' color/formatting code. If name
+    is not a valid code, returns the reset code '§r'.
+    :param name: a name of a color ('blue', 'green', etc)
+    """
+    if name in CODENAMES:
+        return "§" + CODENAMES[name]
+    return "§r"
 
 
 def _create_chat(
@@ -796,41 +842,84 @@ def get_req(something, request):
 
 
 def _test():
-    testpath = "/home/surest/Desktop/testservers/server"
-    banlist = getjsonfile("banned-players", testpath)
-    x = find_in_json(banlist, "uuid", "d2a44ac6-6427-4f3a-98b8-33441c263cd4")
-    print(x)
-
-    banlist = getjsonfile("banned-ips", testpath)
-    x = find_in_json(banlist, "ip", "127.0.0.8")
-    print(x)
-
-    x = config_to_dict_read("server.properties", testpath)
-    print(x)
-    print(x['pvp'])
-    new_pvp = not(x['pvp'])
-    set_item('pvp', new_pvp, "server.properties", testpath)
-    x = config_to_dict_read("server.properties", testpath)
-    print(x['pvp'])
-
-    print(format_bytes(1024))
-    print(format_bytes(1048576 * 2))
-    print(format_bytes(1073741824.0))
-    print(format_bytes(1234234230000))
-    print(format_bytes(1234234230000000))
-    print(format_bytes(123423423000000000))
-
-    print(isipv4address("123.123.123.123"))
-    print(isipv4address("honkin"))
-    print(isipv4address("www.surestcraft.com"))
 
     timecurr = time.time()
+    print("Current system time:", timecurr)
     x = epoch_to_timestr(timecurr)
-    print(str(x))
-    print(read_timestr(str(x)))
-    print(time.time())
-    print(_secondstohuman(36986))
-    print(3698 // 3600)
+    print("Today's date in minecraft format:", x)
+    print("coverted back to epoch format:", read_timestr(x))
+    print("")
+
+    testpath = "/home/surest/Desktop/testservers/server"
+    testuuid = "d2a44ac6-6427-4f3a-98b8-33441c263cd4"
+    print("test server path is:", testpath)
+    print("test UUID (str):", testuuid)
+
+    banlist = getjsonfile("banned-players", testpath)
+    x = find_in_json(banlist, "uuid", testuuid)
+    print("ban record (as a dictionary) for uuid", testuuid)
+    print("    :", x)
+    print("")
+
+    print("making assertion tests...")
+    time.sleep(.1)
+    banlist = getjsonfile("banned-ips", testpath)
+    x = find_in_json(banlist, "ip", "127.0.0.8")
+    assert type(x) is dict
+
+    x = config_to_dict_read("server.properties", testpath)
+    assert type(x) is dict
+    assert 'pvp' in x
+    new_pvp = not(x['pvp'])
+
+    set_item('pvp', new_pvp, "server.properties", testpath)
+    x = config_to_dict_read("server.properties", testpath)
+    assert 'pvp' in x
+    assert x['pvp'] == new_pvp
+
+    assert (format_bytes(1024)) == ('1', 'KiB')
+    assert (format_bytes(1048576 * 2)) == ('2', 'MiB')
+    assert (format_bytes(1073741824.0)) == ('1', 'GiB')
+    assert (format_bytes(1234234230000)) == ('1.123', 'TiB')
+    assert (format_bytes(1234234230000000)) == ('1.096', 'PiB')
+    assert (format_bytes(123423423000000000)) == ('109.6', 'PiB')
+
+    assert (isipv4address("123.123.123.123")) is True
+    assert (isipv4address("honkin")) is False
+    assert (isipv4address("www.surestcraft.com")) is False
+
+    assert (_secondstohuman(36986) == '10.27 hours')
+    assert (3698 // 3600) == 1
+
+    mydict = {"obfuscated": True, "underlined": True, "bold": True,
+              "italic": True, "color": "white", "text": "hello",
+              "clickEvent": {}, "strikethrough": False}
+
+    # test chat items
+    assert _handle_chat_items(mydict) == "§f§o§l§khello"
+
+    newdict = {
+        "text": "", "extra": [
+            {"obfuscated": False, "underlined": False, "bold": False,
+             "italic": False, "color": "white", "text": "", "clickEvent": {},
+             "strikethrough": False},
+            {"obfuscated": False, "underlined": False, "bold": False,
+             "italic": True, "color": "white", "text": "", "clickEvent": {},
+             "strikethrough": False},
+            {"obfuscated": False, "underlined": False, "bold": False,
+             "italic": False, "color": "dark_aqua", "text": "harro ",
+             "clickEvent": {}, "strikethrough": False},
+            {"obfuscated": False, "underlined": False, "bold": True,
+             "italic": False, "color": "dark_aqua", "text": "",
+             "clickEvent": {}, "strikethrough": False},
+            {"obfuscated": False, "bold": False, "color": "gold",
+             "text": "there", "strikethrough": False,
+             "underlined": False, "italic": False}]}
+
+    assert processcolorcodes('&o&3harro &l&6there') == json.dumps(newdict)
+    assert chattocolorcodes(newdict) == "§f§f§o§3harro §3§l§6there"
+
+    print("assertion tests succeeded.")
 
 
 if __name__ == "__main__":

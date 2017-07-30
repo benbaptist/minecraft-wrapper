@@ -49,6 +49,7 @@ class Plugins(object):
             yield i
 
     def loadplugin(self, name, available_files):
+        self.log.debug("NAME OF PLUGIN: %s" % name)
         if name in self.plugins_loaded:
             # Don't try to load a previously errored ( attempted to load..) plugin
             return False

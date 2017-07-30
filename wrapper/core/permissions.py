@@ -30,18 +30,15 @@ class Permissions(object):
         self.wrapper = wrapper
         self.log = self.wrapper.log
 
-        # permissions storage Data object
-        self.permissions = wrapper.permissions
-
         # populate dictionary items to prevent errors due to missing items
-        if "groups" not in self.permissions:
-            self.permissions["groups"] = {}
-        if "users" not in self.permissions:
-            self.permissions["users"] = {}
+        if "groups" not in self.wrapper.wrapper_permissions.Data:
+            self.wrapper.wrapper_permissions.Data["groups"] = {}
+        if "users" not in self.wrapper.wrapper_permissions.Data:
+            self.wrapper.wrapper_permissions.Data["users"] = {}
 
         # Remove deprecated item
-        if "Default" in self.permissions["groups"]:
-            if len(self.permissions["groups"]["Default"]["permissions"]) > 0:
+        if "Default" in self.wrapper.wrapper_permissions.Data["groups"]:
+            if len(self.wrapper.wrapper_permissions.Data["groups"]["Default"]["permissions"]) > 0:
                 self.log.error(
                     "Your permissions structure contains a 'Default' group"
                     " item with some permissions in it.  This is now"
@@ -58,42 +55,42 @@ class Permissions(object):
         self.clean_perms_data()
 
     def fill_user(self, uuid):
-        self.permissions["users"][uuid] = copy.deepcopy(self.empty_user)
+        self.wrapper.wrapper_permissions.Data["users"][uuid] = copy.deepcopy(self.empty_user)
 
     def clean_perms_data(self):
 
         deletes = []
-        for user in self.permissions["users"]:
-            if self.permissions[
+        for user in self.wrapper.wrapper_permissions.Data["users"]:
+            if self.wrapper.wrapper_permissions.Data[
                     "users"][user] == self.empty_user:
                 deletes.append(user)
         for stale_user in deletes:
-            del self.permissions["users"][stale_user]
+            del self.wrapper.wrapper_permissions.Data["users"][stale_user]
 
-        if "converted" in self.permissions:
+        if "converted" in self.wrapper.wrapper_permissions.Data:
             return
-        self.permissions["converted"] = "Yes"
-        permstring = json.dumps(self.permissions)
+        self.wrapper.wrapper_permissions.Data["converted"] = "Yes"
+        permstring = json.dumps(self.wrapper.wrapper_permissions.Data)
         newstring = permstring.lower()
-        self.permissions = json.loads(newstring)
+        self.wrapper.wrapper_permissions.Data = json.loads(newstring)
 
     def group_create(self, groupname):
         """Will create a new (lowercase) groupname."""
         groupname = groupname.lower()
-        if groupname in self.permissions["groups"]:
+        if groupname in self.wrapper.wrapper_permissions.Data["groups"]:
             return "Group '%s' already exists!" % groupname
 
-        self.permissions["groups"][groupname] = {"permissions": {}}
+        self.wrapper.wrapper_permissions.Data["groups"][groupname] = {"permissions": {}}
         return "Created a new permissions group '%s'." % groupname
 
     def group_delete(self, groupname):
         """Will attempt to delete groupname, regardless of case."""
         deletename = groupname.lower()
-        if deletename in self.permissions["groups"]:
-            self.permissions["groups"].pop(deletename)
+        if deletename in self.wrapper.wrapper_permissions.Data["groups"]:
+            self.wrapper.wrapper_permissions.Data["groups"].pop(deletename)
             return "Deleted permissions group '%s'." % deletename
-        if groupname in self.permissions["groups"]:
-            self.permissions["groups"].pop(groupname)
+        if groupname in self.wrapper.wrapper_permissions.Data["groups"]:
+            self.wrapper.wrapper_permissions.Data["groups"].pop(groupname)
             return "Deleted permissions group '%s'." % groupname
         return "Group '%s' does not exist!" % deletename
 
@@ -123,7 +120,7 @@ class Permissions(object):
         setnode = node.lower()
 
         # set the node
-        self.permissions["groups"][setname]["permissions"][setnode] = value
+        self.wrapper.wrapper_permissions.Data["groups"][setname]["permissions"][setnode] = value
         return "Added node/group '%s' to Group '%s'!" % (setnode, setname)
 
     def group_delete_permission(self, group, node):
@@ -133,24 +130,24 @@ class Permissions(object):
         if not self.group_exists(setgroup):
             return "Group '%s' does not exist!" % group
 
-        if setnode in self.permissions["groups"][setgroup]["permissions"]:
-            del self.permissions["groups"][setgroup]["permissions"][setnode]
+        if setnode in self.wrapper.wrapper_permissions.Data["groups"][setgroup]["permissions"]:
+            del self.wrapper.wrapper_permissions.Data["groups"][setgroup]["permissions"][setnode]
             return "Removed permission node '%s' from group '%s'." % (
                 setnode, setgroup)
 
     def group_exists(self, groupname):
-        if groupname.lower() in self.permissions["groups"]:
+        if groupname.lower() in self.wrapper.wrapper_permissions.Data["groups"]:
             return True
         return False
 
     def _group_match(self, node, group, all_groups):
         """return true if conditions met:
-        1) (node in self.permissions["groups"]) -> the group exists
-        2) self.permissions["groups"][group]["permissions"][node] ->
+        1) (node in self.wrapper.wrapper_permissions.Data["groups"]) -> the group exists
+        2) self.wrapper.wrapper_permissions.Data["groups"][group]["permissions"][node] ->
                 the node is set to True
         3) node not already in all_groups
         """
-        if (node in self.permissions["groups"]) and self.permissions[
+        if (node in self.wrapper.wrapper_permissions.Data["groups"]) and self.wrapper.wrapper_permissions.Data[
             "groups"][group]["permissions"][node] and (
                     node not in all_groups):
             return True
@@ -167,8 +164,8 @@ class Permissions(object):
 
             # this must be checked because a race condition can
             # render the groupname non-existent.
-            if groupname in self.permissions["groups"]:
-                for group_node in self.permissions[
+            if groupname in self.wrapper.wrapper_permissions.Data["groups"]:
+                for group_node in self.wrapper.wrapper_permissions.Data[
                         "groups"][groupname]["permissions"]:
                     if self._group_match(group_node, groupname, allgroups):
                         allgroups.append(group_node.lower())
@@ -182,7 +179,7 @@ class Permissions(object):
         it will return the value (usually True) of the node.
         Otherwise, it returns False.
         """
-        if uuid not in self.permissions["users"]:
+        if uuid not in self.wrapper.wrapper_permissions.Data["users"]:
             self.fill_user(uuid)
             # we dont just return false because it could be a first-
             # time check for a default or None permission.
@@ -194,9 +191,9 @@ class Permissions(object):
         node = node.lower()
 
         # user has permission directly
-        for perm in self.permissions["users"][uuid]["permissions"]:
+        for perm in self.wrapper.wrapper_permissions.Data["users"][uuid]["permissions"]:
             if node in fnmatch.filter([node], perm):
-                return self.permissions[
+                return self.wrapper.wrapper_permissions.Data[
                     "users"][uuid]["permissions"][perm]
 
         # return a registered permission;
@@ -212,7 +209,7 @@ class Permissions(object):
         allgroups = []
 
         # get the user's groups
-        for group in self.permissions["users"][uuid]["groups"]:
+        for group in self.wrapper.wrapper_permissions.Data["users"][uuid]["groups"]:
             allgroups.append(group)
 
         if find_child_groups:
@@ -222,10 +219,10 @@ class Permissions(object):
         for group in allgroups:
             # this must be checked because a race condition can
             # render the groupname non-existent.
-            if group in self.permissions["groups"]:
-                for perm in self.permissions["groups"][group]["permissions"]:
+            if group in self.wrapper.wrapper_permissions.Data["groups"]:
+                for perm in self.wrapper.wrapper_permissions.Data["groups"][group]["permissions"]:
                     if node in fnmatch.filter([node], perm):
-                        return self.permissions["groups"][group][
+                        return self.wrapper.wrapper_permissions.Data["groups"][group][
                             "permissions"][perm]
 
         # no permission;
@@ -246,24 +243,24 @@ class Permissions(object):
             pass
         value = bool(value) or False
 
-        if uuid not in self.permissions["users"]:
+        if uuid not in self.wrapper.wrapper_permissions.Data["users"]:
             self.fill_user(uuid)
 
-        self.permissions["users"][uuid]["permissions"][node.lower()] = value
+        self.wrapper.wrapper_permissions.Data["users"][uuid]["permissions"][node.lower()] = value
 
     def remove_permission(self, uuid, node):
         """Completely removes a permission node from the player. They
         will still inherit this permission from their groups or from
         plugin defaults.  Returns True/False success."""
 
-        if uuid not in self.permissions["users"]:
+        if uuid not in self.wrapper.wrapper_permissions.Data["users"]:
             self.fill_user(uuid)
             # Since the user did not even have a permission, return.
             return True
         node = node.lower()
 
-        if node in self.permissions["users"][uuid]["permissions"]:
-            del self.permissions["users"][uuid]["permissions"][node]
+        if node in self.wrapper.wrapper_permissions.Data["users"][uuid]["permissions"]:
+            del self.wrapper.wrapper_permissions.Data["users"][uuid]["permissions"][node]
             return True
 
         self.log.debug("Uuid:%s does not have permission node '%s'" % (
@@ -281,12 +278,12 @@ class Permissions(object):
             return False
 
         # user had no permission data
-        if uuid not in self.permissions["users"]:
+        if uuid not in self.wrapper.wrapper_permissions.Data["users"]:
             self.fill_user(uuid)
             return False
 
         # user has this group ...
-        if group_lower in self.permissions["users"][uuid]["groups"]:
+        if group_lower in self.wrapper.wrapper_permissions.Data["users"][uuid]["groups"]:
             return True
 
         # user does not have the group
@@ -297,11 +294,11 @@ class Permissions(object):
         :returns:  a list of groups the user is in.
         """
 
-        if uuid not in self.permissions["users"]:
+        if uuid not in self.wrapper.wrapper_permissions.Data["users"]:
             self.fill_user(uuid)
             # Had not permissions set at all..
             return []
-        return self.permissions["users"][uuid]["groups"]
+        return self.wrapper.wrapper_permissions.Data["users"][uuid]["groups"]
 
     def set_group(self, uuid, group, creategroup=False):
         """
@@ -315,7 +312,7 @@ class Permissions(object):
         """
         # (deprecate uppercase checks once wrapper hits 2.x.x)
         group = group.lower()
-        if group not in self.permissions["groups"]:
+        if group not in self.wrapper.wrapper_permissions.Data["groups"]:
             if creategroup:
                 self.log.warning("No group with the name '%s' exists-"
                                  " creating a new group!", group)
@@ -324,28 +321,32 @@ class Permissions(object):
                 self.log.debug("No group with the name '%s' exists", group)
                 return False
 
-        if uuid not in self.permissions["users"]:
+        if uuid not in self.wrapper.wrapper_permissions.Data["users"]:
             self.fill_user(uuid)
-        self.permissions["users"][uuid]["groups"].append(group)
+        self.wrapper.wrapper_permissions.Data["users"][uuid]["groups"].append(group)
 
         # return the resulting change (as verification)
         return self.has_group(uuid, group)
 
     def remove_group(self, uuid, group):
-        """Removes the player to a specified group."""
+        """Removes the player from a specified group."""
 
         group = group.lower()
-        if uuid not in self.permissions["users"]:
+        if uuid not in self.wrapper.wrapper_permissions.Data["users"]:
             self.fill_user(uuid)
             return True
 
-        if group in self.permissions["users"][uuid]["groups"]:
-            self.permissions["users"][uuid]["groups"].remove(group)
+        if group in self.wrapper.wrapper_permissions.Data["users"][uuid]["groups"]:
+            self.wrapper.wrapper_permissions.Data["users"][uuid]["groups"].remove(group)
             return True
 
         self.log.debug("UUID:%s was not part of the group '%s'" % (
             uuid, group))
         return False
+
+    def clear_group_data(self):
+        """Resets group data."""
+        self.wrapper.wrapper_permissions.Data["groups"] = {}
 
 
 def _test():

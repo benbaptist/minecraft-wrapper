@@ -5,9 +5,8 @@
 # This program is distributed under the terms of the GNU
 # General Public License, version 3 or later.
 
-from core.exceptions import UnsupportedMinecraftProtocol
-
-from proxy.constants import *
+from __future__ import print_function
+from proxy.utils.constants import *
 
 """
 Ways to reference packets by names and not hard-coded numbers.
@@ -29,9 +28,12 @@ set something False/unimplemented using 0xEE
 
 class Packets(object):
     def __init__(self, protocol):
-
-        if PROTOCOL_1_8END < protocol < PROTOCOL_1_9REL1:
-            raise UnsupportedMinecraftProtocol
+        # not supporting 1.9 and 1.12 snapshots due to high instability/changes
+        if PROTOCOL_1_8END < protocol < PROTOCOL_1_9REL1 or (
+            PROTOCOL_1_12START <= protocol < PROTOCOL_1_12
+        ):
+            print("Protocol version not supported:", protocol)
+            raise ValueError
 
         # Login, Status, and Ping packets
         # -------------------------------
@@ -53,26 +55,26 @@ class Packets(object):
         self.JOIN_GAME = [0x01, [INT, UBYTE, BYTE, UBYTE, UBYTE, STRING]]
         self.CHAT_MESSAGE = [0x02, [STRING, NULL]]
         self.TIME_UPDATE = 0x03
-        self.ENTITY_EQUIPMENT = 0x04  # TODO - never parsed by wrapper
+        self.ENTITY_EQUIPMENT = 0x04
         self.SPAWN_POSITION = 0x05
-        self.UPDATE_HEALTH = 0x06  # TODO - never parsed by wrapper
+        self.UPDATE_HEALTH = 0x06
         self.RESPAWN = 0x07
         self.PLAYER_POSLOOK = 0x08
-        self.HELD_ITEM_CHANGE = 0x09  # TODO - never parsed by wrapper
+        self.HELD_ITEM_CHANGE = 0x09
         self.USE_BED = 0x0a
         self.ANIMATION = 0x0b
         self.SPAWN_PLAYER = 0x0c
-        self.COLLECT_ITEM = 0x0d  # TODO - never parsed by wrapper
+        self.COLLECT_ITEM = 0x0d
         self.SPAWN_OBJECT = 0x0e
         self.SPAWN_MOB = 0x0f
-        self.SPAWN_PAINTING = 0x10  # TODO - never parsed by wrapper
-        self.SPAWN_EXPERIENCE_ORB = 0x11  # TODO - never parsed by wrapper
-        self.ENTITY_VELOCITY = 0x12  # TODO - never parsed by wrapper before
+        self.SPAWN_PAINTING = 0x10
+        self.SPAWN_EXPERIENCE_ORB = 0x11
+        self.ENTITY_VELOCITY = 0x12
         self.DESTROY_ENTITIES = 0x13
         self.ENTITY = 0x14
         self.ENTITY_RELATIVE_MOVE = 0x15
-        self.ENTITY_LOOK = 0x16  # TODO - never parsed by wrapper before
-        self.ENTITY_LOOK_AND_RELATIVE_MOVE = 0x17  # TODO - never parsed by wrapper
+        self.ENTITY_LOOK = 0x16
+        self.ENTITY_LOOK_AND_RELATIVE_MOVE = 0x17
         self.ENTITY_TELEPORT = 0x18
         self.ENTITY_HEAD_LOOK = 0x19
         self.ENTITY_STATUS = 0x1a
@@ -84,49 +86,52 @@ class Packets(object):
         self.SET_EXPERIENCE = 0x1f
         self.ENTITY_PROPERTIES = 0x20
         self.CHUNK_DATA = 0x21
-        self.MULTI_BLOCK_CHANGE = 0x22  # TODO - never parsed by wrapper before
+        self.MULTI_BLOCK_CHANGE = 0x22
         self.BLOCK_CHANGE = 0x23
-        self.BLOCK_ACTION = 0x24  # TODO - never parsed by wrapper before
-        self.BLOCK_BREAK_ANIMATION = 0x25  # TODO - never parsed by wrapper before
+        self.BLOCK_ACTION = 0x24
+        self.BLOCK_BREAK_ANIMATION = 0x25
         self.MAP_CHUNK_BULK = 0x26
-        self.EXPLOSION = 0x27  # TODO - never parsed by wrapper before
-        self.EFFECT = 0x28  # TODO - never parsed by wrapper before
+        self.EXPLOSION = 0x27
+        self.EFFECT = 0x28
         self.SOUND_EFFECT = 0x29
         self.PARTICLE = 0x2a
         self.CHANGE_GAME_STATE = 0x2b
-        self.SPAWN_GLOBAL_ENTITY = 0x2c  # TODO - never parsed by wrapper before
+        self.SPAWN_GLOBAL_ENTITY = 0x2c
         self.OPEN_WINDOW = 0x2d
-        self.CLOSE_WINDOW = 0x2e  # TODO - never parsed by wrapper before
+        self.CLOSE_WINDOW = 0x2e
         self.SET_SLOT = 0x2f
         self.WINDOW_ITEMS = 0x30
-        self.WINDOW_PROPERTY = 0x31  # TODO - never parsed by wrapper before
-        self.CONFIRM_TRANSACTION = 0x32  # TODO - never parsed by wrapper before
-        self.UPDATE_SIGN = 0x33  # TODO - never parsed by wrapper before
-        self.MAP = 0x34  # TODO - never parsed by wrapper before
-        self.UPDATE_BLOCK_ENTITY = 0x35  # TODO - never parsed by wrapper before
-        self.OPEN_SIGN_EDITOR = 0x36  # TODO - never parsed by wrapper before
-        self.STATISTICS = 0x37  # TODO - never parsed by wrapper before
+        self.WINDOW_PROPERTY = 0x31
+        self.CONFIRM_TRANSACTION = 0x32
+        self.UPDATE_SIGN = 0x33
+        self.MAP = 0x34
+        self.UPDATE_BLOCK_ENTITY = 0x35
+        self.OPEN_SIGN_EDITOR = 0x36
+        self.STATISTICS = 0x37
         self.PLAYER_LIST_ITEM = 0x38
         self.PLAYER_ABILITIES = 0x39
-        self.TAB_COMPLETE = 0x3a  # TODO - never parsed by wrapper before
-        self.SCOREBOARD_OBJECTIVE = 0x3b  # TODO - never parsed by wrapper before
-        self.UPDATE_SCORE = 0x3c  # TODO - never parsed by wrapper before
-        self.DISPLAY_SCOREBOARD = 0x3d  # TODO - never parsed by wrapper before
-        self.TEAMS = 0x3e  # TODO - never parsed by wrapper before
+        self.TAB_COMPLETE = 0x3a
+        self.SCOREBOARD_OBJECTIVE = 0x3b
+        self.UPDATE_SCORE = 0x3c
+        self.DISPLAY_SCOREBOARD = 0x3d
+        self.TEAMS = 0x3e
         self.PLUGIN_MESSAGE = 0x3F
         self.DISCONNECT = 0x40
-        self.SERVER_DIFFICULTY = 0x41  # TODO - never parsed by wrapper before
-        self.COMBAT_EVENT = 0x42  # TODO - never parsed by wrapper before
-        self.CAMERA = 0x43  # TODO - never parsed by wrapper before
-        self.WORLD_BORDER = 0x44  # TODO - never parsed by wrapper before
-        self.TITLE = 0x45  # TODO - never parsed by wrapper before
-        self.BROKEN_SET_COMPRESSION_REMOVED1_9 = 0x46
-        self.PLAYER_LIST_HEADER_AND_FOOTER = 0x47  # TODO - never parsed by wrapper before
-        self.RESOURCE_PACK_SEND = 0x48
-        self.UPDATE_ENTITY_NBT = 0x49  # TODO - never parsed by wrapper before
+        # protocol 4-5 ends at 0x40
+        # self.PACKET_THAT_EXISTS_IN_OTHER_PROTOCOLS_BUT_NOT_THIS_ONE = 0xee
+
+        # new to 1.8 (protocol 47
+        self.SERVER_DIFFICULTY = 0xee
+        self.COMBAT_EVENT = 0xee
+        self.CAMERA = 0xee
+        self.WORLD_BORDER = 0xee
+        self.TITLE = 0xee
+        self.BROKEN_SET_COMPRESSION_REMOVED1_9 = 0xee
+        self.PLAYER_LIST_HEADER_AND_FOOTER = 0xee
+        self.RESOURCE_PACK_SEND = 0xee
+        self.UPDATE_ENTITY_NBT = 0xee
 
         # NEW to 1.9
-        self.PACKET_THAT_EXISTS_IN_OTHER_PROTOCOLS_BUT_NOT_THIS_ONE = 0xee
         # ALL VERSIONS handle chunk unloading DIFFERENTLY - CAVEAT EMPTOR!
         self.UNLOAD_CHUNK = 0xee
         self.NAMED_SOUND_EFFECT = 0xee
@@ -135,8 +140,23 @@ class Packets(object):
         self.VEHICLE_MOVE = 0xee
         self.SET_PASSENGERS = 0xee
 
+        # NEW to 1.12
+        self.UNLOCK_RECIPES = 0xee
+        self.SELECT_ADVANCEMENT_TAB = 0xee
+        self.ADVANCEMENTS = 0xee
+
         # 1.8 changes
         if protocol >= PROTOCOL_1_8START:
+            self.SERVER_DIFFICULTY = 0x41
+            self.COMBAT_EVENT = 0x42
+            self.CAMERA = 0x43
+            self.WORLD_BORDER = 0x44
+            self.TITLE = 0x45
+            self.BROKEN_SET_COMPRESSION_REMOVED1_9 = 0x46
+            self.PLAYER_LIST_HEADER_AND_FOOTER = 0x47
+            self.RESOURCE_PACK_SEND = 0x48
+            self.UPDATE_ENTITY_NBT = 0x49
+
             # Parsing changes
             self.KEEP_ALIVE[PARSER] = [VARINT]
             self.CHAT_MESSAGE[PARSER] = [JSON, BYTE]
@@ -235,10 +255,66 @@ class Packets(object):
         # http://wiki.vg/index.php?title=Protocol&oldid=7819#Entity_Properties
         # still good packet numbers through protocol 315
         if protocol > PROTOCOL_1_9_4:
+            # removed
             self.UPDATE_SIGN = 0xee
+
+            # -renumbered because of UPDATE_SIGN removal
             self.SOUND_EFFECT = 0x46
             self.PLAYER_LIST_HEADER_AND_FOOTER = 0x47
             self.COLLECT_ITEM = 0x48
             self.ENTITY_TELEPORT = 0x49
             self.ENTITY_PROPERTIES = 0x4a
             self.ENTITY_EFFECT = 0x4b
+
+        # 1.12 changes
+        if protocol > PROTOCOL_1_12START:
+            # snapshots raise ValueError, so this is really >= PROTOCOL_1_12
+            
+            # re-ordered:
+            self.ENTITY = 0x25
+            self.ENTITY_RELATIVE_MOVE = 0x26
+            self.ENTITY_LOOK_AND_RELATIVE_MOVE = 0x27
+            self.ENTITY_LOOK = 0x28
+
+            # new
+            self.UNLOCK_RECIPES = 0x30  # TODO New
+            
+            # order bumped +1
+            self.DESTROY_ENTITIES = 0x31
+            self.REMOVE_ENTITY_EFFECT = 0x32
+            self.RESOURCE_PACK_SEND = 0x33
+            self.RESPAWN = 0x34
+            self.ENTITY_HEAD_LOOK = 0x35
+            
+            # new
+            self.SELECT_ADVANCEMENT_TAB = 0x36
+            
+            # order bumped +2
+            self.WORLD_BORDER = 0x37
+            self.CAMERA = 0x38
+            self.HELD_ITEM_CHANGE = 0x39
+            self.DISPLAY_SCOREBOARD = 0x3a
+            self.ENTITY_METADATA = [0x3b, [VARINT, METADATA_1_9]]
+            self.ATTACH_ENTITY = 0x3c
+            self.ENTITY_VELOCITY = 0x3d
+            self.ENTITY_EQUIPMENT = 0x3e
+            self.SET_EXPERIENCE = 0x3f
+            self.UPDATE_HEALTH = 0x40
+            self.SCOREBOARD_OBJECTIVE = 0x41
+            self.SET_PASSENGERS = 0x42  # TODO NEW
+            self.TEAMS = 0x43
+            self.UPDATE_SCORE = 0x44
+            self.SPAWN_POSITION = 0x45
+            self.TIME_UPDATE = 0x46
+            self.TITLE = 0x47  # did not change
+            self.SOUND_EFFECT = 0x48
+            self.PLAYER_LIST_HEADER_AND_FOOTER = 0x49
+            self.COLLECT_ITEM = 0x4a
+            self.ENTITY_TELEPORT = 0x4b
+
+            # new
+            self.ADVANCEMENTS = 0x4c
+
+            # order bumped +3
+            self.ENTITY_PROPERTIES = 0x4d
+            self.ENTITY_EFFECT = 0x4e

@@ -1,5 +1,13 @@
 
-**< class Minecraft(object) >**
+**< classes import Items
+from api.helpers import scrub_item_value
+from proxy.packets.mcpackets_cb import Packets as ClientBound
+from proxy.packets.mcpackets_sb import Packets as ServerBound
+
+
+# noinspection PyPep8Naming
+# noinspection PyBroadException
+ >**
 
     .. code:: python
 
@@ -11,6 +19,12 @@
     directly. These methods are accessed using 'self.api.minecraft'
 
     
+
+-  isServerStarted(self)
+
+        Return a boolean indicating if the server is
+        fully booted or not.
+        
 
 -  configWrapper(self, section, config_item, new_value, reload_file=False)
 
@@ -28,13 +42,6 @@
             :reload_file: True to reload the config
 
         :returns: True or False, indicating Success or Failure
-
-        
-
--  isServerStarted(self)
-
-        Return a boolean indicating if the server is
-        fully booted or not.
 
         
 
@@ -129,6 +136,17 @@
 
         :returns: The Player Class object for "playername".
 
+        
+
+-  getplayerby_eid(self, eid)
+
+        Returns the player object of the specified logged-in player.
+        Will raise an exception if the player is not logged in.
+
+        :arg eid: EID of the player
+
+        :returns: The Player Class object for the specified EID.
+         If the EID is not a player or is not found, returns False
         
 
 -  getOfflineUUID(self, name)
@@ -441,6 +459,7 @@
                  (proxy mode).. and only for online bans.
 
         :returns: String describing the operation's outcome.
+         If there is no proxy instance, nothing is returned.
 
         
 
@@ -464,6 +483,7 @@
                  (proxy mode).. and only for online bans.
 
         :returns: String describing the operation's outcome.
+         If there is no proxy instance, nothing is returned.
 
         
 
@@ -482,6 +502,7 @@
                 :expires: Optional expiration in time.time() format.
 
         :returns: String describing the operation's outcome.
+         If there is no proxy instance, nothing is returned.
 
         
 
@@ -492,6 +513,7 @@
         :arg playername:  Name to pardon.
 
         :returns: String describing the operation's outcome.
+         If there is no proxy instance, nothing is returned.
 
         
 
@@ -502,6 +524,7 @@
         :arg playeruuid:  UUID to pardon
 
         :returns: String describing the operation's outcome.
+         If there is no proxy instance, nothing is returned.
 
         
 
@@ -512,6 +535,7 @@
         :arg ipaddress: a valid IPV4 address to pardon.
 
         :returns:  String describing the operation's outcome.
+         If there is no proxy instance, nothing is returned.
 
         
 
@@ -523,6 +547,7 @@
         :arg uuid: Check if the UUID of the user is banned
 
         :returns: True or False (banned or not banned)
+         If there is no proxy instance, None is returned.
 
         
 
@@ -533,6 +558,7 @@
 
         :arg ipaddress: Check if an ipaddress is banned
 
-        :returns: True or False (banned or not banned)
+        :returns: True or False (banned or not banned).
+         If there is no proxy instance, nothing is returned.
 
         

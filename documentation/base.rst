@@ -176,8 +176,7 @@
                       warps)
             ..
 
-        :returns:  Raises wrapper exception `exceptions.NonExistentPlugin`
-         if the specified plugin does not exist.
+        :returns:  Raises exception if the specified plugin does not exist.
 
         
 

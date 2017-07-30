@@ -17,7 +17,7 @@ import sys
 # import StringIO
 
 # local
-from core.mcuuid import MCUUID
+from proxy.utils.mcuuid import MCUUID
 
 # Py3-2
 PY3 = sys.version_info > (3,)
@@ -533,8 +533,8 @@ class Packet(object):
     def send_byte_array(self, payload):
         return self.send_int(len(payload)) + payload
 
-    def send_short_string(self, string):
-        return self.send_short(len(string)) + str.encode("utf8")
+    def send_short_string(self, string_arg):
+        return self.send_short(len(string_arg)) + string_arg.encode("utf8")
 
     def send_list(self, tag):
         # Check that all values are the same type
@@ -752,6 +752,11 @@ class Packet(object):
             elif data_type == 12:
                 meta_data[index] = (data_type, self.read_varint())
 
+            elif data_type == 13:
+                print("1.9 metadata found data type 13 'nbt tag', which "
+                      "wrapper does not parse.. read as 'rest/raw'. "
+                      "Added in version 1.12 minecraft??")
+                meta_data[index] = (data_type, self.read_rest())
             else:
                 print("Unsupported data type '%d' for read_metadata_1_9()  "
                       "(Class Packet)", data_type)
@@ -821,11 +826,11 @@ class Packet(object):
     # ---------------------------------------
     def read_short_string(self):
         size = self.read_short()
-        string = self.read_data(size)
+        shortstring = self.read_data(size)
         try:
-            return string.decode("utf8")
+            return shortstring.decode("utf8")
         except:
-            return string.decode("utf-16")
+            return shortstring.decode("utf-16")
 
     def read_list(self):
         r = []

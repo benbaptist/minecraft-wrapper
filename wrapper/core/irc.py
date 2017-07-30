@@ -73,7 +73,7 @@ class IRC(object):
         self.api.registerEvent("server.say", self.onPlayerSay)
 
     def init(self):
-        while not self.wrapper.halt:
+        while not self.wrapper.halt.halt:
             try:
                 self.log.info("Connecting to IRC...")
                 self.connect()
@@ -404,7 +404,7 @@ class IRC(object):
                                 command = " ".join(message.split(' ')[1:])
                                 self.javaserver.console(command)
                         elif getargs(message.split(" "), 0) == 'halt':
-                            self.wrapper.halt = True
+                            self.wrapper.halt.halt = True
                             self.javaserver.console("stop")
                             self.javaserver.changestate(3)
                         elif getargs(message.split(" "), 0) == 'restart':

@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 NAME = "home"
 AUTHOR = "Cougar"
 ID = "net.version6.minecraft.plugins.home"
@@ -42,6 +44,6 @@ class Main:
             player.message({"text": "Home is not set. Use /sethome.", "color": "red"})
             return
         player.message({"text": "Teleporting you to your home.", "color": "green"})
-        self.api.minecraft.console("tp %s %d %d %d" % (username, self.data.Data[username][0],
+        self.api.minecraft.console("tp %s %s %s %s" % (username, self.data.Data[username][0],
                                                        self.data.Data[username][1],
                                                        self.data.Data[username][2]))

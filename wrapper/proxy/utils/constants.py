@@ -13,6 +13,10 @@
 
 PROTOCOL_MAX = 4000
 
+# includes snapshots
+PROTOCOL_1_12START = 317
+PROTOCOL_1_12 = 334
+
 PROTOCOL_1_11 = 314
 
 PROTOCOL_1_10 = 205
@@ -32,7 +36,7 @@ PROTOCOL_1_9REL1 = 107
 
 # Between 49-106, the protocol is incredibly unstable.
 # Packet numbers changed almost weekly.  using a version in this range
-# will raise as UnsupportedMinecraftProtocol Exception
+# is not supported
 
 # start of 1.9 snapshots
 PROTOCOL_1_9START = 48
@@ -103,3 +107,29 @@ RAW = 90
 # allows the insertion of padding into argument lists.
 # Any field with this designation is just silently skipped.
 NULL = 100
+
+# server state definitions
+# Constants used in client and server connections
+
+# Handshake is the default mode of a server awaiting packets from a
+# client.  Client will send a handshake (a 0x00 packet WITH payload)
+# asking for STATUS or LOGIN mode.  This mode is n/a to
+# serverconnection.py, which starts in LOGIN mode
+HANDSHAKE = 0
+OFFLINE = 0  # an alias of Handshake.
+
+# Not used by serverconnection.py. clientconnection.py handles
+# PING/MOTD functions  Status mode will await either a ping (0x01)
+# containing a unique long int and will respond with same integer...
+#  OR if it receives a 0x00 packet (with no payload), that signals
+# server (client.py) to send the MOTD json response packet.  The
+# ping will follow the 0x00 request for json response.  The ping
+# will set wrapper/server back to HANDSHAKE mode (to await
+# the next handshake).
+MOTD = 1
+STATUS = 1
+
+LOGIN = 2  # login state
+PLAY = 3  # play state
+LOBBY = 4  # lobby state (remote server)
+IDLE = 5  # no parsing at all; just keeping client suspended

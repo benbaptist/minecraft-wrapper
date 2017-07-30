@@ -15,17 +15,16 @@ from socket import error as socket_error
 import requests
 
 # Local imports
-import utils.encryption as encryption
+import proxy.utils.encryption as encryption
 
-from proxy.serverconnection import ServerConnection
-from proxy.packet import Packet
-from proxy.parse_sb import ParseSB
-from proxy import mcpackets_sb
-from proxy import mcpackets_cb
-from proxy.constants import *
+from proxy.server.serverconnection import ServerConnection
+from proxy.packets.packet import Packet
+from proxy.client.parse_sb import ParseSB
+from proxy.packets import mcpackets_sb
+from proxy.packets import mcpackets_cb
+from proxy.utils.constants import *
 
-from api.player import Player
-from core.mcuuid import MCUUID
+from proxy.utils.mcuuid import MCUUID
 
 from api.helpers import processcolorcodes
 
@@ -48,16 +47,16 @@ class Client(object):
         self.client_socket = clientsock
         self.client_address = client_addr
         self.proxy = proxy
-        self.wrapper = self.proxy.wrapper
         self.publicKey = self.proxy.publicKey
         self.privateKey = self.proxy.privateKey
-        self.log = self.proxy.wrapper.log
-        self.config = self.proxy.wrapper.config
+        self.servervitals = self.proxy.srv_data
+
+        self.log = self.proxy.log
         self.ipbanned = banned
 
         # constants from config:
-        self.spigot_mode = self.config["Proxy"]["spigot-mode"]
-        self.hidden_ops = self.config["Proxy"]["hidden-ops"]
+        self.spigot_mode = self.proxy.config["spigot-mode"]
+        self.hidden_ops = self.proxy.config["hidden-ops"]
 
         # client setup and operating paramenters
         self.username = "PING REQUEST"
@@ -66,12 +65,12 @@ class Client(object):
         self.verifyToken = encryption.generate_challenge_token()
         self.serverID = encryption.generate_server_id().encode('utf-8')
         self.MOTD = {}
-        self.serverversion = self.wrapper.javaserver.protocolVersion
+
         # client will reset this later, if need be..
-        self.clientversion = self.serverversion
+        self.clientversion = self.servervitals.protocolVersion
         # default server port (to this wrapper's server)
-        self.server_port = self.wrapper.javaserver.server_port
-        self.wrapper_onlinemode = self.config["Proxy"]["online-mode"]
+        self.serverport = self.servervitals.server_port
+        self.onlinemode = self.proxy.config["online-mode"]
 
         # packet stuff
         self.pktSB = mcpackets_sb.Packets(self.clientversion)
@@ -91,7 +90,7 @@ class Client(object):
         self.abort = False
         # Proxy ServerConnection() (not the javaserver)
         self.server_connection = None
-        self.state = self.proxy.HANDSHAKE
+        self.state = HANDSHAKE
 
         # UUIDs - all should use MCUUID unless otherwise specified
         # --------------------------------------------------------
@@ -185,11 +184,11 @@ class Client(object):
 
             # send packet if server available and parsing passed.
             # already tested - Python will not attempt eval of
-            # self.server.state if self.server is False
+            # self.server_connection.state if self.server_connection is False
             if self.parse(pkid) and \
                     self.server_connection and \
                     self.server_connection.state in (
-                            self.proxy.PLAY, self.proxy.LOBBY):
+                            PLAY, LOBBY):
 
                 # sending to the server only happens in
                 # PLAY/LOBBY (not IDLE, HANDSHAKE, or LOGIN)
@@ -220,12 +219,12 @@ class Client(object):
 
         # close current connection and start new one
         was_lobby = False
-        if self.state == self.proxy.LOBBY:
+        if self.state == LOBBY:
             was_lobby = True
         # get out of PLAY "NOW" to prevent second disconnect that kills client
-        self.state = self.proxy.IDLE
+        self.state = IDLE
         # keep server from sending disconnects
-        self.server_connection.state = self.proxy.IDLE
+        self.server_connection.state = IDLE
         self.server_connection.close_server(
             reason="Lobbification", lobby_return=True)
         time.sleep(1)
@@ -234,7 +233,7 @@ class Client(object):
         self.clientSettingsSent = False
 
         # connect to server
-        self.state = self.proxy.PLAY
+        self.state = PLAY
         self.connect_to_server(ip, port)
 
         # if the client was in LOBBY state (connected to remote server)
@@ -242,9 +241,9 @@ class Client(object):
             self.log.info("%s's client Returned from remote server:"
                           " (UUID: %s | IP: %s | SecureConnection: %s)",
                           self.username, self.uuid.string,
-                          self.ip, self.wrapper_onlinemode)
+                          self.ip, self.onlinemode)
 
-            self._add_player_and_client_objects_to_wrapper()
+            self._add_client()
 
         # TODO whatever respawn stuff works
         # send these right quick to client
@@ -285,41 +284,42 @@ class Client(object):
                 [BOOL, ],
                 (True,))
 
-        self.state = self.proxy.LOBBY
+        self.state = LOBBY
 
     def client_logon(self, start_keep_alives=True, ip=None, port=None):
         """  When the client first logs in to wrapper """
         self._inittheplayer()  # set up inventory and stuff
 
-        if self.wrapper.proxy.isuuidbanned(self.uuid.__str__()):
-            banreason = self.wrapper.proxy.getuuidbanreason(
+        if self.proxy.isuuidbanned(self.uuid.__str__()):
+            banreason = self.proxy.getuuidbanreason(
                 self.uuid.__str__())
             self.log.info("Banned player %s tried to"
                           " connect:\n %s" % (self.username, banreason))
-            self.state = self.proxy.HANDSHAKE
+            self.state = HANDSHAKE
             self.disconnect("Banned: %s" % banreason)
             return False
 
         # Run the pre-login event
-        if not self.wrapper.events.callevent(
+        if not self.proxy.eventhandler.callevent(
                 "player.preLogin", {
-                    "player": self.username,
+                    "playername": self.username,
+                    "player": self.username,  # not a real player object!
                     "online_uuid": self.uuid.string,
                     "offline_uuid": self.serveruuid.string,
                     "ip": self.ip,
-                    "secure_connection": self.wrapper_onlinemode
+                    "secure_connection": self.onlinemode
                 }):
 
-            self.state = self.proxy.HANDSHAKE
+            self.state = HANDSHAKE
             self.disconnect("Login denied by a Plugin.")
             return False
 
         self.log.info("%s's client LOGON occurred: (UUID: %s"
                       " | IP: %s | SecureConnection: %s)",
                       self.username, self.uuid.string,
-                      self.ip, self.wrapper_onlinemode)
+                      self.ip, self.onlinemode)
 
-        self._add_player_and_client_objects_to_wrapper()
+        self._add_client()
 
         # start keep alives
         if start_keep_alives:
@@ -370,7 +370,7 @@ class Client(object):
         t.start()
 
         # switch server_connection to LOGIN to log in to (offline) server.
-        self.server_connection.state = self.proxy.LOGIN
+        self.server_connection.state = LOGIN
 
         # now we send it a handshake to request the server go to login mode
         server_addr = "localhost"
@@ -383,8 +383,8 @@ class Client(object):
         self.server_connection.packet.sendpkt(
             self.server_connection.pktSB.HANDSHAKE,
             [VARINT, STRING, USHORT, VARINT],
-            (self.clientversion, server_addr, self.server_port,
-             self.proxy.LOGIN))
+            (self.clientversion, server_addr, self.serverport,
+             LOGIN))
 
         # send the login request (server is offline, so it will
         # accept immediately by sending login_success)
@@ -427,7 +427,7 @@ class Client(object):
         else:
             jsonmessage = message  # server packets are read as json
 
-        if self.state in (self.proxy.PLAY, self.proxy.LOBBY):
+        if self.state in (PLAY, LOBBY):
             self.packet.sendpkt(
                 self.pktCB.DISCONNECT,
                 [JSON],
@@ -444,7 +444,7 @@ class Client(object):
             self.log.debug("upon disconnect, state was 'other'"
                            " (sent LOGIN_DISCONNECT)")
         time.sleep(1)
-        self.state = self.proxy.HANDSHAKE
+        self.state = HANDSHAKE
         self.close_server()
 
     # internal init and properties
@@ -458,18 +458,10 @@ class Client(object):
         #  xrange/range PY2 difference is not needed.
         # there are 46 items 0-45 in 1.9 (shield) versus
         #  45 (0-44) in 1.8 and below.
-        for i in self.wrapper.inv_slots:
+        for i in self.proxy.inv_slots:
             self.inventory[i] = None
         self.time_server_pinged = time.time()
         self.time_client_responded = time.time()
-        self._refresh_server_version()
-
-    def _refresh_server_version(self):
-        # Get serverversion for mcpackets use
-        try:
-            self.serverversion = self.wrapper.javaserver.protocolVersion
-        except AttributeError:
-            self.serverversion = -1
 
     def _getclientpacketset(self):
         # Determine packet types  - in this context, pktSB/pktCB is
@@ -482,11 +474,11 @@ class Client(object):
     # api related
     # -----------------------------
     def getplayerobject(self):
-        if self.username in self.wrapper.javaserver.players:
-            return self.wrapper.javaserver.players[self.username]
+        if self.username in self.servervitals.players:
+            return self.servervitals.players[self.username]
         self.log.error("In playerlist:\n%s\nI could not locate player: %s\n"
                        "This resulted in setting the player object to FALSE!",
-                       self.wrapper.javaserver.players, self.username)
+                       self.servervitals.players, self.username)
         return False
 
     def editsign(self, position, line1, line2, line3, line4, pre18=False):
@@ -528,7 +520,7 @@ class Client(object):
 
         while not self.abort:
             time.sleep(1)
-            if self.state in (self.proxy.PLAY, self.proxy.LOBBY):
+            if self.state in (PLAY, LOBBY):
                 # client expects < 20sec
                 if time.time() - self.time_server_pinged > 10:
 
@@ -556,7 +548,7 @@ class Client(object):
                        " (%s's client thread)", playername)
 
     def _login_authenticate_client(self, server_id):
-        if self.wrapper_onlinemode:
+        if self.onlinemode:
             r = requests.get("https://sessionserver.mojang.com"
                              "/session/minecraft/hasJoined?username=%s"
                              "&serverId=%s" % (self.username, server_id))
@@ -575,14 +567,14 @@ class Client(object):
                 for prop in requestdata["properties"]:
                     if prop["name"] == "textures":
                         self.skinBlob = prop["value"]
-                        self.wrapper.proxy.skins[
+                        self.proxy.skins[
                             self.uuid.string] = self.skinBlob
                 self.properties = requestdata["properties"]
             else:
                 self.disconnect("Proxy Client Session Error"
                                 " (HTTP Status Code %d)" % r.status_code)
                 return False
-            currentname = self.wrapper.uuids.getusernamebyuuid(
+            currentname = self.proxy.uuids.getusernamebyuuid(
                 self.uuid.string)
             if currentname:
                 if currentname != self.username:
@@ -590,14 +582,14 @@ class Client(object):
                                   " new name, falling back to %s",
                                   self.username, currentname)
                     self.username = currentname
-            self.serveruuid = self.wrapper.uuids.getuuidfromname(self.username)
+            self.serveruuid = self.proxy.uuids.getuuidfromname(self.username)
 
         # Wrapper offline and not authenticating
         # maybe it is the destination of a hub? or you use another
         # way to authenticate (passwords?)
         else:
             # I'll take your word for it, bub...  You are:
-            self.serveruuid = self.wrapper.uuids.getuuidfromname(self.username)
+            self.serveruuid = self.proxy.uuids.getuuidfromname(self.username)
             self.uuid = self.serveruuid
             self.log.debug("Client logon with wrapper offline-"
                            " 'self.uuid = OfflinePlayer:<name>'")
@@ -606,15 +598,15 @@ class Client(object):
         if self.clientversion > 26:
             self.packet.setcompression(256)
 
-    def _add_player_and_client_objects_to_wrapper(self):
-        # Put player object and client into server. (player login
+    def _add_client(self):
+        # Put XXXplayer_object_andXXX client into server data. (player login
         #  will be called later by mcserver.py)
-        if self not in self.wrapper.proxy.clients:
-            self.wrapper.proxy.clients.append(self)
+        if self not in self.proxy.srv_data.clients:
+            self.proxy.srv_data.clients.append(self)
 
-        if self.username not in self.wrapper.javaserver.players:
-            self.wrapper.javaserver.players[self.username] = Player(
-                self.username, self.wrapper)
+        # if self.username not in self.servervitals.players:
+        #     self.servervitals.players[self.username] = Player(
+        #         self.username, self.wrapper)
 
         self._inittheplayer()  # set up inventory and stuff
 
@@ -680,7 +672,7 @@ class Client(object):
         #    if self.config["Proxy"]["online-mode"]:
         #        # Check player files, and rename them accordingly
         #        #  to offline-mode UUID
-        #        worldname = self.wrapper.javaserver.worldname
+        #        worldname = self.servervitals.worldname
         #        if not os.path.exists("%s/playerdata/%s.dat" % (
         #                worldname, self.serveruuid.string)):
         #            if os.path.exists("%s/playerdata/%s.dat" % (
@@ -710,8 +702,9 @@ class Client(object):
         #                             "name": self.username})
         #                        with open("whitelist.json", "w") as f:
         #                            f.write(json.dumps(jsonwhitelistdata))
-        #                        self.wrapper.javaserver.console(
-        #                            "whitelist reload")
+        #                        ##self.XXXservervitalsXXX.console(
+        #                            "##whitelist reload")
+        #                        => self.proxy.eventhandler.callevent("proxy.console", {"command": "whitelist reload"})
         #                        with open("%s/.wrapper-proxy-whitelist-"
         #                                  "migrate" % worldname, "a") as f:
         #                            f.write("%s %s\n" % (
@@ -747,8 +740,8 @@ class Client(object):
                 datarest = self.packet.readpkt([REST, ])[0]
 
             print("\nDATA REST = %s\n" % datarest)
-            response = json.loads(datarest.decode(self.wrapper.encoding),
-                                  encoding=self.wrapper.encoding)
+            response = json.loads(datarest.decode('utf-8'),
+                                  encoding='utf-8')
             self._plugin_response(response)
             return True
 
@@ -779,21 +772,21 @@ class Client(object):
         self.serverportplayerused = data[2]
         requestedstate = data[3]
 
-        if requestedstate == self.proxy.STATUS:
-            self.state = self.proxy.STATUS
+        if requestedstate == STATUS:
+            self.state = STATUS
             # wrapper will handle responses, so do not pass this to the server.
             return False
 
-        if requestedstate == self.proxy.LOGIN:
+        if requestedstate == LOGIN:
             # TODO - coming soon: allow client connections
             # despite lack of server connection
 
-            if self.serverversion == -1:
+            if self.servervitals.protocolVersion == -1:
                 #  ... returns -1 to signal no server
                 self.disconnect("The server is not started.")
                 return False
 
-            if not self.wrapper.javaserver.state == 2:
+            if not self.servervitals.state == 2:
                 self.disconnect("Server has not finished booting. Please try"
                                 " connecting again in a few seconds")
                 return False
@@ -803,9 +796,9 @@ class Client(object):
                                 " (protocol: %s)!" % self.clientversion)
                 return False
 
-            if self.serverversion == self.clientversion:
+            if self.servervitals.protocolVersion == self.clientversion:
                 # login start...
-                self.state = self.proxy.LOGIN
+                self.state = LOGIN
                 # packet passes to server, which will also switch to Login
                 return True
             else:
@@ -822,30 +815,30 @@ class Client(object):
         data = self.packet.readpkt([LONG])
         self.packet.sendpkt(self.pktCB.PING_PONG, [LONG], [data[0]])
         self.log.debug("CB (W)-> STATUS PING")
-        self.state = self.proxy.HANDSHAKE
+        self.state = HANDSHAKE
         return False
 
     def _parse_status_request(self):
         self.log.debug("SB -> STATUS REQUEST")
         sample = []
-        for player in self.wrapper.javaserver.players:
-            playerobj = self.wrapper.javaserver.players[player]
+        for player in self.servervitals.players:
+            playerobj = self.servervitals.players[player]
             if playerobj.username not in self.hidden_ops:
                 sample.append({"name": playerobj.username,
                                "id": str(playerobj.mojangUuid)})
             if len(sample) > 5:
                 break
-        reported_version = self.serverversion
-        reported_name = self.wrapper.javaserver.version
-        motdtext = self.wrapper.javaserver.motd
+        reported_version = self.servervitals.protocolVersion
+        reported_name = self.servervitals.version
+        motdtext = self.servervitals.motd
         if self.clientversion >= PROTOCOL_1_8START:
             motdtext = json.loads(processcolorcodes(motdtext.replace(
                 "\\", "")))
         self.MOTD = {
             "description": motdtext,
             "players": {
-                "max": int(self.wrapper.javaserver.maxPlayers),
-                "online": len(self.wrapper.javaserver.players),
+                "max": int(self.servervitals.maxPlayers),
+                "online": len(self.servervitals.players),
                 "sample": sample
             },
             "version": {
@@ -855,8 +848,8 @@ class Client(object):
         }
 
         # add Favicon, if it exists
-        if self.wrapper.javaserver.serverIcon:
-            self.MOTD["favicon"] = self.wrapper.javaserver.serverIcon
+        if self.servervitals.serverIcon:
+            self.MOTD["favicon"] = self.servervitals.serverIcon
 
         # add Forge information, if applicable.
         if self.proxy.forge:
@@ -880,11 +873,11 @@ class Client(object):
         self.username = data[0]
 
         # just to be clear, this refers to wrapper's mode, not the server.
-        if self.wrapper_onlinemode:
+        if self.onlinemode:
             # Wrapper sends client a login encryption request
 
             # 1.7.x versions
-            if self.serverversion < 6:
+            if self.servervitals.protocolVersion < 6:
                 # send to client 1.7
                 self.packet.sendpkt(
                     self.pktCB.LOGIN_ENCR_REQUEST,
@@ -901,7 +894,7 @@ class Client(object):
 
             # Server UUID is always offline (at the present time)
             # MCUUID object
-            self.serveruuid = self.wrapper.uuids.getuuidfromname(self.username)
+            self.serveruuid = self.proxy.uuids.getuuidfromname(self.username)
 
         else:
             # Wrapper offline and not authenticating
@@ -909,13 +902,13 @@ class Client(object):
             #  way to authenticate (password plugin?)
 
             # Server UUID is always offline (at the present time)
-            self.uuid = self.wrapper.uuids.getuuidfromname(self.username)
+            self.uuid = self.proxy.uuids.getuuidfromname(self.username)
 
             # Since wrapper is offline, we are using offline for self.uuid also
             self.serveruuid = self.uuid  # MCUUID object
 
             # log the client on
-            self.state = self.proxy.PLAY
+            self.state = PLAY
             self.client_logon()
 
     def _parse_login_encr_response(self):
@@ -924,7 +917,7 @@ class Client(object):
 
         # read response Tokens - "shared_secret|verify_token"
         self.log.debug("SB -> LOGIN ENCR RESPONSE")
-        if self.serverversion < 6:
+        if self.servervitals.protocolVersion < 6:
             data = self.packet.readpkt([BYTEARRAY_SHORT, BYTEARRAY_SHORT])
         else:
             data = self.packet.readpkt([BYTEARRAY, BYTEARRAY])
@@ -955,7 +948,7 @@ class Client(object):
         if self.ipbanned:
             self.log.info("Player %s tried to connect from banned ip:"
                           " %s", self.username, self.ip)
-            self.state = self.proxy.HANDSHAKE
+            self.state = HANDSHAKE
             self.disconnect("Your address is IP-banned from this server!.")
             return False
 
@@ -967,7 +960,7 @@ class Client(object):
         # TODO Whitelist processing Here (or should it be at javaserver start?)
 
         # log the client on
-        self.state = self.proxy.PLAY
+        self.state = PLAY
         self.client_logon()
 
     # Lobby parsers
@@ -1010,13 +1003,13 @@ class Client(object):
     def _define_parsers(self):
         # the packets we parse and the methods that parse them.
         self.parsers = {
-            self.proxy.HANDSHAKE: {
+            HANDSHAKE: {
                 self.pktSB.HANDSHAKE:
                     self._parse_handshaking,
                 self.pktSB.PLUGIN_MESSAGE:
                     self._parse_plugin_message,
                 },
-            self.proxy.STATUS: {
+            STATUS: {
                 self.pktSB.STATUS_PING:
                     self._parse_status_ping,
                 self.pktSB.REQUEST:
@@ -1024,7 +1017,7 @@ class Client(object):
                 self.pktSB.PLUGIN_MESSAGE:
                     self._parse_plugin_message,
                 },
-            self.proxy.LOGIN: {
+            LOGIN: {
                 self.pktSB.LOGIN_START:
                     self._parse_login_start,
                 self.pktSB.LOGIN_ENCR_RESPONSE:
@@ -1032,7 +1025,7 @@ class Client(object):
                 self.pktSB.PLUGIN_MESSAGE:
                     self._parse_plugin_message,
                 },
-            self.proxy.PLAY: {
+            PLAY: {
                 self.pktSB.CHAT_MESSAGE:
                     self.parse_sb.parse_play_chat_message,
                 self.pktSB.CLICK_WINDOW:
@@ -1072,7 +1065,7 @@ class Client(object):
                 self.pktSB.PLUGIN_MESSAGE:
                     self._parse_plugin_message,
                 },
-            self.proxy.LOBBY: {
+            LOBBY: {
                 self.pktSB.KEEP_ALIVE[PKT]:
                     self._parse_keep_alive,
                 self.pktSB.CHAT_MESSAGE:
@@ -1080,7 +1073,7 @@ class Client(object):
                 self.pktSB.PLUGIN_MESSAGE:
                     self._parse_plugin_message,
                 },
-            self.proxy.IDLE: {
+            IDLE: {
                 self.pktSB.PLUGIN_MESSAGE:
                     self._parse_plugin_message,
             }

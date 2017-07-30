@@ -12,12 +12,12 @@ import time
 import traceback
 
 # local
-from proxy.packet import Packet
-from proxy.parse_cb import ParseCB
-from proxy import mcpackets_sb
-from proxy import mcpackets_cb
+from proxy.packets.packet import Packet
+from proxy.server.parse_cb import ParseCB
+from proxy.packets import mcpackets_sb
+from proxy.packets import mcpackets_cb
 
-from proxy.constants import *
+from proxy.utils.constants import *
 
 
 # noinspection PyMethodMayBeStatic
@@ -29,7 +29,7 @@ class ServerConnection(object):
         server, parses them, and forards them on to the client.
 
         ServerConnection receives the parent client as it's argument.
-        It's wrapper and proxy instances are passed from the Client.
+        It receives the proxy instance from the Client.
         Therefore, a server instance does not really validly exist
         unless it has a valid parent client.
 
@@ -42,15 +42,14 @@ class ServerConnection(object):
 
         # basic __init__ items from passed arguments
         self.client = client
-        self.wrapper = client.wrapper
         self.proxy = client.proxy
-        self.log = client.wrapper.log
+        self.log = client.log
         self.ip = ip
         self.port = port
 
         # server setup and operating paramenters
         self.abort = False
-        self.state = self.proxy.HANDSHAKE
+        self.state = HANDSHAKE
         self.packet = None
         self.parse_cb = None
         self.buildmode = False
@@ -74,15 +73,11 @@ class ServerConnection(object):
     def _refresh_server_version(self):
         """Get serverversion for mcpackets use"""
 
-        self.version = self.wrapper.javaserver.protocolVersion
+        self.version = self.proxy.srv_data.protocolVersion
         self.pktSB = mcpackets_sb.Packets(self.version)
         self.pktCB = mcpackets_cb.Packets(self.version)
         self.parse_cb = ParseCB(self, self.packet)
         self._define_parsers()
-
-        if self.version > PROTOCOL_1_7:
-            # used by ban code to enable wrapper group help for ban items.
-            self.wrapper.api.registerPermission("mc1.7.6", value=True)
 
     def send(self, packetid, xpr, payload):
         """ Not supported. A wrapper of packet.send(), which is
@@ -98,13 +93,13 @@ class ServerConnection(object):
     def connect(self):
         """ This simply establishes the tcp socket connection and
         starts the flush loop, NOTHING MORE. """
-        self.state = self.proxy.LOGIN
-        # Connect to this wrapper's javaserver (core/mcserver.py)
+        self.state = LOGIN
+        # Connect to a local server address
         if self.ip is None:
-            self.server_socket.connect(("localhost",
-                                        self.wrapper.javaserver.server_port))
+            self.server_socket.connect((
+                "localhost", self.proxy.srv_data.server_port))
 
-        # Connect to some other server (or an offline wrapper)
+        # Connect to some specific server address
         else:
             self.server_socket.connect((self.ip, self.port))
 
@@ -128,11 +123,11 @@ class ServerConnection(object):
         """
 
         # todo remove this and fix reason code
-        # print(reason)
+        print(reason)
 
         if lobby_return:
             # stop parsing PLAY packets to prevent further "disconnects"
-            self.state = self.proxy.LOBBY
+            self.state = LOBBY
         self.log.debug("Disconnecting proxy server socket connection."
                        " %s", self.infos_debug)
 
@@ -195,7 +190,7 @@ class ServerConnection(object):
 
             # parse it
             if self.parse(pkid) and self.client.state in (
-                    self.proxy.PLAY, self.proxy.LOBBY):
+                    PLAY, LOBBY):
                 try:
                     self.client.packet.send_raw(original)
                     if self.proxy.trace:
@@ -213,7 +208,7 @@ class ServerConnection(object):
             self.log.warn("<=CB %s (%s)", hex(pkid), name)
 
     def _break_handle(self):
-        if self.state == self.proxy.LOBBY:
+        if self.state == LOBBY:
             self.log.info("%s is without a server now.", self.client.username)
             # self.close_server("%s server connection closing..." %
             #   self.client.username, lobby_return=True)
@@ -268,13 +263,13 @@ class ServerConnection(object):
 
     def _parse_login_encr_request(self):
         self.close_server("Server is in online mode. Please turn it off "
-                          "in server.properties and allow wrapper to "
+                          "in server.properties and allow Proxy to "
                           "handle the authetication.")
         return False
 
     # Login Success - UUID & Username are sent in this packet as strings
     def _parse_login_success(self):
-        self.state = self.proxy.PLAY
+        self.state = PLAY
         # todo - we may not need to assign this to a variable.
         # (we supplied uuid/name anyway!)
         # noinspection PyUnusedLocal
@@ -317,8 +312,8 @@ class ServerConnection(object):
     def _define_parsers(self):
         # the packets we parse and the methods that parse them.
         self.parsers = {
-            self.proxy.HANDSHAKE: {},  # maps identically to OFFLINE ( '0' )
-            self.proxy.LOGIN: {
+            HANDSHAKE: {},  # maps identically to OFFLINE ( '0' )
+            LOGIN: {
                 self.pktCB.LOGIN_DISCONNECT:
                     self._parse_login_disconnect,
                 self.pktCB.LOGIN_ENCR_REQUEST:
@@ -328,7 +323,7 @@ class ServerConnection(object):
                 self.pktCB.LOGIN_SET_COMPRESSION:
                     self._parse_login_set_compression
             },
-            self.proxy.PLAY: {
+            PLAY: {
                 self.pktCB.COMBAT_EVENT:
                     self.parse_cb.parse_play_combat_event,
                 self.pktCB.KEEP_ALIVE[PKT]:
@@ -380,7 +375,7 @@ class ServerConnection(object):
                 self.pktCB.ENTITY_METADATA[PKT]:
                     self.parse_cb.parse_entity_metadata,
                 },
-            self.proxy.LOBBY: {
+            LOBBY: {
                 self.pktCB.DISCONNECT:
                     self._parse_lobby_disconnect,
                 self.pktCB.KEEP_ALIVE[PKT]:

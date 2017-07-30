@@ -83,7 +83,8 @@
         working with an undefined API!)... what works in this wrapper
         version may not work in the next.
 
-        :returns: player client object
+        :returns: player client object (and possibly sets self.client
+         to the matching client).
 
         
 
@@ -152,7 +153,8 @@
         :Args:
             :url: URL of resource pack
             :hashrp: resource pack hash
-
+        :return: False if not in proxy mode.
+        
         
 
 -  isOp(self, strict=False)

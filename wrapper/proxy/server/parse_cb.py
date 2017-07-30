@@ -7,8 +7,8 @@
 
 import json
 
-from core.entities import Entity
-from proxy.constants import *
+from proxy.entity.entityclasses import Entity
+from proxy.utils.constants import *
 
 # Py3-2
 import sys
@@ -25,13 +25,13 @@ class ParseCB(object):
     """
     def __init__(self, server, packet):
         self.server = server
+        self.log = self.server.log
         self.client = server.client
         self.pktCB = self.server.pktCB
         self.pktSB = self.server.pktSB
-        self.wrapper = server.client.wrapper
         self.proxy = server.client.proxy
-        self.log = server.client.wrapper.log
         self.packet = packet
+        self.ent_control = self.proxy.entity_control
 
     def parse_play_combat_event(self):
         """ just parsed for testing for now """
@@ -65,8 +65,8 @@ class ParseCB(object):
             message = data.replace("player>", new_usage)
             data = message
 
-        payload = self.wrapper.events.callevent(
-            "player.chatbox", {"player": self.client.getplayerobject(),
+        payload = self.proxy.eventhandler.callevent(
+            "player.chatbox", {"playername": self.client.username,
                                "json": data})
         '''
         :decription: Chat message sent from server to the client.
@@ -104,18 +104,20 @@ class ParseCB(object):
     def parse_play_time_update(self):
         data = self.packet.readpkt([LONG, LONG])
         # "long:worldage|long:timeofday")
-        self.wrapper.javaserver.timeofday = data[1]
+        # There could be a number of clients trying to update this at once
+        # noinspection PyBroadException
+        try:
+            self.proxy.srv_data.timeofday = data[1]
+        except:
+            pass
         return True
 
     def parse_play_spawn_position(self):
         data = self.packet.readpkt([POSITION])
-        #  javaserver.spawnPoint doesn't exist.. this
-        # is player spawnpoint anyway... ?
-        # self.wrapper.javaserver.spawnPoint = data[0]
         self.client.position = data[0]
-        self.wrapper.events.callevent("player.spawned",
-                                      {"player": self.client.getplayerobject(),
-                                       "position": data})
+        self.proxy.eventhandler.callevent(
+            "player.spawned", {"playername": self.client.username,
+                               "position": data})
         '''
         :decription: When server advises the client of its' (player's)
          spawn position.
@@ -133,29 +135,37 @@ class ParseCB(object):
 
     def parse_play_player_poslook(self):
         # CAVEAT - The client and server bound packet formats are different!
+        # < 1.8
+        relativemarker = 0
         if self.server.version < PROTOCOL_1_8START:
             data = self.packet.readpkt(
                 [DOUBLE, DOUBLE, DOUBLE, FLOAT, FLOAT, BOOL])
+            relativemarker = data[5]  # TODO ?? just a guess. check wiki
+        # = 1.8
         elif PROTOCOL_1_7_9 < self.server.version < PROTOCOL_1_9START:
             data = self.packet.readpkt(
                 [DOUBLE, DOUBLE, DOUBLE, FLOAT, FLOAT, BYTE])
-        elif self.server.version > PROTOCOL_1_8END:
+            relativemarker = data[5] & 1
+        # >= 1.9 (to 1.12 currently)
+        elif PROTOCOL_1_9START < self.server.version < PROTOCOL_MAX:
             data = self.packet.readpkt(
                 [DOUBLE, DOUBLE, DOUBLE, FLOAT, FLOAT, BYTE, VARINT])
+            relativemarker = data[5] & 1
         else:
-            data = self.packet.readpkt([DOUBLE, DOUBLE, DOUBLE, REST])
+            # This can't really happen...
+            return True
 
-        # not a bad idea to fill player position
-        self.client.position = (data[0], data[1], data[2])
+        # not a bad idea to fill player position if this is absolute position
+        if relativemarker < 1:
+            self.client.position = (data[0], data[1], data[2])
         return True
 
     def parse_play_use_bed(self):
         data = self.packet.readpkt([VARINT, POSITION])
         if data[0] == self.client.server_eid:
-            self.wrapper.events.callevent(
+            self.proxy.eventhandler.callevent(
                 "player.usebed",
-                {"player": self.wrapper.javaserver.players[
-                    self.client.username], "position": data[1]})
+                {"playername": self.client.username, "position": data[1]})
             '''
             :decription: When server sends client to bed mode.
 
@@ -195,7 +205,7 @@ class ParseCB(object):
 
     def parse_play_spawn_object(self):
         # objects are entities and are GC-ed by detroy entities packet
-        if not self.wrapper.javaserver.entity_control:
+        if not self.ent_control:
             return True  # return now if no object tracking
         if self.server.version < PROTOCOL_1_9START:
             dt = self.packet.readpkt(
@@ -212,23 +222,18 @@ class ParseCB(object):
 
         # we have to check these first, lest the object type be new
         # and cause an exception.
-        if dt[2] in self.wrapper.javaserver.entity_control.objecttypes:
-            objectname = self.wrapper.javaserver.entity_control.objecttypes[
+        if dt[2] in self.ent_control.objecttypes:
+            objectname = self.ent_control.objecttypes[
                 dt[2]]
             newobject = {dt[0]: Entity(dt[0], entityuuid, dt[2], objectname,
                                        (dt[3], dt[4], dt[5],), (dt[6], dt[7]),
                                        True, self.client.username)}
 
-            # in many places here, we could have used another self definition
-            # like self.entities = self.wrapper.javaserver..., but we chose
-            # not to to make sure (given the lagacy complexity of the code)
-            # that we remember where all these classes and methods are
-            # in the code and to keep a mental picture of the code layout.
-            self.wrapper.javaserver.entity_control.entities.update(newobject)
+            self.ent_control.entities.update(newobject)
         return True
 
     def parse_play_spawn_mob(self):
-        if not self.wrapper.javaserver.entity_control:
+        if not self.ent_control:
             return True
         if self.server.version < PROTOCOL_1_9START:
             dt = self.packet.readpkt(
@@ -252,19 +257,19 @@ class ParseCB(object):
         # if the dt[2] mob type is not in our defined entity types,
         # it won't be tracked.. however, the undefined mob will not
         # cause an exception.
-        if dt[2] in self.wrapper.javaserver.entity_control.entitytypes:
-            mobname = self.wrapper.javaserver.entity_control.entitytypes[
+        if dt[2] in self.ent_control.entitytypes:
+            mobname = self.ent_control.entitytypes[
                 dt[2]]["name"]
             newmob = {dt[0]: Entity(dt[0], entityuuid, dt[2], mobname,
                                     (dt[3], dt[4], dt[5],),
                                     (dt[6], dt[7], dt[8]),
                                     False, self.client.username)}
 
-            self.wrapper.javaserver.entity_control.entities.update(newmob)
+            self.ent_control.entities.update(newmob)
         return True
 
     def parse_play_entity_relative_move(self):
-        if not self.wrapper.javaserver.entity_control:
+        if not self.ent_control:
             return True
         if self.server.version < PROTOCOL_1_8START:  # 1.7.10 - 1.7.2
             data = self.packet.readpkt([INT, BYTE, BYTE, BYTE])
@@ -274,14 +279,14 @@ class ParseCB(object):
             data = self.packet.readpkt([VARINT, BYTE, BYTE, BYTE])
         # ("varint:eid|byte:dx|byte:dy|byte:dz")
 
-        entupd = self.wrapper.javaserver.entity_control.getEntityByEID(
+        entupd = self.ent_control.getEntityByEID(
             data[0])
         if entupd:
             entupd.move_relative((data[1], data[2], data[3]))
         return True
 
     def parse_play_entity_teleport(self):
-        if not self.wrapper.javaserver.entity_control:
+        if not self.ent_control:
             return True
         if self.server.version < PROTOCOL_1_8START:  # 1.7.10 and prior
             data = self.packet.readpkt([INT, INT, INT, INT, REST])
@@ -294,7 +299,7 @@ class ParseCB(object):
 
         # ("varint:eid|int:x|int:y|int:z|byte:yaw|byte:pitch")
 
-        entupd = self.wrapper.javaserver.entity_control.getEntityByEID(
+        entupd = self.ent_control.getEntityByEID(
             data[0])
         if entupd:
             entupd.teleport((data[1], data[2], data[3]))
@@ -315,29 +320,25 @@ class ParseCB(object):
                 leash = False
         entityeid = data[0]  # rider, leash holder, etc
         vehormobeid = data[1]  # vehicle, leashed entity, etc
-        player = self.proxy.getplayerby_eid(entityeid)
-
-        if player is None:
-            return True
 
         if entityeid == self.client.server_eid:
             if not leash:
-                self.wrapper.events.callevent("player.unmount",
-                                              {"player": player,
-                                               "vehicle_id": vehormobeid,
-                                               "leash": leash})
+                self.proxy.eventhandler.callevent(
+                    "entity.unmount", {"playername": self.client.username,
+                                       "vehicle_id": vehormobeid,
+                                       "leash": leash})
                 '''
                 :decription: When player attaches to entity.
 
                 :Event: Notification only.
                 '''
-                self.log.debug("player unmount called for %s", player.username)
+                self.log.debug("player unmount called for %s", self.client.username)
                 self.client.riding = None
             else:
-                self.wrapper.events.callevent("player.mount",
-                                              {"player": player,
-                                               "vehicle_id": vehormobeid,
-                                               "leash": leash})
+                self.proxy.eventhandler.callevent(
+                    "entity.mount", {"playername": self.client.username,
+                                     "vehicle_id": vehormobeid,
+                                     "leash": leash})
                 '''
                 :decription: When player detaches/unmounts entity.
 
@@ -345,10 +346,10 @@ class ParseCB(object):
                 '''
                 self.client.riding = vehormobeid
                 self.log.debug("player mount called for %s on eid %s",
-                               player.username, vehormobeid)
-                if not self.wrapper.javaserver.entity_control:
+                               self.client.username, vehormobeid)
+                if not self.ent_control:
                     return
-                entupd = self.wrapper.javaserver.entity_control.getEntityByEID(
+                entupd = self.ent_control.getEntityByEID(
                     vehormobeid)
                 if entupd:
                     self.client.riding = entupd
@@ -359,7 +360,7 @@ class ParseCB(object):
         # Get rid of dead entities so that python can GC them.
         # TODO - not certain this works correctly (errors -
         # eids not used and too broad exception)
-        if not self.wrapper.javaserver.entity_control:
+        if not self.ent_control:
             return True
 
         # noinspection PyUnusedLocal
@@ -369,14 +370,16 @@ class ParseCB(object):
             entitycount = bytearray(self.packet.readpkt([BYTE])[0])[0]
             parser = [INT]
         else:
-            entitycount = bytearray(self.packet.readpkt([VARINT]))[0]
+            # TODO - error when more than 256 entities?
+            rawread = self.packet.readpkt([VARINT])
+            entitycount = rawread[0]
             parser = [VARINT]
 
         for _ in range(entitycount):
             eid = self.packet.readpkt(parser)[0]
             # noinspection PyBroadException
-            if eid in self.wrapper.javaserver.entity_control.entities:
-                self.wrapper.javaserver.entity_control.entities.pop(eid, None)
+            if eid in self.ent_control.entities:
+                self.ent_control.entities.pop(eid, None)
 
         return True
 
@@ -545,7 +548,7 @@ class ParseCB(object):
                 lowdata = self.packet.readpkt(parser_three)
                 print(lowdata)
                 packetuuid = lowdata[0]
-                playerclient = self.wrapper.proxy.getclientbyofflineserveruuid(
+                playerclient = self.server.client.proxy.getclientbyofflineserveruuid(
                     packetuuid)
                 if playerclient:
                     raw += self.packet.send_uuid(playerclient.uuid.hex)
@@ -568,7 +571,7 @@ class ParseCB(object):
             z = 0
             while z < lenhead:
                 serveruuid = self.packet.readpkt([UUID])[0]
-                playerclient = self.wrapper.proxy.getclientbyofflineserveruuid(
+                playerclient = self.proxy.getclientbyofflineserveruuid(
                     serveruuid)
                 if not playerclient:
                     z += 1
@@ -669,25 +672,28 @@ class ParseCB(object):
         this is a pretty useless parse, unless we opt to pump this data
         into the entity API.
         """
-        eid, metadata = self.packet.readpkt(self.pktCB.ENTITY_METADATA[PARSER])
-        if self.client.version >= PROTOCOL_1_8START:
-            # 12 means 'ageable'
-            if 12 in metadata:
-                # boolean isbaby
-                if 6 in metadata[12]:
-                    # it's a baby!
-                    if metadata[12][1] is True:
-
-                        # print the data for reference
-                        # see http://wiki.vg/Entities#Entity_Metadata_Format
-                        # self.log.debug("EID: %s - %s", eid, metadata)
-                        # name the baby and make tag visible (no index/type
-                        # checking; accessing base entity class)
-                        metadata[2] = (3, "Entity_%s" % eid)
-                        metadata[3] = (6, True)
-
-        self.client.packet.sendpkt(
-            self.pktCB.ENTITY_METADATA[PKT],
-            self.pktCB.ENTITY_METADATA[PARSER],
-            (eid, metadata))
-        return False
+        # possible source of errors due to complexity of the parse and
+        # the changes between various versions of minecraft.
+        return True
+        # eid, metadata = self.packet.readpkt(self.pktCB.ENTITY_METADATA[PARSER])
+        # if self.client.version >= PROTOCOL_1_8START:
+        #     # 12 means 'ageable'
+        #     if 12 in metadata:
+        #         # boolean isbaby
+        #         if 6 in metadata[12]:
+        #             # it's a baby!
+        #             if metadata[12][1] is True:
+        #
+        #                 # print the data for reference
+        #                 # see http://wiki.vg/Entities#Entity_Metadata_Format
+        #                 # self.log.debug("EID: %s - %s", eid, metadata)
+        #                 # name the baby and make tag visible (no index/type
+        #                 # checking; accessing base entity class)
+        #                 metadata[2] = (3, "Entity_%s" % eid)
+        #                 metadata[3] = (6, True)
+        #
+        # self.client.packet.sendpkt(
+        #     self.pktCB.ENTITY_METADATA[PKT],
+        #     self.pktCB.ENTITY_METADATA[PARSER],
+        #     (eid, metadata))
+        # return False

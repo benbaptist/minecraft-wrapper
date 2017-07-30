@@ -3,7 +3,7 @@
 
     .. code:: python
 
-        def __init__(self, mcserver)
+        def __init__(self, proxy)
 
     ..
 
@@ -16,8 +16,7 @@
 
     Valid only with a functioning server.
 
-    Entity controls are established by console when wrapper
-    reads "preparing ...."
+    Entity controls are established by the proxy
 
     
 

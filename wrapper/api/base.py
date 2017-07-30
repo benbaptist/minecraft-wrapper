@@ -8,8 +8,6 @@
 
 import time
 
-import core.exceptions as exceptions
-
 from api.minecraft import Minecraft
 from core.storage import Storage
 from api.backups import Backups
@@ -310,15 +308,13 @@ class API(object):
                       warps)
             ..
 
-        :returns:  Raises wrapper exception `exceptions.NonExistentPlugin`
-         if the specified plugin does not exist.
+        :returns:  Raises exception if the specified plugin does not exist.
 
         """
         if plugin_id in self.wrapper.plugins:
             return self.wrapper.plugins[plugin_id]["main"]
         else:
-            raise exceptions.NonExistentPlugin("Plugin %s does not exist!" %
-                                               plugin_id)
+            raise LookupError("Plugin %s does not exist!" % plugin_id)
 
     def getStorage(self, name, world=False, formatting="pickle"):
         """
@@ -460,3 +456,75 @@ class API(object):
 
         """
         self.wrapper.shutdown()
+
+    def createGroup(self, groupname):
+        """
+        Used to create a permission group.
+
+        :Args:
+            :groupname: The name of the permission group.
+
+
+        :returns:  string message indicating the outcome
+
+        """
+        return self.wrapper.perms.group_create(groupname)
+
+    def deleteGroup(self, groupname):
+        """
+        Used to delete a permission group.
+
+        :Args:
+            :groupname: The name of the permission group.
+
+
+        :returns:  string message indicating the outcome
+
+        """
+        return self.wrapper.perms.group_delete(groupname)
+
+    def addGroupPerm(self, groupname, permissionnode, value=True):
+        """
+        Used to add a permission node to a group.
+
+        :Args:
+            :groupname: The name of the permission group.
+
+            :permissionnode: The permission node to add to the group.
+             The node can be another group!  Nested permissions must be
+             enabled (see player api "hasPermission").
+
+            :value: value of the node.  normally True to allow the
+             permission, but can be false to deny the permission. For
+             instance, you want a "badplayer" group to be denied some
+             command that would normally be permitted.
+
+        :returns:  string message indicating the outcome
+
+        """
+        return self.wrapper.perms.group_set_permission(
+            groupname, permissionnode, value)
+
+    def deleteGroupPerm(self, groupname, permissionnode):
+        """
+        Used to remove a permission node to a group.
+
+        :Args:
+            :groupname: The name of the permission group.
+
+            :permissionnode: The permission node to remove.
+
+        :returns:  string message indicating the outcome
+
+        """
+        return self.wrapper.perms.group_delete_permission(
+            groupname, permissionnode)
+
+    def resetGroups(self):
+        """
+        resets group data (removes all permission groups).
+
+        :returns:  nothing
+
+        """
+        return self.wrapper.perms.clear_group_data()

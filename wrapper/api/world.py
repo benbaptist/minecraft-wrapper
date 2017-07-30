@@ -63,6 +63,7 @@ class World(object):
             raise Exception("Invalid mode: %s" % mode)
         x1, y1, z1 = position1
         x2, y2, z2 = position2
+
         if self.javaserver.protocolVersion < 6:
             raise Exception("Must be running Minecraft 1.8 or above"
                             " to use the world.fill() method.")
@@ -117,7 +118,7 @@ class Chunk(object):
 
     """
     def __init__(self, bytesarray, x, z):
-        self.ids = struct.unpack("<" + ("H" * (len(bytesarray) / 2)), bytesarray)
+        self.ids = struct.unpack("<" + ("H" * (len(bytesarray) // 2)), bytesarray)
         self.x = x
         self.z = z
         # for i,v in enumerate(bytesarray):

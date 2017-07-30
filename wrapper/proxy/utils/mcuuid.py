@@ -28,10 +28,9 @@ class MCUUID(uuid.UUID):
 
 
 class UUIDS(object):
-    def __init__(self, wrapper):
-        self.wrapper = wrapper
-        self.log = wrapper.log
-        self.usercache = self.wrapper.usercache
+    def __init__(self, loginstance, usercache):
+        self.log = loginstance
+        self.usercache = usercache
 
     @staticmethod
     def formatuuid(playeruuid):
@@ -63,7 +62,7 @@ class UUIDS(object):
 
     def getuuidbyusername(self, username, forcepoll=False):
         """
-        Lookup user's UUID using the username. Primarily searches the wrapper usercache.  If record is
+        Lookup user's UUID using the username. Primarily searches the usercache.  If record is
         older than 30 days (or cannot be found in the cache), it will poll Mojang and also attempt a full
         update of the cache using getusernamebyuuid as well.
 

@@ -1,6 +1,94 @@
-Build 209 (next build)
+Build 220 (next build)
+- documentation generator needs fixed for api.entity (should just
+ point into the proxy/entity files where the actual code is).
 - player to player TP - Add inter-dimensional TP (1.8+) api
   Community Input enhancement proxy mode
+- need to fix various problems with parsing:
+ - dropped items are invisible
+
+Build 219
+- Issues with home and bookmark plugins not setting the location
+ correctly, sometimes causing the player to fall or be slightly
+ misplaced.  Due to specifying %d (and rounding 1/2 coords to change
+ the TP location to an adjoining block).  Fix similar error in
+ teleports.
+- fine tune and verify packets for client and serverbound use.
+- simplify constants for play states for proxy client and server.
+- pass a faux player object to player.preLogin to prevent errors in
+ trying to generate a playerobject before player is logged on.
+- fixed player object login and logout.
+- found error in Z position parse for SB playerposlook
+- API was missing permission group management commands.  Added them
+ to the base API:
+  - createGroup(groupname)
+  - deleteGroup(groupname)
+  - addGroupPerm(group, node, value=True)
+  - deleteGroupPerm(group, node)
+  - resetGroups()  - deletes all group data
+- added group manager plugin
+- correct permissions.py error where creating a self.permissions =
+ self.wrapper.permissions and later making self.permissions = {} breaks
+ the association with wrapper.permissions.
+- Correct more permissions errors.
+- have wrapper commands.py echo back typed commands to the client user.
+
+Build 218
+- fix issues with a plugin called "Name" in help menus.
+- permissions issues with bookmarks plugin allowing commands.
+- Fix example and template plugins
+
+Build 217
+- more debugging with servervitals references.
+- found a new 1.12 metadata data type.. cant parse it yet ('13' - nbt tag)
+
+Build 216 [0.12.1]
+- (reminder) player list was moved to core/wrapper.py.
+-- however.. player list is passed back into servervitals for use
+   by clientconnection
+- Removed improper player references for self.servervitals
+
+Build 215 [0.12.0]
+- update packet information to minecraft version 1.12
+
+Build 211
+- Proxy is an independent system, save for some api.helpers dependencies.
+ Proxy can now, in theory, be used without Wrapper as a stand-alone
+ component for other uses.
+- proxy is entirely refactored, separated proxy into several groups:
+ - base.py file for main Proxy class
+ - client, server, packets, utils, entity groups.
+- Entity control moved to Proxy, where it belongs
+- All wrapper and javaserver references finally removed.
+- proxy passes information back to wrapper (or whatever system) via
+ the shared data (for server and player data) or by calling events.
+ The templates for these shared structures and API's are included as
+ small classes in wrapper/proxy/base.py.
+- Another goal of separation is to make the player api less confusing,
+ since the documentation is not clear on what player API methods are
+ available with/without proxy mode.  Hopefully, movement can be made
+ to offer similar functionality for non-proxy mode (versus just
+ generating errors when an attempt is made to access player
+ data from the proxy).
+
+
+Build 210 - Fully modularize and make Proxy an independent system:
+- group encryption with proxy package (the only place it is used!).
+- Group mcuuid.py into proxy package (proxy depends on it more than
+ wrapper does... I would rather wrapper depend upon a proxy module
+ than v.v.)
+- clean up wrapper halt signal system to support separation of
+ proxy from wrapper.  Also avert possible referencing errors in
+ other places in code, like:
+    - separate player.abort signal from the wrapper.halt.halt signal.
+- create separate Proxy abort signal, separate from wrapper halt (the
+ 'caller' halt signal).
+- separate out proxy and mcserver protocol versioning variables.
+- proxy wrapper plugin channels are hardcoded to utf-8 (versus adding
+ a whole proxy argument just for the channel's encoding!)
+
+
+Build 209
+- changed api/helpers _test() to use assertions for tests. Refactor helpers some.
 
 Build 208
 - Remove readchar package and implement simpler (better IMHO)
@@ -118,7 +206,7 @@ Build 180 Version [0.10.0]
     time now internally, anyway) by assigning a NULL type to the missing field.  For example,
     CHAT_MESSAGE is parsed using [JSON, BYTE] in 1.8 and later and [STRING, NULL]
     prior to 1.8.
-- slit proxy modules even more. mcpackets split into client-bound and server-bound.
+- split proxy modules even more. mcpackets split into client-bound and server-bound.
     moved (and renamed) wrapper/utils/pkt_datatypes.py to proxy/constants.py.
 
 Build 179

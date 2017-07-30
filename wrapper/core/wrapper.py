@@ -41,14 +41,13 @@ from core.storage import Storage
 from core.irc import IRC
 from core.scripts import Scripts
 import core.buildinfo as core_buildinfo_version
-from core.mcuuid import UUIDS
+from proxy.utils.mcuuid import UUIDS
 from core.config import Config
 from core.backups import Backups
 from core.consoleuser import ConsolePlayer
-from core.exceptions import UnsupportedOSException, InvalidServerStartedError
 from core.permissions import Permissions
 # optional API type stuff
-import proxy.base as proxy
+from proxy.base import Proxy, ProxyConfig, HaltSig, ServerVitals
 from api.base import API
 import management.web as manageweb
 # from management.dashboard import Web as Managedashboard  # presently unused
@@ -105,19 +104,17 @@ class Wrapper(object):
         # Read Config items
         # hard coded cursor for non-readline mode
         self.cursor = ">"
-        self.wrapper_ban_system = False
         # This was to allow alternate encodings
         self.encoding = self.config["General"]["encoding"]
+        self.serverpath = self.config["General"]["server-directory"]
         self.proxymode = self.config["Proxy"]["proxy-enabled"]
         self.wrapper_onlinemode = self.config["Proxy"]["online-mode"]
-        self.wrapper_ban_system = self.proxymode and self.wrapper_ban_system
         self.auto_update_wrapper = self.config[
             "Updates"]["auto-update-wrapper"]
         self.auto_update_branch = self.config[
             "Updates"]["auto-update-branch"]
         self.use_timer_tick_event = self.config[
             "Gameplay"]["use-timer-tick-event"]
-        self.command_prefix = self.config["Misc"]["command-prefix"]
         self.use_readline = self.config["Misc"]["use-readline"]
 
         # Storages
@@ -131,15 +128,18 @@ class Wrapper(object):
 
         # storage Data objects
         self.storage = self.wrapper_storage.Data
-        self.permissions = self.wrapper_permissions.Data
         self.usercache = self.wrapper_usercache.Data
+
+        # access this directly to prevent changing the reference
+        # self.permissions = self.wrapper_permissions.Data
 
         # core functions and datasets
         self.perms = Permissions(self)
-        self.uuids = UUIDS(self)
+        self.uuids = UUIDS(self.log, self.usercache)
         self.plugins = Plugins(self)
         self.commands = Commands(self)
         self.events = Events(self)
+        self.players = {}
         self.registered_permissions = {}
         self.help = {}
         self.input_buff = ""
@@ -155,12 +155,20 @@ class Wrapper(object):
         self.web = None
         self.proxy = None
         self.backups = None
-        self.halt = False
+
+        #  HaltSig - Why? ... because if self.halt was just `False`, passing
+        #  a self.halt would simply be passing `False` (immutable).  Changing
+        # the value of self.halt would not necessarily change the value of the
+        # passed parameter (unless it was specifically referenced back as
+        # `wrapper.halt`). Since the halt signal needs to be passed, possibly
+        # several layers deep, and into modules that it may be desireable to
+        # not have direct access to wrapper, using a HaltSig object is
+        # more desireable and reliable in behavior.
+        self.halt = HaltSig()
+
         self.updated = False
         # future plan to expose this to api
         self.xplayer = ConsolePlayer(self)
-        # define the slot once here and not at each clients Instantiation:
-        self.inv_slots = range(46)
 
         # Error messages for non-standard import failures.
         if not readline and self.use_readline:
@@ -177,6 +185,23 @@ class Wrapper(object):
                 " console functioning. Press <Enter> to Exit...")
             sys.stdin.readline()
             self._halt()
+
+        # create server/proxy vitals and config objects
+        self.servervitals = ServerVitals(self.players)
+
+        # LETS TAKE A SECOND TO DISCUSS PLAYER OBJECTS:
+        # The ServerVitals class gets passed the player object list now, but
+        # player objects are now housed in wrapper.  This is how we are
+        # passing informatino between proxy and wrapper.
+
+        self.servervitals.serverpath = self.config[
+            "General"]["server-directory"]
+        self.servervitals.state = OFF
+        self.servervitals.command_prefix = self.config[
+            "Misc"]["command-prefix"]
+        self.proxyconfig = ProxyConfig()
+        self.proxyconfig.proxy = self.config["Proxy"]
+        self.proxyconfig.entity = self.config["Entities"]
 
     def __del__(self):
         """prevent error message on very first wrapper starts when
@@ -199,7 +224,7 @@ class Wrapper(object):
 
         # This is not the actual server... the MCServer
         # class is a console wherein the server is started
-        self.javaserver = MCServer(self)
+        self.javaserver = MCServer(self, self.servervitals)
         self.javaserver.init()
 
         # load plugins
@@ -223,13 +248,13 @@ class Wrapper(object):
                     " the required modules installed: pkg_resources\n"
                     "Hint: http://stackoverflow.com/questions/7446187")
 
-        # Console Daemon runs while not wrapper.halt (here; self.halt)
+        # Console Daemon runs while not wrapper.halt.halt
         consoledaemon = threading.Thread(
             target=self.parseconsoleinput, args=())
         consoledaemon.daemon = True
         consoledaemon.start()
 
-        # Timer also runs while not wrapper.halt
+        # Timer also runs while not wrapper.halt.halt
         t = threading.Thread(target=self.event_timer, args=())
         t.daemon = True
         t.start()
@@ -264,7 +289,7 @@ class Wrapper(object):
         self.log.info("Wrapper Storages closed and saved.")
 
         # wrapper execution ends here.  handle_server ends when
-        # wrapper.halt is True.
+        # wrapper.halt.halt is True.
         if self.sig_int:
             self.log.info("Ending threads, please wait...")
             time.sleep(5)
@@ -301,7 +326,7 @@ class Wrapper(object):
 
     def _halt(self):
         self.javaserver.stop("Halting server...", restart_the_server=False)
-        self.halt = True
+        self.halt.halt = True
 
     def shutdown(self):
         self._halt()
@@ -382,7 +407,7 @@ class Wrapper(object):
             # working buffer allows arrow use to restore what they
             # were typing but did not enter as a command yet
             working_buff = ''
-            while not self.halt:
+            while not self.halt.halt:
                 keypress = readkey.getcharacter()
                 keycode = readkey.convertchar(keypress)
                 length = len(self.input_buff)
@@ -485,7 +510,7 @@ class Wrapper(object):
         return consoleinput
 
     def parseconsoleinput(self):
-        while not self.halt:
+        while not self.halt.halt:
             consoleinput = self.getconsoleinput()
             # No command (perhaps just a line feed or spaces?)
             if len(consoleinput) < 1:
@@ -671,7 +696,7 @@ class Wrapper(object):
             # if wrapper is using proxy mode (which should be set to online)
             return self.config["Proxy"]["online-mode"]
         if self.javaserver is not None:
-            if self.javaserver.onlineMode:
+            if self.servervitals.onlineMode:
                 # if local server is online-mode
                 return True
         return False
@@ -698,18 +723,33 @@ class Wrapper(object):
                         usereadline=self.use_readline)
 
     def _startproxy(self):
-        self.proxy = proxy.Proxy(self)
-        # requests will be set to False if requests or cryptography is missing.
-        if proxy.requests:
-            proxythread = threading.Thread(target=self.proxy.host, args=())
-            proxythread.daemon = True
-            proxythread.start()
-        else:
+
+        # error will raise if requests or cryptography is missing.
+        self.proxy = Proxy(self.halt, self.proxyconfig,
+                           self.servervitals, self.log,
+                           self.usercache, self.events)
+
+        # wait for server to start
+        timer = 0
+        while self.servervitals.state < STARTED:
+            timer += 1
+            time.sleep(.1)
+            if timer > 1200:
+                self.log.warning(
+                    "Proxy mode did not detect a started server within 2"
+                    " minutes.  Disabling proxy mode because something is"
+                    " wrong.")
+                self.disable_proxymode()
+
+        if self.proxy.proxy_port == self.servervitals.server_port:
+            self.log.warning("Proxy mode cannot start because the wrapper"
+                             " port is identical to the server port.")
             self.disable_proxymode()
-            self.log.error(
-                "Proxy mode has been disabled because you do not have one"
-                " or more of the following modules installed:"
-                " \npycrypto and requests")
+            return
+
+        proxythread = threading.Thread(target=self.proxy.host, args=())
+        proxythread.daemon = True
+        proxythread.start()
 
     def disable_proxymode(self):
         self.proxymode = False
@@ -735,7 +775,7 @@ class Wrapper(object):
                 core_buildinfo_version.__build__)
 
     def _auto_update_process(self):
-        while not self.halt:
+        while not self.halt.halt:
             time.sleep(3600)
             if self.updated:
                 self.log.info(
@@ -839,7 +879,7 @@ class Wrapper(object):
 
     def event_timer(self):
         t = time.time()
-        while not self.halt:
+        while not self.halt.halt:
             if time.time() - t > 1:
                 self.events.callevent("timer.second", None)
                 """ eventdoc
@@ -903,10 +943,10 @@ class Wrapper(object):
     def _freeze(self):
         try:
             self.javaserver.freeze()
-        except InvalidServerStartedError as e:
-            self.log.warning(e)
-        except UnsupportedOSException as ex:
+        except OSError as ex:
             self.log.error(ex)
+        except EnvironmentError as e:
+            self.log.warning(e)
         except Exception as exc:
             self.log.exception(
                 "Something went wrong when trying to freeze the"
@@ -915,7 +955,7 @@ class Wrapper(object):
     def _memory(self):
         try:
             get_bytes = self.javaserver.getmemoryusage()
-        except UnsupportedOSException as e:
+        except OSError as e:
             self.log.error(e)
         except Exception as ex:
             self.log.exception(
@@ -934,16 +974,16 @@ class Wrapper(object):
                     getargsafter(console_input[1:].split(" "), 1))
             else:
                 self.log.info("Usage: /raw [command]")
-        except InvalidServerStartedError as e:
+        except EnvironmentError as e:
             self.log.warning(e)
 
     def _unfreeze(self):
         try:
             self.javaserver.unfreeze()
-        except InvalidServerStartedError as e:
-            self.log.warning(e)
-        except UnsupportedOSException as ex:
+        except OSError as ex:
             self.log.error(ex)
+        except EnvironmentError as e:
+            self.log.warning(e)
         except Exception as exc:
             self.log.exception(
                 "Something went wrong when trying to unfreeze"

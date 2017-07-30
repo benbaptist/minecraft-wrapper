@@ -26,9 +26,6 @@ from collections import MutableMapping, MutableSequence, Sequence
 from struct import Struct, error as StructError
 from gzip import GzipFile
 
-
-from core.exceptions import MalformedFileError
-
 import sys
 
 PY3 = sys.version_info > (3,)
@@ -593,10 +590,10 @@ class NBTFile(TAG_Compound):
                     self.name = name
                     self.file.close()
                 else:
-                    raise MalformedFileError(
+                    raise ValueError(
                         "First record is not a Compound Tag")
             except StructError as e:
-                raise MalformedFileError(
+                raise ValueError(
                     "Partial File Parse: file possibly truncated.")
         else:
             raise ValueError(
