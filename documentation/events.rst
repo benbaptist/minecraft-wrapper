@@ -18,7 +18,7 @@
     :Description: player.logout
 
     :Payload:
-         self.getplayer(players_name)
+        :"player": self.getplayer(players_name)
 
     :Can be aborted/modified: 
 

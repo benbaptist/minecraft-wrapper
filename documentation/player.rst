@@ -21,6 +21,37 @@
     upon logging off.  Most features are tied heavily to
     proxy mode implementations and the proxy client instance.
 
+
+    Supported properties of the player:
+    .. code:: python
+
+        self.username
+        self.loggedIn
+        self.mojangUuid
+        self.offlineUuid
+        self.loginposition
+
+        # proxy only
+        self.ipaddress
+        self.serverUuid (proxy only)
+        self.clientUuid (proxy only)
+        self.clientgameversion
+        self.clientboundPackets = Packets_cb(self.clientgameversion)
+        self.serverboundPackets = Packets_sb(self.clientgameversion)
+        self.playereid
+
+        # some player properties associated with abilities (proxy)
+        # default is 1.  Should normally be congruent with speed.
+        self.field_of_view = float(1)
+        # Client set godmode is 0x01
+        self.godmode = 0x00
+        # Client set creative is 0x08
+        self.creative = 0x00
+        # default is 1
+        self.fly_speed = float(1)
+
+    ..
+
     
 
 -  execute(self, string)
