@@ -213,7 +213,7 @@ class Minecraft(object):
         Returns a list of the currently connected players.
 
         """
-        return self.wrapper.players
+        return self.wrapper.servervitals.players
 
     def getEntityControl(self):
         """

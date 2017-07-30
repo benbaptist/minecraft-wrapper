@@ -361,17 +361,18 @@ class MCServer(object):
     def login(self, username, eid, location):
         """Called when a player logs in."""
 
-        # place to store EID if proxy is not fully connected yet.
-        self.vitals.player_eids[username] = [eid, location]
         if username not in self.vitals.players:
             self.vitals.players[username] = Player(username, self.wrapper)
+        # store EID if proxy is not fully connected yet.
+        self.vitals.players[username].playereid = eid
+        self.vitals.players[username].loginposition = location
+
         if self.wrapper.proxy:
-            playerclient = self.getplayer(username).getClient()
+            playerclient = self.vitals.players[username].getClient()
             if playerclient:
-                playerclient.server_connection.eid = eid
+                playerclient.server_eid = eid
                 playerclient.position = location
-        # TODO - print what this produces (self.vitals.player_eids[username][1])
-        self.vitals.players[username].loginposition = self.vitals.player_eids[username][1]
+
         self.wrapper.events.callevent(
             "player.login",
             {"player": self.getplayer(username)})
@@ -379,14 +380,13 @@ class MCServer(object):
     def logout(self, players_name):
         """Called when a player logs out."""
 
-        # self.wrapper.callEvent(
-        #    "player.logout", {"player": self.getPlayer(username)})
         self.wrapper.events.callevent(
             "player.logout", {"player": self.getplayer(players_name)})
+
         if self.wrapper.proxy:
             self.wrapper.proxy.removestaleclients()
 
-        # remove a hub player or not??
+        # TODO remove a hub player or not??
         if players_name in self.vitals.players:
             self.vitals.players[players_name].abort = True
             del self.vitals.players[players_name]

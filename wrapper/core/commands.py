@@ -48,9 +48,9 @@ class Commands(object):
 
     def playercommand(self, payload):
         player = payload["player"]
-        self.log.info(
-            "%s executed: /%s %s",
-            payload["player"], payload["command"], " ".join(payload["args"]))
+        commandtext = "/%s %s" % (payload["command"], " ".join(payload["args"]))
+        player.message(commandtext)
+        self.log.info("%s executed: %s", payload["player"], commandtext)
 
         # We should get of this by creating a wrapper command registering set
 
@@ -135,8 +135,9 @@ class Commands(object):
             if commandname in self.commands[pluginID]:
                 try:
                     command = self.commands[pluginID][commandname]
+                    # require super op to bypass explicit permission
                     if player.hasPermission(
-                            command["permission"]) or player.isOp() > 3:
+                            command["permission"]) or player.isOp() > 4:
                         command["callback"](payload["player"], payload["args"])
                     else:
                         player.message(
@@ -744,18 +745,18 @@ class Commands(object):
                 player.message("&a%s" % call_result)
 
             elif subcommand == "info":
-                if group not in self.wrapper.permissions["groups"]:
+                if group not in self.wrapper.wrapper_permissions.Data["groups"]:
                     player.message("&cGroup '%s' does not exist!" % group)
                     return
                 player.message("&aUsers in the group '%s':" % group)
-                for uuid in self.wrapper.permissions["users"]:
-                    if group in self.wrapper.permissions[
+                for uuid in self.wrapper.wrapper_permissions.Data["users"]:
+                    if group in self.wrapper.wrapper_permissions.Data[
                             "users"][uuid]["groups"]:
                         player.message("%s: &2%s" % (self.wrapper.uuids.getusernamebyuuid(uuid), uuid))
                 player.message("&aPermissions for the group '%s':" % group)
-                for node in self.wrapper.permissions[
+                for node in self.wrapper.wrapper_permissions.Data[
                         "groups"][group]["permissions"]:
-                    value = self.wrapper.permissions[
+                    value = self.wrapper.wrapper_permissions.Data[
                         "groups"][group]["permissions"][node]
                     if value:
                         player.message("- %s: &2%s" % (node, value))
@@ -764,25 +765,31 @@ class Commands(object):
                     else:
                         player.message("- %s: &7%s" % (node, value))
             else:
-                player.message("&cList of groups: %s" %
-                               ", ".join(self.wrapper.permissions["groups"]))
-                usage("groups <groupName> [new/delete/set/remove/info]")
+                player.message("&6List of groups:&b %s" %
+                               ", ".join(self.wrapper.wrapper_permissions.Data["groups"]))
+                usage("groups <groupName> [new|delete] / [set|remove <node>] / [info]")
 
         elif command == "users":
             username = getargs(payload["args"], 1)
             subcommand = getargs(payload["args"], 2)
             uuid = self.wrapper.uuids.getuuidbyusername(username)
-            if str(uuid) not in self.wrapper.permissions:
+            if str(uuid) not in self.wrapper.wrapper_permissions.Data["users"]:
                 self.perms.fill_user(str(uuid))
             if subcommand == "group":
                 group = getargs(payload["args"], 3)
-                if len(group) > 0 and len(uuid) > 0:
-                    call_result = self.perms.set_group(str(uuid), group)
+                remove = getargs(payload["args"], 4) == "remove"
+                if len(group) > 0 and len(str(uuid)) > 0:
+                    if remove:
+                        call_result = self.perms.remove_group(str(uuid), group)
+                    else:
+                        call_result = self.perms.set_group(str(uuid), group)
                     if not call_result:
                         player.message(
                             "&ccommand failed, check wrapper log for info.")
+                    else:
+                        player.message("&aCommand succeeded.")
                 else:
-                    usage("users <username> group <groupName>")
+                    usage("users <username> group <groupName> [remove]")
 
             elif subcommand == "set":
                 node = getargs(payload["args"], 3)
@@ -803,13 +810,13 @@ class Commands(object):
 
             elif subcommand == "info":
                 player.message("&aUser '%s' is in these groups: " % username)
-                for group in self.wrapper.permissions["users"][str(uuid)]["groups"]:
+                for group in self.wrapper.wrapper_permissions.Data["users"][str(uuid)]["groups"]:
                     player.message("- %s" % group)
                 player.message(
                     "&aUser '%s' is granted these individual permissions (not including permissions inherited from groups): " % username)
-                for node in self.wrapper.permissions[
+                for node in self.wrapper.wrapper_permissions.Data[
                         "users"][str(uuid)]["permissions"]:
-                    value = self.wrapper.permissions[
+                    value = self.wrapper.wrapper_permissions.Data[
                         "users"][str(uuid)]["permissions"][node]
                     if value:
                         player.message("- %s: %s" % (node, value))

@@ -72,7 +72,6 @@ class ServerVitals(object):
         self.command_prefix = "/"
 
         # Shared data structures and run-time
-        self.player_eids = {}
         self.players = playerobjects
 
         # TODO - I don't think this is used or needed (same name as proxy.entity_control!)

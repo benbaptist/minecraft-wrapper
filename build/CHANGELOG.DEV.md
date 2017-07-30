@@ -1,8 +1,4 @@
 Build 220 (next build)
-- Need to re-implement and fully debug player objects.  They are
- now added by the mcserver.py (and not in proxy), but never removed.
- Therefore, api.player calls are still functional after the player
- logs off (producing errors).
 - documentation generator needs fixed for api.entity (should just
  point into the proxy/entity files where the actual code is).
 - player to player TP - Add inter-dimensional TP (1.8+) api
@@ -20,7 +16,21 @@ Build 219
 - simplify constants for play states for proxy client and server.
 - pass a faux player object to player.preLogin to prevent errors in
  trying to generate a playerobject before player is logged on.
-- submitted regions and SurestLib plugins (to test wrapper events).
+- fixed player object login and logout.
+- found error in Z position parse for SB playerposlook
+- API was missing permission group management commands.  Added them
+ to the base API:
+  - createGroup(groupname)
+  - deleteGroup(groupname)
+  - addGroupPerm(group, node, value=True)
+  - deleteGroupPerm(group, node)
+  - resetGroups()  - deletes all group data
+- added group manager plugin
+- correct permissions.py error where creating a self.permissions =
+ self.wrapper.permissions and later making self.permissions = {} breaks
+ the association with wrapper.permissions.
+- Correct more permissions errors.
+- have wrapper commands.py echo back typed commands to the client user.
 
 Build 218
 - fix issues with a plugin called "Name" in help menus.

@@ -456,3 +456,75 @@ class API(object):
 
         """
         self.wrapper.shutdown()
+
+    def createGroup(self, groupname):
+        """
+        Used to create a permission group.
+
+        :Args:
+            :groupname: The name of the permission group.
+
+
+        :returns:  string message indicating the outcome
+
+        """
+        return self.wrapper.perms.group_create(groupname)
+
+    def deleteGroup(self, groupname):
+        """
+        Used to delete a permission group.
+
+        :Args:
+            :groupname: The name of the permission group.
+
+
+        :returns:  string message indicating the outcome
+
+        """
+        return self.wrapper.perms.group_delete(groupname)
+
+    def addGroupPerm(self, groupname, permissionnode, value=True):
+        """
+        Used to add a permission node to a group.
+
+        :Args:
+            :groupname: The name of the permission group.
+
+            :permissionnode: The permission node to add to the group.
+             The node can be another group!  Nested permissions must be
+             enabled (see player api "hasPermission").
+
+            :value: value of the node.  normally True to allow the
+             permission, but can be false to deny the permission. For
+             instance, you want a "badplayer" group to be denied some
+             command that would normally be permitted.
+
+        :returns:  string message indicating the outcome
+
+        """
+        return self.wrapper.perms.group_set_permission(
+            groupname, permissionnode, value)
+
+    def deleteGroupPerm(self, groupname, permissionnode):
+        """
+        Used to remove a permission node to a group.
+
+        :Args:
+            :groupname: The name of the permission group.
+
+            :permissionnode: The permission node to remove.
+
+        :returns:  string message indicating the outcome
+
+        """
+        return self.wrapper.perms.group_delete_permission(
+            groupname, permissionnode)
+
+    def resetGroups(self):
+        """
+        resets group data (removes all permission groups).
+
+        :returns:  nothing
+
+        """
+        return self.wrapper.perms.clear_group_data()

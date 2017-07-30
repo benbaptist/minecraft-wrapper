@@ -128,8 +128,10 @@ class Wrapper(object):
 
         # storage Data objects
         self.storage = self.wrapper_storage.Data
-        self.permissions = self.wrapper_permissions.Data
         self.usercache = self.wrapper_usercache.Data
+
+        # access this directly to prevent changing the reference
+        # self.permissions = self.wrapper_permissions.Data
 
         # core functions and datasets
         self.perms = Permissions(self)
@@ -186,6 +188,12 @@ class Wrapper(object):
 
         # create server/proxy vitals and config objects
         self.servervitals = ServerVitals(self.players)
+
+        # LETS TAKE A SECOND TO DISCUSS PLAYER OBJECTS:
+        # The ServerVitals class gets passed the player object list now, but
+        # player objects are now housed in wrapper.  This is how we are
+        # passing informatino between proxy and wrapper.
+
         self.servervitals.serverpath = self.config[
             "General"]["server-directory"]
         self.servervitals.state = OFF

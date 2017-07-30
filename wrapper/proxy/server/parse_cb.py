@@ -135,20 +135,29 @@ class ParseCB(object):
 
     def parse_play_player_poslook(self):
         # CAVEAT - The client and server bound packet formats are different!
+        # < 1.8
+        relativemarker = 0
         if self.server.version < PROTOCOL_1_8START:
             data = self.packet.readpkt(
                 [DOUBLE, DOUBLE, DOUBLE, FLOAT, FLOAT, BOOL])
+            relativemarker = data[5]  # TODO ?? just a guess. check wiki
+        # = 1.8
         elif PROTOCOL_1_7_9 < self.server.version < PROTOCOL_1_9START:
             data = self.packet.readpkt(
                 [DOUBLE, DOUBLE, DOUBLE, FLOAT, FLOAT, BYTE])
-        elif self.server.version > PROTOCOL_1_8END:
+            relativemarker = data[5] & 1
+        # >= 1.9 (to 1.12 currently)
+        elif PROTOCOL_1_9START < self.server.version < PROTOCOL_MAX:
             data = self.packet.readpkt(
                 [DOUBLE, DOUBLE, DOUBLE, FLOAT, FLOAT, BYTE, VARINT])
+            relativemarker = data[5] & 1
         else:
-            data = self.packet.readpkt([DOUBLE, DOUBLE, DOUBLE, REST])
+            # This can't really happen...
+            return True
 
-        # not a bad idea to fill player position
-        self.client.position = (data[0], data[1], data[2])
+        # not a bad idea to fill player position if this is absolute position
+        if relativemarker < 1:
+            self.client.position = (data[0], data[1], data[2])
         return True
 
     def parse_play_use_bed(self):

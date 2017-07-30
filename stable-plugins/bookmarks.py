@@ -32,7 +32,7 @@ class Main:
         self.api.registerCommand("bmlist", self.bookmarklist, "bookmarks")
 
         # comment this line out to only allow players with permission
-        self.api.registerPermission("bookmarks", True)
+        # self.api.registerPermission("bookmarks", True)
 
     def onDisable(self):
         self.data.close()
