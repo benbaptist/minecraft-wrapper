@@ -23,7 +23,8 @@ ID = "com.benbaptist.plugins.example"  # DEFAULT = the filename (without the '.p
 NAME = "Sample Plugin"  # DEFAULT = the filename (without the '.py' extension)
 #
 # disables this plugin (for instance, if this *.py file were only a module for another file/plugin)
-DISABLED = False  # DEFAULT = False
+# TODO this plugin is Disabled to run it change this line:
+DISABLED = True  # DEFAULT = False
 #
 # even if there is only 1 dependency, it must be a 'list' type (enclosed in '[]').
 # NOTE - this plugin will not get imported because wrapper will not find these dependencies (except for 'home.py')

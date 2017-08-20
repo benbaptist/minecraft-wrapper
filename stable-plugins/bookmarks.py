@@ -74,8 +74,7 @@ class Main:
                         {"text": bmname, "color": "dark_red"},
                         {"text": " is already saved.\n", "color": "red"},
                         {"text": " Use ", "color": "gray"},
-                        {"text": "/bmdel %s" % bmname, "color": "gold", "clickEvent": {"action": "run_command",
-                                                                                       "value": "/bmdel %s" % bmname}},
+                        {"text": "/bmdel %s" % bmname, "color": "gold", "clickEvent": {"action": "run_command", "value": "/bmdel %s" % bmname}},
                         {"text": " to delete it first.", "color": "gray"},
                     ]})
                     return False
