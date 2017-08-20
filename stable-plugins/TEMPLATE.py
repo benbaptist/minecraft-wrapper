@@ -19,7 +19,8 @@ hover over a plugin name when you run /plugins, or in the web interface. """
 # ID = "com.benbaptist.plugins.template"
 #
 # Disables plugin
-# DISABLED = True  # DEFAULT = False
+# TODO this plugin is Disabled to run it change this line:
+DISABLED = True  # DEFAULT = False
 #
 # If you need another plugin to load first, add the plugin(s) to this list
 # DEPENDENCIES = [...]  # DEFAULT = False

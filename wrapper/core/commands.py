@@ -491,29 +491,27 @@ class Commands(object):
                                 if len(i[0].split(" ")) > 1:
                                     # if there are args after the command
                                     args = getargsafter(i[0].split(" "), 1)
-                                # TODO we should really base permission on the
-                                # actual command permission, and not a
-                                # (potentially inconsistent) help entry!
 
-                                # will only display is player has permission
+                                # will only display if player has permission
                                 if not player.hasPermission(i[2]):
-                                    permission = {
-                                        "text": "You do not have permission to"
-                                                " use this command.",
-                                        "color": "gray", "italic": True
-                                    }
-                                    items.append({
-                                        "text": "",
-                                        "extra": [{
-                                            "text": command,
-                                            "color": "gray",
-                                            "italic": True,
-                                            "hoverEvent": {
-                                                "action": "show_text",
-                                                "value": permission
-                                            }
-                                        }, ]
-                                    })
+                                    if player.isOp():
+                                        permission = {
+                                            "text": "You do not have permission to"
+                                                    " use this command.",
+                                            "color": "gray", "italic": True
+                                        }
+                                        items.append({
+                                            "text": "",
+                                            "extra": [{
+                                                "text": command,
+                                                "color": "gray",
+                                                "italic": True,
+                                                "hoverEvent": {
+                                                    "action": "show_text",
+                                                    "value": permission
+                                                }
+                                            }, ]
+                                        })
                                     continue
                                 if len(i) > 1 and player.isOp():
                                     permission = {"text": "Requires permission '%s'." % i[2],
@@ -539,6 +537,16 @@ class Commands(object):
                                         "text": " - %s " % i[1]
                                     }]
                                 })
+                            if len(items) == 0:
+                                items.append({
+                                    "text": "",
+                                    "extra": [{
+                                        "text": "No permission to run any of these commands",
+                                        "color": "gray",
+                                        "italic": "true",
+
+                                    }]
+                                })
                             _showpage(player, page, items, "help %s" % groupname, 4,
                                       command_prefix=self.wrapper.servervitals.command_prefix)
                             return
@@ -548,23 +556,44 @@ class Commands(object):
         else:
             items = []
             for v in helpgroups:
+                shortdesc = v["description"][0:30]
+                if len(shortdesc) < len(v["description"]):
+                    shortdesc = shortdesc + "..."
+                groupcolor = "gold"
+                if v["name"] == "Minecraft":
+                    groupcolor = "white"
                 items.append({
                     "text": "",
-                    "extra": [{
-                        "text": "%s\n" % v["name"],
-                        "color": "gold",
-                    }, {
-                        "text": "/help %s 1" % v["name"],
-                        "color": "blue",
-                        "clickEvent": {
-                            "action": "run_command",
-                            "value": "%shelp %s" % (self.wrapper.servervitals.command_prefix, v["name"])
+                    "extra": [
+                        {
+                            "text": "%s " % v["name"],
+                            "color": groupcolor,
+                            "hoverEvent": {
+                                "action": "show_text",
+                                "value": v["description"]
                         }
-                    }, {
-                        "text": " - " + v["description"]
+                    },
+                        {
+                            "text": "[click help]",
+                            "color": "blue",
+                            "clickEvent": {
+                                "action": "run_command",
+                                "value": "%shelp %s" % (
+                                    self.wrapper.servervitals.command_prefix,
+                                    v["name"])
+                            },
+                            "hoverEvent": {
+                                "action": "show_text",
+                                "value": "%shelp %s" % (
+                                    self.wrapper.servervitals.command_prefix,
+                                    v["name"])
+                            }
+                        },
+                        {
+                            "text": " - " + shortdesc
                     }]
                 })
-            _showpage(player, page, items, "help", 4, command_prefix=self.wrapper.servervitals.command_prefix)
+            _showpage(player, page, items, "help", 8, command_prefix=self.wrapper.servervitals.command_prefix)
         return False
 
     def command_playerstats(self, player, payload):
@@ -710,14 +739,14 @@ class Commands(object):
         self.wrapper.javaserver.refresh_ops()
 
     def command_perms(self, player, payload):
-        if not self._superop(player):
+        if not self._superop(player, 5):
             return False
 
         def usage(l):
             player.message("&cUsage: /%s %s" % (payload["command"], l))
 
         command = getargs(payload["args"], 0)
-        if command == "groups":
+        if command in ("gr", "group", "groups"):
             group = getargs(payload["args"], 1)
             subcommand = getargs(payload["args"], 2)
 
@@ -769,13 +798,13 @@ class Commands(object):
                                ", ".join(self.wrapper.wrapper_permissions.Data["groups"]))
                 usage("groups <groupName> [new|delete] / [set|remove <node>] / [info]")
 
-        elif command == "users":
+        elif command in ("user", "users"):
             username = getargs(payload["args"], 1)
             subcommand = getargs(payload["args"], 2)
             uuid = self.wrapper.uuids.getuuidbyusername(username)
             if str(uuid) not in self.wrapper.wrapper_permissions.Data["users"]:
                 self.perms.fill_user(str(uuid))
-            if subcommand == "group":
+            if subcommand in ("group", "groups"):
                 group = getargs(payload["args"], 3)
                 remove = getargs(payload["args"], 4) == "remove"
                 if len(group) > 0 and len(str(uuid)) > 0:
