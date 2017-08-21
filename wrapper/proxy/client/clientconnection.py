@@ -165,13 +165,13 @@ class Client(object):
             except EOFError:
                 # This is not really an error.. It means the client
                 # is not sending packet stream anymore
-                self.log.debug("Client Packet stream ended [EOF]"
-                               " (%s)", self.username)
+                # self.log.debug("Client Packet stream ended [EOF]"
+                #                " (%s)", self.username)
                 break
             except socket_error:
                 # occurs anytime a socket is closed.
-                self.log.debug("client proxy Failed to grab packet"
-                               " [socket_error] (%s)", self.username)
+                # self.log.debug("client proxy Failed to grab packet"
+                #                " [socket_error] (%s)", self.username)
                 break
             except Exception as e:
                 # anything that gets here is a bona-fide error
@@ -213,7 +213,7 @@ class Client(object):
                 self.log.debug("client socket closed (socket_error).")
                 break
             time.sleep(0.01)
-        self.log.debug("client connection flush_loop thread ended")
+        # self.log.debug("client connection flush_loop thread ended")
 
     def change_servers(self, ip=None, port=None):
 
@@ -402,8 +402,9 @@ class Client(object):
         try:
             self.server_connection.close_server("Client Disconnecting...")
         except:
-            self.log.debug("Client socket for %s already"
-                           " closed!", self.username)
+            # self.log.debug("Client socket for %s already"
+            #                " closed!", self.username)
+            pass
         self.abort = True  # TODO investigate this
 
     def disconnect(self, message):
@@ -761,7 +762,7 @@ class Client(object):
     # Login parsers
     # -----------------------
     def _parse_handshaking(self):
-        self.log.debug("HANDSHAKE")
+        # self.log.debug("HANDSHAKE")
         # "version|address|port|state"
         data = self.packet.readpkt([VARINT, STRING, USHORT, VARINT])
 
@@ -811,15 +812,15 @@ class Client(object):
         return False
 
     def _parse_status_ping(self):
-        self.log.debug("SB -> STATUS PING")
+        # self.log.debug("SB -> STATUS PING")
         data = self.packet.readpkt([LONG])
         self.packet.sendpkt(self.pktCB.PING_PONG, [LONG], [data[0]])
-        self.log.debug("CB (W)-> STATUS PING")
+        # self.log.debug("CB (W)-> STATUS PING")
         self.state = HANDSHAKE
         return False
 
     def _parse_status_request(self):
-        self.log.debug("SB -> STATUS REQUEST")
+        # self.log.debug("SB -> STATUS REQUEST")
         sample = []
         for player in self.servervitals.players:
             playerobj = self.servervitals.players[player]
@@ -860,13 +861,13 @@ class Client(object):
             [STRING],
             [json.dumps(self.MOTD)])
 
-        self.log.debug("CB (W)-> JSON RESPONSE")
+        # self.log.debug("CB (W)-> JSON RESPONSE")
         # after this, proxy waits for the expected PING to
         #  go back to Handshake mode
         return False
 
     def _parse_login_start(self):
-        self.log.debug("SB -> LOGIN START")
+        # self.log.debug("SB -> LOGIN START")
         data = self.packet.readpkt([STRING, NULL])
 
         # "username"
@@ -890,7 +891,7 @@ class Client(object):
                     [STRING, BYTEARRAY, BYTEARRAY],
                     (self.serverID, self.publicKey, self.verifyToken))
 
-            self.log.debug("CB (W)-> LOGIN ENCR REQUEST")
+            # self.log.debug("CB (W)-> LOGIN ENCR REQUEST")
 
             # Server UUID is always offline (at the present time)
             # MCUUID object
@@ -916,7 +917,7 @@ class Client(object):
         #  encryption (if we sent one above)
 
         # read response Tokens - "shared_secret|verify_token"
-        self.log.debug("SB -> LOGIN ENCR RESPONSE")
+        # self.log.debug("SB -> LOGIN ENCR RESPONSE")
         if self.servervitals.protocolVersion < 6:
             data = self.packet.readpkt([BYTEARRAY_SHORT, BYTEARRAY_SHORT])
         else:

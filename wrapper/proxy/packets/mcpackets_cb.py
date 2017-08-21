@@ -29,9 +29,7 @@ set something False/unimplemented using 0xEE
 class Packets(object):
     def __init__(self, protocol):
         # not supporting 1.9 and 1.12 snapshots due to high instability/changes
-        if PROTOCOL_1_8END < protocol < PROTOCOL_1_9REL1 or (
-            PROTOCOL_1_12START <= protocol < PROTOCOL_1_12
-        ):
+        if protocol in UNSUPPORTED:
             print("Protocol version not supported:", protocol)
             raise ValueError
 
@@ -120,7 +118,7 @@ class Packets(object):
         # protocol 4-5 ends at 0x40
         # self.PACKET_THAT_EXISTS_IN_OTHER_PROTOCOLS_BUT_NOT_THIS_ONE = 0xee
 
-        # new to 1.8 (protocol 47
+        # new to 1.8 (protocol 47)
         self.SERVER_DIFFICULTY = 0xee
         self.COMBAT_EVENT = 0xee
         self.CAMERA = 0xee
@@ -318,3 +316,48 @@ class Packets(object):
             # order bumped +3
             self.ENTITY_PROPERTIES = 0x4d
             self.ENTITY_EFFECT = 0x4e
+
+        # 1.12.1 CHANGES AGAIN! (to 338)
+        if protocol > PROTOCOL_1_12_1START:
+            self.PLAYER_ABILITIES = 0x2c
+            self.COMBAT_EVENT = 0x2d
+            self.PLAYER_LIST_ITEM = 0x2e
+            self.PLAYER_POSLOOK = 0x2f
+            self.USE_BED = 0x30
+            self.UNLOCK_RECIPES = 0x31
+            self.DESTROY_ENTITIES = 0x32
+            self.REMOVE_ENTITY_EFFECT = 0x33
+            self.RESOURCE_PACK_SEND = 0x34
+            self.RESPAWN = 0x35
+            self.ENTITY_HEAD_LOOK = 0x36
+            self.SELECT_ADVANCEMENT_TAB = 0x37
+            self.WORLD_BORDER = 0x38
+            self.CAMERA = 0x39
+            self.HELD_ITEM_CHANGE = 0x3a
+            self.DISPLAY_SCOREBOARD = 0x3b
+            self.ENTITY_METADATA = [0x3C, [VARINT, METADATA_1_9]]
+            self.ATTACH_ENTITY = 0x3d
+            self.ENTITY_VELOCITY = 0x3e
+            self.ENTITY_EQUIPMENT = 0x3f
+            self.SET_EXPERIENCE = 0x40
+            self.UPDATE_HEALTH = 0x41
+            self.SCOREBOARD_OBJECTIVE = 0x42
+            self.SET_PASSENGERS = 0x43
+            self.TEAMS = 0x44
+            self.UPDATE_SCORE = 0x45
+            self.SPAWN_POSITION = 0x46
+            self.TIME_UPDATE = 0x47
+            self.TITLE = 0x48
+            self.SOUND_EFFECT = 0x49
+            self.PLAYER_LIST_HEADER_AND_FOOTER = 0x4a
+            self.COLLECT_ITEM = 0x4b
+            self.ENTITY_TELEPORT = 0x4c
+            self.ADVANCEMENTS = 0x4d
+            self.ENTITY_PROPERTIES = 0x4e
+            self.ENTITY_EFFECT = 0x4f
+
+            self.ENTITY = 0x28
+            self.ENTITY_RELATIVE_MOVE = 0x25
+            self.ENTITY_LOOK_AND_RELATIVE_MOVE = 0x26
+            self.ENTITY_LOOK = 0x27
+

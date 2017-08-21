@@ -1,10 +1,15 @@
-Build 220 (next build)
+Build 223 (next build)
 - documentation generator needs fixed for api.entity (should just
  point into the proxy/entity files where the actual code is).
 - player to player TP - Add inter-dimensional TP (1.8+) api
   Community Input enhancement proxy mode
 - need to fix various problems with parsing:
  - dropped items are invisible
+
+Build 220-222 [0.13.0]
+- Fixes and improvements to the help menus
+- Update for Minecraft 1.12.1 packets
+- commented out some debugging lines.
 
 Build 219
 - Issues with home and bookmark plugins not setting the location
