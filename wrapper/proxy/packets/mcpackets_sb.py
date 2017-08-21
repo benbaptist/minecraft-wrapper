@@ -29,9 +29,7 @@ set something False/unimplemented using 0xEE
 class Packets(object):
     def __init__(self, protocol):
         # not supporting 1.9 and 1.12 snapshots due to high instability/changes
-        if (PROTOCOL_1_8END < protocol < PROTOCOL_1_9REL1) or (
-            PROTOCOL_1_12START <= protocol < PROTOCOL_1_12
-        ):
+        if protocol in UNSUPPORTED:
             print("Protocol version not supported:", protocol)
             raise ValueError
 
@@ -84,9 +82,12 @@ class Packets(object):
         self.USE_ITEM = 0xee  # 1.9
         self.VEHICLE_MOVE = 0xee  # 1.9
         self.STEER_BOAT = 0xee  # 1.9
+
         self.PREPARE_CRAFTING_GRID = 0xee  # 1.12
         self.CRAFTING_BOOK_DATA = 0xee  # 1.12
         self.ADVANCEMENT_TAB = 0xee  # 1.12
+
+        self.CRAFT_RECIPE_REQUEST = 0xee  # 1.12.1
 
         # Parsing changes
         if protocol >= PROTOCOL_1_8START:
@@ -143,10 +144,10 @@ class Packets(object):
             self.PLUGIN_MESSAGE = 0x0a
             self.USE_ENTITY = 0x0b
             self.KEEP_ALIVE[PKT] = 0x0c
+            self.PLAYER = 0x0d
             self.PLAYER_POSITION = 0x0e
             self.PLAYER_POSLOOK = 0x0f
             self.PLAYER_LOOK = 0x10
-            self.PLAYER = 0x0d
             self.VEHICLE_MOVE = 0x11  # TODO NEW
             self.STEER_BOAT = 0x12  # TODO NEW
             self.PLAYER_ABILITIES = 0x13
@@ -163,3 +164,24 @@ class Packets(object):
             self.SPECTATE = 0x1e
             self.PLAYER_BLOCK_PLACEMENT = 0x1f
             self.USE_ITEM = 0x20
+
+        if protocol > PROTOCOL_1_12_1START:
+            self.PREPARE_CRAFTING_GRID = 0xee  # replaced by CRAFT_RECIPE_REQUEST
+            self.TAB_COMPLETE = 0x01
+            self.CHAT_MESSAGE = 0x02
+            self.CLIENT_STATUS = 0x03  # open inventory was removed as a status
+            self.CLIENT_SETTINGS = 0x04
+            self.CONFIRM_TRANSACTION = 0x05  # TODO NEW
+            self.ENCHANT_ITEM = 0x06  # TODO NEW
+            self.CLICK_WINDOW = 0x07
+            self.CLOSE_WINDOW = 0x08  # TODO NEW
+            self.PLUGIN_MESSAGE = 0x09
+            self.USE_ENTITY = 0x0a
+            self.KEEP_ALIVE[PKT] = 0x0b
+            self.PLAYER = 0x0c
+            self.PLAYER_POSITION = 0x0d
+            self.PLAYER_POSLOOK = 0x0e
+            self.PLAYER_LOOK = 0x0f
+            self.VEHICLE_MOVE = 0x10  # TODO NEW
+            self.STEER_BOAT = 0x11  # TODO NEW
+            self.CRAFT_RECIPE_REQUEST = 0x12

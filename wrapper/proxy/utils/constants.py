@@ -10,17 +10,24 @@
 
 # Still in development at versions 201-210(6/14/16)
 
-
 PROTOCOL_MAX = 4000
 
-# includes snapshots
-PROTOCOL_1_12START = 317
-PROTOCOL_1_12 = 334
+PROTOCOL_1_12_1 = 336
+PROTOCOL_1_12_1START = 336
 
+PROTOCOL_1_12END = 335
+PROTOCOL_1_12 = 334
+PROTOCOL_1_12START = 332
+
+# Between 317-332, the protocol is highly unstable again.
+PROTOCOL_1_11END = 317
 PROTOCOL_1_11 = 314
 
+# Missing 211-300
+PROTOCOL_1_10END = 210
 PROTOCOL_1_10 = 205
 
+# Missing 111-200
 # post- 1.9.3 "pre" releases (1.9.3 pre-2 -)
 PROTOCOL_1_9_4 = 110
 
@@ -54,6 +61,12 @@ PROTOCOL_1_7_9 = 5
 # PAGE: http://wiki.vg/index.php?title=Protocol&oldid=5486
 # 1.7.1-pre to 1.7.5
 PROTOCOL_1_7 = 4
+
+# coallate unsupprted protocols
+UNSUPPORTED = list(range(PROTOCOL_1_9START, PROTOCOL_1_9REL1, 1))
+UNSUPPORTED = UNSUPPORTED + list(range(111, 201, 1))
+UNSUPPORTED = UNSUPPORTED + list(range(211, 301, 1))
+UNSUPPORTED = UNSUPPORTED + list(range(PROTOCOL_1_11END, PROTOCOL_1_12START, 1))
 
 """Minecraft version 1.6.4 and older used a protocol versioning
 scheme separate from the current one. Accordingly, an old protocol
