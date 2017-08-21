@@ -136,9 +136,12 @@ class Storage(object):
 
     def json_load(self):
         try_load = getjsonfile(self.name, self.root, encodedas=self.encoding)
-        if try_load in (None, False):
-            self.log.exception("bad/non-existent file or data '%s/%s.%s'" %
-                               (self.root, self.name, self.file_ext))
+        if try_load is None:
+            self.log.exception("bad file or data '%s/%s.json'" %
+                               (self.root, self.name))
+            return {}
+        if try_load is False:
+            # file just does not exist (yet); return without comments/errors.
             return {}
         else:
             return try_load

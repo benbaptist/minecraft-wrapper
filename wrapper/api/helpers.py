@@ -268,7 +268,7 @@ def getjsonfile(filename, directory=".", encodedas="UTF-8"):
     :returns:
         :if successful: a dictionary
         :if unsuccessful:  None/{}
-        :File/directory not found: False
+        :File not found: False (any requested directory would be created)
 
     """
     if not os.path.exists(directory):
@@ -920,7 +920,7 @@ def _test():
     assert chattocolorcodes(newdict) == "§f§f§o§3harro §3§l§6there"
 
     print("assertion tests succeeded.")
-
+    print(epoch_to_timestr(1501437714))
 
 if __name__ == "__main__":
     _test()
