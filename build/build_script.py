@@ -165,7 +165,7 @@ def process_file(filetext, filename, data):
     strippedtext = ''.join(strippedtext.split())
     strippedtext = strippedtext.replace("<__SPACE__>", "\" \"")
 
-    eventsections = strippedtext.split(".events.callevent",)
+    eventsections = strippedtext.split(".callevent")
     print("building %s events list" % filename)
     for eachsection in eventsections:
         if eachsection[0] != "(":
@@ -178,7 +178,7 @@ def process_file(filetext, filename, data):
         rest = "".join(eachsection.split("%s," % eventname)[1:])
         arguments = get_the_args(rest)
         raw_event = filetext.split("%s," % eventname)
-        myeventonly = raw_event[1].split(".events.callevent")
+        myeventonly = raw_event[1].split(".callevent")
 
         event_doc = myeventonly[0].split("\"\"\"")
 

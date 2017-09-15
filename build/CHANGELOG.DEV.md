@@ -1,10 +1,13 @@
-Build 224 (next build)
+Build 225 (next build)
 - documentation generator needs fixed for api.entity (should just
  point into the proxy/entity files where the actual code is).
 - player to player TP - Add inter-dimensional TP (1.8+) api
   Community Input enhancement proxy mode
 - need to fix various problems with parsing:
  - dropped items are invisible
+
+Build 224 [0.13.1]
+- fix bugs in documentation generator.
 
 Build 223
 - improve core.storage handling of cases where pickle is used and storage
