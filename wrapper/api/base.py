@@ -338,7 +338,7 @@ class API(object):
                 :True: set the storage path to
                  '<serverpath>/<worldname>/plugins'.
 
-            :formatting:  Pickle formatting is the default. pickling is
+            :formatting="pickle":  Pickle formatting is the default. pickling is
              less strict than json formats and leverages binary storage.
              Use of json (or future implemented formats) can result in
              errors if your keys or data do not conform to json standards
