@@ -186,9 +186,8 @@ class Client(object):
             # already tested - Python will not attempt eval of
             # self.server_connection.state if self.server_connection is False
 
-            if self.server_connection and \
-                    self.server_connection.state in (PLAY, LOBBY) and \
-                    self.parse(pkid):
+            if self.parse(pkid) and self.server_connection and \
+                    self.server_connection.state in (PLAY, LOBBY):
 
                 # sending to the server only happens in
                 # PLAY/LOBBY (not IDLE, HANDSHAKE, or LOGIN)
