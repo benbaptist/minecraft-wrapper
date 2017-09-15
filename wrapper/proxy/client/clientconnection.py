@@ -185,16 +185,17 @@ class Client(object):
             # send packet if server available and parsing passed.
             # already tested - Python will not attempt eval of
             # self.server_connection.state if self.server_connection is False
-            if self.parse(pkid) and \
-                    self.server_connection and \
-                    self.server_connection.state in (
-                            PLAY, LOBBY):
+
+            if self.server_connection and \
+                    self.server_connection.state in (PLAY, LOBBY) and \
+                    self.parse(pkid):
 
                 # sending to the server only happens in
                 # PLAY/LOBBY (not IDLE, HANDSHAKE, or LOGIN)
                 # wrapper handles LOGIN/HANDSHAKE with servers (via
                 # self.parse(pkid), which DOES happen in all modes)
                 self.server_connection.packet.send_raw(original)
+
                 if self.proxy.trace:
                     self._do_trace(pkid, self.state)
 

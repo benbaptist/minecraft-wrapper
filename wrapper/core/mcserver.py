@@ -857,8 +857,8 @@ class MCServer(object):
     def _console_event(self, payload):
         # self.api.registerEvent("proxy.console", self._console_event)
 
-        # self.proxy.eventhandler.callevent(
-        #     "proxy.console", {"command": console_command})
+        # self.proxy.eventhandler.callevent("proxy.console",
+        #     {"command": console_command})
 
         command = payload["command"]
         self.console(command)

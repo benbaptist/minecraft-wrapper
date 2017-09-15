@@ -95,7 +95,7 @@ using 'self.api.helpers'
     :returns:
         :if successful: a dictionary
         :if unsuccessful:  None/{}
-        :File/directory not found: False
+        :File not found: False (any requested directory would be created)
 
     
 
