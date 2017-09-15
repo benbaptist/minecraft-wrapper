@@ -226,7 +226,8 @@ def process_file(filetext, filename, data):
             data["groups"][doc_item["group"]] = []
 
         # append this item
-        data["groups"][doc_item["group"]].append(doc_item)
+        if doc_item not in data["groups"][doc_item["group"]]:
+            data["groups"][doc_item["group"]].append(doc_item)
 
 
 # get the payload arguments for an event

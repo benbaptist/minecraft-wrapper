@@ -336,40 +336,7 @@
 
     :Can be aborted/modified: 
 
-:Event: "proxy.console"
-
-    :Module: entitycontrol.py *(entity/entitycontrol.py)*
-
-    :Description: proxy.console
-
-    :Payload:
-        :"command": console_command
-
-    :Can be aborted/modified: 
-
 **< Group 'proxy/base.py' >**
-
-:Event: "proxy.console"
-
-    :Module: base.py *(proxy/base.py)*
-
-    :Description: proxy.console
-
-    :Payload:
-        :"command": console_command
-
-    :Can be aborted/modified: 
-
-:Event: "proxy.console"
-
-    :Module: base.py *(proxy/base.py)*
-
-    :Description: proxy.console
-
-    :Payload:
-        :"command": console_command
-
-    :Can be aborted/modified: 
 
 :Event: "proxy.console"
 
@@ -581,75 +548,6 @@
         digging position will help prevent the client from
         sending "end_break"
 
-:Event: "player.dig"
-
-    :Module: parse_sb.py *(client/parse_sb.py)*
-
-    :Description:
-        When a player attempts to dig.  This event
-        only supports starting and finishing a dig.
-
-    :Payload:
-        :"playername": playername (not the player object!)
-        :"position": x, y, z block position
-        :"action": begin_break or end_break (string)
-        :"face": 0-5 (bottom, top, north, south, west, east)
-
-    :Can be aborted/modified: Yes
-    :Comments:
-        Can be aborted by returning False. Note that the client
-        may still believe the block is broken (or being broken).
-        If you intend to abort the dig, it should be done at
-        "begin_break". Sending a false bedrock to the client's
-        digging position will help prevent the client from
-        sending "end_break"
-
-:Event: "player.dig"
-
-    :Module: parse_sb.py *(client/parse_sb.py)*
-
-    :Description:
-        When a player attempts to dig.  This event
-        only supports starting and finishing a dig.
-
-    :Payload:
-        :"playername": playername (not the player object!)
-        :"position": x, y, z block position
-        :"action": begin_break or end_break (string)
-        :"face": 0-5 (bottom, top, north, south, west, east)
-
-    :Can be aborted/modified: Yes
-    :Comments:
-        Can be aborted by returning False. Note that the client
-        may still believe the block is broken (or being broken).
-        If you intend to abort the dig, it should be done at
-        "begin_break". Sending a false bedrock to the client's
-        digging position will help prevent the client from
-        sending "end_break"
-
-:Event: "player.interact"
-
-    :Module: parse_sb.py *(client/parse_sb.py)*
-
-    :Description:
-        Called when the client is eating food,
-        pulling back bows, using buckets, etc.
-
-    :Payload:
-        :"playername": playername (not the player object!)
-        :"position":  the PLAYERS position - x, y, z, pitch, yaw
-        :"action": "finish_using"  or "use_item"
-        :"origin": Debugging information on where event was parsed.
-
-    :Can be aborted/modified: Yes
-    :Comments:
-        Can be aborted by returning False. Note that the client
-        may still believe the action happened, but the server
-        will act as though the event did not happen.  This
-        could be confusing to a player.  If the event is aborted,
-        consider some feedback to the client (a message, fake
-        particles, etc.)
-
 :Event: "player.interact"
 
     :Module: parse_sb.py *(client/parse_sb.py)*
@@ -694,29 +592,6 @@
         could be confusing to a player.  If the event is aborted,
         consider some feedback to the client (a message, fake
         block, etc.)
-
-:Event: "player.interact"
-
-    :Module: parse_sb.py *(client/parse_sb.py)*
-
-    :Description:
-        Called when the client is eating food,
-        pulling back bows, using buckets, etc.
-
-    :Payload:
-        :"playername": playername (not the player object!)
-        :"position":  the PLAYERS position - x, y, z, pitch, yaw
-        :"action": "finish_using"  or "use_item"
-        :"origin": Debugging information on where event was parsed.
-
-    :Can be aborted/modified: Yes
-    :Comments:
-        Can be aborted by returning False. Note that the client
-        may still believe the action happened, but the server
-        will act as though the event did not happen.  This
-        could be confusing to a player.  If the event is aborted,
-        consider some feedback to the client (a message, fake
-        particles, etc.)
 
 :Event: "player.createSign"
 
