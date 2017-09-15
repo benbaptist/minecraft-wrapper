@@ -189,8 +189,7 @@ class ServerConnection(object):
                 return self._break_handle()
 
             # parse it
-            if self.parse(pkid) and self.client.state in (
-                    PLAY, LOBBY):
+            if self.client.state in (PLAY, LOBBY) and self.parse(pkid):
                 try:
                     self.client.packet.send_raw(original)
                     if self.proxy.trace:
