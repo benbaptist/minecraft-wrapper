@@ -1,10 +1,14 @@
-Build 226 (next build)
+Build 227 (next build)
+
 - documentation generator needs fixed for api.entity (should just
  point into the proxy/entity files where the actual code is).
 - player to player TP - Add inter-dimensional TP (1.8+) api
   Community Input enhancement proxy mode
 - need to fix various problems with parsing:
  - dropped items are invisible
+
+Build 226 [0.13.3]
+- Fix bugs for 1.12.2 (Change of parsing for keep alive)
 
 Build 225 [0.13.2]
 - fix bug in last build with proxy handle()s.

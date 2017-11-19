@@ -317,8 +317,9 @@ class Packets(object):
             self.ENTITY_PROPERTIES = 0x4d
             self.ENTITY_EFFECT = 0x4e
 
-        # 1.12.1 CHANGES AGAIN! (to 338)
-        if protocol > PROTOCOL_1_12_1START:
+        # 1.12.1 CHANGES AGAIN! (to 340)
+        if protocol >= PROTOCOL_1_12_1START:
+            self.CRAFT_RECIPE_RESPONSE = 0x2b
             self.PLAYER_ABILITIES = 0x2c
             self.COMBAT_EVENT = 0x2d
             self.PLAYER_LIST_ITEM = 0x2e
@@ -335,7 +336,7 @@ class Packets(object):
             self.CAMERA = 0x39
             self.HELD_ITEM_CHANGE = 0x3a
             self.DISPLAY_SCOREBOARD = 0x3b
-            self.ENTITY_METADATA = [0x3C, [VARINT, METADATA_1_9]]
+            self.ENTITY_METADATA = [0x3c, [VARINT, METADATA_1_9]]
             self.ATTACH_ENTITY = 0x3d
             self.ENTITY_VELOCITY = 0x3e
             self.ENTITY_EQUIPMENT = 0x3f
@@ -356,8 +357,16 @@ class Packets(object):
             self.ENTITY_PROPERTIES = 0x4e
             self.ENTITY_EFFECT = 0x4f
 
-            self.ENTITY = 0x28
-            self.ENTITY_RELATIVE_MOVE = 0x25
-            self.ENTITY_LOOK_AND_RELATIVE_MOVE = 0x26
-            self.ENTITY_LOOK = 0x27
+        # 1.12.2 CHANGES (340)
+        if protocol >= PROTOCOL_1_12_1START:
+            self.CRAFT_RECIPE_RESPONSE = 0x2b
+
+            # Parsing changes
+            self.KEEP_ALIVE[PARSER] = [LONG]
+
+            # Things that may need addressed:
+            # -Open sign editor
+            # -Ping values has new info
+            # -Display scoreboard has new info for team play
+
 

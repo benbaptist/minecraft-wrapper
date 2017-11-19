@@ -185,3 +185,10 @@ class Packets(object):
             self.VEHICLE_MOVE = 0x10  # TODO NEW
             self.STEER_BOAT = 0x11  # TODO NEW
             self.CRAFT_RECIPE_REQUEST = 0x12
+
+            # Parsing changes
+            self.KEEP_ALIVE[PARSER] = [LONG]
+
+            # New Notes:
+            # - Client status has new notes relevant to respawns
+            # - Block placement has more precise info about placement
