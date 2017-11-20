@@ -99,14 +99,22 @@ class UUIDS(object):
             nameisnow = self.getusernamebyuuid(useruuid, forcepoll=True)
             if nameisnow:
                 return MCUUID(useruuid)
+            self.log.warning("Status code was 200 but still returned False "
+                             "(a non-MCUUID object).  This will likely "
+                             "create other logical/program flow errors")
             return False
         elif r.status_code == 204:  # try last matching UUID instead.  This will populate current name back in 'name'
             if user_uuid_matched:
                 nameisnow = self.getusernamebyuuid(user_uuid_matched, forcepoll=True)
                 if nameisnow:
                     return MCUUID(user_uuid_matched)
+                self.log.warning("Status code was 204 and returned False "
+                                 "(a non-MCUUID object).  This will likely "
+                                 "create other logical/program flow errors")
                 return False
         else:
+            self.log.warning("UUID returned False (a non-MCUUID object).  This "
+                             "will likely create other logical/program flow errors")
             return False  # No other options but to fail request
 
     def getusernamebyuuid(self, useruuid, forcepoll=False):
@@ -130,6 +138,7 @@ class UUIDS(object):
             theirname = self.usercache[useruuid]["localname"]
             if int((time.time() - self.usercache[useruuid]["time"])) < frequency:
                 return theirname  # dont re-poll if same time frame (daily = 86400).
+
         # continue on and poll... because user is not in cache or is old record that needs re-polled
         # else:  # user is not in cache
         names = self._pollmojanguuid(useruuid)
@@ -141,6 +150,10 @@ class UUIDS(object):
             if theirname is not None:
                 self.usercache[useruuid]["time"] = time.time() - frequency + 7200  # may try again in 2 hours
                 return theirname
+            self.log.warning("Instead of a name, this UUID returned False "
+                             "because the name was not found locally and "
+                             "the minecraft service poll failed.  This will likely "
+                             "create other logical/program flow errors")
             return False  # total FAIL
 
         pastnames = []

@@ -24,14 +24,13 @@ class ParseSB(object):
         self.command_prefix_len = len(self.command_prefix)
 
     def parse_play_player_poslook(self):  # player position and look
-        if self.client.clientversion < PROTOCOL_1_8START:
-            data = self.packet.readpkt(
-                [DOUBLE, DOUBLE, DOUBLE, DOUBLE, FLOAT, FLOAT, BOOL])
-        else:
-            data = self.packet.readpkt(
-                [DOUBLE, DOUBLE, DOUBLE, FLOAT, FLOAT, BOOL])
+        """decided to use this one solely for tracking the
+        client position.  Simple. fast. reliable.  Additionally
+        tracking with other packets (playerPos) slows program flow and seems
+        to cause errors, especially for those with poor connnections."""
+        data = self.packet.readpkt(self.PLAYER_POSLOOK[PARSER])
         # ("double:x|double:y|double:z|float:yaw|float:pitch|bool:on_ground")
-        self.client.position = (data[0], data[1], data[2])
+        self.client.position = (data[0], data[1], data[3])
         self.client.head = (data[4], data[5])
         return True
 
@@ -127,16 +126,16 @@ class ParseSB(object):
         return False  # and cancel this original packet
 
     def parse_play_player_position(self):
-        if self.client.clientversion < PROTOCOL_1_8START:
-            data = self.packet.readpkt([DOUBLE, DOUBLE, DOUBLE, DOUBLE, BOOL])
-            # ("double:x|double:y|double:yhead|double:z|bool:on_ground")
-        elif self.client.clientversion >= PROTOCOL_1_8START:
-            data = self.packet.readpkt([DOUBLE, DOUBLE, NULL, DOUBLE, BOOL])
-            # ("double:x|double:y|double:z|bool:on_ground")
-        else:
-            data = [0, 0, 0, 0]
-        # skip 1.7.10 and lower protocol yhead args
-        self.client.position = (data[0], data[1], data[3])
+        # if self.client.clientversion < PROTOCOL_1_8START:
+        #     data = self.packet.readpkt([DOUBLE, DOUBLE, DOUBLE, DOUBLE, BOOL])
+        #     # ("double:x|double:y|double:yhead|double:z|bool:on_ground")
+        # elif self.client.clientversion >= PROTOCOL_1_8START:
+        #     data = self.packet.readpkt([DOUBLE, DOUBLE, NULL, DOUBLE, BOOL])
+        #     # ("double:x|double:y|double:z|bool:on_ground")
+        # else:
+        #     data = [0, 0, 0, 0]
+        # # skip 1.7.10 and lower protocol yhead args
+        # self.client.position = (data[0], data[1], data[3])
         return True
 
     def parse_play_teleport_confirm(self):
