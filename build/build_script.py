@@ -86,6 +86,9 @@ def build_wrapper(buildargs):
     with open("./build/Wrapper.py.md5", "w") as f:
         f.write(hashlib.md5(open("./Wrapper.py", "rb").read()).hexdigest())
 
+    with open("./docs/Wrapper.py.md5", "w") as f:
+        f.write(hashlib.md5(open("./Wrapper.py", "rb").read()).hexdigest())
+
     # Mainly just for me (benbaptist), since most people will probably
     # want to build locally without committing.
     if buildargs.commit:
