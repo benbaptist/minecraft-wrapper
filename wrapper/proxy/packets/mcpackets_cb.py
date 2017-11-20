@@ -61,7 +61,7 @@ class Packets(object):
         self.PLAYER_POSLOOK = [0x08, [DOUBLE, DOUBLE, DOUBLE, FLOAT, FLOAT, BOOL]]
         if protocol > PROTOCOL_1_7_9:
             self.PLAYER_POSLOOK[PARSER] = [DOUBLE, DOUBLE, DOUBLE, FLOAT, FLOAT,
-                                          BYTE]
+                                           BYTE]
         self.HELD_ITEM_CHANGE = 0x09
         self.USE_BED = 0x0a
         self.ANIMATION = 0x0b
@@ -99,9 +99,9 @@ class Packets(object):
         self.PARTICLE = 0x2a
         self.CHANGE_GAME_STATE = 0x2b
         self.SPAWN_GLOBAL_ENTITY = 0x2c
-        self.OPEN_WINDOW = 0x2d
+        self.OPEN_WINDOW = [0x2d, [UBYTE, UBYTE, STRING, UBYTE]]
         self.CLOSE_WINDOW = 0x2e
-        self.SET_SLOT = 0x2f
+        self.SET_SLOT = [0x2f, [BYTE, SHORT, SLOT_NO_NBT]]
         self.WINDOW_ITEMS = 0x30
         self.WINDOW_PROPERTY = 0x31
         self.CONFIRM_TRANSACTION = 0x32
@@ -162,6 +162,8 @@ class Packets(object):
             # Parsing changes
             self.KEEP_ALIVE[PARSER] = [VARINT]
             self.CHAT_MESSAGE[PARSER] = [JSON, BYTE]
+            self.OPEN_WINDOW[PARSER] = [UBYTE, STRING, JSON, UBYTE]
+            self.SET_SLOT[PARSER] = [BYTE, SHORT, SLOT]
             self.ENTITY_METADATA[PARSER] = [VARINT, METADATA]
 
         # 1.9 changes
@@ -185,10 +187,10 @@ class Packets(object):
             self.MULTI_BLOCK_CHANGE = 0x10
             self.CONFIRM_TRANSACTION = 0x11
             self.CLOSE_WINDOW = 0x12
-            self.OPEN_WINDOW = 0x13
+            self.OPEN_WINDOW[PKT] = 0x13
             self.WINDOW_ITEMS = 0x14
             self.WINDOW_PROPERTY = 0x15
-            self.SET_SLOT = 0x16
+            self.SET_SLOT[PKT] = 0x16
             self.SET_COOLDOWN = 0x17  # TODO NEW
             self.PLUGIN_MESSAGE = 0x18
             self.NAMED_SOUND_EFFECT = 0x19  # TODO NEW
@@ -298,7 +300,7 @@ class Packets(object):
             self.CAMERA = 0x38
             self.HELD_ITEM_CHANGE = 0x39
             self.DISPLAY_SCOREBOARD = 0x3a
-            self.ENTITY_METADATA = [0x3b, [VARINT, METADATA_1_9]]
+            self.ENTITY_METADATA[PKT] = 0x3b
             self.ATTACH_ENTITY = 0x3c
             self.ENTITY_VELOCITY = 0x3d
             self.ENTITY_EQUIPMENT = 0x3e
@@ -342,7 +344,7 @@ class Packets(object):
             self.CAMERA = 0x39
             self.HELD_ITEM_CHANGE = 0x3a
             self.DISPLAY_SCOREBOARD = 0x3b
-            self.ENTITY_METADATA = [0x3c, [VARINT, METADATA_1_9]]
+            self.ENTITY_METADATA[PKT] = 0x3c
             self.ATTACH_ENTITY = 0x3d
             self.ENTITY_VELOCITY = 0x3e
             self.ENTITY_EQUIPMENT = 0x3f
@@ -374,5 +376,3 @@ class Packets(object):
             # -Open sign editor
             # -Ping values has new info
             # -Display scoreboard has new info for team play
-
-

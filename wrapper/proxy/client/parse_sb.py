@@ -26,16 +26,11 @@ class ParseSB(object):
     def parse_play_player_poslook(self):  # player position and look
         """decided to use this one solely for tracking the
         client position.  Simple. fast. reliable.  Additionally
-        tracking with other packets slows program flow and seems
+        tracking with other packets (playerPos) slows program flow and seems
         to cause errors, especially for those with poor connnections."""
-        if self.client.clientversion < PROTOCOL_1_8START:
-            data = self.packet.readpkt(
-                [DOUBLE, DOUBLE, DOUBLE, DOUBLE, FLOAT, FLOAT, BOOL])
-        else:
-            data = self.packet.readpkt(
-                [DOUBLE, DOUBLE, DOUBLE, FLOAT, FLOAT, BOOL])
+        data = self.packet.readpkt(self.PLAYER_POSLOOK[PARSER])
         # ("double:x|double:y|double:z|float:yaw|float:pitch|bool:on_ground")
-        self.client.position = (data[0], data[1], data[2])
+        self.client.position = (data[0], data[1], data[3])
         self.client.head = (data[4], data[5])
         return True
 

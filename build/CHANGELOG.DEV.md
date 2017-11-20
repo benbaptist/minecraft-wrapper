@@ -1,4 +1,4 @@
-Build 227 (next build)
+Build 229 (next build)
 
 - documentation generator needs fixed for api.entity (should just
  point into the proxy/entity files where the actual code is).
@@ -6,6 +6,11 @@ Build 227 (next build)
   Community Input enhancement proxy mode
 - need to fix various problems with parsing:
  - dropped items are invisible
+
+Build 228 [0.13.4]
+- Fix more code in Proxy server/client parsing to improve speed and
+ reliablity for slow connection users.
+- Fix SB Parse error in yaw/pitch for 1.8+ playerposlook (create parser)
 
 Build 226 [0.13.3]
 - Fix bugs for 1.12.2 (Change of parsing for keep alive)

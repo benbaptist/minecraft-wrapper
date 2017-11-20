@@ -359,9 +359,9 @@ class ServerConnection(object):
                     self.parse_cb.parse_play_map_chunk_bulk,
                 self.pktCB.CHANGE_GAME_STATE:
                     self.parse_cb.parse_play_change_game_state,
-                self.pktCB.OPEN_WINDOW:
+                self.pktCB.OPEN_WINDOW[PKT]:
                     self.parse_cb.parse_play_open_window,
-                self.pktCB.SET_SLOT:
+                self.pktCB.SET_SLOT[PKT]:
                     self.parse_cb.parse_play_set_slot,
                 self.pktCB.WINDOW_ITEMS:
                     self.parse_cb.parse_play_window_items,

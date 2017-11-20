@@ -1051,7 +1051,7 @@ class Client(object):
                     self.parse_sb.parse_play_player_look,
                 self.pktSB.PLAYER_POSITION:
                     self.parse_sb.parse_play_player_position,
-                self.pktSB.PLAYER_POSLOOK:
+                self.pktSB.PLAYER_POSLOOK[PKT]:
                     self.parse_sb.parse_play_player_poslook,
                 self.pktSB.PLAYER_UPDATE_SIGN:
                     self.parse_sb.parse_play_player_update_sign,

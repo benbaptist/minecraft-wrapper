@@ -211,7 +211,8 @@ class ParseCB(object):
         # CAVEAT - The client and server bound packet formats are different!
         data = self.packet.readpkt(self.pktCB.PLAYER_POSLOOK[PARSER])
         relativemarker = data[5]
-        print("PPLOOK_DATA = ", data, type(data[0]), type(data[1]), type(data[2]), type(data[3]), type(data[4]), type(data[5]))
+        # print("PPLOOK_DATA = ", data, type(data[0]), type(data[1]),
+        #       type(data[2]), type(data[3]), type(data[4]), type(data[5]))
         # fill player position if this is absolute position (or a pre 1.8 server)
         if relativemarker == 0 or self.server.version < PROTOCOL_1_8START:
             self.client.position = (data[0], data[1], data[2])
@@ -289,30 +290,17 @@ class ParseCB(object):
     def parse_play_open_window(self):
         # This works together with SET_SLOT to maintain
         #  accurate inventory in wrapper
-        if self.server.version < PROTOCOL_1_8START:
-            parsing = [UBYTE, UBYTE, STRING, UBYTE]
-        else:
-            parsing = [UBYTE, STRING, JSON, UBYTE]
-        data = self.packet.readpkt(parsing)
+        data = self.packet.readpkt(self.pktCB.OPEN_WINDOW[PARSER])
         self.client.currentwindowid = data[0]
         self.client.noninventoryslotcount = data[3]
         return True
 
     def parse_play_set_slot(self):
         # ("byte:wid|short:slot|slot:data")
-        data = [-12, -12, None]
-
+        data = self.packet.readpkt(self.pktCB.SET_SLOT[PARSER])
         # todo - not sure how we  are dealing with slot counts
         # inventoryslots = 35
-        if self.server.version < PROTOCOL_1_8START:
-            data = self.packet.readpkt([BYTE, SHORT, SLOT_NO_NBT])
-            # inventoryslots = 35
-        elif self.server.version < PROTOCOL_1_9START:
-            data = self.packet.readpkt([BYTE, SHORT, SLOT])
-            # inventoryslots = 35
-        elif self.server.version > PROTOCOL_1_8END:
-            data = self.packet.readpkt([BYTE, SHORT, SLOT])
-            # inventoryslots = 36  # 1.9 minecraft with shield / other hand
+        # inventoryslots = 36  # 1.9 minecraft with shield / other hand
 
         # this is only sent on startup when server sends WID = 0 with 45/46
         # tems and when an item is moved into players inventory from
