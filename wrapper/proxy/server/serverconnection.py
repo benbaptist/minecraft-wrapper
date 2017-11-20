@@ -337,7 +337,7 @@ class ServerConnection(object):
                     self.parse_cb.parse_play_spawn_position,
                 self.pktCB.RESPAWN:
                     self.parse_cb.parse_play_respawn,
-                self.pktCB.PLAYER_POSLOOK:
+                self.pktCB.PLAYER_POSLOOK[PKT]:
                     self.parse_cb.parse_play_player_poslook,
                 self.pktCB.USE_BED:
                     self.parse_cb.parse_play_use_bed,

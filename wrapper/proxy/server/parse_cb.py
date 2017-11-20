@@ -206,30 +206,14 @@ class ParseCB(object):
         return False
 
     def parse_play_player_poslook(self):
+        """This packet is not actually sent very often.  Maybe on respawns
+        or position corrections."""
         # CAVEAT - The client and server bound packet formats are different!
-        # < 1.8
-        relativemarker = 0x00
-        if self.server.version < PROTOCOL_1_8START:
-            data = self.packet.readpkt(
-                [DOUBLE, DOUBLE, DOUBLE, FLOAT, FLOAT, BOOL])
-            relativemarker = data[5]  # TODO ?? just a guess. check wiki
-        # = 1.8
-        elif PROTOCOL_1_7_9 < self.server.version < PROTOCOL_1_9START:
-            data = self.packet.readpkt(
-                [DOUBLE, DOUBLE, DOUBLE, FLOAT, FLOAT, BYTE])
-            relativemarker = data[5]
-        # >= 1.9 (to 1.12 currently)
-        elif PROTOCOL_1_9START < self.server.version < PROTOCOL_MAX:
-            data = self.packet.readpkt(
-                [DOUBLE, DOUBLE, DOUBLE, FLOAT, FLOAT, BYTE, VARINT])
-            relativemarker = data[5]
-        else:
-            # This can't really happen...
-            return True
-
-        # not a bad idea to fill player position if this is absolute position
-        print("RELATIVE MARKER = ", relativemarker, type(relativemarker))
-        if relativemarker == 0x00:
+        data = self.packet.readpkt(self.pktCB.PLAYER_POSLOOK[PARSER])
+        relativemarker = data[5]
+        print("PPLOOK_DATA = ", data, type(data[0]), type(data[1]), type(data[2]), type(data[3]), type(data[4]), type(data[5]))
+        # fill player position if this is absolute position (or a pre 1.8 server)
+        if relativemarker == 0 or self.server.version < PROTOCOL_1_8START:
             self.client.position = (data[0], data[1], data[2])
         return True
 
@@ -256,7 +240,7 @@ class ParseCB(object):
 
     def parse_play_spawn_position(self):
         data = self.packet.readpkt([POSITION])
-        # self.client.position = data[0]  TODO TEST
+        self.client.position = data[0]
         self.proxy.eventhandler.callevent(
             "player.spawned", {"playername": self.client.username,
                                "position": data})

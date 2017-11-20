@@ -35,7 +35,7 @@ class ParseSB(object):
             data = self.packet.readpkt(
                 [DOUBLE, DOUBLE, DOUBLE, FLOAT, FLOAT, BOOL])
         # ("double:x|double:y|double:z|float:yaw|float:pitch|bool:on_ground")
-        # self.client.position = (data[0], data[1], data[2]) TODO TEST
+        self.client.position = (data[0], data[1], data[2])
         self.client.head = (data[4], data[5])
         return True
 

@@ -57,7 +57,11 @@ class Packets(object):
         self.SPAWN_POSITION = 0x05
         self.UPDATE_HEALTH = 0x06
         self.RESPAWN = 0x07
-        self.PLAYER_POSLOOK = 0x08
+
+        self.PLAYER_POSLOOK = [0x08, [DOUBLE, DOUBLE, DOUBLE, FLOAT, FLOAT, BOOL]]
+        if protocol > PROTOCOL_1_7_9:
+            self.PLAYER_POSLOOK[PARSER] = [DOUBLE, DOUBLE, DOUBLE, FLOAT, FLOAT,
+                                          BYTE]
         self.HELD_ITEM_CHANGE = 0x09
         self.USE_BED = 0x0a
         self.ANIMATION = 0x0b
@@ -209,7 +213,9 @@ class Packets(object):
             self.PLAYER_ABILITIES = 0x2b
             self.COMBAT_EVENT = 0x2c
             self.PLAYER_LIST_ITEM = 0x2d
-            self.PLAYER_POSLOOK = 0x2e
+            self.PLAYER_POSLOOK = [0x2e, [DOUBLE, DOUBLE, DOUBLE, FLOAT, FLOAT,
+                                          BYTE, VARINT]]
+
             self.USE_BED = 0x2f
             self.DESTROY_ENTITIES = 0x30
             self.REMOVE_ENTITY_EFFECT = 0x31
@@ -323,7 +329,7 @@ class Packets(object):
             self.PLAYER_ABILITIES = 0x2c
             self.COMBAT_EVENT = 0x2d
             self.PLAYER_LIST_ITEM = 0x2e
-            self.PLAYER_POSLOOK = 0x2f
+            self.PLAYER_POSLOOK[PKT] = 0x2f
             self.USE_BED = 0x30
             self.UNLOCK_RECIPES = 0x31
             self.DESTROY_ENTITIES = 0x32
