@@ -228,6 +228,7 @@ class ParseCB(object):
             return True
 
         # not a bad idea to fill player position if this is absolute position
+        print("RELATIVE MARKER = ", relativemarker, type(relativemarker))
         if relativemarker == 0x00:
             self.client.position = (data[0], data[1], data[2])
         return True
