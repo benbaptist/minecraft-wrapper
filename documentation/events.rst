@@ -188,18 +188,6 @@
 
     :Can be aborted/modified: 
 
-:Event: "player.spawned"
-
-    :Module: parse_cb.py *(server/parse_cb.py)*
-
-    :Description: player.spawned
-
-    :Payload:
-        :"playername": self.client.username
-        :"position": data
-
-    :Can be aborted/modified: 
-
 :Event: "player.usebed"
 
     :Module: parse_cb.py *(server/parse_cb.py)*
@@ -209,6 +197,18 @@
     :Payload:
         :"playername": self.client.username
         :"position": data[1]
+
+    :Can be aborted/modified: 
+
+:Event: "player.spawned"
+
+    :Module: parse_cb.py *(server/parse_cb.py)*
+
+    :Description: player.spawned
+
+    :Payload:
+        :"playername": self.client.username
+        :"position": data
 
     :Can be aborted/modified: 
 
