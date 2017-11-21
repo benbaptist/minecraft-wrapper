@@ -61,7 +61,7 @@ class Client(object):
         # client setup and operating paramenters
         self.username = "PING REQUEST"
         self.packet = Packet(self.client_socket, self)
-        self.parse_sb = ParseSB(self, self.packet)
+        # self.parse_sb = ParseSB(self, self.packet)
         self.verifyToken = encryption.generate_challenge_token()
         self.serverID = encryption.generate_server_id().encode('utf-8')
         self.MOTD = {}
@@ -75,7 +75,8 @@ class Client(object):
         # packet stuff
         self.pktSB = mcpackets_sb.Packets(self.clientversion)
         self.pktCB = mcpackets_cb.Packets(self.clientversion)
-
+        self.parse_sb = ParseSB(self, self.packet)  # TODO SEE IF FIXES
+        
         # dictionary of parser packet constants and associated parsing methods
         self.parsers = {}
         self._getclientpacketset()
