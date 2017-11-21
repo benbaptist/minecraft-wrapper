@@ -1,0 +1,655 @@
+<!-- I'm sorry for how sloppy this code is. I truly am. I'll try to clean it up some day. -->
+<!-- document.title = "Piops"("server_name").innerHTML = stats["server_name"] -->
+<html>
+	<head>
+		<title>Admin Page - Wrapper.py</title>
+		<script type="text/javascript" src="requests.js"></script>
+		<script src="js/ie-emulation-modes-warning.js"></script>
+		<link href="css/bootstrap.min.css" rel="stylesheet">
+		<link href="css/admin.css" rel="stylesheet">
+		<script type="text/javascript" >
+			hasScrolled = false
+			skins = {}
+			lastRefresh = 0
+			speed = 500
+			check = true
+			currentTab = "dash"
+			currentSubTab = "console"
+			memoryGraph = []
+			consoleMemory = []
+			consoleMode = 0
+			_ = function(id) {return document.getElementById(id)}
+			function isAuthed(){
+				if(!localStorage.sessionKey) return false
+				if(requests.action("is_admin", {"key": localStorage.sessionKey})["status"] == "good") return true
+				return false
+			}
+			window.onload = function(){
+				if(isAuthed()){
+					tick()
+					path = window.location.hash.substr(1)
+					if(path.length > 0){
+						window.onhashchange()
+					}
+					// Lazy hack time
+					setTimeout(function(){_("server_console").scrollTop = _("server_console").scrollHeight}, 300);
+					setTimeout(function(){_("chatbox").scrollTop = _("chatbox").scrollHeight}, 300);
+				}else{
+					window.location = "login.html"
+				}
+			}
+			window.onfocus = function(){
+				check = true
+			}
+			window.onblur = function(){
+//				check = false
+			}
+			// Shamelessly copied from http://stackoverflow.com/questions/10420352/converting-file-size-in-bytes-to-human-readable
+			function getReadableFilesize(fileSizeInBytes){
+				var i = -1;
+				var byteUnits = [' kB', ' MB', ' GB', ' TB', 'PB', 'EB', 'ZB', 'YB'];
+				do {
+					fileSizeInBytes = fileSizeInBytes / 1024
+					i++;
+				} while (fileSizeInBytes > 1024);
+				return Math.max(fileSizeInBytes, 0.1).toFixed(1) + byteUnits[i];
+			}
+			function statsCallback(stats){
+				if(stats == false){
+					console.log("Error while refreshing stats. Connection lost?")
+					_("lost_connection_page").style.display = "block"
+					_("admin_page").style.display = "none"
+					return
+				}
+				_("lost_connection_page").style.display = "none"
+				_("admin_page").style.display = "block"
+				lastRefresh = stats["refresh_time"]
+				statusMessages = {0: "Offline", 1: "Server starting...", 2: "Online", 3: "Server stopping...", 5: "Server frozen"}
+				if(stats["server_state"] in statusMessages) _("server_status").innerHTML = statusMessages[stats["server_state"]]
+				if(stats["server_state"] == 0) _("server_status").className = "label label-danger"
+				if(stats["server_state"] == 1) _("server_status").className = "label label-warning"
+				if(stats["server_state"] == 2) _("server_status").className = "label label-success"
+				if(stats["server_state"] == 3) _("server_status").className = "label label-warning"
+				if(stats["server_state"] == 4) _("server_status").className = "label label-warning"
+				if(stats["server_state"] == 5) _("server_status").className = "label label-info"
+				_("levelname_status").innerHTML = stats["level_name"]
+				_("server_version").innerHTML = stats["server_version"]
+				_("server_motd").innerHTML = stats["motd"]
+				_("server_name").innerHTML = stats["server_name"]
+				_("memory_status").innerHTML = getReadableFilesize(stats["server_memory"])
+				_("world_size").innerHTML = getReadableFilesize(stats["world_size"])
+				_("disk_avail").innerHTML = getReadableFilesize(stats["disk_avail"])
+				document.title = stats["server_name"] + " - Wrapper.py"
+				
+				// draw player list
+				_("playerlist").innerHTML = "<th>Face</th><th>Username</th><th>UUID</th><th>Options</th></tr>"
+				_("playerheader").innerHTML = "Players (" +stats["playerCount"][0]+ "/" +stats["playerCount"][1]+ ")"
+				_("tab-chat-players").innerHTML = ""
+				for(i in stats["players"]){
+					if(i == "getLength") continue
+					var player = stats["players"][i]
+					if(!(player.uuid in skins)){
+						var skin = requests.admin("get_player_skin", {"uuid": player.uuid})
+						if(!skin) continue // Might make players not draw in player list
+						skins[player.uuid] = skin
+					}
+					console.log(player)
+					if(player.isOp) var isOp = "<span class=\"glyphicon glyphicon-star op\"></span> "
+					else isOp = ""
+					_("playerlist").innerHTML += "<td><canvas id='playerskin-"+player.name+"' width=16 height=16></canvas></td><td style='white-space:nowrap;'>"+isOp+""+player.name+"</td><td>"+player.uuid+"</td><td style='white-space:nowrap;'><button onclick='_kick("+i+")' class='btn btn-xs btn-default'>Kick</button> <button onclick='_ban("+i+")' class='btn btn-xs btn-default'>Ban</button> <button onclick='_op("+i+")' class='btn btn-xs btn-default'>OP</button> <button onclick='_deop("+i+")' class='btn btn-xs btn-default'>De-OP</button></td></tr>"
+					_("tab-chat-players").innerHTML += '<div class="player">'+isOp+''+player.name+'</div>'
+					if(skins[player.uuid] == null) return
+					// the worst code ever. written in about five minutes.
+					try{
+						var pic = new Image()
+						pic.src = "data:image/png;base64," + skins[player.uuid]
+						_("playerskin-" + player.name).width = 32;_("playerskin-" + player.name).height = 32;
+						var ctx = _("playerskin-" + player.name).getContext("2d")
+						ctx.webkitImageSmoothingEnabled = false
+						ctx.drawImage(pic, 8, 8, 8, 8, 0, 0, ctx.canvas.width, ctx.canvas.height)
+					}catch(err){}
+				}
+				players = stats["players"]
+				
+				// draw plugin list
+				_("pluginlist").innerHTML = "<th>Name</th><th>Description</th><th>Options</th></tr>"
+				for(i in stats["plugins"]){
+					if(i == "getLength") continue
+					var plugin = stats["plugins"][i]
+					if(plugin.good){
+						if(plugin.description) var description = "<span style='font-size:14px;'>" + plugin.description.replace(/\n/g, "</br>") + "</span>"
+						else var description = "<i>No description is available for this plugin.</i>"
+						if(plugin.summary) var summary = plugin.summary.replace("\n", "</br></br>") + "<hr/>"
+						else var summary = ""
+						if(!plugin.author) plugin.author = "anonymous developer"
+						if(plugin.website)
+							var website = "<a href='"+plugin.website+"'>Website</a>"
+						else
+							var website = ""
+						_("pluginlist").innerHTML += "<td style='white-space:nowrap'><b>"+plugin.name+"</b> v"+plugin.version+"<div class='small'>by "+plugin.author+"<br/>"+website+"</div></td><td>"+summary+description+"</td><td style='white-space:nowrap;'><button onclick='_toggle_plugin(\""+plugin.id+"\", this)' class='btn btn-default'>Disable</button></td></tr>"
+					}else{
+						_("pluginlist").innerHTML += "<td style='white-space:nowrap'><b><r>"+plugin.name+"</r></b></td><td><r><i>This plugin failed to load. Please make sure it is a valid plugin.</i></r></td><td style='white-space:nowrap;'><button onclick='_toggle_plugin(\""+plugin.id+"\", this)' class='btn btn-default'>Disable</button></td></tr>"
+					}
+				}
+				if(stats["plugins"].length < 1) _("nopluginswarning").style.display = "block"
+				else _("nopluginswarning").style.display = "none"
+				
+				// draw top 10 players
+				/*_("top-players").innerHTML = "<th>#</th><th>Username</th><th>Playtime</th><th>Logins</th></tr>"
+				for(i in stats["topPlayers"]){
+					if(isNaN(i)) continue
+					var player = stats["topPlayers"][i]
+					_("top-players").innerHTML += "<td>"+(Number(i)+1)+"</td><td>"+player[3]+"</td><td>"+player[1]+"</td><td>"+player[2]+" logins</td></tr>"
+				}*/
+								
+				// draw console
+				var doScroll = false
+				var p = _("server_console") 
+				if(p.scrollTop + p.clientHeight == p.scrollHeight){
+					var doScroll = true
+				}
+				if(stats["console"].length > 0){
+					for(i in stats["console"]){
+						var line = stats["console"][i]
+						if(isNaN(i)) continue
+						consoleMemory[consoleMemory] = line
+						if(consoleMode == 1) // Will be removed eventually
+							var line = line.substr(line.search("]") + 1)
+						if(consoleMode == 2)
+							var line = line.substr(line.search("]:") + 2)
+						p.innerHTML += "\n" + line.replace(/</g,"&lt;").replace(/>/g,"&gt;")
+					}
+				}
+				if(doScroll) p.scrollTop = p.scrollHeight
+				
+				// draw chat
+				var doScroll = false
+				var p = _("chatbox") 
+				if(p.scrollTop + p.clientHeight == p.scrollHeight){
+					var doScroll = true
+				}
+				for(i in stats["chat"]){
+					var line = stats["chat"][i]; payload = line.payload
+					if(line.type == "irc")
+						_("chatbox").innerHTML += "["+payload["channel"]+"] &lt;"+payload["nick"]+"&gt; "+payload["message"]+"\n"
+					if(line.type == "playerJoin")
+						_("chatbox").innerHTML += payload["player"]+" joined the game\n"
+					if(line.type == "playerLeave")
+						_("chatbox").innerHTML += payload["player"]+" left the game\n"
+					if(line.type == "player")
+						_("chatbox").innerHTML += "&lt;"+payload["player"]+"&gt; "+payload["message"]+"\n"
+					if(line.type == "raw")
+						_("chatbox").innerHTML += payload + "\n"
+				}
+				if(doScroll) p.scrollTop = p.scrollHeight
+				
+				// set wrapper.py build string
+				_("buildstring").innerHTML = "Wrapper.py " + stats["wrapper_build"]
+			}
+			function tick(){
+				setTimeout("tick()", speed)
+				if(!check) return false
+				try{
+					stats = requests.adminThreaded("admin_stats", {"last_refresh": lastRefresh}, statsCallback)
+					if(stats == false) abdef()
+				}catch(err){
+					console.log("Error while refreshing stats. Connection lost?")
+					_("lost_connection_page").style.display = "block"
+					_("admin_page").style.display = "none"
+				}
+			}
+
+			// admining functions
+			function _start(){
+				requests.admin("server_action", {"action": "start"})
+			}
+			function _stop(){
+				message = prompt("Please enter a stop reason (will be shown to all players currently active on the server):", "Server stopping...")
+				if(!message) return
+				requests.admin("server_action", {"action": "stop", "reason": message})
+			}
+			function _restart(){
+				message = prompt("Please enter a restart reason (will be shown to all players currently active on the server):", "Server restarting...")
+				if(!message) return
+				requests.admin("server_action", {"action": "restart", "reason": message})
+			}
+			function _kill(){
+				if(confirm("WARNING!!!\n\nAre you sure you want to forcefully kill the server process? This can corrupt the world file, and should only be used as a last-resort if the server is completely unresponsive/frozen.")){
+					requests.admin("server_action", {"action": "kill"})
+				}
+			}
+			function _kick(i){
+				var player = players[i]
+				message = prompt("Please enter a kick message for "+player.name+":")
+				if(message){
+					requests.admin("kick_player", {"player": player.name, "reason": message})
+				}else{
+					alert("Won't kick "+player.name+".")
+				}
+			}
+			function _ban(i){
+				var player = players[i]
+				message = prompt("Please enter a ban message for "+player.name+":")
+				if(message){
+					requests.admin("ban_player", {"player": player.name, "reason": message})
+				}else{
+					alert("Won't ban "+player.name+".")
+				}
+			}
+			function _op(i){
+				var player = players[i]
+				if(confirm("Are you sure you want to give operator to "+player.name+"?")){
+					_console("op "+player.name)
+				}
+			}
+			function _deop(i){
+				var player = players[i]
+				if(confirm("Are you sure you want to remove operator from "+player.name+"?")){
+					_console("deop "+player.name)
+				}
+			}
+			function _console(line){
+				requests.admin("console", {"execute":line})
+			}
+			function _chat(line){
+				requests.admin("chat", {"message": line})
+			}
+			function _reload_plugins(){
+				if(!confirm("Are you sure you want to reload all plugins?")) return
+				requests.admin("reload_plugins", {})
+				alert("Reloaded plugins.")
+			}
+			function _toggle_plugin(id, el){
+				alert("Enabling and disabling plugins is not supported yet!")
+				return
+				// Doesn't actually do anything yet
+				if(!confirm("Are you sure you want to disable the plugin '"+id+"'? Disabling a plugin will force a plugin reload.")) return
+				if(el.innerHTML == "Disable"){
+					el.innerHTML = "Enable"
+				}else if(el.innerHTML == "Enable"){
+					el.innerHTML = "Disable"
+				}
+			}
+			function _halt_wrapper(){
+				if(confirm("WARNING! Are you sure you want to halt Wrapper.py? Once you shut it down, you probably won't be able to access this web interface and you'll have to ask your administer to boot Wrapper.py back up."))
+					requests.admin("halt_wrapper", {})
+			}
+			function _logout(){
+				requests.admin("logout", {})
+				window.location = "login.html"
+			}
+			// I wrote this while very tired. Blah!
+			function _switchTab(id){
+				if(id == currentTab) return
+				_("tab-"+currentTab).className = ""
+				_("tab-"+id).className = "active"
+				_("screen-"+currentTab).style.display = "none"
+				_("screen-"+id).style.display = "block"
+				console.log("Switching from "+currentTab+" to "+id)
+				if(id == "server"){
+					var p = _("server_console") 
+					p.scrollTop = p.scrollHeight
+				}
+				currentTab = id
+			}
+			function _switchSubTab(id){
+				if(id == currentSubTab) return
+				_("nav-"+currentSubTab).className = ""
+				_("nav-"+id).className = "active"
+				_("tab-"+currentSubTab).style.display = "none"
+				_("tab-"+id).style.display = "block"
+				console.log("Switching from sub-tab "+currentTab+" to sub-tab "+id)
+				if(id == "files") onFilesLoaded()
+				if(id == "settings") onSettingsLoaded()
+				currentSubTab = id
+			}
+			window.onhashchange = function(){
+				path = window.location.hash.substr(1)
+				if(!(path.length == 0)){
+					if(path.substr(0, 1) == "-"){
+						window.location.hash = "#"+currentTab+"/"+path.substr(1)
+						//_switchSubTab(path.substr(1))
+					}else{
+						tab = path.split("/")[0]; subtab = path.split("/")[1]
+						console.log("Regular tab: " + tab + " | Subtab: " + subtab)
+						_switchTab(tab)
+						if(subtab.length > 0)
+							_switchSubTab(subtab)
+					}
+				}
+			}
+			Array.prototype.getLength = function(){
+				var l = 0;
+				for(i in this){
+					if(this.hasOwnProperty(i)){
+						l += 1
+					}
+				}
+				return l
+			}
+		</script>
+		<style type="text/css">
+			body{
+				margin: 20px;
+			}
+			r{color:red;}
+			y{color:gold;}
+			g{color:green;}
+			aq{color:#226CF5;}
+			.small{
+				font-style: italic;
+				font-size: 12px;
+			}
+			.op{color:#226CF5;}
+			.console{height: 100%;display: table-row;}
+			.command{display: table-row;}
+			#playerlist td{
+				padding: 0px;
+				vertical-align: middle;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="admin_page">
+			<nav class="navbar navbar-fixed-top navbar-inverse" role="navigation">
+				<div class="container">
+					<div class="navbar-header">
+						<button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+							<span class="sr-only">Toggle navigation</span>
+							<span class="icon-bar"></span>
+							<span class="icon-bar"></span>
+							<span class="icon-bar"></span>
+						</button>
+						<a class="navbar-brand" id="server_name">Wrapper.py</a>
+					</div>
+					<div id="navbar" class="collapse navbar-collapse">
+						<ul class="nav navbar-nav">
+							<li id="tab-dash" class="active"><a href="#dash">Dashboard</a></li>
+							<li id="tab-server"><a href="#server">Server</a></li>
+							<li id="tab-plugins"><a href="#plugins">Plugins</a></li>
+<!--							<li id="tab-notifications"><a href="#notifications">Notifications</a></li>-->
+							<li id="tab-about"><a href="#about">About</a></li>
+						</ul>
+						<ul class="nav navbar-nav navbar-right">
+							<li><a href="javascript:_logout();">Logout</a></li>
+						</ul>
+					</div>
+				</div>
+			</nav>
+			<div id="screen-dash">
+				<!--<div class="col-lg-6">
+					<div class="panel panel-default">
+						<div class="panel-heading">Memory Usage</div>
+						<div class="panel-body">
+							<div class="flot-chart">
+								<div class="flot-chart-content" id="flot-memory-usage" style="width:100%;height:300px;"></div>
+							</div>
+						</div>
+					</div>
+				</div>-->
+				<!--<div class="col-lg-6 right">
+					<div class="panel panel-default">
+						<div class="panel-heading">CPU Usage</div>
+						<div class="panel-body">
+							<div class="flot-chart">
+								<div class="flot-chart-content" id="flot-pie-chart"></div>
+							</div>
+						</div>
+					</div>
+				</div>-->
+				<div class="row">
+					<div class="col-lg-6">
+						<div class="panel panel-default">
+							<div class="panel-heading">
+								<span id="server_status" class="label label-success" style="height:20px;display:block;float:left;font-size:14px;margin-right: 5px;"></span> Server Information
+								<div class="pull-right">
+									<div class="dropdown" style="margin-top:-7px;">
+										<button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown" aria-expanded="true">
+											Power
+											<span class="caret"></span>
+										</button>
+										<ul class="dropdown-menu" role="menu" aria-labelledby="dropdownMenu1">
+											<li role="presentation"><a role="menuitem" tabindex="-1" href="javascript:_start();">Start</a></li>
+											<li role="presentation"><a role="menuitem" tabindex="-1" href="javascript:_restart();">Restart</a></li>
+											<li role="presentation"><a role="menuitem" tabindex="-1" href="javascript:_stop();">Stop</a></li>
+											<li role="presentation"><a role="menuitem" tabindex="-1" href="javascript:_kill();">Force Kill</a></li>
+										</ul>
+									</div>
+								</div>
+							</div>
+							<div class="panel-body">
+	<!--							<b>Server Status: </b> <span id="server_status">Unknown</span></br>-->
+								<b>Server Version: </b> <span id="server_version">Unknown</span></br>
+								<b>Server MOTD: </b> <span id="server_motd">Unknown</span></br>
+								<b>Level Name: </b> <span id="levelname_status">Unknown</span></br>
+								<b>Memory Usage: </b> <span id="memory_status">n/a</span></br>
+								<b>World Size: </b> <span id="world_size">n/a</span><br/>
+								<b>Free Disk Space: </b> <span id="disk_avail">n/a</span>
+							</div>
+						</div>
+					</div>
+					<div class="col-lg-6">
+						<div class="panel panel-default">
+							<div class="panel-heading" id="playerheader">Players</div>
+							<table class="table table-striped" style="font-size:13px;">
+								<tbody id="playerlist">
+									<th>Face</th><th>Username</th><th>UUID</th><th>Options</th></tr>
+								</tbody>
+							</table>
+						</div>
+					</div>
+				</div>
+				<!--<div class="row">
+					<div class="col-lg-6">
+						<div class="panel panel-default">
+							<div class="panel-heading">Top 10 Players</div>
+							<table class="table table-striped" style="font-size:13px;">
+								<tbody id="top-players">
+									<th>Face</th><th>Username</th><th>Playtime</th><th>Logins</th></tr>
+								</tbody>
+							</table>
+						</div>
+					</div>
+				</div>-->
+			</div>
+			<div id="screen-server" style="display:none;" class="container-fluid">
+				<div class="row">
+					<div class="col-sm-3 col-md-2 sidebar">
+						<ul class="nav nav-sidebar">
+							<li role="presentation" id="nav-console" class="active"><a href="#-console">Console</a></li>
+							<li role="presentation" id="nav-chat"><a href="#-chat">Chat</a></li>
+							<li role="presentation" id="nav-files"><a href="#-files">Files</a></li>
+							<li role="presentation" id="nav-settings"><a href="#-settings">Server Properties</a></li>
+						</ul>
+					</div>
+					<div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
+						<div id="tab-console">
+							<pre id="server_console" style="overflow-y:scroll;height:90%;"></pre>
+							<input type="text" onkeydown="if(event.keyCode == 13){_console(this.value);this.value='';}" placeholder="Run a command in the Minecraft server console..." class="form-control"/>
+						</div>
+						<div id="tab-chat" style="display:none;">
+							<div style="height:90%;width:19%;float:right;" class="panel panel-default">
+								<div class="panel-heading">Players</div>
+								<div id="tab-chat-players"></div>
+							</div>
+							<pre id="chatbox" style="overflow-y:scroll;height:90%;width:80%;"></pre>
+							<input type="text" onkeydown="if(event.keyCode == 13){_chat(this.value);this.value='';}" placeholder="Send a message..." class="form-control"/>
+						</div>
+						<div id="tab-files" style="display:none;">
+							<script type="text/javascript">
+								locationPath = ""
+								filesLoaded = false
+								reloadFiles = function(z){
+									if(z == undefined) z = locationPath
+									console.log(locationPath)
+									var payload = requests.admin("listdir", {"path": z})
+									if(payload == false)
+										_("files_failed").style.display = "block"
+									else
+										_("files_failed").style.display = "none"
+									_("files").innerHTML = "<th>Filename</th><th>Actions</th><tr/>"
+									files = payload.files; folders = payload.folders;
+									for(i in folders){
+										if(isNaN(i)) continue
+										var file = folders[i]
+										_("files").innerHTML += "<tr><td><b><a href='javascript:appendPath("+i+")'>"+file.filename+"</a></b> <div class='subtext'>"+file.count+" files</div></td><td><a href='javascript:renameFile("+i+", true)'>Rename</a> | <a href='javascript:deleteFile("+i+", true)'>Delete</a></td></tr>"
+									}
+									for(i in files){
+										if(isNaN(i)) continue
+										var file = files[i]
+										_("files").innerHTML += "<tr><td>"+file.filename+" <div class='subtext'>"+getReadableFilesize(file.size)+" bytes</div></td><td><a href='javascript:renameFile("+i+", false)'>Rename</a> | <a href='javascript:deleteFile("+i+", false)'>Delete</a></td></tr>"
+									}
+									var crumbs = z.split("/")
+									_("crumbs").innerHTML = "<li><a href='javascript:gotoPath(\"\")'>Root</a></li>"
+									var thusFar = "" 
+									for(i in crumbs){
+										if(isNaN(i)) continue
+										if(thusFar.length > 0)
+											thusFar += "/" + crumbs[i]
+										else
+											thusFar += crumbs[i]
+										_("crumbs").innerHTML += "<li><a href='javascript:gotoPath(\""+thusFar+"\")'>"+crumbs[i]+"</a></li>" 
+									}
+									locationPath = z
+								}
+								gotoPath = function(path){
+									locationPath = path
+									reloadFiles()
+								}
+								appendPath = function(i){
+									if(locationPath.length > 0)
+										reloadFiles(locationPath + "/"+folders[i].filename)
+									else
+										reloadFiles(folders[i].filename)
+								}
+								renameFile = function(i, folder){
+									if(folder)
+										var name = folders[i].filename
+									else
+										var name = files[i].filename
+									if (locationPath.length > 0)
+										var path = locationPath + "/" + name
+									else
+										var path = name
+									var rename = prompt("Rename '"+name+"' to the following: ", name)
+									if(!rename) return
+									if (locationPath.length > 0)
+										var newPath = locationPath + "/" + rename
+									else
+										var newPath = rename
+									var status = requests.admin("rename_file", {"path": path, "rename": newPath})
+									if(status)
+										alert("Successfully renamed '"+name+"' to '"+rename+"'!")
+									else
+										alert("An error occurred while renaming. Maybe you don't have permission to modify the file?")
+									reloadFiles()
+								}
+								deleteFile = function(i, folder){
+									if(folder)
+										var name = folders[i].filename
+									else
+										var name = files[i].filename
+									if (locationPath.length > 0)
+										var path = locationPath + "/" + name
+									else
+										var path = name
+									if(!confirm("Are you sure you want to delete '"+name+"'?")) return
+									var status = requests.admin("delete_file", {"path": path})
+									if(status)
+										alert("Successfully deleted '"+name+"'.")
+									else
+										alert("An error occurred while deleting.")
+									reloadFiles()
+								}
+								onFilesLoaded = function(){
+									if(!filesLoaded){
+										reloadFiles()
+									}
+									filesLoaded = true
+								}
+							</script>
+							<div class="alert alert-danger" role="alert" id="files_failed"><b>Could not load files!</b> This is probably because 'web-allow-file-management' is set to False in wrapper.properties.</div>
+							<ol class="breadcrumb col-md-10" id="crumbs"></ol>
+							<div class="container">
+								<button class="btn btn-default">New Directory</button>
+								<button class="btn btn-default" onclick="reloadFiles()">Refresh</button>
+							</div>
+							<div class="table-responsive">
+								<table class="table table-striped">
+									<tbody id="files"></tbody>
+								</table>
+							</div>
+						</div>
+						<div id="tab-settings" style="display:none;">
+							<script type="text/javascript">
+								var settingsLoaded = false
+								reloadproperties = function(){
+									var props = requests.admin("read_server_props", {}); BONK= props
+									if(!props) return
+									_("server_properties").value = props
+								}
+								saveProperties = function(){
+									var result = requests.admin("save_server_props", {"props": _("server_properties").value})
+									if(result == "ok") 
+										alert("Successfully saved server.properties! It is recommended that you restart the server for the changes to take effect.")
+									else
+										alert("An unknown error occurred while saving.")
+								}
+								onSettingsLoaded = function(){
+									if(!settingsLoaded){ 
+										reloadproperties()
+									}
+									settingsLoaded = true
+								}
+							</script>
+							<div style="margin-bottom: 5px;">
+								<button onclick="reloadproperties()" class="btn btn-default">Reload server.properties</button>
+								<button style="float:right;" class="btn btn-primary" onclick="saveProperties()">Save</button>
+							</div>
+							<textarea id="server_properties" style="width:100%;height:90%;" class="form-control" disabled></textarea>
+							Disabled until this can be fixed.
+<!--							Warning: Be careful about changing these settings. Changing them could break the server if you don't know what you're doing. -->
+						</div>
+					</div>
+				</div>
+			</div>
+			<div id="screen-plugins" style="display:none;">
+				<button onclick="_reload_plugins()" class="btn btn-primary">Reload Plugins</button>
+				<div class="panel panel-default" style="margin-top:10px;">
+					<table class="table table-striped">
+						<tbody id="pluginlist">
+							<th>Name</th><th>Description</th><th>Options</th></tr>
+						</tbody>
+					</table>
+					<div style="text-align:center;color:gray;font-size:16px;margin-top:20px;margin-bottom:20px;display:none;" id="nopluginswarning">
+						No plugins are currently installed.
+					</div>
+				</div>
+			</div>
+			<div id="screen-notifications" style="display:none;">
+				<div class="panel panel-default" style="margin-top:10px;">
+					<table class="table table-striped">
+						<tbody id="notifications">
+							<th>Notification</th><th>Time</th></tr>
+							<td>Server frozen</td><td>10:51PM</td>
+						</tbody>
+					</table>
+				</div>
+			</div>
+			<div id="screen-about" style="display:none;">
+				<button onclick="_halt_wrapper();" class="btn btn-primary">Halt Wrapper.py</button>
+				<div class="small">Copyright Ben Baptist 2014</div>
+				<div class="small" id="buildstring"></div>
+				<div class="small">bootstrap - the best thing ever. current design is not final, and is subject to change.</div>
+			</div>
+		</div>
+
+		<div id="lost_connection_page" style="display:none;position:fixed;top:40%;left:50%;transform: translate(-50%, -50%);text-align:center;">
+			<h1>Connection lost</h1>
+			<h4>Make sure Wrapper.py is running. Try reloading the page in a few seconds if this doesn't go away.</h4>
+		</div>
+		<script src="js/jquery.js"></script>
+		<script src="js/bootstrap.min.js"></script>
+		<script src="js/offcanvas.js"></script>
+	</body>
+</html>

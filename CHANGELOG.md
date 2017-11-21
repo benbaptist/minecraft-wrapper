@@ -1,4 +1,118 @@
 #Changelog#
+<h4>0.7.8 - 0.11.x</h4>
+The scope of this update has been __enormous__.  It is a completely new refactor of the old Wrapper.
+It has been our intent to keep the original API intact, but some minor changes were made.  LOTS of _NEW_
+features, configurations, bugfixes, and new events have been added!
+
+**Features** *(by no means a complete list)*
+- Console interface is completely revamped.
+- console supports and uses colorized text.
+- Server and Console parsing is completely new and includes optional anti-scroll-away mode to keep your typing at the last line.
+- Ability to mute server output temporarily while you work at the console.
+- New console commands for modifying the config file, tracking entities, and proxy ban functions.
+- Console can now run in-game wrapper commands, like "/permissions"!
+- Entity tracking implemented:
+    - Entities are parsed/tracked (added and removed) in wrapper's memory.
+    - Entity limits/ mob controls can now be set in each players loaded chunks.
+    - Api items for entities in API.entity
+- Proxy mode refactored and supports newer minecraft versions with less effort.
+- Proxy mode bans system functional (that operate from Mojang uuid service) in API.Minecraft.
+- Tons of new API.minecraft methods, like "getGameRules()", which returns a dictionary of the server gamerules.
+- More reliable permissions code in API.player.
+- More fun stuff in API.player, like "setPlayerAbilities", "sendBlock", "getBedPostion" methods, and better hand/window items tracking.
+- Tons of performance updates to make wrapper cycle the disks less and decrease memory leaks.
+- Class API.Backups added to allow plugins to control backups.
+- Improved (hopefully) event processing to allow multiple plugins to rationally use the same events.
+- Fixed the pesky UUID None/False issues experienced by proxy mode.
+- the server folder and wrapper folder can be truly divorced from one another with all server files in one
+folder and all the wrapper files in another (making the plugin-developers decision to use world-based storages
+more meaningful/consequential).
+- Wrapper auto-detects the server port (removed 'server-port' from proxy config)
+- Wrapper parses console output for pre-1.7 and spigot/bukkit/etc servers without using special config items.
+- Wrapper config files are now in 'logging.json' and 'wrapper.properties.json' (in json format, of course)
+- Speaking of which, wrapper writes all json files and storages with human-readable spacing and indents.
+
+
+**Developer Changes**
+- __MOST IMPORTANT__ - Plugins using Storages _must_ invoke `self.<storageObject>.close()` in their `onDisable(self):` method
+to ensure their data is saved on wrapper shutdown.
+- If you wrote or edited wrapper code before, forget everything you learned.  It's that different.  Only the API
+was (mostly) maintained for plugin compatibility.
+- If your plugins accessed server or wrapper methods (maybe even via api.minecraft.getServer!), those methods are
+certainly broken.  If you were using self.wrapper.someWrapperFunction, it is likely broken.  Look over the API and see
+if a method was added to do what you want.  If not, please submit an issue or PR for that feature :)
+
+**Bug Fixes**
+- Old bugs were fixed
+- TONS of new ones were added
+- The code was almost broken, repaired again, and new bugs fixed.. all too
+numerous to detail!
+- At least a year's work of adding new bugs and fixing them!
+
+
+
+<h4>0.7.7</h4>
+This update contains an important patch regarding username changes. It is important that you update immediately if you use proxy mode, or else any players who've changed their names will be treated as new players upon logging in.
+
+**Features**
+- Added password support to IRC
+- Added `show-irc-join-part` IRC config option for hiding join/part messages from IRC in-game to wrapper.properties
+- Added Spigot support! Make sure your jar file is named "spigot" if it's a Spigot jar, to ensure Wrapper.py goes into Spigot-compatibility mode
+  - Proxy mode should work with Spigot as well. Only tested on 1.8 Spigot
+  - `/reload` command in-game warns about how it's only reloading the Wrapper's plugins and not the server's plugins
+  - New proxy mode option 'spigot-mode' for handling UUIDs and IP addresses offline
+- Improvements to the /playerstats command
+- Added proxy option 'convert-player-files' for migrating regular servers over to proxy mode
+  - Renames player files and whitelists. Will not convert bans, so banned players may become unbanned when switching to proxy mode until you manually re-ban them
+- Added log rotation, and logs are now stored in logs/wrapper directory
+- Added support for Minecraft protocol 54/snapshot 15w32c
+- [pull request #247] New Bookmarks plugin by Cougar
+
+**Developer Changes**
+- Events which return a payload other than True/False will be passed onto the event caller
+  - e.g. you can read an event such as player.rawMessage, and then `return "Different message!"` to change the message (this includes commands!)
+- [pull request #178] Fixed player.setResourcePack
+- [*pull request #193/#194] player.getPosition() now returns the following tuple format: (x, y, z, yaw, pitch) [MAY BREAK EXISTING PLUGINS]
+- [issue #199] Added new methods for modifying player permissions:
+    - player.setGroup(group)
+    - player.setPermission(node, value=True) (value argument is optional, default is True)
+    - player.removePermission(node)
+    - player.removeGroup(group) 
+- [issue #164] Implemented timer.tick event (event is called 20 times per second, like a game tick)
+- [pull request #222] Added player.createsign event when player writes to a sign 
+
+*Pull request was modified from original to better fit the API.  
+
+**Bug Fixes/Regular**
+- CRITICAL BUG FIX: Players who changeed usernames would be treated as a new user (Temporarily fixed by not allowing name changes - it'll continue to use their old usernames even after changing until we implement a workaround)
+- Fixed IRC bug where unicode crashes.... AGAIN. UGH. HOW MANY TIMES DO I HAVE TO FIX THIS?
+- Fixed proxy not binding when server-port is misconfigured/unable to connect to the destination server
+- [issue #214] Fixed slot packet not being parsed properly and causing random disconnections
+- [issue #221] api.minecraft getAllplayers filelock issue on Wind0ze
+- Potentially fixed permission UUIDs being stored inconsistently (some with dashes, some without)
+- Fixed issues that broke Spigot with Wrapper.py
+- Fixed issues with Minecraft 1.7.10 proxy mode
+- Fixed spectator teleportation while using proxy mode
+
+- Fixed `/wrapper halt` command in-game
+- Web mode fixes:
+  - Escaped <>'s in the Chat tab
+  - Joins and parts now show up in the Chat tab
+  - "remember me" when logging in actually makes it remember you
+  - "Lost Connection" page now works again 
+- Fixed some proxy instabibility
+- Help command page fixes
+- Cross-server improvements:
+  - Fixed skins and duplicating players on tab list when traversing between Wrapper.py servers
+  - Weather is now accurate
+
+**Bug Fixes/Developer**
+- Fixed "KeyError: 'users'" error with .hasPermission()
+- Potentially fixed issues with UUIDs being set as "None" or "False" in the Player object. If this bug persists, the console will print a message related to it. Please file a bug report containing this message.
+- Fixed self.log not printing anything in console
+- Better cross-server handling (i.e. player.connect() works better now)
+- Better error handling for Storage objects
+
 <h4>0.7.6</h4>
 **Bug Fixes**
 - Security fixes
