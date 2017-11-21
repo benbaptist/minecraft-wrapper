@@ -30,16 +30,11 @@ You only need to download Wrapper.py.  The 'wrapper' folder is the source code a
  of Wrapper.py.  Wrapper.py is a Python-executable archive folder containing the sourcecode.
 
 
-The original stable branch "master" is version 0.7.6, build 83.  This version is considered to be the working
-standard version for now.  However, it is quite old at this point and the development version has far outpaced it.
+The old stable branch "master", version 0.7.6, build 83 has now been archived in the "Original" branch. The original
+version only supports minecraft versions prior to 1.9.
 
-The current "development" branch version (0.11.x) is now at a point where it is probably a much better choice to use.
-
-- If you are running proxymode with a Minecraft version 1.9 or newer server, you _must_ use the development version.
-- The master version 0.7.6 may be a better choice if you require web mode and possibly IRC, as those have not been tested on development.
-- If you experience serious errors with IRC or web mode in the master branch, you should switch to development (unless you are able to create a pull request to fix the master).
-- The features/advantages of the 0.11.x version are presently too numerous to list.
-
+- If you are running proxymode with a Minecraft version 1.9 or newer server, you _must_ use the current version.
+- The old version 0.7.6 may be a better choice if you require web mode which is currently patently broken at this point.
 
 
 ###  **Python Versions**
@@ -171,9 +166,9 @@ Wrapper.py supports the following features:
   - Achievements, deaths, and whatnot appear on IRC
   - Chat between Minecraft server and IRC channels
 - Scheduled reboots
-- Web remote for controlling the server and the wrapper through your web browser
+- (NOT WORKING) Web remote for controlling the server and the wrapper through your web browser
 - Shell scripts that are called upon certain events (similar to plugin events, but quicker and easier)
-- Minecraft 1.7 and later support (uses tellraw!)
+- Minecraft 1.7 and later support
 - Colorized console output.
 
 # API #
@@ -202,10 +197,10 @@ Wrapper continues to be a work in progress and changes often happen faster than 
 Here is an updated list of the events:
 [Wrapper events](https://docs.google.com/spreadsheets/d/1Sxli0mpN3Aib-aejjX7VRlcN2HZkak_wIqPFJ6mtVIk/edit?usp=sharing)
 
-Check the 'example-plugins' folder to see some example plugins.  These are very useful for seeing hwo the API functions.
+Check the 'example-plugins' and 'stable-plugins' folders to see some example plugins.  These are very useful for seeing how the API functions.
 
 - template.py does nothing - it is just the shell of a plugin to work off of.
-- example.py contains some actual functions.
+- example.py contains some more example functions.
 - zombie.py is a fun test plugin that leaves behind undead versions of people when killed by undead mobs.
 - speedboost.py gives everyone a speedboost when someone dies - similar to survival games.
 - poll.py allows players to vote for certain things on the server. It isn't very up-to-date at the moment, however.
