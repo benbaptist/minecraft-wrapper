@@ -1,4 +1,4 @@
-Build 229 (next build)
+Build 230 (next build)
 
 - documentation generator needs fixed for api.entity (should just
  point into the proxy/entity files where the actual code is).
@@ -6,6 +6,9 @@ Build 229 (next build)
   Community Input enhancement proxy mode
 - need to fix various problems with parsing:
  - dropped items are invisible
+
+Build 229 [0.13.4]
+- Bugfix in SB Parse.
 
 Build 228 [0.13.4]
 - Fix more code in Proxy server/client parsing to improve speed and

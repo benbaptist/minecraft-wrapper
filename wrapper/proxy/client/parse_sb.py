@@ -18,6 +18,7 @@ class ParseSB(object):
         self.proxy = client.proxy
         self.log = client.log
         self.packet = packet
+        self.pktSB = self.client.pktSB
 
         self.command_prefix = self.proxy.srv_data.command_prefix
         self.command_prefix_non_standard = self.command_prefix != "/"
@@ -28,7 +29,7 @@ class ParseSB(object):
         client position.  Simple. fast. reliable.  Additionally
         tracking with other packets (playerPos) slows program flow and seems
         to cause errors, especially for those with poor connnections."""
-        data = self.packet.readpkt(self.PLAYER_POSLOOK[PARSER])
+        data = self.packet.readpkt(self.pktSB.PLAYER_POSLOOK[PARSER])
         # ("double:x|double:y|double:z|float:yaw|float:pitch|bool:on_ground")
         self.client.position = (data[0], data[1], data[3])
         self.client.head = (data[4], data[5])
