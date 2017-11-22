@@ -40,7 +40,8 @@ class Client(object):
         parses them, and forards them on to the server.
 
         Client receives the parent proxy as it's argument.
-        Accordingly, it receives the proxy's wrapper instance.
+        No longer receives the proxy's wrapper instance!  All
+        data is passed via servervitals from proxy's srv_data.
         """
 
         # basic __init__ items from passed arguments
@@ -523,12 +524,15 @@ class Client(object):
             time.sleep(1)
             if self.state in (PLAY, LOBBY):
                 # client expects < 20sec
-                if time.time() - self.time_server_pinged > 10:
+                if time.time() - self.time_server_pinged > 1:
 
                     # create the keep alive value
                     self.keepalive_val = random.randrange(0, 99999)
 
                     # challenge the client with it
+                    parser_type = self.pktCB.KEEP_ALIVE[PARSER][0]
+                    print("PARSER TYPE FOR KEEPALIVE = ", parser_type)
+                    print("CONVERT VALUE to ", parser_type, " - ", parser_type(self.keepalive_val))
                     self.packet.sendpkt(
                         self.pktCB.KEEP_ALIVE[PKT],
                         self.pktCB.KEEP_ALIVE[PARSER],
@@ -717,8 +721,14 @@ class Client(object):
 
     def _parse_keep_alive(self):
         data = self.packet.readpkt(self.pktSB.KEEP_ALIVE[PARSER])
+        print("RECV DATA EXPECTED ", self.keepalive_val)
+
+        print("RECV DATA RAW: ", data)
+        print("RECV DATA[0]: ", data[0])
+
         if data[0] == self.keepalive_val:
             self.time_client_responded = time.time()
+            print("KEEP ALIVE RESET")
         return False
 
     # plugin channel handler
