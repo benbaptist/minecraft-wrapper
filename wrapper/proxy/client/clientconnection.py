@@ -531,8 +531,11 @@ class Client(object):
 
                     # challenge the client with it
                     parser_type = self.pktCB.KEEP_ALIVE[PARSER][0]
-                    print("PARSER TYPE FOR KEEPALIVE = ", parser_type)
-                    print("CONVERT VALUE to ", parser_type, " - ", parser_type(self.keepalive_val))
+                    print("PARSER VALUE[0] FOR KEEPALIVE = ", parser_type)
+                    print("PARSER VALUE FOR KEEPALIVE = ", parser_type)
+                    print("PARSER TYPE FOR VALUE[0] = ", type(parser_type))
+                    print("KEEPALIVE VAL: ", self.keepalive_val)
+
                     self.packet.sendpkt(
                         self.pktCB.KEEP_ALIVE[PKT],
                         self.pktCB.KEEP_ALIVE[PARSER],
