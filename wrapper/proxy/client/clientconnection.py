@@ -524,18 +524,20 @@ class Client(object):
             time.sleep(1)
             if self.state in (PLAY, LOBBY):
                 # client expects < 20sec
+                # sending more frequently (1 second) seems to help with
+                # some slower connections.
                 if time.time() - self.time_server_pinged > 1:
 
                     # create the keep alive value
-                    self.keepalive_val = random.randrange(0, 99999)
+                    # MC 1.12 .2 uses a time() value.
+                    # Old way takes almost full second to generate:
+                    if self.version < PROTOCOL_1_12_2:
+                        self.keepalive_val = random.randrange(0, 99999)
+                    else:
+                        self.keepalive_val = int(time.time())
 
                     # challenge the client with it
-                    parser_type = self.pktCB.KEEP_ALIVE[PARSER][0]
-                    print("PARSER VALUE[0] FOR KEEPALIVE = ", parser_type)
-                    print("PARSER VALUE FOR KEEPALIVE = ", parser_type)
-                    print("PARSER TYPE FOR VALUE[0] = ", type(parser_type))
-                    print("KEEPALIVE VAL: ", self.keepalive_val)
-
+                    print("SENDING KEEPALIVE VAL: ", self.keepalive_val)
                     self.packet.sendpkt(
                         self.pktCB.KEEP_ALIVE[PKT],
                         self.pktCB.KEEP_ALIVE[PARSER],
@@ -545,8 +547,8 @@ class Client(object):
 
                 # check for active client keep alive status:
                 # server can allow up to 30 seconds for response
-                if time.time() - self.time_client_responded > 25 \
-                        and not self.abort:
+                if time.time() - self.time_client_responded > 25:  # \
+                        # and not self.abort:
                     self.disconnect("Client closed due to lack of"
                                     " keepalive response")
                     self.log.debug("Closed %s's client thread due to "
@@ -724,14 +726,12 @@ class Client(object):
 
     def _parse_keep_alive(self):
         data = self.packet.readpkt(self.pktSB.KEEP_ALIVE[PARSER])
-        print("RECV DATA EXPECTED ", self.keepalive_val)
-
-        print("RECV DATA RAW: ", data)
-        print("RECV DATA[0]: ", data[0])
+        print(self.username, "- RECV DATA EXPECTED ", self.keepalive_val)
+        print(self.username, "- RECV DATA[0]: ", data[0])
 
         if data[0] == self.keepalive_val:
             self.time_client_responded = time.time()
-            print("KEEP ALIVE RESET")
+            print(self.username, "'s KEEP ALIVE RESET")
         return False
 
     # plugin channel handler

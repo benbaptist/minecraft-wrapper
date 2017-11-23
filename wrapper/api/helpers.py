@@ -922,6 +922,19 @@ def _test():
     print("assertion tests succeeded.")
     print(epoch_to_timestr(1501437714))
 
+    # test speeds of random versus using time (for keep alives)
+    import timeit, random
 
+    def rand():
+        return random.randrange(0, 99999)
+
+    def rand2():
+        return int(time.time())
+    # for _ in range(10):
+    #     print(timeit.timeit(rand))
+    for _ in range(10):
+        print(timeit.timeit(rand2))
+
+    print(rand2())
 if __name__ == "__main__":
     _test()
