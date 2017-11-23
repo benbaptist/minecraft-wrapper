@@ -929,7 +929,7 @@ def _test():
         return random.randrange(0, 99999)
 
     def rand2():
-        return int(time.time())
+        return int((time.time() * 100) % 1000000)
     # for _ in range(10):
     #     print(timeit.timeit(rand))
     for _ in range(10):

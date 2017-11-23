@@ -534,10 +534,10 @@ class Client(object):
                     if self.version < PROTOCOL_1_12_2:
                         self.keepalive_val = random.randrange(0, 99999)
                     else:
-                        self.keepalive_val = int(time.time())
+                        self.keepalive_val = int((time.time() * 100) % 10000000)
 
                     # challenge the client with it
-                    print("SENDING KEEPALIVE VAL: ", self.keepalive_val)
+                    print(self.username, "SENDING KEEPALIVE VAL: ", self.keepalive_val)
                     self.packet.sendpkt(
                         self.pktCB.KEEP_ALIVE[PKT],
                         self.pktCB.KEEP_ALIVE[PARSER],
