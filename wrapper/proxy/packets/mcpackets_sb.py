@@ -179,7 +179,7 @@ class Packets(object):
             self.CLOSE_WINDOW = 0x08  # TODO NEW
             self.PLUGIN_MESSAGE = 0x09
             self.USE_ENTITY = 0x0a
-            self.KEEP_ALIVE[PKT] = 0x0b
+            self.KEEP_ALIVE = [0x0b, [LONG]]
             self.PLAYER = 0x0c
             self.PLAYER_POSITION = 0x0d
             self.PLAYER_POSLOOK[PKT] = 0x0e
@@ -189,7 +189,7 @@ class Packets(object):
             self.CRAFT_RECIPE_REQUEST = 0x12
 
             # Parsing changes
-            self.KEEP_ALIVE[PARSER] = [LONG]
+            # self.KEEP_ALIVE[PARSER] = [LONG]
 
             # New Notes:
             # - Client status has new notes relevant to respawns

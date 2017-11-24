@@ -40,7 +40,8 @@ class Client(object):
         parses them, and forards them on to the server.
 
         Client receives the parent proxy as it's argument.
-        Accordingly, it receives the proxy's wrapper instance.
+        No longer receives the proxy's wrapper instance!  All
+        data is passed via servervitals from proxy's srv_data.
         """
 
         # basic __init__ items from passed arguments
@@ -523,10 +524,17 @@ class Client(object):
             time.sleep(1)
             if self.state in (PLAY, LOBBY):
                 # client expects < 20sec
-                if time.time() - self.time_server_pinged > 10:
+                # sending more frequently (1 second) seems to help with
+                # some slower connections.
+                if time.time() - self.time_server_pinged > 1:
 
                     # create the keep alive value
-                    self.keepalive_val = random.randrange(0, 99999)
+                    # MC 1.12 .2 uses a time() value.
+                    # Old way takes almost full second to generate:
+                    if self.version < PROTOCOL_1_12_2:
+                        self.keepalive_val = random.randrange(0, 99999)
+                    else:
+                        self.keepalive_val = int((time.time() * 100) % 10000000)
 
                     # challenge the client with it
                     self.packet.sendpkt(
@@ -538,8 +546,8 @@ class Client(object):
 
                 # check for active client keep alive status:
                 # server can allow up to 30 seconds for response
-                if time.time() - self.time_client_responded > 25 \
-                        and not self.abort:
+                if time.time() - self.time_client_responded > 25:  # \
+                        # and not self.abort:
                     self.disconnect("Client closed due to lack of"
                                     " keepalive response")
                     self.log.debug("Closed %s's client thread due to "
@@ -717,6 +725,7 @@ class Client(object):
 
     def _parse_keep_alive(self):
         data = self.packet.readpkt(self.pktSB.KEEP_ALIVE[PARSER])
+
         if data[0] == self.keepalive_val:
             self.time_client_responded = time.time()
         return False
