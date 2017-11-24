@@ -3,4 +3,4 @@
 
 __version__ = [0, 13, 4]
 __build__ = 230
-__branch__ = 'dev'
+__branch__ = 'stable'

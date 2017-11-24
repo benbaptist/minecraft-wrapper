@@ -335,8 +335,6 @@ class Packet(object):
         result = b""  # PY 2-3
         # start with packet id
         result += self.send_varint(pkid)
-        if pkid == 0x0b:
-            print("0x0b PACKET PAYLOAD: ", payload[0])
         # append results to the result packet for each type
         argcount = len(args)
         if argcount == 0:

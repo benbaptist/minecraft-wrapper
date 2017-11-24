@@ -537,7 +537,6 @@ class Client(object):
                         self.keepalive_val = int((time.time() * 100) % 10000000)
 
                     # challenge the client with it
-                    print(self.username, "SENDING KEEPALIVE VAL: ", self.keepalive_val)
                     self.packet.sendpkt(
                         self.pktCB.KEEP_ALIVE[PKT],
                         self.pktCB.KEEP_ALIVE[PARSER],
@@ -726,12 +725,9 @@ class Client(object):
 
     def _parse_keep_alive(self):
         data = self.packet.readpkt(self.pktSB.KEEP_ALIVE[PARSER])
-        print(self.username, "- RECV DATA EXPECTED ", self.keepalive_val)
-        print(self.username, "- RECV DATA[0]: ", data[0])
 
         if data[0] == self.keepalive_val:
             self.time_client_responded = time.time()
-            print(self.username, "'s KEEP ALIVE RESET")
         return False
 
     # plugin channel handler
