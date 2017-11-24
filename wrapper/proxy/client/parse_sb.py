@@ -100,12 +100,18 @@ class ParseSB(object):
                     for registering commands.
                     <description>
 
-                    <abortable> Registered commands ARE aborted... <abortable>
+                    <abortable> Yes. Registered commands ARE already aborted since they do not get passed to the server.
+                    <abortable>
 
                     <comments>
-                    Called AFTER player.rawMessage event if rawMessage
-                    does not reject it.  However, rawMessage could have
+                    Called AFTER player.rawMessage event (if rawMessage
+                    does not reject it).  However, rawMessage could have
                     modified it before this point.
+                    
+                    The best use of this event is a quick way to prevent a client from 
+                    passing certain commands or command arguments to the server.
+                    rawMessage is better if you need something else (parsing or
+                    filtering chat, for example).
                     <comments>
 
                     <payload>

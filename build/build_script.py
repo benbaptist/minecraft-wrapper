@@ -209,6 +209,10 @@ def process_file(filetext, filename, data):
 
         # enhanced doc (has a docstring with <marker> some data <marker>)
         if doc_area:
+            if "internalfunction" in doc_area:
+                # some items need to be scrubbed because they are just
+                # internal workings of wrapper and not real events
+                continue
             for items in doc_item:
                 area = "<%s>" % items
                 target = doc_area.split(area)
@@ -229,7 +233,7 @@ def process_file(filetext, filename, data):
             data["groups"][doc_item["group"]] = []
 
         # append this item
-        if doc_item not in data["groups"][doc_item["group"]]:
+        if doc_item not in data["groups"][doc_item["group"]] and doc_item["payload"] != "payload":
             data["groups"][doc_item["group"]].append(doc_item)
 
 
@@ -255,7 +259,8 @@ def format_to_rst(data):
     indent = "    "
 
     for group in data["groups"]:
-        textfile += "**< Group '%s' >**\n\n" % group
+        if len(data["groups"][group]) > 0:
+            textfile += "**< Group '%s' >**\n\n" % group
         for group_item in data["groups"][group]:
 
             # Event name

@@ -4,12 +4,17 @@
 
     :Module: mcserver.py *(core/mcserver.py)*
 
-    :Description: player.login
+    :Description:
+        When player logs into the java MC server.
 
     :Payload:
-        :"player": self.getplayer(username)
+        :"playername": player name
 
-    :Can be aborted/modified: 
+    :Can be aborted/modified: No
+    :Comments:
+        All events in the core/mcserver.py group are collected
+        from the console output, do not require proxy mode, and
+        therefore, also, cannot be aborted.
 
 :Event: "player.logout"
 
@@ -163,205 +168,6 @@
 
     :Can be aborted/modified: 
 
-:Event: "proxy.console"
-
-    :Module: mcserver.py *(core/mcserver.py)*
-
-    :Description: proxy.console
-
-    :Payload:
-         #{"command": console_command
-
-    :Can be aborted/modified: 
-
-**< Group 'server/parse_cb.py' >**
-
-:Event: "player.chatbox"
-
-    :Module: parse_cb.py *(server/parse_cb.py)*
-
-    :Description: player.chatbox
-
-    :Payload:
-        :"playername": self.client.username
-        :"json": data
-
-    :Can be aborted/modified: 
-
-:Event: "player.usebed"
-
-    :Module: parse_cb.py *(server/parse_cb.py)*
-
-    :Description: player.usebed
-
-    :Payload:
-        :"playername": self.client.username
-        :"position": data[1]
-
-    :Can be aborted/modified: 
-
-:Event: "player.spawned"
-
-    :Module: parse_cb.py *(server/parse_cb.py)*
-
-    :Description: player.spawned
-
-    :Payload:
-        :"playername": self.client.username
-        :"position": data
-
-    :Can be aborted/modified: 
-
-:Event: "entity.unmount"
-
-    :Module: parse_cb.py *(server/parse_cb.py)*
-
-    :Description: entity.unmount
-
-    :Payload:
-        :"playername": self.client.username
-        :"vehicle_id": vehormobeid
-        :"leash": leash
-
-    :Can be aborted/modified: 
-
-:Event: "entity.mount"
-
-    :Module: parse_cb.py *(server/parse_cb.py)*
-
-    :Description: entity.mount
-
-    :Payload:
-        :"playername": self.client.username
-        :"vehicle_id": vehormobeid
-        :"leash": leash
-
-    :Can be aborted/modified: 
-
-**< Group 'core/backups.py' >**
-
-:Event: "wrapper.backupDelete"
-
-    :Module: backups.py *(core/backups.py)*
-
-    :Description: wrapper.backupDelete
-
-    :Payload:
-        :"file": filename
-
-    :Can be aborted/modified: 
-
-:Event: "wrapper.backupFailure"
-
-    :Module: backups.py *(core/backups.py)*
-
-    :Description: wrapper.backupFailure
-
-    :Payload:
-        :"reasonCode": 1
-        :"reasonText": "Tarisnotinstalled.Pleaseinstall""tarbeforetryingtomakebackups."
-
-    :Can be aborted/modified: 
-
-:Event: "wrapper.backupBegin"
-
-    :Module: backups.py *(core/backups.py)*
-
-    :Description: wrapper.backupBegin
-
-    :Payload:
-        :"file": filename
-
-    :Can be aborted/modified: 
-
-:Event: "wrapper.backupFailure"
-
-    :Module: backups.py *(core/backups.py)*
-
-    :Description: wrapper.backupFailure
-
-    :Payload:
-        :"reasonCode": 3
-        :"reasonText": "Backupfile'%s'doesnotexist."%backup_file_and_path
-
-    :Can be aborted/modified: 
-
-:Event: "wrapper.backupEnd"
-
-    :Module: backups.py *(core/backups.py)*
-
-    :Description: wrapper.backupEnd
-
-    :Payload:
-        :"file": filename
-        :"status": statuscode
-
-    :Can be aborted/modified: 
-
-:Event: "wrapper.backupFailure"
-
-    :Module: backups.py *(core/backups.py)*
-
-    :Description: wrapper.backupFailure
-
-    :Payload:
-        :"reasonCode": 2
-        :"reasonText": "Backupfiledidn'texistafterthetar""commandexecuted-assumingfailure."
-
-    :Can be aborted/modified: 
-
-:Event: "wrapper.backupFailure"
-
-    :Module: backups.py *(core/backups.py)*
-
-    :Description: wrapper.backupFailure
-
-    :Payload:
-        :"reasonCode": 4
-        :"reasonText": "backups.jsoniscorrupted.Pleasecontactanadministerinstantly
-         asthis""maybecritical."
-
-    :Can be aborted/modified: 
-
-**< Group 'entity/entitycontrol.py' >**
-
-:Event: "proxy.console"
-
-    :Module: entitycontrol.py *(entity/entitycontrol.py)*
-
-    :Description: proxy.console
-
-    :Payload:
-        :"command": console_command
-
-    :Can be aborted/modified: 
-
-**< Group 'proxy/base.py' >**
-
-:Event: "proxy.console"
-
-    :Module: base.py *(proxy/base.py)*
-
-    :Description: proxy.console
-
-    :Payload:
-        :"command": console_command
-
-    :Can be aborted/modified: 
-
-**< Group 'api/base.py' >**
-
-:Event: "event"
-
-    :Module: base.py *(api/base.py)*
-
-    :Description: event
-
-    :Payload:
-         payload
-
-    :Can be aborted/modified: 
-
 **< Group 'wrapper' >**
 
 :Event: "timer.second"
@@ -389,35 +195,6 @@
     :Comments:
         Use of this timer is not suggested and is turned off
           by default in the wrapper.config.json file
-
-**< Group 'client/clientconnection.py' >**
-
-:Event: "player.preLogin"
-
-    :Module: clientconnection.py *(client/clientconnection.py)*
-
-    :Description: player.preLogin
-
-    :Payload:
-        :"playername": self.username
-        :"player": self.username
-         #notarealplayerobject!"online_uuid": self.uuid.string
-        :"offline_uuid": self.serveruuid.string
-        :"ip": self.ip
-        :"secure_connection": self.onlinemode
-
-    :Can be aborted/modified: 
-
-:Event: "proxy.console"
-
-    :Module: clientconnection.py *(client/clientconnection.py)*
-
-    :Description: proxy.console
-
-    :Payload:
-        :"command": "whitelistreload"
-
-    :Can be aborted/modified: 
 
 **< Group 'core/irc.py' >**
 
@@ -487,6 +264,28 @@
 
 **< Group 'Proxy' >**
 
+:Event: "player.preLogin"
+
+    :Module: clientconnection.py *(client/clientconnection.py)*
+
+    :Description:
+        Called before client logs on.
+
+    :Payload:
+        :"playername": self.username,
+        :"player": username (name only - player object does not yet exist)
+        :"online_uuid": online UUID,
+        :"offline_uuid": UUID on local server (offline),
+        :"ip": the user/client IP on the internet.
+        :"secure_connection": Proxy's online mode
+
+    :Can be aborted/modified: Yes, return False to disconnect the client.
+    :Comments:
+        - If aborted, the client is disconnnected with message
+        "Login denied by a Plugin."
+        - Event occurs after proxy ban code runs right after a
+        successful handshake with Proxy.
+
 :Event: "player.rawMessage"
 
     :Module: parse_sb.py *(client/parse_sb.py)*
@@ -519,11 +318,16 @@
          config as the command cursor).
         :"args": the remaining words/args
 
-    :Can be aborted/modified: Registered commands ARE aborted...
+    :Can be aborted/modified: Yes. Registered commands ARE already aborted since they do not get passed to the server.
     :Comments:
-        Called AFTER player.rawMessage event if rawMessage
-        does not reject it.  However, rawMessage could have
+        Called AFTER player.rawMessage event (if rawMessage
+        does not reject it).  However, rawMessage could have
         modified it before this point.
+        
+        The best use of this event is a quick way to prevent a client from
+        passing certain commands or command arguments to the server.
+        rawMessage is better if you need something else (parsing or
+        filtering chat, for example).
 
 :Event: "player.dig"
 
@@ -635,4 +439,134 @@
     :Comments:
         Can be aborted by returning False. Aborting is not recommended
         since that is how wrapper keeps tabs on inventory.
+
+:Event: "player.chatbox"
+
+    :Module: parse_cb.py *(server/parse_cb.py)*
+
+    :Description:
+        Chat message sent from the server to the client.
+
+    :Payload:
+        :"playername": client username
+        :"json": json or string data
+
+    :Can be aborted/modified: Yes
+    :Comments:
+        - The message will not reach the client if the event is returned False.
+        - If json chat (dict) or text is returned, that value will be sent
+        to the client instead.
+
+:Event: "player.usebed"
+
+    :Module: parse_cb.py *(server/parse_cb.py)*
+
+    :Description:
+        Sent when server send client to bedmode.
+
+    :Payload:
+        :"playername": client username
+        :"position": position of bed
+
+    :Can be aborted/modified: No - Notification only.
+
+:Event: "player.spawned"
+
+    :Module: parse_cb.py *(server/parse_cb.py)*
+
+    :Description:
+        Sent when server advises the client of its spawn position.
+
+    :Payload:
+        :"playername": client username
+        :"position": position
+
+    :Can be aborted/modified: No - Notification only.
+
+:Event: "entity.unmount"
+
+    :Module: parse_cb.py *(server/parse_cb.py)*
+
+    :Description:
+        Sent when player attaches to entity.
+
+    :Payload:
+        :"playername": client username
+        :"vehicle_id": EID of vehicle or MOB
+        :"leash": leash True/False
+
+    :Can be aborted/modified: No - Notification only.
+
+:Event: "entity.mount"
+
+    :Module: parse_cb.py *(server/parse_cb.py)*
+
+    :Description:
+        Sent when player detaches/unmounts entity.
+
+    :Payload:
+        :"playername": client username
+        :"vehicle_id": EID of vehicle or MOB
+        :"leash": leash True/False
+
+    :Can be aborted/modified: No - Notification only.
+
+**< Group 'Backups' >**
+
+:Event: "wrapper.backupDelete"
+
+    :Module: backups.py *(core/backups.py)*
+
+    :Description:
+        Called upon deletion of a backup file.
+
+    :Payload:
+        :"file": filename
+
+    :Can be aborted/modified: Yes, return False to abort.
+
+:Event: "wrapper.backupFailure"
+
+    :Module: backups.py *(core/backups.py)*
+
+    :Description:
+        Indicates failure of backup.
+
+    :Payload:
+        :"reasonCode": an integer 1-4
+        :"reasonText": a string description of the failure.
+
+    :Can be aborted/modified: No - informatinal only
+    :Comments:
+        Reasoncode and text provide more detail about specific problem.
+        1 - Tar not installed.
+        2 - Backup file does not exist after the tar operation.
+        3 - Specified file does not exist.
+        4 - backups.json is corrupted
+
+:Event: "wrapper.backupBegin"
+
+    :Module: backups.py *(core/backups.py)*
+
+    :Description:
+        Indicates a backup is being initiated.
+
+    :Payload:
+        :"file": Name of backup file.
+
+    :Can be aborted/modified: Yes, return False to abort.
+    :Comments:
+        A console warning will be issued if a plugin cancels the backup.
+
+:Event: "wrapper.backupEnd"
+
+    :Module: backups.py *(core/backups.py)*
+
+    :Description:
+        Indicates a backup is complete.
+
+    :Payload:
+        :"file": Name of backup file.
+
+    :Can be aborted/modified: No - informational only
 

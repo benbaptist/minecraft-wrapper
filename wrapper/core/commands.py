@@ -746,7 +746,29 @@ class Commands(object):
             player.message("&cUsage: /%s %s" % (payload["command"], l))
 
         command = getargs(payload["args"], 0)
-        if command in ("gr", "group", "groups"):
+        if command in ("help", "h", "info", "about"):
+            subcommand = getargs(payload["args"], 1)
+            if subcommand in ("group", "groups", "gr", "g"):
+                player.message("&2/perms group <groupname> ...")
+                player.message("&2  new/info -create new group / get info")
+                player.message("&2  set <node> <value>  -set a perm for this group")
+                player.message("&2  delete -deletes the group entirely")
+                player.message("&2  remove <node> -just remove a node")
+
+            elif subcommand in ("users", "user", "use", "u"):
+                player.message("&2/perms user <player> ...")
+                player.message("&2  info -display permissions for a player")
+                player.message("&2  group <group> -assign player to <group>")
+                player.message("&2  group <group> remove -remove player from <group>")
+                player.message("&2  set <node> <value>  -set a perm for this player")
+                player.message("&2  remove <node>  -remove perm <node> for this player")
+            else:
+                player.message("&2The primary subcommands are group, user, RESET")
+                player.message("&2(RESET is not currently implemented)")
+                player.message("&2Help with groups use: /perms help groups")
+                player.message("&2Help with users use: /perms help users")
+
+        elif command in ("gr", "group", "groups"):
             group = getargs(payload["args"], 1)
             subcommand = getargs(payload["args"], 2)
 
@@ -764,9 +786,10 @@ class Commands(object):
                 call_result = self.perms.group_set_permission(
                     group, node, value)
                 if call_result:
-                    player.message("&aGroup permission set.")
+                    player.message("&aGroup permission %s set to %s.",
+                                   node, value)
                 else:
-                    usage("groups %s set <permissionNode> [value]" % group)
+                    usage("groups %s set <permissionNode> <value>" % group)
 
             elif subcommand == "remove":
                 node = getargs(payload["args"], 3)
@@ -796,7 +819,8 @@ class Commands(object):
             else:
                 player.message("&6List of groups:&b %s" %
                                ", ".join(self.wrapper.wrapper_permissions.Data["groups"]))
-                usage("groups <groupName> [new|delete] / [set|remove <node>] / [info]")
+                usage("groups <groupName> [new|delete(group)|info]/[set|remove(node) <node> <value>]")
+                player.message("&cTry '/perms help groups' for more info...")
 
         elif command in ("user", "users"):
             username = getargs(payload["args"], 1)
@@ -855,9 +879,10 @@ class Commands(object):
                         player.message("- %s: %s" % (node, value))
             else:
                 usage("users <username> <group/set/remove/info>")
+                player.message("&cTry '/perms help users' for more info...")
 
         else:
-            usage("<groups/users/RESET> (Note: RESET is case-sensitive!)")
+            usage("<help/groups/users/RESET> (Note: RESET is case-sensitive!)")
             player.message("&cAlias commands: /perms, /perm, /super")
         return False
 

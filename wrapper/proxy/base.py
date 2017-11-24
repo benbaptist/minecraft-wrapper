@@ -372,7 +372,10 @@ class Proxy(object):
                     console_command = "kick %s Banned: %s" % (name, reason)
                     self.eventhandler.callevent("proxy.console",
                                                 {"command": console_command})
+                    """ eventdoc
+                                            <description> internalfunction <description>
 
+                                        """
                     return "Banned %s: %s" % (name, reason)
                 return "Could not write banlist to disk"
         else:
@@ -420,7 +423,10 @@ class Proxy(object):
                     console_command = "kick %s Banned: %s" % (username, reason)
                     self.eventhandler.callevent("proxy.console",
                                                 {"command": console_command})
+                    """ eventdoc
+                                            <description> internalfunction <description>
 
+                                        """
                     return "Banned %s: %s - %s" % (username, uuid, reason)
                 return "Could not write banlist to disk"
         else:
@@ -470,7 +476,10 @@ class Proxy(object):
                             console_command = "kick %s Your IP is Banned!" % client.username
                             self.eventhandler.callevent("proxy.console",
                                                         {"command": console_command})
+                            """ eventdoc
+                                                    <description> internalfunction <description>
 
+                                                """
                             banned += "\n%s" % client.username
                     return "Banned ip address: %s\nPlayers kicked as " \
                            "a result:%s" % (ipaddress, banned)
