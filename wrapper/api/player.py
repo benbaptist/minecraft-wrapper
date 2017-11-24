@@ -193,7 +193,7 @@ class Player(object):
 
         # Process login data
         self.data = Storage(
-            self.clientUuid.string, root="wrapper-data/players")
+            self.clientUuid.string, root="wrapper-data/players", pickle=False)
         if "firstLoggedIn" not in self.data.Data:
             self.data.Data["firstLoggedIn"] = (time.time(), time.tzname)
         if "logins" not in self.data.Data:
