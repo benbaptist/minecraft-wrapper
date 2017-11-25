@@ -1,4 +1,4 @@
-Build 232 (next build)
+Build 233 (next build)
 
 - documentation generator needs fixed for api.entity (should just
  point into the proxy/entity files where the actual code is).
@@ -6,19 +6,20 @@ Build 232 (next build)
   Community Input enhancement proxy mode
  - dropped items are invisible
 
-Build 231
-- Fixed keepalives to prevent player timeouts with slow connections
+Build 232
 - improve /perms:
     - reimplement RESET command
     - add individual, all user, and groups reset methods to the API
 - some refactoring of command processing portions of wrapper.py, commands.py.
 - various bugfixes to bugs I created.
 - move pickling methods to the helpers API
+- clean up documentation some more.
 
-Build 230 [0.13.4] - master branch (stable)
+Build 229-230 [0.13.4] - master branch (stable)
 
 Build 229 [0.13.4]
 - Bugfix in SB Parse.
+- Fixed keepalives to prevent player timeouts with slow connections
 
 Build 228 [0.13.4]
 - Fix more code in Proxy server/client parsing to improve speed and
