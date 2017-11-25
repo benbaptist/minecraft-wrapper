@@ -746,6 +746,7 @@ class Commands(object):
             player.message("&cUsage: /%s %s" % (payload["command"], l))
 
         command = getargs(payload["args"], 0)
+        print(command, "TESTING/halt")
         if command in ("help", "h", "info", "about"):
             subcommand = getargs(payload["args"], 1)
             if subcommand in ("group", "groups", "gr", "g"):

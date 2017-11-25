@@ -348,6 +348,9 @@ class Permissions(object):
         """Resets group data."""
         self.wrapper.wrapper_permissions.Data["groups"] = {}
 
+    def clear_user_data(self):
+        for user in self.wrapper.wrapper_permissions.Data["users"]:
+            self.fill_user(user)
 
 def _test():
     pass
