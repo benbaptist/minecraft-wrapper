@@ -466,7 +466,7 @@ def processcolorcodes(messagestring):
     :returns: Json dumps() string.
 
     """
-    if PY3:
+    if not PY3:
         message = messagestring.encode('ascii', 'ignore')
     else:
         # .encode('ascii', 'ignore')  # encode to bytes
