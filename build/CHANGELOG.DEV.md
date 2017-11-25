@@ -1,11 +1,21 @@
-Build 230 (next build)
+Build 232 (next build)
 
 - documentation generator needs fixed for api.entity (should just
  point into the proxy/entity files where the actual code is).
 - player to player TP - Add inter-dimensional TP (1.8+) api
   Community Input enhancement proxy mode
-- need to fix various problems with parsing:
  - dropped items are invisible
+
+Build 231
+- Fixed keepalives to prevent player timeouts with slow connections
+- improve /perms:
+    - reimplement RESET command
+    - add individual, all user, and groups reset methods to the API
+- some refactoring of command processing portions of wrapper.py, commands.py.
+- various bugfixes to bugs I created.
+- move pickling methods to the helpers API
+
+Build 230 [0.13.4] - master branch (stable)
 
 Build 229 [0.13.4]
 - Bugfix in SB Parse.

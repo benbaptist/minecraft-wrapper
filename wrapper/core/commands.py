@@ -25,6 +25,8 @@ class Commands(object):
         self.perms = wrapper.perms
 
         self.commands = {}
+        self.reset_confirmed = False
+        self.reset_timeout = time.time()
 
     def __getitem__(self, index):
         if not type(index) == str:
@@ -48,7 +50,8 @@ class Commands(object):
 
     def playercommand(self, payload):
         player = payload["player"]
-        commandtext = "/%s %s" % (payload["command"], " ".join(payload["args"]))
+        command = str(payload["command"]).lower()
+        commandtext = "/%s %s" % (command, " ".join(payload["args"]))
         player.message(commandtext)
         self.log.info("%s executed: %s", payload["player"], commandtext)
 
@@ -57,60 +60,60 @@ class Commands(object):
         # make sure any command returns a True-ish item, or the
         # chat packet will continue to the server
 
-        if str(payload["command"]).lower() in ("plugins", "pl"):
+        if command in ("plugins", "pl"):
             self.command_plugins(player)
             return True
 
-        if str(payload["command"]).lower() == "op":
+        elif command == "op":
             self.command_op(player, payload)
             return True
 
-        if str(payload["command"]).lower() == "deop":
+        elif command == "deop":
             self.command_deop(player, payload)
             return True
 
-        if payload["command"] == "wrapper":
+        elif command == "wrapper":
             self.command_wrapper(player, payload)
             return True
 
-        if payload["command"] == "reload":
+        elif command == "reload":
             self.command_reload(player, payload)
             return True
 
-        if payload["command"] in ("help", "?"):
+        elif command in ("help", "?"):
             self.command_help(player, payload)
             return True
 
-        if payload["command"] == "playerstats":
+        elif command == "playerstats":
             self.command_playerstats(player, payload)
             return True
 
-        if payload["command"] in ("permissions", "perm", "perms", "super"):
+        elif command in ("permissions", "perm", "perms", "super"):
             self.command_perms(player, payload)
             return True
 
-        if str(payload["command"]).lower() in ("ent", "entity", "entities"):
+        elif command in ("ent", "entity", "entities"):
             self.command_entities(player, payload)
             return True
 
-        if str(payload["command"]).lower() in (
+        elif command in (
                 "config", "con", "prop", "property", "properties"):
             self.command_setconfig(player, payload)
             return True
 
-        if str(payload["command"]).lower() == "ban":
+        elif command == "ban":
             self.command_banplayer(player, payload)
             return True
 
-        if str(payload["command"]).lower() == "pardon":
+        elif command == "pardon":
             self.command_pardon(player, payload)
             return True
 
-        if str(payload["command"]).lower() == "ban-ip":
+        elif command == "ban-ip":
             self.command_banip(player, payload)
             return True
 
-        if str(payload["command"]).lower() == "pardon-ip":
+        elif command == "pardon-ip":
             self.command_pardonip(player, payload)
             return True
 
@@ -131,10 +134,9 @@ class Commands(object):
             plugin = self.wrapper.plugins[pluginID]
             if not plugin["good"]:
                 continue
-            commandname = payload["command"]
-            if commandname in self.commands[pluginID]:
+            if command in self.commands[pluginID]:
                 try:
-                    command = self.commands[pluginID][commandname]
+                    command = self.commands[pluginID][command]
                     # require super op to bypass explicit permission
                     if player.hasPermission(
                             command["permission"]) or player.isOp() > 4:
@@ -746,8 +748,9 @@ class Commands(object):
             player.message("&cUsage: /%s %s" % (payload["command"], l))
 
         command = getargs(payload["args"], 0)
-        print(command, "TESTING/halt")
+
         if command in ("help", "h", "info", "about"):
+            self.reset_confirmed = False
             subcommand = getargs(payload["args"], 1)
             if subcommand in ("group", "groups", "gr", "g"):
                 player.message("&2/perms group <groupname> ...")
@@ -765,11 +768,11 @@ class Commands(object):
                 player.message("&2  remove <node>  -remove perm <node> for this player")
             else:
                 player.message("&2The primary subcommands are group, user, RESET")
-                player.message("&2(RESET is not currently implemented)")
                 player.message("&2Help with groups use: /perms help groups")
                 player.message("&2Help with users use: /perms help users")
 
         elif command in ("gr", "group", "groups"):
+            self.reset_confirmed = False
             group = getargs(payload["args"], 1)
             subcommand = getargs(payload["args"], 2)
 
@@ -824,6 +827,7 @@ class Commands(object):
                 player.message("&cTry '/perms help groups' for more info...")
 
         elif command in ("user", "users"):
+            self.reset_confirmed = False
             username = getargs(payload["args"], 1)
             subcommand = getargs(payload["args"], 2)
             uuid = self.wrapper.uuids.getuuidbyusername(username)
@@ -882,7 +886,20 @@ class Commands(object):
                 usage("users <username> <group/set/remove/info>")
                 player.message("&cTry '/perms help users' for more info...")
 
+        elif command == "RESET":
+            if self.reset_confirmed and ((time.time() - self.reset_timeout) < 30):
+                self.perms.clear_group_data()
+                self.perms.clear_user_data()
+                self.reset_confirmed = False
+                player.message("&cGroup and player permissions have been cleared!")
+            else:
+                self.reset_timeout = time.time()
+                self.reset_confirmed = True
+                player.message("&cARE YOU SURE?")
+                player.message("&cThis will delete all groups and clear all user permissions!")
+                player.message("Confirm your intent by running '/perms RESET' again within 30 seconds.")
         else:
+            self.reset_confirmed = False
             usage("<help/groups/users/RESET> (Note: RESET is case-sensitive!)")
             player.message("&cAlias commands: /perms, /perm, /super")
         return False

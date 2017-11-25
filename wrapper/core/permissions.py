@@ -352,6 +352,7 @@ class Permissions(object):
         for user in self.wrapper.wrapper_permissions.Data["users"]:
             self.fill_user(user)
 
+
 def _test():
     pass
 

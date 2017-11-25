@@ -867,6 +867,19 @@ class Player(object):
         return self.wrapper.perms.remove_permission(
             self.mojangUuid.string, node)
 
+    def resetPerms(self, uuid):
+        """
+
+        resets all user data (removes all permissions).
+
+        :arg uuid: The online/mojang uuid (string)
+
+        :returns:  nothing
+
+        """
+        return self.wrapper.perms.fill_user(uuid)
+
+
     def hasGroup(self, group):
         """
         Returns a boolean of whether or not the player is in
