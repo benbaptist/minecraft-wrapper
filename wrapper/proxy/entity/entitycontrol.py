@@ -219,6 +219,10 @@ class EntityControl(object):
 
         self.proxy.eventhandler.callevent(
             "proxy.console", {"command": console_command})
+        """ eventdoc
+                                <description> internalfunction <description>
+
+                            """
 
     def _entity_processor(self):
         self._log.debug("_entityprocessor thread started.")

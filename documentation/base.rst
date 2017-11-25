@@ -374,3 +374,11 @@
         :returns:  nothing
 
         
+
+-  resetUsers(self)
+
+        resets all user data (removes all permissions from all users).
+
+        :returns:  nothing
+
+        

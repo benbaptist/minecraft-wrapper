@@ -310,6 +310,30 @@ class Client(object):
                     "ip": self.ip,
                     "secure_connection": self.onlinemode
                 }):
+            """ eventdoc
+                <group> Proxy <group>
+
+                <description> Called before client logs on.
+                <description>
+
+                <abortable> Yes, return False to disconnect the client. <abortable>
+
+                <comments>
+                - If aborted, the client is disconnnected with message 
+                 "Login denied by a Plugin."
+                - Event occurs after proxy ban code runs right after a 
+                 successful handshake with Proxy.
+                <comments>
+                <payload>
+                "playername": self.username,
+                "player": username (name only - player object does not yet exist)
+                "online_uuid": online UUID,
+                "offline_uuid": UUID on local server (offline),
+                "ip": the user/client IP on the internet.
+                "secure_connection": Proxy's online mode
+                <payload>
+
+            """
 
             self.state = HANDSHAKE
             self.disconnect("Login denied by a Plugin.")
@@ -714,6 +738,10 @@ class Client(object):
         #                        ##self.XXXservervitalsXXX.console(
         #                            "##whitelist reload")
         #                        => self.proxy.eventhandler.callevent("proxy.console", {"command": "whitelist reload"})
+        """ eventdoc
+                                <description> internalfunction <description>
+
+                            """
         #                        with open("%s/.wrapper-proxy-whitelist-"
         #                                  "migrate" % worldname, "a") as f:
         #                            f.write("%s %s\n" % (

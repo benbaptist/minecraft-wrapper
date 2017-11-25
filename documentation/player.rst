@@ -437,6 +437,17 @@
 
         
 
+-  resetPerms(self, uuid)
+
+
+        resets all user data (removes all permissions).
+
+        :arg uuid: The online/mojang uuid (string)
+
+        :returns:  nothing
+
+        
+
 -  hasGroup(self, group)
 
         Returns a boolean of whether or not the player is in

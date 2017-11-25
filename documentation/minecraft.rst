@@ -1,6 +1,6 @@
 
 **< classes import Items
-from api.helpers import scrub_item_value
+from api.helpers import scrub_item_value, pickle_load
 from proxy.packets.mcpackets_cb import Packets as ClientBound
 from proxy.packets.mcpackets_sb import Packets as ServerBound
 

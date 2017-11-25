@@ -114,6 +114,9 @@ class MCServer(object):
                 "Web"]["web-enabled"]:
             self.api.registerEvent("timer.second", self.eachsecond)
 
+        # This event is used to allow proxy to make console commands via
+        # callevent() without referencing mcserver.py code (the eventhandler
+        # is passed as an argument to the proxy).
         self.api.registerEvent("proxy.console", self._console_event)
 
     def init(self):
@@ -376,6 +379,24 @@ class MCServer(object):
         self.wrapper.events.callevent(
             "player.login",
             {"player": self.getplayer(username)})
+        """ eventdoc
+            <group> core/mcserver.py <group>
+
+            <description> When player logs into the java MC server.
+            <description>
+
+            <abortable> No <abortable>
+
+            <comments> All events in the core/mcserver.py group are collected
+            from the console output, do not require proxy mode, and 
+            therefore, also, cannot be aborted.
+            <comments>
+
+            <payload>
+            "playername": player name
+            <payload>
+
+        """
 
     def logout(self, players_name):
         """Called when a player logs out."""
@@ -855,10 +876,9 @@ class MCServer(object):
                 self.worldSize = size
 
     def _console_event(self, payload):
-        # self.api.registerEvent("proxy.console", self._console_event)
-
-        # self.proxy.eventhandler.callevent("proxy.console",
-        #     {"command": console_command})
+        """This function is used in conjunction with event handlers to
+        permit a proxy object to make a command call to this server."""
 
         command = payload["command"]
         self.console(command)
+
