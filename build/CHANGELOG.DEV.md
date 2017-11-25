@@ -1,15 +1,12 @@
 Build 234 (next build)
-
-- documentation generator needs fixed for api.entity (should just
- point into the proxy/entity files where the actual code is).
 - player to player TP - Add inter-dimensional TP (1.8+) api
   Community Input enhancement proxy mode
- - dropped items are invisible
 
-Build 233
+Build 233 [0.13.5] - master branch (stable)
 - Fix minecraft.rst document header caused by module containind the name
   "class". renamed proxy/entityclasses to entitybasics.
 - more touch ups to documentation.
+- pushed to master because there are nice bugfixes.
 
 Build 232
 - improve /perms:
