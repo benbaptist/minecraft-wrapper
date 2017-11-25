@@ -211,7 +211,7 @@ class Minecraft(object):
             elif uuid_file_found[-4:] == ".pkl":
                 try:
                     players[player_uuid] = pickle_load(
-                        "wrapper-data/players/%s", uuid_file_found)
+                        "wrapper-data/players", uuid_file_found)
                 except Exception as e:
                     self.log.error("Failed to load player data"
                                    " '%s':\n%s", player_uuid, e)

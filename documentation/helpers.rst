@@ -157,7 +157,7 @@ using 'self.api.helpers'
     rules.
 
     :Args:
-        :path: path to file
+        :path: path to file (no trailing slash)
         :filename: filename including extension
         :data: Data to be pickled.
         :encoding: 'Machine' or 'Human' - determines whether file contents
@@ -174,7 +174,7 @@ using 'self.api.helpers'
     rules.
 
     :Args:
-        :path: path to file
+        :path: path to file (no trailing slash)
         :filename: filename including *.pkl extension
         :data: Data to be pickled.
         :encoding: 'Machine' or 'Human' - determines whether file contents
