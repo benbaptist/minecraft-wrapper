@@ -10,14 +10,14 @@ from __future__ import unicode_literals
 import json
 import os
 from core.nbt import NBTFile
-from proxy.entity.entityclasses import Items
+from proxy.entity.entitybasics import Items
 from api.helpers import scrub_item_value, pickle_load
 from proxy.packets.mcpackets_cb import Packets as ClientBound
 from proxy.packets.mcpackets_sb import Packets as ServerBound
 
 
-# noinspection PyPep8Naming
 # noinspection PyBroadException
+# noinspection PyPep8Naming
 class Minecraft(object):
     """
     .. code:: python

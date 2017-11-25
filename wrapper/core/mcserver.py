@@ -767,6 +767,7 @@ class MCServer(object):
 
         # Player Message
         if getargs(line_words, 0)[0] == "<":
+            # get a name out of <name>
             name = self.stripspecial(getargs(line_words, 0)[1:-1])
             message = self.stripspecial(getargsafter(line_words, 1))
             original = getargsafter(line_words, 0)
@@ -775,7 +776,33 @@ class MCServer(object):
                 "message": message,
                 "original": original
             })
-
+            """ eventdoc
+                <group> core/mcserver.py <group>
+    
+                <description> Player chat scrubbed from the console.
+                <description>
+    
+                <abortable> 
+                <abortable>
+    
+                <comments>
+                Called AFTER player.rawMessage event (if rawMessage
+                does not reject it).  However, rawMessage could have
+                modified it before this point.
+    
+                The best use of this event is a quick way to prevent a client from 
+                passing certain commands or command arguments to the server.
+                rawMessage is better if you need something else (parsing or
+                filtering chat, for example).
+                <comments>
+    
+                <payload>
+                "player": playerobject
+                "message": what the player said in chat. ('hello everyone')
+                "original": The original line of text from the console ('<mcplayer> hello everyone`)
+                <payload>
+    
+            """
         # Player Login
         elif getargs(line_words, 1) == "logged":
             name = self.stripspecial(

@@ -7,8 +7,8 @@
 
 from time import sleep
 import threading
-from proxy.entity.entityclasses import Entities as Entitytypes
-from proxy.entity.entityclasses import Objects as Objecttypes
+from proxy.entity.entitybasics import Entities as Entitytypes
+from proxy.entity.entitybasics import Objects as Objecttypes
 
 
 # noinspection PyPep8Naming

@@ -7,7 +7,7 @@
 
 import json
 
-from proxy.entity.entityclasses import Entity
+from proxy.entity.entitybasics import Entity
 from proxy.utils.constants import *
 
 # Py3-2

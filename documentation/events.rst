@@ -98,14 +98,24 @@
 
     :Module: mcserver.py *(core/mcserver.py)*
 
-    :Description: player.message
+    :Description:
+        Player chat scrubbed from the console.
 
     :Payload:
-        :"player": self.getplayer(name)
-        :"message": message
-        :"original": original
+        :"player": playerobject
+        :"message": what the player said in chat. ('hello everyone')
+        :"original": The original line of text from the console ('<mcplayer> hello everyone`)
 
     :Can be aborted/modified: 
+    :Comments:
+        Called AFTER player.rawMessage event (if rawMessage
+        does not reject it).  However, rawMessage could have
+        modified it before this point.
+        
+        The best use of this event is a quick way to prevent a client from
+        passing certain commands or command arguments to the server.
+        rawMessage is better if you need something else (parsing or
+        filtering chat, for example).
 
 :Event: "player.action"
 
