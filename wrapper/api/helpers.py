@@ -640,9 +640,7 @@ def read_timestr(mc_time_string):
 
 
 # Single line required by documentation creator (at this time)
-def readout(commandtext, description, separator=" - ", pad=15,
-            command_text_fg="magenta", command_text_opts=("bold",),
-            description_text_fg="yellow", usereadline=True):
+def readout(commandtext, description, separator=" - ", pad=15, command_text_fg="magenta", command_text_opts=("bold",), description_text_fg="yellow", usereadline=True):
     """
     display console text only with no logging - useful for displaying
     pretty console-only messages.
