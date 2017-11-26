@@ -518,46 +518,46 @@ class Wrapper(object):
 
             # for use with runwrapperconsolecommand() command
             wholecommandline = consoleinput[0:].split(" ")
-            command = getargs(wholecommandline, 0)
+            command = str(getargs(wholecommandline, 0)).lower()
 
             # this can be passed to runwrapperconsolecommand() command for args
             allargs = wholecommandline[1:]
 
             # Console only commands (not accessible in-game)
-            if command.lower() in ("/halt", "halt"):
+            if command in ("/halt", "halt"):
                 self._halt()
-            elif command.lower() in ("/stop", "stop"):
+            elif command in ("/stop", "stop"):
                 self.javaserver.stop_server_command("Stopping server...")
             # "kill" (with no slash) is a server command.
-            elif command.lower() == "/kill":
+            elif command == "/kill":
                 self.javaserver.kill("Server killed at Console...")
-            elif command.lower() in ("/start", "start"):
+            elif command in ("/start", "start"):
                 self.javaserver.start()
-            elif command.lower() in ("/restart", "restart"):
+            elif command in ("/restart", "restart"):
                 self.javaserver.restart("Server restarting, be right back!")
-            elif command.lower()in ("/update-wrapper", "update-wrapper"):
+            elif command in ("/update-wrapper", "update-wrapper"):
                 self._checkforupdate(True)
             # "plugins" command (with no slash) reserved for server commands
-            elif command.lower() == "/plugins":
+            elif command == "/plugins":
                 self.listplugins()
-            elif command.lower() in ("/mem", "/memory", "mem", "memory"):
+            elif command in ("/mem", "/memory", "mem", "memory"):
                 self._memory()
-            elif command.lower() in ("/raw", "raw"):
+            elif command in ("/raw", "raw"):
                 self._raw(consoleinput)
-            elif command.lower() in ("/freeze", "freeze"):
+            elif command in ("/freeze", "freeze"):
                 self._freeze()
-            elif command.lower() in ("/unfreeze", "unfreeze"):
+            elif command in ("/unfreeze", "unfreeze"):
                 self._unfreeze()
-            elif command.lower() == "/version":
+            elif command == "/version":
                 readout("/version", self.getbuildstring(),
                         usereadline=self.use_readline)
-            elif command.lower() in ("/mute", "/pause", "/cm", "/m", "/p"):
+            elif command in ("/mute", "/pause", "/cm", "/m", "/p"):
                 self._mute_console(allargs)
 
             # Commands that share the commands.py in-game interface
 
             # "reload" (with no slash) may be used by bukkit servers
-            elif command.lower() == "/reload":
+            elif command == "/reload":
                 self.runwrapperconsolecommand("reload", [])
 
             # proxy mode ban system
@@ -584,14 +584,14 @@ class Wrapper(object):
                              "entity", "entities"):
                 self.runwrapperconsolecommand("ent", allargs)
 
-            elif command.lower() in ("/config", "/con", "/prop",
+            elif command in ("/config", "/con", "/prop",
                                      "/property", "/properties"):
                 self.runwrapperconsolecommand("config", allargs)
 
-            elif command.lower() in ("op", "/op"):
+            elif command in ("op", "/op"):
                 self.runwrapperconsolecommand("op", allargs)
 
-            elif command.lower() in ("deop", "/deop"):
+            elif command in ("deop", "/deop"):
                 self.runwrapperconsolecommand("deop", allargs)
 
             # TODO Add more commands below here, below the original items:

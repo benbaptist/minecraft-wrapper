@@ -51,6 +51,22 @@ class Backups(object):
             while len(self.backups) > self.config["Backups"]["backups-keep"]:
                 backup = self.backups[0]
                 if not self.wrapper.events.callevent("wrapper.backupDelete", {"file": filename}):
+                    """ eventdoc
+                                    <group> Backups <group>
+
+                                    <description> Called upon deletion of a backup file.
+                                    <description>
+
+                                    <abortable> Yes, return False to abort. <abortable>
+
+                                    <comments>
+                                    
+                                    <comments>
+                                    <payload>
+                                    "file": filename
+                                    <payload>
+
+                                """
                     break
                 try:
                     os.remove('%s/%s' % (self.config["Backups"]["backup-location"], backup[1]))
@@ -69,6 +85,27 @@ class Backups(object):
             self.wrapper.events.callevent("wrapper.backupFailure",
                                           {"reasonCode": 1, "reasonText": "Tar is not installed. Please install "
                                                                           "tar before trying to make backups."})
+            """ eventdoc
+                <group> Backups <group>
+
+                <description> Indicates failure of backup.
+                <description>
+
+                <abortable> No - informatinal only <abortable>
+
+                <comments>
+                Reasoncode and text provide more detail about specific problem.
+                1 - Tar not installed.
+                2 - Backup file does not exist after the tar operation.
+                3 - Specified file does not exist.
+                4 - backups.json is corrupted
+                <comments>
+                <payload>
+                "reasonCode": an integer 1-4
+                "reasonText": a string description of the failure.
+                <payload>
+
+            """
             self.log.error("Backups will not work, because tar does not appear to be installed!")
             self.log.error("If you are on a Linux-based system, please install it through your preferred package "
                            "manager.")
@@ -126,6 +163,22 @@ class Backups(object):
         # Process begin Events
         if not self.wrapper.events.callevent("wrapper.backupBegin", {"file": filename}):
             self.log.warning("A backup was scheduled, but was cancelled by a plugin!")
+            """ eventdoc
+                <group> Backups <group>
+
+                <description> Indicates a backup is being initiated.
+                <description>
+
+                <abortable> Yes, return False to abort. <abortable>
+
+                <comments>
+                A console warning will be issued if a plugin cancels the backup.
+                <comments>
+                <payload>
+                "file": Name of backup file.
+                <payload>
+
+            """
             return
         if self.config["Backups"]["backup-notification"]:
             self.api.minecraft.broadcast("&cBacking up... lag may occur!", irc=False)
@@ -141,6 +194,10 @@ class Backups(object):
                 self.wrapper.events.callevent("wrapper.backupFailure", {"reasonCode": 3,
                                                                         "reasonText": "Backup file '%s' does not exist."
                                                                         % backup_file_and_path})
+                """ eventdoc
+                                <description> internalfunction <description>
+
+                            """
                 return
         statuscode = os.system(" ".join(arguments))
 
@@ -150,6 +207,21 @@ class Backups(object):
         if self.config["Backups"]["backup-notification"]:
             self.api.minecraft.broadcast("&aBackup complete!", irc=False)
         self.wrapper.events.callevent("wrapper.backupEnd", {"file": filename, "status": statuscode})
+        """ eventdoc
+            <group> Backups <group>
+
+            <description> Indicates a backup is complete.
+            <description>
+
+            <abortable> No - informational only <abortable>
+
+            <comments>
+            <comments>
+            <payload>
+            "file": Name of backup file.
+            <payload>
+
+        """
         self.backups.append((timestamp, filename))
 
         # Prune backups
@@ -160,6 +232,10 @@ class Backups(object):
             self.wrapper.events.callevent("wrapper.backupFailure",
                                           {"reasonCode": 2, "reasonText": "Backup file didn't exist after the tar "
                                                                           "command executed - assuming failure."})
+            """ eventdoc
+                <description> internalfunction <description>
+
+            """
 
     def _getbackups(self):
         if len(self.backups) == 0 and os.path.exists(self.config["Backups"]["backup-location"] + "/backups.json"):
@@ -173,6 +249,10 @@ class Backups(object):
                     "reasonText": "backups.json is corrupted. Please contact an administer instantly, as this "
                                   "may be critical."
                 })
+                """ eventdoc
+                    <description> internalfunction <description>
+
+                """
                 self.backups = []
             else:
                 self.backups = loadcode

@@ -21,6 +21,10 @@
     upon logging off.  Most features are tied heavily to
     proxy mode implementations and the proxy client instance.
 
+    When using events, events in the "proxy" (Group 'Proxy') section are only
+    available in proxy mode.  "server" events (Group 'core/mcserver.py')
+    are available even without proxy mode, as long as the server is running.
+
 
     Supported properties of the player:
     
@@ -434,6 +438,17 @@
 
         :returns:  Boolean; True if operation succeeds, False if
          it fails (set debug mode to see/log error).
+
+        
+
+-  resetPerms(self, uuid)
+
+
+        resets all user data (removes all permissions).
+
+        :arg uuid: The online/mojang uuid (string)
+
+        :returns:  nothing
 
         
 

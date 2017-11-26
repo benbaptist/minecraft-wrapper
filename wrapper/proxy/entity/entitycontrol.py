@@ -7,8 +7,8 @@
 
 from time import sleep
 import threading
-from proxy.entity.entityclasses import Entities as Entitytypes
-from proxy.entity.entityclasses import Objects as Objecttypes
+from proxy.entity.entitybasics import Entities as Entitytypes
+from proxy.entity.entitybasics import Objects as Objecttypes
 
 
 # noinspection PyPep8Naming
@@ -219,6 +219,10 @@ class EntityControl(object):
 
         self.proxy.eventhandler.callevent(
             "proxy.console", {"command": console_command})
+        """ eventdoc
+                                <description> internalfunction <description>
+
+                            """
 
     def _entity_processor(self):
         self._log.debug("_entityprocessor thread started.")

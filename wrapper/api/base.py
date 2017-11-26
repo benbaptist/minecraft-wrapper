@@ -528,3 +528,12 @@ class API(object):
 
         """
         return self.wrapper.perms.clear_group_data()
+
+    def resetUsers(self):
+        """
+        resets all user data (removes all permissions from all users).
+
+        :returns:  nothing
+
+        """
+        return self.wrapper.perms.clear_user_data()

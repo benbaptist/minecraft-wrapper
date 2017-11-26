@@ -10,14 +10,14 @@ from __future__ import unicode_literals
 import json
 import os
 from core.nbt import NBTFile
-from proxy.entity.entityclasses import Items
-from api.helpers import scrub_item_value
+from proxy.entity.entitybasics import Items
+from api.helpers import scrub_item_value, pickle_load
 from proxy.packets.mcpackets_cb import Packets as ClientBound
 from proxy.packets.mcpackets_sb import Packets as ServerBound
 
 
-# noinspection PyPep8Naming
 # noinspection PyBroadException
+# noinspection PyPep8Naming
 class Minecraft(object):
     """
     .. code:: python
@@ -198,14 +198,25 @@ class Minecraft(object):
                 if player_uuid == self.wrapper.uuids.getuuidfromname(username):
                     continue
 
-            with open("wrapper-data/players/%s" % uuid_file_found) as f:
-                data = f.read()
-            try:
-                players[player_uuid] = json.loads(data, self._encoding)
-            except Exception as e:
-                self.log.error("Failed to load player data"
-                               " '%s':\n%s", player_uuid, e)
-                os.remove("wrapper-data/players/" + uuid_file_found)
+            # added because some files under other versions were pickling the data
+            if uuid_file_found[-4:] == "json":
+                with open("wrapper-data/players/%s" % uuid_file_found) as f:
+                    data = f.read()
+                try:
+                    players[player_uuid] = json.loads(data, self._encoding)
+                except Exception as e:
+                    self.log.error("Failed to load player data"
+                                   " '%s':\n%s", player_uuid, e)
+                    os.remove("wrapper-data/players/" + uuid_file_found)
+            elif uuid_file_found[-4:] == ".pkl":
+                try:
+                    players[player_uuid] = pickle_load(
+                        "wrapper-data/players", uuid_file_found)
+                except Exception as e:
+                    self.log.error("Failed to load player data"
+                                   " '%s':\n%s", player_uuid, e)
+                    os.remove("wrapper-data/players/" + uuid_file_found)
+
         return players
 
     def getPlayers(self):  # returns a list of players

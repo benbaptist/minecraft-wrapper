@@ -17,6 +17,19 @@ import datetime
 import socket
 import urllib
 
+version = sys.version_info
+PY3 = version[0] > 2
+
+if PY3:
+    str2 = str
+    # noinspection PyPep8Naming
+    import pickle as Pickle
+else:
+    # noinspection PyUnresolvedReferences
+    str2 = unicode
+    # noinspection PyUnresolvedReferences
+    import cPickle as Pickle
+
 VALID_CODES = list("0123456789abcdefrklmno")
 VALID_COLORS = list("0123456789abcdef")
 
@@ -375,6 +388,71 @@ def isipv4address(addr):
     return True
 
 
+def pickle_load(path, filename):
+    """
+    Save data to Pickle file (*.pkl).  Allows saving dictionary or other
+    data in a way that json cannot always be saved due to json formatting
+    rules.
+
+    :Args:
+        :path: path to file (no trailing slash)
+        :filename: filename including extension
+        :data: Data to be pickled.
+        :encoding: 'Machine' or 'Human' - determines whether file contents
+         can be viewed in a text editor.
+
+    :returns: saved data.  (Assumes success; errors will raise exception.)
+
+    """
+    with open("%s/%s" % (path, filename), "rb") as f:
+        return Pickle.load(f)
+
+
+def pickle_save(path, filename, data, encoding="machine"):
+    """
+    Save data to Pickle file (*.pkl).  Allows saving dictionary or other
+    data in a way that json cannot always be saved due to json formatting
+    rules.
+
+    :Args:
+        :path: path to file (no trailing slash)
+        :filename: filename including *.pkl extension
+        :data: Data to be pickled.
+        :encoding: 'Machine' or 'Human' - determines whether file contents
+         can be viewed in a text editor.
+
+    :returns: Nothing.  Assumes success; errors will raise exception.
+
+    """
+    if "human" in encoding.lower():
+        _protocol = 0
+    else:
+        # using something less than HIGHEST allows both Pythons 2/3
+        # to use the files interchangeably.  It should also allow
+        # moving files between machines with different configurations
+        # with fewer issues.
+        #
+        # Python 2 cPickle does not have a DEFAULT_PROTOCOL
+        # constant like Python 3 pickle (else I would just
+        # use the Default (currently 3, I believe).
+        #
+        # This will probably use either 1 or 2 depending on
+        # which python you use.
+        #
+        # We imported either pickle (Py3) or cPickle (Py2) depending
+        # on what wrapper detected.  Both are implemented in C for
+        # speed.
+        #
+        # The MAIN POINT:
+        # I wanted the code to use something better/faster than
+        # Human-readable (unless that is what you specify), while
+        # still permitting some portability of the final files
+        _protocol = Pickle.HIGHEST_PROTOCOL // 2
+
+    with open("%s/%s" % (path, filename), "wb") as f:
+        Pickle.dump(data, f, protocol=_protocol)
+
+
 def processcolorcodes(messagestring):
     """
     Mostly used internally to process old-style color-codes with
@@ -388,8 +466,7 @@ def processcolorcodes(messagestring):
     :returns: Json dumps() string.
 
     """
-    py3 = sys.version_info > (3,)
-    if not py3:
+    if not PY3:
         message = messagestring.encode('ascii', 'ignore')
     else:
         # .encode('ascii', 'ignore')  # encode to bytes
@@ -563,9 +640,7 @@ def read_timestr(mc_time_string):
 
 
 # Single line required by documentation creator (at this time)
-def readout(commandtext, description, separator=" - ", pad=15,
-            command_text_fg="magenta", command_text_opts=("bold",),
-            description_text_fg="yellow", usereadline=True):
+def readout(commandtext, description, separator=" - ", pad=15, command_text_fg="magenta", command_text_opts=("bold",), description_text_fg="yellow", usereadline=True):
     """
     display console text only with no logging - useful for displaying
     pretty console-only messages.

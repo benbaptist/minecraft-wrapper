@@ -150,6 +150,40 @@ using 'self.api.helpers'
 
     
 
+-  pickle_load(path, filename)
+
+    Save data to Pickle file (*.pkl).  Allows saving dictionary or other
+    data in a way that json cannot always be saved due to json formatting
+    rules.
+
+    :Args:
+        :path: path to file (no trailing slash)
+        :filename: filename including extension
+        :data: Data to be pickled.
+        :encoding: 'Machine' or 'Human' - determines whether file contents
+         can be viewed in a text editor.
+
+    :returns: saved data.  (Assumes success; errors will raise exception.)
+
+    
+
+-  pickle_save(path, filename, data, encoding="machine")
+
+    Save data to Pickle file (*.pkl).  Allows saving dictionary or other
+    data in a way that json cannot always be saved due to json formatting
+    rules.
+
+    :Args:
+        :path: path to file (no trailing slash)
+        :filename: filename including *.pkl extension
+        :data: Data to be pickled.
+        :encoding: 'Machine' or 'Human' - determines whether file contents
+         can be viewed in a text editor.
+
+    :returns: Nothing.  Assumes success; errors will raise exception.
+
+    
+
 -  processcolorcodes(messagestring)
 
     Mostly used internally to process old-style color-codes with
@@ -212,9 +246,7 @@ using 'self.api.helpers'
 
     
 
--  readout(commandtext, description, separator=" - ", pad=15,
-            command_text_fg="magenta", command_text_opts=("bold",),
-            description_text_fg="yellow", usereadline=True)
+-  readout(commandtext, description, separator=" - ", pad=15, command_text_fg="magenta", command_text_opts=("bold",), description_text_fg="yellow", usereadline=True)
 
     display console text only with no logging - useful for displaying
     pretty console-only messages.

@@ -7,7 +7,7 @@
 
 import json
 
-from proxy.entity.entityclasses import Entity
+from proxy.entity.entitybasics import Entity
 from proxy.utils.constants import *
 
 # Py3-2
@@ -180,12 +180,26 @@ class ParseCB(object):
         payload = self.proxy.eventhandler.callevent(
             "player.chatbox", {"playername": self.client.username,
                                "json": data})
-        '''
-        :decription: Chat message sent from server to the client.
+        """ eventdoc
+            <group> Proxy <group>
 
-        :Event: Can be hidden by returning False.  New `data` can be returned
-        to change what is sent to client.
-        '''
+            <description> Chat message sent from the server to the client.
+            <description>
+
+            <abortable> Yes <abortable>
+
+            <comments>
+            - The message will not reach the client if the event is returned False.
+            - If json chat (dict) or text is returned, that value will be sent 
+            to the client instead.
+            <comments>
+            
+            <payload>
+            "playername": client username
+            "json": json or string data
+            <payload>
+
+        """
 
         # reject the packet outright .. no chat gets sent to the client
         if payload is False:
@@ -224,11 +238,24 @@ class ParseCB(object):
             self.proxy.eventhandler.callevent(
                 "player.usebed",
                 {"playername": self.client.username, "position": data[1]})
-            '''
-            :decription: When server sends client to bed mode.
 
-            :Event: Notification only.
-            '''
+            """ eventdoc
+                <group> Proxy <group>
+
+                <description> Sent when server send client to bedmode.
+                <description>
+
+                <abortable> No - Notification only. <abortable>
+
+                <comments>
+                <comments>
+
+                <payload>
+                "playername": client username
+                "position": position of bed
+                <payload>
+
+            """
         return True
 
     def parse_play_join_game(self):
@@ -245,12 +272,24 @@ class ParseCB(object):
         self.proxy.eventhandler.callevent(
             "player.spawned", {"playername": self.client.username,
                                "position": data})
-        '''
-        :decription: When server advises the client of its' (player's)
-         spawn position.
 
-        :Event: Notification only.
-        '''
+        """ eventdoc
+            <group> Proxy <group>
+
+            <description> Sent when server advises the client of its spawn position.
+            <description>
+
+            <abortable> No - Notification only. <abortable>
+
+            <comments>
+            <comments>
+
+            <payload>
+            "playername": client username
+            "position": position
+            <payload>
+
+        """
         return True
 
     def parse_play_respawn(self):
@@ -445,11 +484,8 @@ class ParseCB(object):
         if self.server.version < PROTOCOL_1_8START:
             data = self.packet.readpkt([INT, INT, BOOL])
             leash = data[2]
-        if PROTOCOL_1_8START <= self.server.version < PROTOCOL_1_9START:
-            data = self.packet.readpkt([VARINT, VARINT, BOOL])
-            leash = data[2]
         if self.server.version >= PROTOCOL_1_9START:
-            data = self.packet.readpkt([VARINT, VARINT])
+            data = self.packet.readpkt([INT, INT])
             if data[1] == -1:
                 leash = False
         entityeid = data[0]  # rider, leash holder, etc
@@ -461,11 +497,24 @@ class ParseCB(object):
                     "entity.unmount", {"playername": self.client.username,
                                        "vehicle_id": vehormobeid,
                                        "leash": leash})
-                '''
-                :decription: When player attaches to entity.
+                """ eventdoc
+                    <group> Proxy <group>
 
-                :Event: Notification only.
-                '''
+                    <description> Sent when player attaches to entity.
+                    <description>
+
+                    <abortable> No - Notification only. <abortable>
+
+                    <comments>
+                    <comments>
+
+                    <payload>
+                    "playername": client username
+                    "vehicle_id": EID of vehicle or MOB
+                    "leash": leash True/False
+                    <payload>
+
+                """
                 self.log.debug("player unmount called for %s", self.client.username)
                 self.client.riding = None
             else:
@@ -473,11 +522,24 @@ class ParseCB(object):
                     "entity.mount", {"playername": self.client.username,
                                      "vehicle_id": vehormobeid,
                                      "leash": leash})
-                '''
-                :decription: When player detaches/unmounts entity.
+                """ eventdoc
+                    <group> Proxy <group>
 
-                :Event: Notification only.
-                '''
+                    <description> Sent when player detaches/unmounts entity.
+                    <description>
+
+                    <abortable> No - Notification only. <abortable>
+
+                    <comments>
+                    <comments>
+
+                    <payload>
+                    "playername": client username
+                    "vehicle_id": EID of vehicle or MOB
+                    "leash": leash True/False
+                    <payload>
+
+                """
                 self.client.riding = vehormobeid
                 self.log.debug("player mount called for %s on eid %s",
                                self.client.username, vehormobeid)

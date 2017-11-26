@@ -1,14 +1,27 @@
-Build 230 (next build)
-
-- documentation generator needs fixed for api.entity (should just
- point into the proxy/entity files where the actual code is).
+Build 234 (next build)
 - player to player TP - Add inter-dimensional TP (1.8+) api
   Community Input enhancement proxy mode
-- need to fix various problems with parsing:
- - dropped items are invisible
+
+Build 233 [0.13.5] - master branch (stable)
+- Fix minecraft.rst document header caused by module containind the name
+  "class". renamed proxy/entityclasses to entitybasics.
+- more touch ups to documentation.
+- pushed to master because there are nice bugfixes.
+
+Build 232
+- improve /perms:
+    - reimplement RESET command
+    - add individual, all user, and groups reset methods to the API
+- some refactoring of command processing portions of wrapper.py, commands.py.
+- various bugfixes to bugs I created.
+- move pickling methods to the helpers API
+- clean up documentation some more.
+
+Build 229-230 [0.13.4] - master branch (stable)
 
 Build 229 [0.13.4]
 - Bugfix in SB Parse.
+- Fixed keepalives to prevent player timeouts with slow connections
 
 Build 228 [0.13.4]
 - Fix more code in Proxy server/client parsing to improve speed and
