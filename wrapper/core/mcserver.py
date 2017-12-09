@@ -174,15 +174,10 @@ class MCServer(object):
             self.log.info("Starting server...")
             self.reloadproperties()
 
-            # stuff I was trying to get colorized output to come through
-            # for non-vanilla servers.
-            command = '-fdiagnostics-color=always'
-            self.args.append(command)
-            command2 = self.args
-            # print("args:\n%s\n" % command2)
+            command = self.args
 
             self.proc = subprocess.Popen(
-                command2, cwd=self.vitals.serverpath, stdout=subprocess.PIPE,
+                command, cwd=self.vitals.serverpath, stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE, stdin=subprocess.PIPE,
                 universal_newlines=True)
             self.wrapper.players = {}

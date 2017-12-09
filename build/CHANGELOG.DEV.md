@@ -1,6 +1,17 @@
-Build 234 (next build)
+Build 236 (next build)
 - player to player TP - Add inter-dimensional TP (1.8+) api
   Community Input enhancement proxy mode
+
+Build 233 [0.13.6] - master branch (stable)
+- Bugfix for Spigot servers.  An old attempt to fix colorization on
+  Spigot servers backfired on the newer builds.  I removed the
+  offending code in core/mcserver.py
+
+Build 234
+- change parsing for server bound PlayerPosLook.  Stop using "NULL"
+  element for 1.8+ parsing and just use if else to determine data element
+  positions.  I suspect the null component may be bugged or causing
+  parsing problems.
 
 Build 233 [0.13.5] - master branch (stable)
 - Fix minecraft.rst document header caused by module containind the name
