@@ -25,14 +25,21 @@ class ParseSB(object):
         self.command_prefix_len = len(self.command_prefix)
 
     def parse_play_player_poslook(self):  # player position and look
-        """decided to use this one solely for tracking the
-        client position.  Simple. fast. reliable.  Additionally
-        tracking with other packets (playerPos) slows program flow and seems
-        to cause errors, especially for those with poor connnections."""
+        """decided to use this one solely for tracking the client position"""
+
+        # DOUBLE, DOUBLE, DOUBLE, DOUBLE, FLOAT, FLOAT, BOOL - 1.7 - 1.7.10
+        # ("double:x|double:feety|double:heady|double:z|float:yaw|float:pitch|bool:on_ground")
+
+        # DOUBLE, DOUBLE, DOUBLE, FLOAT, FLOAT, BOOL - 1.8 and up
+        # ("double:x|double:feety|double:z|float:yaw|float:pitch|bool:on_ground")
+
         data = self.packet.readpkt(self.pktSB.PLAYER_POSLOOK[PARSER])
-        # ("double:x|double:y|double:z|float:yaw|float:pitch|bool:on_ground")
-        self.client.position = (data[0], data[1], data[3])
-        self.client.head = (data[4], data[5])
+        if self.client.clientversion > PROTOCOL_1_8START:
+            self.client.position = (data[0], data[1], data[2])
+            self.client.head = (data[3], data[4])
+        else:
+            self.client.position = (data[0], data[1], data[3])
+            self.client.head = (data[4], data[5])
         return True
 
     def parse_play_chat_message(self):
