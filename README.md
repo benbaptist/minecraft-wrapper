@@ -46,11 +46,11 @@ version only supports minecraft versions prior to 1.9.
 
 **LINUX download and setup**
 
-if you have wget installed, You can run the following command to download the stable Wrapper.py (0.7.6):
+if you have wget installed, You can run the following command to download the stable Wrapper.py:
 
 `wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master/Wrapper.py`
 
-or the following to download the development version (0.11.x) of Wrapper.py:
+or the following to download the development version of Wrapper.py:
 
 `wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/Wrapper.py`
 

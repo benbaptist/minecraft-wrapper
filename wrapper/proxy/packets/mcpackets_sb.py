@@ -92,8 +92,8 @@ class Packets(object):
         # Parsing changes
         if protocol >= PROTOCOL_1_8START:
             self.KEEP_ALIVE[PARSER] = [VARINT]
-            self.PLAYER_POSLOOK[PARSER] = [DOUBLE, DOUBLE, NULL, DOUBLE, FLOAT,
-                                           FLOAT, BOOL]
+            self.PLAYER_POSLOOK = [0x06, [DOUBLE, DOUBLE, DOUBLE, FLOAT,
+                                           FLOAT, BOOL]]
 
         if PROTOCOL_1_9START > protocol >= PROTOCOL_1_8START:
             self.SPECTATE = 0x18
