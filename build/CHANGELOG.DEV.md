@@ -1,8 +1,19 @@
-Build 236 (next build)
+Build 237 (next build)
 - player to player TP - Add inter-dimensional TP (1.8+) api
   Community Input enhancement proxy mode
 
-Build 233 [0.13.6] - master branch (stable)
+Build 236
+Improve the non-proxy event section some.
+- Add player.teleport event (core/mcserver.py)
+- API for getPosition and getDimension given non-proxy functionality:
+    -getPosition(): will return whatever position was last returned when
+     a player was teleported.
+    -getDimension just returns the overworld (versus returning nothing)
+- Upgraded the homes plugin to a more robust version that can work without
+  proxy mode and has administrative functions to list and manage homes on
+  a server.
+
+Build 235 [0.13.6] - master branch (stable)
 - Bugfix for Spigot servers.  An old attempt to fix colorization on
   Spigot servers backfired on the newer builds.  I removed the
   offending code in core/mcserver.py

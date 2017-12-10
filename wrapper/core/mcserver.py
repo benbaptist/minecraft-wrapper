@@ -374,6 +374,7 @@ class MCServer(object):
         self.wrapper.events.callevent(
             "player.login",
             {"player": self.getplayer(username)})
+
         """ eventdoc
             <group> core/mcserver.py <group>
 
@@ -742,11 +743,9 @@ class MCServer(object):
             else:
                 self.queued_lines.append(buff)
 
-        # region server console parsing section
-
         # read port of server
         if "Starting Minecraft server" in buff:
-            self.vitals.server_port = get_int(buff.split('on *:')[1])
+            self.vitals.server_port = get_int(buff.split(':')[1])
 
         # confirm server start
         elif "Done (" in buff:
@@ -761,7 +760,7 @@ class MCServer(object):
             self.world = World(self.vitals.worldname, self)
 
         # Player Message
-        if getargs(line_words, 0)[0] == "<":
+        elif getargs(line_words, 0)[0] == "<":
             # get a name out of <name>
             name = self.stripspecial(getargs(line_words, 0)[1:-1])
             message = self.stripspecial(getargsafter(line_words, 1))
@@ -793,7 +792,7 @@ class MCServer(object):
     
                 <payload>
                 "player": playerobject
-                "message": what the player said in chat. ('hello everyone')
+                "message": <str> type - what the player said in chat. ('hello everyone')
                 "original": The original line of text from the console ('<mcplayer> hello everyone`)
                 <payload>
     
@@ -804,10 +803,9 @@ class MCServer(object):
                 getargs(line_words, 0)[0:getargs(line_words, 0).find("[")])
             eid = get_int(getargs(line_words, 6))
             locationtext = getargs(buff.split(" ("), 1)[:-1].split(", ")
-            location = get_int(
-                float(locationtext[0])), get_int(
-                float(locationtext[1])), get_int(
-                float(locationtext[2]))
+            location = get_int(float(locationtext[0])), \
+                       get_int(float(locationtext[1])), \
+                       get_int(float(locationtext[2]))
             self.login(name, eid, location)
 
         # Player Logout
@@ -864,6 +862,34 @@ class MCServer(object):
                 "ticks": get_int(skipping_ticks)
             })
 
+        # player teleport
+        elif getargs(line_words, 0) == "Teleported" and getargs(line_words, 2) == "to":
+            playername = getargs(line_words, 1)
+            playerobj = self.getplayer(playername)
+            playerobj._position = [get_int(float(getargs(line_words, 3).split(",")[0])),
+                        get_int(float(getargs(line_words, 4).split(",")[0])),
+                        get_int(float(getargs(line_words, 5))), 0, 0
+                        ]
+            self.wrapper.events.callevent(
+                "player.teleport",
+                {"player": playerobj})
+
+            """ eventdoc
+                <group> core/mcserver.py <group>
+    
+                <description> When player teleports.
+                <description>
+    
+                <abortable> No <abortable>
+    
+                <comments> driven from console message "Teleported ___ to ....".
+                <comments>
+    
+                <payload>
+                "player": player object
+                <payload>
+    
+            """
     # mcserver.py onsecond Event Handler
     def eachsecond(self, payload):
         if self.config["General"]["timed-reboot"]:
