@@ -103,19 +103,12 @@
 
     :Payload:
         :"player": playerobject
-        :"message": what the player said in chat. ('hello everyone')
+        :"message": <str> type - what the player said in chat. ('hello everyone')
         :"original": The original line of text from the console ('<mcplayer> hello everyone`)
 
     :Can be aborted/modified: 
     :Comments:
-        Called AFTER player.rawMessage event (if rawMessage
-        does not reject it).  However, rawMessage could have
-        modified it before this point.
-        
-        The best use of this event is a quick way to prevent a client from
-        passing certain commands or command arguments to the server.
-        rawMessage is better if you need something else (parsing or
-        filtering chat, for example).
+        This event is triggered by console chat which has already been sent.
 
 :Event: "player.action"
 
@@ -177,6 +170,20 @@
         :"ticks": get_int(skipping_ticks)
 
     :Can be aborted/modified: 
+
+:Event: "player.teleport"
+
+    :Module: mcserver.py *(core/mcserver.py)*
+
+    :Description:
+        When player teleports.
+
+    :Payload:
+        :"player": player object
+
+    :Can be aborted/modified: No
+    :Comments:
+        driven from console message "Teleported ___ to ....".
 
 **< Group 'wrapper' >**
 

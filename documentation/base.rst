@@ -147,7 +147,8 @@
 
 -  blockForEvent(self, eventtype)
 
-        Blocks until the specified event is called. 
+        Blocks until the specified event is called.
+        
 
 -  callEvent(self, event, payload)
 

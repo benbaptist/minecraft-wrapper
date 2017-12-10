@@ -1,6 +1,19 @@
-Build 238 (next build)
+Build 239 (next build)
 - player to player TP - Add inter-dimensional TP (1.8+) api
   Community Input enhancement proxy mode
+
+Build 238
+-refactoring proxy again:
+    - removed "lobby" references from serverconnection: "LOBBY" could
+    never be a real state for server connection since LOBBY is not a real
+    server.  It is just a state in which client connection is active with
+    NO current server.  clientconnection.py is the valid place to
+    handle "lobby" states.
+    - clean up clientconnection references to closing server connections
+    - clean up serverconnection and parse_cb to remove old unused stuff.
+    - turn off proxy entity filtering when entity controls are disabled.
+-fix new bug from bugfix for Spigot in build #237 that introduced new
+error preventing vanilla proxy server connections.
 
 Build 237
 Improve the non-proxy event section some.

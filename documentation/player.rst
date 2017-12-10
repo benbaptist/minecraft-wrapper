@@ -35,6 +35,7 @@
         self.mojangUuid
         self.offlineUuid
         self.loginposition
+        self.playereid
 
         # proxy only
         self.ipaddress
@@ -43,7 +44,6 @@
         self.clientgameversion
         self.clientboundPackets = Packets_cb(self.clientgameversion)
         self.serverboundPackets = Packets_sb(self.clientgameversion)
-        self.playereid
 
         # some player properties associated with abilities (proxy)
         # default is 1.  Should normally be congruent with speed.

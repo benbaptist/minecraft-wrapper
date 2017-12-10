@@ -166,13 +166,13 @@ class Client(object):
             except EOFError:
                 # This is not really an error.. It means the client
                 # is not sending packet stream anymore
-                # self.log.debug("Client Packet stream ended [EOF]"
-                #                " (%s)", self.username)
+                self.log.debug("Client Packet stream ended [EOF]"
+                               " (%s)", self.username)
                 break
             except socket_error:
                 # occurs anytime a socket is closed.
-                # self.log.debug("client proxy Failed to grab packet"
-                #                " [socket_error] (%s)", self.username)
+                self.log.debug("client proxy Failed to grab packet"
+                               " [socket_error] (%s)", self.username)
                 break
             except Exception as e:
                 # anything that gets here is a bona-fide error
@@ -196,25 +196,17 @@ class Client(object):
                 # self.parse(pkid), which DOES happen in all modes)
                 self.server_connection.packet.send_raw(original)
 
-                if self.proxy.trace:
-                    self._do_trace(pkid, self.state)
-
-        self.close_server()  # upon self.abort
-
-    def _do_trace(self, pkid, state):
-        name = str(self.parsers[state][pkid]).split(" ")[0]
-        if pkid not in self.proxy.ignoredSB:
-            self.log.debug("SB=> %s (%s)", hex(pkid), name)
+        self.close_server_instance("Client Handle Ended")  # upon self.abort
 
     def flush_loop(self):
         while not self.abort:
             try:
                 self.packet.flush()
             except socket_error:
-                self.log.debug("client socket closed (socket_error).")
+                self.log.debug("%s client socket closed (socket_error).", self.username)
                 break
             time.sleep(0.01)
-        # self.log.debug("client connection flush_loop thread ended")
+        self.log.debug("%s clientconn flush_loop thread ended", self.username)
 
     def change_servers(self, ip=None, port=None):
 
@@ -226,8 +218,8 @@ class Client(object):
         self.state = IDLE
         # keep server from sending disconnects
         self.server_connection.state = IDLE
-        self.server_connection.close_server(
-            reason="Lobbification", lobby_return=True)
+        self.close_server_instance("Lobbification")
+        lobby_return = True
         time.sleep(1)
 
         # setup for connect
@@ -420,17 +412,17 @@ class Client(object):
 
         # LOBBY code and such to go elsewhere
 
-    def close_server(self):
+    def close_server_instance(self, term_message):
         # close the server connection gracefully first, if possible.
 
         # noinspection PyBroadException
         try:
-            self.server_connection.close_server("Client Disconnecting...")
+            self.server_connection.close_server(term_message)
         except:
-            # self.log.debug("Client socket for %s already"
-            #                " closed!", self.username)
+            self.log.debug("Serverconnection for client %s is already"
+                           " closed: %s", self.username, term_message)
             pass
-        self.abort = True  # TODO investigate this
+        # self.abort = True  # TODO investigate this
 
     def disconnect(self, message):
         """
@@ -471,7 +463,8 @@ class Client(object):
                            " (sent LOGIN_DISCONNECT)")
         time.sleep(1)
         self.state = HANDSHAKE
-        self.close_server()
+        self.close_server_instance("run Disconnect() client.  Aborting client thread")
+        self.abort = True
 
     # internal init and properties
     # -----------------------------
