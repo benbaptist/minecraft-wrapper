@@ -1,8 +1,8 @@
-Build 237 (next build)
+Build 238 (next build)
 - player to player TP - Add inter-dimensional TP (1.8+) api
   Community Input enhancement proxy mode
 
-Build 236
+Build 237
 Improve the non-proxy event section some.
 - Add player.teleport event (core/mcserver.py)
 - API for getPosition and getDimension given non-proxy functionality:
