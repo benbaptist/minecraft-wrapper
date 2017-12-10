@@ -152,7 +152,7 @@ class Player(object):
 
         self.ipaddress = "127.0.0.0"
         self.loginposition = [0, 0, 0]
-        self._position = [0, 0, 0, 0, 0]  # internally used for
+        self._position = [0, 0, 0, 0, 0]  # internally used for non-proxy mode
 
         self.client = None
         self.clientgameversion = self.wrapper.servervitals.protocolVersion

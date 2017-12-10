@@ -745,7 +745,7 @@ class MCServer(object):
 
         # read port of server
         if "Starting Minecraft server" in buff:
-            self.vitals.server_port = get_int(buff.split(':')[1])
+            self.vitals.server_port = get_int(buff.split(':')[-1:][0])
 
         # confirm server start
         elif "Done (" in buff:
@@ -780,14 +780,7 @@ class MCServer(object):
                 <abortable>
     
                 <comments>
-                Called AFTER player.rawMessage event (if rawMessage
-                does not reject it).  However, rawMessage could have
-                modified it before this point.
-    
-                The best use of this event is a quick way to prevent a client from 
-                passing certain commands or command arguments to the server.
-                rawMessage is better if you need something else (parsing or
-                filtering chat, for example).
+                This event is triggered by console chat which has already been sent.
                 <comments>
     
                 <payload>
@@ -803,9 +796,9 @@ class MCServer(object):
                 getargs(line_words, 0)[0:getargs(line_words, 0).find("[")])
             eid = get_int(getargs(line_words, 6))
             locationtext = getargs(buff.split(" ("), 1)[:-1].split(", ")
-            location = get_int(float(locationtext[0])), \
-                       get_int(float(locationtext[1])), \
-                       get_int(float(locationtext[2]))
+            location = get_int(float(locationtext[0])), get_int(
+                float(locationtext[1])), get_int(float(locationtext[2]))
+
             self.login(name, eid, location)
 
         # Player Logout
@@ -929,4 +922,3 @@ class MCServer(object):
 
         command = payload["command"]
         self.console(command)
-

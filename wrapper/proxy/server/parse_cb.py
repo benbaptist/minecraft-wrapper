@@ -307,11 +307,11 @@ class ParseCB(object):
         return True
 
     def parse_play_disconnect(self):
-        # def __str__():
-        #    return "PLAY_DISCONNECT"
         message = self.packet.readpkt([JSON])
-        self.log.info("%s disconnected from Server", self.client.username)
-        self.server.close_server(message)
+        self.server.close_server("Server kicked %s with PLAY disconnect: %s" %
+                                 (self.client.username, message))
+        # client connection will determine if player needs to be kicked
+        return False
 
     def parse_play_time_update(self):
         data = self.packet.readpkt([LONG, LONG])
@@ -479,6 +479,8 @@ class ParseCB(object):
         return True
 
     def parse_play_attach_entity(self):
+        if not self.ent_control:
+            return True
         data = []
         leash = True  # False to detach
         if self.server.version < PROTOCOL_1_8START:
@@ -577,173 +579,4 @@ class ParseCB(object):
             if eid in self.ent_control.entities:
                 self.ent_control.entities.pop(eid, None)
 
-        return True
-
-    # What follows are unparsed packets.  These are retained just for
-    # informational or example purposes.
-    def parse_play_combat_event(self):
-
-        """ just parsed for testing for now """
-        pass
-        # 1.9 packet, conditionally parsed
-        # print("\nSTART COMB_PARSE\n")
-        # data = self.packet.readpkt([VARINT, ])
-        # print("\nread COMB_PARSE\n")
-        # if data[0] == 2:
-        #    # print("\nread COMB_PARSE2\n")
-        #    #player_i_d = self.packet.readpkt([VARINT, ])
-        #    # print("\nread COMB_PARSE3\n")
-        #    #e_i_d = self.packet.readpkt([INT, ])
-        #    # print("\nread COMB_PARSE4\n")
-        #    #strg = self.packet.readpkt([STRING, ])
-
-        #    # print("\nplayerEID=%s\nEID=%s\n" % (player_i_d, e_i_d))
-        #    # print("\nTEXT=\n%s\n" % strg)
-
-        #    # return True
-        return True
-
-    def parse_entity_metadata(self):
-        """
-        This packet is parsed, then re-constituted, the original rejected,
-        and a new packet formed to the client. if the entity is a baby,
-        we rename it.. All of this, just for fun! (and as a demo)  Otherwise,
-        this is a pretty useless parse, unless we opt to pump this data
-        into the entity API.
-        """
-        # possible source of errors due to complexity of the parse and
-        # the changes between various versions of minecraft.
-        return True
-        # eid, metadata = self.packet.readpkt(self.pktCB.ENTITY_METADATA[PARSER])
-        # if self.client.version >= PROTOCOL_1_8START:
-        #     # 12 means 'ageable'
-        #     if 12 in metadata:
-        #         # boolean isbaby
-        #         if 6 in metadata[12]:
-        #             # it's a baby!
-        #             if metadata[12][1] is True:
-        #
-        #                 # print the data for reference
-        #                 # see http://wiki.vg/Entities#Entity_Metadata_Format
-        #                 # self.log.debug("EID: %s - %s", eid, metadata)
-        #                 # name the baby and make tag visible (no index/type
-        #                 # checking; accessing base entity class)
-        #                 metadata[2] = (3, "Entity_%s" % eid)
-        #                 metadata[3] = (6, True)
-        #
-        # self.client.packet.sendpkt(
-        #     self.pktCB.ENTITY_METADATA[PKT],
-        #     self.pktCB.ENTITY_METADATA[PARSER],
-        #     (eid, metadata))
-        # return False
-
-    def parse_play_map_chunk_bulk(self):  # (packet no longer exists in 1.9)
-        # if PROTOCOL_1_9START > self.version > PROTOCOL_1_8START:
-        #     data = self.packet.readpkt([BOOL, VARINT])
-        #     chunks = data[1]
-        #     skylightbool = data[0]
-        #     # ("bool:skylight|varint:chunks")
-        #     for chunk in xxrange(chunks):
-        #         meta = self.packet.readpkt([INT, INT, _USHORT])
-        #         # ("int:x|int:z|ushort:primary")
-        #         primary = meta[2]
-        #         bitmask = bin(primary)[2:].zfill(16)
-        #         chunkcolumn = bytearray()
-        #         for bit in bitmask:
-        #             if bit == "1":
-        #                 # packetanisc
-        #                 chunkcolumn += bytearray(self.packet.read_data(
-        # 16 * 16 * 16 * 2))
-        #                 if self.client.dimension == 0:
-        #                     metalight = bytearray(self.packet.read_data(
-        # 16 * 16 * 16))
-        #                 if skylightbool:
-        #                     skylight = bytearray(self.packet.read_data(
-        # 16 * 16 * 16))
-        #             else:
-        #                 # Null Chunk
-        #                 chunkcolumn += bytearray(16 * 16 * 16 * 2)
-        return True
-
-    def parse_play_entity_properties(self):
-        """ Not sure why I added this.  Based on the wiki, it looked like
-        this might contain a player uuid buried in the lowdata (wiki -
-        "Modifier Data") area that might need to be parsed and reset to
-         the server local uuid.  Thus far, I have not seen it used.
-
-        IF there is a uuid, it may need parsed.
-
-        parser_three = [UUID, DOUBLE, BYTE]
-        if self.version < PROTOCOL_1_8START:
-            parser_one = [INT, INT]
-            parser_two = [STRING, DOUBLE, SHORT]
-            writer_one = self.packet.send_int
-            writer_two = self.packet.send_short
-        else:
-            parser_one = [VARINT, INT]
-            parser_two = [STRING, DOUBLE, VARINT]
-            writer_one = self.packet.send_varint
-            writer_two = self.packet.send_varint
-        raw = b""  # use bytes
-
-        # read first level and repack
-        pass1 = self.packet.readpkt(parser_one)
-        isplayer = self.proxy.getplayerby_eid(pass1[0])
-        if not isplayer:
-            return True
-        raw += writer_one(pass1[0])
-        print(pass1[0], pass1[1])
-        raw += self.packet.send_int(pass1[1])
-
-        # start level 2
-        for _x in range(pass1[1]):
-            pass2 = self.packet.readpkt(parser_two)
-            print(pass2[0], pass2[1], pass2[2])
-            raw += self.packet.send_string(pass2[0])
-            raw += self.packet.send_double(pass2[1])
-            raw += writer_two(pass2[2])
-            print(pass2[2])
-            for _y in range(pass2[2]):
-                lowdata = self.packet.readpkt(parser_three)
-                print(lowdata)
-                packetuuid = lowdata[0]
-                playerclient = self.server.client.proxy.getclientbyofflineserveruuid(
-                    packetuuid)
-                if playerclient:
-                    raw += self.packet.send_uuid(playerclient.uuid.hex)
-                else:
-                    raw += self.packet.send_uuid(lowdata[0])
-                raw += self.packet.send_double(lowdata[1])
-                raw += self.packet.send_byte(lowdata[2])
-                print("Low data: ", lowdata)
-        # self.packet.sendpkt(self.pktCB.ENTITY_PROPERTIES, [RAW], (raw,))
-        return True
-        """
-        return True
-
-    def parse_play_window_items(self):
-        # # I am interested to see when this is used and in what versions.
-        # #    It appears to be superfluous, as SET_SLOT seems to do the
-        # #   purported job nicely.
-        # data = self.packet.readpkt([UBYTE, SHORT])
-        # windowid = data[0]
-        # elementcount = data[1]
-        # # data = self.packet.read("byte:wid|short:count")
-        # # if data["wid"] == 0:
-        # #     for slot in range(1, data["count"]):
-        # #         data = self.packet.readpkt("slot:data")
-        # #         self.client.inventory[slot] = data["data"]
-        # elements = []
-
-        # # just parsing for now; not acting on, so OK to skip 1.7.9
-        # if self.server.version > PROTOCOL_1_7_9:
-        #     for _ in xrange(elementcount):
-        #         elements.append(self.packet.read_slot())
-
-        # # noinspection PyUnusedLocal
-        # jsondata = {  # todo nothin done with data
-        #     "windowid": windowid,
-        #     "elementcount": elementcount,
-        #     "elements": elements
-        # }
         return True
