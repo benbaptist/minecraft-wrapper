@@ -82,6 +82,7 @@ class Player(object):
         self.mojangUuid
         self.offlineUuid
         self.loginposition
+        self.playereid
 
         # proxy only
         self.ipaddress
@@ -90,7 +91,6 @@ class Player(object):
         self.clientgameversion
         self.clientboundPackets = Packets_cb(self.clientgameversion)
         self.serverboundPackets = Packets_sb(self.clientgameversion)
-        self.playereid
 
         # some player properties associated with abilities (proxy)
         # default is 1.  Should normally be congruent with speed.
@@ -152,6 +152,7 @@ class Player(object):
 
         self.ipaddress = "127.0.0.0"
         self.loginposition = [0, 0, 0]
+        self._position = [0, 0, 0, 0, 0]  # internally used for
 
         self.client = None
         self.clientgameversion = self.wrapper.servervitals.protocolVersion
@@ -352,6 +353,8 @@ class Player(object):
         else:
             return self.client
 
+
+
     def getPosition(self):
         """
         Get the players position
@@ -366,12 +369,11 @@ class Player(object):
          and yaw, pitch of head.
         
         """
-        try:
+        if self.wrapper.proxy:
             return self.client.position + self.client.head
-        except AttributeError:
-            # TODO return a last TP position from console output?
+        else:
             # Non-proxy mode:
-            pass
+            return self._position
 
     def getGamemode(self):
         """
@@ -390,7 +392,7 @@ class Player(object):
             return self.client.gamemode
         except AttributeError:
             # Non-proxy mode:
-            pass
+            return 0
 
     def getDimension(self):
         """
@@ -413,7 +415,7 @@ class Player(object):
             return self.client.dimension
         except AttributeError:
             # Non-proxy mode:
-            pass
+            return 0
 
     def setGamemode(self, gamemode=0):
         """
