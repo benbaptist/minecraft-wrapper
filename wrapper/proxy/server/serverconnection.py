@@ -290,6 +290,7 @@ class ServerConnection(object):
                     self.parse_cb.parse_play_change_game_state,
                 self.pktCB.OPEN_WINDOW[PKT]:
                     self.parse_cb.parse_play_open_window,
+
                 self.pktCB.SET_SLOT[PKT]:
                     self.parse_cb.parse_play_set_slot,
                 self.pktCB.PLAYER_LIST_ITEM:
@@ -312,11 +313,3 @@ class ServerConnection(object):
                 self.pktCB.ATTACH_ENTITY] = self.parse_cb.parse_play_attach_entity
             self.parsers[PLAY][
                 self.pktCB.DESTROY_ENTITIES] = self.parse_cb.parse_play_destroy_entities
-            self.parsers[PLAY][
-                self.pktCB.SPAWN_OBJECT] = self.parse_cb.parse_play_spawn_object
-            self.parsers[PLAY][
-                self.pktCB.SPAWN_OBJECT] = self.parse_cb.parse_play_spawn_object
-            self.parsers[PLAY][
-                self.pktCB.SPAWN_OBJECT] = self.parse_cb.parse_play_spawn_object
-            self.parsers[PLAY][
-                self.pktCB.SPAWN_OBJECT] = self.parse_cb.parse_play_spawn_object
