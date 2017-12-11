@@ -173,7 +173,8 @@ class Client(object):
                 break
             except socket_error:
                 # occurs anytime a socket is closed.
-                self.log.debug("%s Client Proxy Failed to grab packet", self.username)
+                if self.username != "PING REQUEST":
+                    self.log.debug("%s Client Proxy Failed to grab packet", self.username)
                 self.abort = True
                 break
             except Exception as e:
