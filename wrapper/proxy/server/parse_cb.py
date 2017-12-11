@@ -242,10 +242,10 @@ class ParseCB(object):
             """ eventdoc
                 <group> Proxy <group>
 
-                <description> Sent when server send client to bedmode.
+                <description> Sent when server sends client to bedmode.
                 <description>
 
-                <abortable> No - Notification only. <abortable>
+                <abortable> No - The server thinks the client is in bed already. <abortable>
 
                 <comments>
                 <comments>
@@ -507,7 +507,8 @@ class ParseCB(object):
 
                     <abortable> No - Notification only. <abortable>
 
-                    <comments>
+                    <comments> Only works if entity controls are enabled.  entity controls
+                    add significant load to wrapper's packet parsing and is off by default.
                     <comments>
 
                     <payload>
@@ -532,7 +533,8 @@ class ParseCB(object):
 
                     <abortable> No - Notification only. <abortable>
 
-                    <comments>
+                    <comments> Only works if entity controls are enabled.  entity controls
+                    add significant load to wrapper's packet parsing and is off by default.
                     <comments>
 
                     <payload>
