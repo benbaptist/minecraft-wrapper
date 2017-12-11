@@ -154,7 +154,7 @@ If you run into any bugs, please _do_ report them!
 
 # Features #
 Wrapper.py supports the following features:
-  - [Plugin system](/documentation/index.md) for adding Bukkit-like features to a vanilla server
+  - [Plugin system](/documentation/readme.md) for adding Bukkit-like features to a vanilla server
   - Proxy mode allows you to add extra functionality to plugins, such as real /commands
   - Permissions system with group support
   - Jump to different servers without reconnecting (extremely experimental, can be used by calling api.minecraft.connect(ip, port) )
@@ -173,7 +173,7 @@ Wrapper.py supports the following features:
 
 # API #
 The documentation for Wrapper.py is not complete, but you can find a reference on the wrapper plugin API here:
-[Wrapper.py Plugin API](/documentation/index.md)
+[Wrapper.py Plugin API](/documentation/readme.md)
 
 ####New Permissions System####
 
