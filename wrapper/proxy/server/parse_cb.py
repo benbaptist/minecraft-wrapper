@@ -507,7 +507,7 @@ class ParseCB(object):
 
                     <abortable> No - Notification only. <abortable>
 
-                    <comments> Only works if entity controls are enabled.  entity controls
+                    <comments> Only works if entity controls are enabled.  Entity controls
                     add significant load to wrapper's packet parsing and is off by default.
                     <comments>
 
@@ -533,7 +533,7 @@ class ParseCB(object):
 
                     <abortable> No - Notification only. <abortable>
 
-                    <comments> Only works if entity controls are enabled.  entity controls
+                    <comments> Only works if entity controls are enabled.  Entity controls
                     add significant load to wrapper's packet parsing and is off by default.
                     <comments>
 

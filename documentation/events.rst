@@ -516,7 +516,7 @@
 
     :Can be aborted/modified: No - Notification only.
     :Comments:
-        Only works if entity controls are enabled.  entity controls
+        Only works if entity controls are enabled.  Entity controls
         add significant load to wrapper's packet parsing and is off by default.
 
 :Event: "entity.mount"
@@ -533,7 +533,7 @@
 
     :Can be aborted/modified: No - Notification only.
     :Comments:
-        Only works if entity controls are enabled.  entity controls
+        Only works if entity controls are enabled.  Entity controls
         add significant load to wrapper's packet parsing and is off by default.
 
 **< Group 'Backups' >**

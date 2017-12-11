@@ -1,6 +1,9 @@
-Build 240 (next build)
+Build 241 (next build)
 - player to player TP - Add inter-dimensional TP (1.8+) api
   Community Input enhancement proxy mode
+
+Build 240
+- more cleanup for PING requests.
 
 Build 239 [0.13.6] - Development branch
 - fix bugs in player.message() displays I introduced in Build 239.

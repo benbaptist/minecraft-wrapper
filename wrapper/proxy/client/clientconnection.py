@@ -416,14 +416,9 @@ class Client(object):
         # LOBBY code and such to go elsewhere
 
     def close_server_instance(self, term_message):
-        # close the server connection gracefully first, if possible.
-
-        # noinspection PyBroadException
-        try:
+        """ Close the server connection gracefully if possible. """
+        if self.server_connection:
             self.server_connection.close_server(term_message)
-        except:
-            self.log.debug("Serverconnection for client %s is already"
-                           " closed: %s", self.username, term_message)
 
     def disconnect(self, message):
         """
@@ -452,16 +447,17 @@ class Client(object):
                 [JSON],
                 [jsonmessage])
 
-            self.log.debug("upon disconnect, state was PLAY"
-                           " (sent PLAY state DISCONNECT)")
+            self.log.debug("Sent PLAY state DISCONNECT packet to %s", self.username)
         else:
             self.packet.sendpkt(
                 self.pktCB.LOGIN_DISCONNECT,
                 [JSON],
                 [message])
 
-            self.log.debug("upon disconnect, state was 'other'"
-                           " (sent LOGIN_DISCONNECT)")
+            if self.username != "PING REQUEST":
+                self.log.debug(
+                    "State was 'other': sent LOGIN_DISCONNECT to %s", self.username)
+
         time.sleep(1)
         self.state = HANDSHAKE
         self.close_server_instance("run Disconnect() client.  Aborting client thread")
@@ -522,11 +518,11 @@ class Client(object):
         if self.version < PROTOCOL_1_11:
             if len(message) > 100:
                 self.log.error(
-                    "chat to client exceeded 100 characters "
+                    "chat to server exceeded 100 characters "
                     "(%s probably got kicked)", self.username)
         if len(message) > 256:
             self.log.error(
-                "chat to client exceeded 256 characters "
+                "chat to server exceeded 256 characters "
                 "(%s probably got kicked)", self.username)
 
         self.server_connection.packet.sendpkt(
