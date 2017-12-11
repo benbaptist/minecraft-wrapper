@@ -1,6 +1,10 @@
-Build 239 (next build)
+Build 240 (next build)
 - player to player TP - Add inter-dimensional TP (1.8+) api
   Community Input enhancement proxy mode
+
+Build 239 [0.13.6] - Development branch
+- fix bugs in player.message() displays I introduced in Build 239.
+- bump version
 
 Build 238
 -fix new bug from bugfix for Spigot in build #237 that introduced new
