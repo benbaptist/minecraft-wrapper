@@ -58,6 +58,7 @@ class Client(object):
         # constants from config:
         self.spigot_mode = self.proxy.config["spigot-mode"]
         self.hidden_ops = self.proxy.config["hidden-ops"]
+        self.silent_bans = self.proxy.config["silent-ipban"]
 
         # client setup and operating paramenters
         self.username = "PING REQUEST"
@@ -107,9 +108,9 @@ class Client(object):
         # to use for all wrapper internal functions for referencing a
         # unique player.
 
-        # TODO - Unused except by plugin channel.  This should be
-        #  integrated better with wrapper's uuid lookups
-        #  and the player API.
+        # TODO - Unused except by plugin channel.
+        # not to be confused with the fact that API player has a property
+        # with the same name.
         self.mojanguuid = None
 
         # information gathered during login or socket connection processes
@@ -166,19 +167,21 @@ class Client(object):
             except EOFError:
                 # This is not really an error.. It means the client
                 # is not sending packet stream anymore
-                self.log.debug("Client Packet stream ended [EOF]"
-                               " (%s)", self.username)
+                if self.username != "PING REQUEST":
+                    self.log.debug("%s Client Packet stream ended [EOF]", self.username)
+                self.abort = True
                 break
             except socket_error:
                 # occurs anytime a socket is closed.
-                self.log.debug("client proxy Failed to grab packet"
-                               " [socket_error] (%s)", self.username)
+                self.log.debug("%s Client Proxy Failed to grab packet", self.username)
+                self.abort = True
                 break
             except Exception as e:
                 # anything that gets here is a bona-fide error
                 # we need to become aware of
-                self.log.error("Exception: Failed to grab packet "
-                               "[CLIENT (%s)] (%s):", self.username, e)
+                self.log.error("%s Client Exception: Failed to grab packet "
+                               "\n%s", self.username, e)
+                self.abort = True
                 break
 
             # self.parse(pkid)
@@ -196,7 +199,10 @@ class Client(object):
                 # self.parse(pkid), which DOES happen in all modes)
                 self.server_connection.packet.send_raw(original)
 
-        self.close_server_instance("Client Handle Ended")  # upon self.abort
+        # sometimes (like during a ping request), a client may never enter PLAY
+        # mode and will never be assigned a server connection...
+        if self.server_connection:
+            self.close_server_instance("Client Handle Ended")  # upon self.abort
 
     def flush_loop(self):
         while not self.abort:
@@ -206,7 +212,9 @@ class Client(object):
                 self.log.debug("%s client socket closed (socket_error).", self.username)
                 break
             time.sleep(0.01)
-        self.log.debug("%s clientconn flush_loop thread ended", self.username)
+        if self.username != "PING REQUEST":
+            self.log.debug("%s clientconnection flush_loop thread ended", self.username)
+        self.proxy.removestaleclients()  # from this instance from proxy.srv_data.clients
 
     def change_servers(self, ip=None, port=None):
 
@@ -219,7 +227,7 @@ class Client(object):
         # keep server from sending disconnects
         self.server_connection.state = IDLE
         self.close_server_instance("Lobbification")
-        lobby_return = True
+        # lobby_return = True
         time.sleep(1)
 
         # setup for connect
@@ -279,10 +287,10 @@ class Client(object):
 
         self.state = LOBBY
 
-    def client_logon(self, start_keep_alives=True, ip=None, port=None):
-        """  When the client first logs in to wrapper """
-        self._inittheplayer()  # set up inventory and stuff
+    def logon_client_into_proxy(self):
+        """  When the client first logs in to the wrapper proxy """
 
+        # check for uuid ban
         if self.proxy.isuuidbanned(self.uuid.__str__()):
             banreason = self.proxy.getuuidbanreason(
                 self.uuid.__str__())
@@ -290,7 +298,7 @@ class Client(object):
                           " connect:\n %s" % (self.username, banreason))
             self.state = HANDSHAKE
             self.disconnect("Banned: %s" % banreason)
-            return False
+            return
 
         # Run the pre-login event
         if not self.proxy.eventhandler.callevent(
@@ -329,35 +337,30 @@ class Client(object):
 
             self.state = HANDSHAKE
             self.disconnect("Login denied by a Plugin.")
-            return False
+            return
 
-        self.log.info("%s's client LOGON occurred: (UUID: %s"
+        self.log.info("%s's Proxy Client LOGON occurred: (UUID: %s"
                       " | IP: %s | SecureConnection: %s)",
                       self.username, self.uuid.string,
                       self.ip, self.onlinemode)
-
+        self._inittheplayer()  # set up inventory and stuff
         self._add_client()
 
         # start keep alives
-        if start_keep_alives:
-            # send login success to client (the real client is already
-            # logged in if keep alives are running)
-            self.packet.sendpkt(
-                self.pktCB.LOGIN_SUCCESS,
-                [STRING, STRING],
-                (self.uuid.string, self.username))
 
-            self.time_client_responded = time.time()
+        # send login success to client
+        self.packet.sendpkt(
+            self.pktCB.LOGIN_SUCCESS,
+            [STRING, STRING],
+            (self.uuid.string, self.username))
 
-            t_keepalives = threading.Thread(
-                target=self._keep_alive_tracker,
-                kwargs={'playername': self.username})
-            t_keepalives.daemon = True
-            t_keepalives.start()
+        self.time_client_responded = time.time()
 
-        # connect to server
-        self.connect_to_server(ip, port)
-        return False
+        t_keepalives = threading.Thread(
+            target=self._keep_alive_tracker,
+            args=())
+        t_keepalives.daemon = True
+        t_keepalives.start()
 
     def connect_to_server(self, ip=None, port=None):
         """
@@ -421,8 +424,6 @@ class Client(object):
         except:
             self.log.debug("Serverconnection for client %s is already"
                            " closed: %s", self.username, term_message)
-            pass
-        # self.abort = True  # TODO investigate this
 
     def disconnect(self, message):
         """
@@ -515,36 +516,40 @@ class Client(object):
                 [POSITION, STRING, STRING, STRING, STRING],
                 (position, line1, line2, line3, line4))
 
-    def chat_to_server(self, string):
+    def chat_to_server(self, message, position=0):
         """ used to resend modified chat packets.  Also to mimic
-        player in API player """
-        self.server_connection.packet.sendpkt(
-            self.pktSB.CHAT_MESSAGE,
-            [STRING],
-            [string])
+        player in API player for say() and execute() methods """
+        if self.version < PROTOCOL_1_11:
+            if len(message) > 100:
+                self.log.error(
+                    "chat to client exceeded 100 characters "
+                    "(%s probably got kicked)", self.username)
+        if len(message) > 256:
+            self.log.error(
+                "chat to client exceeded 256 characters "
+                "(%s probably got kicked)", self.username)
 
-    def chat_to_cleint(self, message):
-        if self.version < PROTOCOL_1_8START:
-            parsing = [STRING, NULL]
-        else:
-            parsing = [JSON, BYTE]
-        self.packet.sendpkt(self.pktCB.CHAT_MESSAGE, parsing, (message, 0))
+        self.server_connection.packet.sendpkt(
+            self.pktSB.CHAT_MESSAGE[PKT], self.pktSB.CHAT_MESSAGE[PARSER],
+            (message, position))
+
+    def chat_to_client(self, message, position=0):
+        """ used by player API to player.message(). """
+        self.packet.sendpkt(self.pktCB.CHAT_MESSAGE[PKT],
+                            self.pktCB.CHAT_MESSAGE[PARSER],
+                            (message, position))
 
     # internal client login methods
     # -----------------------------
-    def _keep_alive_tracker(self, playername):
-        # send keep alives to client and send client settings to server.
-        # TODO future - use a plugin channel to see if the client is
-        # actually another wrapper
-
+    def _keep_alive_tracker(self):
+        """ Send keep alives to client and send client settings to server. """
         while not self.abort:
-            time.sleep(1)
+            time.sleep(.1)
             if self.state in (PLAY, LOBBY):
                 # client expects < 20sec
-                # sending more frequently (1 second) seems to help with
+                # sending more frequently (5 seconds) seems to help with
                 # some slower connections.
-                if time.time() - self.time_server_pinged > 1:
-
+                if time.time() - self.time_server_pinged > 5:
                     # create the keep alive value
                     # MC 1.12 .2 uses a time() value.
                     # Old way takes almost full second to generate:
@@ -568,10 +573,9 @@ class Client(object):
                     self.disconnect("Client closed due to lack of"
                                     " keepalive response")
                     self.log.debug("Closed %s's client thread due to "
-                                   "lack of keepalive response", playername)
+                                   "lack of keepalive response", self.username)
                     return
-        self.log.debug("Client keepalive tracker aborted"
-                       " (%s's client thread)", playername)
+        self.log.debug("%s Client keepalive tracker aborted", self.username)
 
     def _login_authenticate_client(self, server_id):
         if self.onlinemode:
@@ -629,12 +633,6 @@ class Client(object):
         #  will be called later by mcserver.py)
         if self not in self.proxy.srv_data.clients:
             self.proxy.srv_data.clients.append(self)
-
-        # if self.username not in self.servervitals.players:
-        #     self.servervitals.players[self.username] = Player(
-        #         self.username, self.wrapper)
-
-        self._inittheplayer()  # set up inventory and stuff
 
     def _send_client_settings(self):
         if self.clientSettings and not self.clientSettingsSent:
@@ -940,7 +938,10 @@ class Client(object):
 
             # log the client on
             self.state = PLAY
-            self.client_logon()
+            self.logon_client_into_proxy()
+            # connect to server
+            self.connect_to_server()
+        return False
 
     def _parse_login_encr_response(self):
         # the client is RESPONDING to our request for
@@ -973,17 +974,19 @@ class Client(object):
             self.disconnect("Verify tokens are not the same")
             return False
 
-        # determine if IP is banned:
-
-        # client never gets to this point if 'silent-ipban' is enabled
+        # determine if IP is silent banned:
         if self.ipbanned:
             self.log.info("Player %s tried to connect from banned ip:"
                           " %s", self.username, self.ip)
             self.state = HANDSHAKE
-            self.disconnect("Your address is IP-banned from this server!.")
+            if self.silent_bans:
+                self.disconnect("unknown host")
+            else:
+                # self disconnect does not "return" anything.
+                self.disconnect("Your address is IP-banned from this server!.")
             return False
 
-        # begin Client login process
+        # begin Client logon process
         # Wrapper in online mode, taking care of authentication
         if self._login_authenticate_client(serverid) is False:
             return False  # client failed to authenticate
@@ -992,7 +995,11 @@ class Client(object):
 
         # log the client on
         self.state = PLAY
-        self.client_logon()
+        self.logon_client_into_proxy()
+
+        # connect to server
+        self.connect_to_server()
+        return False
 
     # Lobby parsers
     # -----------------------
@@ -1017,19 +1024,10 @@ class Client(object):
         return True
 
     def parse(self, pkid):
-        try:
+        if pkid in self.parsers[self.state]:
             return self.parsers[self.state][pkid]()
-        except KeyError:
-            # Add unparsed packetID to the 'Do nothing parser'
-            self.parsers[self.state][pkid] = self._parse_built
-            if self.buildmode:
-                # some code here to document un-parsed packets?
-                pass
+        else:
             return True
-
-    # Do nothing parser
-    def _parse_built(self):
-        return True
 
     def _define_parsers(self):
         # the packets we parse and the methods that parse them.
@@ -1057,22 +1055,16 @@ class Client(object):
                     self._parse_plugin_message,
                 },
             PLAY: {
-                self.pktSB.CHAT_MESSAGE:
+                self.pktSB.CHAT_MESSAGE[PKT]:
                     self.parse_sb.parse_play_chat_message,
                 self.pktSB.CLICK_WINDOW:
                     self.parse_sb.parse_play_click_window,
                 self.pktSB.CLIENT_SETTINGS:
                     self.parse_sb.parse_play_client_settings,
-                self.pktSB.CLIENT_STATUS:
-                    self._parse_built,
                 self.pktSB.HELD_ITEM_CHANGE:
                     self.parse_sb.parse_play_held_item_change,
                 self.pktSB.KEEP_ALIVE[PKT]:
                     self._parse_keep_alive,
-                self.pktSB.PLAYER:
-                    self._parse_built,
-                self.pktSB.PLAYER_ABILITIES:
-                    self._parse_built,
                 self.pktSB.PLAYER_BLOCK_PLACEMENT:
                     self.parse_sb.parse_play_player_block_placement,
                 self.pktSB.PLAYER_DIGGING:
@@ -1087,10 +1079,6 @@ class Client(object):
                     self.parse_sb.parse_play_player_update_sign,
                 self.pktSB.SPECTATE:
                     self.parse_sb.parse_play_spectate,
-                self.pktSB.TELEPORT_CONFIRM:
-                    self.parse_sb.parse_play_teleport_confirm,
-                self.pktSB.USE_ENTITY:
-                    self._parse_built,
                 self.pktSB.USE_ITEM:
                     self.parse_sb.parse_play_use_item,
                 self.pktSB.PLUGIN_MESSAGE:
@@ -1099,7 +1087,7 @@ class Client(object):
             LOBBY: {
                 self.pktSB.KEEP_ALIVE[PKT]:
                     self._parse_keep_alive,
-                self.pktSB.CHAT_MESSAGE:
+                self.pktSB.CHAT_MESSAGE[PKT]:
                     self._parse_lobby_chat_message,
                 self.pktSB.PLUGIN_MESSAGE:
                     self._parse_plugin_message,

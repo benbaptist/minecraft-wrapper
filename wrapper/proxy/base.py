@@ -238,8 +238,6 @@ class Proxy(object):
             t = threading.Thread(target=client.handle, args=())
             t.daemon = True
             t.start()
-            # self.srv_data.clients.append(client)  # append later (login)
-            self.removestaleclients()
 
         # received self.abort or caller.halt signal...
         self.entity_control._abortep = True

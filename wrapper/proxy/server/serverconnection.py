@@ -20,7 +20,7 @@ from proxy.packets import mcpackets_cb
 from proxy.utils.constants import *
 
 
-# noinspection PyMethodMayBeStatic
+# noinspection PyMethodMayBeStatic,PyBroadException
 class ServerConnection(object):
     def __init__(self, client, ip=None, port=None):
         """
@@ -118,7 +118,7 @@ class ServerConnection(object):
         lobby states.
         """
 
-        self.log.debug("(%s) serverconnection.close_server(): %s",
+        self.log.debug("%s called serverconnection.close_server(): %s",
                        self.client.username, reason)
 
         # end 'handle' and 'flush_loop' cleanly
@@ -129,7 +129,7 @@ class ServerConnection(object):
         try:
             self.server_socket.shutdown(2)
             self.log.debug("Sucessfully closed server socket for"
-                           " %s", self.infos_debug)
+                           " %s", self.client.username)
         except:
             self.log.debug("Server socket for %s already "
                            "closed", self.infos_debug)
@@ -147,24 +147,25 @@ class ServerConnection(object):
                                " %s", self.infos_debug)
                 break
             time.sleep(0.01)
-        self.log.debug("server connection flush_loop thread ended."
-                       " %s", self.infos_debug)
+        self.log.debug("%s serverconnection flush_loop thread ended.",
+                       self.client.username)
 
     def handle(self):
         while not self.abort:
             # get packet
             try:
                 pkid, original = self.packet.grabpacket()
-            except EOFError as eof:
-                # This error is often erroneous, see
-                # https://github.com/suresttexas00/minecraft-wrapper/issues/30
-                return self.close_server("handle EOF")
 
-            # Bad file descriptor occurs anytime a socket is closed.
+            # possible connection losses:
+            except EOFError:
+                # This is not a true error, but means the connection closed.
+                return self.close_server("handle EOF")
             except socket.error:
                 return self.close_server("handle socket.error")
             except Exception as e:
-                return self.close_server("handle Exception")
+                return self.close_server(
+                    "handle Exception: %s TRACEBACK: \n%s" % (e, traceback))
+
             # parse it
             if self.parse(pkid) and self.client.state == PLAY:
                 try:
