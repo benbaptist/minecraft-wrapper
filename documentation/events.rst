@@ -433,8 +433,9 @@
     :Comments:
         Can be aborted by returning False.
         Any of the four line arguments can be changed by
-        returning a dictionary payload containing "lineX":
-        "what you want":
+        returning a dictionary payload containing the lines
+        you want replaced:
+        
         `return {"line2": "You can't write", "line3": "that!"}`
 
 :Event: "player.slotClick"
