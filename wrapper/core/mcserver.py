@@ -400,10 +400,6 @@ class MCServer(object):
         self.wrapper.events.callevent(
             "player.logout", {"player": self.getplayer(players_name)})
 
-        if self.wrapper.proxy:
-            self.wrapper.proxy.removestaleclients()
-
-        # TODO remove a hub player or not??
         if players_name in self.vitals.players:
             self.vitals.players[players_name].abort = True
             del self.vitals.players[players_name]
@@ -860,9 +856,9 @@ class MCServer(object):
             playername = getargs(line_words, 1)
             playerobj = self.getplayer(playername)
             playerobj._position = [get_int(float(getargs(line_words, 3).split(",")[0])),
-                        get_int(float(getargs(line_words, 4).split(",")[0])),
-                        get_int(float(getargs(line_words, 5))), 0, 0
-                        ]
+                                   get_int(float(getargs(line_words, 4).split(",")[0])),
+                                   get_int(float(getargs(line_words, 5))), 0, 0
+                                   ]
             self.wrapper.events.callevent(
                 "player.teleport",
                 {"player": playerobj})

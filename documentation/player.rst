@@ -65,7 +65,8 @@
         it simply falls back to using the 1.8 'execute' command. To 
         be clear, this does NOT work with any Wrapper.py or plugin 
         commands.  The command does not pass through the wrapper.  
-        It is only sent to the server console.
+        It is only sent to the server console (or the actual server in
+        proxy mode).
 
         :arg string: full command string send on player's behalf to server.
 

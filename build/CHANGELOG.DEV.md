@@ -3,6 +3,8 @@ Build 239 (next build)
   Community Input enhancement proxy mode
 
 Build 238
+-fix new bug from bugfix for Spigot in build #237 that introduced new
+error preventing vanilla proxy server connections.
 -refactoring proxy again:
     - removed "lobby" references from serverconnection: "LOBBY" could
     never be a real state for server connection since LOBBY is not a real
@@ -12,8 +14,28 @@ Build 238
     - clean up clientconnection references to closing server connections
     - clean up serverconnection and parse_cb to remove old unused stuff.
     - turn off proxy entity filtering when entity controls are disabled.
--fix new bug from bugfix for Spigot in build #237 that introduced new
-error preventing vanilla proxy server connections.
+    - remove logging/console output for "PING REQUEST" connections.
+    - refactor/rename client methods to be more/better descriptive.  For
+    instance, client_logon() to Logon_client_into_proxy() to show that
+    the client has not logged into a server yet, just into the wrapper proxy.
+    - clean up clientconnection and parse_sb to remove unused stuff.
+    - clean up the program flow for disconnections in serverconnection and
+    clientconnection.
+    - fix keepalive process to stop as soon as client aborts.  Ensure
+    a prompt abort signal for terminated connections.
+    - make normal debug messages look more like prose and less "scary".
+    reserve full bebug style messages for unexpected items/errors.
+    - improve player/client logout process to clean player and client
+    objects out reliably.  Client is only removed when the client proxy
+    flush loop ends and the player object is removed at the mcserver.py
+    logout().
+    - re-add parse_play_player_position to parse_sb.py
+    - re-implement "silent-ipbans" option.
+    - beef up chat_to_server() method (the backend for api.player say() and
+    execute() methods) to prevent a chat message being sent over 100 or 256
+    characters, as applicable to the minecraft version.
+    - added a chat_to_client() method to clientconnection.py as the
+    preferred backend for player.message() when in proxy mode.
 
 Build 237
 Improve the non-proxy event section some.

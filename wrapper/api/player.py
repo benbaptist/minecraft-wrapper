@@ -264,7 +264,8 @@ class Player(object):
         it simply falls back to using the 1.8 'execute' command. To 
         be clear, this does NOT work with any Wrapper.py or plugin 
         commands.  The command does not pass through the wrapper.  
-        It is only sent to the server console.
+        It is only sent to the server console (or the actual server in
+        proxy mode).
 
         :arg string: full command string send on player's behalf to server.
 
@@ -352,8 +353,6 @@ class Player(object):
             return None
         else:
             return self.client
-
-
 
     def getPosition(self):
         """
@@ -508,11 +507,10 @@ class Player(object):
         :arg message: Can be text, colorcoded text, or json chat
 
         """
-        if self.javaserver:
-            self.javaserver.broadcast(message, who=self.username)
+        if self.wrapper.proxy:
+            self.client.chat_to_client(message)
         else:
-            # TODO message client directly
-            pass
+            self.javaserver.broadcast(message, who=self.username)
 
     def actionMessage(self, message=""):
         try:
@@ -884,7 +882,6 @@ class Player(object):
 
         """
         return self.wrapper.perms.fill_user(uuid)
-
 
     def hasGroup(self, group):
         """
