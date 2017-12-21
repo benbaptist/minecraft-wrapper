@@ -2,6 +2,10 @@ Build 241 (next build)
 - player to player TP - Add inter-dimensional TP (1.8+) api
   Community Input enhancement proxy mode
 
+Build 241
+- fix chat_to_client() so that json is messaged properly.  Past couple
+builds broke advanced json chat things (like links and hoverevents).
+
 Build 240
 - more cleanup for PING requests.
 

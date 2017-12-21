@@ -533,7 +533,10 @@ class Client(object):
     def chat_to_client(self, message, position=0):
         """ used by player API to player.message(). """
         if type(message) is dict:
-            sendtext = chattocolorcodes(message)
+            try:
+                sendtext = json.dumps(message)
+            except:
+                sendtext = chattocolorcodes(message)
         else:
             sendtext = processoldcolorcodes(message)
         self.packet.sendpkt(self.pktCB.CHAT_MESSAGE[PKT],
