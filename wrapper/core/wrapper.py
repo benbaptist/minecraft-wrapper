@@ -815,7 +815,7 @@ class Wrapper(object):
             branch_key = self.auto_update_branch
         else:
             branch_key = "%s-branch" % repotype
-        r = requests.get(self.config["Updates"][branch_key])
+        r = requests.get("%s/build/version.json" % self.config["Updates"][branch_key])
         if r.status_code == 200:
             data = r.json()
             if data["__build__"] > core_buildinfo_version.__build__:
@@ -837,24 +837,19 @@ class Wrapper(object):
                 " internet? (Status Code %d)", r.status_code)
             return False
 
-    def performupdate(self, version, build, reponame):
+    def performupdate(self, version, build, updatebranch_url):
         """
         Perform update; returns True if update succeeds.  User must
         still restart wrapper manually.
 
         :param version: first argument from get_wrapper_update_info()
         :param build: second argument from get_wrapper_update_info()
-        :param reponame: 4th argument from get_wrapper_update_info()
-             - not the '__branch__'!
+        :param updatebranch_url:  url of the branch to get updates from.
         :return: True if update succeeds
         """
-        repo = reponame
-        wraphash = requests.get(
-            "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper"
-            "/%s/build/Wrapper.py.md5" % repo)
-        wrapperfile = requests.get(
-            "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper"
-            "/%s/Wrapper.py" % repo)
+
+        wraphash = requests.get("%s/build/Wrapper.py.md5" % updatebranch_url)
+        wrapperfile = requests.get("%s/Wrapper.py" % updatebranch_url)
 
         if wraphash.status_code == 200 and wrapperfile.status_code == 200:
             self.log.info("Verifying Wrapper.py...")
