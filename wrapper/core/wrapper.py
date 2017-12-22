@@ -125,7 +125,10 @@ class Wrapper(object):
         self.config = self.configManager.config
         self.auto_update_wrapper = self.config["Updates"]["auto-update-wrapper"]
         self.auto_update_branch = self.config["Updates"]["auto-update-branch"]
-        self.update_url = self.configManager.config["Updates"][self.auto_update_branch]
+        if not self.auto_update_branch:
+            self.update_url = "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development"
+        else:
+            self.update_url = self.configManager.config["Updates"][self.auto_update_branch]
 
         self.use_timer_tick_event = self.config[
             "Gameplay"]["use-timer-tick-event"]
