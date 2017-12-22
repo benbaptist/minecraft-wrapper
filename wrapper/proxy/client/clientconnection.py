@@ -531,17 +531,17 @@ class Client(object):
             (message, position))
 
     def chat_to_client(self, message, position=0):
-        """ used by player API to player.message(). """
-        if type(message) is dict:
-            try:
-                sendtext = json.dumps(message)
-            except:
-                sendtext = chattocolorcodes(message)
-        else:
-            sendtext = processoldcolorcodes(message)
+        """ used by player API to player.message().
+
+        sendpacket for chat knows how to process either a chat dictionary
+        or a string message!
+
+        don't try sending a json.dumps string... it will simply be sent
+        as a chat string inside a chat.message translate item...
+        """
         self.packet.sendpkt(self.pktCB.CHAT_MESSAGE[PKT],
                             self.pktCB.CHAT_MESSAGE[PARSER],
-                            (sendtext, position))
+                            (message, position))
 
     # internal client login methods
     # -----------------------------

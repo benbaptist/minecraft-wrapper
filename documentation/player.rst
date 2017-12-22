@@ -223,11 +223,22 @@
 
         
 
--  message(self, message="")
+-  message(self, message="", position=0)
 
         Sends a message to the player.
 
-        :arg message: Can be text, colorcoded text, or json chat
+        :Args:
+            :message: Can be text, colorcoded text, or json chat
+            :position:  an integer 0-2.  2 will place it above XP bar.
+             1 or 0 will place it in the chat. Using position 2 will
+             only display any text component (or can be used to display
+             standard minecraft translates, such as
+             "{'translate': 'commands.generic.notFound', 'color': 'red'}" and
+             "{'translate': 'tile.bed.noSleep'}"
+
+
+        :returns: Nothing
+
 
         
 

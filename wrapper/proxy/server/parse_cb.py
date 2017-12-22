@@ -170,7 +170,7 @@ class ParseCB(object):
         data, position = self.packet.readpkt(self.pktCB.CHAT_MESSAGE[PARSER])
         # position (1.8+ only)
         # 0: chat (chat box), 1: system message (chat box), 2: above hotbar
-
+        # print("SEND", type(data), data)
         # Over-ride OP help display
         if "/op <player>" in data:
             new_usage = "player> [-s SUPER-OP] [-o OFFLINE] [-l <level>]"

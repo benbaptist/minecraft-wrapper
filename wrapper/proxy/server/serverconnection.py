@@ -26,7 +26,7 @@ class ServerConnection(object):
         """
         This class ServerConnection is a "fake" client connecting
         to the server.  It receives "CLIENT BOUND" packets from
-        server, parses them, and forards them on to the client.
+        server, parses them, and sends them on to the client.
 
         ServerConnection receives the parent client as it's argument.
         It receives the proxy instance from the Client.

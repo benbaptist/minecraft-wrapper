@@ -8,6 +8,7 @@
 from __future__ import print_function
 
 # system imports
+import copy
 import signal
 import hashlib
 import threading
@@ -113,6 +114,20 @@ class Wrapper(object):
             "Updates"]["auto-update-wrapper"]
         self.auto_update_branch = self.config[
             "Updates"]["auto-update-branch"]
+
+        # make a patch
+        # old paths were:
+        # "dev-branch": "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/build/version.json"
+        # new paths are:
+        # "dev-branch": "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development"
+        for entries in self.config["Updates"]:
+            if "/build/version.json" in str(self.config["Updates"][entries]):
+                oldentry = copy.copy(self.configManager.config["Updates"][entries])
+                self.configManager.config["Updates"][entries] = oldentry.split("/build/version.json")[0]
+                self.configManager.save()
+        # rebuild config
+        self.config = self.configManager.config
+
         self.use_timer_tick_event = self.config[
             "Gameplay"]["use-timer-tick-event"]
         self.use_readline = self.config["Misc"]["use-readline"]
