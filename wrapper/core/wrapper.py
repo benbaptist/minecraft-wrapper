@@ -811,7 +811,6 @@ class Wrapper(object):
 
             if self.auto_update_wrapper or update_now:
                 self.log.info("Updating...")
-                branch_addr = self.config["Updates"][reponame]
                 self.performupdate(version, build)
             else:
                 self.log.info(
