@@ -356,20 +356,22 @@ class MCServer(object):
                 self.console("tellraw %s %s" % (
                     who, processcolorcodes(message)))
 
-    def login(self, username, eid, location):
+    def login(self, username, servereid, position, ipaddr):
         """Called when a player logs in."""
 
         if username not in self.vitals.players:
             self.vitals.players[username] = Player(username, self.wrapper)
-        # store EID if proxy is not fully connected yet.
-        self.vitals.players[username].playereid = eid
-        self.vitals.players[username].loginposition = location
+        # store EID if proxy is not fully connected yet (or is not enabled).
+        self.vitals.players[username].playereid = servereid
+        self.vitals.players[username].loginposition = position
+        if self.vitals.players[username].ipaddress == "127.0.0.0":
+            self.vitals.players[username].ipaddress = ipaddr
 
         if self.wrapper.proxy:
             playerclient = self.vitals.players[username].getClient()
             if playerclient:
-                playerclient.server_eid = eid
-                playerclient.position = location
+                playerclient.server_eid = servereid
+                playerclient.position = position
 
         self.wrapper.events.callevent(
             "player.login",
@@ -622,6 +624,9 @@ class MCServer(object):
 
     @staticmethod
     def stripspecial(text):
+        # not sure what this is actually removing...
+        # this must be legacy code of some kind
+        pass
         a = ""
         it = iter(range(len(text)))
         for i in it:
@@ -788,14 +793,20 @@ class MCServer(object):
             """
         # Player Login
         elif getargs(line_words, 1) == "logged":
-            name = self.stripspecial(
-                getargs(line_words, 0)[0:getargs(line_words, 0).find("[")])
+            user_desc = getargs(line_words, 0).split("[/")
+            name = user_desc[0]
+            ip_addr = user_desc[1].split(":")[0]
             eid = get_int(getargs(line_words, 6))
             locationtext = getargs(buff.split(" ("), 1)[:-1].split(", ")
-            location = get_int(float(locationtext[0])), get_int(
-                float(locationtext[1])), get_int(float(locationtext[2]))
+            if len(locationtext[0].split("]")) > 1:
+                x_c = get_int(float(locationtext[0].split("]")[1]))
+            else:
+                x_c = get_int(float(locationtext[0]))
+            y_c = get_int(float(locationtext[1]))
+            z_c = get_int(float(locationtext[2]))
+            location = x_c, y_c, z_c
 
-            self.login(name, eid, location)
+            self.login(name, eid, location, ip_addr)
 
         # Player Logout
         elif "lost connection" in buff:
