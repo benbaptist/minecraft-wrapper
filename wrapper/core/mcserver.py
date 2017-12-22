@@ -356,24 +356,27 @@ class MCServer(object):
                 self.console("tellraw %s %s" % (
                     who, processcolorcodes(message)))
 
-    def login(self, username, eid, location):
+    def login(self, username, servereid, position, ipaddr):
         """Called when a player logs in."""
 
         if username not in self.vitals.players:
             self.vitals.players[username] = Player(username, self.wrapper)
-        # store EID if proxy is not fully connected yet.
-        self.vitals.players[username].playereid = eid
-        self.vitals.players[username].loginposition = location
+        # store EID if proxy is not fully connected yet (or is not enabled).
+        self.vitals.players[username].playereid = servereid
+        self.vitals.players[username].loginposition = position
+        if self.vitals.players[username].ipaddress == "127.0.0.0":
+            self.vitals.players[username].ipaddress = ipaddr
 
         if self.wrapper.proxy:
             playerclient = self.vitals.players[username].getClient()
             if playerclient:
-                playerclient.server_eid = eid
-                playerclient.position = location
+                playerclient.server_eid = servereid
+                playerclient.position = position
 
         self.wrapper.events.callevent(
             "player.login",
             {"player": self.getplayer(username)})
+
         """ eventdoc
             <group> core/mcserver.py <group>
 
@@ -399,10 +402,6 @@ class MCServer(object):
         self.wrapper.events.callevent(
             "player.logout", {"player": self.getplayer(players_name)})
 
-        if self.wrapper.proxy:
-            self.wrapper.proxy.removestaleclients()
-
-        # TODO remove a hub player or not??
         if players_name in self.vitals.players:
             self.vitals.players[players_name].abort = True
             del self.vitals.players[players_name]
@@ -625,6 +624,9 @@ class MCServer(object):
 
     @staticmethod
     def stripspecial(text):
+        # not sure what this is actually removing...
+        # this must be legacy code of some kind
+        pass
         a = ""
         it = iter(range(len(text)))
         for i in it:
@@ -742,11 +744,9 @@ class MCServer(object):
             else:
                 self.queued_lines.append(buff)
 
-        # region server console parsing section
-
         # read port of server
         if "Starting Minecraft server" in buff:
-            self.vitals.server_port = get_int(buff.split('on *:')[1])
+            self.vitals.server_port = get_int(buff.split(':')[-1:][0])
 
         # confirm server start
         elif "Done (" in buff:
@@ -761,7 +761,7 @@ class MCServer(object):
             self.world = World(self.vitals.worldname, self)
 
         # Player Message
-        if getargs(line_words, 0)[0] == "<":
+        elif getargs(line_words, 0)[0] == "<":
             # get a name out of <name>
             name = self.stripspecial(getargs(line_words, 0)[1:-1])
             message = self.stripspecial(getargsafter(line_words, 1))
@@ -781,34 +781,32 @@ class MCServer(object):
                 <abortable>
     
                 <comments>
-                Called AFTER player.rawMessage event (if rawMessage
-                does not reject it).  However, rawMessage could have
-                modified it before this point.
-    
-                The best use of this event is a quick way to prevent a client from 
-                passing certain commands or command arguments to the server.
-                rawMessage is better if you need something else (parsing or
-                filtering chat, for example).
+                This event is triggered by console chat which has already been sent.
                 <comments>
     
                 <payload>
                 "player": playerobject
-                "message": what the player said in chat. ('hello everyone')
+                "message": <str> type - what the player said in chat. ('hello everyone')
                 "original": The original line of text from the console ('<mcplayer> hello everyone`)
                 <payload>
     
             """
         # Player Login
         elif getargs(line_words, 1) == "logged":
-            name = self.stripspecial(
-                getargs(line_words, 0)[0:getargs(line_words, 0).find("[")])
+            user_desc = getargs(line_words, 0).split("[/")
+            name = user_desc[0]
+            ip_addr = user_desc[1].split(":")[0]
             eid = get_int(getargs(line_words, 6))
             locationtext = getargs(buff.split(" ("), 1)[:-1].split(", ")
-            location = get_int(
-                float(locationtext[0])), get_int(
-                float(locationtext[1])), get_int(
-                float(locationtext[2]))
-            self.login(name, eid, location)
+            if len(locationtext[0].split("]")) > 1:
+                x_c = get_int(float(locationtext[0].split("]")[1]))
+            else:
+                x_c = get_int(float(locationtext[0]))
+            y_c = get_int(float(locationtext[1]))
+            z_c = get_int(float(locationtext[2]))
+            location = x_c, y_c, z_c
+
+            self.login(name, eid, location, ip_addr)
 
         # Player Logout
         elif "lost connection" in buff:
@@ -864,6 +862,34 @@ class MCServer(object):
                 "ticks": get_int(skipping_ticks)
             })
 
+        # player teleport
+        elif getargs(line_words, 0) == "Teleported" and getargs(line_words, 2) == "to":
+            playername = getargs(line_words, 1)
+            playerobj = self.getplayer(playername)
+            playerobj._position = [get_int(float(getargs(line_words, 3).split(",")[0])),
+                                   get_int(float(getargs(line_words, 4).split(",")[0])),
+                                   get_int(float(getargs(line_words, 5))), 0, 0
+                                   ]
+            self.wrapper.events.callevent(
+                "player.teleport",
+                {"player": playerobj})
+
+            """ eventdoc
+                <group> core/mcserver.py <group>
+    
+                <description> When player teleports.
+                <description>
+    
+                <abortable> No <abortable>
+    
+                <comments> driven from console message "Teleported ___ to ....".
+                <comments>
+    
+                <payload>
+                "player": player object
+                <payload>
+    
+            """
     # mcserver.py onsecond Event Handler
     def eachsecond(self, payload):
         if self.config["General"]["timed-reboot"]:
@@ -903,4 +929,3 @@ class MCServer(object):
 
         command = payload["command"]
         self.console(command)
-

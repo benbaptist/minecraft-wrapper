@@ -156,7 +156,7 @@ def build_the_docs():
             index_file, files, files)
     index_file += events_footer
 
-    with open("documentation/index.md", "w") as f:
+    with open("documentation/readme.md", "w") as f:
         f.write(index_file)
 
 

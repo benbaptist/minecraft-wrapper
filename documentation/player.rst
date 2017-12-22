@@ -35,15 +35,15 @@
         self.mojangUuid
         self.offlineUuid
         self.loginposition
+        self.playereid
+        self.ipaddress
 
         # proxy only
-        self.ipaddress
         self.serverUuid (proxy only)
         self.clientUuid (proxy only)
         self.clientgameversion
         self.clientboundPackets = Packets_cb(self.clientgameversion)
         self.serverboundPackets = Packets_sb(self.clientgameversion)
-        self.playereid
 
         # some player properties associated with abilities (proxy)
         # default is 1.  Should normally be congruent with speed.
@@ -65,7 +65,8 @@
         it simply falls back to using the 1.8 'execute' command. To 
         be clear, this does NOT work with any Wrapper.py or plugin 
         commands.  The command does not pass through the wrapper.  
-        It is only sent to the server console.
+        It is only sent to the server console (or the actual server in
+        proxy mode).
 
         :arg string: full command string send on player's behalf to server.
 
@@ -222,11 +223,22 @@
 
         
 
--  message(self, message="")
+-  message(self, message="", position=0)
 
         Sends a message to the player.
 
-        :arg message: Can be text, colorcoded text, or json chat
+        :Args:
+            :message: Can be text, colorcoded text, or json chat
+            :position:  an integer 0-2.  2 will place it above XP bar.
+             1 or 0 will place it in the chat. Using position 2 will
+             only display any text component (or can be used to display
+             standard minecraft translates, such as
+             "{'translate': 'commands.generic.notFound', 'color': 'red'}" and
+             "{'translate': 'tile.bed.noSleep'}"
+
+
+        :returns: Nothing
+
 
         
 

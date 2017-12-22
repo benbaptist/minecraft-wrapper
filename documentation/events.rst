@@ -103,19 +103,12 @@
 
     :Payload:
         :"player": playerobject
-        :"message": what the player said in chat. ('hello everyone')
+        :"message": <str> type - what the player said in chat. ('hello everyone')
         :"original": The original line of text from the console ('<mcplayer> hello everyone`)
 
     :Can be aborted/modified: 
     :Comments:
-        Called AFTER player.rawMessage event (if rawMessage
-        does not reject it).  However, rawMessage could have
-        modified it before this point.
-        
-        The best use of this event is a quick way to prevent a client from
-        passing certain commands or command arguments to the server.
-        rawMessage is better if you need something else (parsing or
-        filtering chat, for example).
+        This event is triggered by console chat which has already been sent.
 
 :Event: "player.action"
 
@@ -177,6 +170,20 @@
         :"ticks": get_int(skipping_ticks)
 
     :Can be aborted/modified: 
+
+:Event: "player.teleport"
+
+    :Module: mcserver.py *(core/mcserver.py)*
+
+    :Description:
+        When player teleports.
+
+    :Payload:
+        :"player": player object
+
+    :Can be aborted/modified: No
+    :Comments:
+        driven from console message "Teleported ___ to ....".
 
 **< Group 'wrapper' >**
 
@@ -426,8 +433,10 @@
     :Comments:
         Can be aborted by returning False.
         Any of the four line arguments can be changed by
-        returning a dictionary payload containing "lineX":
-        "what you want"
+        returning a dictionary payload containing the lines
+        you want replaced:
+        
+        `return {"line2": "You can't write", "line3": "that!"}`
 
 :Event: "player.slotClick"
 
@@ -472,13 +481,13 @@
     :Module: parse_cb.py *(server/parse_cb.py)*
 
     :Description:
-        Sent when server send client to bedmode.
+        Sent when server sends client to bedmode.
 
     :Payload:
         :"playername": client username
         :"position": position of bed
 
-    :Can be aborted/modified: No - Notification only.
+    :Can be aborted/modified: No - The server thinks the client is in bed already.
 
 :Event: "player.spawned"
 
@@ -506,6 +515,9 @@
         :"leash": leash True/False
 
     :Can be aborted/modified: No - Notification only.
+    :Comments:
+        Only works if entity controls are enabled.  Entity controls
+        add significant load to wrapper's packet parsing and is off by default.
 
 :Event: "entity.mount"
 
@@ -520,6 +532,9 @@
         :"leash": leash True/False
 
     :Can be aborted/modified: No - Notification only.
+    :Comments:
+        Only works if entity controls are enabled.  Entity controls
+        add significant load to wrapper's packet parsing and is off by default.
 
 **< Group 'Backups' >**
 

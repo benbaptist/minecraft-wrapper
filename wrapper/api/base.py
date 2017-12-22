@@ -262,10 +262,9 @@ class API(object):
         self.wrapper.help[self.id][groupname] = (summary, commands)
 
     def blockForEvent(self, eventtype):
-        # TODO this event's purpose/functionality and
-        # use cases are unknown at this time
         """
-        Blocks until the specified event is called. """
+        Blocks until the specified event is called.
+        """
         sock = []
         self.wrapper.events.listeners.append(sock)  #
         while True:
@@ -275,7 +274,8 @@ class API(object):
                     self.wrapper.events.listeners.remove(sock)
                     return payload
                 else:
-                    sock.remove(event)
+                    pass
+                    # sock.remove(event)
             time.sleep(0.05)
 
     def callEvent(self, event, payload):

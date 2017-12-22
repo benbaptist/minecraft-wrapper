@@ -82,15 +82,15 @@ class Player(object):
         self.mojangUuid
         self.offlineUuid
         self.loginposition
+        self.playereid
+        self.ipaddress
 
         # proxy only
-        self.ipaddress
         self.serverUuid (proxy only)
         self.clientUuid (proxy only)
         self.clientgameversion
         self.clientboundPackets = Packets_cb(self.clientgameversion)
         self.serverboundPackets = Packets_sb(self.clientgameversion)
-        self.playereid
 
         # some player properties associated with abilities (proxy)
         # default is 1.  Should normally be congruent with speed.
@@ -152,6 +152,7 @@ class Player(object):
 
         self.ipaddress = "127.0.0.0"
         self.loginposition = [0, 0, 0]
+        self._position = [0, 0, 0, 0, 0]  # internally used for non-proxy mode
 
         self.client = None
         self.clientgameversion = self.wrapper.servervitals.protocolVersion
@@ -263,7 +264,8 @@ class Player(object):
         it simply falls back to using the 1.8 'execute' command. To 
         be clear, this does NOT work with any Wrapper.py or plugin 
         commands.  The command does not pass through the wrapper.  
-        It is only sent to the server console.
+        It is only sent to the server console (or the actual server in
+        proxy mode).
 
         :arg string: full command string send on player's behalf to server.
 
@@ -366,12 +368,11 @@ class Player(object):
          and yaw, pitch of head.
         
         """
-        try:
+        if self.wrapper.proxy:
             return self.client.position + self.client.head
-        except AttributeError:
-            # TODO return a last TP position from console output?
+        else:
             # Non-proxy mode:
-            pass
+            return self._position
 
     def getGamemode(self):
         """
@@ -390,7 +391,7 @@ class Player(object):
             return self.client.gamemode
         except AttributeError:
             # Non-proxy mode:
-            pass
+            return 0
 
     def getDimension(self):
         """
@@ -413,7 +414,7 @@ class Player(object):
             return self.client.dimension
         except AttributeError:
             # Non-proxy mode:
-            pass
+            return 0
 
     def setGamemode(self, gamemode=0):
         """
@@ -499,18 +500,29 @@ class Player(object):
                 return ops["level"]
         return False
 
-    def message(self, message=""):
+    def message(self, message="", position=0):
         """
         Sends a message to the player.
 
-        :arg message: Can be text, colorcoded text, or json chat
+        :Args:
+            :message: Can be text, colorcoded text, or json chat
+            :position:  an integer 0-2.  2 will place it above XP bar.
+             1 or 0 will place it in the chat. Using position 2 will
+             only display any text component (or can be used to display
+             standard minecraft translates, such as
+             "{'translate': 'commands.generic.notFound', 'color': 'red'}" and
+             "{'translate': 'tile.bed.noSleep'}"
+
+
+        :returns: Nothing
+
 
         """
-        if self.javaserver:
-            self.javaserver.broadcast(message, who=self.username)
+
+        if self.wrapper.proxy:
+            self.client.chat_to_client(message, position)
         else:
-            # TODO message client directly
-            pass
+            self.javaserver.broadcast(message, who=self.username)
 
     def actionMessage(self, message=""):
         try:
@@ -882,7 +894,6 @@ class Player(object):
 
         """
         return self.wrapper.perms.fill_user(uuid)
-
 
     def hasGroup(self, group):
         """

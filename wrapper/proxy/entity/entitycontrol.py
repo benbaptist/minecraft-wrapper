@@ -27,9 +27,10 @@ class EntityControl(object):
                 <object>.<class_method>
             ..
 
-    Valid only with a functioning server.
+    Valid only with a functioning proxy server.
 
-    Entity controls are established by Proxy.base
+    Entity controls are established by Proxy.base and INCLUDE
+    mount/unmount functions!
 
     """
 
@@ -68,15 +69,16 @@ class EntityControl(object):
 
         self.entities = {}
         self._abortep = False
-
-        # entity processor thread
-        t = threading.Thread(target=self._entity_processor,
-                             name="entProc", args=())
-        t.daemon = True
-        t.start()
-
-        # entity killer thread
         if self.entityControl:
+
+            # entity processor thread
+            t = threading.Thread(target=self._entity_processor,
+                                 name="entProc", args=())
+            t.daemon = True
+            t.start()
+
+            # entity killer thread
+
             ekt = threading.Thread(target=self._entity_thinner,
                                    name="entKill", args=())
             ekt.daemon = True

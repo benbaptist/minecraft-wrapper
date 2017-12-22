@@ -79,7 +79,7 @@ class ServerVitals(object):
         # -1 until a player logs on and server sends a time update
         self.timeofday = -1
         self.spammy_stuff = ["found nothing", "vehicle of", "Wrong location!",
-                             "Tried to add entity"]
+                             "Tried to add entity",]
 
         # PROPOSE
         self.clients = []
@@ -181,15 +181,6 @@ class Proxy(object):
         self.registered_channels = ["WRAPPER.PY|", "WRAPPER.PY|PING", ]
         self.pinged = False
 
-        # trace variables
-        self.trace = False
-        self.ignoredSB = [0x05, 0x0a, 0x00, 0x0f, 0x1a, 0x0d, 0x0e, 0x10, 0x15,
-                          0x03]
-        self.ignoredCB = [0x23, 0x18, 0x0d, 0x2b, 0x39, 0x1b, 0x30, 0x2d, 0x2e,
-                          0x37, 0x46, 0x45, 0x14, 0x16, 0x20, 0x03, 0x3b, 0x4d,
-                          0x3e, 0x3f, 0x27, 0x35, 0x26, 0x4c, 0x40, 0x00, 0x3d,
-                          0x4b, 0x0b, 0x31, 0x48, 0x1d, 0x21, 0x28]
-
         self.privateKey = encryption.generate_key_pair()
         self.publicKey = encryption.encode_public_key(self.privateKey)
 
@@ -247,8 +238,6 @@ class Proxy(object):
             t = threading.Thread(target=client.handle, args=())
             t.daemon = True
             t.start()
-            # self.srv_data.clients.append(client)  # append later (login)
-            self.removestaleclients()
 
         # received self.abort or caller.halt signal...
         self.entity_control._abortep = True

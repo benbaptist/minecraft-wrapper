@@ -1,8 +1,78 @@
-Build 236 (next build)
+Build 246 (next build)
 - player to player TP - Add inter-dimensional TP (1.8+) api
   Community Input enhancement proxy mode
 
-Build 233 [0.13.6] - master branch (stable)
+Build 245 [0.14.1] - Master branch update
+- fix spigot login position (due to spigot pre-pending the world name to
+ the player coordinates).
+- while at that, add IP address to player object from login text (so that
+ non-proxy wrapper's have the player IP address).
+- build a master branch with dev fixes after build 239 (especially due to
+ broken wrapper update stuff).
+
+Build 244 [0.14.0] - Development branch
+- (finally) fix chat_to_client() so that json is messaged properly.
+- fix update code in core/wrapper.  changed the config items slightly.
+- expanded capabilities of player message to send messages above XP bar (proxy mode)
+
+Build 241
+- fix chat_to_client() so that json is messaged properly.  Past couple
+builds broke advanced json chat things (like links and hoverevents).
+
+Build 240
+- more cleanup for PING requests.
+
+Build 239 [0.13.6] - Development branch
+- fix bugs in player.message() displays I introduced in Build 239.
+- bump version
+
+Build 238
+-fix new bug from bugfix for Spigot in build #237 that introduced new
+error preventing vanilla proxy server connections.
+-refactoring proxy again:
+    - removed "lobby" references from serverconnection: "LOBBY" could
+    never be a real state for server connection since LOBBY is not a real
+    server.  It is just a state in which client connection is active with
+    NO current server.  clientconnection.py is the valid place to
+    handle "lobby" states.
+    - clean up clientconnection references to closing server connections
+    - clean up serverconnection and parse_cb to remove old unused stuff.
+    - turn off proxy entity filtering when entity controls are disabled.
+    - remove logging/console output for "PING REQUEST" connections.
+    - refactor/rename client methods to be more/better descriptive.  For
+    instance, client_logon() to Logon_client_into_proxy() to show that
+    the client has not logged into a server yet, just into the wrapper proxy.
+    - clean up clientconnection and parse_sb to remove unused stuff.
+    - clean up the program flow for disconnections in serverconnection and
+    clientconnection.
+    - fix keepalive process to stop as soon as client aborts.  Ensure
+    a prompt abort signal for terminated connections.
+    - make normal debug messages look more like prose and less "scary".
+    reserve full bebug style messages for unexpected items/errors.
+    - improve player/client logout process to clean player and client
+    objects out reliably.  Client is only removed when the client proxy
+    flush loop ends and the player object is removed at the mcserver.py
+    logout().
+    - re-add parse_play_player_position to parse_sb.py
+    - re-implement "silent-ipbans" option.
+    - beef up chat_to_server() method (the backend for api.player say() and
+    execute() methods) to prevent a chat message being sent over 100 or 256
+    characters, as applicable to the minecraft version.
+    - added a chat_to_client() method to clientconnection.py as the
+    preferred backend for player.message() when in proxy mode.
+
+Build 237
+Improve the non-proxy event section some.
+- Add player.teleport event (core/mcserver.py)
+- API for getPosition and getDimension given non-proxy functionality:
+    -getPosition(): will return whatever position was last returned when
+     a player was teleported.
+    -getDimension just returns the overworld (versus returning nothing)
+- Upgraded the homes plugin to a more robust version that can work without
+  proxy mode and has administrative functions to list and manage homes on
+  a server.
+
+Build 235 [0.13.6] - master branch (stable)
 - Bugfix for Spigot servers.  An old attempt to fix colorization on
   Spigot servers backfired on the newer builds.  I removed the
   offending code in core/mcserver.py

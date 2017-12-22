@@ -50,7 +50,7 @@ class Packets(object):
         # -------------------------------
         # 1.7 - 1.7.10 PLAY packets
         self.KEEP_ALIVE = [0x00, [INT]]
-        self.CHAT_MESSAGE = 0x01
+        self.CHAT_MESSAGE = [0x01, [STRING]]  # until 1.11, max string length is 100 or client gets kicked
         self.USE_ENTITY = 0x02
         self.PLAYER = 0x03
         self.PLAYER_POSITION = 0x04
@@ -103,7 +103,7 @@ class Packets(object):
         if protocol >= PROTOCOL_1_9REL1:
             self.TELEPORT_CONFIRM = 0x00
             self.TAB_COMPLETE = 0x01  # TODO NEW
-            self.CHAT_MESSAGE = 0x02
+            self.CHAT_MESSAGE[PKT] = 0x02  # message length increased to 256 at 1.11 (315)
             self.CLIENT_STATUS = 0x03
             self.CLIENT_SETTINGS = 0x04
             self.CONFIRM_TRANSACTION = 0x05  # TODO NEW
@@ -136,7 +136,7 @@ class Packets(object):
             # snapshots raise ValueError, so this is really >= PROTOCOL_1_12
             self.PREPARE_CRAFTING_GRID = 0x01  # TODO NEW 1.12
             self.TAB_COMPLETE = 0x02  # TODO NEW
-            self.CHAT_MESSAGE = 0x03
+            self.CHAT_MESSAGE[PKT] = 0x03
             self.CLIENT_STATUS = 0x04  # open inventory was removed as a status
             self.CLIENT_SETTINGS = 0x05
             self.CONFIRM_TRANSACTION = 0x06  # TODO NEW
@@ -170,7 +170,7 @@ class Packets(object):
         if protocol > PROTOCOL_1_12_1START:
             self.PREPARE_CRAFTING_GRID = 0xee  # replaced by CRAFT_RECIPE_REQUEST
             self.TAB_COMPLETE = 0x01
-            self.CHAT_MESSAGE = 0x02
+            self.CHAT_MESSAGE[PKT] = 0x02
             self.CLIENT_STATUS = 0x03  # open inventory was removed as a status
             self.CLIENT_SETTINGS = 0x04
             self.CONFIRM_TRANSACTION = 0x05  # TODO NEW

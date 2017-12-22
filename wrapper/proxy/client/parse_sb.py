@@ -140,22 +140,16 @@ class ParseSB(object):
         return False  # and cancel this original packet
 
     def parse_play_player_position(self):
-        # if self.client.clientversion < PROTOCOL_1_8START:
-        #     data = self.packet.readpkt([DOUBLE, DOUBLE, DOUBLE, DOUBLE, BOOL])
-        #     # ("double:x|double:y|double:yhead|double:z|bool:on_ground")
-        # elif self.client.clientversion >= PROTOCOL_1_8START:
-        #     data = self.packet.readpkt([DOUBLE, DOUBLE, NULL, DOUBLE, BOOL])
-        #     # ("double:x|double:y|double:z|bool:on_ground")
-        # else:
-        #     data = [0, 0, 0, 0]
-        # # skip 1.7.10 and lower protocol yhead args
-        # self.client.position = (data[0], data[1], data[3])
-        return True
-
-    def parse_play_teleport_confirm(self):
-        # don't interfere with this and self.pktSB.PLAYER_POSLOOK...
-        # doing so will glitch the client
-        # data = self.packet.readpkt([VARINT])
+        if self.client.clientversion < PROTOCOL_1_8START:
+            data = self.packet.readpkt([DOUBLE, DOUBLE, DOUBLE, DOUBLE, BOOL])
+            # ("double:x|double:y|double:yhead|double:z|bool:on_ground")
+        elif self.client.clientversion >= PROTOCOL_1_8START:
+            data = self.packet.readpkt([DOUBLE, DOUBLE, NULL, DOUBLE, BOOL])
+            # ("double:x|double:y|double:z|bool:on_ground")
+        else:
+            data = [0, 0, 0, 0]
+        # skip 1.7.10 and lower protocol yhead args
+        self.client.position = (data[0], data[1], data[3])
         return True
 
     def parse_play_player_look(self):
@@ -454,8 +448,10 @@ class ParseSB(object):
             <comments>
             Can be aborted by returning False.
             Any of the four line arguments can be changed by
-            returning a dictionary payload containing "lineX":
-            "what you want"
+            returning a dictionary payload containing the lines 
+            you want replaced:    
+            
+            `return {"line2": "You can't write", "line3": "that!"}`
             <comments>
 
             <payload>
@@ -508,7 +504,6 @@ class ParseSB(object):
         }
 
         if not self.proxy.eventhandler.callevent("player.slotClick", datadict):
-            self.log.debug("slotclick returned False (SB)")
             return False
         """ eventdoc
             <group> Proxy <group>
