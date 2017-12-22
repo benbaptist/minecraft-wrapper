@@ -1,6 +1,9 @@
-Build 246 (next build)
+Build 247 (next build)
 - player to player TP - Add inter-dimensional TP (1.8+) api
   Community Input enhancement proxy mode
+
+Build 247
+
 
 Build 245 [0.14.1] - Master branch update
 - fix spigot login position (due to spigot pre-pending the world name to
@@ -21,9 +24,9 @@ builds broke advanced json chat things (like links and hoverevents).
 
 Build 240
 - more cleanup for PING requests.
+- fix bugs in player.message() displays I introduced in Build 238/239.
 
 Build 239 [0.13.6] - Development branch
-- fix bugs in player.message() displays I introduced in Build 239.
 - bump version
 
 Build 238
