@@ -83,9 +83,9 @@ class Player(object):
         self.offlineUuid
         self.loginposition
         self.playereid
+        self.ipaddress
 
         # proxy only
-        self.ipaddress
         self.serverUuid (proxy only)
         self.clientUuid (proxy only)
         self.clientgameversion
