@@ -170,7 +170,7 @@ class ParseCB(object):
         data, position = self.packet.readpkt(self.pktCB.CHAT_MESSAGE[PARSER])
         # position (1.8+ only)
         # 0: chat (chat box), 1: system message (chat box), 2: above hotbar
-
+        # print("SEND", type(data), data)
         # Over-ride OP help display
         if "/op <player>" in data:
             new_usage = "player> [-s SUPER-OP] [-o OFFLINE] [-l <level>]"
@@ -242,10 +242,10 @@ class ParseCB(object):
             """ eventdoc
                 <group> Proxy <group>
 
-                <description> Sent when server send client to bedmode.
+                <description> Sent when server sends client to bedmode.
                 <description>
 
-                <abortable> No - Notification only. <abortable>
+                <abortable> No - The server thinks the client is in bed already. <abortable>
 
                 <comments>
                 <comments>
@@ -507,7 +507,8 @@ class ParseCB(object):
 
                     <abortable> No - Notification only. <abortable>
 
-                    <comments>
+                    <comments> Only works if entity controls are enabled.  Entity controls
+                    add significant load to wrapper's packet parsing and is off by default.
                     <comments>
 
                     <payload>
@@ -532,7 +533,8 @@ class ParseCB(object):
 
                     <abortable> No - Notification only. <abortable>
 
-                    <comments>
+                    <comments> Only works if entity controls are enabled.  Entity controls
+                    add significant load to wrapper's packet parsing and is off by default.
                     <comments>
 
                     <payload>

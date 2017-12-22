@@ -1,6 +1,18 @@
-Build 240 (next build)
+Build 243 (next build)
 - player to player TP - Add inter-dimensional TP (1.8+) api
   Community Input enhancement proxy mode
+
+Build 243 [0.14.0] - Development branch
+- (finally) fix chat_to_client() so that json is messaged properly.
+- fix update code in core/wrapper.  changed the config items slightly.
+- expanded capabilities of player message to send messages above XP bar (proxy mode)
+
+Build 241
+- fix chat_to_client() so that json is messaged properly.  Past couple
+builds broke advanced json chat things (like links and hoverevents).
+
+Build 240
+- more cleanup for PING requests.
 
 Build 239 [0.13.6] - Development branch
 - fix bugs in player.message() displays I introduced in Build 239.

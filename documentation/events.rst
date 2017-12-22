@@ -433,8 +433,10 @@
     :Comments:
         Can be aborted by returning False.
         Any of the four line arguments can be changed by
-        returning a dictionary payload containing "lineX":
-        "what you want"
+        returning a dictionary payload containing the lines
+        you want replaced:
+        
+        `return {"line2": "You can't write", "line3": "that!"}`
 
 :Event: "player.slotClick"
 
@@ -479,13 +481,13 @@
     :Module: parse_cb.py *(server/parse_cb.py)*
 
     :Description:
-        Sent when server send client to bedmode.
+        Sent when server sends client to bedmode.
 
     :Payload:
         :"playername": client username
         :"position": position of bed
 
-    :Can be aborted/modified: No - Notification only.
+    :Can be aborted/modified: No - The server thinks the client is in bed already.
 
 :Event: "player.spawned"
 
@@ -513,6 +515,9 @@
         :"leash": leash True/False
 
     :Can be aborted/modified: No - Notification only.
+    :Comments:
+        Only works if entity controls are enabled.  Entity controls
+        add significant load to wrapper's packet parsing and is off by default.
 
 :Event: "entity.mount"
 
@@ -527,6 +532,9 @@
         :"leash": leash True/False
 
     :Can be aborted/modified: No - Notification only.
+    :Comments:
+        Only works if entity controls are enabled.  Entity controls
+        add significant load to wrapper's packet parsing and is off by default.
 
 **< Group 'Backups' >**
 

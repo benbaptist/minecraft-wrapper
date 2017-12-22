@@ -8,6 +8,7 @@
 from __future__ import print_function
 
 # system imports
+import copy
 import signal
 import hashlib
 import threading
@@ -50,6 +51,7 @@ from core.permissions import Permissions
 from proxy.base import Proxy, ProxyConfig, HaltSig, ServerVitals
 from api.base import API
 import management.web as manageweb
+
 # from management.dashboard import Web as Managedashboard  # presently unused
 
 # javaserver state constants
@@ -89,7 +91,6 @@ CLEAR_LINE = ESC + '\x5b\x31\x4b'
 
 
 class Wrapper(object):
-
     def __init__(self):
         # setup log and config
         # needs a false setting on first in case config does not
@@ -109,10 +110,23 @@ class Wrapper(object):
         self.serverpath = self.config["General"]["server-directory"]
         self.proxymode = self.config["Proxy"]["proxy-enabled"]
         self.wrapper_onlinemode = self.config["Proxy"]["online-mode"]
-        self.auto_update_wrapper = self.config[
-            "Updates"]["auto-update-wrapper"]
-        self.auto_update_branch = self.config[
-            "Updates"]["auto-update-branch"]
+
+        # make a patch
+        # old paths were:
+        # "dev-branch": "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/build/version.json"
+        # new paths are:
+        # "dev-branch": "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development"
+        for entries in self.config["Updates"]:
+            if "/build/version.json" in str(self.config["Updates"][entries]):
+                oldentry = copy.copy(self.configManager.config["Updates"][entries])
+                self.configManager.config["Updates"][entries] = oldentry.split("/build/version.json")[0]
+                self.configManager.save()
+        # rebuild config
+        self.config = self.configManager.config
+        self.auto_update_wrapper = self.config["Updates"]["auto-update-wrapper"]
+        self.auto_update_branch = self.config["Updates"]["auto-update-branch"]
+        self.update_url = self.configManager.config["Updates"][self.auto_update_branch]
+
         self.use_timer_tick_event = self.config[
             "Gameplay"]["use-timer-tick-event"]
         self.use_readline = self.config["Misc"]["use-readline"]
@@ -386,11 +400,11 @@ class Wrapper(object):
         their input and modify it, even if the server is producing
         console line messages that would normally "carry away" the 
         user's typing.
-        
+
         Implemented in response to issue 326:
         'Command being typed gets carried off by console every time
          server generates output #326' by @Darkness3840:
-        https://github.com/benbaptist/minecraft-wrapper/issues/326 
+        https://github.com/benbaptist/minecraft-wrapper/issues/326
         """
         if self.use_readline:
             # Obtain a line of console input
@@ -585,7 +599,7 @@ class Wrapper(object):
                 self.runwrapperconsolecommand("ent", allargs)
 
             elif command in ("/config", "/con", "/prop",
-                                     "/property", "/properties"):
+                             "/property", "/properties"):
                 self.runwrapperconsolecommand("config", allargs)
 
             elif command in ("op", "/op"):
@@ -797,7 +811,7 @@ class Wrapper(object):
 
             if self.auto_update_wrapper or update_now:
                 self.log.info("Updating...")
-                self.performupdate(version, build, reponame)
+                self.performupdate(version, build)
             else:
                 self.log.info(
                     "Because you have 'auto-update-wrapper' set to False,"
@@ -815,7 +829,7 @@ class Wrapper(object):
             branch_key = self.auto_update_branch
         else:
             branch_key = "%s-branch" % repotype
-        r = requests.get(self.config["Updates"][branch_key])
+        r = requests.get("%s/build/version.json" % self.config["Updates"][branch_key])
         if r.status_code == 200:
             data = r.json()
             if data["__build__"] > core_buildinfo_version.__build__:
@@ -827,9 +841,9 @@ class Wrapper(object):
                     reponame = data["__branch__"]
                 if "__version__" not in data:
                     data["__version__"] = data["version"]
-                return data["__version__"],\
-                    data["__build__"],\
-                    data["__branch__"], reponame
+                return data["__version__"], \
+                       data["__build__"], \
+                       data["__branch__"], reponame
 
         else:
             self.log.warning(
@@ -837,24 +851,18 @@ class Wrapper(object):
                 " internet? (Status Code %d)", r.status_code)
             return False
 
-    def performupdate(self, version, build, reponame):
+    def performupdate(self, version, build):
         """
         Perform update; returns True if update succeeds.  User must
         still restart wrapper manually.
 
         :param version: first argument from get_wrapper_update_info()
         :param build: second argument from get_wrapper_update_info()
-        :param reponame: 4th argument from get_wrapper_update_info()
-             - not the '__branch__'!
         :return: True if update succeeds
         """
-        repo = reponame
-        wraphash = requests.get(
-            "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper"
-            "/%s/build/Wrapper.py.md5" % repo)
-        wrapperfile = requests.get(
-            "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper"
-            "/%s/Wrapper.py" % repo)
+
+        wraphash = requests.get("%s/build/Wrapper.py.md5" % self.update_url)
+        wrapperfile = requests.get("%s/Wrapper.py" % self.update_url)
 
         if wraphash.status_code == 200 and wrapperfile.status_code == 200:
             self.log.info("Verifying Wrapper.py...")

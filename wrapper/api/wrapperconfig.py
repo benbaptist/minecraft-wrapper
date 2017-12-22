@@ -84,7 +84,7 @@ CONFIG = {
 
         {
 
-         # whether to use the wrapper entity controls.
+         # whether to use the wrapper entity controls.  With new minecraft versions, these are largely unnecessary and better done with the Gamerules.
 
             "enable-entity-controls": False,
 
@@ -134,11 +134,11 @@ CONFIG = {
 
             "stable-branch":
 
-                "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master/build/version.json",
+                "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master",
 
             "dev-branch":
 
-                "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/build/version.json",
+                "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development",
 
         },
 

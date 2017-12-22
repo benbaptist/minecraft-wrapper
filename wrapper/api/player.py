@@ -500,15 +500,27 @@ class Player(object):
                 return ops["level"]
         return False
 
-    def message(self, message=""):
+    def message(self, message="", position=0):
         """
         Sends a message to the player.
 
-        :arg message: Can be text, colorcoded text, or json chat
+        :Args:
+            :message: Can be text, colorcoded text, or json chat
+            :position:  an integer 0-2.  2 will place it above XP bar.
+             1 or 0 will place it in the chat. Using position 2 will
+             only display any text component (or can be used to display
+             standard minecraft translates, such as
+             "{'translate': 'commands.generic.notFound', 'color': 'red'}" and
+             "{'translate': 'tile.bed.noSleep'}"
+
+
+        :returns: Nothing
+
 
         """
+
         if self.wrapper.proxy:
-            self.client.chat_to_client(message)
+            self.client.chat_to_client(message, position)
         else:
             self.javaserver.broadcast(message, who=self.username)
 
