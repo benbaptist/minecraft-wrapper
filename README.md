@@ -66,18 +66,18 @@ or the following to download the development version of Wrapper.py:
 `wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/Wrapper.py`
 
 To install dependencies, use pip.  Many modern distros will actually have most of wrapper's dependencies installed by default.
-These three are commonly missing from older distros:
-
+These are commonly missing from older distros:
 ```
 pip install requests
 pip install pycrypto
 pip install pkg_resources
-
-pip install bcrypt
-pip install cryptography
 ```
 
 `bcrypt` and `cryptography` are newer additions to Wrapper that are also not in the standard library at this time.
+```
+pip install bcrypt
+pip install cryptography
+```
 
 
 ### **Windows Download and setup**
@@ -104,7 +104,8 @@ Then from the command prompt:
 ```
 pip install requests
 pip install pycrypto
- ...
+pip install bcrypt
+pip install cryptography
 ```
 
 Download the Wrapper.py file and place it in the desired folder.
