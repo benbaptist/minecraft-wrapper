@@ -112,55 +112,55 @@ Download the Wrapper.py file and place it in the desired folder.
 
 ###  **Start Up**
 
-Run `python Wrapper.py` to start.
+- Run `python Wrapper.py [--passphrase 'passphrase']` to start.
 
 
-_An alternative method of running wrapper is to run the source package directly.  To do this, clone the repo, copy the
-folder 'wrapper' to the desired location and run it thusly:_<br>
-`python /path/to/wrapperfolder/wrapper`
+    _An alternative method of running wrapper is to run the source package directly.  To do this, clone the repo, copy the
+    folder 'wrapper' to the desired location and run it thusly:_<br>
+    `python /path/to/wrapperfolder/wrapper`
 
 
-Wrapper also takes the following optional arguments:
+    Wrapper also takes the following optional arguments:
 
-```
-  -h, --help           show this help message and exit
-  --encoding, -e       Specify an encoding (other than utf-8)
-  --betterconsole, -b  Use "better console" feature to anchor your imput at
-                       the bottom of the console (anti- scroll-away feature)
-  --passphrase, -p     Passphrase used to encrypt all passwords in Wrapper.
-                       Please use as fairly long phrase (minimum is 8
-                       characters). If not specified, or incorrectly supplied,
-                       Wrapper will prompt for a new passphrase before
-                       starting! Use "--passphrase none" to start wrapper with
-                       passwords disabled.
-```
+    ```
+      -h, --help           show this help message and exit
+      --encoding, -e       Specify an encoding (other than utf-8)
+      --betterconsole, -b  Use "better console" feature to anchor your imput at
+                           the bottom of the console (anti- scroll-away feature)
+      --passphrase, -p     Passphrase used to encrypt all passwords in Wrapper.
+                           Please use as fairly long phrase (minimum is 8
+                           characters). If not specified, or incorrectly supplied,
+                           Wrapper will prompt for a new passphrase before
+                           starting! Use "--passphrase none" to start wrapper with
+                           passwords disabled.
+    ```
 
-To start wrapper using your passphrase:</br>
-`python Wrapper.py --passphrase "my special passphrase - keep this a secret!"`
+    To start wrapper using your passphrase:</br>
+    `python Wrapper.py --passphrase "my special passphrase - keep this a secret!"`
 
-To disable password encryption with bcrypt, use "none" for the passphrase:</br>
-`python Wrapper.py --passphrase none`
+    To disable password encryption with bcrypt, use "none" for the passphrase:</br>
+    `python Wrapper.py --passphrase none`
 
-If bcrypt and cryptography are not installed or the start up passphrase is
-disabled by specifying "none", Wrapper.py will handle all passwords in plain
-text and will not prompt the user for a password. Otherwise, if a passphrase
-is not supplied, Wrapper will prompt for one:
-```
-please input a master passphrase for Wrapper.  This passphrase willbe used to encrypt
- all passwords in Wrapper.
->
-```
+    If bcrypt and cryptography are not installed or the start up passphrase is
+    disabled by specifying "none", Wrapper.py will handle all passwords in plain
+    text and will not prompt the user for a password. Otherwise, if a passphrase
+    is not supplied, Wrapper will prompt for one:
+    ```
+    please input a master passphrase for Wrapper.  This passphrase willbe used to encrypt
+     all passwords in Wrapper.
+    >
+    ```
 
 
  - When you first run Wrapper, you will see the following output as it creates the logging file, a wrapper.properties.json
  file, and then exits.:
-```
-[15:19:18] [root/WARNING]: Unable to locate logging.json -- Creating default logging configuration
-please input a master passphrase for Wrapper.  This passphrase willbe used to encrypt all passwords in Wrapper.  Please use a fairly long phrase (minimum is 8 characters).  You can change the pass-phrase later with /passphrase <new phrase>
->
-[15:19:30] [Config/WARNING]: Updated wrapper.properties.json file - check and edit configuration if needed and start again.
+    ```
+    [15:19:18] [root/WARNING]: Unable to locate logging.json -- Creating default logging configuration
+    please input a master passphrase for Wrapper.  This passphrase willbe used to encrypt all passwords in Wrapper.  Please use a fairly long phrase (minimum is 8 characters).  You can change the pass-phrase later with /passphrase <new phrase>
+    >
+    [15:19:30] [Config/WARNING]: Updated wrapper.properties.json file - check and edit configuration if needed and start again.
 
-```
+    ```
 
 - Open the wrapper properties file, set the `["General"]["command"]` item to boot the jar file and java start
  options of your choice.
@@ -172,65 +172,56 @@ please input a master passphrase for Wrapper.  This passphrase willbe used to en
      - or you can use an absolute path: `/home/user/minecraft/server`.
      - use the default `'.'` to run wrapper inside your server folder.
 
-Tune the file to your remaining preferences, and then run wrapper again.
+- Tune the file to your remaining preferences, and then run wrapper again.
 
-If the server is new (only a server.jar file in the server directory) You will see output similar
+- If the server is new (only a server.jar file in the server directory) You will see output similar
  to this:
-```
-[15:24:10] [root/INFO]: Logging configuration file (logging.json) located and loaded, logging configuration set!
-please input a master passphrase for Wrapper.  This passphrase willbe used to encrypt all passwords in Wrapper.  Please use a fairly long phrase (minimum is 8 characters).  You can change the pass-phrase later with /passphrase <new phrase>
->
-[15:24:16] [Wrapper.py/INFO]: Wrapper.py started - Version [0, 14, 1] (development build #245)
-[15:24:16] [Wrapper.py/WARNING]: NOTE: Server was in 'STOP' state last time  Wrapper.py was running. To start the server, run /start.
-[15:24:16] [Wrapper.py/WARNING]: File 'server.properties' not found.
-[15:24:16] [Wrapper.py/INFO]: Loading plugins...
+    ```
+    [15:24:10] [root/INFO]: Logging configuration file (logging.json) located and loaded, logging configuration set!
+    please input a master passphrase for Wrapper.  This passphrase willbe used to encrypt all passwords in Wrapper.  Please use a fairly long phrase (minimum is 8 characters).  You can change the pass-phrase later with /passphrase <new phrase>
+    >
+    [15:24:16] [Wrapper.py/INFO]: Wrapper.py started - Version [0, 14, 1] (development build #245)
+    [15:24:16] [Wrapper.py/WARNING]: NOTE: Server was in 'STOP' state last time  Wrapper.py was running. To start the server, run /start.
+    [15:24:16] [Wrapper.py/WARNING]: File 'server.properties' not found.
+    [15:24:16] [Wrapper.py/INFO]: Loading plugins...
 
-```
+    ```
 
-To continue, you will need to enter `/start` to continue running (if you are using proxy mode, be aware that this must be done within 2 minutes or proxy mode will be disabled).
+    To continue, you will need to enter `/start` to continue running (if you are using proxy mode, be aware that this must be done within 2 minutes or proxy mode will be disabled).
 
-The server will start and accept the Eula for you:
-```
-/start
-[15:28:02] [Wrapper.py/INFO]: Starting server...
-[15:28:02] [Wrapper.py/WARNING]: File 'server.properties' not found.
-[15:28:05] [Server thread/INFO]: Starting minecraft server version 1.12.2
-[15:28:05] [Server thread/INFO]: Loading properties
-[15:28:05] [Server thread/WARN]: server.properties does not exist
-[15:28:05] [Server thread/INFO]: Generating new properties file
-[15:28:05] [Server thread/WARN]: Failed to load eula.txt
-[15:28:05] [Server thread/INFO]: You need to agree to the EULA in order to run the server. Go to eula.txt for more info.
-[15:28:05] [Server thread/INFO]: Stopping server
-[15:28:05] [Server Shutdown Thread/INFO]: Stopping server
-[15:28:06] [Wrapper.py/INFO]: Starting server...
-[15:28:06] [Wrapper.py/WARNING]: File 'server.properties' not found.
-[15:28:06] [Wrapper.py/WARNING]: EULA agreement was not accepted, accepting on your behalf...
-[15:28:08] [Server thread/INFO]: Starting minecraft server version 1.12.2
-[15:28:08] [Server thread/INFO]: Loading properties
-[15:28:08] [Server thread/INFO]: Default game type: SURVIVAL
-[15:28:08] [Server thread/INFO]: Generating keypair
-[15:28:09] [Server thread/INFO]: Starting Minecraft server on *:25565
-[15:28:09] [Server thread/INFO]: Using epoll channel type
-[15:28:09] [Server thread/INFO]: Preparing level "world"
-[15:28:09] [Server thread/INFO]: Loaded 488 advancements
-[15:28:09] [Server thread/INFO]: Preparing start region for level 0
-[15:28:10] [Server thread/INFO]: Preparing spawn area: 9%
-[15:28:11] [Server thread/INFO]: Preparing spawn area: 18%
-[15:28:12] [Server thread/INFO]: Preparing spawn area: 30%
-[15:28:13] [Server thread/INFO]: Preparing spawn area: 45%
-[15:28:14] [Server thread/INFO]: Preparing spawn area: 60%
-[15:28:15] [Server thread/INFO]: Preparing spawn area: 77%
-[15:28:16] [Server thread/INFO]: Preparing spawn area: 94%
-[15:28:17] [Server thread/INFO]: Done (7.956s)! For help, type "help" or "?"
-[15:28:17] [Wrapper.py/INFO]: Server started
-[15:28:17] [Wrapper.py/INFO]: Proxy listening on *:25566
+    The server will start and accept the Eula for you:
+    ```
+    /start
+    [15:28:02] [Wrapper.py/INFO]: Starting server...
+    [15:28:02] [Wrapper.py/WARNING]: File 'server.properties' not found.
+    [15:28:05] [Server thread/INFO]: Starting minecraft server version 1.12.2
+    [15:28:05] [Server thread/INFO]: Loading properties
+    [15:28:05] [Server thread/WARN]: server.properties does not exist
+    [15:28:05] [Server thread/INFO]: Generating new properties file
+    [15:28:05] [Server thread/WARN]: Failed to load eula.txt
+    [15:28:05] [Server thread/INFO]: You need to agree to the EULA in order to run the server. Go to eula.txt for more info.
+    [15:28:05] [Server thread/INFO]: Stopping server
+    [15:28:05] [Server Shutdown Thread/INFO]: Stopping server
+    [15:28:06] [Wrapper.py/INFO]: Starting server...
+    [15:28:06] [Wrapper.py/WARNING]: File 'server.properties' not found.
+    [15:28:06] [Wrapper.py/WARNING]: EULA agreement was not accepted, accepting on your behalf...
+    [15:28:08] [Server thread/INFO]: Starting minecraft server version 1.12.2
+    [15:28:08] [Server thread/INFO]: Loading properties
+    [15:28:08] [Server thread/INFO]: Default game type: SURVIVAL
+    [15:28:08] [Server thread/INFO]: Generating keypair
+    [15:28:09] [Server thread/INFO]: Starting Minecraft server on *:25565
+     ...
+    [15:28:16] [Server thread/INFO]: Preparing spawn area: 94%
+    [15:28:17] [Server thread/INFO]: Done (7.956s)! For help, type "help" or "?"
+    [15:28:17] [Wrapper.py/INFO]: Server started
+    [15:28:17] [Wrapper.py/INFO]: Proxy listening on *:25566
+    ```
 
-```
+##### operating wrapper #####
 
-
-Any console command beginning with a slash (/) will be interpreted as a Wrapper.py command.<br>
-Type /help to see a list of Wrapper.py commands.<br>
-To completely shutdown the wrapper, type /halt.</br>
+- Any console command beginning with a slash (/) will be interpreted as a Wrapper.py command.<br>
+- Type /help to see a list of Wrapper.py commands.<br>
+- To completely shutdown the wrapper, type /halt.</br>
 
 Please read our [wiki](https://github.com/benbaptist/minecraft-wrapper/wiki) for additional information and review the issues page before submitting bug reports.<br>
 If you run into any bugs, please _do_ report them!
@@ -258,7 +249,7 @@ Wrapper.py supports the following features:
 The documentation for Wrapper.py is not complete, but you can find a reference on the wrapper plugin API here:
 [Wrapper.py Plugin API](/documentation/readme.md)
 
-####New Permissions System####
+#### New Permissions System ####
 
 A file in the wrapper root directory "superOPs.txt" now augments the "Ops.json" file.  Operators in the ops.json file can be assigned a higher (wrapper) OP level.  The contents of the file are laid out just like server.properties (lines of \<something\>=\<value\>).
 
@@ -269,16 +260,17 @@ BenBaptist=9
 ```
 Higher op levels are required to run sensitive wrapper commands like `/perms`.
 
-####Plugins####
+#### Plugins ####
 
 Wrapper continues to be a work in progress and changes often happen faster than they
  get documented, but this should help give you an idea of the methods that can be used.
  below is a list of plugin events that can be registered in your plugins:
 
-[Original list of events](https://docs.google.com/spreadsheet/ccc?key=0AoWx24EFSt80dDRiSGVxcW1xQkVLb2dWTUN4WE5aNmc&usp=sharing)
+- The modern event list is updated with each build:
+    [Wrapper events](/documentation/events.rst)
 
-Here is an updated list of the events:
-[Wrapper events](https://docs.google.com/spreadsheets/d/1Sxli0mpN3Aib-aejjX7VRlcN2HZkak_wIqPFJ6mtVIk/edit?usp=sharing)
+- The original Event list (0.7.6):
+    [Old 0.7.6 Wrapper list of events](https://docs.google.com/spreadsheet/ccc?key=0AoWx24EFSt80dDRiSGVxcW1xQkVLb2dWTUN4WE5aNmc&usp=sharing)
 
 Check the 'example-plugins' and 'stable-plugins' folders to see some example plugins.  These are very useful for seeing how the API functions.
 
