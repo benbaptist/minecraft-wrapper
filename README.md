@@ -3,8 +3,8 @@
 Wrapper.py is an easy to use Minecraft server wrapper for adding extra functionality into the server without modifying 
 the server jar file.
 
-</br></br>It also comes with a relatively simple and straight-forward - yet powerful - plugin API that can be used
- to create Bukkit-like plugins with no server modding.  The API works best when operated in proxy mode. </br>
+It also comes with a relatively simple and straight-forward - yet powerful - plugin API that can be used
+ to create Bukkit-like plugins with no server modding.  The API works best when operated in proxy mode.
 
 
 We also have a gitter channel: [![Join the chat at https://gitter.im/benbaptist/minecraft-wrapper](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/benbaptist/minecraft-wrapper?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
