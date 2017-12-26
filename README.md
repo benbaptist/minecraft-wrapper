@@ -135,17 +135,16 @@ Wrapper also takes the following optional arguments:
                        passwords disabled.
 ```
 
-To start wrapper using your passphrase:
+To start wrapper using your passphrase:</br>
 `python Wrapper.py --passphrase "my special passphrase - keep this a secret!"`
 
-To disable password encryption with bcrypt, use "none" for the passphrase:
+To disable password encryption with bcrypt, use "none" for the passphrase:</br>
 `python Wrapper.py --passphrase none`
 
 If bcrypt and cryptography are not installed or the start up passphrase is
 disabled by specifying "none", Wrapper.py will handle all passwords in plain
 text and will not prompt the user for a password. Otherwise, if a passphrase
 is not supplied, Wrapper will prompt for one:
-
 ```
 please input a master passphrase for Wrapper.  This passphrase willbe used to encrypt
  all passwords in Wrapper.
