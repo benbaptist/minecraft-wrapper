@@ -79,6 +79,9 @@ pip install bcrypt
 pip install cryptography
 ```
 
+Please go to the bcrypt website on pypi for installation of bcrypt (depending on
+your system, additional dependencies may be required):
+[pypi.python.org](https://pypi.python.org/pypi/bcrypt/3.1.0)
 
 ### **Windows Download and setup**
 
