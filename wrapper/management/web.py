@@ -17,6 +17,7 @@ import logging
 from api.helpers import getargs, get_req
 from api.base import API
 from core.storage import Storage
+from utils.crypt import check_pw, make_hash
 
 try:
     import pkg_resources
@@ -38,6 +39,7 @@ class Web(object):
         self.log = logging.getLogger('Web')
         self.config = wrapper.config
         self.serverpath = self.config["General"]["server-directory"]
+        self.encoding = self.config["General"]["encoding"]
         self.socket = False
         self.data = Storage("web")
 
@@ -45,8 +47,9 @@ class Web(object):
             self.data.Data["keys"] = []
         # if not self.config["Web"]["web-password"] == None:
         #   self.log.info("Changing web-mode password because web-password was changed in wrapper.properties")
-        #  ***** change code to hashlib if this gets uncommented
-        #   self.data.Data["password"] = md5.md5(self.config["Web"]["web-password"]).hexdigest()
+        #  ***** NEW (pretty much correct) Pseudocode ****
+        # assuming that the goal is to use the wrapper.properties as an input source and store the hashed password in the web storage??
+        #    self.data.Data["password"] = make_hash(self.config["Web"]["web-password"], self.encoding)
         #   self.config["Web"]["web-password"] = None
         #   self.wrapper.configManager.save()
 
@@ -137,7 +140,9 @@ class Web(object):
     def checkLogin(self, password):
         if time.time() - self.disableLogins < 60:
             return False  # Threshold for logins
-        if password == self.wrapper.config["Web"]["web-password"]:
+        if check_pw(password,
+                    self.config["Web"]["web-password"],
+                    self.config["General"]["encoding"]):
             return True
         self.loginAttempts += 1
         if self.loginAttempts > 10 and time.time() - self.lastAttempt < 60:

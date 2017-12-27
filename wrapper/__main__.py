@@ -10,6 +10,7 @@ import sys
 from core.wrapper import Wrapper
 from api.helpers import getjsonfile
 from utils.log import configure_logger
+from utils.crypt import get_passphrase
 import argparse
 
 parser = argparse.ArgumentParser(
@@ -18,12 +19,21 @@ parser = argparse.ArgumentParser(
 
 parser.add_argument('--encoding', "-e", default='utf-8',
                     action='store_true', help=' Specify an encoding'
-                                              ' (other than utf-8')
+                                              ' (other than utf-8)')
 parser.add_argument('--betterconsole', "-b", default=False,
                     action='store_true', help='Use "better '
                     ' console" feature to anchor your imput at'
                     ' the bottom of the console (anti- scroll-away'
                     ' feature)')
+
+parser.add_argument('--passphrase', "-p", type=str, default="wrong",
+                    help='Passphrase used to encrypt sensitive information in '
+                         'Wrapper.  Please use as fairly long phrase '
+                         '(minimum is 8 characters).  If not specified, '
+                         'or incorrectly supplied, Wrapper will prompt '
+                         'for a new passphrase before starting! Use '
+                         '"--passphrase none" to start wrapper with '
+                         'passwords disabled.')
 
 args = parser.parse_args()
 
@@ -51,8 +61,17 @@ def main(wrapper_start_args):
 
     configure_logger(betterconsole=better_console)
 
+    # develop master passphrase for wrapper
+    secret_key = wrapper_start_args.passphrase
+    if len(secret_key) < 8 and secret_key != 'none':
+        secret_key = get_passphrase(
+            'please input a master passphrase for Wrapper.  This passphrase '
+            'will be used to encrypt sensitive information in Wrapper.\n>')
+    if secret_key == "none":
+        secret_key = False
+
     # __init__ wrapper and set up logging
-    wrapper = Wrapper()
+    wrapper = Wrapper(secret_key)
     log = wrapper.log
 
     # start first wrapper log entry

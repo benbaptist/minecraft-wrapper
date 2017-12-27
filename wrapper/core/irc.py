@@ -15,6 +15,7 @@ import core.buildinfo as version_info
 
 from api.helpers import getargs, getargsafter
 from api.base import API
+from utils.crypt import check_pw, make_hash, encrypt, decrypt
 
 # Py3-2
 import sys
@@ -42,6 +43,7 @@ class IRC(object):
         self.originalNickname = self.nickname[0:]
         self.nickAttempts = 0
         self.channels = self.config["IRC"]["channels"]
+        self.encoding = self.config["General"]["encoding"]
         self.log = log
         self.timeout = False
         self.ready = False
@@ -97,7 +99,12 @@ class IRC(object):
 
     def auth(self):
         if self.config["IRC"]["password"]:
-            self.send("PASS %s" % self.config["IRC"]["password"])
+            plain_password = decrypt(self.wrapper.passphrase, self.config["IRC"]["password"])
+            if plain_password:
+                self.send("PASS %s" % plain_password)
+            else:
+                # fall back if password did not decrypt successfully
+                self.send("PASS %s" % self.config["IRC"]["password"])
         self.send("NICK %s" % self.nickname)
         self.send("USER %s 0 * :%s" % (self.nickname, self.nickname))
 
@@ -365,9 +372,8 @@ class IRC(object):
                     self.send("PRIVMSG %s :%s" % (nick, string))
                 if self.config["IRC"]["control-irc-pass"] == "password":
                     msg("A new password is required in wrapper.properties. Please change it.")
-                    return
                 if "password" in self.config["IRC"]["control-irc-pass"]:
-                    msg("Please choose a password that doesn't contain the term 'password'.")
+                    msg("The password is not secure.  You must use the console to enter a password.")
                     return
                 if nick in self.authorized:
                     if int(time.time()) - self.authorized[nick] < 900:
@@ -492,7 +498,7 @@ class IRC(object):
                         del self.authorized[nick]
                 else:
                     if getargs(message.split(" "), 0) == 'auth':
-                        if getargs(message.split(" "), 1) == self.config["IRC"]["control-irc-pass"]:
+                        if check_pw(getargs(message.split(" "), 1), self.config["IRC"]["control-irc-pass"],self.encoding):
                             msg("Authorization success! You'll remain logged in for 15 minutes.")
                             self.authorized[nick] = int(time.time())
                         else:

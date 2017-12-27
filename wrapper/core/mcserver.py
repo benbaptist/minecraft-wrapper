@@ -731,6 +731,10 @@ class MCServer(object):
             if self.wrapper.proxymode:
                 buff = message
 
+        # read port of server and display proxy port, if applicable
+        if "Starting Minecraft server on" in buff:
+            self.vitals.server_port = get_int(buff.split(':')[-1:][0])
+
         # check for server console spam before printing to wrapper console
         server_spaming = False
         for things in self.vitals.spammy_stuff:
@@ -744,15 +748,14 @@ class MCServer(object):
             else:
                 self.queued_lines.append(buff)
 
-        # read port of server
-        if "Starting Minecraft server" in buff:
-            self.vitals.server_port = get_int(buff.split(':')[-1:][0])
-
+        # be careful about how these elif's are handled!
         # confirm server start
-        elif "Done (" in buff:
+        if "Done (" in buff:
             self._toggle_server_started()
             self.changestate(STARTED)
             self.log.info("Server started")
+            if self.wrapper.proxymode:
+                self.log.info("Proxy listening on *:%s", self.wrapper.proxy.proxy_port)
             self.bootTime = time.time()
 
         # Getting world name
@@ -773,23 +776,23 @@ class MCServer(object):
             })
             """ eventdoc
                 <group> core/mcserver.py <group>
-    
+
                 <description> Player chat scrubbed from the console.
                 <description>
-    
+
                 <abortable> 
                 <abortable>
-    
+
                 <comments>
                 This event is triggered by console chat which has already been sent.
                 <comments>
-    
+
                 <payload>
                 "player": playerobject
                 "message": <str> type - what the player said in chat. ('hello everyone')
                 "original": The original line of text from the console ('<mcplayer> hello everyone`)
                 <payload>
-    
+
             """
         # Player Login
         elif getargs(line_words, 1) == "logged":

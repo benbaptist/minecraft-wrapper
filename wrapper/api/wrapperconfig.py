@@ -70,6 +70,26 @@ CONFIG = {
 
     },
 
+    "Alerts":
+
+        {
+
+        # if using gmail, remember to "allow less secure apps” on your account..
+
+            "enabled": False,
+
+            "send-method": "email",
+
+            "server-addr": "smtp.gmail.com",
+
+            "server-port": 587,
+
+            "login-name": "sphincter@gmail.com",
+
+            "password": "Don't you DARE enter your password here! use wrapper to encryt it!"
+
+        },
+
     "Gameplay":
 
         {
@@ -191,6 +211,10 @@ CONFIG = {
             "shell-scripts": False,
 
             "timed-reboot": False,
+
+         # salt is used internally for wrapper encryption.  Do not edit this; Wrapper will create the salt.  It does not matter much that it is on disk here, as the user must create a passphrase also.  This just prevents the need for a hardcoded salt and ensures each wrapper installation will use a different one.
+
+            "salt": False,
 
          # Deprecated for consistency with timed reboot warning 'minutes'
 

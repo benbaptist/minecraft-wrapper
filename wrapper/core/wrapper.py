@@ -15,6 +15,7 @@ import threading
 import time
 import os
 import logging
+# import smtplib
 import sys  # used to pass sys.argv to server
 
 # non standard library imports
@@ -32,6 +33,8 @@ except ImportError:
 # noinspection PyProtectedMember
 from api.helpers import format_bytes, getargs, getargsafter, readout, get_int
 from utils import readkey
+from utils.crypt import phrase_to_url_safebytes, gensalt
+# from utils.crypt import encrypt, decrypt, make_hash, check_pw
 
 # core items
 from core.mcserver import MCServer
@@ -91,7 +94,7 @@ CLEAR_LINE = ESC + '\x5b\x31\x4b'
 
 
 class Wrapper(object):
-    def __init__(self):
+    def __init__(self, secret_passphrase):
         # setup log and config
         # needs a false setting on first in case config does not
         # load (like after changes).
@@ -99,7 +102,6 @@ class Wrapper(object):
         self.log = logging.getLogger('Wrapper.py')
         self.configManager = Config()
         self.configManager.loadconfig()
-        # set up config
         self.config = self.configManager.config
 
         # Read Config items
@@ -111,7 +113,18 @@ class Wrapper(object):
         self.proxymode = self.config["Proxy"]["proxy-enabled"]
         self.wrapper_onlinemode = self.config["Proxy"]["online-mode"]
 
-        # make a patch
+        # encryption items (for passwords and sensitive user data)
+        self.salt = self.config["General"]["salt"]
+        if not self.salt:
+            self.salt = gensalt(self.encoding)
+            self.configManager.config["General"]["salt"] = self.salt
+            print(self.salt)
+            self.configManager.save()
+        # this is provided at startup by the wrapper operator or script (not stored)
+        # pass phrase must be 32 URL-safe Base64 encoded bytes for the Fernet cipher
+        self.passphrase = phrase_to_url_safebytes(secret_passphrase, self.encoding, self.salt)
+
+        # Patch any old update paths
         # old paths were:
         # "dev-branch": "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/build/version.json"
         # new paths are:
@@ -121,7 +134,8 @@ class Wrapper(object):
                 oldentry = copy.copy(self.configManager.config["Updates"][entries])
                 self.configManager.config["Updates"][entries] = oldentry.split("/build/version.json")[0]
                 self.configManager.save()
-        # rebuild config
+
+        # reload config
         self.config = self.configManager.config
         self.auto_update_wrapper = self.config["Updates"]["auto-update-wrapper"]
         self.auto_update_branch = self.config["Updates"]["auto-update-branch"]
@@ -739,6 +753,11 @@ class Wrapper(object):
                 readout("failed to load plugin", plugin, pad=25,
                         usereadline=self.use_readline)
 
+    def _start_emailer(self):
+        alerts = self.config["Alerts"]["enabled"]
+        if alerts:
+            self.config["Alerts"] = "alerts true"
+
     def _startproxy(self):
 
         # error will raise if requests or cryptography is missing.
@@ -757,6 +776,7 @@ class Wrapper(object):
                     " minutes.  Disabling proxy mode because something is"
                     " wrong.")
                 self.disable_proxymode()
+                return
 
         if self.proxy.proxy_port == self.servervitals.server_port:
             self.log.warning("Proxy mode cannot start because the wrapper"
@@ -784,7 +804,7 @@ class Wrapper(object):
                 core_buildinfo_version.__build__)
 
         elif core_buildinfo_version.__branch__ == "stable":
-            return "%s (stable)" % core_buildinfo_version.__build__
+            return "%s (stable)" % core_buildinfo_version.__version__
         else:
             return "Version: %s (%s build #%d)" % (
                 core_buildinfo_version.__version__,
@@ -844,9 +864,7 @@ class Wrapper(object):
                     reponame = data["__branch__"]
                 if "__version__" not in data:
                     data["__version__"] = data["version"]
-                return data["__version__"], \
-                       data["__build__"], \
-                       data["__branch__"], reponame
+                return data["__version__"], data["__build__"], data["__branch__"], reponame
 
         else:
             self.log.warning(

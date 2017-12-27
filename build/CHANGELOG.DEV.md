@@ -2,8 +2,23 @@ Build 247 (next build)
 - player to player TP - Add inter-dimensional TP (1.8+) api
   Community Input enhancement proxy mode
 
-Build 247
-
+Build 245 (non-build commit)
+- fix error in core/wrapper.py that causes spamming of "Disabling proxy
+ mode because ..." to the console.
+- added text to the vanilla message to tell console user not only the
+ port of the minecraft server, but the proxy too (if proxy is enabled).
+- added module `wrapper/utils/crypt.py` with full featured password encryption schemas:
+    - `make_hash(password_string, encoding='utf-8')` - hash a password
+    - `check_pw(password_string, hashed_pw_str, encoding='utf-8')` check password against hash
+    - `phrase_to_url_safebytes(pass_phrase)` - create bytes for Fernet encryption from wrapper pass phrase
+    - `encrypt(passphrase, data)` - do a Fernet encrypt of data from bytes pass phrase
+    - `decrypt(passphrase, encrypted_str_data)` - Fernet decryption of data
+- implement a wrapper password to be used internally by wrapper to
+ store sensitive data (email passwords) that wrapper's features may use.
+- implement encryption hashing of other stored passwords to disk
+ (web, IRC, so forth.. ).
+- corrected Web/dashboard and IRC password references to use hashed
+ passwords.
 
 Build 245 [0.14.1] - Master branch update
 - fix spigot login position (due to spigot pre-pending the world name to
