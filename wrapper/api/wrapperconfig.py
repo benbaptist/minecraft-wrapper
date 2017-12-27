@@ -78,10 +78,6 @@ CONFIG = {
 
             "enabled": False,
 
-            "monitor-server": False,
-
-            "monitor-proxy": False,
-
             "send-method": "email",
 
             "server-addr": "smtp.gmail.com",
@@ -216,7 +212,7 @@ CONFIG = {
 
             "timed-reboot": False,
 
-         # salt is used internally for wrapper encryption.  Do not edit this; Wrapper will create the salt.  It does not matter much that it is on disk here, as the user must create a passphrase also.  This just prevents a hardcoded salt and makes each wrapper instance use a differnet one.
+         # salt is used internally for wrapper encryption.  Do not edit this; Wrapper will create the salt.  It does not matter much that it is on disk here, as the user must create a passphrase also.  This just prevents the need for a hardcoded salt and ensures each wrapper installation will use a different one.
 
             "salt": False,
 

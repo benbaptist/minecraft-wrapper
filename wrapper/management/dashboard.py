@@ -12,6 +12,7 @@ import datetime
 import logging
 
 from core.storage import Storage
+from utils.crypt import check_pw
 
 try:
     from flask import Flask
@@ -31,6 +32,7 @@ class Web(object):
         self.wrapper = wrapper
         self.config = wrapper.config  # Remember if you need to save use 'wrapper.configManager.save()' not config.save
         self.log = logging.getLogger('Web')
+        self.encoding = self.config["General"]["encoding"]
 
         if not Flask:
             self.config["Web"]["web-enabled"] = False
@@ -72,7 +74,7 @@ class Web(object):
     def checkLogin(self, password):
         if time.time() - self.disableLogins < 60:
             return False  # Threshold for logins
-        if password == self.config["Web"]["web-password"]:
+        if check_pw(password, self.config["Web"]["web-password"], self.encoding):
             return True
         self.loginAttempts += 1
         if self.loginAttempts > 10 and time.time() - self.lastAttempt < 60:

@@ -17,6 +17,8 @@ Build 245 (non-build commit)
  store sensitive data (email passwords) that wrapper's features may use.
 - implement encryption hashing of other stored passwords to disk
  (web, IRC, so forth.. ).
+- corrected Web/dashboard and IRC password references to use hashed
+ passwords.
 
 Build 245 [0.14.1] - Master branch update
 - fix spigot login position (due to spigot pre-pending the world name to

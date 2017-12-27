@@ -96,10 +96,7 @@ def check_pw(password_string, hashed_pw_str, encoding='utf-8'):
             return False
     password_bytes = _bytes_(password_string, encoding)
     hashed_pw = _bytes_(hashed_pw_str, encoding)
-    if bcrypt.checkpw(password_bytes, hashed_pw):
-        return True
-    else:
-        return False
+    return bcrypt.checkpw(password_bytes, hashed_pw)
 
 
 def make_hash(password_string, encoding='utf-8'):
