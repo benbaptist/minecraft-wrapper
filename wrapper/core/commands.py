@@ -13,6 +13,7 @@ from api.helpers import format_bytes, getargs, getargsafter, readout
 from api.helpers import get_int, set_item, putjsonfile
 # noinspection PyProtectedMember
 from api.helpers import _secondstohuman, _showpage
+from utils.crypt import encrypt, get_passphrase, make_hash
 
 
 # noinspection PyBroadException
@@ -22,6 +23,7 @@ class Commands(object):
         self.wrapper = wrapper
         self.log = wrapper.log
         self.config = wrapper.config
+        self.config_manager = wrapper.configManager
         self.perms = wrapper.perms
 
         self.commands = {}
@@ -115,6 +117,10 @@ class Commands(object):
 
         elif command == "pardon-ip":
             self.command_pardonip(player, payload)
+            return True
+
+        elif command == "password":
+            self.command_password(player, payload)
             return True
 
         # This section calls the commands defined by api.registerCommand()
@@ -312,7 +318,7 @@ class Commands(object):
         return returnmessage
 
     def command_entities(self, player, payload):
-        if not player.isOp() > 2:
+        if not self._superop(player, 5):
             player.message("&cPermission Denied")
             return False
 
@@ -598,10 +604,54 @@ class Commands(object):
             _showpage(player, page, items, "help", 8, command_prefix=self.wrapper.servervitals.command_prefix)
         return False
 
+    def command_password(self, player, payload):
+        if not player.isOp() > 4:
+            player.message("&cPermission Denied")
+            return
+        command = getargs(payload["args"], 0)
+        if command in ("help", "h", "info", "about"):
+            player.message("&2Usage: /password [-s] <group> <item> <data>")
+            player.message(
+                "&2 -s =  data is saved with encryption (for third party passwords")
+            player.message(
+                "&2       wrapper might use on your behalf (i.e. an email logon)")
+            player.message("&2 in console, use 'prompt' for <data> to be invisibly")
+            player.message("&2  prompted if there is an 'over the shoulder' concern.")
+            player.message("&2 Sample usage to change IRC remote control password:")
+            player.message("&2  /password IRC control-irc-pass NEWsuckypassword")
+            return
+        idx = 0
+        save_hash = True
+        flag = getargs(payload["args"], 0)
+        if flag == "-s":
+            idx = 1
+            save_hash = False
+        group = getargs(payload["args"], 0 + idx)
+        setting = getargs(payload["args"], 1 + idx)
+        data = getargsafter(payload["args"], 2 + idx)
+        if data == "prompt":
+            data = get_passphrase("Please enter data to be hashed/stored")
+        if group not in self.config:
+            player.message(
+                "&c wrapper.properties has no such group '%s'" % group)
+            return
+        if setting not in self.config[group]:
+            player.message(
+                "&c There is no item '%s' in group '%s'" % (setting, group))
+            return
+        if save_hash:
+            final_data = make_hash(data, self.wrapper.encoding)
+            player.message("&2 data hashed!")
+        else:
+            final_data = encrypt(self.wrapper.passphrase, data, self.wrapper.encoding)
+            player.message("&2 data encrypted!")
+        self.config_manager.config[group][setting] = final_data
+        self.config_manager.save()
+
     def command_playerstats(self, player, payload):
         if not player.isOp() > 3:
             player.message("&cPermission Denied")
-            return False
+            return
 
         subcommand = getargs(payload["args"], 0)
         totalplaytime = {}
@@ -638,8 +688,8 @@ class Commands(object):
         return
 
     def command_deop(self, player, payload):
-        if player is None:
-            player = self.wrapper.xplayer
+        # if player is None:
+        #    player = self.wrapper.xplayer
         if not self._superop(player, 9):
             return False
         operator_name = getargs(payload["args"], 0)
@@ -665,8 +715,9 @@ class Commands(object):
             return "deop requires a running server instance"
 
     def command_op(self, player, payload):
-        if player is None:
-            player = self.wrapper.xplayer
+        # if player is None:  This is a security vulnerability.  console is
+        # already set to an xplayer
+        #    player = self.wrapper.xplayer
         if not self._superop(player, 9):
             return False
 

@@ -86,7 +86,7 @@ CONFIG = {
 
             "login-name": "sphincter@gmail.com",
 
-            "password": "Don't you DARE enter your password here! use wrapper to encryt it!"
+            "password": "use `/password -s Alerts password <your password>` to set this"
 
         },
 
@@ -264,7 +264,7 @@ CONFIG = {
 
             "control-from-irc": False,
 
-            "control-irc-pass": "password",
+            "control-irc-pass": "from console use `/password Web web-password <your password>`",
 
             "irc-enabled": False,
 
@@ -352,7 +352,7 @@ CONFIG = {
 
                 "web-enabled": False,
 
-                "web-password": "password",
+                "web-password": "from console use `/password Web web-password <your password>`",
 
                 "web-port": 8070,
 

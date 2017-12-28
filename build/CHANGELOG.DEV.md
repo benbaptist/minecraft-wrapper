@@ -2,7 +2,7 @@ Build 247 (next build)
 - player to player TP - Add inter-dimensional TP (1.8+) api
   Community Input enhancement proxy mode
 
-Build 245 (non-build commit)
+Build 246 [0.14.1] Dev
 - fix error in core/wrapper.py that causes spamming of "Disabling proxy
  mode because ..." to the console.
 - added text to the vanilla message to tell console user not only the
@@ -19,6 +19,9 @@ Build 245 (non-build commit)
  (web, IRC, so forth.. ).
 - corrected Web/dashboard and IRC password references to use hashed
  passwords.
+- Added /password command to wrapper to allow setting of encrypted
+ passwords in the wrapper.config.json file.
+** important note ** I may consider uniting make_hash/encrypt so that a single schema is used in the next build
 
 Build 245 [0.14.1] - Master branch update
 - fix spigot login position (due to spigot pre-pending the world name to

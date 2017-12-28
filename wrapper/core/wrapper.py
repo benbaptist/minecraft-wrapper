@@ -34,7 +34,6 @@ except ImportError:
 from api.helpers import format_bytes, getargs, getargsafter, readout, get_int
 from utils import readkey
 from utils.crypt import phrase_to_url_safebytes, gensalt
-# from utils.crypt import encrypt, decrypt, make_hash, check_pw
 
 # core items
 from core.mcserver import MCServer
@@ -625,6 +624,9 @@ class Wrapper(object):
             elif command in ("deop", "/deop"):
                 self.runwrapperconsolecommand("deop", allargs)
 
+            elif command in ("pass", "/pass", "pw", "/pw", "password", "/password"):
+                self.runwrapperconsolecommand("password", allargs)
+
             # TODO Add more commands below here, below the original items:
             # TODO __________________
 
@@ -685,6 +687,8 @@ class Wrapper(object):
                  "/entity help/? for more help.. ", None),
                 ("/config", "Change wrapper.properties (type"
                             " /config help for more..)", None),
+                ("/password", "Sample usage: /pw IRC control-irc-pass <new"
+                              "password>", None),
 
                 # Minimum server version for commands to appear is
                 # 1.7.6 (registers perm later in serverconnection.py)
@@ -1063,6 +1067,9 @@ class Wrapper(object):
                 "Send command to the Minecraft"
                 " Server. Useful for Forge\n"
                 "                  commands like '/fml confirm'.",
+                usereadline=self.use_readline)
+        readout("/password",
+                "run `/password help` for more...)",
                 usereadline=self.use_readline)
         readout("/perms", "/perms for more...)",
                 usereadline=self.use_readline)
