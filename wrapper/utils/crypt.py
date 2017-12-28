@@ -180,7 +180,7 @@ def get_passphrase(text_prompt, attempts=3):
         if len(_secret_key) > 7:
             return _secret_key
         tries += 1
-        print("You have %s tries left\n" % (attempts - tries))
+        print("Mimimum length is 8 characters; You have %s tries left\n" % (attempts - tries))
     return False
 
 

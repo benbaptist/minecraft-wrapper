@@ -227,6 +227,9 @@ Download the Wrapper.py file and place it in the desired folder.
 - Type /help to see a list of Wrapper.py commands.<br>
 - To completely shutdown the wrapper, type /halt.</br>
 
+- To enter passwords into the wrapper.properties.config file, use the `/password` console command to enter the applicable password:
+    `/password Web web-password <new password>`
+
 Please read our [wiki](https://github.com/benbaptist/minecraft-wrapper/wiki) for additional information and review the issues page before submitting bug reports.<br>
 If you run into any bugs, please _do_ report them!
 
