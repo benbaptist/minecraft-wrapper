@@ -147,7 +147,7 @@ class Wrapper(object):
 
         self.use_timer_tick_event = self.config[
             "Gameplay"]["use-timer-tick-event"]
-        self.use_readline = self.config["Misc"]["use-readline"]
+        self.use_readline = not(self.config["Misc"]["use-betterconsole"])
 
         # Storages
         self.wrapper_storage = Storage("wrapper", encoding=self.encoding)
