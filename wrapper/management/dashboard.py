@@ -12,14 +12,11 @@ import datetime
 import logging
 
 from core.storage import Storage
-from utils.crypt import check_pw
 
 try:
     from flask import Flask
-    from flask_socketio import SocketIO
 except ImportError:
     Flask = False
-    flask_socketio = False
 
 if Flask:
     from flask import g, redirect, url_for, render_template, request, make_response, Response, Markup
@@ -32,7 +29,7 @@ class Web(object):
         self.wrapper = wrapper
         self.config = wrapper.config  # Remember if you need to save use 'wrapper.configManager.save()' not config.save
         self.log = logging.getLogger('Web')
-        self.encoding = self.config["General"]["encoding"]
+        self.check_password = self.wrapper.cipher.check_pw()
 
         if not Flask:
             self.config["Web"]["web-enabled"] = False
@@ -74,7 +71,7 @@ class Web(object):
     def checkLogin(self, password):
         if time.time() - self.disableLogins < 60:
             return False  # Threshold for logins
-        if check_pw(password, self.config["Web"]["web-password"], self.encoding):
+        if self.check_password(password, self.config["Web"]["web-password"]):
             return True
         self.loginAttempts += 1
         if self.loginAttempts > 10 and time.time() - self.lastAttempt < 60:

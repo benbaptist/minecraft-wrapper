@@ -1,6 +1,24 @@
-Build 247 (next build)
+Build 248 (next build)
 - player to player TP - Add inter-dimensional TP (1.8+) api
   Community Input enhancement proxy mode
+
+Build 247 [0.14.2] Dev
+- For consistency and eliminate confusion, all wrapper internal
+ encryption uses `cryptography` package even for regular hashing
+ and password checking.
+- retained bcrypt package as on option, but it will likely only ever
+ be a part of the plugin API.
+- added plugin API (base.py) password handler functions:
+  ```
+      def hash_password(self, password):
+         """ Bcrypt-based password encryption.  Takes a raw string password
+         returns a string representation of the binary hash."""
+
+      def check_password(self, password, hashed_password):
+         """ Bcrypt-based password checker.  Takes a raw string password and
+         compares it to the hash of a previously hashed password, returning
+         True if the passwords match, or False if not.
+  ```
 
 Build 246 [0.14.1] Dev
 - fix error in core/wrapper.py that causes spamming of "Disabling proxy

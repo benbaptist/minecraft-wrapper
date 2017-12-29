@@ -537,3 +537,42 @@ class API(object):
 
         """
         return self.wrapper.perms.clear_user_data()
+
+    def hash_password(self, password):
+        """ Bcrypt-based password encryption.  Takes a raw string password
+        returns a string representation of the binary hash.
+
+        Bcrypt functions are to be used where ever you are storing a user's
+        password, but do not ever want to be able to "know" their password
+        directly.  We only need to know if the password they supplied is
+        correct or not.
+
+        :Args:
+            :password: The raw string password to be encrypted.
+
+        :returns: a string representation of the encrypted data.  Returns
+         False if bcrypt is not installed on the system.
+
+        """
+
+        return self.wrapper.cipher.bcrypt_make_hash(password)
+
+    def check_password(self, password, hashed_password):
+        """ Bcrypt-based password checker.  Takes a raw string password and
+        compares it to the hash of a previously hashed password, returning True
+        if the passwords match, or False if not.
+
+        Bcrypt functions are to be used where ever you are storing a user's
+        password, but do not ever want to be able to "know" their password
+        directly.  We only need to know if the password they supplied is
+        correct or not.
+
+        :Args:
+            :password: The raw string password to be checked.
+            :hashed_password: a previously stored hash.
+
+        :returns: Boolean result of the comparison.  Returns
+         False if bcrypt is not installed on the system.
+        """
+
+        return self.wrapper.cipher.bcrypt_check_pw(password, hashed_password)

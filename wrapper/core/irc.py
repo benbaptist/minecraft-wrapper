@@ -15,7 +15,6 @@ import core.buildinfo as version_info
 
 from api.helpers import getargs, getargsafter
 from api.base import API
-from utils.crypt import check_pw, make_hash, encrypt, decrypt
 
 # Py3-2
 import sys
@@ -37,6 +36,7 @@ class IRC(object):
         self.config = wrapper.config
         self.configmgr = wrapper.configManager
         self.wrapper = wrapper
+        self.pass_handler = self.wrapper.cipher
         self.address = self.config["IRC"]["server"]
         self.port = self.config["IRC"]["port"]
         self.nickname = self.config["IRC"]["nick"]
@@ -99,7 +99,7 @@ class IRC(object):
 
     def auth(self):
         if self.config["IRC"]["password"]:
-            plain_password = decrypt(self.wrapper.passphrase, self.config["IRC"]["password"])
+            plain_password = pass_handler.decrypt(self.wrapper.passphrase, self.config["IRC"]["password"])
             if plain_password:
                 self.send("PASS %s" % plain_password)
             else:
@@ -498,7 +498,7 @@ class IRC(object):
                         del self.authorized[nick]
                 else:
                     if getargs(message.split(" "), 0) == 'auth':
-                        if check_pw(getargs(message.split(" "), 1), self.config["IRC"]["control-irc-pass"],self.encoding):
+                        if pass_handler.check_pw(getargs(message.split(" "), 1), self.config["IRC"]["control-irc-pass"]):
                             msg("Authorization success! You'll remain logged in for 15 minutes.")
                             self.authorized[nick] = int(time.time())
                         else:

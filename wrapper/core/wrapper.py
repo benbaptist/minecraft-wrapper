@@ -49,6 +49,8 @@ from core.config import Config
 from core.backups import Backups
 from core.consoleuser import ConsolePlayer
 from core.permissions import Permissions
+from utils.crypt import Crypt
+
 # optional API type stuff
 from proxy.base import Proxy, ProxyConfig, HaltSig, ServerVitals
 from api.base import API
@@ -113,15 +115,15 @@ class Wrapper(object):
         self.wrapper_onlinemode = self.config["Proxy"]["online-mode"]
 
         # encryption items (for passwords and sensitive user data)
-        self.salt = self.config["General"]["salt"]
-        if not self.salt:
-            self.salt = gensalt(self.encoding)
-            self.configManager.config["General"]["salt"] = self.salt
-            print(self.salt)
+        # salt is generated and stored in wrapper.properties.json
+        salt = self.config["General"]["salt"]
+        if not salt:
+            salt = gensalt(self.encoding)
+            self.configManager.config["General"]["salt"] = salt
             self.configManager.save()
-        # this is provided at startup by the wrapper operator or script (not stored)
-        # pass phrase must be 32 URL-safe Base64 encoded bytes for the Fernet cipher
-        self.passphrase = phrase_to_url_safebytes(secret_passphrase, self.encoding, self.salt)
+        # passphrase is provided at startup by the wrapper operator or script (not stored)
+        passphrase = phrase_to_url_safebytes(secret_passphrase, self.encoding, salt)
+        self.cipher = Crypt(passphrase, self.encoding)
 
         # Patch any old update paths
         # old paths were:
