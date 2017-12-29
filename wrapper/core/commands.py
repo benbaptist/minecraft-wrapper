@@ -13,7 +13,7 @@ from api.helpers import format_bytes, getargs, getargsafter, readout
 from api.helpers import get_int, set_item, putjsonfile
 # noinspection PyProtectedMember
 from api.helpers import _secondstohuman, _showpage
-from utils.crypt import encrypt, get_passphrase, make_hash
+from utils.crypt import get_passphrase
 
 
 # noinspection PyBroadException
@@ -25,7 +25,7 @@ class Commands(object):
         self.config = wrapper.config
         self.config_manager = wrapper.configManager
         self.perms = wrapper.perms
-
+        self.cipher = self.wrapper.cipher
         self.commands = {}
         self.reset_confirmed = False
         self.reset_timeout = time.time()
@@ -609,42 +609,37 @@ class Commands(object):
             player.message("&cPermission Denied")
             return
         command = getargs(payload["args"], 0)
+
+        def showhelp():
+            player.message("&2Usage: /password <group> <item> <data>")
+            player.message(
+                "&2 in console, use 'prompt' for <data> to be invisibly")
+            player.message(
+                "&2  prompted if there is an 'over the shoulder' concern.")
+            player.message(
+                "&2 Sample usage to change IRC remote control password:")
+            player.message(
+                "&2  /password IRC control-irc-pass NEWsuckypassword")
+
         if command in ("help", "h", "info", "about"):
-            player.message("&2Usage: /password [-s] <group> <item> <data>")
-            player.message(
-                "&2 -s =  data is saved with encryption (for third party passwords")
-            player.message(
-                "&2       wrapper might use on your behalf (i.e. an email logon)")
-            player.message("&2 in console, use 'prompt' for <data> to be invisibly")
-            player.message("&2  prompted if there is an 'over the shoulder' concern.")
-            player.message("&2 Sample usage to change IRC remote control password:")
-            player.message("&2  /password IRC control-irc-pass NEWsuckypassword")
+            showhelp()
             return
-        idx = 0
-        save_hash = True
-        flag = getargs(payload["args"], 0)
-        if flag == "-s":
-            idx = 1
-            save_hash = False
-        group = getargs(payload["args"], 0 + idx)
-        setting = getargs(payload["args"], 1 + idx)
-        data = getargsafter(payload["args"], 2 + idx)
+        group = getargs(payload["args"], 0)
+        setting = getargs(payload["args"], 1)
+        data = getargsafter(payload["args"], 2)
         if data == "prompt":
             data = get_passphrase("Please enter data to be hashed/stored")
         if group not in self.config:
             player.message(
                 "&c wrapper.properties has no such group '%s'" % group)
+            showhelp()
             return
         if setting not in self.config[group]:
             player.message(
                 "&c There is no item '%s' in group '%s'" % (setting, group))
             return
-        if save_hash:
-            final_data = make_hash(data, self.wrapper.encoding)
-            player.message("&2 data hashed!")
-        else:
-            final_data = encrypt(self.wrapper.passphrase, data, self.wrapper.encoding)
-            player.message("&2 data encrypted!")
+        final_data = self.cipher.encrypt(data)
+        player.message("&2 data encrypted!")
         self.config_manager.config[group][setting] = final_data
         self.config_manager.save()
 

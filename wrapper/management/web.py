@@ -17,7 +17,6 @@ import logging
 from api.helpers import getargs, get_req
 from api.base import API
 from core.storage import Storage
-from utils.crypt import check_pw, make_hash
 
 try:
     import pkg_resources
@@ -39,17 +38,16 @@ class Web(object):
         self.log = logging.getLogger('Web')
         self.config = wrapper.config
         self.serverpath = self.config["General"]["server-directory"]
-        self.encoding = self.config["General"]["encoding"]
         self.socket = False
         self.data = Storage("web")
+        self.pass_handler = self.wrapper.cipher
 
         if "keys" not in self.data.Data:
             self.data.Data["keys"] = []
         # if not self.config["Web"]["web-password"] == None:
         #   self.log.info("Changing web-mode password because web-password was changed in wrapper.properties")
         #  ***** NEW (pretty much correct) Pseudocode ****
-        # assuming that the goal is to use the wrapper.properties as an input source and store the hashed password in the web storage??
-        #    self.data.Data["password"] = make_hash(self.config["Web"]["web-password"], self.encoding)
+        #   self.data.Data["password"] = self.pass_handler.encrypt(self.config["Web"]["web-password"])
         #   self.config["Web"]["web-password"] = None
         #   self.wrapper.configManager.save()
 
@@ -140,9 +138,7 @@ class Web(object):
     def checkLogin(self, password):
         if time.time() - self.disableLogins < 60:
             return False  # Threshold for logins
-        if check_pw(password,
-                    self.config["Web"]["web-password"],
-                    self.config["General"]["encoding"]):
+        if self.pass_handler.check_pw(password, self.config["Web"]["web-password"]):
             return True
         self.loginAttempts += 1
         if self.loginAttempts > 10 and time.time() - self.lastAttempt < 60:
@@ -607,7 +603,7 @@ class WebClient(object):
             self.write("<h1>BAD REQUEST</h1>")
             self.close()
             return False
-        #try:
+        # try:
         print("\n\nworkfile: %s\n\n" % workfile)
         if workfile == "/admin":
             workfile = "admin.html"
@@ -617,9 +613,9 @@ class WebClient(object):
         data = self.read(workfile)
         self.headers(contenttype=self.getcontenttype(workfile))
         self.write(data)
-        #except Exception as e:
-            #self.headers(status="404 Not Found (exception in get)")
-            #self.write("<h1>404 Not Found (exception in get)</h4>")
+        # except Exception as e:
+        #    self.headers(status="404 Not Found (exception in get)")
+        #    self.write("<h1>404 Not Found (exception in get)</h4>")
         self.close()
 
     def handle(self):
