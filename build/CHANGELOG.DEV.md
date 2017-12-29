@@ -2,7 +2,7 @@ Build 248 (next build)
 - player to player TP - Add inter-dimensional TP (1.8+) api
   Community Input enhancement proxy mode
 
-Build 246 [0.14.1] redacted update
+Build 247 [0.14.2] dev
 - For consistency and eliminate confusion, all wrapper internal
  encryption uses `cryptography` package even for regular hashing
  and password checking.

@@ -48,16 +48,16 @@ if PY3:
 
 
 def main(wrapper_start_args):
-    # same as 'use-readline = True'
+    # same as old 'use-readline = True'
     better_console = wrapper_start_args.betterconsole
     encoding = wrapper_start_args.encoding
 
     config = getjsonfile("wrapper.properties", ".", encodedas=encoding)
 
     if config and "Misc" in config:
-        if "use-readline" in config["Misc"]:
+        if "use-betterconsole" in config["Misc"]:
             # use readline = not using better_console
-            better_console = not(config["Misc"]["use-readline"])
+            better_console = (config["Misc"]["use-betterconsole"])
 
     configure_logger(betterconsole=better_console)
 
