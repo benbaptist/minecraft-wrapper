@@ -113,6 +113,7 @@ class Wrapper(object):
         self.serverpath = self.config["General"]["server-directory"]
         self.proxymode = self.config["Proxy"]["proxy-enabled"]
         self.wrapper_onlinemode = self.config["Proxy"]["online-mode"]
+        self.halt_message = self.config["Misc"]["halt-message"]
 
         # encryption items (for passwords and sensitive user data)
         # salt is generated and stored in wrapper.properties.json
@@ -363,7 +364,7 @@ class Wrapper(object):
         self._halt()
 
     def _halt(self):
-        self.javaserver.stop("Halting server...", restart_the_server=False)
+        self.javaserver.stop(self.halt_message, restart_the_server=False)
         self.halt.halt = True
 
     def shutdown(self):
@@ -565,14 +566,14 @@ class Wrapper(object):
             if command in ("/halt", "halt"):
                 self._halt()
             elif command in ("/stop", "stop"):
-                self.javaserver.stop_server_command("Stopping server...")
+                self.javaserver.stop_server_command()
             # "kill" (with no slash) is a server command.
             elif command == "/kill":
                 self.javaserver.kill("Server killed at Console...")
             elif command in ("/start", "start"):
                 self.javaserver.start()
             elif command in ("/restart", "restart"):
-                self.javaserver.restart("Server restarting, be right back!")
+                self.javaserver.restart()
             elif command in ("/update-wrapper", "update-wrapper"):
                 self._checkforupdate(True)
             # "plugins" command (with no slash) reserved for server commands

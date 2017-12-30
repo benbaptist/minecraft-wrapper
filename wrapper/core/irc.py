@@ -410,16 +410,16 @@ class IRC(object):
                                 command = " ".join(message.split(' ')[1:])
                                 self.javaserver.console(command)
                         elif getargs(message.split(" "), 0) == 'halt':
-                            self.wrapper.halt.halt = True
-                            self.javaserver.console("stop")
-                            self.javaserver.changestate(3)
+                            msg("Halting wrapper... Bye.")
+                            self.wrapper._halt()
                         elif getargs(message.split(" "), 0) == 'restart':
-                            self.javaserver.restart("Restarting server from IRC remote")
-                            self.javaserver.changestate(3)
+                            msg("restarting from IRC remote")
+                            self.log.info("Restarting server from IRC remote")
+                            self.javaserver.restart()
                         elif getargs(message.split(" "), 0) == 'stop':
-                            self.javaserver.console('stop')
-                            self.javaserver.stop_server_command("Stopped from IRC remote")
-                            msg("Server stopping")
+                            msg("Stopping from IRC remote")
+                            self.log.info("Stopped from IRC remote")
+                            self.javaserver.stop_server_command()
                         elif getargs(message.split(" "), 0) == 'start':
                             self.javaserver.start()
                             msg("Server starting")

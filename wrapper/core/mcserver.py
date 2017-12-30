@@ -23,6 +23,7 @@ import json
 import ctypes
 import platform
 import base64
+import copy
 
 try:
     import resource
@@ -259,11 +260,12 @@ class MCServer(object):
 
     def kick_players(self, reasontext):
         if self.wrapper.proxymode:
-            for player in self.wrapper.players:
-                print("DISCONNECTING", player, reasontext)
+            playerlist = copy.copy(self.vitals.players)
+            for player in playerlist:
+                playerclient = playerlist[player].getClient()
+                playerclient.disconnect(reasontext)
         else:
             for player in self.wrapper.players:
-                print("KICKING", player, reasontext)
                 self.console("kick %s %s" % (player, reasontext))
 
     def stop(self, reason="", restart_the_server=True):
@@ -271,11 +273,10 @@ class MCServer(object):
         it to restart by default.
         """
         self.log.info("Stopping Minecraft server with reason: %s", reason)
+
+        self.kick_players(reason)
+
         self.changestate(STOPPING, reason)
-        for player in self.wrapper.players:
-            print("KICKING", player, reason)
-            self.console("kick %s %s" % (player, reason))
-            time.sleep(1)
         self.console("stop")
 
         # False will allow this loop to run with no server (and
@@ -925,13 +926,14 @@ class MCServer(object):
                 if timer > 0:
                     continue
                 if timer + rb_mins_warn > 0:
-                    if rb_mins_warn + timer < 2:
+                    if rb_mins_warn + timer > 1:
                         self.broadcast("&cServer will reboot in %d "
                                        "minutes!" % (rb_mins_warn + timer))
                     else:
                         self.broadcast("&cServer will reboot in %d "
                                        "minute!" % (rb_mins_warn + timer))
                     continue
+                self.log.warning("Achieved reboot")
                 self.restart(self.reboot_message)
 
     def eachsecond_web(self, payload):

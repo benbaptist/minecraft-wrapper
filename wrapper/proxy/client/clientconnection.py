@@ -37,7 +37,8 @@ class Client(object):
 
         This class Client is a "fake" server, accepting connections
         from clients.  It receives "SERVER BOUND" packets from client,
-        parses them, and forards them on to the server.
+        parses them, and forards them on to the server.  It "sends" to the
+        client (self.send() or self.sendpkt())
 
         Client receives the parent proxy as it's argument.
         No longer receives the proxy's wrapper instance!  All
@@ -426,7 +427,7 @@ class Client(object):
         disconnects the client (runs close_server(), which will
          also shut off the serverconnection.py)
 
-        Not used to disconnect from a server!
+        Not used to disconnect from a server!  This disconnects the client.
         """
         jsonmessage = message  # server packets are read as json
 
