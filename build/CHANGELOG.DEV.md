@@ -1,6 +1,12 @@
-Build 248 (next build)
+Build 249 (next build)
 - player to player TP - Add inter-dimensional TP (1.8+) api
   Community Input enhancement proxy mode
+
+Build 248
+- This build fixes [issue 492](https://github.com/benbaptist/minecraft-wrapper/issues/492):
+    - Fix timer loops for reboots
+    - Fix custom messages in Misc section and add new message "halt-message"
+     for when wrapper is halted.
 
 Build 247 [0.14.2] dev
 - For consistency and eliminate confusion, all wrapper internal

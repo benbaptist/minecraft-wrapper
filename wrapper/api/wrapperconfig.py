@@ -172,11 +172,21 @@ CONFIG = {
 
             "command-prefix": "/",
 
+         # Reboot message occurs with automatic timed server restarts ["General"]["timed-reboot"]
+
             "reboot-message": "Server is conducting a scheduled reboot. The server will be back momentarily!",
+
+         # Restart message occurs when console command "/restart" is run.
 
             "default-restart-message": "Server restarting...",
 
+         # Stop message is generated from wrapper "/stop" command.
+
             "stop-message": "Stopping The Minecraft Server",
+
+         # message when wrapper halt is called.
+
+            "halt-message": "Halting Wrapper...",
 
          # readline is likely to be more-cross platform, but does not use wrapper's ability to keep console keystroke entries visually intact while server produces output.
 

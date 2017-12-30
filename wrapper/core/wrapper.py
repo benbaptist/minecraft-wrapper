@@ -113,6 +113,7 @@ class Wrapper(object):
         self.serverpath = self.config["General"]["server-directory"]
         self.proxymode = self.config["Proxy"]["proxy-enabled"]
         self.wrapper_onlinemode = self.config["Proxy"]["online-mode"]
+        self.halt_message = self.config["Misc"]["halt-message"]
 
         # encryption items (for passwords and sensitive user data)
         # salt is generated and stored in wrapper.properties.json
@@ -286,10 +287,16 @@ class Wrapper(object):
         consoledaemon.daemon = True
         consoledaemon.start()
 
-        # Timer also runs while not wrapper.halt.halt
-        t = threading.Thread(target=self.event_timer, args=())
-        t.daemon = True
-        t.start()
+        # Timer runs while not wrapper.halt.halt
+        ts = threading.Thread(target=self.event_timer_second, args=())
+        ts.daemon = True
+        ts.start()
+
+        if self.use_timer_tick_event:
+            # Timer runs while not wrapper.halt.halt
+            tt = threading.Thread(target=self.event_timer_tick, args=())
+            tt.daemon = True
+            tt.start()
 
         if self.config["General"]["shell-scripts"]:
             if os.name in ("posix", "mac"):
@@ -357,7 +364,7 @@ class Wrapper(object):
         self._halt()
 
     def _halt(self):
-        self.javaserver.stop("Halting server...", restart_the_server=False)
+        self.javaserver.stop(self.halt_message, restart_the_server=False)
         self.halt.halt = True
 
     def shutdown(self):
@@ -559,14 +566,14 @@ class Wrapper(object):
             if command in ("/halt", "halt"):
                 self._halt()
             elif command in ("/stop", "stop"):
-                self.javaserver.stop_server_command("Stopping server...")
+                self.javaserver.stop_server_command()
             # "kill" (with no slash) is a server command.
             elif command == "/kill":
                 self.javaserver.kill("Server killed at Console...")
             elif command in ("/start", "start"):
                 self.javaserver.start()
             elif command in ("/restart", "restart"):
-                self.javaserver.restart("Server restarting, be right back!")
+                self.javaserver.restart()
             elif command in ("/update-wrapper", "update-wrapper"):
                 self._checkforupdate(True)
             # "plugins" command (with no slash) reserved for server commands
@@ -912,40 +919,39 @@ class Wrapper(object):
                 wrapperfile.status_code, exc_info=True)
             return False
 
-    def event_timer(self):
-        t = time.time()
+    def event_timer_second(self):
         while not self.halt.halt:
-            if time.time() - t > 1:
-                self.events.callevent("timer.second", None)
-                """ eventdoc
-                    <group> wrapper <group>
+            time.sleep(1)
+            self.events.callevent("timer.second", None)
+            """ eventdoc
+                <group> wrapper <group>
 
-                    <description> a timer that is called each second.
-                    <description>
+                <description> a timer that is called each second.
+                <description>
 
-                    <abortable> No <abortable>
+                <abortable> No <abortable>
 
-                """
-                t = time.time()
-            if self.use_timer_tick_event:
-                # don't really advise the use of this timer
-                self.events.callevent("timer.tick", None)
-                """ eventdoc
-                    <group> wrapper <group>
+            """
 
-                    <description> a timer that is called each 1/20th
-                    <sp> of a second, like a minecraft tick.
-                    <description>
-
-                    <abortable> No <abortable>
-
-                    <comments>
-                    Use of this timer is not suggested and is turned off
-                    <sp> by default in the wrapper.config.json file
-                    <comments>
-
-                """
+    def event_timer_tick(self):
+        while not self.halt.halt:
+            self.events.callevent("timer.tick", None)
             time.sleep(0.05)
+            """ eventdoc
+                <group> wrapper <group>
+
+                <description> a timer that is called each 1/20th
+                <sp> of a second, like a minecraft tick.
+                <description>
+
+                <abortable> No <abortable>
+
+                <comments>
+                Use of this timer is not suggested and is turned off
+                <sp> by default in the wrapper.config.json file
+                <comments>
+
+            """
 
     def _pause_console(self, pause_time):
         if not self.javaserver:
