@@ -49,10 +49,8 @@ class MCServer(object):
         self.reboot_message = self.config["Misc"]["reboot-message"]
         self.restart_message = self.config["Misc"]["default-restart-message"]
 
-        self.reboot_minutes = self.config[
-            "General"]["timed-reboot-minutes"]
-        self.reboot_warning_minutes = self.config[
-            "General"]["timed-reboot-warning-minutes"]
+        self.reboot_minutes = self.config["General"]["timed-reboot-minutes"]
+        self.reboot_warning_minutes = self.config["General"]["timed-reboot-warning-minutes"]
 
         # These will be used to auto-detect the number of prepend
         # items in the server output.
@@ -73,13 +71,11 @@ class MCServer(object):
         if "ServerStarted" not in self.wrapper.storage:
             self._toggle_server_started(False)
 
-        self.bootTime = time.time()
         # False/True - whether server will attempt boot
         self.boot_server = self.wrapper.storage["ServerStarted"]
         # whether a stopped server tries rebooting
         self.server_autorestart = self.config["General"]["auto-restart"]
         self.proc = None
-        self.rebootWarnings = 0
         self.lastsizepoll = 0
         self.console_output_data = []
 
@@ -110,9 +106,21 @@ class MCServer(object):
         # don't reg. an unused event.  The timer still is running, we
         #  just have not cluttered the events holder with another
         #  registration item.
-        if self.config["General"]["timed-reboot"] or self.config[
-                "Web"]["web-enabled"]:
-            self.api.registerEvent("timer.second", self.eachsecond)
+        #  # entity processor thread
+        #    t = threading.Thread(target=self._entity_processor,
+        #                         name="entProc", args=())
+        #    t.daemon = True
+        #    t.start()
+
+        if self.config["General"]["timed-reboot"]:
+            rb = threading.Thread(target=self.reboot_timer, args=())
+            rb.daemon = True
+            rb.start()
+
+        if self.config["Web"]["web-enabled"]:
+            wb = threading.Thread(target=self.eachsecond_web, args=())
+            wb.daemon = True
+            wb.start()
 
         # This event is used to allow proxy to make console commands via
         # callevent() without referencing mcserver.py code (the eventhandler
@@ -240,6 +248,7 @@ class MCServer(object):
         """Restart the Minecraft server, and kick people with the
         specified reason
         """
+        # timed-reboot passes reboot message (not restart)
         if reason == "":
             reason = self.restart_message
         if self.vitals.state in (STOPPING, OFF):
@@ -248,6 +257,15 @@ class MCServer(object):
             return
         self.stop(reason)
 
+    def kick_players(self, reasontext):
+        if self.wrapper.proxymode:
+            for player in self.wrapper.players:
+                print("DISCONNECTING", player, reasontext)
+        else:
+            for player in self.wrapper.players:
+                print("KICKING", player, reasontext)
+                self.console("kick %s %s" % (player, reasontext))
+
     def stop(self, reason="", restart_the_server=True):
         """Stop the Minecraft server from an automatic process.  Allow
         it to restart by default.
@@ -255,7 +273,9 @@ class MCServer(object):
         self.log.info("Stopping Minecraft server with reason: %s", reason)
         self.changestate(STOPPING, reason)
         for player in self.wrapper.players:
+            print("KICKING", player, reason)
             self.console("kick %s %s" % (player, reason))
+            time.sleep(1)
         self.console("stop")
 
         # False will allow this loop to run with no server (and
@@ -756,7 +776,6 @@ class MCServer(object):
             self.log.info("Server started")
             if self.wrapper.proxymode:
                 self.log.info("Proxy listening on *:%s", self.wrapper.proxy.proxy_port)
-            self.bootTime = time.time()
 
         # Getting world name
         elif "Preparing level" in buff:
@@ -893,38 +912,39 @@ class MCServer(object):
                 <payload>
     
             """
-    # mcserver.py onsecond Event Handler
-    def eachsecond(self, payload):
-        if self.config["General"]["timed-reboot"]:
-            if time.time() - self.bootTime > (self.reboot_minutes * 60):
-                if self.config["General"]["timed-reboot-warning-minutes"] > 0:
-                    if self.rebootWarnings <= self.reboot_warning_minutes:
-                        l = (time.time()
-                             - self.bootTime
-                             - self.reboot_minutes * 60)
-                        if l > self.rebootWarnings:
-                            self.rebootWarnings += 1
-                            if int(self.reboot_warning_minutes - l + 1) > 0:
-                                self.broadcast(
-                                    "&cServer will reboot in %d minute(s)!" %
-                                    int(self.reboot_warning_minutes - l + 1))
-                        return
+    # mcserver.py onsecond Event Handlers
+    def reboot_timer(self):
+        rb_mins = self.reboot_minutes
+        rb_mins_warn = self.config["General"]["timed-reboot-warning-minutes"]
+        while not self.wrapper.halt.halt:
+            time.sleep(1)
+            timer = rb_mins - rb_mins_warn
+            while self.vitals.state in (STARTED, STARTING):
+                timer -= 1
+                time.sleep(60)
+                if timer > 0:
+                    continue
+                if timer + rb_mins_warn > 0:
+                    if rb_mins_warn + timer < 2:
+                        self.broadcast("&cServer will reboot in %d "
+                                       "minutes!" % (rb_mins_warn + timer))
+                    else:
+                        self.broadcast("&cServer will reboot in %d "
+                                       "minute!" % (rb_mins_warn + timer))
+                    continue
                 self.restart(self.reboot_message)
-                self.bootTime = time.time()
-                self.rebootWarnings = 0
 
-        # only used by web management module
-        if self.config["Web"]["web-enabled"]:
-            if time.time() - self.lastsizepoll > 120:
-                if self.vitals.worldname is None:
-                    return True
-                self.lastsizepoll = time.time()
-                size = 0
-                # os.scandir not in standard library on early py2.7.x systems
-                for i in os.walk("%s/%s" % (self.vitals.serverpath, self.vitals.worldname)):
-                    for f in os.listdir(i[0]):
-                        size += os.path.getsize(os.path.join(i[0], f))
-                self.worldSize = size
+    def eachsecond_web(self, payload):
+        if time.time() - self.lastsizepoll > 120:
+            if self.vitals.worldname is None:
+                return True
+            self.lastsizepoll = time.time()
+            size = 0
+            # os.scandir not in standard library on early py2.7.x systems
+            for i in os.walk("%s/%s" % (self.vitals.serverpath, self.vitals.worldname)):
+                for f in os.listdir(i[0]):
+                    size += os.path.getsize(os.path.join(i[0], f))
+            self.worldSize = size
 
     def _console_event(self, payload):
         """This function is used in conjunction with event handlers to

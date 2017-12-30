@@ -1,6 +1,9 @@
-Build 248 (next build)
+Build 249 (next build)
 - player to player TP - Add inter-dimensional TP (1.8+) api
   Community Input enhancement proxy mode
+
+Build 248
+-Fix timer loops for reboots
 
 Build 247 [0.14.2] dev
 - For consistency and eliminate confusion, all wrapper internal
