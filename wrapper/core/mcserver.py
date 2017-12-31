@@ -267,6 +267,7 @@ class MCServer(object):
         else:
             for player in playerlist:
                 self.console("kick %s %s" % (player, reasontext))
+            time.sleep(2)
 
     def stop(self, reason="", restart_the_server=True):
         """Stop the Minecraft server from an automatic process.  Allow
@@ -933,7 +934,6 @@ class MCServer(object):
                         self.broadcast("&cServer will reboot in %d "
                                        "minute!" % (rb_mins_warn + timer))
                     continue
-                self.log.warning("Achieved reboot")
                 self.restart(self.reboot_message)
 
     def eachsecond_web(self, payload):

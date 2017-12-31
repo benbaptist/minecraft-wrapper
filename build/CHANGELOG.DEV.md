@@ -1,6 +1,10 @@
-Build 252 (next build)
+Build 253 (next build)
 - player to player TP - Add inter-dimensional TP (1.8+) api
   Community Input enhancement proxy mode
+
+Build 252
+apparently, Spigot/Mcbans needs more time to kick the players before
+ a server restart...
 
 Build 251
 bugfixes in config and remove test code
