@@ -579,8 +579,8 @@ class Commands(object):
                             "hoverEvent": {
                                 "action": "show_text",
                                 "value": v["description"]
-                        }
-                    },
+                            }
+                        },
                         {
                             "text": "[click help]",
                             "color": "blue",
@@ -599,7 +599,7 @@ class Commands(object):
                         },
                         {
                             "text": " - " + shortdesc
-                    }]
+                        }]
                 })
             _showpage(player, page, items, "help", 8, command_prefix=self.wrapper.servervitals.command_prefix)
         return False

@@ -40,6 +40,8 @@ CONFIG = {
 
                 ],
 
+         # backup interval is in seconds: 3600 = hourly, 86400 = Daily, 604800 = weekly
+
             "backup-interval": 3600,
 
          # backup location is inside wrapper's directory
@@ -60,7 +62,7 @@ CONFIG = {
 
         {
 
-        # if using gmail, remember to "allow less secure apps” on your account..
+         # if using gmail, remember to "allow less secure apps” on your account..
 
             "enabled": False,
 
@@ -72,7 +74,11 @@ CONFIG = {
 
             "login-name": "sphincter@gmail.com",
 
-            "password": "use `/password -s Alerts password <your password>` to set this"
+         # -plaintext items are converted to hashed items by wrapper
+
+            "password-plaintext": False,
+
+            "password": "use `/password -s Alerts password <your password>` to set this or enter a password-plaintext"
 
         },
 
@@ -80,7 +86,7 @@ CONFIG = {
 
         {
 
-        # Use of timer-tick is not recommended.  1/20th of a second timer option for plugin use. May impact wrapper performance negatively.
+         # Use of timer-tick is not recommended.  1/20th of a second timer option for plugin use. May impact wrapper performance negatively.
 
             "use-timer-tick-event": False,
 
@@ -269,7 +275,11 @@ CONFIG = {
 
             "control-from-irc": False,
 
-            "control-irc-pass": "from console use `/password Web web-password <your password>`",
+         # enter a password here and wrapper will convert it to a hashed password
+
+            "control-irc-pass-plaintext": False,
+
+            "control-irc-pass": "from console use `/password IRC control-irc-pass <your password>`",
 
             "irc-enabled": False,
 
@@ -277,7 +287,11 @@ CONFIG = {
 
             "obstruct-nicknames": False,
 
-            "password": None,
+         # enter a password here and wrapper will convert it to a hashed password
+
+            "password-plaintext": False,
+
+            "password": "from console use `/password IRC password <your password>`",
 
             "port": 6667,
 
@@ -358,6 +372,10 @@ CONFIG = {
             "web-bind": "0.0.0.0",
 
             "web-enabled": False,
+
+         # enter a password here and wrapper will convert it to a hashed password
+
+            "web-password-plaintext": False,
 
             "web-password": "to set this, from console use `/password Web web-password <your password>`",
 
