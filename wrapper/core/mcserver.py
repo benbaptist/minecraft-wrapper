@@ -259,13 +259,13 @@ class MCServer(object):
         self.stop(reason)
 
     def kick_players(self, reasontext):
+        playerlist = copy.copy(self.vitals.players)
         if self.wrapper.proxymode:
-            playerlist = copy.copy(self.vitals.players)
             for player in playerlist:
                 playerclient = playerlist[player].getClient()
                 playerclient.disconnect(reasontext)
         else:
-            for player in self.wrapper.players:
+            for player in playerlist:
                 self.console("kick %s %s" % (player, reasontext))
 
     def stop(self, reason="", restart_the_server=True):

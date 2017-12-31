@@ -1,6 +1,9 @@
-Build 250 (next build)
+Build 251 (next build)
 - player to player TP - Add inter-dimensional TP (1.8+) api
   Community Input enhancement proxy mode
+
+Build 250
+- Fix custom messages again for non-proxy mode.
 
 Build 249
 - add config items to allow entering a plaintext password that
