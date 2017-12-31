@@ -127,20 +127,15 @@ class Wrapper(object):
 
         # Update passwords (hash any plaintext passwords)
         for groups in self.config:
-            print("CHECKING GROUP", groups)
             for cfg_items in self.config[groups]:
-                print("PROCESSING ITEM", cfg_items)
                 if cfg_items[-10:] == "-plaintext":
-                    print("FOUND A PLAIN ITEM")
                     # i.e., cfg_items ===> like ["web-password-plaintext"]
                     hash_item = cfg_items[:-10]
-                    print("hash ITEM IS", hash_item)
                     # hash_item ===> i.e., ["web-password"]
-                    if hash_item in self.config[groups]:
+                    if hash_item in self.config[groups] and self.config[groups][cfg_items]:
                         # encrypt contents of (i.e.) ["web-password-plaintext"]
                         hashed_item = self.cipher.encrypt(
                             self.config[groups][cfg_items])
-                        print("hashED ITEM IS", hashed_item)
                         # store in "" ["Web"]["web-password"]
                         self.config[groups][hash_item] = hashed_item
                         # set plaintext item to false (successful digest)
@@ -1157,5 +1152,3 @@ class Wrapper(object):
             " displays on single page!)",
             separator="[players|ips] [searchtext] ", pad=12,
             usereadline=self.use_readline)
-items = "ggfdfgdfgooofd-plaintext"
-print(items[:-10])
