@@ -5,9 +5,6 @@
 # General Public License, version 3 or later.
 
 from base64 import urlsafe_b64encode
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-from cryptography.hazmat.backends import default_backend
 from os import urandom
 from getpass import getpass
 
@@ -17,6 +14,9 @@ PY3 = sys.version_info > (3,)
 
 try:
     from cryptography.fernet import Fernet
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+    from cryptography.hazmat.backends import default_backend
 except ImportError:
     Fernet = False
 

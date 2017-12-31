@@ -1,6 +1,13 @@
-Build 249 (next build)
+Build 250 (next build)
 - player to player TP - Add inter-dimensional TP (1.8+) api
   Community Input enhancement proxy mode
+
+Build 249
+- add config items to allow entering a plaintext password that
+ gets digested and resaved with encryption.
+- PEP-8 updates to dashboard (still not usable yet)
+- Fix error that prevented startup if user did not have cryptography
+ installed.
 
 Build 248
 - This build fixes [issue 492](https://github.com/benbaptist/minecraft-wrapper/issues/492):

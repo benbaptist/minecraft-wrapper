@@ -44,12 +44,6 @@ class Web(object):
 
         if "keys" not in self.data.Data:
             self.data.Data["keys"] = []
-        # if not self.config["Web"]["web-password"] == None:
-        #   self.log.info("Changing web-mode password because web-password was changed in wrapper.properties")
-        #  ***** NEW (pretty much correct) Pseudocode ****
-        #   self.data.Data["password"] = self.pass_handler.encrypt(self.config["Web"]["web-password"])
-        #   self.config["Web"]["web-password"] = None
-        #   self.wrapper.configManager.save()
 
         self.api.registerEvent("server.consoleMessage", self.onServerConsole)
         self.api.registerEvent("player.message", self.onPlayerMessage)

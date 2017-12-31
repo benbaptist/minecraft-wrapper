@@ -121,24 +121,43 @@ class Wrapper(object):
         if not salt:
             salt = gensalt(self.encoding)
             self.configManager.config["General"]["salt"] = salt
-            self.configManager.save()
         # passphrase is provided at startup by the wrapper operator or script (not stored)
         passphrase = phrase_to_url_safebytes(secret_passphrase, self.encoding, salt)
         self.cipher = Crypt(passphrase, self.encoding)
 
-        # Patch any old update paths
-        # old paths were:
-        # "dev-branch": "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/build/version.json"
-        # new paths are:
-        # "dev-branch": "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development"
+        # Update passwords (hash any plaintext passwords)
+        for groups in self.config:
+            print("CHECKING GROUP", groups)
+            for cfg_items in self.config[groups]:
+                print("PROCESSING ITEM", cfg_items)
+                if cfg_items[-10:] == "-plaintext":
+                    print("FOUND A PLAIN ITEM")
+                    # i.e., cfg_items ===> like ["web-password-plaintext"]
+                    hash_item = cfg_items[:-10]
+                    print("hash ITEM IS", hash_item)
+                    # hash_item ===> i.e., ["web-password"]
+                    if hash_item in self.config[groups]:
+                        # encrypt contents of (i.e.) ["web-password-plaintext"]
+                        hashed_item = self.cipher.encrypt(
+                            self.config[groups][cfg_items])
+                        print("hashED ITEM IS", hashed_item)
+                        # store in "" ["Web"]["web-password"]
+                        self.config[groups][hash_item] = hashed_item
+                        # set plaintext item to false (successful digest)
+                        self.config[groups][cfg_items] = False
+
+        # Patch any old update paths "..wrapper/development/build/version.json"
+        # new paths are: "..wrapper/development"
         for entries in self.config["Updates"]:
             if "/build/version.json" in str(self.config["Updates"][entries]):
                 oldentry = copy.copy(self.configManager.config["Updates"][entries])
                 self.configManager.config["Updates"][entries] = oldentry.split("/build/version.json")[0]
-                self.configManager.save()
 
-        # reload config
+        # save changes made to config file
+        self.configManager.save()
         self.config = self.configManager.config
+
+        # reload branch update info.
         self.auto_update_wrapper = self.config["Updates"]["auto-update-wrapper"]
         self.auto_update_branch = self.config["Updates"]["auto-update-branch"]
         if not self.auto_update_branch:
@@ -151,20 +170,17 @@ class Wrapper(object):
         self.use_readline = not(self.config["Misc"]["use-betterconsole"])
 
         # Storages
-        self.wrapper_storage = Storage("wrapper", encoding=self.encoding)
-
+        self.wrapper_storage = Storage(
+            "wrapper", encoding=self.encoding)
         self.wrapper_permissions = Storage(
             "permissions", encoding=self.encoding, pickle=False)
-
         self.wrapper_usercache = Storage(
             "usercache", encoding=self.encoding, pickle=False)
 
         # storage Data objects
         self.storage = self.wrapper_storage.Data
         self.usercache = self.wrapper_usercache.Data
-
-        # access this directly to prevent changing the reference
-        # self.permissions = self.wrapper_permissions.Data
+        # self.wrapper_permissions accessed only by permissions module
 
         # core functions and datasets
         self.perms = Permissions(self)
@@ -225,7 +241,7 @@ class Wrapper(object):
         # LETS TAKE A SECOND TO DISCUSS PLAYER OBJECTS:
         # The ServerVitals class gets passed the player object list now, but
         # player objects are now housed in wrapper.  This is how we are
-        # passing informatino between proxy and wrapper.
+        # passing information between proxy and wrapper.
 
         self.servervitals.serverpath = self.config[
             "General"]["server-directory"]
@@ -1141,3 +1157,5 @@ class Wrapper(object):
             " displays on single page!)",
             separator="[players|ips] [searchtext] ", pad=12,
             usereadline=self.use_readline)
+items = "ggfdfgdfgooofd-plaintext"
+print(items[:-10])
