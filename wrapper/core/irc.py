@@ -23,19 +23,6 @@ if PY3:
     # noinspection PyShadowingBuiltins
     xrange = range
 
-    def _str_(text, enc):
-        return str(text, enc)
-
-    def _bytes_(text, enc):
-        return bytes(text, enc)
-else:
-    # noinspection PyUnusedLocal
-    def _str_(text, enc):
-        return str(text)
-
-    # noinspection PyUnusedLocal
-    def _bytes_(text, enc):
-        return bytes(text)
 
 # due to self.socket being ducktyped as boolean when it is used later as a socket.
 # also, api uses mixedCase
@@ -62,7 +49,6 @@ class IRC(object):
         self.ready = False
         self.msgQueue = []
         self.authorized = {}
-        self.line = ""
 
         self.api = API(self.wrapper, "IRC", internal=True)
 
@@ -131,8 +117,6 @@ class IRC(object):
 
     def send(self, payload):
         pay = "%s\n" % payload
-        # print("PAYTYPE", type(pay))
-        # print("PAYLOAD: ", pay)
         if PY3:
             pay = bytes(pay, self.encoding)
         if self.socket:
@@ -247,8 +231,8 @@ class IRC(object):
     def handle(self):
         while self.socket:
             try:
-                irc_buffer = self.socket.recv(1024)  # more duck typing
-                if irc_buffer == "":
+                irc_buffer = self.socket.recv(1024)
+                if irc_buffer == b"":
                     self.log.error("Disconnected from IRC")
                     self.socket = False
                     self.ready = False
@@ -264,9 +248,8 @@ class IRC(object):
             except Exception as e:
                 self.log.debug("Exception in IRC handle: \n%s", e)
                 irc_buffer = ""
-            for line in irc_buffer.split("\n"):
-                self.line = line
-                self.parse()
+            for line in irc_buffer.split(b"\n"):
+                self.parse(line)
 
     def queue(self):
         while self.socket:
@@ -300,8 +283,11 @@ class IRC(object):
         else:
             self.rawConsole({"extra": payload})
 
-    def parse(self):
-        if getargs(self.line.split(" "), 1) == "001":
+    def parse(self, dataline):
+        _line = dataline
+        if PY3:
+            _line = str(dataline, self.encoding)
+        if getargs(_line.split(" "), 1) == "001":
             for command in self.config["IRC"]["autorun-irc-commands"]:
                 self.send(command)
             for channel in self.channels:
@@ -310,7 +296,7 @@ class IRC(object):
             self.log.info("Connected to IRC!")
             self.state = True
             self.nickAttempts = 0
-        if getargs(self.line.split(" "), 1) == "433":
+        if getargs(_line.split(" "), 1) == "433":
             self.log.info("Nickname '%s' already in use.", self.nickname)
             self.nickAttempts += 1
             if self.nickAttempts > 2:
@@ -322,22 +308,22 @@ class IRC(object):
                 self.nickname += "_"
             self.auth()
             self.log.info("Attemping to use nickname '%s'.", self.nickname)
-        if getargs(self.line.split(" "), 1) == "JOIN":
-            nick = getargs(self.line.split(" "), 0)[1:getargs(self.line.split(" "), 0).find("!")]
-            channel = getargs(self.line.split(" "), 2)[1:][:-1]
+        if getargs(_line.split(" "), 1) == "JOIN":
+            nick = getargs(_line.split(" "), 0)[1:getargs(_line.split(" "), 0).find("!")]
+            channel = getargs(_line.split(" "), 2)[1:][:-1]
             self.log.info("%s joined %s", nick, channel)
             self.wrapper.events.callevent("irc.join", {"nick": nick, "channel": channel})
-        if getargs(self.line.split(" "), 1) == "PART":
-            nick = getargs(self.line.split(" "), 0)[1:getargs(self.line.split(" "), 0).find("!")]
-            channel = getargs(self.line.split(" "), 2)
+        if getargs(_line.split(" "), 1) == "PART":
+            nick = getargs(_line.split(" "), 0)[1:getargs(_line.split(" "), 0).find("!")]
+            channel = getargs(_line.split(" "), 2)
             self.log.info("%s parted %s", nick, channel)
             self.wrapper.events.callevent("irc.part", {"nick": nick, "channel": channel})
-        if getargs(self.line.split(" "), 1) == "MODE":
+        if getargs(_line.split(" "), 1) == "MODE":
             try:
-                nick = getargs(self.line.split(" "), 0)[1:getargs(self.line.split(" "), 0).find('!')]
-                channel = getargs(self.line.split(" "), 2)
-                modes = getargs(self.line.split(" "), 3)
-                user = getargs(self.line.split(" "), 4)[:-1]
+                nick = getargs(_line.split(" "), 0)[1:getargs(_line.split(" "), 0).find('!')]
+                channel = getargs(_line.split(" "), 2)
+                modes = getargs(_line.split(" "), 3)
+                user = getargs(_line.split(" "), 4)[:-1]
                 self.console(channel, [{
                     "text": user, 
                     "color": "green"
@@ -348,17 +334,17 @@ class IRC(object):
             except Exception as e:
                 self.log.debug("Exception in IRC in parse (MODE): \n%s", e)
                 pass
-        if getargs(self.line.split(" "), 0) == "PING":
-            self.send("PONG %s" % getargs(self.line.split(" "), 1))
-        if getargs(self.line.split(" "), 1) == "QUIT":
-            nick = getargs(self.line.split(" "), 0)[1:getargs(self.line.split(" "), 0).find("!")]
-            message = getargsafter(self.line.split(" "), 2)[1:].strip("\n").strip("\r")
+        if getargs(_line.split(" "), 0) == "PING":
+            self.send("PONG %s" % getargs(_line.split(" "), 1))
+        if getargs(_line.split(" "), 1) == "QUIT":
+            nick = getargs(_line.split(" "), 0)[1:getargs(_line.split(" "), 0).find("!")]
+            message = getargsafter(_line.split(" "), 2)[1:].strip("\n").strip("\r")
 
             self.wrapper.events.callevent("irc.quit", {"nick": nick, "message": message, "channel": None})
-        if getargs(self.line.split(" "), 1) == "PRIVMSG":
-            channel = getargs(self.line.split(" "), 2)
-            nick = getargs(self.line.split(" "), 0)[1:getargs(self.line.split(" "), 0).find("!")]
-            message = getargsafter(self.line.split(" "), 3)[1:].strip("\n").strip("\r")
+        if getargs(_line.split(" "), 1) == "PRIVMSG":
+            channel = getargs(_line.split(" "), 2)
+            nick = getargs(_line.split(" "), 0)[1:getargs(_line.split(" "), 0).find("!")]
+            message = getargsafter(_line.split(" "), 3)[1:].strip("\n").strip("\r")
 
             if channel[0] == "#":
                 if message.strip() == ".players":
