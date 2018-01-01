@@ -1,6 +1,9 @@
-Build 253 (next build)
+Build 254 (next build)
 - player to player TP - Add inter-dimensional TP (1.8+) api
   Community Input enhancement proxy mode
+
+BUild 253
+- Correct Python 3 errors in IRC
 
 Build 252
 -correct password decryting errors in IRC
