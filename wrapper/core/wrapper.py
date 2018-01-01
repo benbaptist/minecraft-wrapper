@@ -117,10 +117,12 @@ class Wrapper(object):
 
         # encryption items (for passwords and sensitive user data)
         # salt is generated and stored in wrapper.properties.json
+        config_changes = False
         salt = self.config["General"]["salt"]
         if not salt:
             salt = gensalt(self.encoding)
-            self.configManager.config["General"]["salt"] = salt
+            self.config["General"]["salt"] = salt
+            config_changes = True
         # passphrase is provided at startup by the wrapper operator or script (not stored)
         passphrase = phrase_to_url_safebytes(secret_passphrase, self.encoding, salt)
         self.cipher = Crypt(passphrase, self.encoding)
@@ -140,17 +142,19 @@ class Wrapper(object):
                         self.config[groups][hash_item] = hashed_item
                         # set plaintext item to false (successful digest)
                         self.config[groups][cfg_items] = False
+                        config_changes = True
 
         # Patch any old update paths "..wrapper/development/build/version.json"
         # new paths are: "..wrapper/development"
         for entries in self.config["Updates"]:
             if "/build/version.json" in str(self.config["Updates"][entries]):
-                oldentry = copy.copy(self.configManager.config["Updates"][entries])
-                self.configManager.config["Updates"][entries] = oldentry.split("/build/version.json")[0]
+                oldentry = copy.copy(self.config["Updates"][entries])
+                self.config["Updates"][entries] = oldentry.split("/build/version.json")[0]
+                config_changes = True
 
         # save changes made to config file
-        self.configManager.save()
-        self.config = self.configManager.config
+        if config_changes:
+            self.configManager.save()
 
         # reload branch update info.
         self.auto_update_wrapper = self.config["Updates"]["auto-update-wrapper"]
@@ -158,7 +162,7 @@ class Wrapper(object):
         if not self.auto_update_branch:
             self.update_url = "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development"
         else:
-            self.update_url = self.configManager.config["Updates"][self.auto_update_branch]
+            self.update_url = self.config["Updates"][self.auto_update_branch]
 
         self.use_timer_tick_event = self.config[
             "Gameplay"]["use-timer-tick-event"]
@@ -243,6 +247,7 @@ class Wrapper(object):
         self.servervitals.state = OFF
         self.servervitals.command_prefix = self.config[
             "Misc"]["command-prefix"]
+
         self.proxyconfig = ProxyConfig()
         self.proxyconfig.proxy = self.config["Proxy"]
         self.proxyconfig.entity = self.config["Entities"]
@@ -814,9 +819,8 @@ class Wrapper(object):
 
     def disable_proxymode(self):
         self.proxymode = False
-        self.configManager.config["Proxy"]["proxy-enabled"] = False
+        self.config["Proxy"]["proxy-enabled"] = False
         self.configManager.save()
-        self.config = self.configManager.config
         self.log.warning(
             "\nProxy mode is now turned off in wrapper.properties.json.\n")
 

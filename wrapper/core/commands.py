@@ -640,7 +640,7 @@ class Commands(object):
             return
         final_data = self.cipher.encrypt(data)
         player.message("&2 data encrypted!")
-        self.config_manager.config[group][setting] = final_data
+        self.config[group][setting] = final_data
         self.config_manager.save()
 
     def command_playerstats(self, player, payload):
