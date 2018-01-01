@@ -23,6 +23,19 @@ if PY3:
     # noinspection PyShadowingBuiltins
     xrange = range
 
+    def _str_(text, enc):
+        return str(text, enc)
+
+    def _bytes_(text, enc):
+        return bytes(text, enc)
+else:
+    # noinspection PyUnusedLocal
+    def _str_(text, enc):
+        return str(text)
+
+    # noinspection PyUnusedLocal
+    def _bytes_(text, enc):
+        return bytes(text)
 
 # due to self.socket being ducktyped as boolean when it is used later as a socket.
 # also, api uses mixedCase
@@ -99,7 +112,7 @@ class IRC(object):
 
     def auth(self):
         if self.config["IRC"]["password"]:
-            plain_password = pass_handler.decrypt(self.wrapper.passphrase, self.config["IRC"]["password"])
+            plain_password = self.pass_handler.decrypt(self.config["IRC"]["password"])
             if plain_password:
                 self.send("PASS %s" % plain_password)
             else:
@@ -117,8 +130,13 @@ class IRC(object):
             self.log.debug("Exception in IRC disconnect: \n%s", e)
 
     def send(self, payload):
+        pay = "%s\n" % payload
+        # print("PAYTYPE", type(pay))
+        # print("PAYLOAD: ", pay)
+        if PY3:
+            pay = bytes(pay, self.encoding)
         if self.socket:
-            self.socket.send("%s\n" % payload)
+            self.socket.send(pay)
         else:
             return False
 
@@ -498,7 +516,7 @@ class IRC(object):
                         del self.authorized[nick]
                 else:
                     if getargs(message.split(" "), 0) == 'auth':
-                        if pass_handler.check_pw(getargs(message.split(" "), 1), self.config["IRC"]["control-irc-pass"]):
+                        if self.pass_handler.check_pw(getargs(message.split(" "), 1), self.config["IRC"]["control-irc-pass"]):
                             msg("Authorization success! You'll remain logged in for 15 minutes.")
                             self.authorized[nick] = int(time.time())
                         else:
