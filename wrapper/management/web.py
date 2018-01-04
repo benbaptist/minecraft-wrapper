@@ -40,15 +40,10 @@ class Web(object):
         self.serverpath = self.config["General"]["server-directory"]
         self.socket = False
         self.data = Storage("web")
+        self.pass_handler = self.wrapper.cipher
 
         if "keys" not in self.data.Data:
             self.data.Data["keys"] = []
-        # if not self.config["Web"]["web-password"] == None:
-        #   self.log.info("Changing web-mode password because web-password was changed in wrapper.properties")
-        #  ***** change code to hashlib if this gets uncommented
-        #   self.data.Data["password"] = md5.md5(self.config["Web"]["web-password"]).hexdigest()
-        #   self.config["Web"]["web-password"] = None
-        #   self.wrapper.configManager.save()
 
         self.api.registerEvent("server.consoleMessage", self.onServerConsole)
         self.api.registerEvent("player.message", self.onPlayerMessage)
@@ -137,7 +132,7 @@ class Web(object):
     def checkLogin(self, password):
         if time.time() - self.disableLogins < 60:
             return False  # Threshold for logins
-        if password == self.wrapper.config["Web"]["web-password"]:
+        if self.pass_handler.check_pw(password, self.config["Web"]["web-password"]):
             return True
         self.loginAttempts += 1
         if self.loginAttempts > 10 and time.time() - self.lastAttempt < 60:
@@ -602,7 +597,7 @@ class WebClient(object):
             self.write("<h1>BAD REQUEST</h1>")
             self.close()
             return False
-        #try:
+        # try:
         print("\n\nworkfile: %s\n\n" % workfile)
         if workfile == "/admin":
             workfile = "admin.html"
@@ -612,9 +607,9 @@ class WebClient(object):
         data = self.read(workfile)
         self.headers(contenttype=self.getcontenttype(workfile))
         self.write(data)
-        #except Exception as e:
-            #self.headers(status="404 Not Found (exception in get)")
-            #self.write("<h1>404 Not Found (exception in get)</h4>")
+        # except Exception as e:
+        #    self.headers(status="404 Not Found (exception in get)")
+        #    self.write("<h1>404 Not Found (exception in get)</h4>")
         self.close()
 
     def handle(self):

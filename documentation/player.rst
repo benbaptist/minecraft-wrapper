@@ -21,6 +21,11 @@
     upon logging off.  Most features are tied heavily to
     proxy mode implementations and the proxy client instance.
 
+    The player object has a self.__str___ representation that returns the
+    player.username.  Therefore, plugins do not need to attempt string
+    conversion or do explicit references to player.username in their code
+    (str(player) or player.username in plugin code).
+
     When using events, events in the "proxy" (Group 'Proxy') section are only
     available in proxy mode.  "server" events (Group 'core/mcserver.py')
     are available even without proxy mode, as long as the server is running.

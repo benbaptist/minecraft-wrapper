@@ -36,18 +36,19 @@ class IRC(object):
         self.config = wrapper.config
         self.configmgr = wrapper.configManager
         self.wrapper = wrapper
+        self.pass_handler = self.wrapper.cipher
         self.address = self.config["IRC"]["server"]
         self.port = self.config["IRC"]["port"]
         self.nickname = self.config["IRC"]["nick"]
         self.originalNickname = self.nickname[0:]
         self.nickAttempts = 0
         self.channels = self.config["IRC"]["channels"]
+        self.encoding = self.config["General"]["encoding"]
         self.log = log
         self.timeout = False
         self.ready = False
         self.msgQueue = []
         self.authorized = {}
-        self.line = ""
 
         self.api = API(self.wrapper, "IRC", internal=True)
 
@@ -97,7 +98,12 @@ class IRC(object):
 
     def auth(self):
         if self.config["IRC"]["password"]:
-            self.send("PASS %s" % self.config["IRC"]["password"])
+            plain_password = self.pass_handler.decrypt(self.config["IRC"]["password"])
+            if plain_password:
+                self.send("PASS %s" % plain_password)
+            else:
+                # fall back if password did not decrypt successfully
+                self.send("PASS %s" % self.config["IRC"]["password"])
         self.send("NICK %s" % self.nickname)
         self.send("USER %s 0 * :%s" % (self.nickname, self.nickname))
 
@@ -110,8 +116,11 @@ class IRC(object):
             self.log.debug("Exception in IRC disconnect: \n%s", e)
 
     def send(self, payload):
+        pay = "%s\n" % payload
+        if PY3:
+            pay = bytes(pay, self.encoding)
         if self.socket:
-            self.socket.send("%s\n" % payload)
+            self.socket.send(pay)
         else:
             return False
 
@@ -222,8 +231,8 @@ class IRC(object):
     def handle(self):
         while self.socket:
             try:
-                irc_buffer = self.socket.recv(1024)  # more duck typing
-                if irc_buffer == "":
+                irc_buffer = self.socket.recv(1024)
+                if irc_buffer == b"":
                     self.log.error("Disconnected from IRC")
                     self.socket = False
                     self.ready = False
@@ -239,9 +248,8 @@ class IRC(object):
             except Exception as e:
                 self.log.debug("Exception in IRC handle: \n%s", e)
                 irc_buffer = ""
-            for line in irc_buffer.split("\n"):
-                self.line = line
-                self.parse()
+            for line in irc_buffer.split(b"\n"):
+                self.parse(line)
 
     def queue(self):
         while self.socket:
@@ -275,8 +283,11 @@ class IRC(object):
         else:
             self.rawConsole({"extra": payload})
 
-    def parse(self):
-        if getargs(self.line.split(" "), 1) == "001":
+    def parse(self, dataline):
+        _line = dataline
+        if PY3:
+            _line = str(dataline, self.encoding)
+        if getargs(_line.split(" "), 1) == "001":
             for command in self.config["IRC"]["autorun-irc-commands"]:
                 self.send(command)
             for channel in self.channels:
@@ -285,7 +296,7 @@ class IRC(object):
             self.log.info("Connected to IRC!")
             self.state = True
             self.nickAttempts = 0
-        if getargs(self.line.split(" "), 1) == "433":
+        if getargs(_line.split(" "), 1) == "433":
             self.log.info("Nickname '%s' already in use.", self.nickname)
             self.nickAttempts += 1
             if self.nickAttempts > 2:
@@ -297,22 +308,22 @@ class IRC(object):
                 self.nickname += "_"
             self.auth()
             self.log.info("Attemping to use nickname '%s'.", self.nickname)
-        if getargs(self.line.split(" "), 1) == "JOIN":
-            nick = getargs(self.line.split(" "), 0)[1:getargs(self.line.split(" "), 0).find("!")]
-            channel = getargs(self.line.split(" "), 2)[1:][:-1]
+        if getargs(_line.split(" "), 1) == "JOIN":
+            nick = getargs(_line.split(" "), 0)[1:getargs(_line.split(" "), 0).find("!")]
+            channel = getargs(_line.split(" "), 2)[1:][:-1]
             self.log.info("%s joined %s", nick, channel)
             self.wrapper.events.callevent("irc.join", {"nick": nick, "channel": channel})
-        if getargs(self.line.split(" "), 1) == "PART":
-            nick = getargs(self.line.split(" "), 0)[1:getargs(self.line.split(" "), 0).find("!")]
-            channel = getargs(self.line.split(" "), 2)
+        if getargs(_line.split(" "), 1) == "PART":
+            nick = getargs(_line.split(" "), 0)[1:getargs(_line.split(" "), 0).find("!")]
+            channel = getargs(_line.split(" "), 2)
             self.log.info("%s parted %s", nick, channel)
             self.wrapper.events.callevent("irc.part", {"nick": nick, "channel": channel})
-        if getargs(self.line.split(" "), 1) == "MODE":
+        if getargs(_line.split(" "), 1) == "MODE":
             try:
-                nick = getargs(self.line.split(" "), 0)[1:getargs(self.line.split(" "), 0).find('!')]
-                channel = getargs(self.line.split(" "), 2)
-                modes = getargs(self.line.split(" "), 3)
-                user = getargs(self.line.split(" "), 4)[:-1]
+                nick = getargs(_line.split(" "), 0)[1:getargs(_line.split(" "), 0).find('!')]
+                channel = getargs(_line.split(" "), 2)
+                modes = getargs(_line.split(" "), 3)
+                user = getargs(_line.split(" "), 4)[:-1]
                 self.console(channel, [{
                     "text": user, 
                     "color": "green"
@@ -323,18 +334,17 @@ class IRC(object):
             except Exception as e:
                 self.log.debug("Exception in IRC in parse (MODE): \n%s", e)
                 pass
-        if getargs(self.line.split(" "), 0) == "PING":
-            self.send("PONG %s" % getargs(self.line.split(" "), 1))
-        if getargs(self.line.split(" "), 1) == "QUIT":
-            nick = getargs(self.line.split(" "), 0)[1:getargs(self.line.split(" "), 0).find("!")]
-            message = getargsafter(self.line.split(" "), 2)[1:].strip("\n").strip("\r")
+        if getargs(_line.split(" "), 0) == "PING":
+            self.send("PONG %s" % getargs(_line.split(" "), 1))
+        if getargs(_line.split(" "), 1) == "QUIT":
+            nick = getargs(_line.split(" "), 0)[1:getargs(_line.split(" "), 0).find("!")]
+            message = getargsafter(_line.split(" "), 2)[1:].strip("\n").strip("\r")
 
             self.wrapper.events.callevent("irc.quit", {"nick": nick, "message": message, "channel": None})
-        if getargs(self.line.split(" "), 1) == "PRIVMSG":
-            channel = getargs(self.line.split(" "), 2)
-            nick = getargs(self.line.split(" "), 0)[1:getargs(self.line.split(" "), 0).find("!")]
-            message = getargsafter(self.line.split(" "), 3)[1:].strip("\n").strip("\r")
-
+        if getargs(_line.split(" "), 1) == "PRIVMSG":
+            channel = getargs(_line.split(" "), 2)
+            nick = getargs(_line.split(" "), 0)[1:getargs(_line.split(" "), 0).find("!")]
+            message = getargsafter(_line.split(" "), 3)[1:].strip("\n").strip("\r")
             if channel[0] == "#":
                 if message.strip() == ".players":
                     users = ""
@@ -345,7 +355,10 @@ class IRC(object):
                 elif message.strip() == ".about":
                     self.send("PRIVMSG %s :Wrapper.py Version %s" % (channel, self.wrapper.getbuildstring()))
                 else:
-                    message = message.decode("utf-8", "ignore")
+                    if not PY3:
+                        message = message.decode(self.encoding, "ignore")
+                        # TODO - not sure if this part is going to work in PY3
+                        # now that message is a properly encoded string, not a b"" sequence
                     if getargs(message.split(" "), 0) == "\x01ACTION":
                         self.wrapper.events.callevent("irc.action", {"nick": nick,
                                                                      "channel": channel,
@@ -365,9 +378,8 @@ class IRC(object):
                     self.send("PRIVMSG %s :%s" % (nick, string))
                 if self.config["IRC"]["control-irc-pass"] == "password":
                     msg("A new password is required in wrapper.properties. Please change it.")
-                    return
                 if "password" in self.config["IRC"]["control-irc-pass"]:
-                    msg("Please choose a password that doesn't contain the term 'password'.")
+                    msg("The password is not secure.  You must use the console to enter a password.")
                     return
                 if nick in self.authorized:
                     if int(time.time()) - self.authorized[nick] < 900:
@@ -404,16 +416,16 @@ class IRC(object):
                                 command = " ".join(message.split(' ')[1:])
                                 self.javaserver.console(command)
                         elif getargs(message.split(" "), 0) == 'halt':
-                            self.wrapper.halt.halt = True
-                            self.javaserver.console("stop")
-                            self.javaserver.changestate(3)
+                            msg("Halting wrapper... Bye.")
+                            self.wrapper.shutdown()
                         elif getargs(message.split(" "), 0) == 'restart':
-                            self.javaserver.restart("Restarting server from IRC remote")
-                            self.javaserver.changestate(3)
+                            msg("restarting from IRC remote")
+                            self.log.info("Restarting server from IRC remote")
+                            self.javaserver.restart()
                         elif getargs(message.split(" "), 0) == 'stop':
-                            self.javaserver.console('stop')
-                            self.javaserver.stop_server_command("Stopped from IRC remote")
-                            msg("Server stopping")
+                            msg("Stopping from IRC remote")
+                            self.log.info("Stopped from IRC remote")
+                            self.javaserver.stop_server_command()
                         elif getargs(message.split(" "), 0) == 'start':
                             self.javaserver.start()
                             msg("Server starting")
@@ -492,7 +504,7 @@ class IRC(object):
                         del self.authorized[nick]
                 else:
                     if getargs(message.split(" "), 0) == 'auth':
-                        if getargs(message.split(" "), 1) == self.config["IRC"]["control-irc-pass"]:
+                        if self.pass_handler.check_pw(getargs(message.split(" "), 1), self.config["IRC"]["control-irc-pass"]):
                             msg("Authorization success! You'll remain logged in for 15 minutes.")
                             self.authorized[nick] = int(time.time())
                         else:

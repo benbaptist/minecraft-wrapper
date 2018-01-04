@@ -1,6 +1,79 @@
-Build 246 (next build)
+Build 255 (next build)
 - player to player TP - Add inter-dimensional TP (1.8+) api
   Community Input enhancement proxy mode
+
+Build 254 [0.15.0] - Master branch update
+- Correct one other Python 2/3 error in IRC
+- Add explanatory comments about player object usage in strings
+- Add warning log about web mode being presently broken
+- Build master branch to [0.15.0]
+
+Build 253
+- Correct Python 3 errors in IRC
+
+Build 252
+-correct password decryting errors in IRC
+- IRC now works in PY2 only (unicode related issues in PY3)
+
+Build 251
+- bugfixes in config and remove test code
+- apparently, Spigot/Mcbans needs more time to kick the players before
+ a server restart...
+
+Build 250
+- Fix custom messages again for non-proxy mode.
+
+Build 249
+- add config items to allow entering a plaintext password that
+ gets digested and resaved with encryption.
+- PEP-8 updates to dashboard (still not usable yet)
+- Fix error that prevented startup if user did not have cryptography
+ installed.
+
+Build 248
+- This build fixes [issue 492](https://github.com/benbaptist/minecraft-wrapper/issues/492):
+    - Fix timer loops for reboots
+    - Fix custom messages in Misc section and add new message "halt-message"
+     for when wrapper is halted.
+
+Build 247 [0.14.2] dev
+- For consistency and eliminate confusion, all wrapper internal
+ encryption uses `cryptography` package even for regular hashing
+ and password checking.
+- retained bcrypt package as on option, but it will likely only ever
+ be a part of the plugin API.
+- added plugin API (base.py) password handler functions:
+  ```
+      def hash_password(self, password):
+         """ Bcrypt-based password encryption.  Takes a raw string password
+         returns a string representation of the binary hash."""
+
+      def check_password(self, password, hashed_password):
+         """ Bcrypt-based password checker.  Takes a raw string password and
+         compares it to the hash of a previously hashed password, returning
+         True if the passwords match, or False if not.
+  ```
+
+Build 246 [0.14.1] Dev
+- fix error in core/wrapper.py that causes spamming of "Disabling proxy
+ mode because ..." to the console.
+- added text to the vanilla message to tell console user not only the
+ port of the minecraft server, but the proxy too (if proxy is enabled).
+- added module `wrapper/utils/crypt.py` with full featured password encryption schemas:
+    - `make_hash(password_string, encoding='utf-8')` - hash a password
+    - `check_pw(password_string, hashed_pw_str, encoding='utf-8')` check password against hash
+    - `phrase_to_url_safebytes(pass_phrase)` - create bytes for Fernet encryption from wrapper pass phrase
+    - `encrypt(passphrase, data)` - do a Fernet encrypt of data from bytes pass phrase
+    - `decrypt(passphrase, encrypted_str_data)` - Fernet decryption of data
+- implement a wrapper password to be used internally by wrapper to
+ store sensitive data (email passwords) that wrapper's features may use.
+- implement encryption hashing of other stored passwords to disk
+ (web, IRC, so forth.. ).
+- corrected Web/dashboard and IRC password references to use hashed
+ passwords.
+- Added /password command to wrapper to allow setting of encrypted
+ passwords in the wrapper.config.json file.
+** important note ** I may consider uniting make_hash/encrypt so that a single schema is used in the next build
 
 Build 245 [0.14.1] - Master branch update
 - fix spigot login position (due to spigot pre-pending the world name to
@@ -21,9 +94,9 @@ builds broke advanced json chat things (like links and hoverevents).
 
 Build 240
 - more cleanup for PING requests.
+- fix bugs in player.message() displays I introduced in Build 238/239.
 
 Build 239 [0.13.6] - Development branch
-- fix bugs in player.message() displays I introduced in Build 239.
 - bump version
 
 Build 238

@@ -102,13 +102,16 @@
         Player chat scrubbed from the console.
 
     :Payload:
-        :"player": playerobject
+        :"player": playerobject (self.__str__ represents as player.username)
         :"message": <str> type - what the player said in chat. ('hello everyone')
         :"original": The original line of text from the console ('<mcplayer> hello everyone`)
 
     :Can be aborted/modified: 
     :Comments:
         This event is triggered by console chat which has already been sent.
+        This event returns the player object. if used in a string context,
+        ("%s") it's repr (self.__str__) is self.username (no need to do
+        str(player) or player.username in plugin code).
 
 :Event: "player.action"
 

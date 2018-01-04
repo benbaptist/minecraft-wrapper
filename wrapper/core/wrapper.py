@@ -15,6 +15,7 @@ import threading
 import time
 import os
 import logging
+# import smtplib
 import sys  # used to pass sys.argv to server
 
 # non standard library imports
@@ -32,6 +33,7 @@ except ImportError:
 # noinspection PyProtectedMember
 from api.helpers import format_bytes, getargs, getargsafter, readout, get_int
 from utils import readkey
+from utils.crypt import phrase_to_url_safebytes, gensalt
 
 # core items
 from core.mcserver import MCServer
@@ -47,6 +49,8 @@ from core.config import Config
 from core.backups import Backups
 from core.consoleuser import ConsolePlayer
 from core.permissions import Permissions
+from utils.crypt import Crypt
+
 # optional API type stuff
 from proxy.base import Proxy, ProxyConfig, HaltSig, ServerVitals
 from api.base import API
@@ -91,7 +95,7 @@ CLEAR_LINE = ESC + '\x5b\x31\x4b'
 
 
 class Wrapper(object):
-    def __init__(self):
+    def __init__(self, secret_passphrase):
         # setup log and config
         # needs a false setting on first in case config does not
         # load (like after changes).
@@ -99,7 +103,6 @@ class Wrapper(object):
         self.log = logging.getLogger('Wrapper.py')
         self.configManager = Config()
         self.configManager.loadconfig()
-        # set up config
         self.config = self.configManager.config
 
         # Read Config items
@@ -110,45 +113,73 @@ class Wrapper(object):
         self.serverpath = self.config["General"]["server-directory"]
         self.proxymode = self.config["Proxy"]["proxy-enabled"]
         self.wrapper_onlinemode = self.config["Proxy"]["online-mode"]
+        self.halt_message = self.config["Misc"]["halt-message"]
 
-        # make a patch
-        # old paths were:
-        # "dev-branch": "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/build/version.json"
-        # new paths are:
-        # "dev-branch": "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development"
+        # encryption items (for passwords and sensitive user data)
+        # salt is generated and stored in wrapper.properties.json
+        config_changes = False
+        salt = self.config["General"]["salt"]
+        if not salt:
+            salt = gensalt(self.encoding)
+            self.config["General"]["salt"] = salt
+            config_changes = True
+        # passphrase is provided at startup by the wrapper operator or script (not stored)
+        passphrase = phrase_to_url_safebytes(secret_passphrase, self.encoding, salt)
+        self.cipher = Crypt(passphrase, self.encoding)
+
+        # Update passwords (hash any plaintext passwords)
+        for groups in self.config:
+            for cfg_items in self.config[groups]:
+                if cfg_items[-10:] == "-plaintext":
+                    # i.e., cfg_items ===> like ["web-password-plaintext"]
+                    hash_item = cfg_items[:-10]
+                    # hash_item ===> i.e., ["web-password"]
+                    if hash_item in self.config[groups] and self.config[groups][cfg_items]:
+                        # encrypt contents of (i.e.) ["web-password-plaintext"]
+                        hashed_item = self.cipher.encrypt(
+                            self.config[groups][cfg_items])
+                        # store in "" ["Web"]["web-password"]
+                        self.config[groups][hash_item] = hashed_item
+                        # set plaintext item to false (successful digest)
+                        self.config[groups][cfg_items] = False
+                        config_changes = True
+
+        # Patch any old update paths "..wrapper/development/build/version.json"
+        # new paths are: "..wrapper/development"
         for entries in self.config["Updates"]:
             if "/build/version.json" in str(self.config["Updates"][entries]):
-                oldentry = copy.copy(self.configManager.config["Updates"][entries])
-                self.configManager.config["Updates"][entries] = oldentry.split("/build/version.json")[0]
-                self.configManager.save()
-        # rebuild config
-        self.config = self.configManager.config
+                oldentry = copy.copy(self.config["Updates"][entries])
+                self.config["Updates"][entries] = oldentry.split("/build/version.json")[0]
+                config_changes = True
+
+        # save changes made to config file
+        if config_changes:
+            self.configManager.save()
+
+        # reload branch update info.
         self.auto_update_wrapper = self.config["Updates"]["auto-update-wrapper"]
         self.auto_update_branch = self.config["Updates"]["auto-update-branch"]
         if not self.auto_update_branch:
             self.update_url = "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development"
         else:
-            self.update_url = self.configManager.config["Updates"][self.auto_update_branch]
+            self.update_url = self.config["Updates"][self.auto_update_branch]
 
         self.use_timer_tick_event = self.config[
             "Gameplay"]["use-timer-tick-event"]
-        self.use_readline = self.config["Misc"]["use-readline"]
+        self.use_readline = not(self.config["Misc"]["use-betterconsole"])
 
         # Storages
-        self.wrapper_storage = Storage("wrapper", encoding=self.encoding)
-
+        self.wrapper_storage = Storage(
+            "wrapper", encoding=self.encoding)
         self.wrapper_permissions = Storage(
             "permissions", encoding=self.encoding, pickle=False)
-
         self.wrapper_usercache = Storage(
             "usercache", encoding=self.encoding, pickle=False)
 
         # storage Data objects
         self.storage = self.wrapper_storage.Data
         self.usercache = self.wrapper_usercache.Data
-
-        # access this directly to prevent changing the reference
-        # self.permissions = self.wrapper_permissions.Data
+        # self.wrapper_permissions accessed only by permissions module
 
         # core functions and datasets
         self.perms = Permissions(self)
@@ -209,13 +240,14 @@ class Wrapper(object):
         # LETS TAKE A SECOND TO DISCUSS PLAYER OBJECTS:
         # The ServerVitals class gets passed the player object list now, but
         # player objects are now housed in wrapper.  This is how we are
-        # passing informatino between proxy and wrapper.
+        # passing information between proxy and wrapper.
 
         self.servervitals.serverpath = self.config[
             "General"]["server-directory"]
         self.servervitals.state = OFF
         self.servervitals.command_prefix = self.config[
             "Misc"]["command-prefix"]
+
         self.proxyconfig = ProxyConfig()
         self.proxyconfig.proxy = self.config["Proxy"]
         self.proxyconfig.entity = self.config["Entities"]
@@ -255,6 +287,11 @@ class Wrapper(object):
 
         if self.config["Web"]["web-enabled"]:  # this should be a plugin
             if manageweb.pkg_resources and manageweb.requests:
+                self.log.warning(
+                    "Our apologies!  Web mode is currently broken.  Wrapper"
+                    " will start web mode anyway, but it will not likely "
+                    "function well (or at all).  For now, you should turn "
+                    "off web mode in wrapper.properties.json.")
                 self.web = manageweb.Web(self)
                 t = threading.Thread(target=self.web.wrap, args=())
                 t.daemon = True
@@ -271,10 +308,16 @@ class Wrapper(object):
         consoledaemon.daemon = True
         consoledaemon.start()
 
-        # Timer also runs while not wrapper.halt.halt
-        t = threading.Thread(target=self.event_timer, args=())
-        t.daemon = True
-        t.start()
+        # Timer runs while not wrapper.halt.halt
+        ts = threading.Thread(target=self.event_timer_second, args=())
+        ts.daemon = True
+        ts.start()
+
+        if self.use_timer_tick_event:
+            # Timer runs while not wrapper.halt.halt
+            tt = threading.Thread(target=self.event_timer_tick, args=())
+            tt.daemon = True
+            tt.start()
 
         if self.config["General"]["shell-scripts"]:
             if os.name in ("posix", "mac"):
@@ -342,7 +385,7 @@ class Wrapper(object):
         self._halt()
 
     def _halt(self):
-        self.javaserver.stop("Halting server...", restart_the_server=False)
+        self.javaserver.stop(self.halt_message, restart_the_server=False)
         self.halt.halt = True
 
     def shutdown(self):
@@ -544,14 +587,14 @@ class Wrapper(object):
             if command in ("/halt", "halt"):
                 self._halt()
             elif command in ("/stop", "stop"):
-                self.javaserver.stop_server_command("Stopping server...")
+                self.javaserver.stop_server_command()
             # "kill" (with no slash) is a server command.
             elif command == "/kill":
                 self.javaserver.kill("Server killed at Console...")
             elif command in ("/start", "start"):
                 self.javaserver.start()
             elif command in ("/restart", "restart"):
-                self.javaserver.restart("Server restarting, be right back!")
+                self.javaserver.restart()
             elif command in ("/update-wrapper", "update-wrapper"):
                 self._checkforupdate(True)
             # "plugins" command (with no slash) reserved for server commands
@@ -610,6 +653,9 @@ class Wrapper(object):
 
             elif command in ("deop", "/deop"):
                 self.runwrapperconsolecommand("deop", allargs)
+
+            elif command in ("pass", "/pass", "pw", "/pw", "password", "/password"):
+                self.runwrapperconsolecommand("password", allargs)
 
             # TODO Add more commands below here, below the original items:
             # TODO __________________
@@ -671,6 +717,8 @@ class Wrapper(object):
                  "/entity help/? for more help.. ", None),
                 ("/config", "Change wrapper.properties (type"
                             " /config help for more..)", None),
+                ("/password", "Sample usage: /pw IRC control-irc-pass <new"
+                              "password>", None),
 
                 # Minimum server version for commands to appear is
                 # 1.7.6 (registers perm later in serverconnection.py)
@@ -739,6 +787,11 @@ class Wrapper(object):
                 readout("failed to load plugin", plugin, pad=25,
                         usereadline=self.use_readline)
 
+    def _start_emailer(self):
+        alerts = self.config["Alerts"]["enabled"]
+        if alerts:
+            self.config["Alerts"] = "alerts true"
+
     def _startproxy(self):
 
         # error will raise if requests or cryptography is missing.
@@ -757,6 +810,7 @@ class Wrapper(object):
                     " minutes.  Disabling proxy mode because something is"
                     " wrong.")
                 self.disable_proxymode()
+                return
 
         if self.proxy.proxy_port == self.servervitals.server_port:
             self.log.warning("Proxy mode cannot start because the wrapper"
@@ -770,9 +824,8 @@ class Wrapper(object):
 
     def disable_proxymode(self):
         self.proxymode = False
-        self.configManager.config["Proxy"]["proxy-enabled"] = False
+        self.config["Proxy"]["proxy-enabled"] = False
         self.configManager.save()
-        self.config = self.configManager.config
         self.log.warning(
             "\nProxy mode is now turned off in wrapper.properties.json.\n")
 
@@ -784,7 +837,7 @@ class Wrapper(object):
                 core_buildinfo_version.__build__)
 
         elif core_buildinfo_version.__branch__ == "stable":
-            return "%s (stable)" % core_buildinfo_version.__build__
+            return "%s (stable)" % core_buildinfo_version.__version__
         else:
             return "Version: %s (%s build #%d)" % (
                 core_buildinfo_version.__version__,
@@ -844,9 +897,7 @@ class Wrapper(object):
                     reponame = data["__branch__"]
                 if "__version__" not in data:
                     data["__version__"] = data["version"]
-                return data["__version__"], \
-                       data["__build__"], \
-                       data["__branch__"], reponame
+                return data["__version__"], data["__build__"], data["__branch__"], reponame
 
         else:
             self.log.warning(
@@ -888,40 +939,39 @@ class Wrapper(object):
                 wrapperfile.status_code, exc_info=True)
             return False
 
-    def event_timer(self):
-        t = time.time()
+    def event_timer_second(self):
         while not self.halt.halt:
-            if time.time() - t > 1:
-                self.events.callevent("timer.second", None)
-                """ eventdoc
-                    <group> wrapper <group>
+            time.sleep(1)
+            self.events.callevent("timer.second", None)
+            """ eventdoc
+                <group> wrapper <group>
 
-                    <description> a timer that is called each second.
-                    <description>
+                <description> a timer that is called each second.
+                <description>
 
-                    <abortable> No <abortable>
+                <abortable> No <abortable>
 
-                """
-                t = time.time()
-            if self.use_timer_tick_event:
-                # don't really advise the use of this timer
-                self.events.callevent("timer.tick", None)
-                """ eventdoc
-                    <group> wrapper <group>
+            """
 
-                    <description> a timer that is called each 1/20th
-                    <sp> of a second, like a minecraft tick.
-                    <description>
-
-                    <abortable> No <abortable>
-
-                    <comments>
-                    Use of this timer is not suggested and is turned off
-                    <sp> by default in the wrapper.config.json file
-                    <comments>
-
-                """
+    def event_timer_tick(self):
+        while not self.halt.halt:
+            self.events.callevent("timer.tick", None)
             time.sleep(0.05)
+            """ eventdoc
+                <group> wrapper <group>
+
+                <description> a timer that is called each 1/20th
+                <sp> of a second, like a minecraft tick.
+                <description>
+
+                <abortable> No <abortable>
+
+                <comments>
+                Use of this timer is not suggested and is turned off
+                <sp> by default in the wrapper.config.json file
+                <comments>
+
+            """
 
     def _pause_console(self, pause_time):
         if not self.javaserver:
@@ -1045,6 +1095,9 @@ class Wrapper(object):
                 "Send command to the Minecraft"
                 " Server. Useful for Forge\n"
                 "                  commands like '/fml confirm'.",
+                usereadline=self.use_readline)
+        readout("/password",
+                "run `/password help` for more...)",
                 usereadline=self.use_readline)
         readout("/perms", "/perms for more...)",
                 usereadline=self.use_readline)

@@ -56,6 +56,8 @@ CONFIG = {
 
                 ],
 
+         # backup interval is in seconds: 3600 = hourly, 86400 = Daily, 604800 = weekly
+
             "backup-interval": 3600,
 
          # backup location is inside wrapper's directory
@@ -68,17 +70,19 @@ CONFIG = {
 
             "enabled": False
 
-    },
+        },
 
     "Gameplay":
 
         {
 
-        # Use of timer-tick is not recommended.  1/20th of a second timer option for plugin use. May impact wrapper performance negatively.
+         # Use of timer-tick is not recommended.  1/20th of a second timer option for plugin use. May impact wrapper performance negatively.
 
             "use-timer-tick-event": False,
 
         },
+
+# Entity processing is somewhat superfluous now that minecraft has more built-in entity management gamerules now.  Must be turned on to use player.mount / unmount events.
 
     "Entities":
 
@@ -132,13 +136,9 @@ CONFIG = {
 
          # You can point these to another branch, if desired.
 
-            "stable-branch":
+            "stable-branch": "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master",
 
-                "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master",
-
-            "dev-branch":
-
-                "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development",
+            "dev-branch": "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development",
 
         },
 
@@ -148,25 +148,43 @@ CONFIG = {
 
         {
 
-         # if you change command-prefix, no minecraft command will work. Bug or feature? -TODO not sure.
+         # if you change the command-prefix, no minecraft command will work because minecraft itself only recognizes "/" commands... TODO - Bug or feature? -not sure.
 
             "command-prefix": "/",
 
+         # Reboot message occurs with automatic timed server restarts ["General"]["timed-reboot"]
+
             "reboot-message": "Server is conducting a scheduled reboot. The server will be back momentarily!",
+
+         # Restart message occurs when console command "/restart" is run.
 
             "default-restart-message": "Server restarting...",
 
+         # Stop message is generated from wrapper "/stop" command.
+
             "stop-message": "Stopping The Minecraft Server",
+
+         # message when wrapper halt is called.
+
+            "halt-message": "Halting Wrapper...",
 
          # readline is likely to be more-cross platform, but does not use wrapper's ability to keep console keystroke entries visually intact while server produces output.
 
-            "use-readline": True
+            "use-readline": "deprecated",
+
+         # Use-betterconsole replaces "use-readline" for clarity about what this option does.  The default is False because use-betterconsole may not be fully cross-platform.  Better Console makes it easier for the console operator too see what they are typing, even while the server or wrapper my be writing output at the same time, essentially produces jline-like functionality to the wrapper console...
+
+            "use-betterconsole": False
 
         },
 
     "General":
 
+# General wrapper and server startup options
+
         {
+
+         # restart server automatically if it stops (unless you explicity used the "/stop" command within the console).
 
             "auto-restart": True,
 
@@ -174,11 +192,10 @@ CONFIG = {
 
             "command": "java -jar -Xmx2G -Xms1G server.jar nogui",
 
-            "encoding": "UTF-8",
+         # If not uft-8, specify your system's encoding here.
 
-         # wrapper detects server version and adjusts accordingly now
+            "encoding": "utf-8",
 
-            "pre-1.7-mode": "deprecated",
 
          # Using the default '.' roots the server in the same folder with wrapper. Change this to another folder to keep the wrapper and server folders separate.  Do not use a trailing slash...  e.g. - '/full/pathto/the/server'
 
@@ -192,13 +209,21 @@ CONFIG = {
 
             "timed-reboot": False,
 
-         # Deprecated for consistency with timed reboot warning 'minutes'
+         # salt is used internally for wrapper encryption.  Do not edit this; Wrapper will create the salt.  It does not matter much that it is on disk here, as the user must create a passphrase also.  This just prevents the need for a hardcoded salt and ensures each wrapper installation will use a different one.
 
-            "timed-reboot-seconds": "deprecated",
+            "salt": False,
 
             "timed-reboot-minutes": 1440,
 
             "timed-reboot-warning-minutes": 5,
+
+         # wrapper detects server version and adjusts accordingly now.
+
+            "pre-1.7-mode": "deprecated",
+
+         # Deprecated for consistency with timed reboot "warning" being in "minutes", not seconds
+
+            "timed-reboot-seconds": "deprecated",
 
          # The remaining items and functionality were moved to group "Updates" and deprecated from this section.
 
@@ -240,7 +265,11 @@ CONFIG = {
 
             "control-from-irc": False,
 
-            "control-irc-pass": "password",
+         # enter a password here and wrapper will convert it to a hashed password
+
+            "control-irc-pass-plaintext": False,
+
+            "control-irc-pass": "from console use `/password IRC control-irc-pass <your password>`",
 
             "irc-enabled": False,
 
@@ -248,7 +277,11 @@ CONFIG = {
 
             "obstruct-nicknames": False,
 
-            "password": None,
+         # enter a password here and wrapper will convert it to a hashed password
+
+            "password-plaintext": False,
+
+            "password": "from console use `/password IRC password <your password>`",
 
             "port": 6667,
 
@@ -260,81 +293,87 @@ CONFIG = {
 
         },
 
+# This is a man-in-the-middle proxy similar to BungeeCord, which is used for extra plugin functionality. Online-mode must be set to False in server.properties. Make sure that the server port is not accessible directly from the outside world.
 
+# Note: the online-mode option here refers to the proxy only, not to the server's offline mode.  Each server's online mode will depend on its setting in server.properties.  If you experience issues, you might try turning network-compression-threshold to -1 (off) in server.properties.
 
     "Proxy":
 
-    # This is a man-in-the-middle proxy similar to BungeeCord, which is used for extra plugin functionality. online-mode must be set to False in server.properties. Make sure that the server is not accessible directly from the outside world.
+        {
 
-    # Note: the online-mode option here refers to the proxy only, not to the server's offline mode.  Each server's online mode will depend on its setting in server.properties.  It is recommended that you turn network-compression-threshold to -1 (off) in server.properties for fewer issues.
+
+
+            "convert-player-files": False,
+
+         # This actually does nothing in the code. TODO - re-implement this somewhere? perhaps in the server JSON response?
+
+            "max-players": 1024,
+
+         # the wrapper's online mode, NOT the server.
+
+            "online-mode": True,
+
+            "proxy-bind": "0.0.0.0",
+
+            "proxy-enabled": False,
+
+         # if wrapper is a sub world (wrapper needs to do extra work to spawn the player).
+
+            "proxy-sub-world": False,
+
+         # the wrapper's proxy port that accepts client connections from the internet. This port is exposed to the internet via your port forwards.
+
+            "proxy-port": 25565,
+
+         # Server port is deprecated - This port is autoconfigured from server console output now.
+
+            "server-port": "deprecated",
+
+         # spigot mode has some slightly "off" bytes in the login sequence.
+
+            "spigot-mode": False,
+
+         # silent bans cause your server to ignore sockets from that IP (for IP bans). This will cause your server to appear offline and avoid possible confrontations.
+
+            "silent-ipban": True,
+
+            "hidden-ops":
+
+             # these players do not appear in the sample server player list pings.
+
+                [
+
+                    "SurestTexas00",
+
+                    "BenBaptist"
+
+                ]
+
+        },
+
+    "Web":
 
         {
 
-                "convert-player-files": False,
+            "public-stats": True,
 
-            # This actually does nothing in the code. TODO - re-implement this somewhere? perhaps in the server JSON response?
+            "web-allow-file-management": True,
 
-                "max-players": 1024,
+            "web-bind": "0.0.0.0",
 
-            # the wrapper's online mode, NOT the server.
+            "web-enabled": False,
 
-                "online-mode": True,
+         # enter a password here and wrapper will convert it to a hashed password
 
-                "proxy-bind": "0.0.0.0",
+            "web-password-plaintext": False,
 
-                "proxy-enabled": False,
+            "web-password": "to set this, from console use `/password Web web-password <your password>`",
 
-            # if wrapper is a sub world (wrapper needs to do extra work to spawn the player).
+            "web-port": 8070,
 
-                "proxy-sub-world": False,
+            "server-name": "Minecraft Server",
 
-            # the wrapper's proxy port that accepts client connections from the internet. This port is exposed to the internet via your port forwards.
-
-                "proxy-port": 25565,
-
-            # Deprecated - This port is autoconfigured from server console output now.
-
-                "server-port": "deprecated",
-
-                "spigot-mode": False,
-
-            # silent bans cause your server to ignore sockets from that IP (for IP bans). This will cause your server to appear offline and avoid possible confrontations.
-
-                "silent-ipban": True,
-
-                "hidden-ops":
-
-                # these players do not appear in the sample server player list pings.
-
-                    [
-
-                        "SurestTexas00",
-
-                        "BenBaptist"
-
-                    ]
-
-            },
-
-        "Web":
-
-            {
-
-                "public-stats": True,
-
-                "web-allow-file-management": True,
-
-                "web-bind": "0.0.0.0",
-
-                "web-enabled": False,
-
-                "web-password": "password",
-
-                "web-port": 8070,
-
-                "server-name": "Minecraft Server",
-
-            }
+        }
 
     }
 
