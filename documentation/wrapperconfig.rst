@@ -56,6 +56,32 @@ CONFIG = {
 
         },
 
+# Alerts provide email or other notification of wrapper problems (server down, etc).
+
+    "Alerts":
+
+        {
+
+         # if using gmail, remember to "allow less secure apps” on your account..
+
+            "enabled": False,
+
+            "send-method": "email",
+
+            "server-addr": "smtp.gmail.com",
+
+            "server-port": 587,
+
+            "login-name": "sphincter@gmail.com",
+
+         # -plaintext items are converted to hashed items by wrapper
+
+            "password-plaintext": False,
+
+            "password": "use `/password -s Alerts password <your password>` to set this or enter a password-plaintext"
+
+        },
+
     "Gameplay":
 
         {
