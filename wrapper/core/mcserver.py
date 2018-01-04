@@ -805,11 +805,14 @@ class MCServer(object):
                 <abortable>
 
                 <comments>
-                This event is triggered by console chat which has already been sent.
+                This event is triggered by console chat which has already been sent. 
+                This event returns the player object. if used in a string context, 
+                ("%s") it's repr (self.__str__) is self.username (no need to do 
+                str(player) or player.username in plugin code).
                 <comments>
 
                 <payload>
-                "player": playerobject
+                "player": playerobject (self.__str__ represents as player.username)
                 "message": <str> type - what the player said in chat. ('hello everyone')
                 "original": The original line of text from the console ('<mcplayer> hello everyone`)
                 <payload>
@@ -936,7 +939,7 @@ class MCServer(object):
                     continue
                 self.restart(self.reboot_message)
 
-    def eachsecond_web(self, payload):
+    def eachsecond_web(self):
         if time.time() - self.lastsizepoll > 120:
             if self.vitals.worldname is None:
                 return True
