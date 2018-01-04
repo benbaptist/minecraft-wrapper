@@ -287,6 +287,11 @@ class Wrapper(object):
 
         if self.config["Web"]["web-enabled"]:  # this should be a plugin
             if manageweb.pkg_resources and manageweb.requests:
+                self.log.warning(
+                    "Our apologies!  Web mode is currently broken.  Wrapper"
+                    " will start web mode anyway, but it will not likely "
+                    "function well (or at all).  For now, you should turn "
+                    "off web mode in wrapper.properties.json.")
                 self.web = manageweb.Web(self)
                 t = threading.Thread(target=self.web.wrap, args=())
                 t.daemon = True

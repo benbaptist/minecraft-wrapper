@@ -116,7 +116,7 @@ Download the Wrapper.py file and place it in the desired folder.
 
 ###  **Start Up**
 
-- Run `python Wrapper.py [--passphrase 'passphrase']` to start.
+- Run `python Wrapper.py [--passphrase 'passphrase']` to start (passphrase must be 8 or more characters in length).
 
 
     _An alternative method of running wrapper is to run the source package directly.  To do this, clone the repo, copy the
@@ -150,7 +150,7 @@ Download the Wrapper.py file and place it in the desired folder.
     text and will not prompt the user for a password. Otherwise, if a passphrase
     is not supplied, Wrapper will prompt for one:
     ```
-    please input a master passphrase for Wrapper.  This passphrase willbe used to encrypt
+    please input a master passphrase for Wrapper.  This passphrase will be used to encrypt
      all passwords in Wrapper.
     >
     ```
@@ -160,7 +160,7 @@ Download the Wrapper.py file and place it in the desired folder.
  file, and then exits.:
     ```
     [15:19:18] [root/WARNING]: Unable to locate logging.json -- Creating default logging configuration
-    please input a master passphrase for Wrapper.  This passphrase willbe used to encrypt all passwords in Wrapper.  Please use a fairly long phrase (minimum is 8 characters).  You can change the pass-phrase later with /passphrase <new phrase>
+    please input a master passphrase for Wrapper.  This passphrase will be used to encrypt all passwords in Wrapper.  Please use a fairly long phrase (minimum is 8 characters).  You can change the pass-phrase later with /passphrase <new phrase>
     >
     [15:19:30] [Config/WARNING]: Updated wrapper.properties.json file - check and edit configuration if needed and start again.
 
@@ -182,7 +182,7 @@ Download the Wrapper.py file and place it in the desired folder.
  to this:
     ```
     [15:24:10] [root/INFO]: Logging configuration file (logging.json) located and loaded, logging configuration set!
-    please input a master passphrase for Wrapper.  This passphrase willbe used to encrypt all passwords in Wrapper.  Please use a fairly long phrase (minimum is 8 characters).  You can change the pass-phrase later with /passphrase <new phrase>
+    please input a master passphrase for Wrapper.  This passphrase will be used to encrypt all passwords in Wrapper.  Please use a fairly long phrase (minimum is 8 characters).  You can change the pass-phrase later with /passphrase <new phrase>
     >
     [15:24:16] [Wrapper.py/INFO]: Wrapper.py started - Version [0, 14, 1] (development build #245)
     [15:24:16] [Wrapper.py/WARNING]: NOTE: Server was in 'STOP' state last time  Wrapper.py was running. To start the server, run /start.

@@ -345,7 +345,6 @@ class IRC(object):
             channel = getargs(_line.split(" "), 2)
             nick = getargs(_line.split(" "), 0)[1:getargs(_line.split(" "), 0).find("!")]
             message = getargsafter(_line.split(" "), 3)[1:].strip("\n").strip("\r")
-
             if channel[0] == "#":
                 if message.strip() == ".players":
                     users = ""
@@ -356,7 +355,10 @@ class IRC(object):
                 elif message.strip() == ".about":
                     self.send("PRIVMSG %s :Wrapper.py Version %s" % (channel, self.wrapper.getbuildstring()))
                 else:
-                    message = message.decode("utf-8", "ignore")
+                    if not PY3:
+                        message = message.decode(self.encoding, "ignore")
+                        # TODO - not sure if this part is going to work in PY3
+                        # now that message is a properly encoded string, not a b"" sequence
                     if getargs(message.split(" "), 0) == "\x01ACTION":
                         self.wrapper.events.callevent("irc.action", {"nick": nick,
                                                                      "channel": channel,
@@ -415,7 +417,7 @@ class IRC(object):
                                 self.javaserver.console(command)
                         elif getargs(message.split(" "), 0) == 'halt':
                             msg("Halting wrapper... Bye.")
-                            self.wrapper._halt()
+                            self.wrapper.shutdown()
                         elif getargs(message.split(" "), 0) == 'restart':
                             msg("restarting from IRC remote")
                             self.log.info("Restarting server from IRC remote")

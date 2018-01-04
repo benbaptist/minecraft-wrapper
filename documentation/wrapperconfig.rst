@@ -54,7 +54,7 @@ CONFIG = {
 
             "enabled": False
 
-    },
+        },
 
 # Alerts provide email or other notification of wrapper problems (server down, etc).
 

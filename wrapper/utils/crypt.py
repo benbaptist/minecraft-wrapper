@@ -91,23 +91,6 @@ class Crypt(object):
              phrase_to_url_safebytes)
             :encoding: string encoding
 
-        :sample usage:
-
-            .. code:: python
-
-                from utils.crypt import Crypt
-                # salt and passphrase must be created first
-                self.cipher = Crypt(passphrase, encoding='utf-8')
-                hashed = self.cipher.encrypt("mydumbpassword or phrase"
-                if self.cipher.ckeck_pw("hello world", hashed):
-                    print("yes, that was the password!")
-                else:
-                    print("no, the password was:")
-                    print(self.cipher.decrypt(hashed))
-
-            ..
-
-
         """
         self.passphrase = passphrase
         self.encoding = encoding
