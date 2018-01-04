@@ -77,9 +77,7 @@ class Backups(object):
         Allow plugin to re-enable disabled backups or enable backups
         during this wrapper session.
 
-        :returns:
-            :True: tar is installed
-            :False: tar is not installed
+        :returns: False if tar is not installed, otherwise, nothing.
 
         """
         self.wrapper.backups.enabled = True
