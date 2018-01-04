@@ -2,11 +2,11 @@ Build 255 (next build)
 - player to player TP - Add inter-dimensional TP (1.8+) api
   Community Input enhancement proxy mode
 
-Build 254 [0.14.2] - Master branch update
+Build 254 [0.15.0] - Master branch update
 - Correct one other Python 2/3 error in IRC
 - Add explanatory comments about player object usage in strings
 - Add warning log about web mode being presently broken
-- Build master branch to [0.14.2]
+- Build master branch to [0.15.0]
 
 Build 253
 - Correct Python 3 errors in IRC

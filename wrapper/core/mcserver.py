@@ -107,11 +107,6 @@ class MCServer(object):
         # don't reg. an unused event.  The timer still is running, we
         #  just have not cluttered the events holder with another
         #  registration item.
-        #  # entity processor thread
-        #    t = threading.Thread(target=self._entity_processor,
-        #                         name="entProc", args=())
-        #    t.daemon = True
-        #    t.start()
 
         if self.config["General"]["timed-reboot"]:
             rb = threading.Thread(target=self.reboot_timer, args=())
