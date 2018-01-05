@@ -595,6 +595,8 @@
 
     :Payload:
         :"file": Name of backup file.
+        :"status": Status code from TAR
+        :"Summary": string summary of operation
 
     :Can be aborted/modified: No - informational only
 

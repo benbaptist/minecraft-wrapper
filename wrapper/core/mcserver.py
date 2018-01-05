@@ -939,6 +939,19 @@ class MCServer(object):
                     else:
                         self.broadcast("&cServer will reboot in %d "
                                        "minute!" % (rb_mins_warn + timer))
+                        countdown = 59
+                        timer -= 1
+                        while countdown > 0:
+                            time.sleep(1)
+                            countdown -= 1
+                            if countdown == 0:
+                                self.restart(self.reboot_message)
+                            if countdown % 15 == 0:
+                                self.broadcast("&cServer will reboot in %d "
+                                               "seconds" % countdown)
+                            if countdown < 6:
+                                self.broadcast("&cServer will reboot in %d "
+                                               "seconds" % countdown)
                     continue
                 self.restart(self.reboot_message)
 
@@ -960,3 +973,6 @@ class MCServer(object):
 
         command = payload["command"]
         self.console(command)
+
+print(20 % 3)
+print(30 % 15)
