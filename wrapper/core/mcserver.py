@@ -785,34 +785,39 @@ class MCServer(object):
             name = self.stripspecial(getargs(line_words, 0)[1:-1])
             message = self.stripspecial(getargsafter(line_words, 1))
             original = getargsafter(line_words, 0)
-            self.wrapper.events.callevent("player.message", {
-                "player": self.getplayer(name),
-                "message": message,
-                "original": original
-            })
-            """ eventdoc
-                <group> core/mcserver.py <group>
-
-                <description> Player chat scrubbed from the console.
-                <description>
-
-                <abortable> 
-                <abortable>
-
-                <comments>
-                This event is triggered by console chat which has already been sent. 
-                This event returns the player object. if used in a string context, 
-                ("%s") it's repr (self.__str__) is self.username (no need to do 
-                str(player) or player.username in plugin code).
-                <comments>
-
-                <payload>
-                "player": playerobject (self.__str__ represents as player.username)
-                "message": <str> type - what the player said in chat. ('hello everyone')
-                "original": The original line of text from the console ('<mcplayer> hello everyone`)
-                <payload>
-
-            """
+            playerobj = self.getplayer(name)
+            if playerobj:
+                self.wrapper.events.callevent("player.message", {
+                    "player": self.getplayer(name),
+                    "message": message,
+                    "original": original
+                })
+                """ eventdoc
+                    <group> core/mcserver.py <group>
+    
+                    <description> Player chat scrubbed from the console.
+                    <description>
+    
+                    <abortable> 
+                    <abortable>
+    
+                    <comments>
+                    This event is triggered by console chat which has already been sent. 
+                    This event returns the player object. if used in a string context, 
+                    ("%s") it's repr (self.__str__) is self.username (no need to do 
+                    str(player) or player.username in plugin code).
+                    <comments>
+    
+                    <payload>
+                    "player": playerobject (self.__str__ represents as player.username)
+                    "message": <str> type - what the player said in chat. ('hello everyone')
+                    "original": The original line of text from the console ('<mcplayer> hello everyone`)
+                    <payload>
+    
+                """
+            else:
+                self.log.debug("Console has chat from '%s', but wrapper has no "
+                               "known logged-in player object by that name.", name)
         # Player Login
         elif getargs(line_words, 1) == "logged":
             user_desc = getargs(line_words, 0).split("[/")
@@ -820,6 +825,9 @@ class MCServer(object):
             ip_addr = user_desc[1].split(":")[0]
             eid = get_int(getargs(line_words, 6))
             locationtext = getargs(buff.split(" ("), 1)[:-1].split(", ")
+            # spigot versus vanilla
+            # SPIGOT - [12:13:19 INFO]: *******[/] logged in with entity id 123 at ([world]316.86789318152546, 67.12426603789697, -191.9069627257038)
+            # VANILLA - [23:24:34] [Server thread/INFO]: *******[/127.0.0.1:47434] logged in with entity id 149 at (46.29907483845001, 63.0, -270.1293488726086)
             if len(locationtext[0].split("]")) > 1:
                 x_c = get_int(float(locationtext[0].split("]")[1]))
             else:
