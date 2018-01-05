@@ -425,7 +425,7 @@ At last, Wrapper.py 0.7.3 release! This is a relatively big update, and will fix
 
 **Features**
 - Web admin panel for controlling the wrapper & the server from a browser
-  - It is extremely ugly, and primitive. Don't except much yet.
+  - It is extremely ugly, and primitive. Don't expect much yet.
 - Optional backup compression (tar.gz)
 
 - Optional auto-update system (turned off by default)
@@ -502,9 +502,7 @@ At last, Wrapper.py 0.7.3 release! This is a relatively big update, and will fix
 - Entity tracking system being implemented
   - Very early, buggy junk
   - Doesn't handle despawning very well quite yet, or multiple players
-- player.getDimension() now properly updates when switching dimensions
-
-This update definitely makes some API methods cleaner. 
+- player.getDimension() now properly updates when switching dimensions.
 
 <h4>0.7.2</h4>
 Server jumping still seems super buggy and weird. It only works in my test environment, but fails in other environments. I have no clue why.
