@@ -1,6 +1,10 @@
-Build 257 (next build)
+Build 258 (next build)
 - player to player TP - Add inter-dimensional TP (1.8+) api
   Community Input enhancement proxy mode
+
+Build 257
+- Add countdown timers of 45, 30, 15 and then 5-1 seconds to the reboot timers broadcasts
+- Add a backups summary text.
 
 Build 256 [0.15.1]
 - fix spigot bug where nicknamed players producing chat results in

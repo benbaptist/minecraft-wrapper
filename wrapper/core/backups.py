@@ -14,6 +14,7 @@ import platform
 
 from api.base import API
 from api.helpers import putjsonfile, getjsonfile, mkdir_p
+from api.helpers import _secondstohuman, format_bytes
 
 # I should probably not use irc=True when broadcasting, and instead should just rely on events and having
 # MCserver.py and irc.py print messages themselves for the sake of consistency.
@@ -120,7 +121,7 @@ class Backups(object):
         self._checkforbackupfolder()
         self._getbackups()  # populate self.backups
         self._performbackup()
-        self.log.debug("Backup cycle complete.")
+        self.log.debug("dobackup() cycle complete.")
 
     def _checkforbackupfolder(self):
         if not os.path.exists(self.config["Backups"]["backup-location"]):
@@ -179,6 +180,7 @@ class Backups(object):
                 <payload>
 
             """
+            self._doserversaving(True)
             return
         if self.config["Backups"]["backup-notification"]:
             self.api.minecraft.broadcast("&cBacking up... lag may occur!", irc=False)
@@ -199,14 +201,40 @@ class Backups(object):
 
                             """
                 return
+        # perform TAR backup
         statuscode = os.system(" ".join(arguments))
 
         # TODO add a wrapper properties config item to set save mode of server
         # restart saves, call finish Events
         self._doserversaving()
-        if self.config["Backups"]["backup-notification"]:
-            self.api.minecraft.broadcast("&aBackup complete!", irc=False)
-        self.wrapper.events.callevent("wrapper.backupEnd", {"file": filename, "status": statuscode})
+        self.backups.append((timestamp, filename))
+
+        # Prune backups
+        self.pruneoldbackups(filename)
+
+        # Check for success
+        finalbackup = "%s/%s" % (self.config["Backups"]["backup-location"], filename)
+        if not os.path.exists(finalbackup):
+            self.wrapper.events.callevent("wrapper.backupFailure",
+                                          {"reasonCode": 2, "reasonText": "Backup file didn't exist after the tar "
+                                                                          "command executed - assuming failure."})
+            """ eventdoc
+                <description> internalfunction <description>
+
+            """
+            summary = "backup failed"
+        else:
+            # find size of completed backup file
+            backupsize = os.path.getsize(finalbackup)
+            size_of, units = format_bytes(backupsize)
+            timetook = _secondstohuman(int(time.time()) - timestamp)
+            desc = "were backed up.  The operation took"
+            summary = "%s %s %s %s" % (size_of, units, desc, timetook)
+
+        self.wrapper.events.callevent("wrapper.backupEnd",
+                                      {"file": filename,
+                                       "status": statuscode,
+                                       "summary": summary})
         """ eventdoc
             <group> Backups <group>
 
@@ -219,23 +247,14 @@ class Backups(object):
             <comments>
             <payload>
             "file": Name of backup file.
+            "status": Status code from TAR
+            "Summary": string summary of operation 
             <payload>
 
         """
-        self.backups.append((timestamp, filename))
-
-        # Prune backups
-        self.pruneoldbackups(filename)
-
-        # Check for success
-        if not os.path.exists(self.config["Backups"]["backup-location"] + "/" + filename):
-            self.wrapper.events.callevent("wrapper.backupFailure",
-                                          {"reasonCode": 2, "reasonText": "Backup file didn't exist after the tar "
-                                                                          "command executed - assuming failure."})
-            """ eventdoc
-                <description> internalfunction <description>
-
-            """
+        if self.config["Backups"]["backup-notification"]:
+            self.api.minecraft.broadcast("&aBackup cycle complete!", irc=False)
+            self.api.minecraft.broadcast("&a%s" % summary, irc=False)
 
     def _getbackups(self):
         if len(self.backups) == 0 and os.path.exists(self.config["Backups"]["backup-location"] + "/backups.json"):
