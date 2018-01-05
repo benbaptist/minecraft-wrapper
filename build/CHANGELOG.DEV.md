@@ -2,7 +2,7 @@ Build 257 (next build)
 - player to player TP - Add inter-dimensional TP (1.8+) api
   Community Input enhancement proxy mode
 
-Build 256
+Build 256 [0.15.1]
 - fix spigot bug where nicknamed players producing chat results in
  an invalid playerobject being generated with a player.message event
  because the nickname is not a logged on player.
