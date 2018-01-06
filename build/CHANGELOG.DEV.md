@@ -1,6 +1,9 @@
-Build 258 (next build)
+Build 259 (next build)
 - player to player TP - Add inter-dimensional TP (1.8+) api
   Community Input enhancement proxy mode
+
+Build 258
+- first crack at getting web.py working
 
 Build 257
 - Add countdown timers of 45, 30, 15 and then 5-1 seconds to the reboot timers broadcasts

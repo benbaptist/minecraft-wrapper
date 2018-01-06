@@ -79,7 +79,7 @@ class ServerVitals(object):
         # -1 until a player logs on and server sends a time update
         self.timeofday = -1
         self.spammy_stuff = ["found nothing", "vehicle of", "Wrong location!",
-                             "Tried to add entity",]
+                             "Tried to add entity", ]
 
         # PROPOSE
         self.clients = []

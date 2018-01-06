@@ -424,6 +424,7 @@ class Commands(object):
             return False
 
         if getargs(payload["args"], 0) == "server":
+            # payload = {"args": ""}
             return
         try:
             self.wrapper.plugins.reloadplugins()

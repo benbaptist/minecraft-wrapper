@@ -104,13 +104,15 @@ class Wrapper(object):
         self.configManager = Config()
         self.configManager.loadconfig()
         self.config = self.configManager.config
+        self.encoding = self.config["General"]["encoding"]
+        self.serverpath = self.config["General"]["server-directory"]
+        self.api = API(self, "Wrapper.py")
 
         # Read Config items
         # hard coded cursor for non-readline mode
         self.cursor = ">"
         # This was to allow alternate encodings
-        self.encoding = self.config["General"]["encoding"]
-        self.serverpath = self.config["General"]["server-directory"]
+
         self.proxymode = self.config["Proxy"]["proxy-enabled"]
         self.wrapper_onlinemode = self.config["Proxy"]["online-mode"]
         self.halt_message = self.config["Misc"]["halt-message"]
@@ -169,12 +171,9 @@ class Wrapper(object):
         self.use_readline = not(self.config["Misc"]["use-betterconsole"])
 
         # Storages
-        self.wrapper_storage = Storage(
-            "wrapper", encoding=self.encoding)
-        self.wrapper_permissions = Storage(
-            "permissions", encoding=self.encoding, pickle=False)
-        self.wrapper_usercache = Storage(
-            "usercache", encoding=self.encoding, pickle=False)
+        self.wrapper_storage = Storage("wrapper")
+        self.wrapper_permissions = Storage("permissions", pickle=False)
+        self.wrapper_usercache = Storage("usercache", pickle=False)
 
         # storage Data objects
         self.storage = self.wrapper_storage.Data
@@ -197,7 +196,6 @@ class Wrapper(object):
 
         # init items that are set up later (or opted out of/ not set up.)
         self.javaserver = None
-        self.api = None
         self.irc = None
         self.scripts = None
         self.web = None
@@ -265,14 +263,10 @@ class Wrapper(object):
         """wrapper execution starts here"""
 
         self.signals()
-
         self.backups = Backups(self)
-
-        self.api = API(self, "Wrapper.py")
         self._registerwrappershelp()
 
-        # This is not the actual server... the MCServer
-        # class is a console wherein the server is started
+        # The MCServerclass is a console wherein the server is started
         self.javaserver = MCServer(self, self.servervitals)
         self.javaserver.init()
 
