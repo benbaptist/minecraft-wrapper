@@ -26,12 +26,12 @@
 				else{
 					localStorage.sessionKey = r["payload"]["session-key"]
 					console.log("Login Success!")
-					window.location = "admin.html"
+					window.location = "/admin.html"
 				}
 			}
 			window.onload = function() {
 				if(isAuthed()){
-					window.location = "admin.html"
+					window.location = "/admin.html"
 				}
 			}
 			function _login(){
@@ -55,9 +55,10 @@
 			<div id="login_invalid" style="display:none;color:red;font-weight:bold;">The password was invalid.</div>
 			Password: <input type="password" id="login_password" onkeydown="if(event.keyCode==13){_login();this.value='';}"/><button onclick="_login()">Login</button>-->
 			<form class="form-signin" role="form" action="javascript:_login();">
-				<h2 class="form-signin-heading">Admin Login</h2>
+				<h2 class="form-signin-heading">Admin Login</h2><br>
+				<h4> "DO NOT enter a password you use anywhere else.. this is not a secure HTTPS site!" </h4>
 				<div id="login_invalid" style="display:none;" class="alert alert-danger">The password was invalid.</div>
-				<label for="inputPassword" class="sr-only">Password</label>
+				<label class="sr-only">Password</label>
 				<input type="password" id="login_password" class="form-control" placeholder="Password" required>
 				<div class="checkbox">
 					<label>

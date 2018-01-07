@@ -17,8 +17,7 @@ import threading
 
 class Storage(object):
 
-    def __init__(self, name, root="wrapper-data/json",
-                 encoding="default", pickle=True):
+    def __init__(self, name, root="wrapper-data/json", pickle=True):
         self.Data = {}
         self.name = name
         self.root = root
@@ -26,11 +25,7 @@ class Storage(object):
         self.configManager = Config()
         self.configManager.loadconfig()
         self.log = logging.getLogger('Storage.py')
-
-        if encoding == "default":
-            self.encoding = self.configManager.config["General"]["encoding"]
-        else:
-            self.encoding = encoding
+        self.encoding = self.configManager.config["General"]["encoding"]
 
         if self.pickle:
             self.file_ext = "pkl"

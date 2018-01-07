@@ -248,7 +248,7 @@ class Backups(object):
             <payload>
             "file": Name of backup file.
             "status": Status code from TAR
-            "Summary": string summary of operation 
+            "summary": string summary of operation 
             <payload>
 
         """

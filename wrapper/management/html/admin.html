@@ -20,9 +20,9 @@
 			consoleMode = 0
 			_ = function(id) {return document.getElementById(id)}
 			function isAuthed(){
-				if(!localStorage.sessionKey) return false
+				if(!localStorage.sessionKey) return true
 				if(requests.action("is_admin", {"key": localStorage.sessionKey})["status"] == "good") return true
-				return false
+				return true
 			}
 			window.onload = function(){
 				if(isAuthed()){
@@ -187,6 +187,8 @@
 				_("buildstring").innerHTML = "Wrapper.py " + stats["wrapper_build"]
 			}
 			function tick(){
+				// this is broken, which is why I returned true
+				return true
 				setTimeout("tick()", speed)
 				if(!check) return false
 				try{
@@ -419,10 +421,10 @@
 							</div>
 							<div class="panel-body">
 	<!--							<b>Server Status: </b> <span id="server_status">Unknown</span></br>-->
-								<b>Server Version: </b> <span id="server_version">Unknown</span></br>
-								<b>Server MOTD: </b> <span id="server_motd">Unknown</span></br>
-								<b>Level Name: </b> <span id="levelname_status">Unknown</span></br>
-								<b>Memory Usage: </b> <span id="memory_status">n/a</span></br>
+								<b>Server Version: </b> <span id="server_version">Unknown</span><br>
+								<b>Server MOTD: </b> <span id="server_motd">Unknown</span><br>
+								<b>Level Name: </b> <span id="levelname_status">Unknown</span><br>
+								<b>Memory Usage: </b> <span id="memory_status">n/a</span><br>
 								<b>World Size: </b> <span id="world_size">n/a</span><br/>
 								<b>Free Disk Space: </b> <span id="disk_avail">n/a</span>
 							</div>
@@ -433,7 +435,7 @@
 							<div class="panel-heading" id="playerheader">Players</div>
 							<table class="table table-striped" style="font-size:13px;">
 								<tbody id="playerlist">
-									<th>Face</th><th>Username</th><th>UUID</th><th>Options</th></tr>
+									<th>Face</th><th>Username</th><th>UUID</th><th>Options</th>
 								</tbody>
 							</table>
 						</div>
@@ -618,7 +620,7 @@
 				<div class="panel panel-default" style="margin-top:10px;">
 					<table class="table table-striped">
 						<tbody id="pluginlist">
-							<th>Name</th><th>Description</th><th>Options</th></tr>
+							<th>Name</th><th>Description</th><th>Options</th>
 						</tbody>
 					</table>
 					<div style="text-align:center;color:gray;font-size:16px;margin-top:20px;margin-bottom:20px;display:none;" id="nopluginswarning">
@@ -630,7 +632,7 @@
 				<div class="panel panel-default" style="margin-top:10px;">
 					<table class="table table-striped">
 						<tbody id="notifications">
-							<th>Notification</th><th>Time</th></tr>
+							<th>Notification</th><th>Time</th>
 							<td>Server frozen</td><td>10:51PM</td>
 						</tbody>
 					</table>

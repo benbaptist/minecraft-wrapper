@@ -973,6 +973,3 @@ class MCServer(object):
 
         command = payload["command"]
         self.console(command)
-
-print(20 % 3)
-print(30 % 15)
