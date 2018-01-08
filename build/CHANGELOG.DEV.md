@@ -1,9 +1,13 @@
-Build 259 (next build)
+Build 260 (next build)
 - player to player TP - Add inter-dimensional TP (1.8+) api
   Community Input enhancement proxy mode
 
-Build 258
-- first crack at getting web.py working
+Build 259 (and 258)
+- first crack at getting web.py working (i.e., at least getting into the admin page).
+- Web mode changed for now to only permit bindings to 127.0.0.1 because:
+- password checking is disabled in admin.html (function isAuthed()).
+- Warning messages in wrapper startup.
+- Warning messages in Login.html.
 
 Build 257
 - Add countdown timers of 45, 30, 15 and then 5-1 seconds to the reboot timers broadcasts
