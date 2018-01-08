@@ -154,6 +154,11 @@ class Wrapper(object):
                 self.config["Updates"][entries] = oldentry.split("/build/version.json")[0]
                 config_changes = True
 
+        # TODO temporary - Do not allow anything other than localhost binds for web
+        if not self.config["Web"]["web-bind"] == "127.0.0.1":
+            self.config["Web"]["web-bind"] = "127.0.0.1"
+            config_changes = True
+
         # save changes made to config file
         if config_changes:
             self.configManager.save()
@@ -282,10 +287,11 @@ class Wrapper(object):
         if self.config["Web"]["web-enabled"]:  # this should be a plugin
             if manageweb.pkg_resources and manageweb.requests:
                 self.log.warning(
-                    "Our apologies!  Web mode is currently broken.  Wrapper"
-                    " will start web mode anyway, but it will not likely "
-                    "function well (or at all).  For now, you should turn "
-                    "off web mode in wrapper.properties.json.")
+                    "Our apologies!  Web mode is an alpha feature and is not "
+                    "secure from outside usage and will only run on localhost. "
+                    " Wrapper will start web mode anyway, but if you are not "
+                    "really using Web mode, you should turn it off in "
+                    "wrapper.properties.json.")
                 self.web = manageweb.Web(self)
                 t = threading.Thread(target=self.web.wrap, args=())
                 t.daemon = True
