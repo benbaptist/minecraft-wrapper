@@ -26,12 +26,12 @@
 				else{
 					localStorage.sessionKey = r["payload"]["session-key"]
 					console.log("Login Success!")
-					window.location = "/admin.html"
+					window.location = "admin.html"
 				}
 			}
 			window.onload = function() {
 				if(isAuthed()){
-					window.location = "/admin.html"
+					window.location = "admin.html"
 				}
 			}
 			function _login(){

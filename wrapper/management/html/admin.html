@@ -21,9 +21,9 @@
 			consoleMode = 0
 			_ = function(id) {return document.getElementById(id)}
 			function isAuthed(){
-				if(!localStorage.sessionKey) return true
+				if(!localStorage.sessionKey) return false
 				if(requests.action("is_admin", {"key": localStorage.sessionKey})["status"] == "good") return true
-				return true
+				return false
 			}
 			window.onload = function(){
 				if(isAuthed()){

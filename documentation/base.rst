@@ -150,6 +150,22 @@
         Blocks until the specified event is called.
         
 
+-  sendAlerts(self, message, group="wrapper")
+
+                Used to send alerts outside of wrapper (email, for instance).
+
+                :Args:
+                    :message: The message to be sent the servers configured
+                     and listed in the wrapper.propertues "Alerts"["servers"]
+                     item.
+                    :group: message will be sent to the emails/servers
+                     listed that have a matching
+                     wrapper.properties.json["Alerts"]["servers"]["group"]=group
+
+                :returns:  None/Nothing
+
+                
+
 -  callEvent(self, event, payload)
 
         Invokes the specific event. Payload is extra information
