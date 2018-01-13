@@ -97,15 +97,25 @@ CONFIG = {
          # enable a server item by setting login name to something other than "False".  Use your email address for login-name and the associated password (encrypt it first).
 
             "servers": [
+
                 {
+
                     "group": "wrapper",
+
                     "subject": "Wrapper.py Alert",
+
                     "type": "email",
+
                     "address": "smtp.gmail.com",
+
                     "port": 587,
+
                     "login-name": False,
+
                     "encrypted-password": "Copy and Paste from 'password' after wrapper encrypts it.",
+
                     "recipients": ["email1@provider.com", "email2@provider.com"]
+
                 }
             ],
 
