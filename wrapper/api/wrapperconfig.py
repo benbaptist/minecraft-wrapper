@@ -78,23 +78,43 @@ CONFIG = {
 
         {
 
-         # if using gmail, remember to "allow less secure apps” on your account..
+         # with some modern email providers, you may need to "allow less secure apps” on your account..
+
+         # You should use a dedicated email with a password that is different from your other accounts for this purpose.
+
+         # deprecated items were incorprated into the servers dictionary.
+
+            "send-method": "deprecated",
+
+            "server-addr": "deprecated",
+
+            "server-port": "deprecated",
+
+            "login-name": "deprecated",
 
             "enabled": False,
 
-            "send-method": "email",
+         # enable a server item by setting login name to something other than "False".  Use your email address for login-name and the associated password (encrypt it first).
 
-            "server-addr": "smtp.gmail.com",
+            "servers": [
+                {
+                    "group": "wrapper",
+                    "subject": "Wrapper.py Alert",
+                    "type": "email",
+                    "address": "smtp.gmail.com",
+                    "port": 587,
+                    "login-name": False,
+                    "encrypted-password": "Copy and Paste from 'password' after wrapper encrypts it.",
+                    "recipients": ["email1@provider.com", "email2@provider.com"]
+                }
+            ],
 
-            "server-port": 587,
-
-            "login-name": "sphincter@gmail.com",
 
          # -plaintext items are converted to hashed items by wrapper
 
             "password-plaintext": False,
 
-            "password": "use `/password -s Alerts password <your password>` to set this or enter a password-plaintext"
+            "password": "use `/password -s Alerts password <your password>` to set this (or enter a password-plaintext)."
 
         },
 

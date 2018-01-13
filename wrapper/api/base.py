@@ -278,6 +278,23 @@ class API(object):
                     # sock.remove(event)
             time.sleep(0.05)
 
+    def sendAlerts(self, message, group="wrapper"):
+        """
+                Used to send alerts outside of wrapper (email, for instance).
+
+                :Args:
+                    :message: The message to be sent the servers configured
+                     and listed in the wrapper.propertues "Alerts"["servers"]
+                     item.
+                    :group: message will be sent to the emails/servers
+                     listed that have a matching
+                     wrapper.properties.json["Alerts"]["servers"]["group"]=group
+
+                :returns:  None/Nothing
+
+                """
+        self.wrapper.alerts.process_alerts(message)
+
     def callEvent(self, event, payload):
         # TODO this event's purpose/functionality and
         # use cases are unknown at this time

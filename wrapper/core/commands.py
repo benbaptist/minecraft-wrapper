@@ -55,9 +55,10 @@ class Commands(object):
         command = str(payload["command"]).lower()
         commandtext = "/%s %s" % (command, " ".join(payload["args"]))
         player.message(commandtext)
-        self.log.info("%s executed: %s", payload["player"], commandtext)
+        if command not in ("password", "othersensitivecommand"):
+            self.log.info("%s executed: %s", payload["player"], commandtext)
 
-        # We should get of this by creating a wrapper command registering set
+        # We should get out of this by creating a wrapper command registering set
 
         # make sure any command returns a True-ish item, or the
         # chat packet will continue to the server

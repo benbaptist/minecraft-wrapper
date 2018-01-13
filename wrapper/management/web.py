@@ -5,7 +5,6 @@
 # This program is distributed under the terms of the GNU
 # General Public License, version 3 or later.
 
-import socket
 import traceback
 import threading
 import time
@@ -13,11 +12,19 @@ import json
 import random
 import os
 import logging
+import socket
+from pprint import pprint
 
-from api.helpers import getargs, getargsafter
+from api.helpers import getargs
 from core.storage import Storage
 
-import urllib
+# noinspection PyBroadException
+try:
+    # noinspection PyCompatibility,PyUnresolvedReferences
+    from urllib.parse import unquote as urllib_unquote
+except:
+    # noinspection PyCompatibility,PyUnresolvedReferences
+    from urllib import unquote as urllib_unquote
 
 try:
     import pkg_resources
@@ -41,11 +48,13 @@ class Web(object):
         if "keys" not in self.data:
             self.data["keys"] = []
 
+        # Register events
         self.api.registerEvent("server.consoleMessage", self.on_server_console)
         self.api.registerEvent("player.message", self.on_player_message)
         self.api.registerEvent("player.join", self.on_player_join)
         self.api.registerEvent("player.leave", self.on_player_leave)
         self.api.registerEvent("irc.message", self.on_channel_message)
+
         self.consoleScrollback = []
         self.chatScrollback = []
         self.memoryGraph = []
@@ -56,6 +65,69 @@ class Web(object):
         # t = threading.Thread(target=self.update_graph, args=())
         # t.daemon = True
         # t.start()
+
+    # ================ Start  and Run code section ================
+    # ordered by the time they are referenced in the code.
+
+    # def update_graph(self):
+    #     while not self.wrapper.halt.halt:
+    #         while len(self.memoryGraph) > 200:
+    #             del self.memoryGraph[0]
+    #         if self.wrapper.javaserver.getmemoryusage():
+    #             self.memoryGraph.append(
+    #                 [time.time(), self.wrapper.javaserver.getmemoryusage()])
+    #        time.sleep(1)
+
+    def wrap(self):
+        """ Wrapper starts excution here (via a thread). """
+        while not self.wrapper.halt.halt:
+            try:
+                if self.bind():
+                    # cProfile.run("self.listen()", "cProfile-debug")
+                    self.listen()
+                else:
+                    self.log.error(
+                        "Could not bind web to %s:%d - retrying in 5 seconds" % (
+                            self.config["Web"]["web-bind"],
+                            self.config["Web"]["web-port"]))
+            except:
+                for line in traceback.format_exc().split("\n"):
+                    self.log.error(line)
+            time.sleep(5)
+        # closing also calls storage.save().
+        self.storage.close()
+
+    def bind(self):
+        """ Started by self.wrap() to bind socket. """
+        if self.socket is not False:
+            self.socket.close()
+        try:
+            self.socket = socket.socket()
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            self.socket.bind((self.config["Web"]["web-bind"],
+                              self.config["Web"]["web-port"]))
+            self.socket.listen(5)
+            return True
+        except:
+            return False
+
+    def listen(self):
+        """ Excuted by self.wrap() to listen for client(s). """
+        self.log.info("Web Interface bound to %s:%d" % (
+            self.config["Web"]["web-bind"], self.config["Web"]["web-port"]))
+        while not self.wrapper.halt.halt:
+            sock, addr = self.socket.accept()
+            # self.log.debug("(WEB) Connection %s started" % str(addr))
+            client = Client(self.wrapper, sock, addr, self)
+            # t = threading.Thread(target=cProfile.runctx, args=("client.wrap()", globals(), locals(), "cProfile-debug"))
+            # t.daemon = True
+            # t.start()
+            t = threading.Thread(target=client.wrap, args=())
+            t.daemon = True
+            t.start()
+        self.storage.save()
+
+    # ========== EVENTS SECTION ==========================
 
     def on_server_console(self, payload):
         while len(self.consoleScrollback) > 1000:
@@ -109,25 +181,32 @@ class Web(object):
         self.chatScrollback.append(
             (time.time(), {"type": "irc", "payload": payload}))
 
-    def update_graph(self):
-        while not self.wrapper.halt.halt:
-            while len(self.memoryGraph) > 200:
-                del self.memoryGraph[0]
-            if self.wrapper.javaserver.getmemoryusage():
-                self.memoryGraph.append(
-                    [time.time(), self.wrapper.javaserver.getmemoryusage()])
-            time.sleep(1)
+    # ========== Externally-called Methods section ==========================
 
     def check_login(self, password):
+        """
+        Returns True or False to indicate login success.
+         - Called by client.run_action, action="login"
+        """
+
+        # TODO this ought to indicate somewhere other than the console why a login failed
+        # TODO - maybe use None and False? - None for timeout and False for wrong password...
+
+        # Threshold for logins
         if time.time() - self.disableLogins < 60:
-            return False  # Threshold for logins
+            return False
+
+        # check password validity
         if self.pass_handler.check_pw(password, self.config["Web"]["web-password"]):
             return True
+
+        # unsuccessful password attempt
         self.loginAttempts += 1
         if self.loginAttempts > 10 and time.time() - self.lastAttempt < 60:
             self.disableLogins = time.time()
             self.log.warn("Disabled login attempts for one minute")
         self.lastAttempt = time.time()
+        return False
 
     def make_key(self, remember_me):
         a = ""
@@ -154,52 +233,10 @@ class Web(object):
             if v[0] == key:
                 del self.data["keys"][i]
 
-    def wrap(self):
-        while not self.wrapper.halt.halt:
-            try:
-                if self.bind():
-                    # cProfile.run("self.listen()", "cProfile-debug")
-                    self.listen()
-                else:
-                    self.log.error(
-                        "Could not bind web to %s:%d - retrying in 5 seconds" % (
-                            self.config["Web"]["web-bind"],
-                            self.config["Web"]["web-port"]))
-            except:
-                for line in traceback.format_exc().split("\n"):
-                    self.log.error(line)
-            time.sleep(5)
-
-    def bind(self):
-        if self.socket is not False:
-            self.socket.close()
-        try:
-            self.socket = socket.socket()
-            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            self.socket.bind((self.config["Web"]["web-bind"],
-                              self.config["Web"]["web-port"]))
-            self.socket.listen(5)
-            return True
-        except:
-            return False
-
-    def listen(self):
-        self.log.info("Web Interface bound to %s:%d" % (
-            self.config["Web"]["web-bind"], self.config["Web"]["web-port"]))
-        while not self.wrapper.halt.halt:
-            sock, addr = self.socket.accept()
-            # self.log.debug("(WEB) Connection %s started" % str(addr))
-            client = Client(self.wrapper, sock, addr, self)
-            # t = threading.Thread(target=cProfile.runctx, args=("client.wrap()", globals(), locals(), "cProfile-debug"))
-            # t.daemon = True
-            # t.start()
-            t = threading.Thread(target=client.wrap, args=())
-            t.daemon = True
-            t.start()
-
 
 # noinspection PyBroadException
 class Client(object):
+    """ Client socket handler- Web and Client function together as a server. """
     def __init__(self, wrapper, socket_conn, addr, web):
         self.wrapper = wrapper
         self.config = wrapper.config
@@ -210,32 +247,10 @@ class Client(object):
         self.log = wrapper.log
         self.api = wrapper.api
         self.socket.setblocking(30)
+
+        # to be able to run console commands as console xplayer():
         self.command_payload = {"args": ""}
         self.web_admin = self.wrapper.xplayer
-
-    def read(self, filename):
-        return pkg_resources.resource_stream(__name__,
-                                             "html/%s" % filename).read()
-
-    def write(self, message):
-        self.socket.send(message)
-
-    def headers(self, status="200 Good", content_type="text/html", location=""):
-        self.write("HTTP/1.0 %s\n" % status)
-        if len(location) < 1:
-            self.write("Content-Type: %s\n" % content_type)
-
-        if len(location) > 0:
-            self.write("Location: %s\n" % location)
-
-        self.write("\n")
-
-    def close(self):
-        try:
-            self.socket.close()
-        # self.log.debug("(WEB) Connection %s closed" % str(self.addr))
-        except:
-            pass
 
     def wrap(self):
         try:
@@ -245,8 +260,77 @@ class Client(object):
             self.log.error("Internal error while handling web mode request:")
             self.log.error(error_is)
             self.headers(status="300 Internal Server Error")
-            self.write("<h1>300 Internal Server Error</h1>\n\n%s" % error_is)
+            self.write("<h1>300 Internal Server Error</h1>\r\n%s" % error_is)
             self.close()
+
+    def handle(self):
+        while not self.wrapper.halt.halt:
+
+            # read data from socket
+            try:
+                data = self.socket.recv(1024)
+                if len(data) < 1:
+                    self.close()
+                    return
+
+                buff = data.split("\r\n")
+            except:
+                self.close()
+                break
+
+            if len(buff) < 1:
+                self.log.debug("Connection closed abnormally")
+                return False
+
+            for line in buff:
+                args = line.split(" ")
+
+                if getargs(args, 0) == "GET":
+                    self.log.debug(args)
+                    self.get(getargs(args, 1))
+
+                if getargs(args, 0) == "POST":
+                    self.request = getargs(args, 1)
+                    self.headers(status="400 Bad Request")
+                    self.write("<h1>Invalid request. Sorry.</h1>")
+
+                # self.log.debug(args)
+
+    def get(self, request):
+        # print("GET request: %s" % request)
+
+        if request in ("/", "index"):
+            filename = "index.html"
+        elif request == "/admin":
+            filename = "/admin.html"
+        elif request == ".":
+            self.headers(status="400 Bad Request")
+            self.write("<h1>BAD REQUEST</h1>")
+            self.close()
+            return False
+        elif request[0:7] == "/action":
+            try:
+                raw_dump = json.dumps(self.handle_action(request))
+                self.log.debug(raw_dump)
+                self.write(raw_dump)
+            except:
+                self.headers(status="300 Internal Server Error")
+                print(traceback.format_exc())
+            self.close()
+            return False
+        else:
+            filename = request
+            # filename = request.replace("..", "").replace("%", "").replace("\\", "")
+        # print(filename)
+
+        try:
+            data = self.read(filename)
+            self.headers(content_type=self.get_content_type(filename))
+            self.write(data)
+        except:
+            self.headers(status="404 Not Found")
+            self.write("<h1>404 Not Found</h4>")
+        self.close()
 
     def handle_action(self, request):
         # def args(i):
@@ -258,7 +342,7 @@ class Client(object):
         # def get(i):
         #    for a in args(1).split("?")[1].split("&"):
         #        if a[0:a.find("=")]:
-        #            return urllib.unquote(a[a.find("=") + 1:])
+        #            return urllib_unquote(a[a.find("=") + 1:])
         #    return ""
 
         info = self.run_action(request)
@@ -270,19 +354,29 @@ class Client(object):
             return {"status": "good", "payload": info}
 
     def run_action(self, request):
-        def args(index):
-            try:
-                return request.split("/")[1:][index]
-            except:
-                return ""
 
-        def get(index):
-            for a in args(1).split("?")[1].split("&"):
-                if a[0:a.find("=")] == index:
-                    return urllib.unquote(a[a.find("=") + 1:])
-            return ""
+        # Entire requested action
+        request_action = request.split("/")[2] or ""
 
-        action = args(1).split("?")[0]
+        # split the action into two parts - action and args
+        action_parts = request_action.split("?")
+
+        # get the action - read_server_props, halt_wrapper, server_action, etc
+        action = action_parts[0]
+
+        # develop args into a dictionary for later
+        action_arg_list = action_parts[1].split("&")
+        argdict = {}
+        for argument in action_arg_list:
+            argparts = argument.split("=")
+            argname = argument.split("=")[0]
+            if len(argparts) > 1:
+                value = argparts[1]
+            else:
+                value = ""
+            argdict[argname] = value
+        pprint(action)
+        pprint(json.dumps(argdict))
         if action == "stats":
             if not self.config["Web"]["public-stats"]:
                 return EOFError
@@ -295,9 +389,11 @@ class Client(object):
                      })
             return {"playerCount": len(self.wrapper.servervitals.players),
                     "players": players}
+
         if action == "login":
-            password = get("password")
-            remember_me = get("remember-me")
+            password = argdict["password"]
+            remember_me = argdict["remember-me"]
+            print(password, remember_me)
             if remember_me == "true":
                 remember_me = True
             else:
@@ -311,23 +407,23 @@ class Client(object):
                 self.log.warn("%s failed to login" % self.addr[0])
             return EOFError
         if action == "is_admin":
-            if self.web.validate_key(get("key")):
+            if self.web.validate_key(argdict["key"]):
                 return {"status": "good"}
             return EOFError
         if action == "logout":
-            if self.web.validate_key(get("key")):
-                self.web.remove_key(get("key"))
+            if self.web.validate_key(argdict["key"]):
+                self.web.remove_key(argdict["key"])
                 self.log.warn("[%s] Logged out." % self.addr[0])
                 return "goodbye"
             return EOFError
         if action == "read_server_props":
-            if not self.web.validate_key(get("key")):
+            if not self.web.validate_key(argdict["key"]):
                 return EOFError
             return open("server.properties", "r").read()
         if action == "save_server_props":
-            if not self.web.validate_key(get("key")):
+            if not self.web.validate_key(argdict["key"]):
                 return EOFError
-            props = get("props")
+            props = argdict["props"]
             if not props:
                 return False
             if len(props) < 10:
@@ -336,12 +432,12 @@ class Client(object):
                 f.write(props)
             return "ok"
         if action == "listdir":
-            if not self.web.validate_key(get("key")):
+            if not self.web.validate_key(argdict["key"]):
                 return EOFError
             if not self.config["Web"]["web-allow-file-management"]:
                 return EOFError
             safe = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWYXZ0123456789_-/ "
-            path_unfiltered = get("path")
+            path_unfiltered = argdict["path"]
             path = ""
             for i in path_unfiltered:
                 if i in safe:
@@ -366,12 +462,12 @@ class Client(object):
                         {"filename": p, "size": os.path.getsize(fullpath)})
             return {"files": files, "folders": folders}
         if action == "rename_file":
-            if not self.web.validate_key(get("key")):
+            if not self.web.validate_key(argdict["key"]):
                 return EOFError
             if not self.config["Web"]["web-allow-file-management"]:
                 return EOFError
-            ren_file = get("path")
-            rename = get("rename")
+            ren_file = argdict["path"]
+            rename = argdict["rename"]
             if os.path.exists(ren_file):
                 try:
                     os.rename(ren_file, rename)
@@ -381,11 +477,11 @@ class Client(object):
                 return True
             return False
         if action == "delete_file":
-            if not self.web.validate_key(get("key")):
+            if not self.web.validate_key(argdict["key"]):
                 return EOFError
             if not self.config["Web"]["web-allow-file-management"]:
                 return EOFError
-            del_file = get("path")
+            del_file = argdict["path"]
             if os.path.exists(del_file):
                 try:
                     if os.path.isdir(del_file):
@@ -398,15 +494,15 @@ class Client(object):
                 return True
             return False
         if action == "halt_wrapper":
-            if not self.web.validate_key(get("key")):
-                return EOFError
+            # if not self.web.validate_key(argdict["key"]):
+            #    return EOFError
             self.wrapper.shutdown()
         if action == "get_player_skin":
-            if not self.web.validate_key(get("key")):
+            if not self.web.validate_key(argdict["key"]):
                 return EOFError
             if not self.wrapper.proxymode:
                 return {"error": "Proxy mode not enabled."}
-            uuid = get("uuid")
+            uuid = argdict["uuid"]
             if uuid in self.wrapper.proxy.skins:
                 skin = self.wrapper.proxy.getSkinTexture(uuid)
                 if skin:
@@ -416,11 +512,11 @@ class Client(object):
             else:
                 return None
         if action == "admin_stats":
-            if not self.web.validate_key(get("key")):
+            if not self.web.validate_key(argdict["key"]):
                 return EOFError
             if not self.wrapper.javaserver:
                 return
-            refresh_time = float(get("last_refresh"))
+            refresh_time = float(argdict["last_refresh"])
             players = []
             for i in self.wrapper.servervitals.players:
                 player = self.wrapper.servervitals.players[i]
@@ -481,40 +577,40 @@ class Client(object):
                     "server_memory_graph": memory_graph,
                     "world_size": self.wrapper.server.worldSize}
         if action == "console":
-            if not self.web.validate_key(get("key")):
+            if not self.web.validate_key(argdict["key"]):
                 return EOFError
-            self.wrapper.javaserver.console(get("execute"))
-            self.log.warn("[%s] Executed: %s" % (self.addr[0], get("execute")))
+            self.wrapper.javaserver.console(argdict["execute"])
+            self.log.warn("[%s] Executed: %s" % (self.addr[0], argdict["execute"]))
             return True
         if action == "chat":
-            if not self.web.validate_key(get("key")):
+            if not self.web.validate_key(argdict["key"]):
                 return EOFError
-            message = get("message")
+            message = argdict["message"]
             self.web.chatScrollback.append((time.time(), {"type": "raw",
                                                           "payload": "[WEB ADMIN] " + message}))
             self.wrapper.javaserver.broadcast("&c[WEB ADMIN]&r " + message)
             return True
         if action == "kick_player":
-            if not self.web.validate_key(get("key")):
+            if not self.web.validate_key(argdict["key"]):
                 return EOFError
-            player = get("player")
-            reason = get("reason")
+            player = argdict["player"]
+            reason = argdict["reason"]
             self.log.warn("[%s] %s was kicked with reason: %s" % (self.addr[0], player, reason))
             self.wrapper.javaserver.console("kick %s %s" % (player, reason))
             return True
         if action == "ban_player":
-            if not self.web.validate_key(get("key")):
+            if not self.web.validate_key(argdict["key"]):
                 return EOFError
-            player = get("player")
-            reason = get("reason")
+            player = argdict["player"]
+            reason = argdict["reason"]
             self.log.warn("[%s] %s was banned with reason: %s" % (self.addr[0], player, reason))
             self.wrapper.javaserver.console("ban %s %s" % (player, reason))
             return True
         if action == "change_plugin":
-            if not self.web.validate_key(get("key")):
+            if not self.web.validate_key(argdict["key"]):
                 return EOFError
-            plugin = get("plugin")
-            state = get("state")
+            plugin = argdict["plugin"]
+            state = argdict["state"]
             if state == "enable":
                 if plugin in self.wrapper.storage["disabled_plugins"]:
                     self.wrapper.storage["disabled_plugins"].remove(plugin)
@@ -528,22 +624,22 @@ class Client(object):
                     self.wrapper.commands.command_reload(self.web_admin,
                                                          self.command_payload)
         if action == "reload_plugins":
-            if not self.web.validate_key(get("key")):
+            if not self.web.validate_key(argdict["key"]):
                 return EOFError
             self.wrapper.commands.command_reload(self.web_admin,
                                                  self.command_payload)
             return True
         if action == "server_action":
-            if not self.web.validate_key(get("key")):
+            if not self.web.validate_key(argdict["key"]):
                 return EOFError
-            command = get("action")
+            command = argdict["action"]
             if command == "stop":
-                reason = get("reason")
+                reason = argdict["reason"]
                 self.wrapper.javaserver.stop(reason)
                 self.log.warn("[%s] Server stop with reason: %s" % (self.addr[0], reason))
                 return "success"
             elif command == "restart":
-                reason = get("reason")
+                reason = argdict["reason"]
                 self.wrapper.javaserver.restart(reason)
                 self.log.warn("[%s] Server restart with reason: %s" % (self.addr[0], reason))
                 return "success"
@@ -558,8 +654,31 @@ class Client(object):
             return {"error": "invalid_server_action"}
         return False
 
+    def read(self, filename):
+        return pkg_resources.resource_stream(__name__,
+                                             "html/%s" % filename).read()
+
+    def write(self, message):
+        self.socket.send(message)
+
+    def close(self):
+        try:
+            self.socket.close()
+        except:
+            pass
+
+    def headers(self, status="200 Good", content_type="text/html", location=""):
+        self.write("HTTP/1.1 %s\r\n" % status)
+        if len(location) < 1:
+            self.write("Content-Type: %s\r\n" % content_type)
+
+        if len(location) > 0:
+            self.write("Location: %s\r\n" % location)
+
+        self.write("\r\n")
+
     def get_content_type(self, filename):
-        ext = filename[filename.rfind("."):][1:]
+        ext = filename.split(".")[-1]
         if ext == "js":
             return "application/javascript"
         if ext == "css":
@@ -570,82 +689,12 @@ class Client(object):
             return"image/x-icon"
         return "application/octet-stream"
 
-    def get(self, request):
-        # print("GET request: %s" % request)
 
-        def args(i):
-            try:
-                return request.split("/")[1:][i]
-            except:
-                return ""
-        fn_path = request.split(" ")
-        if fn_path[0] == "/":
-            filename = "index.html"
-        elif args(0) == "action":
-            try:
-                self.write(json.dumps(self.handle_action(request)))
-            except:
-                self.headers(status="300 Internal Server Error")
-                print(traceback.format_exc())
-            self.close()
-            return False
-        else:
-            filename = fn_path[0]
-            #filename = request.replace("..", "").replace("%", "").replace("\\", "")
-        # print(filename)
-        if filename == "/admin":
-            filename = "/admin.html"  # alias /admin as /admin.html
-        if filename == ".":
-            self.headers(status="400 Bad Request")
-            self.write("<h1>BAD REQUEST</h1>")
-            self.close()
-            return False
-        try:
-            data = self.read(filename)
-            self.headers(content_type=self.get_content_type(filename))
-            self.write(data)
-        except:
-            self.headers(status="404 Not Found")
-            self.write("<h1>404 Not Found</h4>")
-        self.close()
-
-    def handle(self):
-        while True:
-            try:
-                data = self.socket.recv(1024)
-                if len(data) < 1:
-                    self.close()
-                    return
-                buff = data.split("\n")
-            except:
-                self.close()
-                # self.log.debug("(WEB) Connection %s closed" % str(self.addr))
-                break
-            if len(buff) < 1:
-                print("Web connection closed suddenly")
-                return False
-            for line in buff:
-                args = line.split(" ")
-                # def args(i):
-                #    try:
-                #        return line.split(" ")[i]
-                #    except:
-                #        return ""
-
-                # def argsAfter(i):
-                #    try:
-                #        return " ".join(line.split(" ")[i:])
-                #    except:
-                #        return ""
-
-                if getargs(args, 0) == "GET":
-                    # intent not clear to me in original code:
-                    #  #self.get(args(1))
-
-                    # self.get(getargs(args, 1)) or (as I am guessing):
-                    self.get(getargsafter(args, 1))
-
-                if getargs(args, 0) == "POST":
-                    self.request = getargsafter(args, 1)
-                    self.headers(status="400 Bad Request")
-                    self.write("<h1>Invalid request. Sorry.</h1>")
+if __name__ == "__main__":
+    pass
+    print("passed and excuted")
+    # line = "GET SOME MORE DATA Hoss"
+    # i = 1
+    # x = " ".join(line.split(" ")[i:])
+    # y = line.split(" ")[i]
+    print('/action/read_server_props?key=undefined'.split("/"))

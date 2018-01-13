@@ -49,7 +49,9 @@ from core.config import Config
 from core.backups import Backups
 from core.consoleuser import ConsolePlayer
 from core.permissions import Permissions
+from core.alerts import Alerts
 from utils.crypt import Crypt
+
 
 # optional API type stuff
 from proxy.base import Proxy, ProxyConfig, HaltSig, ServerVitals
@@ -107,6 +109,7 @@ class Wrapper(object):
         self.encoding = self.config["General"]["encoding"]
         self.serverpath = self.config["General"]["server-directory"]
         self.api = API(self, "Wrapper.py")
+        self.alerts = Alerts(self)
 
         # Read Config items
         # hard coded cursor for non-readline mode
@@ -338,6 +341,8 @@ class Wrapper(object):
             t.daemon = True
             t.start()
 
+        self.alerts.process_alerts("Wrapper.py started!")
+
         self.javaserver.handle_server()
         # handle_server always runs, even if the actual server is not started
 
@@ -347,6 +352,8 @@ class Wrapper(object):
         self.wrapper_permissions.close()
         self.wrapper_usercache.close()
         self.log.info("Wrapper Storages closed and saved.")
+
+        self.alerts.process_alerts("Wrapper.py stopped!")
 
         # wrapper execution ends here.  handle_server ends when
         # wrapper.halt.halt is True.
