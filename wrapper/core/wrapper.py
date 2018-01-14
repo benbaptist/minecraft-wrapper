@@ -341,7 +341,8 @@ class Wrapper(object):
             t.daemon = True
             t.start()
 
-        self.alerts.process_alerts("Wrapper.py started!")
+        # Alert sent by daemonized thread to prevent wrapper execution blocking
+        self.alerts.ui_process_alerts("Wrapper.py started at %s" % time.time())
 
         self.javaserver.handle_server()
         # handle_server always runs, even if the actual server is not started
@@ -353,7 +354,8 @@ class Wrapper(object):
         self.wrapper_usercache.close()
         self.log.info("Wrapper Storages closed and saved.")
 
-        self.alerts.process_alerts("Wrapper.py stopped!")
+        # use non-daemon thread to ensure alert gets sent before wrapper closes
+        self.alerts.ui_process_alerts("Wrapper.py stopped at %s" % time.time(), blocking=True)
 
         # wrapper execution ends here.  handle_server ends when
         # wrapper.halt.halt is True.

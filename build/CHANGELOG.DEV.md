@@ -1,6 +1,11 @@
-Build 261 (next build)
+Build 262 (next build)
 - player to player TP - Add inter-dimensional TP (1.8+) api
   Community Input enhancement proxy mode
+
+Build 261
+- Add api.base item sendEmail( message, recipients, subject, group="wrapper") to api.
+- Make alerts have a threaded interface to allow non-blocking alert processing.
+- Built-in alerts for wrapper startup, shutdown, and crashes.
 
 Build 260
 - Finish alerts API.  Alerts allow wrapper to send emails:

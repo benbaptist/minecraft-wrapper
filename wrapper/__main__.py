@@ -99,12 +99,15 @@ def main(wrapper_start_args):
         if not wrapper.configManager.exit:
             os.system("reset")
         wrapper.plugins.disableplugins()
+        wrapper.alerts.ui_process_alerts("Wrapper called SystemExit exception", blocking=True)
 
         # save-all is required to have a flush argument
         wrapper.javaserver.console("save-all flush")
         wrapper.javaserver.stop("Wrapper.py received shutdown signal - bye")
         wrapper.halt.halt = True
     except Exception as ex:
+        crash_mess = ("Wrapper.py crashed - stopping server to be safe (%s)" % ex)
+        wrapper.alerts.ui_process_alerts(crash_mess, blocking=True)
         log.critical("Wrapper.py crashed - stopping server to be safe (%s)",
                      ex, exc_info=True)
         wrapper.halt.halt = True

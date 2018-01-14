@@ -278,22 +278,45 @@ class API(object):
                     # sock.remove(event)
             time.sleep(0.05)
 
-    def sendAlerts(self, message, group="wrapper"):
+    def sendAlerts(self, message, group="wrapper", blocking=False):
         """
-                Used to send alerts outside of wrapper (email, for instance).
+        Used to send alerts outside of wrapper (email, for instance).
 
-                :Args:
-                    :message: The message to be sent the servers configured
-                     and listed in the wrapper.propertues "Alerts"["servers"]
-                     item.
-                    :group: message will be sent to the emails/servers
-                     listed that have a matching
-                     wrapper.properties.json["Alerts"]["servers"]["group"]=group
+        :Args:
+            :message: The message to be sent the servers configured
+             and listed in the wrapper.propertues "Alerts"["servers"]
+             item.
+            :group: message will be sent to the emails/servers
+             listed that have the matching "group" in
+             wrapper.properties.json["Alerts"]["servers"]["group"]
+            :blocking: -see same argument for 'sendMail'
 
-                :returns:  None/Nothing
+        :returns:  None/Nothing
 
-                """
-        self.wrapper.alerts.process_alerts(message)
+        """
+        self.wrapper.alerts.ui_process_alerts(message, group, blocking)
+
+    def sendEmail(self, message, recipients, subject, group="wrapper", blocking=False):
+        """
+        Use group email server settings to email a specified set of recipients
+        (independent of alerts settings or enablement).
+
+        :Args:
+            :message: The message content to be emailed (text/string).
+            :recipients: list of email addresses, type=list (even if only one)
+            :subject: plain text
+            :group: message will be sent using the settings in the matching
+             "group" in wrapper.properties.json["Alerts"]["servers"]["group"]
+            :blocking: if True, runs non-daemonized and holds up continued
+             wrapper execution until sending is complete.  You would want this
+             set to False normally when dealing with players.  However, at an
+             'onDisable' plugin event, or anywhere else wrapper execution may end
+             abruptly, blocking may be advisble to ensure the emails finish.
+
+        :returns:  None/Nothing
+
+        """
+        self.wrapper.alerts.ui_send_mail(group, recipients, subject, message, blocking)
 
     def callEvent(self, event, payload):
         # TODO this event's purpose/functionality and

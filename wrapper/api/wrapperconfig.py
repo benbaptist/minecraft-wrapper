@@ -100,6 +100,8 @@ CONFIG = {
 
                 {
 
+         # built in alerts use "wrapper" group.
+
                     "group": "wrapper",
 
                     "subject": "Wrapper.py Alert",
