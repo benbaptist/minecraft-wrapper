@@ -65,12 +65,12 @@
 			}
 
 			function statsCallback(stats){
-				<!--/ if(stats == false){
-				// 	console.log("Error while refreshing stats (statsCallback). Connection lost?")
-				// 	getElem("lost_connection_page").style.display = "block"
-				// 	getElem("admin_page").style.display = "none"
-				// 	return
-				// } -->
+				    if(stats == false){
+				 	console.log("Error while refreshing stats (statsCallback). Connection lost?")
+				 	getElem("lost_connection_page").style.display = "block"
+				 	getElem("admin_page").style.display = "none"
+				 	return
+				}
 				getElem("lost_connection_page").style.display = "none";
 				getElem("admin_page").style.display = "block";
 				console.log(stats)
@@ -493,7 +493,6 @@
 									if(z === undefined) z = locationPath;
 									console.log(locationPath);
 									var payload = requests.action("listdir", {"path": z});
-									console.log("THIS WORKS!?-"+payload)
 									if(payload === false)
 										getElem("files_failed").style.display = "block";
 									else
@@ -657,8 +656,8 @@
 			<h1>Connection lost</h1>
 			<h4>Make sure Wrapper.py is running. Try reloading the page in a few seconds if this doesn't go away.</h4>
 		</div>
-		<!--<script src="js/jquery.js"></script>-->
-		<!--<script src="js/bootstrap.min.js"></script>-->
-		<!--<script src="js/offcanvas.js"></script>-->
+		<script src="js/jquery.js"></script>
+		<script src="js/bootstrap.min.js"></script>
+		<script src="js/offcanvas.js"></script>
 	</body>
 </html>

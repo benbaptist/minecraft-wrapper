@@ -273,7 +273,7 @@ class Client(object):
                                              "html/%s" % filename).read()
 
     def write(self, message):
-        self.log.debug(message[0:100])
+        # self.log.debug(message[0:200])
         self.socket.send(message)
 
     def close(self):
@@ -468,7 +468,7 @@ class Client(object):
                 return EOFError
             if not self.config["Web"]["web-allow-file-management"]:
                 return EOFError
-            safe = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWYXZ0123456789_-/ "
+            safe = ".abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWYXZ0123456789_-/ "
             path_unfiltered = argdict["path"]
             path = ""
             for i in path_unfiltered:

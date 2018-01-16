@@ -46,7 +46,6 @@ requests.action = function(action, arglist){
 	xmlhttp.open("GET", "/action/"+action+"?"+args, false);
 	xmlhttp.overrideMimeType("application/json");
 	xmlhttp.send(null);
-    console.log("<"+xmlhttp.responseText+">");
     return JSON.parse(xmlhttp.responseText)["payload"];
 }
 
@@ -64,8 +63,6 @@ requests.admin = function(action, arglist){
 	xmlhttp.open("GET", "/action/"+action+"?"+args, false);
 	xmlhttp.overrideMimeType("application/json");
 	xmlhttp.send(null);
-    console.log("<"+xmlhttp.responseText+">");
-    console.log("ADMIN RETURNED FROM END")
     return JSON.parse(xmlhttp.responseText);
 }
 
@@ -83,5 +80,5 @@ requests.adminThreaded = function(action, arglist, callBack){
     xmlhttp.open("GET", "/action/"+action+"?"+args, false);
 	xmlhttp.overrideMimeType("application/json");
 	xmlhttp.send(null);
-
+    callBack(response["payload"]);
 }
