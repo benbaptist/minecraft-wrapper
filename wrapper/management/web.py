@@ -129,7 +129,6 @@ class Web(object):
                     sock.close()
                     print("sorry charlie (an unathorized IP attempted connection)")
                     continue
-                # self.log.debug("(WEB) Connection %s started" % str(addr))
             client = Client(self.wrapper, sock, addr, self)
 
             # t = threading.Thread(target=cProfile.runctx, args=("client.wrap()", globals(), locals(), "cProfile-debug"))
@@ -274,7 +273,7 @@ class Client(object):
                                              "html/%s" % filename).read()
 
     def write(self, message):
-        self.log.debug(message)
+        self.log.debug(message[0:100])
         self.socket.send(message)
 
     def close(self):
@@ -285,12 +284,9 @@ class Client(object):
 
     def headers(self, status="200 Good", content_type="text/html", location=""):
         self.write("HTTP/1.1 %s\r\n" % status)
-        # if len(location) < 1:
         self.write("Content-Type: %s\r\n" % content_type)
-
         if len(location) > 0:
             self.write("Location: %s\r\n" % location)
-
         self.write("\r\n")
 
     def get_content_type(self, filename):
@@ -339,7 +335,6 @@ class Client(object):
                 args = line.split(" ")
 
                 if getargs(args, 0) == "GET":
-                    # self.log.debug(args)
                     self.get(getargs(args, 1))
 
                 if getargs(args, 0) == "POST":
@@ -347,10 +342,7 @@ class Client(object):
                     self.headers(status="400 Bad Request")
                     self.write("<h1>Invalid request. Sorry.</h1>")
 
-                # self.log.debug(args)
-
     def get(self, request):
-        # print("GET request: %s" % request)
 
         if request in ("/", "index"):
             request = "/index.html"
@@ -363,10 +355,8 @@ class Client(object):
             return
         # Process actions
         elif request[0:7] == "/action":
-            print("DO /ACTION")
             try:
                 raw_dump = json.dumps(self.handle_action(request))
-                # self.log.debug("RAW DUMP: %s", raw_dump)
                 self.headers()
                 self.write(raw_dump)
                 self.close()
@@ -376,10 +366,6 @@ class Client(object):
                 self.close()
             return
 
-        # convert spaces and such from %xx codes back to spaces and slashes
-        # request = request.replace("..", "").replace("%2F", "/").replace("\\", "").replace("+", " ")
-
-        # core section that reads local page and serves it to client browser
         try:
             data = self.read(request)
             contenttype = self.get_content_type(request)
@@ -391,17 +377,6 @@ class Client(object):
         self.close()
 
     def handle_action(self, request):
-        # def args(i):
-        #    try:
-        #        return request.split("/")[1:][i]
-        #    except:
-        #        return ""
-
-        # def get(i):
-        #    for a in args(1).split("?")[1].split("&"):
-        #        if a[0:a.find("=")]:
-        #            return urllib_unquote(a[a.find("=") + 1:])
-        #    return ""
 
         info = self.run_action(request)
         if not info:
@@ -412,7 +387,6 @@ class Client(object):
             return {"status": "good", "payload": info}
 
     def run_action(self, request):
-        # pprint(request)
         # Entire requested action
         request_action = request.split("/")[2] or ""
 
@@ -464,7 +438,6 @@ class Client(object):
             return EOFError
         if action == "is_admin":
             if self.web.validate_key(argdict["key"]):
-                print("ADMIN PASSED")
                 return {"status": "good"}
             return EOFError
         if action == "logout":

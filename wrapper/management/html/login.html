@@ -15,36 +15,29 @@
             invalidLogins = 0;
             getElem = function(id) {return document.getElementById(id)};
 
-            alert ("script loading..");
-
             function isAuthed(){
-                alert("Checking for session Key");
                 <!--  use sessionStorage for now instead of localStorage  -->
                 if(!localStorage.sessionKey){
-                    alert("There is no session Key");
                     return false;
                 }
                 if(requests.admin("is_admin", {"key": localStorage.sessionKey})["status"] == "good"){
-                    alert("session Key was good");
                     return true;
                 }
                 return false;
             }
 
             function loginWithPassword(password){
-                var r = requests.action("login", {"password": password, "remember-me": getElem("remember-me").checked})
-
+                var r = requests.admin("login", {"password": password, "remember-me": getElem("remember-me").checked});
                 if (r["payload"] == "permission_denied"){
-                    getElem("login_invalid").style.display = "block"
-                    invalidLogins += 1
+                    getElem("login_invalid").style.display = "block";
+                    invalidLogins += 1;
                     if(invalidLogins > 1){
-                        getElem("login_invalid").innerHTML = "The password was invalid. (" + invalidLogins + " attempts)"
+                        getElem("login_invalid").innerHTML = "The password was invalid. (" + invalidLogins + " attempts)";
                     }
                 }
                 else{
-                    localStorage.sessionKey = r["payload"]["session-key"]
-                    console.log("Login Success!")
-                    window.location = "admin.html"
+                    localStorage.sessionKey = r["session-key"];
+                    window.location = "admin.html";
                 }
             }
             window.onload = function() {
@@ -88,8 +81,8 @@
                 <button class="btn btn-lg btn-primary btn-block" >Login</button>
             </form>
         </div><!-- /container -->
-        <!-- <script src="js/jquery.min.js"></script> -->
-        <!-- <script src="js/bootstrap.min.js"></script> -->
+        <script src="js/jquery.min.js"></script>
+        <script src="js/bootstrap.min.js"></script>
         <!-- <script src="js/ie10-viewport-bug-workaround.js"></script> -->
     </body>
 

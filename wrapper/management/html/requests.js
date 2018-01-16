@@ -57,6 +57,7 @@ requests.admin = function(action, arglist){
 	xmlhttp = new XMLHttpRequest();
 	xmlhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
+      console.log("ADMIN RETURNED FROM IF")
       return JSON.parse(this.responseText)
         }
     };
@@ -64,7 +65,8 @@ requests.admin = function(action, arglist){
 	xmlhttp.overrideMimeType("application/json");
 	xmlhttp.send(null);
     console.log("<"+xmlhttp.responseText+">");
-    return JSON.parse(xmlhttp.responseText)["payload"];
+    console.log("ADMIN RETURNED FROM END")
+    return JSON.parse(xmlhttp.responseText);
 }
 
 requests.adminThreaded = function(action, arglist, callBack){
