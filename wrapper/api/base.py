@@ -288,7 +288,7 @@ class API(object):
              item.
             :group: message will be sent to the emails/servers
              listed that have the matching "group" in
-             wrapper.properties.json["Alerts"]["servers"]["group"]
+             wrapper.properties.json["Alerts"]["servers"][<serverindex>]["group"]
             :blocking: -see same argument for 'sendMail'
 
         :returns:  None/Nothing
@@ -306,7 +306,7 @@ class API(object):
             :recipients: list of email addresses, type=list (even if only one)
             :subject: plain text
             :group: message will be sent using the settings in the matching
-             "group" in wrapper.properties.json["Alerts"]["servers"]["group"]
+             "group" in wrapper.properties.json["Alerts"]["servers"][<serverindex>]["group"]
             :blocking: if True, runs non-daemonized and holds up continued
              wrapper execution until sending is complete.  You would want this
              set to False normally when dealing with players.  However, at an

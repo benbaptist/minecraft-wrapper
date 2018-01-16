@@ -429,6 +429,12 @@ CONFIG = {
 
             "web-port": 8070,
 
+         # Only accept connections from "safe" IP addresses.  extra security layer since
+
+            "safe-ips": ["127.0.0.1"],
+
+            "safe-ips-use": True,
+
             "server-name": "Minecraft Server",
 
         }

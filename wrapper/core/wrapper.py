@@ -157,11 +157,6 @@ class Wrapper(object):
                 self.config["Updates"][entries] = oldentry.split("/build/version.json")[0]
                 config_changes = True
 
-        # TODO temporary - Do not allow anything other than localhost binds for web
-        if not self.config["Web"]["web-bind"] == "127.0.0.1":
-            self.config["Web"]["web-bind"] = "127.0.0.1"
-            config_changes = True
-
         # save changes made to config file
         if config_changes:
             self.configManager.save()
@@ -291,7 +286,12 @@ class Wrapper(object):
             if manageweb.pkg_resources and manageweb.requests:
                 self.log.warning(
                     "Our apologies!  Web mode is an alpha feature and is not "
-                    "secure from outside usage and will only run on localhost. "
+                    "secure from outside usage. It does not use HTTPS and is "
+                    "currently not password protected.  We have imposed a "
+                    "setting in the 'Web' section to only allow only certain "
+                    "IPs to connect.  If you need to use web remotely, add the "
+                    "IP address from where you will be using the web interface"
+                    " into the 'safe-ips' config item.  That said..."
                     " Wrapper will start web mode anyway, but if you are not "
                     "really using Web mode, you should turn it off in "
                     "wrapper.properties.json.")

@@ -1,6 +1,28 @@
-Build 262 (next build)
+Build 263 (next build)
 - player to player TP - Add inter-dimensional TP (1.8+) api
   Community Input enhancement proxy mode
+
+Build 262
+- First working Web module, with important changes:
+    - Best results with Firefox.
+    - Password login is NOT WORKING
+    - only connections from localhost are allowed by default.
+    - To access web from another network (IP), in the config:
+        1) Add the ip to "Web" config item 'safe-ips"
+        2) Set item 'use_safe_ips' to true.
+    - Basic buttons work (reload plugins, halt wrapper, start/stop/restart/kill server)
+    - file operations fully functional (in Firefox only)!
+    - Chat and console "send" things, but don't "receive" responses
+__Future__
+- really having problems getting XMLHttpRequest to return valid JSON
+ data back to the client (running webpage).  We are also using (seem forced to)
+ deprecated Synchronous XMLHttpRequest (setting False to third argument in
+ `XMLHttpRequest.open()`  Tried to use True a few different ways, but it still
+ breaks our ability to get a good textResponse from XMLHttpRequest.
+
+ Right now, though, it is functional enough to do some nice RC stuff, like
+ renaming and deleting files!  So, I am making it an official build for
+ development!
 
 Build 261
 - Add api.base item sendEmail( message, recipients, subject, group="wrapper") to api.
