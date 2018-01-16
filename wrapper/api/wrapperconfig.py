@@ -100,6 +100,8 @@ CONFIG = {
 
                 {
 
+         # built in alerts use "wrapper" group.
+
                     "group": "wrapper",
 
                     "subject": "Wrapper.py Alert",
@@ -426,6 +428,12 @@ CONFIG = {
             "web-password": "to set this, from console use `/password Web web-password <your password>`",
 
             "web-port": 8070,
+
+         # Only accept connections from "safe" IP addresses.  extra security layer since
+
+            "safe-ips": ["127.0.0.1"],
+
+            "safe-ips-use": True,
 
             "server-name": "Minecraft Server",
 

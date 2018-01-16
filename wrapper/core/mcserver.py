@@ -37,6 +37,53 @@ STOPPING = 3
 FROZEN = 4
 
 
+class ServerVitals(object):
+    """This class permits sharing of server information between
+    the caller (such as a Wrapper instance) and proxy."""
+    def __init__(self, playerobjects):
+
+        # operational info
+        self.serverpath = ""
+        self.state = 0
+        self.server_port = "25564"
+        self.onlineMode = True
+        self.command_prefix = "/"
+
+        # Shared data structures and run-time
+        self.players = playerobjects
+
+        # TODO - I don't think this is used or needed (same name as proxy.entity_control!)
+        self.entity_control = None
+        # -1 until a player logs on and server sends a time update
+        self.timeofday = -1
+        self.spammy_stuff = ["found nothing", "vehicle of", "Wrong location!",
+                             "Tried to add entity", ]
+
+        # PROPOSE
+        self.clients = []
+
+        # owner/op info
+        self.ownernames = {}
+        self.operator_list = []
+
+        # server properties and folder infos
+        self.properties = {}
+        self.worldname = None
+        self.worldsize = 0
+        self.maxplayers = 20
+        self.motd = None
+        self.serverIcon = None
+
+        # # Version information
+        # -1 until proxy mode checks the server's MOTD on boot
+        self.protocolVersion = -1
+        # this is string name of the version, collected by console output
+        self.version = ""
+        # a comparable number = x0y0z, where x, y, z = release,
+        #  major, minor, of version.
+        self.version_compute = 0
+
+
 # noinspection PyBroadException,PyUnusedLocal
 class MCServer(object):
 
@@ -93,7 +140,6 @@ class MCServer(object):
                 " running. To start the server, run /start.")
 
         # Server Information
-        self.worldSize = 0
         self.world = None
 
         # get OPs
@@ -965,7 +1011,7 @@ class MCServer(object):
             for i in os.walk("%s/%s" % (self.vitals.serverpath, self.vitals.worldname)):
                 for f in os.listdir(i[0]):
                     size += os.path.getsize(os.path.join(i[0], f))
-            self.worldSize = size
+            self.vitals.worldsize = size
 
     def _console_event(self, payload):
         """This function is used in conjunction with event handlers to

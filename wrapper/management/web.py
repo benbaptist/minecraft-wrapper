@@ -41,10 +41,16 @@ class Web(object):
         self.api = wrapper.api
         self.log = logging.getLogger('Web')
         self.config = wrapper.config
+        self.serverpath = self.config["General"]["server-directory"]
         self.pass_handler = self.wrapper.cipher
         self.socket = False
         self.storage = Storage("web", pickle=False)
         self.data = self.storage.Data
+
+        # TODO temporary security code until pass words are fixed.
+        self.onlyusesafe_ips = self.config["Web"]["safe-ips-use"]
+        self.safe_ips = self.config["Web"]["safe-ips"]
+
         if "keys" not in self.data:
             self.data["keys"] = []
 
@@ -117,8 +123,15 @@ class Web(object):
             self.config["Web"]["web-bind"], self.config["Web"]["web-port"]))
         while not self.wrapper.halt.halt:
             sock, addr = self.socket.accept()
-            # self.log.debug("(WEB) Connection %s started" % str(addr))
+            # TODO temporary security code until pass words are fixed.
+            if self.onlyusesafe_ips:
+                if addr[0] not in self.safe_ips:
+                    sock.close()
+                    print("sorry charlie (an unathorized IP attempted connection)")
+                    continue
+                # self.log.debug("(WEB) Connection %s started" % str(addr))
             client = Client(self.wrapper, sock, addr, self)
+
             # t = threading.Thread(target=cProfile.runctx, args=("client.wrap()", globals(), locals(), "cProfile-debug"))
             # t.daemon = True
             # t.start()
@@ -204,7 +217,7 @@ class Web(object):
         self.loginAttempts += 1
         if self.loginAttempts > 10 and time.time() - self.lastAttempt < 60:
             self.disableLogins = time.time()
-            self.log.warn("Disabled login attempts for one minute")
+            self.log.warning("Disabled login attempts for one minute")
         self.lastAttempt = time.time()
         return False
 
@@ -215,9 +228,13 @@ class Web(object):
             a += z[random.randrange(0, len(z))]
         # a += chr(random.randrange(97, 122))
         self.data["keys"].append([a, time.time(), remember_me])
+        print("KEY", a)
         return a
 
     def validate_key(self, key):
+        # TODO for now..
+        return True
+        pprint(self.data)
         for i in self.data["keys"]:
             expire_time = 2592000
             if len(i) > 2:
@@ -300,7 +317,7 @@ class Client(object):
         # print("GET request: %s" % request)
 
         if request in ("/", "index"):
-            filename = "index.html"
+            filename = "/index.html"
         elif request == "/admin":
             filename = "/admin.html"
         elif request == ".":
@@ -311,7 +328,7 @@ class Client(object):
         elif request[0:7] == "/action":
             try:
                 raw_dump = json.dumps(self.handle_action(request))
-                self.log.debug(raw_dump)
+                # self.log.debug("RAW DUMP: %s", raw_dump)
                 self.write(raw_dump)
             except:
                 self.headers(status="300 Internal Server Error")
@@ -320,8 +337,9 @@ class Client(object):
             return False
         else:
             filename = request
-            # filename = request.replace("..", "").replace("%", "").replace("\\", "")
-        # print(filename)
+
+        request = filename
+        filename = request.replace("..", "").replace("%2F", "/").replace("\\", "").replace("+", " ")
 
         try:
             data = self.read(filename)
@@ -354,7 +372,7 @@ class Client(object):
             return {"status": "good", "payload": info}
 
     def run_action(self, request):
-
+        # pprint(request)
         # Entire requested action
         request_action = request.split("/")[2] or ""
 
@@ -366,17 +384,16 @@ class Client(object):
 
         # develop args into a dictionary for later
         action_arg_list = action_parts[1].split("&")
-        argdict = {}
+        argdict = {"key": ""}
         for argument in action_arg_list:
             argparts = argument.split("=")
             argname = argument.split("=")[0]
             if len(argparts) > 1:
                 value = argparts[1]
+                value = value.replace("%2F", "/").replace("+", " ")
             else:
                 value = ""
             argdict[argname] = value
-        pprint(action)
-        pprint(json.dumps(argdict))
         if action == "stats":
             if not self.config["Web"]["public-stats"]:
                 return EOFError
@@ -393,33 +410,35 @@ class Client(object):
         if action == "login":
             password = argdict["password"]
             remember_me = argdict["remember-me"]
-            print(password, remember_me)
             if remember_me == "true":
                 remember_me = True
             else:
                 remember_me = False
             if self.web.check_login(password):
                 key = self.web.make_key(remember_me)
-                self.log.warn("%s logged in to web mode (remember me: %s)" % (
+                self.log.info("%s logged in to web mode (remember me: %s)" % (
                     self.addr[0], remember_me))
                 return {"session-key": key}
             else:
-                self.log.warn("%s failed to login" % self.addr[0])
+                self.log.warning("%s failed to login" % self.addr[0])
             return EOFError
         if action == "is_admin":
             if self.web.validate_key(argdict["key"]):
+                print("ADMIN PASSED")
                 return {"status": "good"}
             return EOFError
         if action == "logout":
             if self.web.validate_key(argdict["key"]):
                 self.web.remove_key(argdict["key"])
-                self.log.warn("[%s] Logged out." % self.addr[0])
+                self.log.info("[%s] Logged out." % self.addr[0])
                 return "goodbye"
             return EOFError
         if action == "read_server_props":
             if not self.web.validate_key(argdict["key"]):
                 return EOFError
-            return open("server.properties", "r").read()
+            with open("%s/server.properties" % self.web.serverpath, 'r') as f:
+                file_contents = f.read()
+            return file_contents
         if action == "save_server_props":
             if not self.web.validate_key(argdict["key"]):
                 return EOFError
@@ -428,7 +447,7 @@ class Client(object):
                 return False
             if len(props) < 10:
                 return False
-            with open("server.properties", "w") as f:
+            with open("%s/server.properties" % self.web.serverpath, 'r') as f:
                 f.write(props)
             return "ok"
         if action == "listdir":
@@ -523,7 +542,7 @@ class Client(object):
                 players.append({
                     "name": i,
                     "loggedIn": player.loggedIn,
-                    "uuid": str(player.uuid),
+                    "uuid": str(player.mojangUuid),
                     "isOp": player.isOp()
                 })
             plugins = []
@@ -568,19 +587,19 @@ class Client(object):
                     "wrapper_build": self.wrapper.getbuildstring(),
                     "console": console_scrollback,
                     "chat": chat_scrollback,
-                    "level_name": self.wrapper.servervitals.worldName,
+                    "level_name": self.wrapper.servervitals.worldname,
                     "server_version": self.wrapper.servervitals.version,
                     "motd": self.wrapper.servervitals.motd,
                     "refresh_time": time.time(),
                     "server_name": self.config["Web"]["server-name"],
-                    "server_memory": self.wrapper.server.getmemoryusage(),
+                    "server_memory": self.wrapper.javaserver.getmemoryusage(),
                     "server_memory_graph": memory_graph,
-                    "world_size": self.wrapper.server.worldSize}
+                    "world_size": self.wrapper.servervitals.worldsize}
         if action == "console":
             if not self.web.validate_key(argdict["key"]):
                 return EOFError
             self.wrapper.javaserver.console(argdict["execute"])
-            self.log.warn("[%s] Executed: %s" % (self.addr[0], argdict["execute"]))
+            self.log.info("[%s] Executed: %s" % (self.addr[0], argdict["execute"]))
             return True
         if action == "chat":
             if not self.web.validate_key(argdict["key"]):
@@ -595,7 +614,7 @@ class Client(object):
                 return EOFError
             player = argdict["player"]
             reason = argdict["reason"]
-            self.log.warn("[%s] %s was kicked with reason: %s" % (self.addr[0], player, reason))
+            self.log.info("[%s] %s was kicked with reason: %s" % (self.addr[0], player, reason))
             self.wrapper.javaserver.console("kick %s %s" % (player, reason))
             return True
         if action == "ban_player":
@@ -603,7 +622,7 @@ class Client(object):
                 return EOFError
             player = argdict["player"]
             reason = argdict["reason"]
-            self.log.warn("[%s] %s was banned with reason: %s" % (self.addr[0], player, reason))
+            self.log.info("[%s] %s was banned with reason: %s" % (self.addr[0], player, reason))
             self.wrapper.javaserver.console("ban %s %s" % (player, reason))
             return True
         if action == "change_plugin":
@@ -614,13 +633,13 @@ class Client(object):
             if state == "enable":
                 if plugin in self.wrapper.storage["disabled_plugins"]:
                     self.wrapper.storage["disabled_plugins"].remove(plugin)
-                    self.log.warn("[%s] Set plugin enabled: '%s'" % (self.addr[0], plugin))
+                    self.log.info("[%s] Set plugin enabled: '%s'" % (self.addr[0], plugin))
                     self.wrapper.commands.command_reload(self.web_admin,
                                                          self.command_payload)
             else:
                 if plugin not in self.wrapper.storage["disabled_plugins"]:
                     self.wrapper.storage["disabled_plugins"].append(plugin)
-                    self.log.warn("[%s] Set plugin disabled: '%s'" % (self.addr[0], plugin))
+                    self.log.info("[%s] Set plugin disabled: '%s'" % (self.addr[0], plugin))
                     self.wrapper.commands.command_reload(self.web_admin,
                                                          self.command_payload)
         if action == "reload_plugins":
@@ -635,21 +654,21 @@ class Client(object):
             command = argdict["action"]
             if command == "stop":
                 reason = argdict["reason"]
-                self.wrapper.javaserver.stop(reason)
-                self.log.warn("[%s] Server stop with reason: %s" % (self.addr[0], reason))
+                self.wrapper.javaserver.stop_server_command(reason)
+                self.log.info("[%s] Server stop with reason: %s" % (self.addr[0], reason))
                 return "success"
             elif command == "restart":
                 reason = argdict["reason"]
                 self.wrapper.javaserver.restart(reason)
-                self.log.warn("[%s] Server restart with reason: %s" % (self.addr[0], reason))
+                self.log.info("[%s] Server restart with reason: %s" % (self.addr[0], reason))
                 return "success"
             elif command == "start":
                 self.wrapper.javaserver.start()
-                self.log.warn("[%s] Server started" % (self.addr[0]))
+                self.log.info("[%s] Server started" % (self.addr[0]))
                 return "success"
             elif command == "kill":
-                self.wrapper.javaserver.kill()
-                self.log.warn("[%s] Server killed." % self.addr[0])
+                self.wrapper.javaserver.kill("Server killed by Web module...")
+                self.log.info("[%s] Server killed." % self.addr[0])
                 return "success"
             return {"error": "invalid_server_action"}
         return False
