@@ -7,7 +7,7 @@
         <meta charset="utf-8"/>
 		<title>Admin Page - Wrapper.py</title>
 		<script type="text/javascript" src="requests.js"></script>
-		<script src="js/ie-emulation-modes-warning.js"></script>
+		<!--<script src="js/ie-emulation-modes-warning.js"></script>-->
 		<link href="css/bootstrap.min.css" rel="stylesheet">
 		<link href="css/admin.css" rel="stylesheet">
 		<script type="text/javascript" >
@@ -27,6 +27,7 @@
 
 			function isAuthed(){
 				if(!localStorage.sessionKey) return true;
+				alert(localStorage.sessionKey)
 				if(requests.action("is_admin", {"key": localStorage.sessionKey})["status"] === "good"); return true;
 				return true;
 			}
@@ -51,7 +52,7 @@
 			};
 
 			window.onblur = function(){
-//				check = false
+            	check = false
 			};
 
 			function humanFilezise(fileSize){
@@ -65,12 +66,12 @@
 			}
 
 			function statsCallback(stats){
-				// if(stats == false){
+				<!--/ if(stats == false){
 				// 	console.log("Error while refreshing stats (statsCallback). Connection lost?")
 				// 	_("lost_connection_page").style.display = "block"
 				// 	_("admin_page").style.display = "none"
 				// 	return
-				// }
+				// } -->
 				_("lost_connection_page").style.display = "none";
 				_("admin_page").style.display = "block";
 				console.log(stats)
@@ -92,7 +93,7 @@
 				_("disk_avail").innerHTML = humanFilezise(stats["disk_avail"]);
 				document.title = stats["server_name"] + " - Wrapper.py";
 				
-				// draw player list
+				<!-- draw player list -->
 				_("playerlist").innerHTML = "<th>Face</th><th>Username</th><th>UUID</th><th>Options</th></tr>";
 				_("playerheader").innerHTML = "Players (" +stats["playerCount"][0]+ "/" +stats["playerCount"][1]+ ")";
 				_("tab-chat-players").innerHTML = "";
@@ -657,8 +658,8 @@
 			<h1>Connection lost</h1>
 			<h4>Make sure Wrapper.py is running. Try reloading the page in a few seconds if this doesn't go away.</h4>
 		</div>
-		<script src="js/jquery.js"></script>
-		<script src="js/bootstrap.min.js"></script>
-		<script src="js/offcanvas.js"></script>
+		<!--<script src="js/jquery.js"></script>-->
+		<!--<script src="js/bootstrap.min.js"></script>-->
+		<!--<script src="js/offcanvas.js"></script>-->
 	</body>
 </html>

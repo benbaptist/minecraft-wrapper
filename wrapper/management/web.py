@@ -269,6 +269,42 @@ class Client(object):
         self.command_payload = {"args": ""}
         self.web_admin = self.wrapper.xplayer
 
+    def read(self, filename):
+        return pkg_resources.resource_stream(__name__,
+                                             "html/%s" % filename).read()
+
+    def write(self, message):
+        self.log.debug(message)
+        self.socket.send(message)
+
+    def close(self):
+        try:
+            self.socket.close()
+        except:
+            pass
+
+    def headers(self, status="200 Good", content_type="text/html", location=""):
+        self.write("HTTP/1.1 %s\r\n" % status)
+        # if len(location) < 1:
+        self.write("Content-Type: %s\r\n" % content_type)
+
+        if len(location) > 0:
+            self.write("Location: %s\r\n" % location)
+
+        self.write("\r\n")
+
+    def get_content_type(self, filename):
+        ext = filename.split(".")[-1]
+        if ext == "js":
+            return "application/javascript"
+        if ext == "css":
+            return "text/css"
+        if ext in ("txt", "html"):
+            return "text/html"
+        if ext in ("ico",):
+            return"image/x-icon"
+        return "application/octet-stream"
+
     def wrap(self):
         try:
             self.handle()
@@ -303,7 +339,7 @@ class Client(object):
                 args = line.split(" ")
 
                 if getargs(args, 0) == "GET":
-                    self.log.debug(args)
+                    # self.log.debug(args)
                     self.get(getargs(args, 1))
 
                 if getargs(args, 0) == "POST":
@@ -317,33 +353,37 @@ class Client(object):
         # print("GET request: %s" % request)
 
         if request in ("/", "index"):
-            filename = "/index.html"
+            request = "/index.html"
         elif request == "/admin":
-            filename = "/admin.html"
+            request = "/admin.html"
         elif request == ".":
             self.headers(status="400 Bad Request")
             self.write("<h1>BAD REQUEST</h1>")
             self.close()
-            return False
+            return
+        # Process actions
         elif request[0:7] == "/action":
+            print("DO /ACTION")
             try:
                 raw_dump = json.dumps(self.handle_action(request))
                 # self.log.debug("RAW DUMP: %s", raw_dump)
+                self.headers()
                 self.write(raw_dump)
+                self.close()
             except:
                 self.headers(status="300 Internal Server Error")
                 print(traceback.format_exc())
-            self.close()
-            return False
-        else:
-            filename = request
+                self.close()
+            return
 
-        request = filename
-        filename = request.replace("..", "").replace("%2F", "/").replace("\\", "").replace("+", " ")
+        # convert spaces and such from %xx codes back to spaces and slashes
+        # request = request.replace("..", "").replace("%2F", "/").replace("\\", "").replace("+", " ")
 
+        # core section that reads local page and serves it to client browser
         try:
-            data = self.read(filename)
-            self.headers(content_type=self.get_content_type(filename))
+            data = self.read(request)
+            contenttype = self.get_content_type(request)
+            self.headers(content_type=contenttype, location=request)
             self.write(data)
         except:
             self.headers(status="404 Not Found")
@@ -673,40 +713,6 @@ class Client(object):
             return {"error": "invalid_server_action"}
         return False
 
-    def read(self, filename):
-        return pkg_resources.resource_stream(__name__,
-                                             "html/%s" % filename).read()
-
-    def write(self, message):
-        self.socket.send(message)
-
-    def close(self):
-        try:
-            self.socket.close()
-        except:
-            pass
-
-    def headers(self, status="200 Good", content_type="text/html", location=""):
-        self.write("HTTP/1.1 %s\r\n" % status)
-        if len(location) < 1:
-            self.write("Content-Type: %s\r\n" % content_type)
-
-        if len(location) > 0:
-            self.write("Location: %s\r\n" % location)
-
-        self.write("\r\n")
-
-    def get_content_type(self, filename):
-        ext = filename.split(".")[-1]
-        if ext == "js":
-            return "application/javascript"
-        if ext == "css":
-            return "text/css"
-        if ext in ("txt", "html"):
-            return "text/html"
-        if ext in ("ico",):
-            return"image/x-icon"
-        return "application/octet-stream"
 
 
 if __name__ == "__main__":
