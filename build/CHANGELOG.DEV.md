@@ -1,6 +1,27 @@
-Build 263 (next build)
+Build 264 (next build)
 - player to player TP - Add inter-dimensional TP (1.8+) api
   Community Input enhancement proxy mode
+
+Build 263
+- Finally repaired logins; fixed isAuthed() components of login.html and admin.html
+- tested OK with firefox and chrome browsers.
+- Fixed bug that prevented browsing into directories with periods (like com.banbaptist.some.plugin)
+- retaining the feature for using 'safe-ips'.
+- Moved out alot of cruft that probably was/is experimental, unused, or meant for the new
+ management.py interface.  Proposed items for removal are in `/management/html/html_deprecate`. Extra
+ js, css, and junk... just lots of clutter to confuse us.
+_remaining bugs_
+ - [ ] Generally, shouldn't buttons (server restarts and so forth), get feedback from wrapper that they actually completed the operation (most events prematurely or just flatly assume it succeeded)?
+ - [ ] `Server` - No feed back from console.
+ - [ ] `Server` - No chat feed back or player list
+ - [ ] `Server` `files` - Working great, but we should:
+        - implement the "new directory" function/button.
+        - maybe a file viewer for text files like server properties does??
+ - [ ] `Server` `Server Properties` - re-enable the editing/saving function.
+ - [ ] `Dashboard` - nothing works except the 'Power' drop-down button.  Don't get me wrong, that's great, but the ticking event that gathers server info needs repaired.
+ - [ ] Clicking logout does not log you out of the web page or prevent further access to the interface items.  You have to clear the history and close the browser....
+ - [ ] The remember_me checkbox probably does nothing...
+ - [ ] One day, proper HTTPS would be nice so the password we so carefully encrypted within wrapper can't be seen when the client web page sends it via an unencryted `GET` request :o ...
 
 Build 262
 - First working Web module, with important changes:

@@ -285,16 +285,21 @@ class Wrapper(object):
         if self.config["Web"]["web-enabled"]:  # this should be a plugin
             if manageweb.pkg_resources and manageweb.requests:
                 self.log.warning(
-                    "Our apologies!  Web mode is an alpha feature and is not "
-                    "secure from outside usage. It does not use HTTPS and is "
-                    "currently not password protected.  We have imposed a "
-                    "setting in the 'Web' section to only allow only certain "
-                    "IPs to connect.  If you need to use web remotely, add the "
-                    "IP address from where you will be using the web interface"
+                    "Web mode is an alpha feature and is not completely "
+                    "secure. It does not use HTTPS and sends your password"
+                    "back to the server with a plain-text HTTP GET.  Besides "
+                    "password protection, we also have a setting in the 'Web' "
+                    "section to only allow only certain IPs to connect.  If "
+                    "you need to use web remotely, add the IP address from "
+                    "where you will be using the web interface"
                     " into the 'safe-ips' config item.  That said..."
                     " Wrapper will start web mode anyway, but if you are not "
                     "really using Web mode, you should turn it off in "
-                    "wrapper.properties.json.")
+                    "wrapper.properties.json.\n\nLastly; never use the same "
+                    "password for Web that you use anywhere else (like your "
+                    "banking or email accounts).  Like I said, it goes over "
+                    "the 'wires' unencrypted just as you typed it in the "
+                    "browser..")
                 self.web = manageweb.Web(self)
                 t = threading.Thread(target=self.web.wrap, args=())
                 t.daemon = True
@@ -302,7 +307,7 @@ class Wrapper(object):
             else:
                 self.log.error(
                     "Web remote could not be started because you do not have"
-                    " the required modules installed: pkg_resources\n"
+                    " the pkg_resources module installed: \n"
                     "Hint: http://stackoverflow.com/questions/7446187")
 
         # Console Daemon runs while not wrapper.halt.halt

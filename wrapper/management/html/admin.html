@@ -7,7 +7,7 @@
         <meta charset="utf-8"/>
 		<title>Admin Page - Wrapper.py</title>
 		<script type="text/javascript" src="requests.js"></script>
-		<script src="js/ie-emulation-modes-warning.js"></script>
+		<!--<script src="js/ie-emulation-modes-warning.js"></script>-->
 		<link href="css/bootstrap.min.css" rel="stylesheet">
 		<link href="css/admin.css" rel="stylesheet">
 		<script type="text/javascript" >
@@ -23,12 +23,12 @@
 			var consoleMemory = [];
 			var consoleMode = 0;
 
-			_ = function(id) {return document.getElementById(id);};
+			getElem = function(id) {return document.getElementById(id);};
 
 			function isAuthed(){
-				if(!localStorage.sessionKey) return true;
+				if(!localStorage.sessionKey) return false;
 				if(requests.action("is_admin", {"key": localStorage.sessionKey})["status"] === "good"); return true;
-				return true;
+				return false;
 			}
 
 			window.onload = function(){
@@ -39,8 +39,8 @@
 						window.onhashchange();
 					}
 					// Lazy hack time
-					setTimeout(function(){_("server_console").scrollTop = _("server_console").scrollHeight;}, 300);
-					setTimeout(function(){_("chatbox").scrollTop = _("chatbox").scrollHeight;}, 300);
+					setTimeout(function(){getElem("server_console").scrollTop = getElem("server_console").scrollHeight;}, 300);
+					setTimeout(function(){getElem("chatbox").scrollTop = getElem("chatbox").scrollHeight;}, 300);
 				}else{
 					window.location = "login.html";
 				}
@@ -51,7 +51,7 @@
 			};
 
 			window.onblur = function(){
-//				check = false
+            	check = false
 			};
 
 			function humanFilezise(fileSize){
@@ -65,57 +65,57 @@
 			}
 
 			function statsCallback(stats){
-				// if(stats == false){
-				// 	console.log("Error while refreshing stats (statsCallback). Connection lost?")
-				// 	_("lost_connection_page").style.display = "block"
-				// 	_("admin_page").style.display = "none"
-				// 	return
-				// }
-				_("lost_connection_page").style.display = "none";
-				_("admin_page").style.display = "block";
+				    if(stats == false){
+				 	console.log("Error while refreshing stats (statsCallback). Connection lost?")
+				 	getElem("lost_connection_page").style.display = "block"
+				 	getElem("admin_page").style.display = "none"
+				 	return
+				}
+				getElem("lost_connection_page").style.display = "none";
+				getElem("admin_page").style.display = "block";
 				console.log(stats)
 				lastRefresh = stats["last_refresh"];
 				statusMessages = {0: "Offline", 1: "Server starting...", 2: "Online", 3: "Server stopping...", 5: "Server frozen"};
-				if(stats["server_state"] in statusMessages) _("server_status").innerHTML = statusMessages[stats["server_state"]];
-				if(stats["server_state"] === 0) _("server_status").className = "label label-danger";
-				if(stats["server_state"] === 1) _("server_status").className = "label label-warning";
-				if(stats["server_state"] === 2) _("server_status").className = "label label-success";
-				if(stats["server_state"] === 3) _("server_status").className = "label label-warning";
-				if(stats["server_state"] === 4) _("server_status").className = "label label-warning";
-				if(stats["server_state"] === 5) _("server_status").className = "label label-info";
-				_("levelname_status").innerHTML = stats["level_name"];
-				_("server_version").innerHTML = stats["server_version"];
-				_("server_motd").innerHTML = stats["motd"];
-				_("server_name").innerHTML = stats["server_name"];
-				_("memory_status").innerHTML = humanFilezise(stats["server_memory"]);
-				_("world_size").innerHTML = humanFilezise(stats["world_size"]);
-				_("disk_avail").innerHTML = humanFilezise(stats["disk_avail"]);
+				if(stats["server_state"] in statusMessages) getElem("server_status").innerHTML = statusMessages[stats["server_state"]];
+				if(stats["server_state"] === 0) getElem("server_status").className = "label label-danger";
+				if(stats["server_state"] === 1) getElem("server_status").className = "label label-warning";
+				if(stats["server_state"] === 2) getElem("server_status").className = "label label-success";
+				if(stats["server_state"] === 3) getElem("server_status").className = "label label-warning";
+				if(stats["server_state"] === 4) getElem("server_status").className = "label label-warning";
+				if(stats["server_state"] === 5) getElem("server_status").className = "label label-info";
+				getElem("levelname_status").innerHTML = stats["level_name"];
+				getElem("server_version").innerHTML = stats["server_version"];
+				getElem("server_motd").innerHTML = stats["motd"];
+				getElem("server_name").innerHTML = stats["server_name"];
+				getElem("memory_status").innerHTML = humanFilezise(stats["server_memory"]);
+				getElem("world_size").innerHTML = humanFilezise(stats["world_size"]);
+				getElem("disk_avail").innerHTML = humanFilezise(stats["disk_avail"]);
 				document.title = stats["server_name"] + " - Wrapper.py";
 				
-				// draw player list
-				_("playerlist").innerHTML = "<th>Face</th><th>Username</th><th>UUID</th><th>Options</th></tr>";
-				_("playerheader").innerHTML = "Players (" +stats["playerCount"][0]+ "/" +stats["playerCount"][1]+ ")";
-				_("tab-chat-players").innerHTML = "";
+				<!-- draw player list -->
+				getElem("playerlist").innerHTML = "<th>Face</th><th>Username</th><th>UUID</th><th>Options</th></tr>";
+				getElem("playerheader").innerHTML = "Players (" +stats["playerCount"][0]+ "/" +stats["playerCount"][1]+ ")";
+				getElem("tab-chat-players").innerHTML = "";
 				for(i in stats["players"]){
 					if(i === "getLength") continue
 					var player = stats["players"][i];
 					if(!(player.uuid in skins)){
-						var skin = requests.admin("get_player_skin", {"uuid": player.uuid});
+						var skin = requests.action("get_player_skin", {"uuid": player.uuid});
 						if(!skin) continue // Might make players not draw in player list
 						skins[player.uuid] = skin;
 					}
 					console.log(player);
 					if(player.isOp) var isOp = "<span class=\"glyphicon glyphicon-star op\"></span> ";
 					else isOp = "";
-					_("playerlist").innerHTML += "<td><canvas id='playerskin-"+player.name+"' width=16 height=16></canvas></td><td style='white-space:nowrap;'>"+isOp+""+player.name+"</td><td>"+player.uuid+"</td><td style='white-space:nowrap;'><button onclick='_kick("+i+")' class='btn btn-xs btn-default'>Kick</button> <button onclick='_ban("+i+")' class='btn btn-xs btn-default'>Ban</button> <button onclick='_op("+i+")' class='btn btn-xs btn-default'>OP</button> <button onclick='_deop("+i+")' class='btn btn-xs btn-default'>De-OP</button></td></tr>";
-					_("tab-chat-players").innerHTML += '<div class="player">'+isOp+''+player.name+'</div>';
+					getElem("playerlist").innerHTML += "<td><canvas id='playerskin-"+player.name+"' width=16 height=16></canvas></td><td style='white-space:nowrap;'>"+isOp+""+player.name+"</td><td>"+player.uuid+"</td><td style='white-space:nowrap;'><button onclick='_kick("+i+")' class='btn btn-xs btn-default'>Kick</button> <button onclick='_ban("+i+")' class='btn btn-xs btn-default'>Ban</button> <button onclick='_op("+i+")' class='btn btn-xs btn-default'>OP</button> <button onclick='_deop("+i+")' class='btn btn-xs btn-default'>De-OP</button></td></tr>";
+					getElem("tab-chat-players").innerHTML += '<div class="player">'+isOp+''+player.name+'</div>';
 					if(skins[player.uuid] === null) return;
 					// the worst code ever.  Can be improved?
 					try{
 						var pic = new Image();
 						pic.src = "data:image/png;base64," + skins[player.uuid];
-						_("playerskin-" + player.name).width = 32;_("playerskin-" + player.name).height = 32;
-						var ctx = _("playerskin-" + player.name).getContext("2d");
+						getElem("playerskin-" + player.name).width = 32;getElem("playerskin-" + player.name).height = 32;
+						var ctx = getElem("playerskin-" + player.name).getContext("2d");
 						ctx.webkitImageSmoothingEnabled = false;
 						ctx.drawImage(pic, 8, 8, 8, 8, 0, 0, ctx.canvas.width, ctx.canvas.height);
 					}catch(err){}
@@ -123,7 +123,7 @@
 				players = stats["players"];
 				
 				// draw plugin list
-				_("pluginlist").innerHTML = "<th>Name</th><th>Description</th><th>Options</th></tr>";
+				getElem("pluginlist").innerHTML = "<th>Name</th><th>Description</th><th>Options</th></tr>";
 				for(i in stats["plugins"]){
 					if(i === "getLength") continue
 					var plugin = stats["plugins"][i];
@@ -137,25 +137,25 @@
 							var website = "<a href='"+plugin.website+"'>Website</a>";
 						else
 							var website = "";
-						_("pluginlist").innerHTML += "<td style='white-space:nowrap'><b>"+plugin.name+"</b> v"+plugin.version+"<div class='small'>by "+plugin.author+"<br/>"+website+"</div></td><td>"+summary+description+"</td><td style='white-space:nowrap;'><button onclick='_toggle_plugin(\""+plugin.id+"\", this)' class='btn btn-default'>Disable</button></td></tr>";
+						getElem("pluginlist").innerHTML += "<td style='white-space:nowrap'><b>"+plugin.name+"</b> v"+plugin.version+"<div class='small'>by "+plugin.author+"<br/>"+website+"</div></td><td>"+summary+description+"</td><td style='white-space:nowrap;'><button onclick='_toggle_plugin(\""+plugin.id+"\", this)' class='btn btn-default'>Disable</button></td></tr>";
 					}else{
-						_("pluginlist").innerHTML += "<td style='white-space:nowrap'><b><r>"+plugin.name+"</r></b></td><td><r><i>This plugin failed to load. Please make sure it is a valid plugin.</i></r></td><td style='white-space:nowrap;'><button onclick='_toggle_plugin(\""+plugin.id+"\", this)' class='btn btn-default'>Disable</button></td></tr>";
+						getElem("pluginlist").innerHTML += "<td style='white-space:nowrap'><b><r>"+plugin.name+"</r></b></td><td><r><i>This plugin failed to load. Please make sure it is a valid plugin.</i></r></td><td style='white-space:nowrap;'><button onclick='_toggle_plugin(\""+plugin.id+"\", this)' class='btn btn-default'>Disable</button></td></tr>";
 					}
 				}
-				if(stats["plugins"].length < 1) _("nopluginswarning").style.display = "block";
-				else _("nopluginswarning").style.display = "none";
+				if(stats["plugins"].length < 1) getElem("nopluginswarning").style.display = "block";
+				else getElem("nopluginswarning").style.display = "none";
 				
 				// draw top 10 players
-				/*_("top-players").innerHTML = "<th>#</th><th>Username</th><th>Playtime</th><th>Logins</th></tr>"
+				/*getElem("top-players").innerHTML = "<th>#</th><th>Username</th><th>Playtime</th><th>Logins</th></tr>"
 				for(i in stats["topPlayers"]){
 					if(isNaN(i)) continue
 					var player = stats["topPlayers"][i]
-					_("top-players").innerHTML += "<td>"+(Number(i)+1)+"</td><td>"+player[3]+"</td><td>"+player[1]+"</td><td>"+player[2]+" logins</td></tr>"
+					getElem("top-players").innerHTML += "<td>"+(Number(i)+1)+"</td><td>"+player[3]+"</td><td>"+player[1]+"</td><td>"+player[2]+" logins</td></tr>"
 				}*/
 								
 				// draw console
 				var doScroll = false;
-				var p = _("server_console");
+				var p = getElem("server_console");
 				if(p.scrollTop + p.clientHeight === p.scrollHeight) var doScroll = true;
 				if(stats["console"].length > 0){
 					for(i in stats["console"]){
@@ -173,27 +173,27 @@
 				
 				// draw chat
 				var doScroll = false;
-				var p = _("chatbox");
+				var p = getElem("chatbox");
 				if(p.scrollTop + p.clientHeight === p.scrollHeight){
 					var doScroll = true;
 				}
 				for(i in stats["chat"]){
 					var line = stats["chat"][i]; payload = line.payload;
 					if(line.type === "irc")
-						_("chatbox").innerHTML += "["+payload["channel"]+"] &lt;"+payload["nick"]+"&gt; "+payload["message"]+"\n";
+						getElem("chatbox").innerHTML += "["+payload["channel"]+"] &lt;"+payload["nick"]+"&gt; "+payload["message"]+"\n";
 					if(line.type === "playerJoin")
-						_("chatbox").innerHTML += payload["player"]+" joined the game\n";
+						getElem("chatbox").innerHTML += payload["player"]+" joined the game\n";
 					if(line.type === "playerLeave")
-						_("chatbox").innerHTML += payload["player"]+" left the game\n";
+						getElem("chatbox").innerHTML += payload["player"]+" left the game\n";
 					if(line.type === "player")
-						_("chatbox").innerHTML += "&lt;"+payload["player"]+"&gt; "+payload["message"]+"\n";
+						getElem("chatbox").innerHTML += "&lt;"+payload["player"]+"&gt; "+payload["message"]+"\n";
 					if(line.type === "raw")
-						_("chatbox").innerHTML += payload + "\n";
+						getElem("chatbox").innerHTML += payload + "\n";
 				}
 				if(doScroll) p.scrollTop = p.scrollHeight;
 				
 				// set wrapper.py build string
-				_("buildstring").innerHTML = "Wrapper.py " + stats["wrapper_build"];
+				getElem("buildstring").innerHTML = "Wrapper.py " + stats["wrapper_build"];
 			}
 			function tick(){
 				// this is broken, which is why I returned true
@@ -201,38 +201,38 @@
 				setTimeout("tick()", speed);
 				if(!check) return false;
 				try{
-					stats = requests.adminThreaded("admin_stats", {"last_refresh": lastRefresh}, statsCallback);
+					stats = requests.actionThreaded("admin_stats", {"last_refresh": lastRefresh}, statsCallback);
 				}catch(err){
 					console.log("Error while refreshing stats (function tick). Connection lost?");
-					_("lost_connection_page").style.display = "block";
-					_("admin_page").style.display = "none";
+					getElem("lost_connection_page").style.display = "block";
+					getElem("admin_page").style.display = "none";
 				}
 			}
 
 			// admining functions
 			function _start(){
-				requests.admin("server_action", {"action": "start"});
+				requests.action("server_action", {"action": "start"});
 			}
 			function _stop(){
 				message = prompt("Please enter a stop reason (will be shown to all players currently active on the server):", "Server stopping...");
 				if(!message) return;
-				requests.admin("server_action", {"action": "stop", "reason": message});
+				requests.action("server_action", {"action": "stop", "reason": message});
 			}
 			function _restart(){
 				message = prompt("Please enter a restart reason (will be shown to all players currently active on the server):", "Server restarting...");
 				if(!message) return;
-				requests.admin("server_action", {"action": "restart", "reason": message});
+				requests.action("server_action", {"action": "restart", "reason": message});
 			}
 			function _kill(){
 				if(confirm("WARNING!!!\n\nAre you sure you want to forcefully kill the server process? This can corrupt the world file, and should only be used as a last-resort if the server is completely unresponsive/frozen.")){
-					requests.admin("server_action", {"action": "kill"});
+					requests.action("server_action", {"action": "kill"});
 				}
 			}
 			function _kick(i){
 				var player = players[i];
 				message = prompt("Please enter a kick message for "+player.name+":");
 				if(message){
-					requests.admin("kick_player", {"player": player.name, "reason": message});
+					requests.action("kick_player", {"player": player.name, "reason": message});
 				}else{
 					alert("Won't kick "+player.name+".");
 				}
@@ -241,7 +241,7 @@
 				var player = players[i];
 				message = prompt("Please enter a ban message for "+player.name+":");
 				if(message){
-					requests.admin("ban_player", {"player": player.name, "reason": message});
+					requests.action("ban_player", {"player": player.name, "reason": message});
 				}else{
 					alert("Won't ban "+player.name+".");
 				}
@@ -259,14 +259,14 @@
 				}
 			}
 			function _console(line){
-				requests.admin("console", {"execute":line});
+				requests.action("console", {"execute":line});
 			}
 			function _chat(line){
-				requests.admin("chat", {"message": line});
+				requests.action("chat", {"message": line});
 			}
 			function _reload_plugins(){
 				if(!confirm("Are you sure you want to reload all plugins?")) return;
-				requests.admin("reload_plugins", {});
+				requests.action("reload_plugins", {});
 				alert("Reloaded plugins.");
 			}
 			function _toggle_plugin(id, el){
@@ -282,32 +282,32 @@
 			}
 			function _halt_wrapper(){
 				if(confirm("WARNING! Are you sure you want to halt Wrapper.py? Once you shut it down, you probably won't be able to access this web interface and you'll have to ask your administer to boot Wrapper.py back up."))
-					requests.admin("halt_wrapper", {});
+					requests.action("halt_wrapper", {});
 			}
 			function _logout(){
-				requests.admin("logout", {});
+				requests.action("logout", {});
 				window.location = "login.html";
 			}
 			// I wrote this while very tired. Blah!
 			function _switchTab(id){
 				if(id === currentTab) return;
-				_("tab-"+currentTab).className = "";
-				_("tab-"+id).className = "active";
-				_("screen-"+currentTab).style.display = "none";
-				_("screen-"+id).style.display = "block";
+				getElem("tab-"+currentTab).className = "";
+				getElem("tab-"+id).className = "active";
+				getElem("screen-"+currentTab).style.display = "none";
+				getElem("screen-"+id).style.display = "block";
 				console.log("Switching from "+currentTab+" to "+id);
 				if(id === "server"){
-					var p = _("server_console");
+					var p = getElem("server_console");
 					p.scrollTop = p.scrollHeight;
 				}
 				currentTab = id;
 			}
 			function _switchSubTab(id){
 				if(id === currentSubTab) return;
-				_("nav-"+currentSubTab).className = "";
-				_("nav-"+id).className = "active";
-				_("tab-"+currentSubTab).style.display = "none";
-				_("tab-"+id).style.display = "block";
+				getElem("nav-"+currentSubTab).className = "";
+				getElem("nav-"+id).className = "active";
+				getElem("tab-"+currentSubTab).style.display = "none";
+				getElem("tab-"+id).style.display = "block";
 				console.log("Switching from sub-tab "+currentTab+" to sub-tab "+id);
 				if(id === "files") onFilesLoaded();
 				if(id === "settings") onSettingsLoaded();
@@ -492,32 +492,31 @@
 								reloadFiles = function(z){
 									if(z === undefined) z = locationPath;
 									console.log(locationPath);
-									var payload = requests.admin("listdir", {"path": z});
-									console.log("THIS WORKS!?-"+payload)
+									var payload = requests.action("listdir", {"path": z});
 									if(payload === false)
-										_("files_failed").style.display = "block";
+										getElem("files_failed").style.display = "block";
 									else
-										_("files_failed").style.display = "none";
-									_("files").innerHTML = "<th>Filename</th><th>Actions</th><tr/>";
+										getElem("files_failed").style.display = "none";
+									getElem("files").innerHTML = "<th>Filename</th><th>Actions</th><tr/>";
 									files = payload.files; folders = payload.folders;
 									for(i in folders){
 										if(isNaN(i)) continue
 										var file = folders[i];
-										_("files").innerHTML += "<tr><td><b><a href='javascript:appendPath("+i+")'>"+file.filename+"</a></b> <div class='subtext'>"+file.count+" files</div></td><td><a href='javascript:renameFile("+i+", true)'>Rename</a> | <a href='javascript:deleteFile("+i+", true)'>Delete</a></td></tr>";
+										getElem("files").innerHTML += "<tr><td><b><a href='javascript:appendPath("+i+")'>"+file.filename+"</a></b> <div class='subtext'>"+file.count+" files</div></td><td><a href='javascript:renameFile("+i+", true)'>Rename</a> | <a href='javascript:deleteFile("+i+", true)'>Delete</a></td></tr>";
 									}
 									for(i in files){
 										if(isNaN(i)) continue
 										var file = files[i];
-										_("files").innerHTML += "<tr><td>"+file.filename+" <div class='subtext'>"+humanFilezise(file.size)+" bytes</div></td><td><a href='javascript:renameFile("+i+", false)'>Rename</a> | <a href='javascript:deleteFile("+i+", false)'>Delete</a></td></tr>";
+										getElem("files").innerHTML += "<tr><td>"+file.filename+" <div class='subtext'>"+humanFilezise(file.size)+" bytes</div></td><td><a href='javascript:renameFile("+i+", false)'>Rename</a> | <a href='javascript:deleteFile("+i+", false)'>Delete</a></td></tr>";
 									}
 									var crumbs = z.split("/");
-									_("crumbs").innerHTML = "<li><a href='javascript:gotoPath(\"\")'>Root</a></li>";
+									getElem("crumbs").innerHTML = "<li><a href='javascript:gotoPath(\"\")'>Root</a></li>";
 									var thusFar = "" 
 									for (i in crumbs){
 										if(isNaN(i)) continue;
 										if(thusFar.length > 0) thusFar += "/" + crumbs[i];
 										else thusFar += crumbs[i];
-										_("crumbs").innerHTML += "<li><a href='javascript:gotoPath(\""+thusFar+"\")'>"+crumbs[i]+"</a></li>";
+										getElem("crumbs").innerHTML += "<li><a href='javascript:gotoPath(\""+thusFar+"\")'>"+crumbs[i]+"</a></li>";
 									}
 									locationPath = z;
 								};
@@ -546,7 +545,7 @@
 										var newPath = locationPath + "/" + rename;
 									else
 										var newPath = rename;
-									var status = requests.admin("rename_file", {"path": path, "rename": newPath});
+									var status = requests.action("rename_file", {"path": path, "rename": newPath});
 									if(status)
 										alert("Successfully renamed '"+name+"' to '"+rename+"'!");
 									else
@@ -563,7 +562,7 @@
 									else
 										var path = name;
 									if(!confirm("Are you sure you want to delete '"+name+"'?")) return;
-									var status = requests.admin("delete_file", {"path": path});
+									var status = requests.action("delete_file", {"path": path});
 									if(status)
 										alert("Successfully deleted '"+name+"'.");
 									else
@@ -593,12 +592,12 @@
 							<script type="text/javascript">
 								var settingsLoaded = false;
 								reloadproperties = function(){
-									var props = requests.admin("read_server_props", {}); BONK= props;
+									var props = requests.action("read_server_props", {}); BONK= props;
 									if(!props) return;
-									_("server_properties").value = props;
+									getElem("server_properties").value = props;
 								};
 								saveProperties = function(){
-									var result = requests.admin("save_server_props", {"props": _("server_properties").value});
+									var result = requests.action("save_server_props", {"props": getElem("server_properties").value});
 									if(result === "ok") 
 										alert("Successfully saved server.properties! It is recommended that you restart the server for the changes to take effect.");
 									else

@@ -16,42 +16,25 @@ function doArgs(passedargs){
 
 var requests = {}
 
-requests.action = function(action, arguments){
-
-    var args = doArgs(arguments);
+requests.testing = function(action, arglist){
+    console.log("RUNNING 'REQUESTS.ACTION'")
+    var args = doArgs(arglist);
     var XMLrequest = new XMLHttpRequest();
     XMLrequest.onreadystatechange = function () {
         var DONE = this.DONE || 4;
         if (this.readyState === DONE){
             alert(this.readyState);
+            alert(this.responseText)
             return JSON.parse(this.responseText)
         }
     };
-
-    XMLrequest.open("GET", "/action/"+action+"?"+args, false);
+    XMLrequest.open("GET", "/action/"+action+"?"+args, true);
 	XMLrequest.overrideMimeType("application/json");
 	XMLrequest.send(null);
-
 }
 
-requests.action_orig = function(action, arguments){
-
-    var args = doArgs(arguments)
-
-	var xmlhttp;
-	xmlhttp = new XMLHttpRequest();
-	xmlhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-      return JSON.parse(this.responseText)
-        }
-    };
-    xmlhttp.open("GET", "/action/"+action+"?"+args, false);
-	xmlhttp.overrideMimeType("application/json");
-	xmlhttp.send(null);
-}
-
-requests.admin = function(action, arguments){
-	var args = doArgs(arguments)
+requests.action = function(action, arglist){
+	var args = doArgs(arglist)
 
 	var xmlhttp;
 	xmlhttp = new XMLHttpRequest();
@@ -62,18 +45,29 @@ requests.admin = function(action, arguments){
     };
 	xmlhttp.open("GET", "/action/"+action+"?"+args, false);
 	xmlhttp.overrideMimeType("application/json");
-	// xmlhttp.responseType = 'json';
-    xmlhttp.send(null);
-    //while(xmlhttp.readyState != 4){
-    //    console.log(xmlhttp.readyState)
-    //    console.log("waiting");
-    //}
-    console.log("<"+xmlhttp.responseText+">");
+	xmlhttp.send(null);
     return JSON.parse(xmlhttp.responseText)["payload"];
 }
 
-requests.adminThreaded = function(action, arguments, callBack){
-	var args = doArgs(arguments)
+requests.admin = function(action, arglist){
+	var args = doArgs(arglist)
+
+	var xmlhttp;
+	xmlhttp = new XMLHttpRequest();
+	xmlhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      console.log("ADMIN RETURNED FROM IF")
+      return JSON.parse(this.responseText)
+        }
+    };
+	xmlhttp.open("GET", "/action/"+action+"?"+args, false);
+	xmlhttp.overrideMimeType("application/json");
+	xmlhttp.send(null);
+    return JSON.parse(xmlhttp.responseText);
+}
+
+requests.adminThreaded = function(action, arglist, callBack){
+	var args = doArgs(arglist)
 
 	var xmlhttp;
 	xmlhttp = new XMLHttpRequest();
@@ -86,5 +80,5 @@ requests.adminThreaded = function(action, arguments, callBack){
     xmlhttp.open("GET", "/action/"+action+"?"+args, false);
 	xmlhttp.overrideMimeType("application/json");
 	xmlhttp.send(null);
-
+    callBack(response["payload"]);
 }
