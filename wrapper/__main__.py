@@ -105,6 +105,11 @@ def main(wrapper_start_args):
         wrapper.javaserver.console("save-all flush")
         wrapper.javaserver.stop("Wrapper.py received shutdown signal - bye")
         wrapper.halt.halt = True
+    except ImportWarning as ex:
+        crash_mess = ("Wrapper.py Could not start due to missing requests "
+                      "module: \n%s" % ex)
+        wrapper.alerts.ui_process_alerts(crash_mess, blocking=True)
+        log.critical(crash_mess)
     except Exception as ex:
         crash_mess = ("Wrapper.py crashed - stopping server to be safe (%s)" % ex)
         wrapper.alerts.ui_process_alerts(crash_mess, blocking=True)

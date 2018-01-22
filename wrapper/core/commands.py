@@ -4,7 +4,7 @@
 # https://github.com/benbaptist/minecraft-wrapper
 # This program is distributed under the terms of the GNU
 # General Public License, version 3 or later.
-
+from  pprint import pprint
 import random
 import time
 import json
@@ -67,12 +67,21 @@ class Commands(object):
             self.command_plugins(player)
             return True
 
+        # some minecraft commands (like op, ban, kick) will have implementations
+        # that should vary based on whether proxymode is enabled and are
+        # defined here to supercede the minecraft version.
+        # all commands here override their Minecraft equivalent.
+
         elif command == "op":
             self.command_op(player, payload)
             return True
 
         elif command == "deop":
             self.command_deop(player, payload)
+            return True
+
+        elif command == "kick":
+            self.command_kick(player, payload)
             return True
 
         elif command == "wrapper":
@@ -104,19 +113,19 @@ class Commands(object):
             self.command_setconfig(player, payload)
             return True
 
-        elif command == "ban":
+        elif self.wrapper.proxymode and command == "ban":
             self.command_banplayer(player, payload)
             return True
 
-        elif command == "pardon":
+        elif self.wrapper.proxymode and command == "pardon":
             self.command_pardon(player, payload)
             return True
 
-        elif command == "ban-ip":
+        elif self.wrapper.proxymode and command == "ban-ip":
             self.command_banip(player, payload)
             return True
 
-        elif command == "pardon-ip":
+        elif self.wrapper.proxymode and command == "pardon-ip":
             self.command_pardonip(player, payload)
             return True
 
@@ -168,6 +177,21 @@ class Commands(object):
         # return values.  Returning False here will mean no plugin or
         # wrapper command was parsed (so it passes to server).
         return False
+
+    def command_sample(self, player, payload):
+        """
+        :args:
+            :player: is the calling player object, equivalent to payload['player']
+
+            :payload: dictionary of:
+                :args: ["list, "of", "all", "args"]
+                :player: caller player object
+                :command: type:string = the command that was called
+                :playername: - additional argument when run from in-game (proxy mode)?
+        """
+        if not self._superop(player, 3):
+            return False
+        pprint(payload)
 
     def command_setconfig(self, player, payload):
         # only allowed for console and SuperOP 10
@@ -683,6 +707,13 @@ class Commands(object):
                 if i == 9:
                     break
         return
+
+    def command_kick(self, player, payload):
+        if not self._superop(player, 3):
+            return False
+        player_name = getargs(payload["args"], 0)
+        reason = "You were kicked!  Reason: %s" % getargsafter(payload["args"], 1)
+        self.wrapper.javaserver.kick_player(player_name, reason)
 
     def command_deop(self, player, payload):
         # if player is None:

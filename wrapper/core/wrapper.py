@@ -54,7 +54,8 @@ from utils.crypt import Crypt
 
 
 # optional API type stuff
-from proxy.base import Proxy, ProxyConfig, HaltSig, ServerVitals
+from core.servervitals import ServerVitals
+from proxy.base import Proxy, ProxyConfig, HaltSig
 from api.base import API
 import management.web as manageweb
 
@@ -226,15 +227,6 @@ class Wrapper(object):
                 " console functioning. Press <Enter> to acknowledge...")
             sys.stdin.readline()
 
-        # requests is just being used in too many places to try
-        # and track its usages piece-meal.
-        if not requests:
-            self.log.error(
-                "You must have the requests module installed to use wrapper!"
-                " console functioning. Press <Enter> to Exit...")
-            sys.stdin.readline()
-            self._halt()
-
         # create server/proxy vitals and config objects
         self.servervitals = ServerVitals(self.players)
 
@@ -265,6 +257,15 @@ class Wrapper(object):
     def start(self):
         """wrapper execution starts here"""
 
+        # requests is just being used in too many places to try
+        # and track its usages piece-meal.
+        if not requests:
+            self.log.error(
+                "You must have the requests module installed to use wrapper!"
+                " console functioning. Press <Enter> to Exit...")
+            sys.stdin.readline()
+            raise ImportWarning
+
         self.signals()
         self.backups = Backups(self)
         self._registerwrappershelp()
@@ -283,23 +284,8 @@ class Wrapper(object):
             t.start()
 
         if self.config["Web"]["web-enabled"]:  # this should be a plugin
-            if manageweb.pkg_resources and manageweb.requests:
-                self.log.warning(
-                    "Web mode is an alpha feature and is not completely "
-                    "secure. It does not use HTTPS and sends your password"
-                    "back to the server with a plain-text HTTP GET.  Besides "
-                    "password protection, we also have a setting in the 'Web' "
-                    "section to only allow only certain IPs to connect.  If "
-                    "you need to use web remotely, add the IP address from "
-                    "where you will be using the web interface"
-                    " into the 'safe-ips' config item.  That said..."
-                    " Wrapper will start web mode anyway, but if you are not "
-                    "really using Web mode, you should turn it off in "
-                    "wrapper.properties.json.\n\nLastly; never use the same "
-                    "password for Web that you use anywhere else (like your "
-                    "banking or email accounts).  Like I said, it goes over "
-                    "the 'wires' unencrypted just as you typed it in the "
-                    "browser..")
+            if manageweb.pkg_resources:
+                self.log.warning(manageweb.DISCLAIMER)
                 self.web = manageweb.Web(self)
                 t = threading.Thread(target=self.web.wrap, args=())
                 t.daemon = True
@@ -414,37 +400,66 @@ class Wrapper(object):
         """
         cursor = self.cursor
 
+        def _console_event():
+            self.events.callevent("server.consoleMessage",
+                                  {"message": message})
+            """ eventdoc
+                <group> core/wrapper.py <group>
+
+                <description> a line of Console output.
+                <description>
+
+                <abortable> No
+                <abortable>
+
+                <comments>
+                This event is triggered by console output which has already been sent. 
+                <comments>
+
+                <payload>
+                "message": <str> type - The line of buffered output.
+                <payload>
+
+            """
+
         if self.use_readline:
+            _console_event()
             print(message)
             return
 
-        def _wrapper(msg):
+        def _wrapper_line():
+            _console_event()
+            _wrapper()
+
+        def _wrapper():
             """_wrapper is normally displaying a live typing buffer.
             Therefore, there is no cr/lf at end because it is 
             constantly being re-printed in the same spot as the
             user types."""
-            if msg != "":
+            if message != "":
                 # re-print what the console user was typing right below that.
                 # /wrapper commands receive special magenta coloring
-                if msg[0:1] == '/':
+                if message[0:1] == '/':
                     print("{0}{1}{2}{3}{4}{5}".format(
                         UP_LINE, cursor, FG_YELLOW,
-                        msg, RESET, CLEAR_EOL))
+                        message, RESET, CLEAR_EOL))
                 else:
                     print("{0}{1}{2}{3}".format(
                         BACKSPACE, cursor,
-                        msg, CLEAR_EOL))
+                        message, CLEAR_EOL))
 
-        def _server(msg):
+        def _server():
             # print server lines
-            print("{0}{1}{2}\r\n".format(UP_LINE, CLEAR_LINE, msg, CLEAR_EOL))
+            _console_event()
+            print("{0}{1}{2}\r\n".format(UP_LINE, CLEAR_LINE, message, CLEAR_EOL))
 
-        def _print(msg):
-            _server(msg)
+        def _print():
+            _server()
 
         parse = {
             "server": _server,
             "wrapper": _wrapper,
+            "wrapper_line": _wrapper_line,
             "print": _print,
         }
 
@@ -579,7 +594,7 @@ class Wrapper(object):
 
             # print the finished command to console
             self.write_stdout(
-                "%s\r\n" % self.input_buff, source="wrapper")
+                "%s\r\n" % self.input_buff, source="wrapper_line")
 
         return consoleinput
 
@@ -664,6 +679,9 @@ class Wrapper(object):
 
             elif command in ("op", "/op"):
                 self.runwrapperconsolecommand("op", allargs)
+
+            elif command in ("kick", "/kick"):
+                self.runwrapperconsolecommand("kick", allargs)
 
             elif command in ("deop", "/deop"):
                 self.runwrapperconsolecommand("deop", allargs)

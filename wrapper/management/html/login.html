@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <!-- refactored to get rid of `_` function and replace with getElem (for readability). -->
 
 <html>
@@ -16,36 +15,54 @@
             getElem = function(id) {return document.getElementById(id)};
 
             function isAuthed(){
-                <!--  use sessionStorage for now instead of localStorage  -->
                 if(!localStorage.sessionKey){
                     return false;
                 }
-                if(requests.admin("is_admin", {"key": localStorage.sessionKey})["status"] == "good"){
+                var loginKey = requests.action("is_admin", {});
+                if (loginKey["status"] == "good"){
                     return true;
                 }
+                localStorage.sessionKey = undefined
                 return false;
             }
 
             function loginWithPassword(password){
-                var r = requests.admin("login", {"password": password, "remember-me": getElem("remember-me").checked});
-                if (r["payload"] == "permission_denied"){
-                    getElem("login_invalid").style.display = "block";
+                console.log("start loginWithPassword");
+                var r = requests.action("login", {"password": password, "remember-me": getElem("remember-me").checked});
+                if (r == "permission_denied"){
                     invalidLogins += 1;
+                    getElem("login_invalid").style.display = "block";
                     if(invalidLogins > 1){
                         getElem("login_invalid").innerHTML = "The password was invalid. (" + invalidLogins + " attempts)";
+                    return;
                     }
                 }
-                else{
-                    localStorage.sessionKey = r["session-key"];
-                    window.location = "admin.html";
+                if (r == "timed_out"){
+                    if (invalidLogins > 5){
+                    invalidLogins = -1;
+                    }
+                    invalidLogins += 1;
+                    getElem("login_invalid").style.display = "block";
+                    getElem("login_invalid").innerHTML = "Timed out.. Too many attempts!";
+                    return;
                 }
+
+                localStorage.sessionKey = r["session-key"];
+                window.location = "admin.html";
             }
             window.onload = function() {
                 if(isAuthed()){
-                    window.location = "admin.html"
+                    console.log("got authed on window load...");
+                    window.location = "admin.html";
+                }
+                else{
+                    invalidLogins += 1;
+                    getElem("login_invalid").style.display = "block";
+                    getElem("login_invalid").innerHTML = "You must login to access Web interface.";
                 }
             }
             function _login(){
+                console.log("starting login.");
                 console.log(getElem('login_password').value);
                 loginWithPassword(getElem('login_password').value);
             }
@@ -69,7 +86,7 @@
             Password: <input type="password" id="login_password" onkeydown="if(event.keyCode==13){_login();this.value='';}"/><button onclick="_login()">Login</button>-->
             <form class="form-signin" action="javascript:_login();">
                 <h2 class="form-signin-heading">Admin Login</h2><br>
-                <h4> "DO NOT enter a password you use anywhere else.. this is not a secure HTTPS site!" </h4>
+                <h4> Enter your Wrapper.py 'Web' Password. </h4>
                 <div id="login_invalid" style="display:none;" class="alert alert-danger">The password was invalid.</div>
                 <label class="sr-only">Password</label>
                 <input type="password" id="login_password" class="form-control" placeholder="Password" required>

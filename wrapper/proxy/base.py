@@ -17,8 +17,6 @@ from api.helpers import isipv4address
 from proxy.utils import mcuuid
 from proxy.entity.entitycontrol import EntityControl
 
-from core.mcserver import ServerVitals
-
 try:
     import requests
     # noinspection PyUnresolvedReferences
@@ -96,6 +94,7 @@ class Proxy(object):
         self.config = config.proxy
         self.ent_config = config.entity
 
+        # requests = False if requests or proxy.utils.encryption does not import
         if not requests and self.config["proxy-enabled"]:
             raise Exception("You must have requests and pycrypto installed "
                             "to run the Proxy!")
@@ -313,14 +312,15 @@ class Proxy(object):
                                 "expires": expiration,
                                 "reason": reason})
                 if putjsonfile(banlist, "banned-players", self.srv_data.serverpath):
-
-                    console_command = "kick %s Banned: %s" % (name, reason)
+                    # this actually is not needed.  Commands now handle the kick.
+                    console_command = "kick %s %s" % (name, reason)
                     self.eventhandler.callevent("proxy.console",
                                                 {"command": console_command})
                     """ eventdoc
-                                            <description> internalfunction <description>
 
-                                        """
+                    description> internalfunction <description>
+
+                    """
                     return "Banned %s: %s" % (name, reason)
                 return "Could not write banlist to disk"
         else:

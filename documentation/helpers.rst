@@ -49,7 +49,7 @@ using 'self.api.helpers'
 -  format_bytes(number_raw_bytes)
 
     Internal wrapper function that takes number of bytes
-    and converts to Kbtye, MiB, GiB, etc... using 4 most
+    and converts to KiB, MiB, GiB, etc... using 4 most
     significant digits.
 
     :returns: tuple - (string repr of 4 digits, string units)
@@ -58,7 +58,7 @@ using 'self.api.helpers'
 
 -  getargs(arginput, i)
 
-    returns a certain index of argument (without producting an
+    returns a certain index of argument (without producing an
     error if out of range, etc).
 
     :Args:
@@ -152,16 +152,13 @@ using 'self.api.helpers'
 
 -  pickle_load(path, filename)
 
-    Save data to Pickle file (*.pkl).  Allows saving dictionary or other
-    data in a way that json cannot always be saved due to json formatting
-    rules.
+    Load data from a Pickle file (*.pkl).  Normally the returned data would
+     be a dictionary or other python object.  Used to retrieve data that was
+     previously `pickle_save`d.
 
     :Args:
         :path: path to file (no trailing slash)
         :filename: filename including extension
-        :data: Data to be pickled.
-        :encoding: 'Machine' or 'Human' - determines whether file contents
-         can be viewed in a text editor.
 
     :returns: saved data.  (Assumes success; errors will raise exception.)
 

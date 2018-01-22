@@ -211,7 +211,7 @@ def find_in_json(jsonlist, keyname, searchvalue):
 def format_bytes(number_raw_bytes):
     """
     Internal wrapper function that takes number of bytes
-    and converts to Kbtye, MiB, GiB, etc... using 4 most
+    and converts to KiB, MiB, GiB, etc... using 4 most
     significant digits.
 
     :returns: tuple - (string repr of 4 digits, string units)
@@ -237,7 +237,7 @@ def format_bytes(number_raw_bytes):
 
 def getargs(arginput, i):
     """
-    returns a certain index of argument (without producting an
+    returns a certain index of argument (without producing an
     error if out of range, etc).
 
     :Args:
@@ -390,16 +390,13 @@ def isipv4address(addr):
 
 def pickle_load(path, filename):
     """
-    Save data to Pickle file (*.pkl).  Allows saving dictionary or other
-    data in a way that json cannot always be saved due to json formatting
-    rules.
+    Load data from a Pickle file (*.pkl).  Normally the returned data would
+     be a dictionary or other python object.  Used to retrieve data that was
+     previously `pickle_save`d.
 
     :Args:
         :path: path to file (no trailing slash)
         :filename: filename including extension
-        :data: Data to be pickled.
-        :encoding: 'Machine' or 'Human' - determines whether file contents
-         can be viewed in a text editor.
 
     :returns: saved data.  (Assumes success; errors will raise exception.)
 
@@ -514,7 +511,6 @@ def processcolorcodes(messagestring):
 
             current = ""
 
-            # noinspection PyBroadException
             try:
                 code = message[i + 1]
             except:
@@ -996,6 +992,7 @@ def _test():
 
     print("assertion tests succeeded.")
     print(epoch_to_timestr(1501437714))
+
 
 if __name__ == "__main__":
     _test()

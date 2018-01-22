@@ -155,13 +155,17 @@
         Used to send alerts outside of wrapper (email, for instance).
 
         :Args:
-            :message: The message to be sent the servers configured
-             and listed in the wrapper.propertues "Alerts"["servers"]
-             item.
-            :group: message will be sent to the emails/servers
+            :message: The message to be sent to the servers configured
+             and listed in the wrapper.propertues ["Alerts"]["servers"]
+             list.
+            :group: message will be sent to each of the emails/servers
              listed that have the matching "group" in
              wrapper.properties.json["Alerts"]["servers"][<serverindex>]["group"]
-            :blocking: -see same argument for 'sendMail'
+            :blocking: if True, runs non-daemonized and holds up continued
+             wrapper execution until sending is complete.  You would want this
+             set to False normally when dealing with players.  However, at an
+             'onDisable' plugin event, or anywhere else wrapper execution may end
+             abruptly, blocking may be advisble to ensure the emails finish.
 
         :returns:  None/Nothing
 
@@ -221,15 +225,15 @@
 
 -  getStorage(self, name, world=False, formatting="pickle")
 
-        Returns a storage object manager.  The manager contains the
-        storage object, 'Data' (a dictionary). 'Data' contains the
+        Returns a storage object manager.  The manager contains a
+        storage dictionary called 'Data'. 'Data' contains the
         data your plugin will remember across reboots.
 
         :NOTE: This method is somewhat different from previous Wrapper
          versions prior to 0.10.1 (build 182).  The storage object is
          no longer a data object itself; It is a manager used for
          controlling the saving of the object data.  The actual data
-         is contained in Dictionary subitem 'Data'
+         is contained in the property/dictionary variable 'Data'
 
         ___
 
@@ -422,7 +426,7 @@
 
         
 
--  hash_password(self, password)
+-  hashPassword(self, password)
 
         Bcrypt-based password encryption.  Takes a raw string password
         returns a string representation of the binary hash.
@@ -440,7 +444,7 @@
 
         
 
--  check_password(self, password, hashed_password)
+-  checkPassword(self, password, hashed_password)
 
         Bcrypt-based password checker.  Takes a raw string password and
         compares it to the hash of a previously hashed password, returning True

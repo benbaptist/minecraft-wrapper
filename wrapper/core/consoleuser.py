@@ -76,7 +76,7 @@ class ConsolePlayer(object):
         Permit the console to have a nice display instead of
         returning the object instance notation.
         """
-        return "CONSOLE OPERATOR"
+        return self.username
 
     def message(self, message):
         """
