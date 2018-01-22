@@ -5,6 +5,8 @@ Build 265 (next build)
 Build 264 [0.16.0] The web version.
 - Web console commands pass through wrappers console parsing, so that wrapper
  commands can be run in Web.
+- Add Wrapper memory usage items to Web.
+- touch-up server.properties layout.
 
 Build 263b [0.16.0] The web version.  (not pulled to benBaptist Dev)
 - documentation touch-ups

@@ -92,7 +92,10 @@
 				getElem("server_version").innerHTML = stats["server_version"];
 				getElem("server_motd").innerHTML = stats["motd"];
 				getElem("server_name").innerHTML = stats["server_name"];
+
 				getElem("memory_status").innerHTML = humanFilezise(stats["server_memory"]);
+				getElem("memory_status_w").innerHTML = humanFilezise(stats["wrapper_memory_rss"]);
+				getElem("memory_status_w_p").innerHTML = humanFilezise(stats["wrapper_memory_peak"]);
 				getElem("world_size").innerHTML = humanFilezise(stats["world_size"]);
 				getElem("disk_avail").innerHTML = humanFilezise(stats["disk_avail"]);
 				document.title = stats["server_name"] + " - Wrapper.py";
@@ -207,7 +210,7 @@
 			function tick(){
 				setTimeout("tick()", speed);
 				if(!check) return false;
-				deBug = true;
+				deBug = false;
 
 				if (deBug === true){
 				    requests.adminThreaded("admin_stats", {"last_refresh": lastRefresh}, statsCallback);
@@ -262,8 +265,15 @@
 			}
 			function _op(i){
 				var player = players[i];
-				if(confirm("Are you sure you want to give operator to "+player.name+"?")){
-					_console("op "+player.name);
+				message = prompt("Are you sure you want to give operator to "+player.name+"?\n\nWrapper supports additional operator options, but you will need to use the console to specify them (type `help op` in the console for more).\n\nEnter the OP level (1-4) for "+player.name+" (The actual server OP level will be that listed in server.properties).", "4");
+				if(message){
+				    if (message >= 5){
+				        _console("op "+player.name+" -s -l "+message);
+				        alert(player.name+" was super-Opped (level > 4)!");
+				    }
+				    else{
+					    _console("op "+player.name+" -l "+message);
+					}
 				}
 			}
 			function _deop(i){
@@ -453,7 +463,9 @@
 								<b>Server Version: </b> <span id="server_version">Unknown</span><br>
 								<b>Server MOTD: </b> <span id="server_motd">Unknown</span><br>
 								<b>Level Name: </b> <span id="levelname_status">Unknown</span><br>
-								<b>Memory Usage: </b> <span id="memory_status">n/a</span><br>
+								<b>Server Memory Usage: </b> <span id="memory_status">n/a</span><br>
+								<b>Wrapper Memory Usage: </b> <span id="memory_status_w">n/a</span><br>
+								<b>Wrapper Peak Memory Usage: </b> <span id="memory_status_w_p">n/a</span><br>
 								<b>World Size: </b> <span id="world_size">n/a</span><br/>
 								<b>Free Disk Space: </b> <span id="disk_avail">n/a</span>
 							</div>
@@ -653,10 +665,10 @@
 							</script>
 							<div style="margin-bottom: 5px;">
 								<button onclick="reloadproperties()" class="btn btn-default">Reload server.properties</button>
-								<button style="float:right;" class="btn btn-primary" onclick="saveProperties()">Save</button>
+								<button style="float:center;" class="btn btn-primary" onclick="saveProperties()">Save</button>
 							</div>
-							<textarea id="server_properties" style="width:100%;height:80%;" class="form-control" ></textarea>
-							Warning: Be careful about changing these settings. Changing them could break the server if you don't know what you're doing.
+                            Warning: Be careful about changing these settings. Changing them could break the server if you don't know what you're doing.
+							<textarea id="server_properties" rows="30" style="overflow-x:scroll;overflow-y:scroll;height:90%;" class="form-control" ></textarea>
 						</div>
 					</div>
 				</div>

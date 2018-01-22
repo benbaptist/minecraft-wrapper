@@ -184,35 +184,40 @@ class Web(object):
         self.consoleScrollback.append((time.time(), payload["message"]))
 
     def on_player_message(self, payload):
+        print("PLAYER MESSAGE")
         while len(self.chatScrollback) > 200:
             try:
                 self.chatScrollback.pop()
             except:
                 break
-        self.chatScrollback.append(
-            (time.time(), {"type": "player",
+        print("APPENDED ITEM")
+        print([time.time(), {"type": "player",
                            "payload": {"player": payload["player"].username,
-                                       "message": payload["message"]}}))
+                                       "message": payload["message"]}}])
+        self.chatScrollback.append(
+            [time.time(), {"type": "player",
+                           "payload": {"player": payload["player"].username,
+                                       "message": payload["message"]}}])
 
     def on_player_join(self, payload):
         while len(self.chatScrollback) > 200:
             self.chatScrollback.pop()
         self.chatScrollback.append(
-            (time.time(), {"type": "playerJoin",
-                           "payload": {"player": payload["player"].username}}))
+            [time.time(), {"type": "playerJoin",
+                           "payload": {"player": payload["player"].username}}])
 
     def on_player_leave(self, payload):
         while len(self.chatScrollback) > 200:
             self.chatScrollback.pop()
         self.chatScrollback.append(
-            (time.time(), {"type": "playerLeave",
-                           "payload": {"player": payload["player"].username}}))
+            [time.time(), {"type": "playerLeave",
+                           "payload": {"player": payload["player"].username}}])
 
     def on_channel_message(self, payload):
         while len(self.chatScrollback) > 200:
             self.chatScrollback.pop()
         self.chatScrollback.append(
-            (time.time(), {"type": "irc", "payload": payload}))
+            [time.time(), {"type": "irc", "payload": payload}])
 
     # ========== Externally-called Methods section ==========================
 
@@ -691,6 +696,10 @@ class Client(object):
             for line in self.web.memoryGraph:
                 if line[0] > last_refresh:
                     memory_graph.append(line[1])
+
+            mem_use = self.wrapper.memory_usage()
+            wrapper_peak_mem = mem_use["peak"] * 1000
+            wrapper_rss_mem = mem_use["rss"] * 1000
             stats = {"playerCount": [len(self.wrapper.servervitals.players),
                                      self.wrapper.servervitals.maxplayers],
                      "players": players,
@@ -706,6 +715,8 @@ class Client(object):
                      "disk_avail": self.web.getdisk_usage(),
                      "server_name": self.config["Web"]["server-name"],
                      "server_memory": self.wrapper.javaserver.getmemoryusage(),
+                     "wrapper_memory_rss": wrapper_rss_mem,
+                     "wrapper_memory_peak": wrapper_peak_mem,
                      "server_memory_graph": memory_graph,
                      "world_size": self.wrapper.servervitals.worldsize
                      }

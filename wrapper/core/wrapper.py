@@ -14,6 +14,7 @@ import hashlib
 import threading
 import time
 import os
+import resource
 import logging
 # import smtplib
 import sys  # used to pass sys.argv to server
@@ -1036,6 +1037,41 @@ class Wrapper(object):
             self.log.exception(
                 "Something went wrong when trying to freeze the"
                 " server! (%s)", exc)
+
+    # noinspection PyBroadException
+    @staticmethod
+    def memory_usage():
+        """Memory usage of the current process in kilobytes.
+        returns dict {'peak': 0, 'rss': 0}"""
+
+        def _memory_usage():
+            """Memory usage of the current process in kilobytes."""
+            status = None
+            result = {'peak': 0, 'rss': 0}
+            try:
+                # This will only work on systems with a /proc file system
+                # (like Linux).
+                status = open('/proc/self/status')
+                for line in status:
+                    parts = line.split()
+                    key = parts[0][2:-1].lower()
+                    if key in result:
+                        result[key] = int(parts[1])
+            finally:
+                if status is not None:
+                    status.close()
+            return result
+        try:
+            totmem = _memory_usage()
+        except:
+            try:
+                # this might be cross-platform
+                temp = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+                totmem = {'peak': temp, 'rss': temp}
+            except:
+                # all efforts fail...
+                totmem = {'peak': 0, 'rss': 0}
+        return totmem
 
     def _memory(self):
         try:

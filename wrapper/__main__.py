@@ -7,6 +7,7 @@
 
 import os
 import sys
+import resource
 from core.wrapper import Wrapper
 from api.helpers import getjsonfile
 from utils.log import configure_logger
