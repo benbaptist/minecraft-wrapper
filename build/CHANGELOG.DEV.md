@@ -3,6 +3,8 @@ Build 265 (next build)
   Community Input enhancement proxy mode
 
 Build 264 [0.16.0] The web version.
+- Web console commands pass through wrappers console parsing, so that wrapper
+ commands can be run in Web.
 
 Build 263b [0.16.0] The web version.  (not pulled to benBaptist Dev)
 - documentation touch-ups

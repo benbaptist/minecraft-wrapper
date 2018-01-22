@@ -74,7 +74,6 @@ class Web(object):
         self.xplayer = ConsolePlayer(self.wrapper)
         self.xplayer.username = "*WEB_ADMIN*"
 
-        # TODO temporary security code until pass words are fixed.
         self.onlyusesafe_ips = self.config["Web"]["safe-ips-use"]
         self.safe_ips = self.config["Web"]["safe-ips"]
 
@@ -158,7 +157,6 @@ class Web(object):
             self.config["Web"]["web-bind"], self.config["Web"]["web-port"]))
         while not self.wrapper.halt.halt:
             sock, addr = self.socket.accept()
-            # TODO temporary security code until pass words are fixed.
             if self.onlyusesafe_ips:
                 if addr[0] not in self.safe_ips:
                     sock.close()
@@ -297,6 +295,7 @@ class Web(object):
     def getdisk_usage(self):
         """only works on Python 3.  returns 0 for Python 2"""
         if disk_usage:
+            # noinspection PyCallingNonCallable
             spaces = disk_usage(self.serverpath)
             free = spaces[2][0]
             return free
@@ -715,7 +714,8 @@ class Client(object):
         if action == "console":
             if not self.web.validate_key(argdict["key"]):
                 return EOFError
-            self.wrapper.javaserver.console(argdict["execute"])
+            command = argdict["execute"]
+            self.wrapper.process_command(command)
             self.log.info("[%s] Executed: %s" % (self.addr[0], argdict["execute"]))
             return True
 
@@ -723,8 +723,14 @@ class Client(object):
             if not self.web.validate_key(argdict["key"]):
                 return EOFError
             message = argdict["message"]
-            # self.web.chatScrollback.append((time.time(), {"type": "raw",
-            #                                              "payload": "[WEB ADMIN] " + message}))
+            self.web.chatScrollback.append(
+                (time.time(),
+                 {"type": "raw",
+                  "payload": "[WEB ADMIN] " + message}))
+            # payload = chatline.payload;
+            # if(chatline.type === "raw"){
+            #            	getElem("chatbox").innerHTML += payload + "\n";
+            #                }
             self.wrapper.javaserver.broadcast("&c[WEB ADMIN]&r " + message)
             return True
 

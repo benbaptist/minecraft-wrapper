@@ -604,9 +604,11 @@ class Wrapper(object):
             # No command (perhaps just a line feed or spaces?)
             if len(consoleinput) < 1:
                 continue
+            self.process_command(consoleinput)
 
+    def process_command(self, commandline):
             # for use with runwrapperconsolecommand() command
-            wholecommandline = consoleinput[0:].split(" ")
+            wholecommandline = commandline[0:].split(" ")
             command = str(getargs(wholecommandline, 0)).lower()
 
             # this can be passed to runwrapperconsolecommand() command for args
@@ -632,7 +634,7 @@ class Wrapper(object):
             elif command in ("/mem", "/memory", "mem", "memory"):
                 self._memory()
             elif command in ("/raw", "raw"):
-                self._raw(consoleinput)
+                self._raw(commandline)
             elif command in ("/freeze", "freeze"):
                 self._freeze()
             elif command in ("/unfreeze", "unfreeze"):
@@ -689,20 +691,12 @@ class Wrapper(object):
             elif command in ("pass", "/pass", "pw", "/pw", "password", "/password"):
                 self.runwrapperconsolecommand("password", allargs)
 
-            # TODO Add more commands below here, below the original items:
-            # TODO __________________
-
-            # more commands here...
-
-            # TODO __________________
-            # TODO add more commands above here, above the help-related items:
-
             # minecraft help command
             elif command == "help":
                 readout("/help", "Get wrapper.py help.",
                         separator=" (with a slash) - ",
                         usereadline=self.use_readline)
-                self.javaserver.console(consoleinput)
+                self.javaserver.console(commandline)
 
             # wrapper's help (console version)
             elif command == "/help":
@@ -715,12 +709,10 @@ class Wrapper(object):
             # Commmand not recognized by wrapper
             else:
                 try:
-                    self.javaserver.console(consoleinput)
+                    self.javaserver.console(commandline)
                 except Exception as e:
-                    self.log.error("[BREAK] Console input exception"
+                    self.log.error("Console input exception"
                                    " (nothing passed to server) \n%s" % e)
-                    break
-                continue
 
     def _registerwrappershelp(self):
         # All commands listed herein are accessible in-game
