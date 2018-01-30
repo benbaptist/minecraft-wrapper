@@ -20,7 +20,6 @@
 			var currentSubTab = "console";
 			var memoryGraph = [];
 			var consoleMemory = [];
-			var consoleMode = 0;
 
 			getElem = function(id) {return document.getElementById(id);};
 
@@ -69,16 +68,15 @@
 			}
 
 			function statsCallback(stats){
-			    console.log("STATS"+stats)
+			    // console.log("STATS"+stats)
 				if(stats == false){
-                    console.log("Error while refreshing stats (statsCallback). Connection lost?")
-                    getElem("lost_connection_page").style.display = "block"
-                    getElem("admin_page").style.display = "none"
-                    return
+                    console.log("Error while refreshing stats (statsCallback). Connection lost?");
+                    getElem("lost_connection_page").style.display = "block";
+                    getElem("admin_page").style.display = "none";
+                    return;
                 }
 				getElem("lost_connection_page").style.display = "none";
 				getElem("admin_page").style.display = "block";
-				console.log(stats)
 				lastRefresh = stats["last_refresh"];
 				statusMessages = {0: "Offline", 1: "Server starting...", 2: "Online", 3: "Server stopping...", 5: "Server frozen"};
 				if(stats["server_state"] in statusMessages) getElem("server_status").innerHTML = statusMessages[stats["server_state"]];
@@ -99,8 +97,8 @@
 				getElem("world_size").innerHTML = humanFilezise(stats["world_size"]);
 				getElem("disk_avail").innerHTML = humanFilezise(stats["disk_avail"]);
 				document.title = stats["server_name"] + " - Wrapper.py";
-				
-				<!-- draw player list -->
+
+				// draw player list
 				getElem("playerlist").innerHTML = "<th>Face</th><th>Username</th><th>UUID</th><th>Options</th></tr>";
 				getElem("playerheader").innerHTML = "Players (" +stats["playerCount"][0]+ "/" +stats["playerCount"][1]+ ")";
 				getElem("tab-chat-players").innerHTML = "";
@@ -112,7 +110,7 @@
 						if(!skin) continue
 						skins[player.uuid] = skin;
 					}
-					console.log(player);
+					// console.log(player);
 					if(player.isOp) var isOp = "<span class=\"glyphicon glyphicon-star op\"></span> ";
 					else isOp = "";
 					getElem("playerlist").innerHTML += "<td><canvas id='playerskin-"+player.name+"' width=16 height=16></canvas></td><td style='white-space:nowrap;'>"+isOp+""+player.name+"</td><td>"+player.uuid+"</td><td style='white-space:nowrap;'><button onclick='_kick("+i+")' class='btn btn-xs btn-default'>Kick</button> <button onclick='_ban("+i+")' class='btn btn-xs btn-default'>Ban</button> <button onclick='_op("+i+")' class='btn btn-xs btn-default'>OP</button> <button onclick='_deop("+i+")' class='btn btn-xs btn-default'>De-OP</button></td></tr>";
@@ -129,7 +127,7 @@
 					}catch(err){}
 				}
 				players = stats["players"];
-				
+
 				// draw plugin list
 				getElem("pluginlist").innerHTML = "<th>Name</th><th>Description</th><th>Options</th></tr>";
 				for(i in stats["plugins"]){
@@ -152,7 +150,7 @@
 				}
 				if(stats["plugins"].length < 1) getElem("nopluginswarning").style.display = "block";
 				else getElem("nopluginswarning").style.display = "none";
-				
+
 				// draw top 10 players
 				/*getElem("top-players").innerHTML = "<th>#</th><th>Username</th><th>Playtime</th><th>Logins</th></tr>"
 				for(i in stats["topPlayers"]){
@@ -160,7 +158,7 @@
 					var player = stats["topPlayers"][i]
 					getElem("top-players").innerHTML += "<td>"+(Number(i)+1)+"</td><td>"+player[3]+"</td><td>"+player[1]+"</td><td>"+player[2]+" logins</td></tr>"
 				}*/
-								
+
 				// draw console
 				var doScroll = false;
 				var p = getElem("server_console");
@@ -168,12 +166,8 @@
 				if(stats["console"].length > 0){
 					for(i in stats["console"]){
 						var line = stats["console"][i];
-						// if(isNaN(i)) continue
+						if(isNaN(i)) continue
 						consoleMemory[consoleMemory] = line;
-						// if(consoleMode === 1) // Will be removed eventually
-						//    var line = line.substr(line.search("]") + 1);
-						// if(consoleMode === 2)
-						//     var line = line.substr(line.search("]:") + 2);
 						p.innerHTML += "\n" + line.replace(/</g,"&lt;").replace(/>/g,"&gt;");
 					}
 				}
@@ -187,8 +181,8 @@
 				if(stats["chat"].length > 0){
                     for(i in stats["chat"]){
                         var chatline = stats["chat"][i];
+                        console.log(chatline);
                         payload = chatline.payload;
-                        alert(chatline)
                         if(chatline.type === "irc")
                             getElem("chatbox").innerHTML += "["+payload["channel"]+"] &lt;"+payload["nick"]+"&gt; "+payload["message"]+"\n";
                         if(chatline.type === "playerJoin")
@@ -202,7 +196,7 @@
                     }
                 }
 				if(doScroll) p.scrollTop = p.scrollHeight;
-				
+
 				// set wrapper.py build string
 				getElem("buildstring").innerHTML = "Wrapper.py " + stats["wrapper_build"];
 			}
@@ -269,7 +263,7 @@
 				if(message){
 				    if (message >= 5){
 				        _console("op "+player.name+" -s -l "+message);
-				        alert(player.name+" was super-Opped (level > 4)!");
+				        alert(player.name+" was Super-Opped (level > 4)!");
 				    }
 				    else{
 					    _console("op "+player.name+" -l "+message);
@@ -298,9 +292,6 @@
 				alert("Reloaded plugins.");
 			}
 			function _toggle_plugin(id, el){
-				// alert("Enabling and disabling plugins is not supported yet!");
-				// return;
-				// Doesn't actually do anything yet
 				if(!confirm("Are you sure you want to disable the plugin '"+id+"'? Disabling a plugin will force a plugin reload.  Also, the plugin will be removed form this list (you may not be able to reload it)")) return;
 				if(el.innerHTML === "Disable"){
 					el.innerHTML = "Enable";

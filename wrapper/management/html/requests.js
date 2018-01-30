@@ -9,7 +9,7 @@ function doArgs(passedargs){
 		args += "&" + i + "=" + encodeURIComponent(passedargs[i]);
 		if(i == undefined) continue;
 	}
-	console.log("ARGS:" + args);
+	// console.log("ARGS:" + args);
 	return args
 }
 
@@ -25,12 +25,12 @@ requests.action = function(action, arglist){
       return JSON.parse(this.responseText)
         }
     };
-    console.log("GET /action/"+action+"?"+args)
+    // console.log("GET /action/"+action+"?"+args)
 	xmlhttp.open("GET", "/action/"+action+"?"+args, false);
 	xmlhttp.overrideMimeType("application/json");
 	xmlhttp.send(null);
 	pay = JSON.parse(xmlhttp.responseText)["payload"];
-	console.log("PAY: "+pay);
+	// console.log("PAY: "+pay);
     return pay;
 }
 
@@ -48,6 +48,6 @@ requests.adminThreaded = function(action, arglist, callBack){
 	xmlhttp.overrideMimeType("application/json");
 	xmlhttp.send(null);
 	pay = JSON.parse(xmlhttp.responseText)["payload"];
-	console.log("Callback PAY: "+pay);
+	// console.log("Callback PAY: "+pay);
     callBack(pay);
 }

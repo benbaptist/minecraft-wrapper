@@ -112,7 +112,7 @@ class Alerts(object):
             except smtplib.SMTPAuthenticationError:
                 self.log.warn("Incorrect email account username/password.  This "
                               "can also be because you have not enabled 'less-"
-                              "secure' apps on you account.")
+                              "secure' apps on your account.")
             except Exception as exception:
                 self.log.warn(exception)
         login()

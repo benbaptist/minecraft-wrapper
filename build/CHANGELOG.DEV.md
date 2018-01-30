@@ -7,6 +7,9 @@ Build 264 [0.16.0] The web version.
  commands can be run in Web.
 - Add Wrapper memory usage items to Web.
 - touch-up server.properties layout.
+- fix player chat in Web mode.
+- remove debug code console logs from web code.
+- Py3 fixes for Web mode.
 
 Build 263b [0.16.0] The web version.  (not pulled to benBaptist Dev)
 - documentation touch-ups

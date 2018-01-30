@@ -83,8 +83,8 @@ class Web(object):
         # Register events
         self.api.registerEvent("server.consoleMessage", self.on_server_console)
         self.api.registerEvent("player.message", self.on_player_message)
-        self.api.registerEvent("player.join", self.on_player_join)
-        self.api.registerEvent("player.leave", self.on_player_leave)
+        self.api.registerEvent("player.login", self.on_player_join)
+        self.api.registerEvent("player.logout", self.on_player_leave)
         self.api.registerEvent("irc.message", self.on_channel_message)
 
         self.consoleScrollback = []
@@ -184,16 +184,11 @@ class Web(object):
         self.consoleScrollback.append((time.time(), payload["message"]))
 
     def on_player_message(self, payload):
-        print("PLAYER MESSAGE")
         while len(self.chatScrollback) > 200:
             try:
                 self.chatScrollback.pop()
             except:
                 break
-        print("APPENDED ITEM")
-        print([time.time(), {"type": "player",
-                           "payload": {"player": payload["player"].username,
-                                       "message": payload["message"]}}])
         self.chatScrollback.append(
             [time.time(), {"type": "player",
                            "payload": {"player": payload["player"].username,
@@ -202,22 +197,24 @@ class Web(object):
     def on_player_join(self, payload):
         while len(self.chatScrollback) > 200:
             self.chatScrollback.pop()
-        self.chatScrollback.append(
-            [time.time(), {"type": "playerJoin",
-                           "payload": {"player": payload["player"].username}}])
+        print("PLAYER JOINED")
+        self.chatScrollback.append([
+            time.time(), {"type": "playerJoin",
+                          "payload": {"player": payload["player"].username}}])
 
     def on_player_leave(self, payload):
         while len(self.chatScrollback) > 200:
             self.chatScrollback.pop()
-        self.chatScrollback.append(
-            [time.time(), {"type": "playerLeave",
-                           "payload": {"player": payload["player"].username}}])
+        print("PLAYER LEFT")
+        self.chatScrollback.append([
+            time.time(), {"type": "playerLeave",
+                          "payload": {"player": payload["player"].username}}])
 
     def on_channel_message(self, payload):
         while len(self.chatScrollback) > 200:
             self.chatScrollback.pop()
-        self.chatScrollback.append(
-            [time.time(), {"type": "irc", "payload": payload}])
+        self.chatScrollback.append([
+            time.time(), {"type": "irc", "payload": payload}])
 
     # ========== Externally-called Methods section ==========================
 
@@ -329,6 +326,7 @@ class Client(object):
     def write(self, message):
         self.socket.send(message)
 
+    # noinspection PyBroadException
     def close(self):
         try:
             self.socket.close()
@@ -734,14 +732,7 @@ class Client(object):
             if not self.web.validate_key(argdict["key"]):
                 return EOFError
             message = argdict["message"]
-            self.web.chatScrollback.append(
-                (time.time(),
-                 {"type": "raw",
-                  "payload": "[WEB ADMIN] " + message}))
-            # payload = chatline.payload;
-            # if(chatline.type === "raw"){
-            #            	getElem("chatbox").innerHTML += payload + "\n";
-            #                }
+            self.web.chatScrollback.append((time.time(), {"type": "raw", "payload": "[WEB ADMIN] " + message}))
             self.wrapper.javaserver.broadcast("&c[WEB ADMIN]&r " + message)
             return True
 
