@@ -47,7 +47,11 @@ requests.adminThreaded = function(action, arglist, callBack){
     xmlhttp.open("GET", "/action/"+action+"?"+args, false);
 	xmlhttp.overrideMimeType("application/json");
 	xmlhttp.send(null);
-	pay = JSON.parse(xmlhttp.responseText)["payload"];
-	// console.log("Callback PAY: "+pay);
-    callBack(pay);
+	try {
+        pay = JSON.parse(xmlhttp.responseText)["payload"];
+    }
+    catch(err) {
+        console.log("Callback PAY: "+xmlhttp.responseText);
+    }
+	callBack(pay);
 }

@@ -5,6 +5,7 @@
 # This program is distributed under the terms of the GNU
 # General Public License, version 3 or later.
 from __future__ import print_function
+from __future__ import absolute_import
 
 import copy
 import traceback
@@ -19,6 +20,7 @@ import socket
 from api.helpers import getargs, mkdir_p
 from core.storage import Storage
 from core.consoleuser import ConsolePlayer
+from utils.py23 import py_str, py_bytes
 
 try:
     from shutil import disk_usage
@@ -299,9 +301,9 @@ class Web(object):
         if disk_usage:
             # noinspection PyCallingNonCallable
             spaces = disk_usage(self.serverpath)
-            free = spaces[2][0]
-            return free
-        return "0"
+            frsp = spaces.free
+            return frsp
+        return int(0)
 
 
 # noinspection PyBroadException
@@ -324,6 +326,8 @@ class Client(object):
         return ret_object
 
     def write(self, message):
+        if type(message) is str:
+            message = py_bytes(message, self.wrapper.encoding)
         self.socket.send(message)
 
     # noinspection PyBroadException
@@ -373,7 +377,8 @@ class Client(object):
                     self.close()
                     return
 
-                buff = data.split("\r\n")
+                str_data = py_str(data, self.wrapper.encoding)
+                buff = str_data.split("\r\n")
             except:
                 self.close()
                 break
@@ -698,8 +703,8 @@ class Client(object):
             mem_use = self.wrapper.memory_usage()
             wrapper_peak_mem = mem_use["peak"] * 1000
             wrapper_rss_mem = mem_use["rss"] * 1000
-            stats = {"playerCount": [len(self.wrapper.servervitals.players),
-                                     self.wrapper.servervitals.maxplayers],
+            stats = {"playerCount": (len(self.wrapper.servervitals.players),
+                                     self.wrapper.servervitals.maxplayers),
                      "players": players,
                      "plugins": plugins,
                      "server_state": self.wrapper.servervitals.state,

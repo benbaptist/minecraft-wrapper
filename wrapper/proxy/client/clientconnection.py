@@ -142,7 +142,7 @@ class Client(object):
         self.properties = {}
         self.clientSettings = False
         self.clientSettingsSent = False
-        self.skinBlob = {}
+        self.skin_blob = {}
         self.windowCounter = 2
         self.currentwindowid = -1
         self.noninventoryslotcount = 0
@@ -588,6 +588,17 @@ class Client(object):
                              "/session/minecraft/hasJoined?username=%s"
                              "&serverId=%s" % (self.username, server_id))
             if r.status_code == 200:
+                # {
+                #     "id": "<profile identifier>",
+                #     "name": "<player name>",
+                #     "properties": [
+                #         {
+                #             "name": "textures",
+                #             "value": "<base64 string>",
+                #             "signature": "<base64 string; signed data using Yggdrasil's private key>"
+                #         }
+                #     ]
+                # }
                 requestdata = r.json()
                 self.uuid = MCUUID(requestdata["id"])  # TODO
 
@@ -601,9 +612,9 @@ class Client(object):
 
                 for prop in requestdata["properties"]:
                     if prop["name"] == "textures":
-                        self.skinBlob = prop["value"]
+                        self.skin_blob = prop["value"]
                         self.proxy.skins[
-                            self.uuid.string] = self.skinBlob
+                            self.uuid.string] = self.skin_blob
                 self.properties = requestdata["properties"]
             else:
                 self.disconnect("Proxy Client Session Error"

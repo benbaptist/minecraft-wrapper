@@ -7,7 +7,6 @@
 
 import os
 import sys
-import resource
 from core.wrapper import Wrapper
 from api.helpers import getjsonfile
 from utils.log import configure_logger
@@ -125,6 +124,7 @@ def main(wrapper_start_args):
             log.critical("Wrapper has no server instance. Server is likely "
                          "killed but could still be running, or it "
                          "might be corrupted! (%s)", exc, exc_info=True)
+
 
 if __name__ == "__main__":
     main(args)

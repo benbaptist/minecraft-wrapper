@@ -4,7 +4,9 @@
 # https://github.com/benbaptist/minecraft-wrapper
 # This program is distributed under the terms of the GNU
 # General Public License, version 3 or later.
+from __future__ import absolute_import
 
+import base64
 import socket
 import threading
 import time
@@ -13,6 +15,7 @@ import json
 from api.helpers import getjsonfile, putjsonfile, find_in_json
 from api.helpers import epoch_to_timestr, read_timestr
 from api.helpers import isipv4address
+from utils.py23 import py_str
 
 from proxy.utils import mcuuid
 from proxy.entity.entitycontrol import EntityControl
@@ -88,8 +91,9 @@ class ProxyConfig(object):
 
 class Proxy(object):
     def __init__(self, termsignal, config, servervitals, loginstance,
-                 usercache, eventhandler):
+                 usercache, eventhandler, encoding="utf-8"):
 
+        self.encoding = encoding
         self.srv_data = servervitals
         self.config = config.proxy
         self.ent_config = config.entity
@@ -545,8 +549,11 @@ class Proxy(object):
             return False
 
         if uuid in self.skinTextures:
-            return self.skinTextures[uuid]
-        skinblob = json.loads(self.skins[uuid].decode("base64"))
+            return py_str(self.skinTextures[uuid], self.encoding)
+
+        textual = base64.b64decode(self.skins[uuid]).decode("utf-8", "ignore")
+        skinblob = json.loads(textual)
+
         # Player has no skin, so set to Alex [fix from #160]
         if "SKIN" not in skinblob["textures"]:
             skinblob["textures"]["SKIN"] = {
@@ -555,8 +562,8 @@ class Proxy(object):
             }
         r = requests.get(skinblob["textures"]["SKIN"]["url"])
         if r.status_code == 200:
-            self.skinTextures[uuid] = r.content.encode("base64")
-            return self.skinTextures[uuid]
+            self.skinTextures[uuid] = base64.b64encode(r.content)
+            return py_str(self.skinTextures[uuid], self.encoding)
         else:
             self.log.warning("Could not fetch skin texture! "
                              "(status code %d)", r.status_code)

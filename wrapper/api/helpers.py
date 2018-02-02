@@ -21,12 +21,9 @@ version = sys.version_info
 PY3 = version[0] > 2
 
 if PY3:
-    str2 = str
     # noinspection PyPep8Naming
     import pickle as Pickle
 else:
-    # noinspection PyUnresolvedReferences
-    str2 = unicode
     # noinspection PyUnresolvedReferences
     import cPickle as Pickle
 
@@ -900,16 +897,6 @@ def _create_chat(
              ]
             }
     return [json.dumps(chat)]
-
-
-def get_req(something, request):
-    # This is a private function used by management.web
-    for a in request.split("/")[1:][1].split("?")[1].split("&"):
-        if a[0:a.find("=")] == something:
-            # TODO PY3 unquote not a urllib (py3) method - impacts: Web mode
-            # noinspection PyUnresolvedReferences
-            return urllib.unquote(a[a.find("=") + 1:])
-    return ""
 
 
 def _test():

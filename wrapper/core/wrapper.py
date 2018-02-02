@@ -382,6 +382,7 @@ class Wrapper(object):
         self = args[0]
         self.log.info("Wrapper.py received SIGTSTP; NO sleep support!"
                       " Wrapper halting...\n")
+        # this continues a frozen server, if it was frozen...
         os.system("kill -CONT %d" % self.javaserver.proc.pid)
         self._halt()
 
@@ -822,7 +823,8 @@ class Wrapper(object):
         # error will raise if requests or cryptography is missing.
         self.proxy = Proxy(self.halt, self.proxyconfig,
                            self.servervitals, self.log,
-                           self.usercache, self.events)
+                           self.usercache, self.events,
+                           self.encoding)
 
         # wait for server to start
         timer = 0
