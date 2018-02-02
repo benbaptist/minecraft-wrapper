@@ -413,7 +413,7 @@ CONFIG = {
 
         {
 
-            "public-stats": True,
+            "public-stats": "deprecated",
 
             "web-allow-file-management": True,
 
@@ -429,7 +429,8 @@ CONFIG = {
 
             "web-port": 8070,
 
-         # Only accept connections from "safe" IP addresses.  extra security layer since
+         # By default, wrapper only accepts connections from "safe" IP addresses.
+         # Disable (set 'safe-ips-use' ot false) or add the IP address of computers you may use to access web mode.
 
             "safe-ips": ["127.0.0.1"],
 

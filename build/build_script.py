@@ -254,8 +254,36 @@ def get_the_args(stringsection):
 
 
 def format_to_rst(data):
-    """take dictionary data and return a text Rst file"""
-    textfile = ""
+    """take events dictionary data and return a text Rst file"""
+    textfile = """# -*- coding: utf-8 -*-
+
+***Wrapper Events***
+
+    Each Wrapper event, once registered, will call back the passed function
+    when the event occurs.  The call back function must reference the correct
+    return payload.
+    
+    :sample Plugin snippet:
+    
+        .. code:: python
+
+            class Main:
+                def __init__(self, api, log):
+                    self.api = api
+                    
+            def onEnable(self):
+                self.api.registerEvent("player.login", _player_login_callback)
+            
+            def _player_login_callback(self, payload):
+                playername = payload["playername"]
+                player_object = self.api.getPlayer(playername)
+                self.api.minecraft.broadcast("%s joined the server!" % playername)
+                player_object.message("Welcome to the server, %s" % playername)
+                
+        ..
+
+
+"""
     indent = "    "
 
     for group in data["groups"]:
@@ -297,7 +325,7 @@ def format_to_rst(data):
                 textfile += "%s:Payload: None\n\n" % indent
 
             # abortable
-            textfile += "%s:Can be aborted/modified: %s\n" % (
+            textfile += "%s:Can be aborted/modified: %s\n\n" % (
                 indent, group_item["abortable"])
 
             # Comments - are indented just like payload args
@@ -336,6 +364,7 @@ def build_the_events():
     # write the finished file
     with open("documentation/events.rst", "w") as f:
         f.write(format_to_rst(all_events))
+
 
 if __name__ == "__main__":
     build_wrapper(args)

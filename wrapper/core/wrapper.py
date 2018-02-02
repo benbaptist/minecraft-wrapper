@@ -14,6 +14,7 @@ import hashlib
 import threading
 import time
 import os
+import resource
 import logging
 # import smtplib
 import sys  # used to pass sys.argv to server
@@ -54,7 +55,8 @@ from utils.crypt import Crypt
 
 
 # optional API type stuff
-from proxy.base import Proxy, ProxyConfig, HaltSig, ServerVitals
+from core.servervitals import ServerVitals
+from proxy.base import Proxy, ProxyConfig, HaltSig
 from api.base import API
 import management.web as manageweb
 
@@ -226,15 +228,6 @@ class Wrapper(object):
                 " console functioning. Press <Enter> to acknowledge...")
             sys.stdin.readline()
 
-        # requests is just being used in too many places to try
-        # and track its usages piece-meal.
-        if not requests:
-            self.log.error(
-                "You must have the requests module installed to use wrapper!"
-                " console functioning. Press <Enter> to Exit...")
-            sys.stdin.readline()
-            self._halt()
-
         # create server/proxy vitals and config objects
         self.servervitals = ServerVitals(self.players)
 
@@ -265,6 +258,15 @@ class Wrapper(object):
     def start(self):
         """wrapper execution starts here"""
 
+        # requests is just being used in too many places to try
+        # and track its usages piece-meal.
+        if not requests:
+            self.log.error(
+                "You must have the requests module installed to use wrapper!"
+                " console functioning. Press <Enter> to Exit...")
+            sys.stdin.readline()
+            raise ImportWarning
+
         self.signals()
         self.backups = Backups(self)
         self._registerwrappershelp()
@@ -283,23 +285,8 @@ class Wrapper(object):
             t.start()
 
         if self.config["Web"]["web-enabled"]:  # this should be a plugin
-            if manageweb.pkg_resources and manageweb.requests:
-                self.log.warning(
-                    "Web mode is an alpha feature and is not completely "
-                    "secure. It does not use HTTPS and sends your password"
-                    "back to the server with a plain-text HTTP GET.  Besides "
-                    "password protection, we also have a setting in the 'Web' "
-                    "section to only allow only certain IPs to connect.  If "
-                    "you need to use web remotely, add the IP address from "
-                    "where you will be using the web interface"
-                    " into the 'safe-ips' config item.  That said..."
-                    " Wrapper will start web mode anyway, but if you are not "
-                    "really using Web mode, you should turn it off in "
-                    "wrapper.properties.json.\n\nLastly; never use the same "
-                    "password for Web that you use anywhere else (like your "
-                    "banking or email accounts).  Like I said, it goes over "
-                    "the 'wires' unencrypted just as you typed it in the "
-                    "browser..")
+            if manageweb.pkg_resources:
+                self.log.warning(manageweb.DISCLAIMER)
                 self.web = manageweb.Web(self)
                 t = threading.Thread(target=self.web.wrap, args=())
                 t.daemon = True
@@ -395,6 +382,7 @@ class Wrapper(object):
         self = args[0]
         self.log.info("Wrapper.py received SIGTSTP; NO sleep support!"
                       " Wrapper halting...\n")
+        # this continues a frozen server, if it was frozen...
         os.system("kill -CONT %d" % self.javaserver.proc.pid)
         self._halt()
 
@@ -414,37 +402,66 @@ class Wrapper(object):
         """
         cursor = self.cursor
 
+        def _console_event():
+            self.events.callevent("server.consoleMessage",
+                                  {"message": message})
+            """ eventdoc
+                <group> core/wrapper.py <group>
+
+                <description> a line of Console output.
+                <description>
+
+                <abortable> No
+                <abortable>
+
+                <comments>
+                This event is triggered by console output which has already been sent. 
+                <comments>
+
+                <payload>
+                "message": <str> type - The line of buffered output.
+                <payload>
+
+            """
+
         if self.use_readline:
+            _console_event()
             print(message)
             return
 
-        def _wrapper(msg):
+        def _wrapper_line():
+            _console_event()
+            _wrapper()
+
+        def _wrapper():
             """_wrapper is normally displaying a live typing buffer.
             Therefore, there is no cr/lf at end because it is 
             constantly being re-printed in the same spot as the
             user types."""
-            if msg != "":
+            if message != "":
                 # re-print what the console user was typing right below that.
                 # /wrapper commands receive special magenta coloring
-                if msg[0:1] == '/':
+                if message[0:1] == '/':
                     print("{0}{1}{2}{3}{4}{5}".format(
                         UP_LINE, cursor, FG_YELLOW,
-                        msg, RESET, CLEAR_EOL))
+                        message, RESET, CLEAR_EOL))
                 else:
                     print("{0}{1}{2}{3}".format(
                         BACKSPACE, cursor,
-                        msg, CLEAR_EOL))
+                        message, CLEAR_EOL))
 
-        def _server(msg):
+        def _server():
             # print server lines
-            print("{0}{1}{2}\r\n".format(UP_LINE, CLEAR_LINE, msg, CLEAR_EOL))
+            _console_event()
+            print("{0}{1}{2}\r\n".format(UP_LINE, CLEAR_LINE, message, CLEAR_EOL))
 
-        def _print(msg):
-            _server(msg)
+        def _print():
+            _server()
 
         parse = {
             "server": _server,
             "wrapper": _wrapper,
+            "wrapper_line": _wrapper_line,
             "print": _print,
         }
 
@@ -579,7 +596,7 @@ class Wrapper(object):
 
             # print the finished command to console
             self.write_stdout(
-                "%s\r\n" % self.input_buff, source="wrapper")
+                "%s\r\n" % self.input_buff, source="wrapper_line")
 
         return consoleinput
 
@@ -589,9 +606,11 @@ class Wrapper(object):
             # No command (perhaps just a line feed or spaces?)
             if len(consoleinput) < 1:
                 continue
+            self.process_command(consoleinput)
 
+    def process_command(self, commandline):
             # for use with runwrapperconsolecommand() command
-            wholecommandline = consoleinput[0:].split(" ")
+            wholecommandline = commandline[0:].split(" ")
             command = str(getargs(wholecommandline, 0)).lower()
 
             # this can be passed to runwrapperconsolecommand() command for args
@@ -617,7 +636,7 @@ class Wrapper(object):
             elif command in ("/mem", "/memory", "mem", "memory"):
                 self._memory()
             elif command in ("/raw", "raw"):
-                self._raw(consoleinput)
+                self._raw(commandline)
             elif command in ("/freeze", "freeze"):
                 self._freeze()
             elif command in ("/unfreeze", "unfreeze"):
@@ -665,26 +684,21 @@ class Wrapper(object):
             elif command in ("op", "/op"):
                 self.runwrapperconsolecommand("op", allargs)
 
+            elif command in ("kick", "/kick"):
+                self.runwrapperconsolecommand("kick", allargs)
+
             elif command in ("deop", "/deop"):
                 self.runwrapperconsolecommand("deop", allargs)
 
             elif command in ("pass", "/pass", "pw", "/pw", "password", "/password"):
                 self.runwrapperconsolecommand("password", allargs)
 
-            # TODO Add more commands below here, below the original items:
-            # TODO __________________
-
-            # more commands here...
-
-            # TODO __________________
-            # TODO add more commands above here, above the help-related items:
-
             # minecraft help command
             elif command == "help":
                 readout("/help", "Get wrapper.py help.",
                         separator=" (with a slash) - ",
                         usereadline=self.use_readline)
-                self.javaserver.console(consoleinput)
+                self.javaserver.console(commandline)
 
             # wrapper's help (console version)
             elif command == "/help":
@@ -697,12 +711,10 @@ class Wrapper(object):
             # Commmand not recognized by wrapper
             else:
                 try:
-                    self.javaserver.console(consoleinput)
+                    self.javaserver.console(commandline)
                 except Exception as e:
-                    self.log.error("[BREAK] Console input exception"
+                    self.log.error("Console input exception"
                                    " (nothing passed to server) \n%s" % e)
-                    break
-                continue
 
     def _registerwrappershelp(self):
         # All commands listed herein are accessible in-game
@@ -811,7 +823,8 @@ class Wrapper(object):
         # error will raise if requests or cryptography is missing.
         self.proxy = Proxy(self.halt, self.proxyconfig,
                            self.servervitals, self.log,
-                           self.usercache, self.events)
+                           self.usercache, self.events,
+                           self.encoding)
 
         # wait for server to start
         timer = 0
@@ -1026,6 +1039,41 @@ class Wrapper(object):
             self.log.exception(
                 "Something went wrong when trying to freeze the"
                 " server! (%s)", exc)
+
+    # noinspection PyBroadException
+    @staticmethod
+    def memory_usage():
+        """Memory usage of the current process in kilobytes.
+        returns dict {'peak': 0, 'rss': 0}"""
+
+        def _memory_usage():
+            """Memory usage of the current process in kilobytes."""
+            status = None
+            result = {'peak': 0, 'rss': 0}
+            try:
+                # This will only work on systems with a /proc file system
+                # (like Linux).
+                status = open('/proc/self/status')
+                for line in status:
+                    parts = line.split()
+                    key = parts[0][2:-1].lower()
+                    if key in result:
+                        result[key] = int(parts[1])
+            finally:
+                if status is not None:
+                    status.close()
+            return result
+        try:
+            totmem = _memory_usage()
+        except:
+            try:
+                # this might be cross-platform
+                temp = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+                totmem = {'peak': temp, 'rss': temp}
+            except:
+                # all efforts fail...
+                totmem = {'peak': 0, 'rss': 0}
+        return totmem
 
     def _memory(self):
         try:

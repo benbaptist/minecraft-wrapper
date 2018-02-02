@@ -363,11 +363,15 @@ class Player(object):
         """
         Get the players position
         
-        :Note:  The player's position is obtained by parsing client
+        :Proxymode Note:  The player's position is obtained by parsing client
          packets, which are not sent until the client logs in to 
          the server.  Allow some time after server login to verify 
          the wrapper has had the oppportunity to parse a suitable 
          packet to get the information!
+
+        :Non-proxymode note: will still work, but the returned position will
+         be either the player's login position or where he last teleported
+         to...
         
         :returns: a tuple of the player's current position x, y, z, 
          and yaw, pitch of head.
@@ -383,7 +387,7 @@ class Player(object):
         """
         Get the player's current gamemode.
         
-        :Note:  The player's Gamemode is obtained by parsing client
+        :Proxymode Note:  The player's Gamemode is obtained by parsing client
          packets, which are not sent until the client logs in to 
          the server.  Allow some time after server login to verify 
          the wrapper has had the oppportunity to parse a suitable 
@@ -402,7 +406,7 @@ class Player(object):
         """
         Get the player's current dimension.
 
-        :Note:  The player's Dimension is obtained by parsing client
+        :Proxymode Note:  The player's Dimension is obtained by parsing client
          packets, which are not sent until the client logs in to 
          the server.  Allow some time after server login to verify 
          the wrapper has had the oppportunity to parse a suitable 
@@ -439,10 +443,10 @@ class Player(object):
 
     def setResourcePack(self, url, hashrp=""):
         """
-        Sets the player's resource pack to a different URL. If the
-        user hasn't already allowed resource packs, the user will
-        be prompted to change to the specified resource pack.
-        Probably broken right now.
+        :Proxymode: Sets the player's resource pack to a different URL. If the
+         user hasn't already allowed resource packs, the user will
+         be prompted to change to the specified resource pack.
+         Probably broken right now.
 
         :Args:
             :url: URL of resource pack
@@ -550,7 +554,7 @@ class Player(object):
 
     def setVisualXP(self, progress, level, total):
         """
-         Change the XP bar on the client's side only. Does not
+        :Proxymode: Change the XP bar on the client's side only. Does not
          affect actual XP levels.
 
         :Args:
@@ -579,9 +583,9 @@ class Player(object):
 
     def openWindow(self, windowtype, title, slots):
         """
-        Opens an inventory window on the client side.  EntityHorse
-        is not supported due to further EID requirement.  *1.8*
-        *experimental only.*
+        :Proxymode: Opens an inventory window on the client side.  EntityHorse
+         is not supported due to further EID requirement.  *1.8*
+         *experimental only.*
 
         :Args:
             :windowtype:  Window Type (text string). See below
@@ -645,7 +649,7 @@ class Player(object):
 
     def setPlayerAbilities(self, fly):
         """
-        *based on old playerSetFly (which was an unfinished function)*
+        :Proxymode: *based on old playerSetFly (which was an unfinished function)*
 
         NOTE - You are implementing these abilities on the client
          side only.. if the player is in survival mode, the server
@@ -712,15 +716,15 @@ class Player(object):
     def sendBlock(self, position, blockid, blockdata, sendblock=True,
                   numparticles=1, partdata=1):
         """
-        Used to make phantom blocks visible ONLY to the client.  Sends
-        either a particle or a block to the minecraft player's client.
-        For blocks iddata is just block id - No need to bitwise the
-        blockdata; just pass the additional block data.  The particle
-        sender is only a basic version and is not intended to do
-        anything more than send something like a barrier particle to
-        temporarily highlight something for the player.  Fancy particle
-        operations should be custom done by the plugin or someone can
-        write a nicer particle-renderer.
+        :Proxymode: Used to make phantom blocks visible ONLY to the client.
+         Sends either a particle or a block to the minecraft player's client.
+         For blocks iddata is just block id - No need to bitwise the
+         blockdata; just pass the additional block data.  The particle
+         sender is only a basic version and is not intended to do
+         anything more than send something like a barrier particle to
+         temporarily highlight something for the player.  Fancy particle
+         operations should be custom done by the plugin or someone can
+         write a nicer particle-renderer.
 
         :Args:
 
@@ -788,7 +792,7 @@ class Player(object):
     # Inventory-related actions.
     def getItemInSlot(self, slot):
         """
-        Returns the item object of an item currently being held.
+        :Proxymode: Returns the item object of an item currently being held.
 
         """
         try:
@@ -973,6 +977,8 @@ class Player(object):
     def connect(self, address, port):
         # TODO - WORK IN PROGRESS
         """
+        :Proxymode: Presenty buggy, at best!
+
         Upon calling, the player object will become defunct and
         the client will be transferred to another server or wrapper
         instance (provided it has online-mode turned off).

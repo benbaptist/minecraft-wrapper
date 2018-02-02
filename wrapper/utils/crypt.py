@@ -3,14 +3,12 @@
 # Copyright (C) 2017, 2018 - SurestTexas00
 # This program is distributed under the terms of the GNU
 # General Public License, version 3 or later.
+from __future__ import absolute_import
 
 from base64 import urlsafe_b64encode
 from os import urandom
 from getpass import getpass
-
-# Py3-2
-import sys
-PY3 = sys.version_info > (3,)
+from utils.py23 import py_str, py_bytes
 
 try:
     from cryptography.fernet import Fernet
@@ -25,31 +23,16 @@ try:
 except ImportError:
     bcrypt = False
 
-if PY3:
-    def _str_(text, enc):
-        return str(text, enc)
-
-    def _bytes_(text, enc):
-        return bytes(text, enc)
-else:
-    # noinspection PyUnusedLocal
-    def _str_(text, enc):
-        return str(text)
-
-    # noinspection PyUnusedLocal
-    def _bytes_(text, enc):
-        return bytes(text)
-
 
 def phrase_to_url_safebytes(pass_phrase, encoding='utf-8', salt=b'AAAAA'):
     """return 32, url-safe, base64 encoded bytes from a string"""
 
-    passphrase = _bytes_(pass_phrase, encoding)
+    passphrase = py_bytes(pass_phrase, encoding)
     if not Fernet:
         return passphrase
 
     backend = default_backend()
-    salt_b = _bytes_(salt, encoding)
+    salt_b = py_bytes(salt, encoding)
     kdf = PBKDF2HMAC(
         algorithm=hashes.SHA256(),
         length=32,
@@ -63,7 +46,7 @@ def phrase_to_url_safebytes(pass_phrase, encoding='utf-8', salt=b'AAAAA'):
 def gensalt(encoding='utf-8'):
     rand = urandom(16)
     enc = urlsafe_b64encode(rand)
-    return _str_(enc, encoding)
+    return py_str(enc, encoding)
 
 
 def get_passphrase(text_prompt, attempts=3):
@@ -133,10 +116,10 @@ class Crypt(object):
                 "! \x1b\x5b\x30\x6d" % data)
             return data
         cipher = Fernet(self.passphrase)
-        byte_data = _bytes_(data, self.encoding)
+        byte_data = py_bytes(data, self.encoding)
         encrypted_bytes = cipher.encrypt(byte_data)
     
-        return _str_(encrypted_bytes, self.encoding)
+        return py_str(encrypted_bytes, self.encoding)
 
     def decrypt(self, encrypted_str_data):
         """ Decrypt password using cryptography Fernet.
@@ -153,14 +136,14 @@ class Crypt(object):
                 "installed... `Crypt.decrypt` did not do anything! \x1b\x5b\x30\x6d")
             return encrypted_str_data
         cipher = Fernet(self.passphrase)
-        encrypted_byte_data = _bytes_(encrypted_str_data, self.encoding)
+        encrypted_byte_data = py_bytes(encrypted_str_data, self.encoding)
         try:
             decrypted_bytes = cipher.decrypt(encrypted_byte_data)
         except:
             # data could not be decryted (probably wrong salt/passphrase)
             return False
     
-        return _str_(decrypted_bytes, self.encoding)
+        return py_str(decrypted_bytes, self.encoding)
 
     def bcrypt_check_pw(self, password_string, hashed_pw_str):
         """ Bcrypt-based password checker.  Takes a raw string password and
@@ -190,8 +173,8 @@ class Crypt(object):
                 return True
             else:
                 return False
-        password_bytes = _bytes_(password_string, self.encoding)
-        hashed_pw = _bytes_(hashed_pw_str, self.encoding)
+        password_bytes = py_bytes(password_string, self.encoding)
+        hashed_pw = py_bytes(hashed_pw_str, self.encoding)
         return bcrypt.checkpw(password_bytes, hashed_pw)
 
     def bcrypt_make_hash(self, password_string):
@@ -209,6 +192,6 @@ class Crypt(object):
                 " \x1b\x5b\x30\x6d" % password_string)
             return False
 
-        password_bytes = _bytes_(password_string, self.encoding)
+        password_bytes = py_bytes(password_string, self.encoding)
         hashed_bytes = bcrypt.hashpw(password_bytes, bcrypt.gensalt())
-        return _str_(hashed_bytes, self.encoding)
+        return py_str(hashed_bytes, self.encoding)

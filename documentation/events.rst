@@ -1,3 +1,31 @@
+# -*- coding: utf-8 -*-
+
+***Wrapper Events***
+
+    Each Wrapper event, once registered, will call back the passed function
+    when the event occurs.  The call back function must reference the correct
+    return payload.
+    
+    :sample Plugin snippet:
+    
+        .. code:: python
+
+            class Main:
+                def __init__(self, api, log):
+                    self.api = api
+                    
+            def onEnable(self):
+                self.api.registerEvent("player.login", _player_login_callback)
+            
+            def _player_login_callback(self, payload):
+                playername = payload["playername"]
+                player_object = self.api.getPlayer(playername)
+                self.api.minecraft.broadcast("%s joined the server!" % playername)
+                player_object.message("Welcome to the server, %s" % playername)
+                
+        ..
+
+
 **< Group 'core/mcserver.py' >**
 
 :Event: "player.login"
@@ -11,6 +39,7 @@
         :"playername": player name
 
     :Can be aborted/modified: No
+
     :Comments:
         All events in the core/mcserver.py group are collected
         from the console output, do not require proxy mode, and
@@ -27,6 +56,7 @@
 
     :Can be aborted/modified: 
 
+
 :Event: "server.stopped"
 
     :Module: mcserver.py *(core/mcserver.py)*
@@ -37,6 +67,7 @@
         :"reason": reason
 
     :Can be aborted/modified: 
+
 
 :Event: "server.starting"
 
@@ -49,6 +80,7 @@
 
     :Can be aborted/modified: 
 
+
 :Event: "server.started"
 
     :Module: mcserver.py *(core/mcserver.py)*
@@ -60,6 +92,7 @@
 
     :Can be aborted/modified: 
 
+
 :Event: "server.stopping"
 
     :Module: mcserver.py *(core/mcserver.py)*
@@ -70,6 +103,7 @@
         :"reason": reason
 
     :Can be aborted/modified: 
+
 
 :Event: "server.state"
 
@@ -83,16 +117,6 @@
 
     :Can be aborted/modified: 
 
-:Event: "server.consoleMessage"
-
-    :Module: mcserver.py *(core/mcserver.py)*
-
-    :Description: server.consoleMessage
-
-    :Payload:
-        :"message": buff
-
-    :Can be aborted/modified: 
 
 :Event: "player.message"
 
@@ -107,6 +131,7 @@
         :"original": The original line of text from the console ('<mcplayer> hello everyone`)
 
     :Can be aborted/modified: 
+
     :Comments:
         This event is triggered by console chat which has already been sent.
         This event returns the player object. if used in a string context,
@@ -125,6 +150,7 @@
 
     :Can be aborted/modified: 
 
+
 :Event: "player.achievement"
 
     :Module: mcserver.py *(core/mcserver.py)*
@@ -136,6 +162,7 @@
         :"achievement": achievement
 
     :Can be aborted/modified: 
+
 
 :Event: "server.say"
 
@@ -150,6 +177,7 @@
 
     :Can be aborted/modified: 
 
+
 :Event: "player.death"
 
     :Module: mcserver.py *(core/mcserver.py)*
@@ -163,6 +191,7 @@
 
     :Can be aborted/modified: 
 
+
 :Event: "server.lagged"
 
     :Module: mcserver.py *(core/mcserver.py)*
@@ -173,6 +202,7 @@
         :"ticks": get_int(skipping_ticks)
 
     :Can be aborted/modified: 
+
 
 :Event: "player.teleport"
 
@@ -185,6 +215,7 @@
         :"player": player object
 
     :Can be aborted/modified: No
+
     :Comments:
         driven from console message "Teleported ___ to ....".
 
@@ -201,6 +232,7 @@
 
     :Can be aborted/modified: No
 
+
 :Event: "timer.tick"
 
     :Module: wrapper.py *(core/wrapper.py)*
@@ -212,6 +244,7 @@
     :Payload: None
 
     :Can be aborted/modified: No
+
     :Comments:
         Use of this timer is not suggested and is turned off
           by default in the wrapper.config.json file
@@ -230,6 +263,7 @@
 
     :Can be aborted/modified: 
 
+
 :Event: "irc.part"
 
     :Module: irc.py *(core/irc.py)*
@@ -241,6 +275,7 @@
         :"channel": channel
 
     :Can be aborted/modified: 
+
 
 :Event: "irc.quit"
 
@@ -254,6 +289,7 @@
         :"channel": None
 
     :Can be aborted/modified: 
+
 
 :Event: "irc.action"
 
@@ -269,6 +305,7 @@
 
     :Can be aborted/modified: 
 
+
 :Event: "irc.message"
 
     :Module: irc.py *(core/irc.py)*
@@ -281,6 +318,7 @@
         :"message": message
 
     :Can be aborted/modified: 
+
 
 **< Group 'Proxy' >**
 
@@ -300,6 +338,7 @@
         :"secure_connection": Proxy's online mode
 
     :Can be aborted/modified: Yes, return False to disconnect the client.
+
     :Comments:
         - If aborted, the client is disconnnected with message
         "Login denied by a Plugin."
@@ -319,6 +358,7 @@
         :"message": the chat message string.
 
     :Can be aborted/modified: Yes
+
     :Comments:
         Can be aborted by returning False. Can be modified before
         passing to server.  'chatmsg' accepts both raw string
@@ -339,6 +379,7 @@
         :"args": the remaining words/args
 
     :Can be aborted/modified: Yes. Registered commands ARE already aborted since they do not get passed to the server.
+
     :Comments:
         Called AFTER player.rawMessage event (if rawMessage
         does not reject it).  However, rawMessage could have
@@ -364,6 +405,7 @@
         :"face": 0-5 (bottom, top, north, south, west, east)
 
     :Can be aborted/modified: Yes
+
     :Comments:
         Can be aborted by returning False. Note that the client
         may still believe the block is broken (or being broken).
@@ -387,6 +429,7 @@
         :"origin": Debugging information on where event was parsed.
 
     :Can be aborted/modified: Yes
+
     :Comments:
         Can be aborted by returning False. Note that the client
         may still believe the action happened, but the server
@@ -409,6 +452,7 @@
         :"origin": Debugging information on where event was parsed.
 
     :Can be aborted/modified: Yes
+
     :Comments:
         Can be aborted by returning False. Note that the client
         may still believe the action happened, but the server
@@ -433,6 +477,7 @@
         :"line4": l4
 
     :Can be aborted/modified: Yes
+
     :Comments:
         Can be aborted by returning False.
         Any of the four line arguments can be changed by
@@ -458,6 +503,7 @@
         :"clicked": item data
 
     :Can be aborted/modified: Yes
+
     :Comments:
         Can be aborted by returning False. Aborting is not recommended
         since that is how wrapper keeps tabs on inventory.
@@ -474,6 +520,7 @@
         :"json": json or string data
 
     :Can be aborted/modified: Yes
+
     :Comments:
         - The message will not reach the client if the event is returned False.
         - If json chat (dict) or text is returned, that value will be sent
@@ -492,6 +539,7 @@
 
     :Can be aborted/modified: No - The server thinks the client is in bed already.
 
+
 :Event: "player.spawned"
 
     :Module: parse_cb.py *(server/parse_cb.py)*
@@ -504,6 +552,7 @@
         :"position": position
 
     :Can be aborted/modified: No - Notification only.
+
 
 :Event: "entity.unmount"
 
@@ -518,6 +567,7 @@
         :"leash": leash True/False
 
     :Can be aborted/modified: No - Notification only.
+
     :Comments:
         Only works if entity controls are enabled.  Entity controls
         add significant load to wrapper's packet parsing and is off by default.
@@ -535,6 +585,7 @@
         :"leash": leash True/False
 
     :Can be aborted/modified: No - Notification only.
+
     :Comments:
         Only works if entity controls are enabled.  Entity controls
         add significant load to wrapper's packet parsing and is off by default.
@@ -553,6 +604,7 @@
 
     :Can be aborted/modified: Yes, return False to abort.
 
+
 :Event: "wrapper.backupFailure"
 
     :Module: backups.py *(core/backups.py)*
@@ -565,6 +617,7 @@
         :"reasonText": a string description of the failure.
 
     :Can be aborted/modified: No - informatinal only
+
     :Comments:
         Reasoncode and text provide more detail about specific problem.
         1 - Tar not installed.
@@ -583,6 +636,7 @@
         :"file": Name of backup file.
 
     :Can be aborted/modified: Yes, return False to abort.
+
     :Comments:
         A console warning will be issued if a plugin cancels the backup.
 
@@ -599,4 +653,22 @@
         :"summary": string summary of operation
 
     :Can be aborted/modified: No - informational only
+
+
+**< Group 'core/wrapper.py' >**
+
+:Event: "server.consoleMessage"
+
+    :Module: wrapper.py *(core/wrapper.py)*
+
+    :Description:
+        a line of Console output.
+
+    :Payload:
+        :"message": <str> type - The line of buffered output.
+
+    :Can be aborted/modified: No
+
+    :Comments:
+        This event is triggered by console output which has already been sent.
 

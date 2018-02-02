@@ -37,53 +37,6 @@ STOPPING = 3
 FROZEN = 4
 
 
-class ServerVitals(object):
-    """This class permits sharing of server information between
-    the caller (such as a Wrapper instance) and proxy."""
-    def __init__(self, playerobjects):
-
-        # operational info
-        self.serverpath = ""
-        self.state = 0
-        self.server_port = "25564"
-        self.onlineMode = True
-        self.command_prefix = "/"
-
-        # Shared data structures and run-time
-        self.players = playerobjects
-
-        # TODO - I don't think this is used or needed (same name as proxy.entity_control!)
-        self.entity_control = None
-        # -1 until a player logs on and server sends a time update
-        self.timeofday = -1
-        self.spammy_stuff = ["found nothing", "vehicle of", "Wrong location!",
-                             "Tried to add entity", ]
-
-        # PROPOSE
-        self.clients = []
-
-        # owner/op info
-        self.ownernames = {}
-        self.operator_list = []
-
-        # server properties and folder infos
-        self.properties = {}
-        self.worldname = None
-        self.worldsize = 0
-        self.maxplayers = 20
-        self.motd = None
-        self.serverIcon = None
-
-        # # Version information
-        # -1 until proxy mode checks the server's MOTD on boot
-        self.protocolVersion = -1
-        # this is string name of the version, collected by console output
-        self.version = ""
-        # a comparable number = x0y0z, where x, y, z = release,
-        #  major, minor, of version.
-        self.version_compute = 0
-
-
 # noinspection PyBroadException,PyUnusedLocal
 class MCServer(object):
 
@@ -288,26 +241,39 @@ class MCServer(object):
 
     def restart(self, reason=""):
         """Restart the Minecraft server, and kick people with the
-        specified reason
+        specified reason.  If server was already stopped, restart it.
         """
         # timed-reboot passes reboot message (not restart)
         if reason == "":
             reason = self.restart_message
         if self.vitals.state in (STOPPING, OFF):
-            self.log.warning(
-                "The server is not already running... Just use '/start'.")
+            self.start()
             return
         self.stop(reason)
 
+
+
     def kick_players(self, reasontext):
         playerlist = copy.copy(self.vitals.players)
+        for player in playerlist:
+            self.kick_player(player, reasontext)
+
+    def kick_player(self, player, reasontext):
         if self.wrapper.proxymode:
-            for player in playerlist:
-                playerclient = playerlist[player].getClient()
+            try:
+                playerclient = self.vitals.players[player].getClient()
                 playerclient.disconnect(reasontext)
-        else:
-            for player in playerlist:
+            except AttributeError:
+                self.log.warning(
+                    "Proxy kick failed - Gould not get client %s.\n"
+                    "I'll try using the console..", player)
                 self.console("kick %s %s" % (player, reasontext))
+            except KeyError:
+                self.log.warning(
+                    "Kick failed - No proxy player called %s", player)
+        else:
+            self.console("kick %s %s" % (player, reasontext))
+            # this sleep is here for Spigot McBans reasons/compatibility.
             time.sleep(2)
 
     def stop(self, reason="", restart_the_server=True):
@@ -659,10 +625,13 @@ class MCServer(object):
         """Returns allocated memory in bytes. This command
         currently only works for *NIX based systems.
         """
-        if not resource or not os.name == "posix" or self.proc is None:
+        if not resource or not os.name == "posix":
             raise OSError(
                 "Your current OS (%s) does not support"
                 " this command at this time." % os.name)
+        if self.proc is None:
+            self.log.debug("There is no running server to getmemoryusage().")
+            return 0
         try:
             with open("/proc/%d/statm" % self.proc.pid) as f:
                 getbytes = int(f.read().split(" ")[1]) * resource.getpagesize()
@@ -708,9 +677,6 @@ class MCServer(object):
         """Internally-used function that parses a particular
         console line.
         """
-        if not self.wrapper.events.callevent(
-                "server.consoleMessage", {"message": buff}):
-            return False
 
         if len(buff) < 1:
             return
@@ -1017,5 +983,15 @@ class MCServer(object):
         """This function is used in conjunction with event handlers to
         permit a proxy object to make a command call to this server."""
 
-        command = payload["command"]
-        self.console(command)
+        # make commands pass through the command interface.
+        comm_pay = payload["command"].split(" ")
+        if len(comm_pay) > 1:
+            args = comm_pay[1:]
+        else:
+            args = [""]
+        payload = {"player": self.wrapper.xplayer,
+                   "command": comm_pay[0],
+                   "args": args
+                   }
+
+        self.wrapper.commands.playercommand(payload)
