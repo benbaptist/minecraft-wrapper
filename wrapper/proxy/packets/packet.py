@@ -65,11 +65,6 @@ class Packet(object):
     def __init__(self, sock, obj):
         self.socket = sock
         self.obj = obj
-        # self.sendCipher = encryption.aes128cfb8(sharedsecret).encryptor()
-        #>> > ct = self.sendCipher.update(b"a secret message") + self.sendCipher.finalize()
-        #>> > self.recvCipher = cipher.decryptor()
-        #>> > self.recvCipher.update(ct) + self.recvCipher.finalize()
-
         self.recvCipher = None
         self.sendCipher = None
         self.compressThreshold = -1
@@ -234,7 +229,7 @@ class Packet(object):
             if self.sendCipher is None:
                 self.socket.send(packet)
             else:
-                self.socket.send(self.sendCipher.update(packet))  # + self.sendCipher.finalize())
+                self.socket.send(self.sendCipher.update(packet))
 
     def send_raw(self, payload):
         if not self.abort:
@@ -601,8 +596,7 @@ class Packet(object):
                 raise EOFError("Packet stream ended (Client disconnected")
         if self.recvCipher is None:
             return d
-        return self.recvCipher.update(d)  # + self.recvCipher.finalize()
-        # self.recvCipher.decrypt(d)
+        return self.recvCipher.update(d)
 
     def read_data(self, length):
         d = self.buffer.read(length)
