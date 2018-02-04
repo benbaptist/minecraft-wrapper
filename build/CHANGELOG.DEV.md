@@ -2,6 +2,18 @@ Build 265 (next build)
 - player to player TP - Add inter-dimensional TP (1.8+) api
   Community Input enhancement proxy mode
 
+Build 265 [0.16.1]
+- remove PyCrypto dependency!  PyCrypto is no longer maintained.
+ PyCrypto was not pip installing properly anymore on recent Python3
+ systems.  This was the straw that broke the camel's back.  It has
+ fork that is being maintained (pycryptodome), but we already have a good
+ crypto package requirement in use for wrapper encryption (cryptography),
+ so I chose to leverage that instead to minimize the number of
+ package dependencies:
+- wrapper dependencies are only `requests`, `cryptography` and `bcrypt`*[]:
+ `package_resources` is part of normal setuptools on any recent pip version these days.
+- added file "requirements.txt" to be useful for `pip install -r requirements.txt`
+
 Build 264 [0.16.0] The web version.
 - Web console commands pass through wrappers console parsing, so that wrapper
  commands can be run in Web.

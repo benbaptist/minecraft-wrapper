@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2016, 2017 - BenBaptist and Wrapper.py developer(s).
+# Copyright (C) 2016 - 2018 - BenBaptist and Wrapper.py developer(s).
 # https://github.com/benbaptist/minecraft-wrapper
 # This program is distributed under the terms of the GNU
 # General Public License, version 3 or later.
@@ -250,8 +250,6 @@ class MCServer(object):
             self.start()
             return
         self.stop(reason)
-
-
 
     def kick_players(self, reasontext):
         playerlist = copy.copy(self.vitals.players)
@@ -743,7 +741,7 @@ class MCServer(object):
                 message = (
                     "%s Since you are running Wrapper in OFFLINE mode, THIS "
                     "COULD BE SERIOUS!\n%s Wrapper is not handling any"
-                    " authenication.\n%s This is only ok if this wrapper "
+                    " authentication.\n%s This is only ok if this wrapper "
                     "is not accessible from either port %s or port %s"
                     " (I.e., this wrapper is a multiworld for a hub server, or"
                     " you are doing your own authorization via a plugin)." % (
@@ -753,7 +751,7 @@ class MCServer(object):
                 message = (
                     "%s Since you are running Wrapper in proxy mode, this"
                     " should be ok because Wrapper is handling the"
-                    " authenication, PROVIDED no one can access port"
+                    " authentication, PROVIDED no one can access port"
                     " %s from outside your network." % (
                         prefix, self.vitals.server_port))
 

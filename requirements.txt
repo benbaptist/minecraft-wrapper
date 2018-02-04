@@ -1,0 +1,13 @@
+asn1crypto==0.24.0
+certifi==2018.1.18
+cffi==1.11.4
+chardet==3.0.4
+enum34==1.1.6
+idna==2.6
+ipaddress==1.0.19
+pycparser==2.18
+six==1.11.0
+urllib3==1.22
+bcrypt>=3.1.4
+requests>=2.18.4
+cryptography>=2.1.4

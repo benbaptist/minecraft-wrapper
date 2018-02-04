@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2016, 2017 - BenBaptist and Wrapper.py developer(s).
+# Copyright (C) 2016 - 2018 - BenBaptist and Wrapper.py developer(s).
 # https://github.com/benbaptist/minecraft-wrapper
 # This program is distributed under the terms of the GNU
 # General Public License, version 3 or later.
@@ -40,6 +40,7 @@ args = parser.parse_args()
 version = sys.version_info
 VERSION = version[0]
 SUBVER = version[1]
+MICRO = version[2]
 
 PY3 = VERSION > 2
 MINSUB = 7
@@ -76,7 +77,7 @@ def main(wrapper_start_args):
 
     # start first wrapper log entry
     log.info("Wrapper.py started - Version %s", wrapper.getbuildstring())
-    log.debug("Wrapper is using Python %s.%s.", sys.version_info[0], SUBVER)
+    log.debug("Wrapper is using Python %s.%s.%s.", VERSION, SUBVER, MICRO)
 
     # flag python version problems
     if SUBVER < MINSUB:
@@ -95,6 +96,7 @@ def main(wrapper_start_args):
     # noinspection PyBroadException
     try:
         wrapper.start()
+
     except SystemExit:
         if not wrapper.configManager.exit:
             os.system("reset")
@@ -105,11 +107,13 @@ def main(wrapper_start_args):
         wrapper.javaserver.console("save-all flush")
         wrapper.javaserver.stop("Wrapper.py received shutdown signal - bye")
         wrapper.halt.halt = True
+
     except ImportWarning as ex:
         crash_mess = ("Wrapper.py Could not start due to missing requests "
                       "module: \n%s" % ex)
         wrapper.alerts.ui_process_alerts(crash_mess, blocking=True)
         log.critical(crash_mess)
+
     except Exception as ex:
         crash_mess = ("Wrapper.py crashed - stopping server to be safe (%s)" % ex)
         wrapper.alerts.ui_process_alerts(crash_mess, blocking=True)

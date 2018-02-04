@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2016, 2017 - BenBaptist and Wrapper.py developer(s).
+# Copyright (C) 2016 - 2018 - BenBaptist and Wrapper.py developer(s).
 # https://github.com/benbaptist/minecraft-wrapper
 # This program is distributed under the terms of the GNU
 # General Public License, version 3 or later.
@@ -65,6 +65,11 @@ class Packet(object):
     def __init__(self, sock, obj):
         self.socket = sock
         self.obj = obj
+        # self.sendCipher = encryption.aes128cfb8(sharedsecret).encryptor()
+        #>> > ct = self.sendCipher.update(b"a secret message") + self.sendCipher.finalize()
+        #>> > self.recvCipher = cipher.decryptor()
+        #>> > self.recvCipher.update(ct) + self.recvCipher.finalize()
+
         self.recvCipher = None
         self.sendCipher = None
         self.compressThreshold = -1
@@ -229,7 +234,7 @@ class Packet(object):
             if self.sendCipher is None:
                 self.socket.send(packet)
             else:
-                self.socket.send(self.sendCipher.encrypt(packet))
+                self.socket.send(self.sendCipher.update(packet))  # + self.sendCipher.finalize())
 
     def send_raw(self, payload):
         if not self.abort:
@@ -596,7 +601,8 @@ class Packet(object):
                 raise EOFError("Packet stream ended (Client disconnected")
         if self.recvCipher is None:
             return d
-        return self.recvCipher.decrypt(d)
+        return self.recvCipher.update(d)  # + self.recvCipher.finalize()
+        # self.recvCipher.decrypt(d)
 
     def read_data(self, length):
         d = self.buffer.read(length)
