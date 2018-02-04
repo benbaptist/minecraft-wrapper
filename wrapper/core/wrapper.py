@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2016, 2017 - BenBaptist and Wrapper.py developer(s).
+# Copyright (C) 2016 - 2018 - BenBaptist and Wrapper.py developer(s).
 # https://github.com/benbaptist/minecraft-wrapper
 # This program is distributed under the terms of the GNU
 # General Public License, version 3 or later.
@@ -387,7 +387,8 @@ class Wrapper(object):
         self._halt()
 
     def _halt(self):
-        self.javaserver.stop(self.halt_message, restart_the_server=False)
+        if self.servervitals.state in (1, 2):
+            self.javaserver.stop(self.halt_message, restart_the_server=False)
         self.halt.halt = True
 
     def shutdown(self):
@@ -819,12 +820,15 @@ class Wrapper(object):
             self.config["Alerts"] = "alerts true"
 
     def _startproxy(self):
-
-        # error will raise if requests or cryptography is missing.
-        self.proxy = Proxy(self.halt, self.proxyconfig,
-                           self.servervitals, self.log,
-                           self.usercache, self.events,
-                           self.encoding)
+        try:
+            self.proxy = Proxy(self.halt, self.proxyconfig, self.servervitals,
+                               self.log, self.usercache, self.events,
+                               self.encoding)
+        except ImportError:
+            self.log.error("Proxy mode not started because of missing "
+                           "dependencies for encryption!")
+            self.disable_proxymode()
+            return
 
         # wait for server to start
         timer = 0

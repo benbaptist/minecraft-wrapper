@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2016, 2017 - BenBaptist and Wrapper.py developer(s).
+# Copyright (C) 2016 - 2018 - BenBaptist and Wrapper.py developer(s).
 # https://github.com/benbaptist/minecraft-wrapper
 # This program is distributed under the terms of the GNU
 # General Public License, version 3 or later.
@@ -11,6 +11,7 @@ import socket
 import threading
 import time
 import json
+import requests
 
 from api.helpers import getjsonfile, putjsonfile, find_in_json
 from api.helpers import epoch_to_timestr, read_timestr
@@ -21,11 +22,9 @@ from proxy.utils import mcuuid
 from proxy.entity.entitycontrol import EntityControl
 
 try:
-    import requests
-    # noinspection PyUnresolvedReferences
     import proxy.utils.encryption as encryption
 except ImportError:
-    requests = False
+    encryption = False
 
 try:
     from proxy.client.clientconnection import Client
@@ -98,12 +97,13 @@ class Proxy(object):
         self.config = config.proxy
         self.ent_config = config.entity
 
-        # requests = False if requests or proxy.utils.encryption does not import
-        if not requests and self.config["proxy-enabled"]:
-            raise Exception("You must have requests and pycrypto installed "
-                            "to run the Proxy!")
-
         self.log = loginstance
+        # encryption = False if proxy.utils.encryption does not import
+        if not encryption and self.config["proxy-enabled"]:
+            self.log.error(
+                "You must have the package 'cryptography' installed to run the Proxy!")
+            raise ImportError()
+
         self.usercache = usercache
         self.eventhandler = eventhandler
         self.uuids = mcuuid.UUIDS(self.log, self.usercache)
@@ -140,8 +140,8 @@ class Proxy(object):
         self.registered_channels = ["WRAPPER.PY|", "WRAPPER.PY|PING", ]
         self.pinged = False
 
-        self.privateKey = encryption.generate_key_pair()
-        self.publicKey = encryption.encode_public_key(self.privateKey)
+        self.private_key = encryption.generate_private_key_set()
+        self.public_key = encryption.get_public_key_bytes(self.private_key)
 
         self.entity_control = None
 

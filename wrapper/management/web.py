@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2016, 2017 - BenBaptist and Wrapper.py developer(s).
+# Copyright (C) 2014 - 2018 - BenBaptist and Wrapper.py developer(s).
 # https://github.com/benbaptist/minecraft-wrapper
 # This program is distributed under the terms of the GNU
 # General Public License, version 3 or later.
@@ -44,21 +44,17 @@ try:
 except ImportError:
     pkg_resources = False
 
-DISCLAIMER = "Web mode is an alpha feature and is not completely " \
-             "secure. It does not use HTTPS and sends your password" \
-             "back to the server with a plain-text HTTP GET.  Besides " \
-             "password protection, we also have a setting in the 'Web' " \
-             "section to only allow only certain IPs to connect.  If " \
-             "you need to use web remotely, add the IP address from " \
-             "where you will be using the web interface" \
-             " into the 'safe-ips' config item.  That said..." \
-             " Wrapper will start web mode anyway, but if you are not " \
-             "really using Web mode, you should turn it off in " \
-             "wrapper.properties.json.\n\nLastly; never use the same " \
-             "password for Web that you use anywhere else (like your " \
-             "banking or email accounts).  Like I said, it goes over " \
-             "the 'wires' unencrypted just as you typed it in the " \
-             "browser.."
+DISCLAIMER = "Web mode is a beta feature and does not use HTTPS to send your " \
+             "password to the server (just uses a plain-text HTTP GET).  " \
+             "Besides password protection, we also have a setting in the " \
+             "'Web' section to only allow only certain IPs to connect.  If " \
+             "you need to use web remotely, it is recommended to turn this " \
+             "feature on and add the IP address from where you will be using " \
+             "the web interface into the 'safe-ips' config item.  That said" \
+             "... never use the same password for Web that you use anywhere " \
+             "else (like your banking or email accounts).  This password " \
+             "is passed over the connection unencrypted, exactly as you " \
+             "typed it into the browser password field.."
 
 
 # noinspection PyBroadException
@@ -144,7 +140,7 @@ class Web(object):
         if self.socket is not False:
             self.socket.close()
         try:
-            self.socket = socket.socket()
+            self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.socket.bind((self.config["Web"]["web-bind"],
                               self.config["Web"]["web-port"]))
@@ -397,6 +393,7 @@ class Client(object):
                     self.request = getargs(args, 1)
                     self.headers(status="400 Bad Request")
                     self.write("<h1>Invalid request. Sorry.</h1>")
+        self.close()
 
     def get(self, request):
 

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2016, 2017 - BenBaptist and Wrapper.py developer(s).
+# Copyright (C) 2016 - 2018 - BenBaptist and Wrapper.py developer(s).
 # https://github.com/benbaptist/minecraft-wrapper
 # This program is distributed under the terms of the GNU
 # General Public License, version 3 or later.
@@ -25,7 +25,6 @@ from proxy.packets import mcpackets_cb
 from proxy.utils.constants import *
 
 from proxy.utils.mcuuid import MCUUID
-
 from api.helpers import processcolorcodes, processoldcolorcodes, chattocolorcodes
 
 
@@ -49,8 +48,8 @@ class Client(object):
         self.client_socket = clientsock
         self.client_address = client_addr
         self.proxy = proxy
-        self.publicKey = self.proxy.publicKey
-        self.privateKey = self.proxy.privateKey
+        self.public_key = self.proxy.public_key
+        self.private_key = self.proxy.private_key
         self.servervitals = self.proxy.srv_data
 
         self.log = self.proxy.log
@@ -927,13 +926,13 @@ class Client(object):
                 self.packet.sendpkt(
                     self.pktCB.LOGIN_ENCR_REQUEST,
                     [STRING, BYTEARRAY_SHORT, BYTEARRAY_SHORT],
-                    (self.serverID, self.publicKey, self.verifyToken))
+                    (self.serverID, self.public_key, self.verifyToken))
             else:
                 # send to client 1.8 +
                 self.packet.sendpkt(
                     self.pktCB.LOGIN_ENCR_REQUEST,
                     [STRING, BYTEARRAY, BYTEARRAY],
-                    (self.serverID, self.publicKey, self.verifyToken))
+                    (self.serverID, self.public_key, self.verifyToken))
 
             # self.log.debug("CB (W)-> LOGIN ENCR REQUEST")
 
@@ -970,20 +969,20 @@ class Client(object):
         else:
             data = self.packet.readpkt([BYTEARRAY, BYTEARRAY])
 
-        sharedsecret = encryption.decrypt_shared_secret(
-            data[0], self.privateKey)
-        verifytoken = encryption.decrypt_shared_secret(
-            data[1], self.privateKey)
+        sharedsecret = encryption.decrypt_PKCS1v15_shared_data(
+            data[0], self.private_key)
+        verifytoken = encryption.decrypt_PKCS1v15_shared_data(
+            data[1], self.private_key)
         h = hashlib.sha1()
         # self.serverID already encoded
         h.update(self.serverID)
         h.update(sharedsecret)
-        h.update(self.publicKey)
+        h.update(self.public_key)
         serverid = self.packet.hexdigest(h)
 
         # feed info to packet.py for parsing
-        self.packet.sendCipher = encryption.AES128CFB8(sharedsecret)
-        self.packet.recvCipher = encryption.AES128CFB8(sharedsecret)
+        self.packet.sendCipher = encryption.aes128cfb8(sharedsecret).encryptor()
+        self.packet.recvCipher = encryption.aes128cfb8(sharedsecret).decryptor()
 
         # verify correct response
         if not verifytoken == self.verifyToken:

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2016, 2017 - BenBaptist and Wrapper.py developer(s).
+# Copyright (C) 2016 - 2018 - BenBaptist and Wrapper.py developer(s).
 # https://github.com/benbaptist/minecraft-wrapper
 # This program is distributed under the terms of the GNU
 # General Public License, version 3 or later.
@@ -229,7 +229,7 @@ class Packet(object):
             if self.sendCipher is None:
                 self.socket.send(packet)
             else:
-                self.socket.send(self.sendCipher.encrypt(packet))
+                self.socket.send(self.sendCipher.update(packet))
 
     def send_raw(self, payload):
         if not self.abort:
@@ -596,7 +596,7 @@ class Packet(object):
                 raise EOFError("Packet stream ended (Client disconnected")
         if self.recvCipher is None:
             return d
-        return self.recvCipher.decrypt(d)
+        return self.recvCipher.update(d)
 
     def read_data(self, length):
         d = self.buffer.read(length)
