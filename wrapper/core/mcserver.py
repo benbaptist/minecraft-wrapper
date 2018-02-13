@@ -51,7 +51,7 @@ class MCServer(object):
         self.restart_message = self.config["Misc"]["default-restart-message"]
 
         self.reboot_minutes = self.config["General"]["timed-reboot-minutes"]
-        self.reboot_warning_minutes = self.config["General"]["timed-reboot-warning-minutes"]
+        self.reboot_warn_minutes = self.config["General"]["timed-reboot-warning-minutes"]  # noqa
 
         # These will be used to auto-detect the number of prepend
         # items in the server output.
@@ -178,7 +178,6 @@ class MCServer(object):
             self.reloadproperties()
 
             command = self.args
-
             self.proc = subprocess.Popen(
                 command, cwd=self.vitals.serverpath, stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE, stdin=subprocess.PIPE,
@@ -586,7 +585,9 @@ class MCServer(object):
         ops = False
         # (4 = PROTOCOL_1_7 ) - 1.7.6 or greater use ops.json
         if self.vitals.protocolVersion > 4:
-            ops = getjsonfile("ops", self.vitals.serverpath, encodedas=self.encoding)
+            ops = getjsonfile(
+                "ops", self.vitals.serverpath, encodedas=self.encoding
+            )
         if not ops:
             # try for an old "ops.txt" file instead.
             ops = []
@@ -699,10 +700,10 @@ class MCServer(object):
             release = get_int(getargs(semantics, 0))
             major = get_int(getargs(semantics, 1))
             minor = get_int(getargs(semantics, 2))
-            self.vitals.version_compute = minor + (major * 100) + (release * 10000)
+            self.vitals.version_compute = minor + (major * 100) + (release * 10000)  # noqa
 
             # 1.7.6 (protocol 5) is the cutoff where ops.txt became ops.json
-            if self.vitals.version_compute > 10705 and self.vitals.protocolVersion < 0:
+            if self.vitals.version_compute > 10705 and self.vitals.protocolVersion < 0:  # noqa
                 self.vitals.protocolVersion = 5
                 self.wrapper.api.registerPermission("mc1.7.6", value=True)
             if self.vitals.version_compute < 10702 and self.wrapper.proxymode:
@@ -775,6 +776,8 @@ class MCServer(object):
             else:
                 self.queued_lines.append(buff)
 
+        first_word = getargs(line_words, 0)
+        second_word = getargs(line_words, 1)
         # be careful about how these elif's are handled!
         # confirm server start
         if "Done (" in buff:
@@ -782,7 +785,7 @@ class MCServer(object):
             self.changestate(STARTED)
             self.log.info("Server started")
             if self.wrapper.proxymode:
-                self.log.info("Proxy listening on *:%s", self.wrapper.proxy.proxy_port)
+                self.log.info("Proxy listening on *:%s", self.wrapper.proxy.proxy_port)  # noqa
 
         # Getting world name
         elif "Preparing level" in buff:
@@ -790,9 +793,9 @@ class MCServer(object):
             self.world = World(self.vitals.worldname, self)
 
         # Player Message
-        elif getargs(line_words, 0)[0] == "<":
+        elif first_word[0] == "<":
             # get a name out of <name>
-            name = self.stripspecial(getargs(line_words, 0)[1:-1])
+            name = self.stripspecial(first_word[1:-1])
             message = self.stripspecial(getargsafter(line_words, 1))
             original = getargsafter(line_words, 0)
             playerobj = self.getplayer(name)
@@ -824,20 +827,20 @@ class MCServer(object):
                     "original": The original line of text from the console ('<mcplayer> hello everyone`)
                     <payload>
     
-                """
+                """  # noqa
             else:
                 self.log.debug("Console has chat from '%s', but wrapper has no "
-                               "known logged-in player object by that name.", name)
+                               "known logged-in player object by that name.", name)  # noqa
         # Player Login
-        elif getargs(line_words, 1) == "logged":
-            user_desc = getargs(line_words, 0).split("[/")
+        elif second_word == "logged":
+            user_desc = first_word.split("[/")
             name = user_desc[0]
             ip_addr = user_desc[1].split(":")[0]
             eid = get_int(getargs(line_words, 6))
             locationtext = getargs(buff.split(" ("), 1)[:-1].split(", ")
             # spigot versus vanilla
-            # SPIGOT - [12:13:19 INFO]: *******[/] logged in with entity id 123 at ([world]316.86789318152546, 67.12426603789697, -191.9069627257038)
-            # VANILLA - [23:24:34] [Server thread/INFO]: *******[/127.0.0.1:47434] logged in with entity id 149 at (46.29907483845001, 63.0, -270.1293488726086)
+            # SPIGOT - [12:13:19 INFO]: *******[/] logged in with entity id 123 at ([world]316.86789318152546, 67.12426603789697, -191.9069627257038)  # noqa
+            # VANILLA - [23:24:34] [Server thread/INFO]: *******[/127.0.0.1:47434] logged in with entity id 149 at (46.29907483845001, 63.0, -270.1293488726086)  # noqa
             if len(locationtext[0].split("]")) > 1:
                 x_c = get_int(float(locationtext[0].split("]")[1]))
             else:
@@ -850,12 +853,12 @@ class MCServer(object):
 
         # Player Logout
         elif "lost connection" in buff:
-            name = getargs(line_words, 0)
+            name = first_word
             self.logout(name)
 
         # player action
-        elif getargs(line_words, 0) == "*":
-            name = self.stripspecial(getargs(line_words, 1))
+        elif first_word == "*":
+            name = self.stripspecial(second_word)
             message = self.stripspecial(getargsafter(line_words, 2))
             self.wrapper.events.callevent("player.action", {
                 "player": self.getplayer(name),
@@ -864,7 +867,7 @@ class MCServer(object):
 
         # Player Achievement
         elif "has just earned the achievement" in buff:
-            name = self.stripspecial(getargs(line_words, 0))
+            name = self.stripspecial(first_word)
             achievement = getargsafter(line_words, 6)
             self.wrapper.events.callevent("player.achievement", {
                 "player": name,
@@ -873,12 +876,12 @@ class MCServer(object):
 
         # /say command
         elif getargs(
-                line_words, 0)[0] == "[" and getargs(line_words, 0)[-1] == "]":
+                line_words, 0)[0] == "[" and first_word[-1] == "]":
             if self.getservertype != "vanilla":
                 # Unfortunately, Spigot and Bukkit output things
                 # that conflict with this.
                 return
-            name = self.stripspecial(getargs(line_words, 0)[1:-1])
+            name = self.stripspecial(first_word[1:-1])
             message = self.stripspecial(getargsafter(line_words, 1))
             original = getargsafter(line_words, 0)
             self.wrapper.events.callevent("server.say", {
@@ -888,8 +891,8 @@ class MCServer(object):
             })
 
         # Player Death
-        elif getargs(line_words, 1) in self.deathprefixes:
-            name = self.stripspecial(getargs(line_words, 0))
+        elif second_word in self.deathprefixes:
+            name = self.stripspecial(first_word)
             self.wrapper.events.callevent("player.death", {
                 "player": self.getplayer(name),
                 "death": getargsafter(line_words, 1)
@@ -903,13 +906,14 @@ class MCServer(object):
             })
 
         # player teleport
-        elif getargs(line_words, 0) == "Teleported" and getargs(line_words, 2) == "to":
-            playername = getargs(line_words, 1)
+        elif first_word == "Teleported" and getargs(line_words, 2) == "to":
+            playername = second_word
             playerobj = self.getplayer(playername)
-            playerobj._position = [get_int(float(getargs(line_words, 3).split(",")[0])),
-                                   get_int(float(getargs(line_words, 4).split(",")[0])),
-                                   get_int(float(getargs(line_words, 5))), 0, 0
-                                   ]
+            playerobj._position = [
+                get_int(float(getargs(line_words, 3).split(",")[0])),
+                get_int(float(getargs(line_words, 4).split(",")[0])),
+                get_int(float(getargs(line_words, 5))), 0, 0
+            ]
             self.wrapper.events.callevent(
                 "player.teleport",
                 {"player": playerobj})
@@ -972,7 +976,9 @@ class MCServer(object):
             self.lastsizepoll = time.time()
             size = 0
             # os.scandir not in standard library on early py2.7.x systems
-            for i in os.walk("%s/%s" % (self.vitals.serverpath, self.vitals.worldname)):
+            for i in os.walk(
+                    "%s/%s" % (self.vitals.serverpath, self.vitals.worldname)
+            ):
                 for f in os.listdir(i[0]):
                     size += os.path.getsize(os.path.join(i[0], f))
             self.vitals.worldsize = size

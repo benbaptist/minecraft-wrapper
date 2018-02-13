@@ -18,6 +18,7 @@ import resource
 import logging
 # import smtplib
 import sys  # used to pass sys.argv to server
+# from pprint import pprint
 
 # non standard library imports
 try:
@@ -33,7 +34,9 @@ except ImportError:
 # small feature and helpers
 # noinspection PyProtectedMember
 from api.helpers import format_bytes, getargs, getargsafter, readout, get_int
+from api.helpers import putjsonfile
 from utils import readkey
+from utils import version as version_mod
 from utils.crypt import phrase_to_url_safebytes, gensalt
 
 # core items
@@ -44,7 +47,7 @@ from core.events import Events
 from core.storage import Storage
 from core.irc import IRC
 from core.scripts import Scripts
-import core.buildinfo as core_buildinfo_version
+import core.buildinfo as buildinfo
 from proxy.utils.mcuuid import UUIDS
 from core.config import Config
 from core.backups import Backups
@@ -130,8 +133,8 @@ class Wrapper(object):
             salt = gensalt(self.encoding)
             self.config["General"]["salt"] = salt
             config_changes = True
-        # passphrase is provided at startup by the wrapper operator or script (not stored)
-        passphrase = phrase_to_url_safebytes(secret_passphrase, self.encoding, salt)
+        # passphrase is provided at startup by the wrapper operator or script (not stored)  # noqa
+        passphrase = phrase_to_url_safebytes(secret_passphrase, self.encoding, salt)  # noqa
         self.cipher = Crypt(passphrase, self.encoding)
 
         # Update passwords (hash any plaintext passwords)
@@ -141,7 +144,7 @@ class Wrapper(object):
                     # i.e., cfg_items ===> like ["web-password-plaintext"]
                     hash_item = cfg_items[:-10]
                     # hash_item ===> i.e., ["web-password"]
-                    if hash_item in self.config[groups] and self.config[groups][cfg_items]:
+                    if hash_item in self.config[groups] and self.config[groups][cfg_items]:  # noqa
                         # encrypt contents of (i.e.) ["web-password-plaintext"]
                         hashed_item = self.cipher.encrypt(
                             self.config[groups][cfg_items])
@@ -156,7 +159,7 @@ class Wrapper(object):
         for entries in self.config["Updates"]:
             if "/build/version.json" in str(self.config["Updates"][entries]):
                 oldentry = copy.copy(self.config["Updates"][entries])
-                self.config["Updates"][entries] = oldentry.split("/build/version.json")[0]
+                self.config["Updates"][entries] = oldentry.split("/build/version.json")[0]  # noqa
                 config_changes = True
 
         # save changes made to config file
@@ -167,7 +170,7 @@ class Wrapper(object):
         self.auto_update_wrapper = self.config["Updates"]["auto-update-wrapper"]
         self.auto_update_branch = self.config["Updates"]["auto-update-branch"]
         if not self.auto_update_branch:
-            self.update_url = "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development"
+            self.update_url = "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development"  # noqa
         else:
             self.update_url = self.config["Updates"][self.auto_update_branch]
 
@@ -347,7 +350,7 @@ class Wrapper(object):
         self.log.info("Wrapper Storages closed and saved.")
 
         # use non-daemon thread to ensure alert gets sent before wrapper closes
-        self.alerts.ui_process_alerts("Wrapper.py stopped at %s" % time.time(), blocking=True)
+        self.alerts.ui_process_alerts("Wrapper.py stopped at %s" % time.time(), blocking=True)  # noqa
 
         # wrapper execution ends here.  handle_server ends when
         # wrapper.halt.halt is True.
@@ -423,7 +426,7 @@ class Wrapper(object):
                 "message": <str> type - The line of buffered output.
                 <payload>
 
-            """
+            """  # noqa
 
         if self.use_readline:
             _console_event()
@@ -454,7 +457,7 @@ class Wrapper(object):
         def _server():
             # print server lines
             _console_event()
-            print("{0}{1}{2}\r\n".format(UP_LINE, CLEAR_LINE, message, CLEAR_EOL))
+            print("{0}{1}{2}\r\n".format(UP_LINE, CLEAR_LINE, message, CLEAR_EOL))  # noqa
 
         def _print():
             _server()
@@ -691,7 +694,7 @@ class Wrapper(object):
             elif command in ("deop", "/deop"):
                 self.runwrapperconsolecommand("deop", allargs)
 
-            elif command in ("pass", "/pass", "pw", "/pw", "password", "/password"):
+            elif command in ("pass", "/pass", "pw", "/pw", "password", "/password"):  # noqa
                 self.runwrapperconsolecommand("password", allargs)
 
             # minecraft help command
@@ -805,10 +808,9 @@ class Wrapper(object):
                 if summary is None:
                     summary = "No description available for this plugin"
 
-                version = plugin["version"]
-                readout(name, summary,
-                        separator=(
-                            " - v%s - " % ".".join([str(_) for _ in version])),
+                plugin_version = plugin["version"]
+                sep = " - v%s - " % ".".join([str(_) for _ in plugin_version])
+                readout(name, summary, separator=sep,
                         usereadline=self.use_readline)
             else:
                 readout("failed to load plugin", plugin, pad=25,
@@ -862,18 +864,15 @@ class Wrapper(object):
 
     @staticmethod
     def getbuildstring():
-        if core_buildinfo_version.__branch__ == "dev":
-            return "%s (development build #%d)" % (
-                core_buildinfo_version.__version__,
-                core_buildinfo_version.__build__)
 
-        elif core_buildinfo_version.__branch__ == "stable":
-            return "%s (stable)" % core_buildinfo_version.__version__
-        else:
-            return "Version: %s (%s build #%d)" % (
-                core_buildinfo_version.__version__,
-                core_buildinfo_version.__branch__,
-                core_buildinfo_version.__build__)
+        thisversion = version_mod.get_complete_version()
+        vers_string = "%d.%d.%d - %s (%s build #%d)" % (
+            thisversion[0], thisversion[1], thisversion[2],  # 3 part semantic
+            thisversion[3],                                  # release type
+            buildinfo.__branch__,                            # branch
+            thisversion[4],                                  # build number
+        )
+        return vers_string
 
     def _auto_update_process(self):
         while not self.halt.halt:
@@ -890,15 +889,16 @@ class Wrapper(object):
         self.log.info("Checking for new builds...")
         update = self.get_wrapper_update_info()
         if update:
-            version, build, repotype, reponame = update
+            version, repotype, reponame = update
+            build = version[4]
             self.log.info(
                 "New Wrapper.py %s build #%d is available!"
                 " (current build is #%d)",
-                repotype, build, core_buildinfo_version.__build__)
+                repotype, build, buildinfo.__version__[4])
 
             if self.auto_update_wrapper or update_now:
                 self.log.info("Updating...")
-                self.performupdate(version, build)
+                self.performupdate(version, reponame)
             else:
                 self.log.info(
                     "Because you have 'auto-update-wrapper' set to False,"
@@ -911,41 +911,93 @@ class Wrapper(object):
         """get the applicable branch wrapper update"""
         # read the installed branch info
         if repotype is None:
-            repotype = core_buildinfo_version.__branch__
+            repotype = buildinfo.__branch__
+
+        # develop updates location
         if self.auto_update_branch:
             branch_key = self.auto_update_branch
         else:
             branch_key = "%s-branch" % repotype
-        r = requests.get("%s/build/version.json" % self.config["Updates"][branch_key])
+
+        # get the update information
+        r = requests.get("%s/build/version.json" % self.config["Updates"][branch_key])  # noqa
         if r.status_code == 200:
             data = r.json()
-            if data["__build__"] > core_buildinfo_version.__build__:
-                if repotype == "dev":
-                    reponame = "development"
-                elif repotype == "stable":
-                    reponame = "master"
-                else:
-                    reponame = data["__branch__"]
-                if "__version__" not in data:
-                    data["__version__"] = data["version"]
-                return data["__version__"], data["__build__"], data["__branch__"], reponame
-
         else:
             self.log.warning(
                 "Failed to check for updates - are you connected to the"
                 " internet? (Status Code %d)", r.status_code)
             return False
+        # do some renaming for humans (maintain consistent branch namings)
+        if repotype == "dev":
+            reponame = "development"
+        elif repotype == "stable":
+            reponame = "master"
+        else:
+            reponame = data["__branch__"]
 
-    def performupdate(self, version, build):
+        # should not happen unless someone points to a very old repo.
+        if "__version__" not in data:
+            self.log.warning("corrupted repo data. Saved debug data to disk!")
+            putjsonfile(data, "repo_update_failure_debug")
+            return False
+
+        print(buildinfo.__version__)
+        print(data["__version__"][3])
+
+        release_mapping = {'alpha': 0, 'beta': 1, 'rc': 2, "final": 3}
+        this_wrapper_rel = release_mapping[buildinfo.__version__[3]]
+        found_wrapper_rel = release_mapping[data["__version__"][3]]
+        versionisbetter = data["__version__"][0] > buildinfo.__version__[0]
+        versionissame = data["__version__"][0] = buildinfo.__version__[0]
+        subversionhigher = data["__version__"][1] > buildinfo.__version__[1]
+        subversionsame = data["__version__"][1] = buildinfo.__version__[1]
+        miniversionhigher = data["__version__"][2] > buildinfo.__version__[2]
+        buildishigher = data["__version__"][4] > buildinfo.__version__[4]
+
+        ''' 
+        version[__build__] is deprecated and remains in version.json solely
+        for older wrapper builds before (old build number) 265.  Since the 
+        new version tuple includes build as the fifth element, we use that.
+        Of course really old versions (0.8.x and older) still use the old
+        `"build"` item... 
+        
+        Build numbers are now unique to a given release and version.  So
+        [1, 0, 0, 'rc', <build>] will have a different build number sequence
+        from both [0, 16, 1, 'beta', <build>] and [1, 0, 0, 'final', <build>]
+        '''
+
+        update = False
+        if found_wrapper_rel > this_wrapper_rel:
+            update = True
+        elif versionisbetter:
+            update = True
+        elif buildishigher:
+            update = True
+        elif versionissame:
+            if subversionhigher:
+                update = True
+            elif subversionsame and miniversionhigher:
+                update = True
+
+        if update:
+            return data["__version__"], data[
+                "__branch__"], reponame
+        else:
+            return False
+
+    def performupdate(self, version, repo):
         """
         Perform update; returns True if update succeeds.  User must
         still restart wrapper manually.
 
         :param version: first argument from get_wrapper_update_info()
-        :param build: second argument from get_wrapper_update_info()
+        :param repo: get_wrapper_update_info().__branch__
         :return: True if update succeeds
         """
 
+        if self.updated:
+            return True
         wraphash = requests.get("%s/build/Wrapper.py.md5" % self.update_url)
         wrapperfile = requests.get("%s/Wrapper.py" % self.update_url)
 
@@ -957,8 +1009,9 @@ class Wrapper(object):
                 with open(sys.argv[0], "wb") as f:
                     f.write(wrapperfile.content)
                 self.log.info(
-                    "Wrapper.py %s (#%d) installed. Please reboot Wrapper.py.",
-                    ".".join([str(_) for _ in version]), build)
+                    "Wrapper.py %s (%s) installed. Please reboot Wrapper.py.",
+                    version_mod.get_main_version(version), repo
+                )
                 self.updated = True
                 return True
             else:
