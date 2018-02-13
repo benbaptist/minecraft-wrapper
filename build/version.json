@@ -2,13 +2,13 @@
     "__branch__": "dev", 
     "__build__": 266, 
     "__version__": [
-        0, 
-        16, 
         1, 
-        "beta", 
-        266
+        0, 
+        0, 
+        "rc", 
+        1
     ], 
     "build": 229, 
-    "release_time": 1518553122.111785, 
+    "release_time": 1518553854.161127, 
     "repotype": "dev"
 }

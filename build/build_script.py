@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # build fully, but not commit also:
-# usage: python ./build/build_script.py . dev
+# usage: python ./build/build_script.py . dev rc -i -d
 
 from os import path, walk, chdir, remove, system
 from glob import glob
@@ -23,7 +23,7 @@ parser.add_argument('branch', type=str, choices=('dev', 'stable'),
 parser.add_argument('release', type=str, choices=(
                         'alpha', 'beta', 'rc', 'final'
                     ),
-                    default='rc', help='type of release (alpha, beta, etc)')
+                    default='alpha', help='type of release (alpha, beta, etc)')
 parser.add_argument('--commit', '-c', action='store_true',
                     help='commit changes to specified branch')
 parser.add_argument('--incrementbuild', '-i', action='store_true',
