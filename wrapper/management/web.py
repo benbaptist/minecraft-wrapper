@@ -125,9 +125,12 @@ class Web(object):
                     self.listen()
                 else:
                     self.log.error(
-                        "Could not bind web to %s:%d - retrying in 5 seconds" % (
+                        "Could not bind web to %s:%d - retrying in 5"
+                        " seconds" % (
                             self.config["Web"]["web-bind"],
-                            self.config["Web"]["web-port"]))
+                            self.config["Web"]["web-port"]
+                        )
+                    )
             except:
                 for line in traceback.format_exc().split("\n"):
                     self.log.error(line)
@@ -154,18 +157,18 @@ class Web(object):
         self.log.info("Web Interface bound to %s:%d" % (
             self.config["Web"]["web-bind"], self.config["Web"]["web-port"]))
         while not self.wrapper.halt.halt:
+            # noinspection PyUnresolvedReferences
             sock, addr = self.socket.accept()
             if self.onlyusesafe_ips:
                 if addr[0] not in self.safe_ips:
                     sock.close()
-                    self.log.info("Sorry charlie (an unathorized IP %s attempted "
-                                  "connection)", addr[0])
+                    self.log.info(
+                        "Sorry charlie (an unathorized IP %s attempted "
+                        "connection)", addr[0]
+                    )
                     continue
             client = Client(self.wrapper, sock, addr, self)
 
-            # t = threading.Thread(target=cProfile.runctx, args=("client.wrap()", globals(), locals(), "cProfile-debug"))
-            # t.daemon = True
-            # t.start()
             t = threading.Thread(target=client.wrap, args=())
             t.daemon = True
             t.start()
@@ -228,7 +231,7 @@ class Web(object):
             return None
 
         # check password validity
-        if self.pass_handler.check_pw(password, self.config["Web"]["web-password"]):
+        if self.pass_handler.check_pw(password, self.config["Web"]["web-password"]):  # noqa
             return True
 
         # unsuccessful password attempt
@@ -316,7 +319,8 @@ class Client(object):
         self.api = wrapper.api
         self.socket.setblocking(30)
 
-    def read(self, filename):
+    @staticmethod
+    def read(filename):
         ret_object = pkg_resources.resource_stream(__name__,
                                                    "html/%s" % filename).read()
         return ret_object
@@ -340,7 +344,8 @@ class Client(object):
             self.write("Location: %s\r\n" % location)
         self.write("\r\n")
 
-    def get_content_type(self, filename):
+    @staticmethod
+    def get_content_type(filename):
         ext = filename.split(".")[-1]
         if ext == "js":
             return "application/javascript"
@@ -548,7 +553,7 @@ class Client(object):
                 return EOFError
             if not self.config["Web"]["web-allow-file-management"]:
                 return EOFError
-            safe = ".abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWYXZ0123456789_-/ "
+            safe = ".abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWYXZ0123456789_-/ "  # noqa
             path_unfiltered = argdict["path"]
             path = ""
             for i in path_unfiltered:
@@ -727,14 +732,17 @@ class Client(object):
                 return EOFError
             command = argdict["execute"]
             self.wrapper.process_command(command)
-            self.log.info("[%s] Executed: %s" % (self.addr[0], argdict["execute"]))
+            self.log.info("[%s] Executed: %s" % (self.addr[0], argdict["execute"]))  # noqa
             return True
 
         if action == "chat":
             if not self.web.validate_key(argdict["key"]):
                 return EOFError
             message = argdict["message"]
-            self.web.chatScrollback.append((time.time(), {"type": "raw", "payload": "[WEB ADMIN] " + message}))
+            self.web.chatScrollback.append(
+                (time.time(),
+                 {"type": "raw", "payload": "[WEB ADMIN] " + message})
+            )
             self.wrapper.javaserver.broadcast("&c[WEB ADMIN]&r " + message)
             return True
 
@@ -745,7 +753,7 @@ class Client(object):
             reason = argdict["reason"].split("%20")
             args = [player]
             args += reason
-            payload = {"player": self.web.xplayer, "args": args, "command": "kick"}
+            payload = {"player": self.web.xplayer, "args": args, "command": "kick"}  # noqa
             self.wrapper.commands.playercommand(payload)
             self.log.info("[WEB][%s] kicked %s with reason: %s"
                           "" % (self.addr[0], player, " ".join(reason)))
@@ -759,7 +767,10 @@ class Client(object):
             args = [player]
             args += reason
 
-            self.log.info("[%s] %s was banned with reason: %s" % (self.addr[0], player, " ".join(reason)))
+            self.log.info(
+                "[%s] %s was banned with reason: %s" % (
+                    self.addr[0], player, " ".join(reason))
+            )
             payload = {"player": self.web.xplayer,
                        "args": args,
                        "command": "ban"}
@@ -778,17 +789,23 @@ class Client(object):
             if state == "enable":
                 if plugin in self.wrapper.storage["disabled_plugins"]:
                     for thisone in self.wrapper.storage["disabled_plugins"]:
-                        if plugin == self.wrapper.storage["disabled_plugins"][thisone]:
-                            del self.wrapper.storage["disabled_plugins"][thisone]
+                        if plugin == self.wrapper.storage["disabled_plugins"][thisone]:  # noqa
+                            del self.wrapper.storage["disabled_plugins"][thisone]  # noqa
                             break
                     self.wrapper.wrapper_storage.save()
-                    self.log.info("[%s] Set plugin enabled: '%s'" % (self.addr[0], plugin))
+                    self.log.info(
+                        "[%s] Set plugin enabled: '%s'" % (
+                            self.addr[0], plugin)
+                    )
                     self.wrapper.commands.playercommand(payload)
             else:
                 if plugin not in self.wrapper.storage["disabled_plugins"]:
                     self.wrapper.storage["disabled_plugins"].append(plugin)
                     self.wrapper.wrapper_storage.save()
-                    self.log.info("[%s] Set plugin disabled: '%s'" % (self.addr[0], plugin))
+                    self.log.info(
+                        "[%s] Set plugin disabled: '%s'" % (
+                            self.addr[0], plugin)
+                    )
                     self.wrapper.commands.playercommand(payload)
 
         if action == "reload_plugins":
@@ -816,12 +833,16 @@ class Client(object):
             if command == "stop":
                 reason = argdict["reason"]
                 self.wrapper.javaserver.stop_server_command(reason)
-                self.log.info("[%s] Server stop with reason: %s" % (self.addr[0], reason))
+                self.log.info(
+                    "[%s] Server stop with reason: %s" % (self.addr[0], reason))
                 return "success"
             elif command == "restart":
                 reason = argdict["reason"]
                 self.wrapper.javaserver.restart(reason)
-                self.log.info("[%s] Server restart with reason: %s" % (self.addr[0], reason))
+                self.log.info(
+                    "[%s] Server restart with reason: %s" % (
+                        self.addr[0], reason)
+                )
                 return "success"
             elif command == "start":
                 self.wrapper.javaserver.start()

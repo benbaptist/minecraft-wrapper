@@ -12,6 +12,8 @@ import random
 import math
 
 import core.buildinfo as version_info
+from utils import version as version_handler
+from utils.py23 import py_bytes, py_str
 
 from api.helpers import getargs, getargsafter
 from api.base import API
@@ -116,9 +118,7 @@ class IRC(object):
             self.log.debug("Exception in IRC disconnect: \n%s", e)
 
     def send(self, payload):
-        pay = "%s\n" % payload
-        if PY3:
-            pay = bytes(pay, self.encoding)
+        pay = py_bytes("%s\n" % payload, self.encoding)
         if self.socket:
             self.socket.send(pay)
         else:
@@ -284,9 +284,7 @@ class IRC(object):
             self.rawConsole({"extra": payload})
 
     def parse(self, dataline):
-        _line = dataline
-        if PY3:
-            _line = str(dataline, self.encoding)
+        _line = py_str(dataline, self.encoding)
         if getargs(_line.split(" "), 1) == "001":
             for command in self.config["IRC"]["autorun-irc-commands"]:
                 self.send(command)
@@ -446,57 +444,40 @@ class IRC(object):
                                     "(state #%d)" % self.javaserver.state)
                             if self.wrapper.javaserver.getmemoryusage():
                                 msg("Server Memory Usage: %d bytes" % self.wrapper.javaserver.getmemoryusage())
-                        elif getargs(message.split(" "), 0) == 'check-update':
+                        elif getargs(message.split(" "), 0) in ('check-update', 'update-wrapper'):
                             msg("Checking for new updates...")
                             update = self.wrapper.get_wrapper_update_info()
+                            repotype = None
+                            version = None
                             if update:
-                                version, build, repotype = update
-                                if repotype == "stable":
-                                    msg("New Wrapper.py Version %s available! (you have %s)" %
-                                        (".".join([str(_) for _ in version]), self.wrapper.getbuildstring()))
-                                elif repotype == "dev":
-                                    msg("New Wrapper.py development build %s #%d available! (you have %s #%d)" % 
-                                        (".".join([str(_) for _ in version]), build, version_info.__version__,
-                                         version_info.__build__))
-                                else:
-                                    msg("Unknown new version: %s | %d | %s" % (version, build, repotype))
+                                version, repotype = update
+                                build = version[4]
+                                newversion = version_handler.get_version(version)
+                                yourversion = version_handler.get_version(version_info.__version__)
+
+                                msg(
+                                    "New Wrapper.py Version %s (%s) is available! (you have %s)" %
+                                    (newversion, repotype, yourversion)
+                                )
                                 msg("To perform the update, type update-wrapper.")
                             else:
-                                if version_info.__branch__ == "stable":
-                                    msg("No new stable Wrapper.py versions available.")
-                                elif version_info.__branch__ == "dev":
-                                    msg("No new development Wrapper.py versions available.")
-                        elif getargs(message.split(" "), 0) == 'update-wrapper':
-                            msg("Checking for new updates...")
-                            update = self.wrapper.get_wrapper_update_info()
-                            if update:
-                                version, build, repotype = update
-                                if repotype == "stable":
-                                    msg("New Wrapper.py Version %s available! (you have %s)" %
-                                        (".".join([str(_) for _ in version]), self.wrapper.getbuildstring()))
-                                elif repotype == "dev":
-                                    msg("New Wrapper.py development build %s #%d available! (you have %s #%d)" %
-                                        (".".join(version), build, version_info.__version__, version_info.__build__))
-                                else:
-                                    msg("Unknown new version: %s | %d | %s" % (version, build, repotype))
+                                msg("No new %s Wrapper.py versions available." % version_info.__branch__)
+                            if getargs(message.split(" "), 0) == 'update-wrapper' and update:
                                 msg("Performing update..")
-                                if self.wrapper.performupdate(version, build, repotype):
-                                    msg("Update completed! Version %s #%d (%s) is now installed. Please reboot "
-                                        "Wrapper.py to apply changes." % (version, build, repotype))
+                                if self.wrapper.performupdate(version, repotype):
+                                    msg(
+                                        "Update completed! Version %s (%s) is now installed. Please reboot "
+                                        "Wrapper.py to apply changes." % (version, repotype)
+                                    )
                                 else:
                                     msg("An error occured while performing update.")
                                     msg("Please check the Wrapper.py console as soon as possible for an explanation "
                                         "and traceback.")
-                                    msg("If you are unsure of the cause, please file a bug report on http://github.com"
-                                        "/benbaptist/minecraft-wrapper.")
-                            else:
-                                if version_info.__branch__ == "stable":
-                                    msg("No new stable Wrapper.py versions available.")
-                                elif version_info.__branch__ == "dev":
-                                    msg("No new development Wrapper.py versions available.")
+                                    msg("If you are unsure of the cause, please file a bug report.")
+
                         elif getargs(message.split(" "), 0) == "about":
-                            msg("Wrapper.py by benbaptist - Version %s (build #%d)" % (version_info.__version__,
-                                                                                       version_info.__branch__))
+                            msg("Wrapper.py by benbaptist - Version %s (%d)" % (
+                                version_info.__version__, version_info.__branch__))
                         else:
                             msg('Unknown command. Type help for more commands')
                     else:
