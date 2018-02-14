@@ -287,7 +287,7 @@ def format_to_rst(data):
             def _player_login_callback(self, payload):
                 playername = payload["playername"]
                 player_object = self.api.getPlayer(playername)
-                self.api.minecraft.broadcast("%s joined the server!" % playername)  
+                self.api.minecraft.broadcast("%s joined the server!" % playername)
                 player_object.message("Welcome to the server, %s" % playername)
                 
         ..

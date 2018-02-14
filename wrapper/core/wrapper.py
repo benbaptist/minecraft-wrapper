@@ -942,9 +942,6 @@ class Wrapper(object):
             putjsonfile(data, "repo_update_failure_debug")
             return False
 
-        print(buildinfo.__version__)
-        print(data["__version__"][3])
-
         release_mapping = {'alpha': 0, 'beta': 1, 'rc': 2, "final": 3}
         this_wrapper_rel = release_mapping[buildinfo.__version__[3]]
         found_wrapper_rel = release_mapping[data["__version__"][3]]
