@@ -25,8 +25,6 @@ CONFIG = {
 
     "Backups":
 
-        {
-
             "backup-compression": False,
 
          # Specify files and folders you want backed up.  Items must be in your server folder (see 'General' section)
@@ -54,27 +52,15 @@ CONFIG = {
 
             "enabled": False
 
-        },
 
 # Alerts provide email or other notification of wrapper problems (server down, etc).
 
     "Alerts":
 
-        {
 
          # with some modern email providers, you may need to "allow less secure apps” on your account..
 
          # You should use a dedicated email with a password that is different from your other accounts for this purpose.
-
-         # deprecated items were incorprated into the servers dictionary.
-
-            "send-method": "deprecated",
-
-            "server-addr": "deprecated",
-
-            "server-port": "deprecated",
-
-            "login-name": "deprecated",
 
             "enabled": False,
 
@@ -112,23 +98,17 @@ CONFIG = {
 
             "password": "use `/password -s Alerts password <your password>` to set this (or enter a password-plaintext)."
 
-        },
 
     "Gameplay":
-
-        {
 
          # Use of timer-tick is not recommended.  1/20th of a second timer option for plugin use. May impact wrapper performance negatively.
 
             "use-timer-tick-event": False,
 
-        },
 
 # Entity processing is somewhat superfluous now that minecraft has more built-in entity management gamerules now.  Must be turned on to use player.mount / unmount events.
 
     "Entities":
-
-        {
 
          # whether to use the wrapper entity controls.  With new minecraft versions, these are largely unnecessary and better done with the Gamerules.
 
@@ -162,11 +142,8 @@ CONFIG = {
 
             "thin-Chicken": 30
 
-        },
 
     "Updates":
-
-        {
 
          # Use one of the names listed herein (i.e. 'stable-branch')
 
@@ -182,13 +159,10 @@ CONFIG = {
 
             "dev-branch": "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development",
 
-        },
 
 # look 'n' feel type customizations
 
     "Misc":
-
-        {
 
          # if you change the command-prefix, no minecraft command will work because minecraft itself only recognizes "/" commands... TODO - Bug or feature? -not sure.
 
@@ -210,21 +184,14 @@ CONFIG = {
 
             "halt-message": "Halting Wrapper...",
 
-         # readline is likely to be more-cross platform, but does not use wrapper's ability to keep console keystroke entries visually intact while server produces output.
-
-            "use-readline": "deprecated",
-
          # Use-betterconsole replaces "use-readline" for clarity about what this option does.  The default is False because use-betterconsole may not be fully cross-platform.  Better Console makes it easier for the console operator too see what they are typing, even while the server or wrapper my be writing output at the same time, essentially produces jline-like functionality to the wrapper console...
 
             "use-betterconsole": False
 
-        },
 
     "General":
 
 # General wrapper and server startup options
-
-        {
 
          # restart server automatically if it stops (unless you explicity used the "/stop" command within the console).
 
@@ -243,10 +210,6 @@ CONFIG = {
 
             "server-directory": ".",
 
-         # server-name was moved to Web (it is used only by web module in code)
-
-            "server-name": "deprecated",
-
             "shell-scripts": False,
 
             "timed-reboot": False,
@@ -259,33 +222,10 @@ CONFIG = {
 
             "timed-reboot-warning-minutes": 5,
 
-         # wrapper detects server version and adjusts accordingly now.
-
-            "pre-1.7-mode": "deprecated",
-
-         # Deprecated for consistency with timed reboot "warning" being in "minutes", not seconds
-
-            "timed-reboot-seconds": "deprecated",
-
-         # The remaining items and functionality were moved to group "Updates" and deprecated from this section.
-
-            "auto-update-branch": "deprecated",
-
-            "auto-update-dev-build": "deprecated",
-
-            "auto-update-wrapper": "deprecated",
-
-            "stable-branch":  "deprecated",
-
-            "dev-branch":  "deprecated",
-
-        },
 
 # This allows your users to communicate to and from the server via IRC and vice versa.
 
     "IRC":
-
-        {
 
             "autorun-irc-commands":
 
@@ -333,17 +273,12 @@ CONFIG = {
 
             "show-irc-join-part": True
 
-        },
 
 # This is a man-in-the-middle proxy similar to BungeeCord, which is used for extra plugin functionality. Online-mode must be set to False in server.properties. Make sure that the server port is not accessible directly from the outside world.
 
 # Note: the online-mode option here refers to the proxy only, not to the server's offline mode.  Each server's online mode will depend on its setting in server.properties.  If you experience issues, you might try turning network-compression-threshold to -1 (off) in server.properties.
 
     "Proxy":
-
-        {
-
-
 
             "convert-player-files": False,
 
@@ -367,10 +302,6 @@ CONFIG = {
 
             "proxy-port": 25565,
 
-         # Server port is deprecated - This port is autoconfigured from server console output now.
-
-            "server-port": "deprecated",
-
          # spigot mode has some slightly "off" bytes in the login sequence.
 
             "spigot-mode": False,
@@ -391,13 +322,8 @@ CONFIG = {
 
                 ]
 
-        },
 
     "Web":
-
-        {
-
-            "public-stats": "deprecated",
 
             "web-allow-file-management": True,
 
@@ -422,8 +348,5 @@ CONFIG = {
 
             "server-name": "Minecraft Server",
 
-        }
-
-    }
 
 # 

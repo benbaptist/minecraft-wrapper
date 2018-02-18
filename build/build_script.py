@@ -10,7 +10,6 @@ import time
 import json
 import hashlib
 import argparse
-import subprocess
 
 parser = argparse.ArgumentParser(
     description='Build script for Wrapper.py!',
@@ -19,19 +18,15 @@ parser = argparse.ArgumentParser(
 parser.add_argument('source', type=str, default='.',
                     help='the top level source directory')
 parser.add_argument('branch', type=str, choices=('dev', 'stable'),
-                    default='dev', help='branch to commit changes to')
+                    default='dev', help='branch name to build')
 parser.add_argument('release', type=str, choices=(
                         'alpha', 'beta', 'rc', 'final'
                     ),
                     default='alpha', help='type of release (alpha, beta, etc)')
-parser.add_argument('--commit', '-c', action='store_true',
-                    help='commit changes to specified branch')
 parser.add_argument('--incrementbuild', '-i', action='store_true',
                     help='increment the build number (for final builds)')
 parser.add_argument('--docbuild', '-d', action='store_true',
                     help='Re-build Wrapper.py documentation')
-parser.add_argument('--message', '-m', type=str, default='build revision',
-                    help='commit message')
 parser.add_argument('--verbose', '-v', action='store_true',
                     help='verbose flag')
 
@@ -72,7 +67,6 @@ def build_wrapper(buildargs):
 
     with open("build/buildinfo.py", "w") as f:
         f.write(filetext)
-
     with open("wrapper/core/buildinfo.py", "w") as f:
         f.write(filetext)
 
@@ -83,7 +77,6 @@ def build_wrapper(buildargs):
         # Time to start with a clean Wrapper.py!
         remove("Wrapper.py")
 
-    # from the master branch (this works properly)
     # Hooray for calling zip from system() instead of using proper
     # modules! :D
     print(path.curdir)
@@ -93,23 +86,14 @@ def build_wrapper(buildargs):
     chdir("..")
     system("zip Wrapper.py LICENSE.txt")
 
+    wrapper_hash = hashlib.md5(open("./Wrapper.py", "rb").read()).hexdigest()
     with open("./build/Wrapper.py.md5", "w") as f:
-        f.write(hashlib.md5(open("./Wrapper.py", "rb").read()).hexdigest())
-
+        f.write(wrapper_hash)
     with open("./docs/Wrapper.py.md5", "w") as f:
-        f.write(hashlib.md5(open("./Wrapper.py", "rb").read()).hexdigest())
+        f.write(wrapper_hash)
 
-    # Mainly just for me (benbaptist), since most people will probably
-    # want to build locally without committing.
-    if buildargs.commit:
-        subprocess.Popen("git add --update :/", shell=True).wait()
-        subprocess.Popen(
-            "git commit -m 'Build %s %d | %s'" %
-            (buildargs.branch, version["__version__"][4], buildargs.message),
-            shell=True).wait()
-        subprocess.Popen("git push", shell=True).wait()
-    print("Built version %d (%s build)" % (
-        version["__version__"][4], buildargs.branch))
+    # removed committing code.  Want it back?  look at this commit:
+    #  `https://github.com/benbaptist/minecraft-wrapper/commit/141e07e04f7d7f7c334c9b4bbfd92d537ff0188e`  # noqa
 
 
 # Main documentation builder
@@ -133,15 +117,36 @@ def build_the_docs():
     processed = {}
 
     for files in api_files:
+        if files == "wrapperconfig":
+            def printfunct(printitem):
+                print(printitem)
+            logit = printfunct
+        else:
+            def lgit(printitem):
+                pass
+            logit = lgit
+        logit("hello there")
         with open("wrapper/api/%s.py" % files) as f:
             data = f.read()
         all_items = data.split(sep)
         complete_doc = ""
         item_count = len(all_items) - 1
         total_items = range(0, item_count, 2)
+        logit("total items: %s\nitem count: %s" % (total_items, item_count))
         for each_item in total_items:
             # each_item.split(endsep)[0]
+            logit("each item: %s" % each_item)
             item = all_items[each_item + 1]
+
+            item_lines = item.splitlines()
+            newlines = ""
+            for alllines in item_lines:
+                if alllines[-7:] != "# NODOC":
+                    newlines += "%s\n" % alllines
+            # remove trailing \n created at last entry
+            item = newlines[:-1]
+
+            logit("item: %s" % item)
             header = "****\n"
             if "class " in all_items[each_item]:
                 header = "**< class%s >**\n" % all_items[each_item].split(
@@ -149,9 +154,12 @@ def build_the_docs():
 
             if "def " in all_items[each_item]:
                 defs = all_items[each_item].split("def")
+                logit("defs: %s" % defs)
                 number_of_defs = len(defs) - 1
+                logit("no defs: %s" % number_of_defs)
                 header = "- %s\n" % all_items[each_item].split(
                     "def")[number_of_defs].split(":")[0]
+                logit("header: %s" % header)
 
             # dont create documentation for private functions
             if "-  _" not in header:

@@ -93,11 +93,21 @@ def get_docs_version(version=None):
     return str(repo)
 
 
-def get_git_changeset():
-    """Returns a numeric identifier of the latest git changeset.
+def get_git_changeset(formatter=True):
+    """
+    **We really can't use this at the present time because builds_script.py
+    is run PRIOR to comitting.  This means our identifier would actually
+    be for the LAST build, not the present one.**
+
+    Returns a string representation of numeric identifier of the latest
+    git changeset.
+
     The result is the UTC timestamp of the changeset in YYYYMMDDHHMMSS format.
     This value isn't guaranteed to be unique, but collisions are very unlikely,
     so it's sufficient for generating the development version numbers.
+
+    A more compact, less readable, EPOCH time can be returned by specifying
+    `formatter=False`
     """
     repo_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     git_log = subprocess.Popen(
@@ -106,16 +116,18 @@ def get_git_changeset():
         shell=True, cwd=repo_dir, universal_newlines=True,
     )
     timestamp = git_log.communicate()[0]
-    try:
-        timestamp = datetime.datetime.utcfromtimestamp(int(timestamp))
-    except ValueError:
-        return None
-    return timestamp.strftime('%Y%m%d%H%M%S')
-
+    if formatter:
+        try:
+            timestamp = datetime.datetime.utcfromtimestamp(int(timestamp))
+        except ValueError:
+            return None
+        return timestamp.strftime('%Y%m%d%H%M%S')
+    else:
+        return timestamp
 
 if __name__ == "__main__":
     print(get_version(), "get_version()")
     print(get_main_version(), "get_main_version()")
     print(get_complete_version(), "get_complete_version()")
     print(get_docs_version(), "get_docs_version()")
-    print(get_git_changeset(), "get_git_changeset()")
+    print(get_git_changeset(formatter=False), "get_git_changeset()")

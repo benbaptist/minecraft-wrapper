@@ -19,7 +19,6 @@ using 'self.api.helpers'
     ..
 
 
-
 -  config_to_dict_read(filename, filepath)
 
     reads a disk file with '=' lines (like server.properties) and
