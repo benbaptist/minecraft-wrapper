@@ -85,6 +85,7 @@ get the dependencies list:
 "stable" - `wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master/requirements.txt`
 
 To install dependencies, use pip to install the `requirements,txt`:
+[See Installation section](#dependencies)
 ```
 pip install -r requirements.txt
 ```
