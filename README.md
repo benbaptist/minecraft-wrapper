@@ -25,9 +25,10 @@ Python 3.5 or higher is the recommended Python version to use with Wrapper.
 
 
 ###  **Dependencies**
-You must have a pip version > 9.0.1 to ensure wrapper's dependencies will install correctly. bcrypt and cryptography
+You must have a pip version > 9.0.1 to ensure wrapper's dependencies will install correctly. Bcrypt and cryptography
  may not install correctly if your pip version is not at least 9.0.1.
 To ensure you have the correct pip version:
+
  `pip install --upgrade pip>=9.0.1`
 
 Wrapper.py requires the following packages: </br>
@@ -48,20 +49,21 @@ pip install pkg_resources
 
 If you have issues with bcrypt, please go to the bcrypt website on pypi for installation of bcrypt (depending on
 your system, additional dependencies may be required):
-[pypi.python.org](https://pypi.python.org/pypi/bcrypt/3.1.4)
-bcrypt is not critical to wrapper.  It is used in the plugin API.  It may be removed at a future date, depending on how useful (or not useful) it ends up being.
+[pypi.python.org](https://pypi.python.org/pypi/bcrypt/3.1.4).
+Bcrypt is not critical to wrapper.  It is used in the plugin API.  It may be removed at a future date, depending on how useful (or not useful) it ends up being.
 
 </br> Please do not submit issues regarding installing dependencies.  These are beyond
  the scope of this document or the author's expertise (in general); please research
  the solution applicable to your platform.  Some variants of the pip installation
  that can help if you are having permission problems:
- 1) Use sudo (this example for Ubuntu type systems):
-    `sudo -H pip install --upgrade pip>=9.0.1`: Only do this if you want the packages system-wide and you risk breaking your packing system or some other dependency
- 2) Better solution, use the --user flag for pip:
+ 1) Use sudo with the -H flag (this example for Ubuntu type systems):
+    `sudo -H pip install --upgrade pip>=9.0.1`: Only do this if you want the packages system-wide and you also _possibly_ risk breaking your packaging system or some other dependency
+ 2) Better solution - use the --user flag for pip:
     `pip install --user --upgrade pip>=9.0.1`
 
 You will also need "tar" installed if you need backups. Most Linux distros have this pre-installed, but you may need to
  install it manually on Windows: http://gnuwin32.sourceforge.net/packages/gtar.htm
+
 
 ###  **Wrapper.py Versions**
 
@@ -85,12 +87,16 @@ version only supports minecraft versions prior to 1.9.
 if you have wget installed, You can  use it to get Wrapper.py and its dependency lists.
 
 For the stable Wrapper.py:
-`wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master/Wrapper.py`
-`wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master/requirements.txt`
+
+    `wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master/Wrapper.py`
+
+    `wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master/requirements.txt`
 
 Or for the development version of Wrapper.py:
-`wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/Wrapper.py`
-`wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/requirements.txt`
+
+    `wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/Wrapper.py`
+
+    `wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/requirements.txt`
 
 To install dependencies, [See dependencies section](#dependencies)
 
@@ -185,9 +191,9 @@ Download the Wrapper.py file and place it in the desired folder.
 - Wrapper supports having a separate server and wrapper folder.  This is also recommended, although you can simply put
  Wrapper in the same directory with your server.  Examples (item `["General"]["server-directory"]` in the config file):
 
-     - setting `../server` - will set the server folder to a sister directory.
-     - or you can use an absolute path: `/home/user/minecraft/server`.
-     - use the default `'.'` to run wrapper inside your server folder.
+     - setting `"../server"` - will set the server folder to a sister directory.
+     - or you can use an absolute path: `"/home/user/minecraft/server"`.
+     - use the default `"."` to run wrapper inside your server folder.
 
 - Tune the file to your remaining preferences, and then run wrapper again.
 
@@ -234,7 +240,7 @@ Download the Wrapper.py file and place it in the desired folder.
     [15:28:17] [Wrapper.py/INFO]: Proxy listening on *:25566
     ```
 
-##### operating wrapper #####
+### operating wrapper ###
 
 - Any console command beginning with a slash (/) will be interpreted as a Wrapper.py command.<br>
 - Type /help to see a list of Wrapper.py commands.<br>
