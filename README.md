@@ -16,6 +16,14 @@ will be set to true in the eula.txt file in your server folder.
 
 # Installation #
 
+###  **Python Versions**
+Python 3.5 or higher is the recommended Python version to use with Wrapper.
+
+*Wrapper is only designed to be compatible with Python 3.4+ and python 2.7+ versions (Using a python 2.7 version below 2.7.11 is also _not_ recommended)
+
+*It may run under python 2.6, but this is untested and may cause errors.  Certain Linux distros with Python 2.7 also have known issues with the requests module.*
+
+
 ###  **Dependencies**
 You must have a pip version > 9.0.1 to ensure wrapper's dependencies will install correctly. bcrypt and cryptography
  may not install correctly if your pip version is not at least 9.0.1.
@@ -33,9 +41,15 @@ It is recommended that you install the requirements by using the requirements.tx
  can type `pip install -r requirements.txt` in the console.  This will ensure you
  have these packages and their dependencies, with the proper versions.
 
+If needed, install any older missing dependencies in older distros (using a current pip version and setuptools will usually avoid this):
+```
+pip install pkg_resources
+```
 
-You will also need "tar" installed if you need backups. Most Linux distros have this pre-installed, but you may need to
- install it manually on Windows: http://gnuwin32.sourceforge.net/packages/gtar.htm
+If you have issues with bcrypt, please go to the bcrypt website on pypi for installation of bcrypt (depending on
+your system, additional dependencies may be required):
+[pypi.python.org](https://pypi.python.org/pypi/bcrypt/3.1.4)
+bcrypt is not critical to wrapper.  It is used in the plugin API.  It may be removed at a future date, depending on how useful (or not useful) it ends up being.
 
 </br> Please do not submit issues regarding installing dependencies.  These are beyond
  the scope of this document or the author's expertise (in general); please research
@@ -45,6 +59,9 @@ You will also need "tar" installed if you need backups. Most Linux distros have 
     `sudo -H pip install --upgrade pip>=9.0.1`: Only do this if you want the packages system-wide and you risk breaking your packing system or some other dependency
  2) Better solution, use the --user flag for pip:
     `pip install --user --upgrade pip>=9.0.1`
+
+You will also need "tar" installed if you need backups. Most Linux distros have this pre-installed, but you may need to
+ install it manually on Windows: http://gnuwin32.sourceforge.net/packages/gtar.htm
 
 ###  **Wrapper.py Versions**
 
@@ -62,42 +79,21 @@ version only supports minecraft versions prior to 1.9.
 
 [SurestTexas Development branch "dev"](https://github.com/suresttexas00/minecraft-wrapper/tree/development):  SurestTexas00's development fork.  Might have bleeding edge stuff.
 
-###  **Python Versions**
-Python 3.5 or higher is the recommended Python version to use with Wrapper.
-
-*Wrapper is only designed to be compatible with Python 3.4+ and python 2.7+ versions (Using a python 2.7 version below 2.7.11 is also _not_ recommended)
-
-*It may run under python 2.6, but this is untested may cause errors.  Certain Linux distros with Python 2.7 also have known issues with the requests module.*
-
 
 ### **LINUX download and setup**
 
-if you have wget installed, You can run the following command to download the stable Wrapper.py:
+if you have wget installed, You can  use it to get Wrapper.py and its dependency lists.
 
+For the stable Wrapper.py:
 `wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master/Wrapper.py`
+`wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master/requirements.txt`
 
-or the following to download the development version of Wrapper.py:
-
+Or for the development version of Wrapper.py:
 `wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/Wrapper.py`
+`wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/requirements.txt`
 
-get the dependencies list:
-"development" - `wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/requirements.txt`
-"stable" - `wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master/requirements.txt`
+To install dependencies, [See dependencies section](#dependencies)
 
-To install dependencies, use pip to install the `requirements,txt`:
-```
-pip install -r requirements.txt
-```
-
-If needed, install any older missing dependencies in older distros (using a current pip version and setuptools will usually avoid this):
-```
-pip install pkg_resources
-```
-
-If you have issues with bcrypt, please go to the bcrypt website on pypi for installation of bcrypt (depending on
-your system, additional dependencies may be required):
-[pypi.python.org](https://pypi.python.org/pypi/bcrypt/3.1.4)
-bcrypt is not critical to wrapper.  It is used in the plugin API.  It may be removed at a future date, depending on how useful (or not useful) it ends up being.
 
 ### **Windows Download and setup**
 
@@ -146,6 +142,8 @@ Download the Wrapper.py file and place it in the desired folder.
       --encoding, -e       Specify an encoding (other than utf-8)
       --betterconsole, -b  Use "better console" feature to anchor your imput at
                            the bottom of the console (anti- scroll-away feature)
+                           Also implements jline-like functionality with arrow
+                           keys and bash-like command history memory.
       --passphrase, -p     Passphrase used to encrypt all passwords in Wrapper.
                            Please use as fairly long phrase (minimum is 8
                            characters). If not specified, or incorrectly supplied,
@@ -157,13 +155,13 @@ Download the Wrapper.py file and place it in the desired folder.
     To start wrapper using your passphrase:</br>
     `python Wrapper.py --passphrase "my special passphrase - keep this a secret!"`
 
-    To disable password encryption with bcrypt, use "none" for the passphrase:</br>
+    To disable password encryption, use "none" for the passphrase:</br>
     `python Wrapper.py --passphrase none`
 
-    If bcrypt and cryptography are not installed or the start up passphrase is
-    disabled by specifying "none", Wrapper.py will handle all passwords in plain
-    text and will not prompt the user for a password. Otherwise, if a passphrase
-    is not supplied, Wrapper will prompt for one:
+    If the start up passphrase is disabled by specifying "none", Wrapper.py
+    will handle all passwords in plain text and will not prompt the user for
+    a password. Otherwise, if a passphrase is not supplied, Wrapper will prompt
+    for one:
     ```
     please input a master passphrase for Wrapper.  This passphrase will be used to encrypt
      all passwords in Wrapper.
@@ -291,7 +289,7 @@ Wrapper continues to be a work in progress and changes often happen faster than 
 - The modern event list is updated with each build:
     [Wrapper events](/documentation/events.rst)
 
-- The original Event list (0.7.6):
+- The original Event list (Wrapper version 0.7.6):
     [Old 0.7.6 Wrapper list of events](https://docs.google.com/spreadsheet/ccc?key=0AoWx24EFSt80dDRiSGVxcW1xQkVLb2dWTUN4WE5aNmc&usp=sharing)
 
 Check the 'example-plugins' and 'stable-plugins' folders to see some example plugins.  These are very useful for seeing how the API functions.
