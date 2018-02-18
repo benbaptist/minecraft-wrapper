@@ -117,25 +117,14 @@ def build_the_docs():
     processed = {}
 
     for files in api_files:
-        if files == "wrapperconfig":
-            def printfunct(printitem):
-                print(printitem)
-            logit = printfunct
-        else:
-            def lgit(printitem):
-                pass
-            logit = lgit
-        logit("hello there")
         with open("wrapper/api/%s.py" % files) as f:
             data = f.read()
         all_items = data.split(sep)
         complete_doc = ""
         item_count = len(all_items) - 1
         total_items = range(0, item_count, 2)
-        logit("total items: %s\nitem count: %s" % (total_items, item_count))
         for each_item in total_items:
             # each_item.split(endsep)[0]
-            logit("each item: %s" % each_item)
             item = all_items[each_item + 1]
 
             item_lines = item.splitlines()
@@ -146,7 +135,6 @@ def build_the_docs():
             # remove trailing \n created at last entry
             item = newlines[:-1]
 
-            logit("item: %s" % item)
             header = "****\n"
             if "class " in all_items[each_item]:
                 header = "**< class%s >**\n" % all_items[each_item].split(
@@ -154,12 +142,9 @@ def build_the_docs():
 
             if "def " in all_items[each_item]:
                 defs = all_items[each_item].split("def")
-                logit("defs: %s" % defs)
                 number_of_defs = len(defs) - 1
-                logit("no defs: %s" % number_of_defs)
                 header = "- %s\n" % all_items[each_item].split(
                     "def")[number_of_defs].split(":")[0]
-                logit("header: %s" % header)
 
             # dont create documentation for private functions
             if "-  _" not in header:

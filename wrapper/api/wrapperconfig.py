@@ -37,7 +37,7 @@ but without all the comment lines.*
 
 CONFIG = {
 
-# Automatic backups with pruning. Intervals are specified in seconds.
+# Backups - Automatic backups with pruning. Intervals are specified in seconds.
 
     "Backups":
 
@@ -72,7 +72,7 @@ CONFIG = {
 
         },  # NODOC
 
-# Alerts provide email or other notification of wrapper problems (server down, etc).
+# Alerts - provide email or other notification of wrapper problems (server down, etc).
 
     "Alerts":
 
@@ -130,6 +130,8 @@ CONFIG = {
 
         },  # NODOC
 
+# Gameplay - miscellaneous configuration items.
+
     "Gameplay":
 
         {  # NODOC
@@ -140,7 +142,7 @@ CONFIG = {
 
         },  # NODOC
 
-# Entity processing is somewhat superfluous now that minecraft has more built-in entity management gamerules now.  Must be turned on to use player.mount / unmount events.
+# Entity processing - This is somewhat superfluous now that minecraft has more built-in entity management gamerules now.  Must be turned on to use player.mount / unmount events.
 
     "Entities":
 
@@ -180,6 +182,8 @@ CONFIG = {
 
         },  # NODOC
 
+# Updates - Control wrapper update behaviour.
+
     "Updates":
 
         {  # NODOC
@@ -200,7 +204,7 @@ CONFIG = {
 
         },  # NODOC
 
-# look 'n' feel type customizations
+# Misc - look 'n' feel type customizations
 
     "Misc":
 
@@ -236,9 +240,9 @@ CONFIG = {
 
         },  # NODOC
 
-    "General":
-
 # General wrapper and server startup options
+
+    "General":
 
         {  # NODOC
             # NODOC
@@ -297,7 +301,7 @@ CONFIG = {
             # NODOC
         },  # NODOC
 
-# This allows your users to communicate to and from the server via IRC and vice versa.
+# IRC - This allows your users to communicate to and from the server via IRC and vice versa.
 
     "IRC":
 
@@ -350,6 +354,7 @@ CONFIG = {
             "show-irc-join-part": True
 
         },  # NODOC
+# Proxy settings -
 
 # This is a man-in-the-middle proxy similar to BungeeCord, which is used for extra plugin functionality. Online-mode must be set to False in server.properties. Make sure that the server port is not accessible directly from the outside world.
 
@@ -406,6 +411,8 @@ CONFIG = {
                 ]
 
         },  # NODOC
+        # NODOC
+# Web - Web mode allows you to control and monitor the server.  This is not a https connection.  Be mindful of that and don't use the same password you use anywhere else.  It is also advised that this be open only to the localhost.
 
     "Web":
 

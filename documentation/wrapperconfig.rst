@@ -21,7 +21,7 @@ but without all the comment lines.*
 
 CONFIG = {
 
-# Automatic backups with pruning. Intervals are specified in seconds.
+# Backups - Automatic backups with pruning. Intervals are specified in seconds.
 
     "Backups":
 
@@ -53,7 +53,7 @@ CONFIG = {
             "enabled": False
 
 
-# Alerts provide email or other notification of wrapper problems (server down, etc).
+# Alerts - provide email or other notification of wrapper problems (server down, etc).
 
     "Alerts":
 
@@ -99,6 +99,8 @@ CONFIG = {
             "password": "use `/password -s Alerts password <your password>` to set this (or enter a password-plaintext)."
 
 
+# Gameplay - miscellaneous configuration items.
+
     "Gameplay":
 
          # Use of timer-tick is not recommended.  1/20th of a second timer option for plugin use. May impact wrapper performance negatively.
@@ -106,7 +108,7 @@ CONFIG = {
             "use-timer-tick-event": False,
 
 
-# Entity processing is somewhat superfluous now that minecraft has more built-in entity management gamerules now.  Must be turned on to use player.mount / unmount events.
+# Entity processing - This is somewhat superfluous now that minecraft has more built-in entity management gamerules now.  Must be turned on to use player.mount / unmount events.
 
     "Entities":
 
@@ -143,6 +145,8 @@ CONFIG = {
             "thin-Chicken": 30
 
 
+# Updates - Control wrapper update behaviour.
+
     "Updates":
 
          # Use one of the names listed herein (i.e. 'stable-branch')
@@ -160,7 +164,7 @@ CONFIG = {
             "dev-branch": "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development",
 
 
-# look 'n' feel type customizations
+# Misc - look 'n' feel type customizations
 
     "Misc":
 
@@ -189,9 +193,9 @@ CONFIG = {
             "use-betterconsole": False
 
 
-    "General":
-
 # General wrapper and server startup options
+
+    "General":
 
          # restart server automatically if it stops (unless you explicity used the "/stop" command within the console).
 
@@ -223,7 +227,7 @@ CONFIG = {
             "timed-reboot-warning-minutes": 5,
 
 
-# This allows your users to communicate to and from the server via IRC and vice versa.
+# IRC - This allows your users to communicate to and from the server via IRC and vice versa.
 
     "IRC":
 
@@ -273,6 +277,7 @@ CONFIG = {
 
             "show-irc-join-part": True
 
+# Proxy settings -
 
 # This is a man-in-the-middle proxy similar to BungeeCord, which is used for extra plugin functionality. Online-mode must be set to False in server.properties. Make sure that the server port is not accessible directly from the outside world.
 
@@ -322,6 +327,7 @@ CONFIG = {
 
                 ]
 
+# Web - Web mode allows you to control and monitor the server.  This is not a https connection.  Be mindful of that and don't use the same password you use anywhere else.  It is also advised that this be open only to the localhost.
 
     "Web":
 
