@@ -17,36 +17,34 @@ will be set to true in the eula.txt file in your server folder.
 # Installation #
 
 ###  **Dependencies**
+You must have a pip version > 9.0.1 to ensure wrapper's dependencies will install correctly. bcrypt and cryptography
+ may not install correctly if your pip version is not at least 9.0.1.
+To ensure you have the correct pip version:
+ `pip install --upgrade pip>=9.0.1`
 
 Wrapper.py requires the following packages: </br>
-- `requests`
-- `cryptography`
-- `bcrypt`
+- `requests` - Extensively used by Wrapper to handle internet data requests.
+- `cryptography` - required for Proxy mode and internal wrapper password handling.
+- `bcrypt` - Only required for the plugin API functions 'hashPassword' and 'checkPassword'
+- `setuptools` - Most python libraries already have this now.  Used by the Web interface.
 
-The easy way is just save the requirements.txt file from the repo to your hard
- drive, then from the same folder, you can type `pip install -r requirements.txt`
- in the console.  This will ensure you have these packages and their dependencies,
- with the proper versions.
+It is recommended that you install the requirements by using the requirements.txt
+ file from the repo.  Save it to your hard drive.  Then from the same folder, you
+ can type `pip install -r requirements.txt` in the console.  This will ensure you
+ have these packages and their dependencies, with the proper versions.
 
-If you want to pick and choose packages:
-- `requests` is just too indespensible... Wrapper uses it everywhere and will not start without it.
-- Some (usually Windows) systems may also need `readline`.
-- `cryptography` is required if you want to securely encrypt passwords
-   used in Wrapper.  If you don't install cryptography, all passwords
-   will be stored in plain text in the wrapper.properties.json.  The
-   wrapper passphrase feature will also be disabled.
-- Web mode also requires `pkg_resources`, which is normally included with
-   setuptools now.
-- Proxy mode requires `cryptography`.
-- `bcrypt` is only required if you want to use the plugin API
-
-- Make sure your pip version is up-to-date when installing bcrypt in particular:</br>
-   `[sudo -H] pip install --upgrade pip`
 
 You will also need "tar" installed if you need backups. Most Linux distros have this pre-installed, but you may need to
  install it manually on Windows: http://gnuwin32.sourceforge.net/packages/gtar.htm
 
-</br> Please do not submit issues regarding installing dependencies.  These are beyond the scope of this document or the author's expertise (in general); please research the solution applicable to your platform.
+</br> Please do not submit issues regarding installing dependencies.  These are beyond
+ the scope of this document or the author's expertise (in general); please research
+ the solution applicable to your platform.  Some variants of the pip installation
+ that can help if you are having permission problems:
+ 1) Use sudo (this example for Ubuntu type systems):
+    `sudo -H pip install --upgrade pip>=9.0.1`: Only do this if you want the packages system-wide and you risk breaking your packing system or some other dependency
+ 2) Better solution, use the --user flag for pip:
+    `pip install --user --upgrade pip>=9.0.1`
 
 ###  **Wrapper.py Versions**
 
@@ -56,19 +54,20 @@ You only need to download Wrapper.py.  The 'wrapper' folder is the source code a
 The old stable branch "master", version 0.7.6, build 83 has now been archived in the ["Original"](https://github.com/benbaptist/minecraft-wrapper/tree/Original) branch. The original
 version only supports minecraft versions prior to 1.9.
 
-[Master branch "stable" repo](https://github.com/benbaptist/minecraft-wrapper/tree/master):  Stable branch that is only updated with serious bug fixes and major releases
+[Master branch "stable"](https://github.com/benbaptist/minecraft-wrapper/tree/master):  Stable branch that is only updated with serious bug fixes and major releases
 
-[Development branch "dev" repo](https://github.com/benbaptist/minecraft-wrapper/tree/development):  Development branch with newer features.
+[Development branch "dev"](https://github.com/benbaptist/minecraft-wrapper/tree/development):  Development branch with newer features.
 
 <br>
 
-[SurestTexas Development branch "dev" repo](https://github.com/suresttexas00/minecraft-wrapper/tree/development):  SurestTexas00's development fork.  Might have bleeding edge stuff.
+[SurestTexas Development branch "dev"](https://github.com/suresttexas00/minecraft-wrapper/tree/development):  SurestTexas00's development fork.  Might have bleeding edge stuff.
 
 ###  **Python Versions**
+Python 3.5 or higher is the recommended Python version to use with Wrapper.
 
-*Wrapper is only designed to be compatible with Python 2.7+ and python 3.4+ versions.  Python 3.5+ is recommended.  Using  python version below 2.7.11 is _not_ recommended
+*Wrapper is only designed to be compatible with Python 3.4+ and python 2.7+ versions (Using a python 2.7 version below 2.7.11 is also _not_ recommended)
 
-*It may run under python 2.6, but this may cause problems with some dependencies.  Certain Linux distros with Python 2.7 also have known issues with the requests module.*
+*It may run under python 2.6, but this is untested may cause errors.  Certain Linux distros with Python 2.7 also have known issues with the requests module.*
 
 
 ### **LINUX download and setup**
@@ -88,14 +87,6 @@ get the dependencies list:
 To install dependencies, use pip to install the `requirements,txt`:
 ```
 pip install -r requirements.txt
-```
-
-
-or install them manually:
-```
-pip install requests
-pip install cryptography
-pip install bcrypt
 ```
 
 If needed, install any older missing dependencies in older distros (using a current pip version and setuptools will usually avoid this):

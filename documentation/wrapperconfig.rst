@@ -7,13 +7,6 @@
 here are inserted or deleted from the the wrapper config
 each time wrapper starts.*
 
-*Items marked as "deprecated" get removed from the wrapper
-config when wrapper starts.  These are are not valid items.
-they only exist so that they will get removed from older
-wrapper versions.  This is intended to keep the actual
-wrapper.config.json file from getting cluttered with old
-unused items.*
-
 *The wrapper.config.json file contents will look like this,
 but without all the comment lines.*
 
@@ -209,7 +202,6 @@ CONFIG = {
 
             "encoding": "utf-8",
 
-
          # Using the default '.' roots the server in the same folder with wrapper. Change this to another folder to keep the wrapper and server folders separate.  Do not use a trailing slash...  e.g. - '/full/pathto/the/server'
 
             "server-directory": ".",
@@ -345,8 +337,7 @@ CONFIG = {
 
             "web-port": 8070,
 
-         # By default, wrapper only accepts connections from "safe" IP addresses.
-         # Disable (set 'safe-ips-use' ot false) or add the IP address of computers you may use to access web mode.
+         # By default, wrapper only accepts connections from "safe" IP addresses.  Disable (set 'safe-ips-use' ot false) or add the IP address of computers you may use to access web mode.
 
             "safe-ips": ["127.0.0.1"],
 
