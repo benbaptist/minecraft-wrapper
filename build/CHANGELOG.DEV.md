@@ -1,26 +1,27 @@
-Build 266 / Build 2 [1.0.0  beta]
+Build 3 [1.0.0  beta]
+- Fix in-game "wrapper update" command (was broken with new version format)
+
+
+Build 2 [1.0.0  beta]
 - Ensure server auto-restarts don't happen during a backup cycle.
 - added some API.backups functions to test backup status.
 - Fix [#521](https://github.com/benbaptist/minecraft-wrapper/issues/521)
    using a config item in Misc: "trap-ctrl-z"
+- reverted "properly implement Ctrl-z as a wrapper/server 'freeze'." in favor of the above solution.
 - removed option to disable wrapper passphrase.
 - fixed player.message broken with regards to '&' usages.  Also works for
   all json again, including "translate".
 - Player.message takes second argument for position of message (0,1,2)
 
+
 Build 266 / Build 1 [1.0.0  beta]
-- properly implement Ctrl-z as a wrapper/server 'freeze'.
+- properly implement Ctrl-z as a wrapper/server 'freeze' (does not work).
 - restage version.py and make buildscript.py comply with 5 part format.
 - build numbers are now unique only to major version and release type (X.x.x, 'a','b', 'rc', 'final')
 
   (Goals)
 implement bug fixes and improvements:
 - whitelist needs a long overdue overhaul: #314
-    - jspanos71 @jspanos71 Feb 04 17:28
-     I'm having an issue when i try to turn on proxy mode for a whitelist server... the
-     existing whitelist entries don't register as valid and doing /whitelist add at the
-     console doesn't work either... is there something i'm missing? running the latest
-     beta build within a couple of minor builds
 - When name changes occur, add option to convert local player name by changing the name and the offline filenames in serverFolder/world/playerdata/<uuid>.dat and serverFolder/world/stats/<uuid>.json
 - Also re-implement the server conversion option to convert online player files to offline (and vs-vs?)
 

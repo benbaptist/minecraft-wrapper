@@ -57,7 +57,7 @@ Bcrypt is not critical to wrapper.  It is used in the plugin API.  It may be rem
  the solution applicable to your platform.  Some variants of the pip installation
  that can help if you are having permission problems:
  1) Use sudo with the -H flag (this example for Ubuntu type systems):
-    `sudo -H pip install --upgrade pip>=9.0.1`: Only do this if you want the packages system-wide and you also _possibly_ risk breaking your packaging system or some other dependency
+    `sudo -H pip install --upgrade pip>=9.0.1`: Only do this if you want the packages system-wide and you also _possibly_ risk breaking your packaging system or some other dependency.
  2) Better solution - use the --user flag for pip:
     `pip install --user --upgrade pip>=9.0.1`
 
@@ -71,7 +71,7 @@ You only need to download Wrapper.py.  The 'wrapper' folder is the source code a
  of Wrapper.py.  Wrapper.py is a Python-executable archive folder containing the sourcecode.</br>
 
 The old stable branch "master", version 0.7.6, build 83 has now been archived in the ["Original"](https://github.com/benbaptist/minecraft-wrapper/tree/Original) branch. The original
-version only supports minecraft versions prior to 1.9.
+version only supports minecraft versions up to 1.8.
 
 [Master branch "stable"](https://github.com/benbaptist/minecraft-wrapper/tree/master):  Stable branch that is only updated with serious bug fixes and major releases
 
@@ -234,7 +234,7 @@ Download the Wrapper.py file and place it in the desired folder.
     [15:28:17] [Wrapper.py/INFO]: Proxy listening on *:25566
     ```
 
-### operating wrapper ###
+### Operating wrapper ###
 
 - Any console command beginning with a slash (/) will be interpreted as a Wrapper.py command.<br>
 - Type /help to see a list of Wrapper.py commands.<br>
@@ -245,6 +245,9 @@ Download the Wrapper.py file and place it in the desired folder.
 
 Please read our [wiki](https://github.com/benbaptist/minecraft-wrapper/wiki) for additional information and review the issues page before submitting bug reports.<br>
 If you run into any bugs, please _do_ report them!
+
+If you have questions, please use our [Gitter page](https://gitter.im/benbaptist/minecraft-wrapper) instead of creating an issue.
+
 
 # Features #
 Wrapper.py supports the following features:

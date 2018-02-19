@@ -13,6 +13,7 @@ import time
 import json
 import requests
 
+# imports that are still dependent upon wrapper:
 from api.helpers import getjsonfile, putjsonfile, find_in_json
 from api.helpers import epoch_to_timestr, read_timestr
 from api.helpers import isipv4address
@@ -21,6 +22,7 @@ from utils.py23 import py_str
 from proxy.utils import mcuuid
 from proxy.entity.entitycontrol import EntityControl
 
+# encryption requires 'cryptography' package.
 try:
     import proxy.utils.encryption as encryption
 except ImportError:
@@ -33,6 +35,11 @@ try:
 except ImportError:
     Client = False
     Packet = False
+
+""" The whole point of what follows was originally intended to 
+support making proxy an independent thing that does not need 
+a wrapper or server instance to function.  Not sure it was a 
+great idea, but... We shall see."""
 
 
 class NullEventHandler(object):
@@ -88,6 +95,34 @@ class ProxyConfig(object):
           }
 
 
+"""
+class ServerVitals(object):
+    def __init__(self, playerobjects):
+        self.serverpath = ""
+        self.state = 0
+        self.server_port = "25564"
+        self.onlineMode = True
+        self.command_prefix = "/"
+        self.players = playerobjects
+        self.entity_control = None
+        self.timeofday = -1
+        self.spammy_stuff = ["found nothing", "vehicle of", "Wrong location!",
+                             "Tried to add entity", ]
+        self.clients = []
+        self.ownernames = {}
+        self.operator_list = []
+        self.properties = {}
+        self.worldname = None
+        self.worldsize = 0
+        self.maxplayers = 20
+        self.motd = None
+        self.serverIcon = None
+        self.protocolVersion = -1
+        self.version = ""
+        self.version_compute = 0
+"""
+
+
 class Proxy(object):
     def __init__(self, termsignal, config, servervitals, loginstance,
                  usercache, eventhandler, encoding="utf-8"):
@@ -100,8 +135,8 @@ class Proxy(object):
         self.log = loginstance
         # encryption = False if proxy.utils.encryption does not import
         if not encryption and self.config["proxy-enabled"]:
-            self.log.error(
-                "You must have the package 'cryptography' installed to run the Proxy!")
+            self.log.error("You must have the package 'cryptography' "
+                           "installed to run the Proxy!")
             raise ImportError()
 
         self.usercache = usercache
@@ -315,8 +350,10 @@ class Proxy(object):
                                 "source": source,
                                 "expires": expiration,
                                 "reason": reason})
-                if putjsonfile(banlist, "banned-players", self.srv_data.serverpath):
-                    # this actually is not needed.  Commands now handle the kick.
+                if putjsonfile(banlist,
+                               "banned-players",
+                               self.srv_data.serverpath):
+                    # this actually is not needed. Commands now handle the kick.
                     console_command = "kick %s %s" % (name, reason)
                     self.eventhandler.callevent("proxy.console",
                                                 {"command": console_command})
@@ -366,7 +403,9 @@ class Proxy(object):
                                 "source": source,
                                 "expires": expiration,
                                 "reason": reason})
-                if putjsonfile(banlist, "banned-players", self.srv_data.serverpath):
+                if putjsonfile(banlist,
+                               "banned-players",
+                               self.srv_data.serverpath):
                     self.log.info("kicking %s... %s", username, reason)
 
                     console_command = "kick %s Banned: %s" % (username, reason)
@@ -375,7 +414,7 @@ class Proxy(object):
                     """ eventdoc
                                             <description> internalfunction <description>
 
-                                        """
+                                        """  # noqa
                     return "Banned %s: %s - %s" % (username, uuid, reason)
                 return "Could not write banlist to disk"
         else:
@@ -422,13 +461,14 @@ class Proxy(object):
                     for client in self.srv_data.clients:
                         if client.ip == str(ipaddress):
 
-                            console_command = "kick %s Your IP is Banned!" % client.username
-                            self.eventhandler.callevent("proxy.console",
-                                                        {"command": console_command})
+                            console_command = "kick %s Your IP is Banned!" % client.username  # noqa
+                            self.eventhandler.callevent(
+                                "proxy.console", {"command": console_command}
+                            )
                             """ eventdoc
                                                     <description> internalfunction <description>
 
-                                                """
+                                                """  # noqa
                             banned += "\n%s" % client.username
                     return "Banned ip address: %s\nPlayers kicked as " \
                            "a result:%s" % (ipaddress, banned)
@@ -467,7 +507,9 @@ class Proxy(object):
                 for x in banlist:
                     if x == banrecord:
                         banlist.remove(x)
-                if putjsonfile(banlist, "banned-players", self.srv_data.serverpath):
+                if putjsonfile(banlist,
+                               "banned-players",
+                               self.srv_data.serverpath):
                     name = self.uuids.getusernamebyuuid(str(uuid))
                     return "pardoned %s" % name
                 return "Could not write banlist to disk"
@@ -486,7 +528,9 @@ class Proxy(object):
                 for x in banlist:
                     if x == banrecord:
                         banlist.remove(x)
-                if putjsonfile(banlist, "banned-players", self.srv_data.serverpath):
+                if putjsonfile(banlist,
+                               "banned-players",
+                               self.srv_data.serverpath):
                     return "pardoned %s" % username
                 return "Could not write banlist to disk"
             else:

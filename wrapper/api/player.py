@@ -6,7 +6,6 @@
 # General Public License, version 3 or later.
 
 import time
-import json
 import threading
 
 from proxy.packets.mcpackets_cb import Packets as Packets_cb
@@ -14,7 +13,7 @@ from proxy.packets.mcpackets_sb import Packets as Packets_sb
 
 from proxy.utils.constants import *
 from core.storage import Storage
-from api.helpers import processoldcolorcodes, chattocolorcodes, processcolorcodes  # noqa
+from api.helpers import processoldcolorcodes
 
 
 # region Constants
@@ -188,7 +187,7 @@ class Player(object):
 
                     self.ipaddress = client.ip
 
-                    # pktSB already set to self.wrapper.servervitals.protocolVersion
+                    # pktSB already set to self.wrapper.servervitals.protocolVersion  # noqa
                     self.clientboundPackets = self.client.pktCB
                     self.clientgameversion = self.client.clientversion
                     gotclient = True
@@ -514,13 +513,13 @@ class Player(object):
         Sends a message to the player.
 
         :Args:
-            :message: Can be text, colorcoded text, or json chat
+            :message: Can be text, colorcoded text, or chat dictionary of json.
             :position:  an integer 0-2.  2 will place it above XP bar.
              1 or 0 will place it in the chat. Using position 2 will
              only display any text component (or can be used to display
              standard minecraft translates, such as
              "{'translate': 'commands.generic.notFound', 'color': 'red'}" and
-             "{'translate': 'tile.bed.noSleep'}"
+             "{'translate': 'tile.bed.noSleep'}")
 
 
         :returns: Nothing
@@ -635,7 +634,8 @@ class Player(object):
 
     def setPlayerAbilities(self, fly):
         """
-        :Proxymode: *based on old playerSetFly (which was an unfinished function)*
+        :Proxymode: *based on old playerSetFly (which was an unfinished
+         function)*
 
         NOTE - You are implementing these abilities on the client
          side only.. if the player is in survival mode, the server
@@ -799,7 +799,7 @@ class Player(object):
             return False
 
     # Permissions-related
-    def hasPermission(self, node, another_player=False, group_match=True, find_child_groups=True):
+    def hasPermission(self, node, another_player=False, group_match=True, find_child_groups=True):  # noqa
         """
         If the player has the specified permission node (either
         directly, or inherited from a group that the player is in),

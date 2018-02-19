@@ -4,8 +4,8 @@
 # https://github.com/benbaptist/minecraft-wrapper
 # This program is distributed under the terms of the GNU
 # General Public License, version 3 or later.
-from  pprint import pprint
-import random
+from pprint import pprint
+
 import time
 import json
 
@@ -58,7 +58,7 @@ class Commands(object):
         if command not in ("password", "othersensitivecommand"):
             self.log.info("%s executed: %s", payload["player"], commandtext)
 
-        # We should get out of this by creating a wrapper command registering set
+        # We should get out of this by creating a wrapper command registering set # noqa
 
         # make sure any command returns a True-ish item, or the
         # chat packet will continue to the server
@@ -179,15 +179,18 @@ class Commands(object):
         return False
 
     def command_sample(self, player, payload):
+        # just a sample command as a pattern for new commands
         """
         :args:
-            :player: is the calling player object, equivalent to payload['player']
+            :player: is the calling player object, equivalent to
+             payload['player']
 
             :payload: dictionary of:
                 :args: ["list, "of", "all", "args"]
                 :player: caller player object
                 :command: type:string = the command that was called
-                :playername: - additional argument when run from in-game (proxy mode)?
+                :playername: - additional argument when run from in-game
+                 (proxy mode)?
         """
         if not self._superop(player, 3):
             return False
@@ -408,23 +411,41 @@ class Commands(object):
         if len(getargs(payload["args"], 0)) > 0:
             subcommand = getargs(payload["args"], 0)
             if subcommand == "update":
-                player.message({"text": "Checking for new Wrapper.py updates...", "color": "yellow"})
+                player.message(
+                    {"text": "Checking for new Wrapper.py updates...",
+                     "color": "yellow"}
+                )
                 update = self.wrapper.get_wrapper_update_info()
                 if update:
-                    version, build, repotype = update
-                    player.message("&bNew Wrapper.py Version %s (Build #%d) available!)" %
-                                   (".".join([str(_) for _ in version]), build))
-                    player.message("&bYou are currently on %s." % self.wrapper.getbuildstring())
+                    version, repotype, reponame = update
+                    build = version[4]
+
+                    player.message(
+                        "New Wrapper.py %s version %s is available! (current "
+                        "build is #%s)" % (
+                            repotype, version, self.wrapper.buildinfo.__version__  # noqa
+                        )
+                    )
                     player.message("&aPerforming update...")
                     if self.wrapper.performupdate(version, build, repotype):
-                        player.message("&aUpdate completed! Version %s #%d (%s) is now installed. "
-                                       "Please reboot Wrapper.py to apply changes." % (version, build, repotype))
+                        player.message(
+                            "&aUpdate completed! Version %s #%d (%s) is now "
+                            "installed. Please reboot Wrapper.py to apply "
+                            "changes." % (version, build, repotype)
+                        )
                     else:
-                        player.message("&cAn error occured while performing update.")
-                        player.message("&cPlease check the Wrapper.py console as soon as possible "
-                                       "for an explanation and traceback.")
-                        player.message("&cIf you are unsure of the cause, please file a bug report "
-                                       "on http://github.com/benbaptist/minecraft-wrapper with the traceback.")
+                        player.message(
+                            "&cAn error occured while performing update."
+                        )
+                        player.message(
+                            "&cPlease check the Wrapper.py console as soon as "
+                            "possible for an explanation and traceback."
+                        )
+                        player.message(
+                            "&cIf you are unsure of the cause, please file a "
+                            "bug report on http://github.com/benbaptist/minecra"
+                            "ft-wrapper with the traceback."
+                        )
                 else:
                     player.message("&cNo new Wrapper.py versions available.")
             elif subcommand == "halt":
@@ -434,13 +455,21 @@ class Commands(object):
                 server_bytes = self.wrapper.javaserver.getmemoryusage()
                 if server_bytes:
                     amount, units = format_bytes(server_bytes)
-                    player.message("&cServer Memory: %s %s (%s bytes)" % (amount, units, server_bytes))
+                    player.message(
+                        "&cServer Memory: %s %s (%s bytes)" % (
+                            amount, units, server_bytes
+                        )
+                    )
                 else:
-                    player.message("&cError: Couldn't retrieve memory usage for an unknown reason")
-            elif subcommand == "random":
-                player.message("&cRandom number: &a%d" % random.randrange(0, 99999999))
+                    player.message(
+                        "&cError: Couldn't retrieve memory usage for an "
+                        "unknown reason"
+                    )
         else:
-            player.message({"text": "Wrapper.py Version %s" % buildstring, "color": "gray", "italic": True})
+            player.message(
+                {"text": "Wrapper.py Version %s" % buildstring,
+                 "color": "gray", "italic": True}
+            )
         return
 
     def command_reload(self, player, payload):
