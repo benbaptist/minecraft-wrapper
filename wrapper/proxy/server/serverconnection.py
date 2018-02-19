@@ -238,7 +238,7 @@ class ServerConnection(object):
         # noinspection PyUnusedLocal
         data = self.packet.readpkt([STRING, STRING])
         self.client.serveruuid = MCUUID(data[0])
-        print("UUUUUUUUIIIIDDDD: %s" % self.client.serveruuid.string)
+        # print("UUUUUUUUIIIIDDDD: %s" % self.client.serveruuid.string)
         return False
 
     def _parse_login_set_compression(self):
