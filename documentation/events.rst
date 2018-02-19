@@ -333,7 +333,7 @@
         :"playername": self.username,
         :"player": username (name only - player object does not yet exist)
         :"online_uuid": online UUID,
-        :"offline_uuid": UUID on local server (offline),
+        :"server_uuid": UUID on local server (offline),
         :"ip": the user/client IP on the internet.
         :"secure_connection": Proxy's online mode
 

@@ -17,6 +17,19 @@ if PY3:
     # noinspection PyShadowingBuiltins
     xrange = range
 
+TRANSLATE = {
+    "op":
+        [
+            {'clickEvent': {'action': 'suggest_command', 'value': '/op '},
+             'translate': 'commands.op.usage'},
+
+            {'clickEvent': {'action': 'suggest_command', 'value': '/op '},
+             'text':
+                 '/op <player> [-s SUPEROP] [-o OFFLINE] [-l <superoplevel>]',
+             'italic': True}
+        ],
+}
+
 
 # noinspection PyMethodMayBeStatic
 class ParseCB(object):
@@ -53,15 +66,7 @@ class ParseCB(object):
                 if not playerclient:
                     z += 1
                     continue
-                try:
-                    # Not sure how could this fail. All clients have a uuid.
-                    uuid = playerclient.uuid
-                except Exception as e:
-                    # uuid = playerclient
-                    self.log.exception("playerclient.uuid failed in "
-                                       "playerlist item (%s)", e)
-                    z += 1
-                    continue
+                uuid = playerclient.uuid
                 z += 1
                 if action == 0:
                     properties = playerclient.properties
@@ -81,7 +86,7 @@ class ParseCB(object):
                     self.client.packet.sendpkt(
                         self.pktCB.PLAYER_LIST_ITEM,
                         [VARINT, VARINT, UUID, STRING, VARINT, RAW],
-                        (0, 1, playerclient.uuid, playerclient.username,
+                        (0, 1, uuid, playerclient.username,
                          len(properties), raw))
 
                 elif action == 1:
@@ -90,11 +95,12 @@ class ParseCB(object):
                     # noinspection PyUnusedLocal
                     # todo should we be using this to set client gamemode?
                     gamemode = data[0]
+                    print("GAMEMODE (parse_cb): %s" % gamemode)
                     # ("varint:gamemode")
                     self.client.packet.sendpkt(
                         self.pktCB.PLAYER_LIST_ITEM,
                         [VARINT, VARINT, UUID, VARINT],
-                        (1, 1, uuid, data[0]))
+                        (1, 1, uuid, gamemode))
                     # print(1, 1, uuid, gamemode)
                 elif action == 2:
                     data = self.packet.readpkt([VARINT])
@@ -151,11 +157,13 @@ class ParseCB(object):
         # We dont need to read the whole thing.
         clientserverid = self.proxy.getclientbyofflineserveruuid(dt[1])
         if clientserverid.uuid:
+            print("parseCB::  %s" % clientserverid.uuid.string)
+            print("parseCB::  %s" % clientserverid.uuid)
             if self.server.version < PROTOCOL_1_8START:
                 self.client.packet.sendpkt(
                     self.pktCB.SPAWN_PLAYER,
                     [VARINT, STRING, RAW],
-                    (dt[0], str(clientserverid.uuid), dt[2]))
+                    (dt[0], clientserverid.uuid.string, dt[2]))
             else:
                 self.client.packet.sendpkt(
                     self.pktCB.SPAWN_PLAYER,
@@ -172,10 +180,12 @@ class ParseCB(object):
         # 0: chat (chat box), 1: system message (chat box), 2: above hotbar
         # print("SEND", type(data), data)
         # Over-ride OP help display
-        if "/op <player>" in data:
-            new_usage = "player> [-s SUPER-OP] [-o OFFLINE] [-l <level>]"
-            message = data.replace("player>", new_usage)
-            data = message
+
+        for eachtrans in TRANSLATE:
+            if TRANSLATE[eachtrans][0] == data:
+                new_usage = TRANSLATE[eachtrans][1]
+                data = new_usage
+        self.log.debug(data)
 
         payload = self.proxy.eventhandler.callevent(
             "player.chatbox", {"playername": self.client.username,
@@ -199,7 +209,7 @@ class ParseCB(object):
             "json": json or string data
             <payload>
 
-        """
+        """  # noqa
 
         # reject the packet outright .. no chat gets sent to the client
         if payload is False:
@@ -227,7 +237,7 @@ class ParseCB(object):
         relativemarker = data[5]
         # print("PPLOOK_DATA = ", data, type(data[0]), type(data[1]),
         #       type(data[2]), type(data[3]), type(data[4]), type(data[5]))
-        # fill player position if this is absolute position (or a pre 1.8 server)
+        # fill player pos if this is absolute position (or a pre 1.8 server)
         if relativemarker == 0 or self.server.version < PROTOCOL_1_8START:
             self.client.position = (data[0], data[1], data[2])
         return True
@@ -255,7 +265,7 @@ class ParseCB(object):
                 "position": position of bed
                 <payload>
 
-            """
+            """  # noqa
         return True
 
     def parse_play_join_game(self):
@@ -289,7 +299,7 @@ class ParseCB(object):
             "position": position
             <payload>
 
-        """
+        """  # noqa
         return True
 
     def parse_play_respawn(self):
@@ -311,6 +321,7 @@ class ParseCB(object):
         self.server.close_server("Server kicked %s with PLAY disconnect: %s" %
                                  (self.client.username, message))
         # client connection will determine if player needs to be kicked
+        self.server.client.notify_disconnect(message)
         return False
 
     def parse_play_time_update(self):
@@ -517,8 +528,9 @@ class ParseCB(object):
                     "leash": leash True/False
                     <payload>
 
-                """
-                self.log.debug("player unmount called for %s", self.client.username)
+                """  # noqa
+                self.log.debug("player unmount called for %s",
+                               self.client.username)
                 self.client.riding = None
             else:
                 self.proxy.eventhandler.callevent(
@@ -543,7 +555,7 @@ class ParseCB(object):
                     "leash": leash True/False
                     <payload>
 
-                """
+                """  # noqa
                 self.client.riding = vehormobeid
                 self.log.debug("player mount called for %s on eid %s",
                                self.client.username, vehormobeid)

@@ -74,6 +74,7 @@ class ParseSB(object):
             <payload>
 
         """
+
         # This part allows the player plugin event "player.rawMessage" to...
         if payload is False:
             return False  # ..reject the packet (by returning False)
