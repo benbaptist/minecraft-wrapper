@@ -155,20 +155,13 @@ Download the Wrapper.py file and place it in the desired folder.
                            Please use as fairly long phrase (minimum is 8
                            characters). If not specified, or incorrectly supplied,
                            Wrapper will prompt for a new passphrase before
-                           starting! Use "--passphrase none" to start wrapper with
-                           passwords disabled.
+                           starting!
     ```
 
     To start wrapper using your passphrase:</br>
     `python Wrapper.py --passphrase "my special passphrase - keep this a secret!"`
 
-    To disable password encryption, use "none" for the passphrase:</br>
-    `python Wrapper.py --passphrase none`
-
-    If the start up passphrase is disabled by specifying "none", Wrapper.py
-    will handle all passwords in plain text and will not prompt the user for
-    a password. Otherwise, if a passphrase is not supplied, Wrapper will prompt
-    for one:
+    If a passphrase is not supplied, Wrapper will prompt for one:
     ```
     please input a master passphrase for Wrapper.  This passphrase will be used to encrypt
      all passwords in Wrapper.

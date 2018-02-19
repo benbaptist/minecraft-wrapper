@@ -79,7 +79,6 @@ def build_wrapper(buildargs):
 
     # Hooray for calling zip from system() instead of using proper
     # modules! :D
-    print(path.curdir)
     system("ls")
     chdir("wrapper")
     system("zip ../Wrapper.py -r . -x *~ /.git* *.pyc *__pycache__* *test.py")

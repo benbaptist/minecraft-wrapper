@@ -125,6 +125,7 @@ def get_git_changeset(formatter=True):
     else:
         return timestamp
 
+
 if __name__ == "__main__":
     print(get_version(), "get_version()")
     print(get_main_version(), "get_main_version()")

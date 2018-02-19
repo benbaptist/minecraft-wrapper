@@ -15,7 +15,6 @@ import json
 import time
 import datetime
 import socket
-import urllib
 
 version = sys.version_info
 PY3 = version[0] > 2
@@ -508,6 +507,7 @@ def processcolorcodes(messagestring):
 
             current = ""
 
+            # noinspection PyBroadException
             try:
                 code = message[i + 1]
             except:
@@ -540,6 +540,7 @@ def processcolorcodes(messagestring):
                 # noinspection PyUnresolvedReferences
                 it.next()
             except AttributeError:
+                # noinspection PyUnresolvedReferences
                 it.__next__()
 
     extras.append({
@@ -551,7 +552,7 @@ def processcolorcodes(messagestring):
         "italic": italic,
         "strikethrough": strikethrough
     })
-    return json.dumps({"text": "", "extra": extras})
+    return json.dumps({"text": "", "extra": extras}, sort_keys=True)
 
 
 def processoldcolorcodes(message):
@@ -633,7 +634,7 @@ def read_timestr(mc_time_string):
 
 
 # Single line required by documentation creator (at this time)
-def readout(commandtext, description, separator=" - ", pad=15, command_text_fg="magenta", command_text_opts=("bold",), description_text_fg="yellow", usereadline=True):
+def readout(commandtext, description, separator=" - ", pad=15, command_text_fg="magenta", command_text_opts=("bold",), description_text_fg="yellow", usereadline=True):  # noqa
     """
     display console text only with no logging - useful for displaying
     pretty console-only messages.
@@ -900,7 +901,7 @@ def _create_chat(
 
 
 def _test():
-
+    # from pprint import pprint
     timecurr = time.time()
     print("Current system time:", timecurr)
     x = epoch_to_timestr(timecurr)
@@ -954,8 +955,11 @@ def _test():
               "clickEvent": {}, "strikethrough": False}
 
     # test chat items
+    print("testing _handle_chat_items")
     assert _handle_chat_items(mydict) == "§f§o§l§khello"
+    print("_handle_chat_items passsed")
 
+    print("testing processcolorcodes")
     newdict = {
         "text": "", "extra": [
             {"obfuscated": False, "underlined": False, "bold": False,
@@ -974,7 +978,16 @@ def _test():
              "text": "there", "strikethrough": False,
              "underlined": False, "italic": False}]}
 
-    assert processcolorcodes('&o&3harro &l&6there') == json.dumps(newdict)
+    print("-------------------------")
+    print(json.dumps(newdict))
+
+    print("-------------------------")
+
+    print(processcolorcodes('&o&3harro &l&6there'))
+    assert processcolorcodes(
+        '&o&3harro &l&6there') == json.dumps(newdict, sort_keys=True)
+
+    print("testing processcolorcodes passed")
     assert chattocolorcodes(newdict) == "§f§f§o§3harro §3§l§6there"
 
     print("assertion tests succeeded.")

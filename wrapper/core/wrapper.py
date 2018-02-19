@@ -174,9 +174,11 @@ class Wrapper(object):
         else:
             self.update_url = self.config["Updates"][self.auto_update_branch]
 
+        # load some general options
         self.use_timer_tick_event = self.config[
             "Gameplay"]["use-timer-tick-event"]
         self.use_readline = not(self.config["Misc"]["use-betterconsole"])
+        self.trap_ctrlz = self.config["Misc"]["trap-ctrl-z"]
 
         # Storages
         self.wrapper_storage = Storage("wrapper")
@@ -365,7 +367,8 @@ class Wrapper(object):
         # noinspection PyBroadException
         try:
             # lacking in Windows
-            signal.signal(signal.SIGTSTP, self.sigtstp)
+            if self.trap_ctrlz:
+                signal.signal(signal.SIGTSTP, self.sigtstp)
         except:
             pass
 
@@ -1053,6 +1056,24 @@ class Wrapper(object):
                 <comments>
 
             """
+
+    def backups_running(self):
+        return self._backup_progress()
+
+    def backups_idle(self):
+        return not self._backup_progress()
+
+    def _backup_progress(self):
+        if self.backups:
+            if self.backups.inprogress:
+                self.log.info(
+                    "backup_progress reporting: A backup is in progress."
+                )
+                return True
+            else:
+                return False
+        else:
+            return False
 
     def _pause_console(self, pause_time):
         if not self.javaserver:

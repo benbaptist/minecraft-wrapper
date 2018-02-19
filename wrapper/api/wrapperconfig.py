@@ -49,7 +49,7 @@ CONFIG = {
             # NODOC
             "backup-compression": False,
 
-         # Specify files and folders you want backed up.  Items must be in your server folder (see 'General' section)
+         # Specify server files and folders you want backed up.  Items must be in your server folder (see 'General' section)
 
             "backup-folders":
 
@@ -60,11 +60,11 @@ CONFIG = {
 
                 ],
 
-         # backup interval is in seconds: 3600 = hourly, 86400 = Daily, 604800 = weekly
+         # backup interval in seconds: 3600 = hourly, 86400 = Daily, 604800 = weekly
 
             "backup-interval": 3600,
 
-         # backup location is inside wrapper's directory
+         # backup location is inside wrapper's directory, unless you use an absolute path (such as /home/otherdirectory/backups)
 
             "backup-location": "backup-directory",
 
@@ -233,6 +233,10 @@ CONFIG = {
          # message when wrapper halt is called.
 
             "halt-message": "Halting Wrapper...",
+
+         # Speficy if wrapper should trap control-z and shutdown in a controlled manner (similar to ctrl-c).  If false, follows the behavior permitted by your system (and that might not end well!)  - Discussion: https://github.com/benbaptist/minecraft-wrapper/issues/521
+
+            "trap-ctrl-z": True,
 
          # readline is likely to be more-cross platform, but does not use wrapper's ability to keep console keystroke entries visually intact while server produces output.  # NODOC
             # NODOC
