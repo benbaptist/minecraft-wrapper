@@ -30,12 +30,13 @@ class Backups(object):
         self.api = API(wrapper, "Backups", internal=True)
 
         self.interval = 0
+        self.inprogress = False
         self.backup_interval = self.config["Backups"]["backup-interval"]
         self.time = time.time()
         self.backups = []
         self.enabled = self.config["Backups"]["enabled"]  # allow plugins to shutdown backups via api
         self.timerstarted = False
-        if self.enabled and self.dotarchecks():  # only register event if used and tar installed!
+        if self.enabled and self.dotarchecks():  # only register event if used and tar installed.
             self.api.registerEvent("timer.second", self.eachsecond)
             self.timerstarted = True
             self.log.debug("Backups Enabled..")
@@ -67,25 +68,32 @@ class Backups(object):
                                     "file": filename
                                     <payload>
 
-                                """
+                                """  # noqa
                     break
                 try:
-                    os.remove('%s/%s' % (self.config["Backups"]["backup-location"], backup[1]))
+                    os.remove(
+                        '%s/%s' % (self.config["Backups"]["backup-location"],
+                                   backup[1])
+                    )
                 except Exception as e:
                     self.log.error("Failed to delete backup (%s)", e)
                 self.log.info("Deleting old backup: %s",
-                              datetime.datetime.fromtimestamp(int(backup[0])).strftime('%Y-%m-%d_%H:%M:%S'))
+                              datetime.datetime.fromtimestamp(int(backup[0])).strftime('%Y-%m-%d_%H:%M:%S'))  # noqa
                 # hink = self.backups[0][1][:]  # not used...
                 del self.backups[0]
-        putjsonfile(self.backups, "backups", self.config["Backups"]["backup-location"])
+        putjsonfile(
+            self.backups, "backups", self.config["Backups"]["backup-location"])
 
     def dotarchecks(self):
         # Check if tar is installed
         which = "where" if platform.system() == "Windows" else "which"
         if not subprocess.call([which, "tar"]) == 0:
-            self.wrapper.events.callevent("wrapper.backupFailure",
-                                          {"reasonCode": 1, "reasonText": "Tar is not installed. Please install "
-                                                                          "tar before trying to make backups."})
+            self.wrapper.events.callevent(
+                "wrapper.backupFailure",
+                 {"reasonCode": 1,
+                  "reasonText": "Tar is not installed. Please install "
+                                "tar before trying to make backups."}
+            )
             """ eventdoc
                 <group> Backups <group>
 
@@ -100,6 +108,7 @@ class Backups(object):
                 2 - Backup file does not exist after the tar operation.
                 3 - Specified file does not exist.
                 4 - backups.json is corrupted
+                5 - unable to create backup directory
                 <comments>
                 <payload>
                 "reasonCode": an integer 1-4
@@ -116,41 +125,46 @@ class Backups(object):
             return True
 
     def dobackup(self):
+        self.inprogress = True
         self.log.debug("Backup starting.")
         self._settime()
-        self._checkforbackupfolder()
+        if not self._checkforbackupfolder():
+            self.inprogress = False
+            self.wrapper.events.callevent(
+                "wrapper.backupFailure",
+                {
+                 "reasonCode": 5,
+                 "reasonText": "Backup location could not be found/created!"
+                }
+            )
+            self.log.warning("")
         self._getbackups()  # populate self.backups
         self._performbackup()
         self.log.debug("dobackup() cycle complete.")
+        self.inprogress = False
 
     def _checkforbackupfolder(self):
         if not os.path.exists(self.config["Backups"]["backup-location"]):
-            self.log.warning("Backup location %s does not exist -- creating target location...",
-                             self.config["Backups"]["backup-location"])
+            self.log.warning(
+                "Backup location %s does not exist -- creating target "
+                "location...", self.config["Backups"]["backup-location"]
+            )
             mkdir_p(self.config["Backups"]["backup-location"])
-
-    def _doserversaving(self, desiredstate=True):
-        """
-        :param desiredstate: True = turn serversaving on
-                             False = turn serversaving off
-        :return:
-
-        Future expansion to allow config of server saving state glabally in config.  Plan to include a glabal
-        config option for periodic or continuous server disk saving of the minecraft server.
-        """
-        if desiredstate:
-            self.api.minecraft.console("save-all flush")  # flush argument is required
-            self.api.minecraft.console("save-on")
-        else:
-            self.api.minecraft.console("save-all flush")  # flush argument is required
-            self.api.minecraft.console("save-off")
-            time.sleep(0.5)
+        if not os.path.exists(self.config["Backups"]["backup-location"]):
+            self.log.error(
+                "Backup location %s could not be created!",
+                self.config["Backups"]["backup-location"]
+            )
+            return False
+        return True
 
     def _performbackup(self):
         timestamp = int(time.time())
 
         # Turn off server saves...
-        self._doserversaving(False)
+        self.wrapper.javaserver.doserversaving(False)
+        # give server time to save
+        time.sleep(1)
 
         # Create tar arguments
         filename = "backup-%s.tar" % datetime.datetime.fromtimestamp(int(timestamp)).strftime("%Y-%m-%d_%H.%M.%S")
@@ -180,8 +194,11 @@ class Backups(object):
                 <payload>
 
             """
-            self._doserversaving(True)
+            self.wrapper.javaserver.doserversaving(True)
+            # give server time to save
+            time.sleep(1)
             return
+
         if self.config["Backups"]["backup-notification"]:
             self.api.minecraft.broadcast("&cBacking up... lag may occur!", irc=False)
 
@@ -206,7 +223,8 @@ class Backups(object):
 
         # TODO add a wrapper properties config item to set save mode of server
         # restart saves, call finish Events
-        self._doserversaving()
+        self.wrapper.javaserver.doserversaving(True)
+
         self.backups.append((timestamp, filename))
 
         # Prune backups

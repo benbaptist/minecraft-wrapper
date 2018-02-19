@@ -133,7 +133,9 @@ class Crypt(object):
         if not Fernet:
             print(
                 "\x1b\x5b\x33\x33\x6dWARNING! Package `cryptography` is not "
-                "installed... `Crypt.decrypt` did not do anything! \x1b\x5b\x30\x6d")
+                "installed... `Crypt.decrypt` did not do anything! "
+                "\x1b\x5b\x30\x6d"
+            )
             return encrypted_str_data
         cipher = Fernet(self.passphrase)
         encrypted_byte_data = py_bytes(encrypted_str_data, self.encoding)
@@ -166,9 +168,10 @@ class Crypt(object):
             """
         if not bcrypt:
             print(
-                "\x1b\x5b\x33\x33\x6dWARNING! Package `bcrypt` is not installed. "
-                "Therefore, `crypt` is only doing a string comparison of the 'hash'"
-                " and the 'password'! \x1b\x5b\x30\x6d")
+                "\x1b\x5b\x33\x33\x6dWARNING! Package `bcrypt` is not installed"
+                ". Therefore, `crypt` is only doing a string comparison of the "
+                "'hash' and the 'password'! \x1b\x5b\x30\x6d"
+            )
             if password_string == hashed_pw_str:
                 return True
             else:

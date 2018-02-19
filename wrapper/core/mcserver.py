@@ -277,6 +277,7 @@ class MCServer(object):
         """Stop the Minecraft server from an automatic process.  Allow
         it to restart by default.
         """
+        # self.doserversaving()
         self.log.info("Stopping Minecraft server with reason: %s", reason)
 
         self.kick_players(reason)
@@ -503,6 +504,25 @@ class MCServer(object):
                 "server.stopping", {"reason": reason})
         self.wrapper.events.callevent(
             "server.state", {"state": state, "reason": reason})
+
+    def doserversaving(self, desiredstate=True):
+        """
+        :param desiredstate: True = turn serversaving on
+                             False = turn serversaving off
+        :return:
+
+        Future expansion to allow config of server saving state glabally in
+        config.  Plan to include a global config option for periodic or
+        continuous server disk saving of the minecraft server.
+
+        """
+        if desiredstate:
+            self.console("save-all flush")  # flush argument is required
+            self.console("save-on")
+        else:
+            self.console("save-all flush")  # flush argument is required
+            self.console("save-off")
+        time.sleep(1)
 
     def getservertype(self):
         if "spigot" in self.config["General"]["command"].lower():
@@ -959,7 +979,13 @@ class MCServer(object):
                             time.sleep(1)
                             countdown -= 1
                             if countdown == 0:
-                                self.restart(self.reboot_message)
+                                if self.wrapper.backups_idle():
+                                    self.restart(self.reboot_message)
+                                else:
+                                    self.broadcast(
+                                        "&cBackup in progress. Server reboot "
+                                        "delayed for one minute..")
+                                    countdown = 59
                             if countdown % 15 == 0:
                                 self.broadcast("&cServer will reboot in %d "
                                                "seconds" % countdown)
@@ -967,7 +993,13 @@ class MCServer(object):
                                 self.broadcast("&cServer will reboot in %d "
                                                "seconds" % countdown)
                     continue
-                self.restart(self.reboot_message)
+                if self.wrapper.backups_idle():
+                    self.restart(self.reboot_message)
+                else:
+                    self.broadcast(
+                        "&cBackup in progress. Server reboot "
+                        "delayed..")
+                    timer = rb_mins + rb_mins_warn + 1
 
     def eachsecond_web(self):
         if time.time() - self.lastsizepoll > 120:

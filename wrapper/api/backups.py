@@ -114,3 +114,26 @@ class Backups(object):
         num_kept = int(desired_number)
         self.wrapper.backups.config["Backups"]["backups-keep"] = num_kept
         self.wrapper.configManager.save()
+
+    def backupInProgress(self):
+        """
+        Query the state of automatic backups.  This and `backupIsIdle` are
+        just the same function phrased in opposite manner.
+
+        :returns:  True if a backup is in progress.  Otherwise, if a backup
+         is not running, returns False
+
+        """
+        return self.wrapper.backups_running()
+
+    def backupIsIdle(self):
+        """
+        Query the state of automatic backups, asking a boolean representing
+        whether the backups are currently idle.
+
+        :returns:  True if a backup is idle and not running.  Otherwise, if
+         a backup is running, returns False
+
+        """
+        return self.wrapper.backups_idle()
+

@@ -16,37 +16,54 @@ will be set to true in the eula.txt file in your server folder.
 
 # Installation #
 
+###  **Python Versions**
+Python 3.5 or higher is the recommended Python version to use with Wrapper.
+
+*Wrapper is only designed to be compatible with Python 3.4+ and python 2.7+ versions (Using a python 2.7 version below 2.7.11 is also _not_ recommended)
+
+*It may run under python 2.6, but this is untested and may cause errors.  Certain Linux distros with Python 2.7 also have known issues with the requests module.*
+
+
 ###  **Dependencies**
+You must have a pip version > 9.0.1 to ensure wrapper's dependencies will install correctly. Bcrypt and cryptography
+ may not install correctly if your pip version is not at least 9.0.1.
+To ensure you have the correct pip version:
+
+ `pip install --upgrade pip>=9.0.1`
 
 Wrapper.py requires the following packages: </br>
-- `requests`
-- `cryptography`
-- `bcrypt`
+- `requests` - Extensively used by Wrapper to handle internet data requests.
+- `cryptography` - required for Proxy mode and internal wrapper password handling.
+- `bcrypt` - Only required for the plugin API functions 'hashPassword' and 'checkPassword'
+- `setuptools` - Most python libraries already have this now.  Used by the Web interface.
 
-The easy way is just save the requirements.txt file from the repo to your hard
- drive, then from the same folder, you can type `pip install -r requirements.txt`
- in the console.  This will ensure you have these packages and their dependencies,
- with the proper versions.
+It is recommended that you install the requirements by using the requirements.txt
+ file from the repo.  Save it to your hard drive.  Then from the same folder, you
+ can type `pip install -r requirements.txt` in the console.  This will ensure you
+ have these packages and their dependencies, with the proper versions.
 
-If you want to pick and choose packages:
-- `requests` is just too indespensible... Wrapper uses it everywhere and will not start without it.
-- Some (usually Windows) systems may also need `readline`.
-- `cryptography` is required if you want to securely encrypt passwords
-   used in Wrapper.  If you don't install cryptography, all passwords
-   will be stored in plain text in the wrapper.properties.json.  The
-   wrapper passphrase feature will also be disabled.
-- Web mode also requires `pkg_resources`, which is normally included with
-   setuptools now.
-- Proxy mode requires `cryptography`.
-- `bcrypt` is only required if you want to use the plugin API
+If needed, install any older missing dependencies in older distros (using a current pip version and setuptools will usually avoid this):
+```
+pip install pkg_resources
+```
 
-- Make sure your pip version is up-to-date when installing bcrypt in particular:</br>
-   `[sudo -H] pip install --upgrade pip`
+If you have issues with bcrypt, please go to the bcrypt website on pypi for installation of bcrypt (depending on
+your system, additional dependencies may be required):
+[pypi.python.org](https://pypi.python.org/pypi/bcrypt/3.1.4).
+Bcrypt is not critical to wrapper.  It is used in the plugin API.  It may be removed at a future date, depending on how useful (or not useful) it ends up being.
+
+</br> Please do not submit issues regarding installing dependencies.  These are beyond
+ the scope of this document or the author's expertise (in general); please research
+ the solution applicable to your platform.  Some variants of the pip installation
+ that can help if you are having permission problems:
+ 1) Use sudo with the -H flag (this example for Ubuntu type systems):
+    `sudo -H pip install --upgrade pip>=9.0.1`: Only do this if you want the packages system-wide and you also _possibly_ risk breaking your packaging system or some other dependency
+ 2) Better solution - use the --user flag for pip:
+    `pip install --user --upgrade pip>=9.0.1`
 
 You will also need "tar" installed if you need backups. Most Linux distros have this pre-installed, but you may need to
  install it manually on Windows: http://gnuwin32.sourceforge.net/packages/gtar.htm
 
-</br> Please do not submit issues regarding installing dependencies.  These are beyond the scope of this document or the author's expertise (in general); please research the solution applicable to your platform.
 
 ###  **Wrapper.py Versions**
 
@@ -56,57 +73,34 @@ You only need to download Wrapper.py.  The 'wrapper' folder is the source code a
 The old stable branch "master", version 0.7.6, build 83 has now been archived in the ["Original"](https://github.com/benbaptist/minecraft-wrapper/tree/Original) branch. The original
 version only supports minecraft versions prior to 1.9.
 
-[Master branch "stable" repo](https://github.com/benbaptist/minecraft-wrapper/tree/master):  Stable branch that is only updated with serious bug fixes and major releases
+[Master branch "stable"](https://github.com/benbaptist/minecraft-wrapper/tree/master):  Stable branch that is only updated with serious bug fixes and major releases
 
-[Development branch "dev" repo](https://github.com/benbaptist/minecraft-wrapper/tree/development):  Development branch with newer features.
+[Development branch "dev"](https://github.com/benbaptist/minecraft-wrapper/tree/development):  Development branch with newer features.
 
 <br>
 
-[SurestTexas Development branch "dev" repo](https://github.com/suresttexas00/minecraft-wrapper/tree/development):  SurestTexas00's development fork.  Might have bleeding edge stuff.
-
-###  **Python Versions**
-
-*Wrapper is only designed to be compatible with Python 2.7+ and python 3.4+ versions.  Python 3.5+ is recommended.  Using  python version below 2.7.11 is _not_ recommended
-
-*It may run under python 2.6, but this may cause problems with some dependencies.  Certain Linux distros with Python 2.7 also have known issues with the requests module.*
+[SurestTexas Development branch "dev"](https://github.com/suresttexas00/minecraft-wrapper/tree/development):  SurestTexas00's development fork.  Might have bleeding edge stuff.
 
 
 ### **LINUX download and setup**
 
-if you have wget installed, You can run the following command to download the stable Wrapper.py:
+if you have wget installed, You can  use it to get Wrapper.py and its dependency lists.
 
-`wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master/Wrapper.py`
+For the stable Wrapper.py:
 
-or the following to download the development version of Wrapper.py:
-
-`wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/Wrapper.py`
-
-get the dependencies list:
-"development" - `wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/requirements.txt`
-"stable" - `wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master/requirements.txt`
-
-To install dependencies, use pip to install the `requirements,txt`:
 ```
-pip install -r requirements.txt
+wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master/Wrapper.py
+wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master/requirements.txt
 ```
 
-
-or install them manually:
+Or for the development version of Wrapper.py:
 ```
-pip install requests
-pip install cryptography
-pip install bcrypt
+wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/Wrapper.py
+wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/requirements.txt
 ```
 
-If needed, install any older missing dependencies in older distros (using a current pip version and setuptools will usually avoid this):
-```
-pip install pkg_resources
-```
+To install dependencies, [See dependencies section](#dependencies)
 
-If you have issues with bcrypt, please go to the bcrypt website on pypi for installation of bcrypt (depending on
-your system, additional dependencies may be required):
-[pypi.python.org](https://pypi.python.org/pypi/bcrypt/3.1.4)
-bcrypt is not critical to wrapper.  It is used in the plugin API.  It may be removed at a future date, depending on how useful (or not useful) it ends up being.
 
 ### **Windows Download and setup**
 
@@ -155,24 +149,19 @@ Download the Wrapper.py file and place it in the desired folder.
       --encoding, -e       Specify an encoding (other than utf-8)
       --betterconsole, -b  Use "better console" feature to anchor your imput at
                            the bottom of the console (anti- scroll-away feature)
+                           Also implements jline-like functionality with arrow
+                           keys and bash-like command history memory.
       --passphrase, -p     Passphrase used to encrypt all passwords in Wrapper.
                            Please use as fairly long phrase (minimum is 8
                            characters). If not specified, or incorrectly supplied,
                            Wrapper will prompt for a new passphrase before
-                           starting! Use "--passphrase none" to start wrapper with
-                           passwords disabled.
+                           starting!
     ```
 
     To start wrapper using your passphrase:</br>
     `python Wrapper.py --passphrase "my special passphrase - keep this a secret!"`
 
-    To disable password encryption with bcrypt, use "none" for the passphrase:</br>
-    `python Wrapper.py --passphrase none`
-
-    If bcrypt and cryptography are not installed or the start up passphrase is
-    disabled by specifying "none", Wrapper.py will handle all passwords in plain
-    text and will not prompt the user for a password. Otherwise, if a passphrase
-    is not supplied, Wrapper will prompt for one:
+    If a passphrase is not supplied, Wrapper will prompt for one:
     ```
     please input a master passphrase for Wrapper.  This passphrase will be used to encrypt
      all passwords in Wrapper.
@@ -196,9 +185,9 @@ Download the Wrapper.py file and place it in the desired folder.
 - Wrapper supports having a separate server and wrapper folder.  This is also recommended, although you can simply put
  Wrapper in the same directory with your server.  Examples (item `["General"]["server-directory"]` in the config file):
 
-     - setting `../server` - will set the server folder to a sister directory.
-     - or you can use an absolute path: `/home/user/minecraft/server`.
-     - use the default `'.'` to run wrapper inside your server folder.
+     - setting `"../server"` - will set the server folder to a sister directory.
+     - or you can use an absolute path: `"/home/user/minecraft/server"`.
+     - use the default `"."` to run wrapper inside your server folder.
 
 - Tune the file to your remaining preferences, and then run wrapper again.
 
@@ -245,7 +234,7 @@ Download the Wrapper.py file and place it in the desired folder.
     [15:28:17] [Wrapper.py/INFO]: Proxy listening on *:25566
     ```
 
-##### operating wrapper #####
+### operating wrapper ###
 
 - Any console command beginning with a slash (/) will be interpreted as a Wrapper.py command.<br>
 - Type /help to see a list of Wrapper.py commands.<br>
@@ -300,7 +289,7 @@ Wrapper continues to be a work in progress and changes often happen faster than 
 - The modern event list is updated with each build:
     [Wrapper events](/documentation/events.rst)
 
-- The original Event list (0.7.6):
+- The original Event list (Wrapper version 0.7.6):
     [Old 0.7.6 Wrapper list of events](https://docs.google.com/spreadsheet/ccc?key=0AoWx24EFSt80dDRiSGVxcW1xQkVLb2dWTUN4WE5aNmc&usp=sharing)
 
 Check the 'example-plugins' and 'stable-plugins' folders to see some example plugins.  These are very useful for seeing how the API functions.

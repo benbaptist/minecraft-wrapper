@@ -25,7 +25,7 @@ class Alerts(object):
         port = server.get("port", None)
         address = server.get("address", None)
         server_type = server.get("type", "invalid")
-        if not (username and address and enc_pass and port and server_type != "invalid"):
+        if not (username and address and enc_pass and port and server_type != "invalid"):  # noqa
             self.log.warn("incorrectly configured alert!:\n%s",
                           json.dumps(server, sort_keys=True, indent=2))
             return False
@@ -60,7 +60,7 @@ class Alerts(object):
                 self.send_alert(server, message)
 
     def send_alert(self, server, message, alt_recipient=None, alt_subj=None):
-        username, address, enc_pass, port, server_type = self._err_checks(server)
+        username, address, enc_pass, port, server_type = self._err_checks(server)  # noqa
         mess = message
         subj = alt_subj
         recipients = alt_recipient
@@ -92,10 +92,10 @@ class Alerts(object):
             is_mail = server.get("type", "").lower() == "email"
             if group_name and is_mail:
                 username, address, enc_pass, port, _ = self._err_checks(server)
-                self.send_email(
-                    username, enc_pass, address, port, message, recipients, subject)
+                self.send_email(username, enc_pass, address, port,
+                                message, recipients, subject)
 
-    def send_email(self, user, encrypted_pass, addr, port, mess, recipients, subj):
+    def send_email(self, user, encrypted_pass, addr, port, mess, recipients, subj):  # noqa
         password = self.wrapper.cipher.decrypt(encrypted_pass)
         if not password:
             self.log.warn("email password for %s did not decrypt!" % addr)
@@ -110,9 +110,10 @@ class Alerts(object):
             try:
                 mail.login(user, password)
             except smtplib.SMTPAuthenticationError:
-                self.log.warn("Incorrect email account username/password.  This "
-                              "can also be because you have not enabled 'less-"
-                              "secure' apps on your account.")
+                self.log.warn(
+                    "Incorrect email account username/password.  This "
+                    "can also be because you have not enabled 'less-"
+                    "secure' apps on your account.")
             except Exception as exception:
                 self.log.warn(exception)
         login()

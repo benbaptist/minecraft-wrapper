@@ -624,6 +624,7 @@
         2 - Backup file does not exist after the tar operation.
         3 - Specified file does not exist.
         4 - backups.json is corrupted
+        5 - unable to create backup directory
 
 :Event: "wrapper.backupBegin"
 

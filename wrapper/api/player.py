@@ -14,7 +14,7 @@ from proxy.packets.mcpackets_sb import Packets as Packets_sb
 
 from proxy.utils.constants import *
 from core.storage import Storage
-from api.helpers import processoldcolorcodes
+from api.helpers import processoldcolorcodes, chattocolorcodes, processcolorcodes  # noqa
 
 
 # region Constants
@@ -529,28 +529,14 @@ class Player(object):
         """
 
         if self.wrapper.proxy:
-            self.client.chat_to_client(message, position)
+            if isinstance(message, dict):
+                sentitem = message
+            else:
+                sentitem = processoldcolorcodes(message)
+
+            self.client.chat_to_client(sentitem, position)
         else:
             self.javaserver.broadcast(message, who=self.username)
-
-    def actionMessage(self, message=""):
-        try:
-            version = self.wrapper.proxy.srv_data.protocolVersion
-        except AttributeError:
-            # Non proxy mode
-            return False
-
-        if version < PROTOCOL_1_8START:
-            parsing = [_STRING, _NULL]
-            data = [message]
-        else:
-            parsing = [_STRING, _BYTE]
-            data = (json.dumps({"text": processoldcolorcodes(message)}), 2)
-
-        self.client.packet.sendpkt(
-            self.clientboundPackets.CHAT_MESSAGE,
-            parsing,  # "string|byte"
-            data)
 
     def setVisualXP(self, progress, level, total):
         """
