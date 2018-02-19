@@ -1,4 +1,6 @@
 Build 5  [1.0b5]
+- [#519](https://github.com/benbaptist/minecraft-wrapper/issues/519) - delay server backups during idle periods.
+
   (Goals)
 implement bug fixes and improvements:
 - whitelist needs a long overdue overhaul: #314

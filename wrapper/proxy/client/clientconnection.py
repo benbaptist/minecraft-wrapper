@@ -649,7 +649,7 @@ class Client(object):
                                   self.username, currentname)
                     self.username = currentname
             self.serveruuid = self.proxy.uuids.getuuidfromname(self.username)
-            print("_login_authenticate_client just changed self.serveruuid to %s" % self.proxy.uuids.getuuidfromname(self.username))  # noqa
+            # print("_login_authenticate_client just changed self.serveruuid to %s" % self.proxy.uuids.getuuidfromname(self.username))  # noqa
             # TODO "handle name changes better"
 
         # Wrapper offline and not authenticating

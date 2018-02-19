@@ -282,6 +282,7 @@ class MCServer(object):
         """Stop the Minecraft server from an automatic process.  Allow
         it to restart by default.
         """
+        self.doserversaving()
         self.log.info("Stopping Minecraft server with reason: %s", reason)
 
         self.kick_players(reason)
@@ -404,6 +405,8 @@ class MCServer(object):
                 playerclient.server_eid = servereid
                 playerclient.position = position
 
+        # activate backup status
+        self.wrapper.backups.idle = False
         self.wrapper.events.callevent(
             "player.login",
             {"player": self.getplayer(username)})
@@ -435,6 +438,8 @@ class MCServer(object):
             self.wrapper.events.callevent(
                 "player.logout", {"player": self.getplayer(players_name)})
             del self.vitals.players[players_name]
+        if len(self.vitals.players) == 0:
+            self.wrapper.backups.idle = True
 
     def getplayer(self, username):
         """Returns a player object with the specified name, or

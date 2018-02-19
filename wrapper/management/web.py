@@ -198,7 +198,6 @@ class Web(object):
     def on_player_join(self, payload):
         while len(self.chatScrollback) > 200:
             self.chatScrollback.pop()
-        print("PLAYER JOINED")
         self.chatScrollback.append([
             time.time(), {"type": "playerJoin",
                           "payload": {"player": payload["player"].username}}])
@@ -206,7 +205,6 @@ class Web(object):
     def on_player_leave(self, payload):
         while len(self.chatScrollback) > 200:
             self.chatScrollback.pop()
-        print("PLAYER LEFT")
         self.chatScrollback.append([
             time.time(), {"type": "playerLeave",
                           "payload": {"player": payload["player"].username}}])

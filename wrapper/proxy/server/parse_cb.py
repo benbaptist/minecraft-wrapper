@@ -185,7 +185,7 @@ class ParseCB(object):
             if TRANSLATE[eachtrans][0] == data:
                 new_usage = TRANSLATE[eachtrans][1]
                 data = new_usage
-        self.log.debug(data)
+        # self.log.debug(data)
 
         payload = self.proxy.eventhandler.callevent(
             "player.chatbox", {"playername": self.client.username,
