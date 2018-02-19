@@ -25,7 +25,7 @@ from proxy.packets import mcpackets_cb
 from proxy.utils.constants import *
 
 from proxy.utils.mcuuid import MCUUID
-from api.helpers import processcolorcodes, processoldcolorcodes, chattocolorcodes
+from api.helpers import processcolorcodes
 
 
 # noinspection PyMethodMayBeStatic
@@ -93,11 +93,14 @@ class Client(object):
         # Proxy ServerConnection() (not the javaserver)
         self.server_connection = None
         self.state = HANDSHAKE
+        self.permit_disconnect_from_server = False
 
         # UUIDs - all should use MCUUID unless otherwise specified
+
         # --------------------------------------------------------
         # Server UUID - which is the local offline UUID.
         self.serveruuid = None
+
         # --------------------------------------------------------
         # The client UUID authenticated by connection to session server.
         self.uuid = None
@@ -156,6 +159,10 @@ class Client(object):
             "sent": False
         }
 
+    def notify_disconnect(self, message):
+        if self.permit_disconnect_from_server:
+            self.disconnect(message)
+
     def handle(self):
         t = threading.Thread(target=self.flush_loop, args=())
         t.daemon = True
@@ -168,13 +175,15 @@ class Client(object):
                 # This is not really an error.. It means the client
                 # is not sending packet stream anymore
                 if self.username != "PING REQUEST":
-                    self.log.debug("%s Client Packet stream ended [EOF]", self.username)
+                    self.log.debug("%s Client Packet stream ended [EOF]",
+                                   self.username)
                 self.abort = True
                 break
             except socket_error:
                 # occurs anytime a socket is closed.
                 if self.username != "PING REQUEST":
-                    self.log.debug("%s Client Proxy Failed to grab packet", self.username)
+                    self.log.debug("%s Client Proxy Failed to grab packet",
+                                   self.username)
                 self.abort = True
                 break
             except Exception as e:
@@ -210,12 +219,14 @@ class Client(object):
             try:
                 self.packet.flush()
             except socket_error:
-                self.log.debug("%s client socket closed (socket_error).", self.username)
+                self.log.debug("%s client socket closed (socket_error).",
+                               self.username)
                 break
             time.sleep(0.01)
         if self.username != "PING REQUEST":
-            self.log.debug("%s clientconnection flush_loop thread ended", self.username)
-        self.proxy.removestaleclients()  # from this instance from proxy.srv_data.clients
+            self.log.debug("%s clientconnection flush_loop thread ended",
+                           self.username)
+        self.proxy.removestaleclients()  # from proxy.srv_data.clients
 
     def change_servers(self, ip=None, port=None):
 
@@ -292,9 +303,9 @@ class Client(object):
         """  When the client first logs in to the wrapper proxy """
 
         # check for uuid ban
-        if self.proxy.isuuidbanned(self.uuid.__str__()):
+        if self.proxy.isuuidbanned(self.uuid.string):
             banreason = self.proxy.getuuidbanreason(
-                self.uuid.__str__())
+                self.uuid.string)  # changed from __str__()
             self.log.info("Banned player %s tried to"
                           " connect:\n %s" % (self.username, banreason))
             self.state = HANDSHAKE
@@ -307,7 +318,7 @@ class Client(object):
                     "playername": self.username,
                     "player": self.username,  # not a real player object!
                     "online_uuid": self.uuid.string,
-                    "offline_uuid": self.serveruuid.string,
+                    "server_uuid": self.serveruuid.string,
                     "ip": self.ip,
                     "secure_connection": self.onlinemode
                 }):
@@ -329,17 +340,17 @@ class Client(object):
                 "playername": self.username,
                 "player": username (name only - player object does not yet exist)
                 "online_uuid": online UUID,
-                "offline_uuid": UUID on local server (offline),
+                "server_uuid": UUID on local server (offline),
                 "ip": the user/client IP on the internet.
                 "secure_connection": Proxy's online mode
                 <payload>
 
-            """
+            """  # noqa
 
             self.state = HANDSHAKE
             self.disconnect("Login denied by a Plugin.")
             return
-
+        self.permit_disconnect_from_server = True
         self.log.info("%s's Proxy Client LOGON occurred: (UUID: %s"
                       " | IP: %s | SecureConnection: %s)",
                       self.username, self.uuid.string,
@@ -362,6 +373,7 @@ class Client(object):
             args=())
         t_keepalives.daemon = True
         t_keepalives.start()
+        # self.permit_disconnect_from_server = False
 
     def connect_to_server(self, ip=None, port=None):
         """
@@ -397,7 +409,7 @@ class Client(object):
         server_addr = "localhost"
         if self.spigot_mode:
             server_addr = "localhost\x00%s\x00%s" % \
-                          (self.client_address[0], self.uuid.hex)
+                          (self.client_address[0], self.serveruuid.hex)  # TODO - does this break spigot (using serveruuid versus uuid)?  # noqa
         if self.proxy.forge:
             server_addr = "localhost\x00FML\x00"
 
@@ -421,6 +433,7 @@ class Client(object):
         if self.server_connection:
             self.server_connection.close_server(term_message)
 
+    # noinspection PyBroadException
     def disconnect(self, message):
         """
         disconnects the client (runs close_server(), which will
@@ -428,27 +441,33 @@ class Client(object):
 
         Not used to disconnect from a server!  This disconnects the client.
         """
-        jsonmessage = message  # server packets are read as json
-
+        jsondict = {"text": "bye"}
         if type(message) is dict:
-            if "text" in message:
-                jsonmessage = {"text": message}
-                if "color" in message:
-                    jsonmessage["color"] = message["color"]
-                if "bold" in message:
-                    jsonmessage["bold"] = message["bold"]
-                message = jsonmessage["text"]
-                jsonmessage = json.dumps(jsonmessage)
-        else:
-            jsonmessage = message  # server packets are read as json
+            jsondict = message
+        elif type(message) is list:
+            if type(message[0]) is dict:
+                jsondict = message[0]
+            if type(message[0]) is str:
+                try:
+                    jsondict = json.loads(message[0])
+                except Exception:  # JSONDecodeError is not defined, so broadexception  # noqa
+                    jsondict = message
+
+        elif type(message) is str:
+                jsonmessage = message  # server packets are read as json
+                try:
+                    jsondict = json.loads(jsonmessage)
+                except Exception:
+                    jsondict = jsonmessage
 
         if self.state in (PLAY, LOBBY):
             self.packet.sendpkt(
                 self.pktCB.DISCONNECT,
                 [JSON],
-                [jsonmessage])
+                [jsondict])
 
-            self.log.debug("Sent PLAY state DISCONNECT packet to %s", self.username)
+            self.log.debug("Sent PLAY state DISCONNECT packet to %s",
+                           self.username)
         else:
             self.packet.sendpkt(
                 self.pktCB.LOGIN_DISCONNECT,
@@ -457,11 +476,13 @@ class Client(object):
 
             if self.username != "PING REQUEST":
                 self.log.debug(
-                    "State was 'other': sent LOGIN_DISCONNECT to %s", self.username)
+                    "State was 'other': sent LOGIN_DISCONNECT to %s",
+                    self.username)
 
         time.sleep(1)
         self.state = HANDSHAKE
-        self.close_server_instance("run Disconnect() client.  Aborting client thread")
+        self.close_server_instance(
+            "run Disconnect() client.  Aborting client thread")
         self.abort = True
 
     # internal init and properties
@@ -594,7 +615,7 @@ class Client(object):
                 #         {
                 #             "name": "textures",
                 #             "value": "<base64 string>",
-                #             "signature": "<base64 string; signed data using Yggdrasil's private key>"
+                #             "signature": "<base64 string; signed data using Yggdrasil's private key>"  # noqa
                 #         }
                 #     ]
                 # }
@@ -628,6 +649,8 @@ class Client(object):
                                   self.username, currentname)
                     self.username = currentname
             self.serveruuid = self.proxy.uuids.getuuidfromname(self.username)
+            print("_login_authenticate_client just changed self.serveruuid to %s" % self.proxy.uuids.getuuidfromname(self.username))  # noqa
+            # TODO "handle name changes better"
 
         # Wrapper offline and not authenticating
         # maybe it is the destination of a hub? or you use another
@@ -639,6 +662,7 @@ class Client(object):
             self.log.debug("Client logon with wrapper offline-"
                            " 'self.uuid = OfflinePlayer:<name>'")
 
+        # TODO This should follow server properties setting
         # no idea what is special about version 26
         if self.clientversion > 26:
             self.packet.setcompression(256)
@@ -743,7 +767,7 @@ class Client(object):
         #                            f.write(json.dumps(jsonwhitelistdata))
         #                        ##self.XXXservervitalsXXX.console(
         #                            "##whitelist reload")
-        #                        => self.proxy.eventhandler.callevent("proxy.console", {"command": "whitelist reload"})
+        #                        => self.proxy.eventhandler.callevent("proxy.console", {"command": "whitelist reload"})  # noqa
         """ eventdoc
                                 <description> internalfunction <description>
 
@@ -791,6 +815,7 @@ class Client(object):
 
         return True
 
+    # Staged for future wrapper plugin channel
     def _plugin_response(self, response):
         if "ip" in response:
             self.shared = {
@@ -941,7 +966,7 @@ class Client(object):
             self.serveruuid = self.proxy.uuids.getuuidfromname(self.username)
 
         else:
-            # Wrapper offline and not authenticating
+            # Wrapper proxy offline and not authenticating
             # maybe it is the destination of a hub? or you use another
             #  way to authenticate (password plugin?)
 

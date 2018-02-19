@@ -84,6 +84,10 @@ class Commands(object):
             self.command_kick(player, payload)
             return True
 
+        elif command == "whitelist":
+            self.command_whitelist(player, payload)
+            return True
+
         elif command == "wrapper":
             self.command_wrapper(player, payload)
             return True
@@ -741,8 +745,63 @@ class Commands(object):
         if not self._superop(player, 3):
             return False
         player_name = getargs(payload["args"], 0)
-        reason = "You were kicked!  Reason: %s" % getargsafter(payload["args"], 1)
+        all_args = getargsafter(payload["args"], 1)
+        if all_args == "":
+            reason = {'translate': 'multiplayer.disconnect.kicked'}
+        else:
+            reason = {'translate': 'multiplayer.disconnect.kicked',
+                      'text': all_args
+            }
+
         self.wrapper.javaserver.kick_player(player_name, reason)
+
+    def command_whitelist(self, player, payload):
+        if player.isOp() < 3:
+            return False
+        wl_commands = {
+            "add": self._command_whitelist_add,
+            "list": self._command_whitelist_list,
+            "off": self._command_whitelist_off,
+            "on": self._command_whitelist_on,
+            "reload": self._command_whitelist_reload,
+            "remove": self._command_whitelist_remove,
+            "offline": self._command_whitelist_offline,
+            "online": self._command_whitelist_online,
+        }
+        wl_comm = getargs(payload["args"], 0)
+        wl_arg = getargs(payload["args"], 1)
+        if wl_comm in wl_commands:
+            wl_commands[wl_comm](player, wl_arg)
+        else:
+            player.message({'with': [{'translate': 'commands.whitelist.usage'}],
+                            'translate': 'commands.generic.usage',
+                            'color': 'red'})
+
+    def _command_whitelist_add(self, player, arg):
+        player.execute("whitelist add %s" % arg)
+        player.message("..Working.  Server may lag.")
+        player.message()
+
+    def _command_whitelist_list(self, player, arg):
+        player.execute("whitelist list")
+
+    def _command_whitelist_off(self, player, arg):
+        player.execute("whitelist off")
+
+    def _command_whitelist_on(self, player, arg):
+        player.execute("whitelist on")
+
+    def _command_whitelist_reload(self, player, arg):
+        player.execute("whitelist reload")
+
+    def _command_whitelist_remove(self, player, arg):
+        player.execute("whitelist remove %s" % arg)
+
+    def _command_whitelist_offline(self, player, arg):
+        pass
+
+    def _command_whitelist_online(self, player, arg):
+        pass
 
     def command_deop(self, player, payload):
         # if player is None:
@@ -785,9 +844,15 @@ class Commands(object):
         offline_mode = "-o" in flags
 
         new_operator_name = getargs(payload["args"], 0)
+        if new_operator_name == "":
+            player.message({'with': [{'translate': 'commands.op.usage'}],
+                            'translate': 'commands.generic.usage',
+                            'color': 'red'})
+            return
+
         valid_uuid = self.wrapper.uuids.getuuidbyusername(new_operator_name)
 
-        if not offline_mode and valid_uuid is None:
+        if not offline_mode and valid_uuid in (None, False):
             player.message(
                 "&c'%s' is not a valid player name!" % new_operator_name)
             return False

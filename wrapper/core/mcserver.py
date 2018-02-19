@@ -242,12 +242,13 @@ class MCServer(object):
         """Restart the Minecraft server, and kick people with the
         specified reason.  If server was already stopped, restart it.
         """
-        # timed-reboot passes reboot message (not restart)
         if reason == "":
             reason = self.restart_message
+
         if self.vitals.state in (STOPPING, OFF):
             self.start()
             return
+        self.doserversaving()
         self.stop(reason)
 
     def kick_players(self, reasontext):
@@ -268,6 +269,10 @@ class MCServer(object):
             except KeyError:
                 self.log.warning(
                     "Kick failed - No proxy player called %s", player)
+            except Exception as e:
+                self.log.warning(
+                    "Kick failed - something else went wrong:"
+                    " %s\n%s\n%s", player, e,)
         else:
             self.console("kick %s %s" % (player, reasontext))
             # this sleep is here for Spigot McBans reasons/compatibility.
@@ -277,7 +282,6 @@ class MCServer(object):
         """Stop the Minecraft server from an automatic process.  Allow
         it to restart by default.
         """
-        # self.doserversaving()
         self.log.info("Stopping Minecraft server with reason: %s", reason)
 
         self.kick_players(reason)
@@ -426,11 +430,10 @@ class MCServer(object):
     def logout(self, players_name):
         """Called when a player logs out."""
 
-        self.wrapper.events.callevent(
-            "player.logout", {"player": self.getplayer(players_name)})
-
         if players_name in self.vitals.players:
             self.vitals.players[players_name].abort = True
+            self.wrapper.events.callevent(
+                "player.logout", {"player": self.getplayer(players_name)})
             del self.vitals.players[players_name]
 
     def getplayer(self, username):

@@ -18,6 +18,7 @@ from proxy.packets import mcpackets_sb
 from proxy.packets import mcpackets_cb
 
 from proxy.utils.constants import *
+from proxy.utils.mcuuid import MCUUID
 
 
 # noinspection PyMethodMayBeStatic,PyBroadException
@@ -187,7 +188,7 @@ class ServerConnection(object):
         return False
 
     def _transmit_upstream(self):
-        # TODO this probably needs to be removed.  Wrapper's proxy is fragile/slow enought ATM
+        # TODO this probably needs to be removed.  Wrapper's proxy is fragile/slow enought ATM   # noqa
         """ transmit wrapper channel status info to the server's
          direction to help sync hub/lobby wrappers """
 
@@ -220,6 +221,7 @@ class ServerConnection(object):
         message = self.packet.readpkt([STRING])
         self.log.info("Disconnected from server: %s", message)
         self.close_server(message)
+        self.client.notify_disconnect(message)
         return False
 
     def _parse_login_encr_request(self):
@@ -235,6 +237,8 @@ class ServerConnection(object):
         # (we supplied uuid/name anyway!)
         # noinspection PyUnusedLocal
         data = self.packet.readpkt([STRING, STRING])
+        self.client.serveruuid = MCUUID(data[0])
+        print("UUUUUUUUIIIIDDDD: %s" % self.client.serveruuid.string)
         return False
 
     def _parse_login_set_compression(self):
@@ -307,10 +311,10 @@ class ServerConnection(object):
             self.parsers[PLAY][
                 self.pktCB.SPAWN_MOB] = self.parse_cb.parse_play_spawn_mob
             self.parsers[PLAY][
-                self.pktCB.ENTITY_RELATIVE_MOVE] = self.parse_cb.parse_play_entity_relative_move
+                self.pktCB.ENTITY_RELATIVE_MOVE] = self.parse_cb.parse_play_entity_relative_move  # noqa
             self.parsers[PLAY][
-                self.pktCB.ENTITY_TELEPORT] = self.parse_cb.parse_play_entity_teleport
+                self.pktCB.ENTITY_TELEPORT] = self.parse_cb.parse_play_entity_teleport  # noqa
             self.parsers[PLAY][
-                self.pktCB.ATTACH_ENTITY] = self.parse_cb.parse_play_attach_entity
+                self.pktCB.ATTACH_ENTITY] = self.parse_cb.parse_play_attach_entity  # noqa
             self.parsers[PLAY][
-                self.pktCB.DESTROY_ENTITIES] = self.parse_cb.parse_play_destroy_entities
+                self.pktCB.DESTROY_ENTITIES] = self.parse_cb.parse_play_destroy_entities  # noqa

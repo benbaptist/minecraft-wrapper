@@ -237,13 +237,13 @@
         Sends a message to the player.
 
         :Args:
-            :message: Can be text, colorcoded text, or json chat
+            :message: Can be text, colorcoded text, or chat dictionary of json.
             :position:  an integer 0-2.  2 will place it above XP bar.
              1 or 0 will place it in the chat. Using position 2 will
              only display any text component (or can be used to display
              standard minecraft translates, such as
              "{'translate': 'commands.generic.notFound', 'color': 'red'}" and
-             "{'translate': 'tile.bed.noSleep'}"
+             "{'translate': 'tile.bed.noSleep'}")
 
 
         :returns: Nothing
@@ -311,7 +311,8 @@
 
 -  setPlayerAbilities(self, fly)
 
-        :Proxymode: *based on old playerSetFly (which was an unfinished function)*
+        :Proxymode: *based on old playerSetFly (which was an unfinished
+         function)*
 
         NOTE - You are implementing these abilities on the client
          side only.. if the player is in survival mode, the server

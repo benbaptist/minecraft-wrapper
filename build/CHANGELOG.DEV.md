@@ -1,8 +1,31 @@
-Build 3 [1.0.0  beta]
+Build 5  [1.0b5]
+  (Goals)
+implement bug fixes and improvements:
+- whitelist needs a long overdue overhaul: #314
+- When name changes occur, add option to convert local player name by changing the name and the offline filenames in serverFolder/world/playerdata/<uuid>.dat and serverFolder/world/stats/<uuid>.json
+- Also re-implement the server conversion option to convert online player files to offline (and vs-vs?)
+
+Build 4 [1.0b4]
+- upgrade consoleuser.py for use with new player.message()
+- add its 'execute()' method.
+- create support for alternate output streams besides the console.
+- more proxy fixes as I prepare to fix whitelisting issues:
+    - Made disconnects work better and staged ability to allow proxy client
+     to ignore proxy server disconnects (later on for lobby/multiserver ops)
+    - Disconnect messages use minecraft translate and work in all client states.
+    - Added way to substitute coloration and augmented text for commands wrapper
+     modifies (in this case, 'op') - parse_cb.py.
+    - added a 'client_notify()' function to let server request a client's
+     disconnection.  Client will have the abilty to ignore this request! :D
+- install vanilla whitelist commands into 'commands.py' -off, on, add, remove, list, reload
+- Manually Save server before a restart (spigot plugins mess with save states).
+- Fix bug in commands.command_op that would op "False" player if name is left blank.
+
+Build 3 [1.0b3]
 - Fix in-game "wrapper update" command (was broken with new version format)
 
 
-Build 2 [1.0.0  beta]
+Build 2 [1.0b2]
 - Ensure server auto-restarts don't happen during a backup cycle.
 - added some API.backups functions to test backup status.
 - Fix [#521](https://github.com/benbaptist/minecraft-wrapper/issues/521)
@@ -18,12 +41,6 @@ Build 266 / Build 1 [1.0.0  beta]
 - properly implement Ctrl-z as a wrapper/server 'freeze' (does not work).
 - restage version.py and make buildscript.py comply with 5 part format.
 - build numbers are now unique only to major version and release type (X.x.x, 'a','b', 'rc', 'final')
-
-  (Goals)
-implement bug fixes and improvements:
-- whitelist needs a long overdue overhaul: #314
-- When name changes occur, add option to convert local player name by changing the name and the offline filenames in serverFolder/world/playerdata/<uuid>.dat and serverFolder/world/stats/<uuid>.json
-- Also re-implement the server conversion option to convert online player files to offline (and vs-vs?)
 
 
 Build 265 [0.16.1]
