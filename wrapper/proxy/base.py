@@ -279,10 +279,10 @@ class Proxy(object):
         attempts = ["Search: %s" % str(uuid)]
         for client in self.srv_data.clients:
             attempts.append("try: client-%s uuid-%s serveruuid-%s name-%s" %
-                            (client, client.uuid.string,
-                             client.serveruuid.string, client.username))
-            if client.serveruuid.string == str(uuid):
-                self.uuidTranslate[uuid] = client.uuid.string
+                            (client, client.online_uuid.string,
+                             client.local_uuid.string, client.username))
+            if client.local_uuid.string == str(uuid):
+                self.uuidTranslate[uuid] = client.online_uuid.string
                 return client
         self.log.debug("getclientbyofflineserveruuid failed: \n %s", attempts)
         self.log.debug("POSSIBLE CLIENTS: \n %s", self.srv_data.clients)

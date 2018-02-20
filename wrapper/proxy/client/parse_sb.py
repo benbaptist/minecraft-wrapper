@@ -594,11 +594,11 @@ class ParseSB(object):
 
         # ("uuid:target_player")
         for client in self.proxy.clients:
-            if data[0] == client.uuid:
+            if data[0] == client.online_uuid:
                 self.client.server_connection.packet.sendpkt(
                     self.client.pktSB.SPECTATE,
                     [UUID],
-                    [client.serveruuid])
+                    [client.online_uuid])
                 self.log.debug("spectate returned False (SB)")
                 return False
         return True

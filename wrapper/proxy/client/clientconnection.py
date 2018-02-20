@@ -99,11 +99,11 @@ class Client(object):
 
         # --------------------------------------------------------
         # Server UUID - which is the local offline UUID.
-        self.serveruuid = None
+        self.local_uuid = None
 
         # --------------------------------------------------------
         # The client UUID authenticated by connection to session server.
-        self.uuid = None
+        self.online_uuid = None
         # --------------------------------------------------------
         # the formal, unique, mojang UUID as looked up on mojang servers.
         # This ID will be the same no matter what mode wrapper is in
@@ -253,7 +253,7 @@ class Client(object):
         if was_lobby:
             self.log.info("%s's client Returned from remote server:"
                           " (UUID: %s | IP: %s | SecureConnection: %s)",
-                          self.username, self.uuid.string,
+                          self.username, self.online_uuid.string,
                           self.ip, self.onlinemode)
 
             self._add_client()
@@ -303,9 +303,9 @@ class Client(object):
         """  When the client first logs in to the wrapper proxy """
 
         # check for uuid ban
-        if self.proxy.isuuidbanned(self.uuid.string):
+        if self.proxy.isuuidbanned(self.online_uuid.string):
             banreason = self.proxy.getuuidbanreason(
-                self.uuid.string)  # changed from __str__()
+                self.online_uuid.string)  # changed from __str__()
             self.log.info("Banned player %s tried to"
                           " connect:\n %s" % (self.username, banreason))
             self.state = HANDSHAKE
@@ -317,8 +317,8 @@ class Client(object):
                 "player.preLogin", {
                     "playername": self.username,
                     "player": self.username,  # not a real player object!
-                    "online_uuid": self.uuid.string,
-                    "server_uuid": self.serveruuid.string,
+                    "online_uuid": self.online_uuid.string,
+                    "server_uuid": self.local_uuid.string,
                     "ip": self.ip,
                     "secure_connection": self.onlinemode
                 }):
@@ -353,7 +353,7 @@ class Client(object):
         self.permit_disconnect_from_server = True
         self.log.info("%s's Proxy Client LOGON occurred: (UUID: %s"
                       " | IP: %s | SecureConnection: %s)",
-                      self.username, self.uuid.string,
+                      self.username, self.online_uuid.string,
                       self.ip, self.onlinemode)
         self._inittheplayer()  # set up inventory and stuff
         self._add_client()
@@ -364,7 +364,7 @@ class Client(object):
         self.packet.sendpkt(
             self.pktCB.LOGIN_SUCCESS,
             [STRING, STRING],
-            (self.uuid.string, self.username))
+            (self.online_uuid.string, self.username))
 
         self.time_client_responded = time.time()
 
@@ -409,7 +409,7 @@ class Client(object):
         server_addr = "localhost"
         if self.spigot_mode:
             server_addr = "localhost\x00%s\x00%s" % \
-                          (self.client_address[0], self.serveruuid.hex)  # TODO - does this break spigot (using serveruuid versus uuid)?  # noqa
+                          (self.client_address[0], self.local_uuid.hex)  # TODO - does this break spigot (using serveruuid versus uuid)?  # noqa
         if self.proxy.forge:
             server_addr = "localhost\x00FML\x00"
 
@@ -620,7 +620,7 @@ class Client(object):
                 #     ]
                 # }
                 requestdata = r.json()
-                self.uuid = MCUUID(requestdata["id"])  # TODO
+                self.online_uuid = MCUUID(requestdata["id"])  # TODO
 
                 if requestdata["name"] != self.username:
                     self.disconnect("Client's username did not"
@@ -634,22 +634,22 @@ class Client(object):
                     if prop["name"] == "textures":
                         self.skin_blob = prop["value"]
                         self.proxy.skins[
-                            self.uuid.string] = self.skin_blob
+                            self.online_uuid.string] = self.skin_blob
                 self.properties = requestdata["properties"]
             else:
                 self.disconnect("Proxy Client Session Error"
                                 " (HTTP Status Code %d)" % r.status_code)
                 return False
             currentname = self.proxy.uuids.getusernamebyuuid(
-                self.uuid.string)
+                self.online_uuid.string)
             if currentname:
                 if currentname != self.username:
                     self.log.info("%s's client performed LOGON in with"
                                   " new name, falling back to %s",
                                   self.username, currentname)
                     self.username = currentname
-            self.serveruuid = self.proxy.uuids.getuuidfromname(self.username)
-            # print("_login_authenticate_client just changed self.serveruuid to %s" % self.proxy.uuids.getuuidfromname(self.username))  # noqa
+            self.local_uuid = self.proxy.uuids.getuuidfromname(self.username)
+            # print("_login_authenticate_client just changed self.local_uuid to %s" % self.proxy.uuids.getuuidfromname(self.username))  # noqa
             # TODO "handle name changes better"
 
         # Wrapper offline and not authenticating
@@ -657,10 +657,10 @@ class Client(object):
         # way to authenticate (passwords?)
         else:
             # I'll take your word for it, bub...  You are:
-            self.serveruuid = self.proxy.uuids.getuuidfromname(self.username)
-            self.uuid = self.serveruuid
+            self.local_uuid = self.proxy.uuids.getuuidfromname(self.username)
+            self.online_uuid = self.local_uuid
             self.log.debug("Client logon with wrapper offline-"
-                           " 'self.uuid = OfflinePlayer:<name>'")
+                           " 'self.online_uuid = OfflinePlayer:<name>'")
 
         # TODO This should follow server properties setting
         # no idea what is special about version 26
@@ -725,62 +725,6 @@ class Client(object):
                     [STRING, BOOL],
                     [channel, state])
 
-    def _whitelist_processing(self):
-        pass
-        # This needs re-worked.  should likely be in main wrapper of server
-        #  instance, not at each client connection
-
-        # Rename UUIDs accordingly
-        # if self.config["Proxy"]["convert-player-files"]:
-        #    if self.config["Proxy"]["online-mode"]:
-        #        # Check player files, and rename them accordingly
-        #        #  to offline-mode UUID
-        #        worldname = self.servervitals.worldname
-        #        if not os.path.exists("%s/playerdata/%s.dat" % (
-        #                worldname, self.serveruuid.string)):
-        #            if os.path.exists("%s/playerdata/%s.dat" % (
-        #                    worldname, self.uuid.string)):
-        #                self.log.info("Migrating %s's playerdata"
-        #                              " file to proxy mode", self.username)
-        #                shutil.move("%s/playerdata/%s.dat" %
-        #                            (worldname, self.uuid.string),
-        #                            "%s/playerdata/%s.dat" % (
-        #                                worldname, self.serveruuid.string))
-        #                with open("%s/.wrapper-proxy-playerdata-migrate" %
-        #                          worldname, "a") as f:
-        #                    f.write("%s %s\n" % (self.uuid.string,
-        #                                         self.serveruuid.string))
-        #        # Change whitelist entries to offline mode versions
-        #        if os.path.exists("whitelist.json"):
-        #            with open("whitelist.json", "r") as f:
-        #                jsonwhitelistdata = json.loads(f.read())
-        #            if jsonwhitelistdata:
-        #                for player in jsonwhitelistdata:
-        #                    if not player["uuid"] == self.serveruuid.string\
-        #                            and player["uuid"] == self.uuid.string:
-        #                        self.log.info("Migrating %s's whitelist entry"
-        #                                      " to proxy mode", self.username)
-        #                        jsonwhitelistdata.append(
-        #                            {"uuid": self.serveruuid.string,
-        #                             "name": self.username})
-        #                        with open("whitelist.json", "w") as f:
-        #                            f.write(json.dumps(jsonwhitelistdata))
-        #                        ##self.XXXservervitalsXXX.console(
-        #                            "##whitelist reload")
-        #                        => self.proxy.eventhandler.callevent("proxy.console", {"command": "whitelist reload"})  # noqa
-        """ eventdoc
-                                <description> internalfunction <description>
-
-                            """
-        #                        with open("%s/.wrapper-proxy-whitelist-"
-        #                                  "migrate" % worldname, "a") as f:
-        #                            f.write("%s %s\n" % (
-        #                                self.uuid.string,
-        #                                self.serveruuid.string))
-
-    # PARSERS SECTION
-    # -----------------------------
-
     def _parse_keep_alive(self):
         data = self.packet.readpkt(self.pktSB.KEEP_ALIVE[PARSER])
 
@@ -807,7 +751,7 @@ class Client(object):
             else:
                 datarest = self.packet.readpkt([REST, ])[0]
 
-            print("\nDATA REST = %s\n" % datarest)
+            # print("\nDATA REST = %s\n" % datarest)
             response = json.loads(datarest.decode('utf-8'),
                                   encoding='utf-8')
             self._plugin_response(response)
@@ -963,7 +907,7 @@ class Client(object):
 
             # Server UUID is always offline (at the present time)
             # MCUUID object
-            self.serveruuid = self.proxy.uuids.getuuidfromname(self.username)
+            self.local_uuid = self.proxy.uuids.getuuidfromname(self.username)
 
         else:
             # Wrapper proxy offline and not authenticating
@@ -971,10 +915,11 @@ class Client(object):
             #  way to authenticate (password plugin?)
 
             # Server UUID is always offline (at the present time)
-            self.uuid = self.proxy.uuids.getuuidfromname(self.username)
+            self.online_uuid = self.proxy.uuids.getuuidfromname(self.username)
 
-            # Since wrapper is offline, we are using offline for self.uuid also
-            self.serveruuid = self.uuid  # MCUUID object
+            # Since wrapper is offline, we are using offline for
+            #  self.online_uuid also
+            self.local_uuid = self.online_uuid  # MCUUID object
 
             # log the client on
             self.state = PLAY

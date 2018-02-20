@@ -214,7 +214,7 @@ class Main:
                     player.message("&cERROR: Invalid ID %d" % tilename)
                     return
             except:
-                print traceback.format_exc()
+                print(traceback.format_exc())
             self.minecraft.console("give %s %s %d %d %s" % (player.name, tilename, count, damage, tags))
         else:
             player.message("&cUsage: /i <TileName>[:data] [amount] [dataTag]")
@@ -234,7 +234,7 @@ class Main:
         else:
             player.message("&cUsage: /block <x> <y> <z>")
     def whois(self, player, args):
-        player.message("&7You are %s. You are in dimension %d, in gamemode %d and are currently located at %s. Your UUID is %s." % (player.username, player.getDimension(), player.getGamemode(), player.getPosition(), str(player.uuid)))
+        player.message("&7You are %s. You are in dimension %d, in gamemode %d and are currently located at %s. Your UUID is %s." % (player.username, player.getDimension(), player.getGamemode(), player.getPosition(), str(player.mojangUuid)))
     def sudo(self, player, args):
         if len(args) > 1:
             self.minecraft.getPlayer(args[0]).execute(" ".join(args[1:]))

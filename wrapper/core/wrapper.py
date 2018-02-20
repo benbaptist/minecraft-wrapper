@@ -688,6 +688,9 @@ class Wrapper(object):
                              "/property", "/properties"):
                 self.runwrapperconsolecommand("config", allargs)
 
+            elif self.proxymode and command in ("whitelist", "/whitelist"):
+                self.runwrapperconsolecommand("whitelist", allargs)
+
             elif command in ("op", "/op"):
                 self.runwrapperconsolecommand("op", allargs)
 

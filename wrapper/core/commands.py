@@ -10,13 +10,13 @@ import time
 import json
 
 from api.helpers import format_bytes, getargs, getargsafter, readout
-from api.helpers import get_int, set_item, putjsonfile
+from api.helpers import get_int, set_item, getjsonfile, putjsonfile
 # noinspection PyProtectedMember
 from api.helpers import _secondstohuman, _showpage
 from utils.crypt import get_passphrase
 
 
-# noinspection PyBroadException
+# noinspection PyBroadException,PyMethodMayBeStatic
 class Commands(object):
 
     def __init__(self, wrapper):
@@ -778,30 +778,88 @@ class Commands(object):
                             'color': 'red'})
 
     def _command_whitelist_add(self, player, arg):
-        player.execute("whitelist add %s" % arg)
-        player.message("..Working.  Server may lag.")
-        player.message()
+        if not self.wrapper.proxymode:
+            player.execute("whitelist add %s" % arg)
+            player.message("..Working.  Server may lag.")
+            player.message()
+            return
+        whitelist = getjsonfile(
+            "whitelist", self.wrapper.serverpath, self.wrapper.encoding
+        )
+        online_uuid = self.wrapper.uuids.getuuidbyusername(arg).string
 
-    def _command_whitelist_list(self, player, arg):
+        if online_uuid in (None, False):
+            player.message("&c INVALID NAME")
+            return
+        proper_spelled = self.wrapper.uuids.getusernamebyuuid(online_uuid)
+        off_line = self.wrapper.uuids.getuuidfromname(proper_spelled).string
+
+        add_record = True
+        for index, entry in enumerate(whitelist):
+            # Name is already there; just update uuid
+            if whitelist[index]["name"] == proper_spelled:
+                whitelist[index]["uuid"] = off_line
+                add_record = False
+                break
+            # uuid is correct offline; make sure name matches
+            elif whitelist[index]["uuid"] == off_line:
+                whitelist[index]["name"] = proper_spelled
+                add_record = False
+                break
+            # uuid is online version; correct to offline and edit username
+            elif whitelist[index]["uuid"] == online_uuid:
+                whitelist[index]["uuid"] = off_line
+                whitelist[index]["name"] = proper_spelled
+                add_record = False
+                break
+
+        if add_record:
+            jsonitem = {"uuid": off_line, "name": proper_spelled}
+            whitelist.append(jsonitem)
+
+        putjsonfile(whitelist, "whitelist", self.wrapper.serverpath,)
+        player.message("Done!")
+        player.execute("whitelist reload")
+
+    def _command_whitelist_list(self, player, _arg):
         player.execute("whitelist list")
 
-    def _command_whitelist_off(self, player, arg):
+    def _command_whitelist_off(self, player, _arg):
         player.execute("whitelist off")
 
-    def _command_whitelist_on(self, player, arg):
+    def _command_whitelist_on(self, player, _arg):
         player.execute("whitelist on")
 
-    def _command_whitelist_reload(self, player, arg):
+    def _command_whitelist_reload(self, player, _arg):
         player.execute("whitelist reload")
 
     def _command_whitelist_remove(self, player, arg):
         player.execute("whitelist remove %s" % arg)
+        player.execute("whitelist reload")
 
     def _command_whitelist_offline(self, player, arg):
-        pass
+        whitelist = getjsonfile(
+            "whitelist", self.wrapper.serverpath, self.wrapper.encoding
+        )
+        for index, entry in enumerate(whitelist):
+            newuuid = self.wrapper.uuids.getuuidfromname(
+                whitelist[index]["name"]).string
+            whitelist[index]["uuid"] = newuuid
+        putjsonfile(whitelist, "whitelist", self.wrapper.serverpath, )
+        player.message("Done!")
+        player.execute("whitelist reload")
 
     def _command_whitelist_online(self, player, arg):
-        pass
+        whitelist = getjsonfile(
+            "whitelist", self.wrapper.serverpath, self.wrapper.encoding
+        )
+        for index, entry in enumerate(whitelist):
+            newuuid = self.wrapper.uuids.getuuidbyusername(
+                whitelist[index]["name"]).string
+            whitelist[index]["uuid"] = newuuid
+        putjsonfile(whitelist, "whitelist", self.wrapper.serverpath, )
+        player.message("Done!")
+        player.execute("whitelist reload")
 
     def command_deop(self, player, payload):
         # if player is None:
