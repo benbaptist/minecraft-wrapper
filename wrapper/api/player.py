@@ -182,8 +182,8 @@ class Player(object):
                 if client.username == self.username:
                     self.client = client
                     # Both MCUUID objects
-                    self.clientUuid = client.uuid
-                    self.serverUuid = client.serveruuid
+                    self.clientUuid = client.online_uuid
+                    self.serverUuid = client.local_uuid
 
                     self.ipaddress = client.ip
 

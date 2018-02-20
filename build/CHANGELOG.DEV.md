@@ -1,11 +1,14 @@
+Build 6  [1.0b6]
+FIX Whitelisting!  #314
+- whitelist add/remove both also 'reload'... because everybody forgets that part!
+- whitelist adds players using offline uuids while in proxy mode.
+- two new commands added:
+    - /whitelist online - convert all whitelist names to online uuids (to set server to online mode)
+    - /whitelist offline -  convert all whitelist names to offline uuids (to set server to offline/proxy mode)
+- uuid changes are "cosmetic" and do not affect player inventory, etc.  HOWEVER; changing a servers online mode WILL.
+
 Build 5  [1.0b5]
 - [#519](https://github.com/benbaptist/minecraft-wrapper/issues/519) - delay server backups during idle periods.
-
-  (Goals)
-implement bug fixes and improvements:
-- whitelist needs a long overdue overhaul: #314
-- When name changes occur, add option to convert local player name by changing the name and the offline filenames in serverFolder/world/playerdata/<uuid>.dat and serverFolder/world/stats/<uuid>.json
-- Also re-implement the server conversion option to convert online player files to offline (and vs-vs?)
 
 Build 4 [1.0b4]
 - upgrade consoleuser.py for use with new player.message()

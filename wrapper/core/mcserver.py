@@ -762,6 +762,10 @@ class MCServer(object):
             new_usage = "player> [-s SUPER-OP] [-o OFFLINE] [-l <level>]"
             message = buff.replace("player>", new_usage)
             buff = message
+        if "/whitelist <on|off" in buff:
+            new_usage = "on|off|list|add|remvove|reload|offline|online>"
+            message = buff.replace("player>", new_usage)
+            buff = message
 
         if "While this makes the game possible to play" in buff:
             prefix = " ".join(buff.split(' ')[:self.prepends_offset])

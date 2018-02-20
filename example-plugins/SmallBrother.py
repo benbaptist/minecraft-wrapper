@@ -63,7 +63,7 @@ class Main:
     def breakBlock(self, payload):  # print self.minecraft.getServer().world.getBlock(payload["position"])
         player = payload["player"]
         x, y, z = payload["position"]
-        uuid = player.uuid
+        uuid = player.mojangUuid
         if player.name in self.toggled:
             actions = self.lookupBlock(x, y, z)
             for action in actions:
@@ -84,7 +84,7 @@ class Main:
         if payload["position"]:
             x, y, z = payload["position"]
 
-        uuid = player.uuid
+        uuid = player.mojangUuid
         if player.name in self.toggled and payload["position"]:
             actions = self.lookupBlock(x, y, z)
             for action in actions:

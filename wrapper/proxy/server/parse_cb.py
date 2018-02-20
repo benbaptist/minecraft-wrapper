@@ -26,7 +26,19 @@ TRANSLATE = {
             {'clickEvent': {'action': 'suggest_command', 'value': '/op '},
              'text':
                  '/op <player> [-s SUPEROP] [-o OFFLINE] [-l <superoplevel>]',
-             'italic': True}
+             'italic': True,
+             'color': 'yellow'}
+        ],
+    "whitelist":
+        [
+            {'clickEvent': {'value': '/whitelist ', 'action': 'suggest_command'},
+             'translate': 'commands.whitelist.usage'},
+
+            {'clickEvent': {'action': 'suggest_command', 'value': '/whitelist '},
+             'text':
+                 '/whitelist <on|off|list|add|remvove|reload|offline|online>',
+             'italic': True,
+             'color': 'yellow'}
         ],
 }
 
@@ -66,7 +78,7 @@ class ParseCB(object):
                 if not playerclient:
                     z += 1
                     continue
-                uuid = playerclient.uuid
+                uuid = playerclient.online_uuid
                 z += 1
                 if action == 0:
                     properties = playerclient.properties
@@ -95,7 +107,7 @@ class ParseCB(object):
                     # noinspection PyUnusedLocal
                     # todo should we be using this to set client gamemode?
                     gamemode = data[0]
-                    print("GAMEMODE (parse_cb): %s" % gamemode)
+                    # print("GAMEMODE (parse_cb): %s" % gamemode)
                     # ("varint:gamemode")
                     self.client.packet.sendpkt(
                         self.pktCB.PLAYER_LIST_ITEM,
@@ -144,6 +156,7 @@ class ParseCB(object):
         # This packet  is used to spawn other players into a player
         # client's world.  if this packet does not arrive, the other
         #  player(s) will not be visible to the client
+        # it does not play a role in the player's spawing process.
         if self.server.version < PROTOCOL_1_8START:
             dt = self.packet.readpkt([VARINT, STRING, REST])
         else:
@@ -156,19 +169,20 @@ class ParseCB(object):
 
         # We dont need to read the whole thing.
         clientserverid = self.proxy.getclientbyofflineserveruuid(dt[1])
-        if clientserverid.uuid:
-            print("parseCB::  %s" % clientserverid.uuid.string)
-            print("parseCB::  %s" % clientserverid.uuid)
+        if clientserverid.online_uuid:
+            # print("parseCB::  %s" % clientserverid.online_uuid.string)
+            # print("parseCB::  %s" % clientserverid.online_uuid)
             if self.server.version < PROTOCOL_1_8START:
                 self.client.packet.sendpkt(
                     self.pktCB.SPAWN_PLAYER,
                     [VARINT, STRING, RAW],
-                    (dt[0], clientserverid.uuid.string, dt[2]))
+                    (dt[0], clientserverid.online_uuid.string, dt[2]))
             else:
+                # print("UUID of spawned player = %s  : Should be online uuid" % clientserverid.online_uuid)
                 self.client.packet.sendpkt(
                     self.pktCB.SPAWN_PLAYER,
                     [VARINT, UUID, RAW],
-                    (dt[0], clientserverid.uuid, dt[2]))
+                    (dt[0], clientserverid.online_uuid, dt[2]))
             return False
         return True
 
