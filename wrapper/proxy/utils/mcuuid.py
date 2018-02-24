@@ -113,11 +113,12 @@ class UUIDS(object):
                                  "create other logical/program flow errors")
                 return False
         else:
-            self.log.warning("UUID returned False (a non-MCUUID object).  This "
-                             "will likely create other logical/program flow errors")
+            self.log.warning(
+                "UUID returned False (a non-MCUUID object).  This "
+                "will likely create other logical/program flow errors")
             return False  # No other options but to fail request
 
-    def getusernamebyuuid(self, useruuid, forcepoll=False):
+    def getusernamebyuuid(self, useruuid, forcepoll=False, uselocalname=True):
         """
         Returns the username from the specified UUID.
         If the player has never logged in before and isn't in the user cache, it will poll Mojang's API.
@@ -126,9 +127,10 @@ class UUIDS(object):
 
         :param useruuid:  string UUID
         :param forcepoll:  force polling even if record has been cached in past 30 days.
+        :param uselocalname:  Will return the name our server uses for this player.
 
         :returns: returns the username from the specified uuid, else returns False if failed.
-        """
+        """  # noqa
         frequency = 2592000  # if called directly, can update cache daily (refresh names list, etc)
         if forcepoll:
             frequency = 600  # 10 minute limit
@@ -194,7 +196,10 @@ class UUIDS(object):
             self.usercache[useruuid]["name"] = pastnames[0]["name"]
             if self.usercache[useruuid]["localname"] is None:
                 self.usercache[useruuid]["localname"] = pastnames[0]["name"]
-        return self.usercache[useruuid]["localname"]
+        if uselocalname:
+            return self.usercache[useruuid]["localname"]
+        else:
+            return self.usercache[useruuid]["name"]
 
     def _pollmojanguuid(self, user_uuid):
         """
@@ -225,16 +230,109 @@ class UUIDS(object):
                             self.log.warning("response: \n%s", str(rx))
                             return False
                         elif entry["account.mojang.com"] in ("yellow", "red"):
-                            self.log.warning("Mojang accounts is experiencing issues (%s).",
-                                             entry["account.mojang.com"])
+                            self.log.warning(
+                                "Mojang accounts is experiencing issues (%s).",
+                                entry["account.mojang.com"]
+                            )
                             return False
-                        self.log.warning("Mojang Status found, but corrupted or in an unexpected format (status "
-                                         "code %s)", r.status_code)
+                        self.log.warning(
+                            "Mojang Status found, but corrupted or in an "
+                            "unexpected format (status code %s)",
+                            r.status_code
+                        )
                         return False
                     else:
-                        self.log.warning("Mojang Status not found - no internet connection, perhaps? "
-                                         "(status code may not exist)")
+                        self.log.warning(
+                            "Mojang Status not found - no internet connection, "
+                            "perhaps? (status code may not exist)")
                         try:
                             return self.usercache[user_uuid]["name"]
                         except TypeError:
                             return False
+
+    def convert_user(self, serverdirectory=".", worldname="world", uuid_="all", onlinemode=False):  # noqa
+        """
+        Convert a user's or all users' data files to online or offline mode.
+
+        Converts all files in /playerdata, /stats, /advancements
+
+        :Args:
+            :serverdirectory: The server's working directory.  Default is '.'
+             This is normally self.wrapper.serverpath.
+            :worldname: The server worldname.  Should be obtained by the
+             API.minecraft.getWorldName().
+            :uuid:
+                :if a string: Passing "all" causes every player in the wrapper
+                 usercache to be converted.  Otherwise, this is interpreted as
+                 the string representation of a UUID
+                :if a list: It is presumed to be a list of UUID.strings.
+            :onlinemode: set to True to convert files to Online mode, False to
+             convert them to Offline mode.
+
+            passed UUIDS are the online versions!
+
+        :returns: Nothing.  Performs action(s), logging successful conversions.
+
+        """
+        cwd = "%s/%s" % (serverdirectory, worldname)
+        if uuid_ == "all":
+            all_uuids = []
+            for uuids in self.usercache:
+                all_uuids.append(uuids)
+        elif type(uuid_) is list:
+            all_uuids = uuid_
+        else:
+            all_uuids = [uuid]
+
+        self._conv_user(all_uuids, cwd, onlinemode)
+
+    def _conv_user(self, alluuids, cwd, online=False):
+        for onlineuuid_str in alluuids:
+            username_str = self.getusernamebyuuid(onlineuuid_str)
+            offlineuuid_str = self.getuuidfromname(username_str).string
+            if online:
+                self.convert_files(offlineuuid_str, onlineuuid_str, cwd)
+            else:
+                self.convert_files(onlineuuid_str, offlineuuid_str, cwd)
+
+    def convert_files(self, olduuid, newuuid, cwd):
+        """
+        Convert a player's old uuid to new uuid.
+        Converts all files in /playerdata, /stats, /advancements
+
+        :Args:
+            :olduuid: The original UUID (string)
+            :nwe UUID: the new UUID (string).
+            :cwd: The `./server/world` directory.
+
+        :returns: Nothing.  Performs action, logging successful conversions.
+
+        """
+
+        old_files = [
+            "%s/playerdata/%s.dat" % (cwd, olduuid),
+            "%s/stats/%s.json" % (cwd, olduuid),
+            "%s/advancements/%s.json" % (cwd, olduuid)
+        ]
+        new_files = [
+            "%s/playerdata/%s.dat" % (cwd, newuuid),
+            "%s/stats/%s.json" % (cwd, newuuid),
+            "%s/advancements/%s.json" % (cwd, newuuid)
+        ]
+        self._cu_write(old_files, new_files)
+
+    # noinspection PyBroadException
+    def _cu_write(self, old, new):
+        for x, files in enumerate(old):
+            try:
+                with open(old[x], 'rb') as f:
+                    content = f.read()
+            except Exception:
+                continue
+
+            try:
+                with open(new[x], 'wb') as f:
+                    f.write(content)
+                self.log.debug("Wrote: %s", new[x])
+            except Exception:
+                continue

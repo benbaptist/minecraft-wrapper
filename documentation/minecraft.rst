@@ -422,7 +422,9 @@
 
 -  getWorldName(self)
 
-        Returns the world's name.
+        Returns the world's name.  If worldname does not exist (server
+         not started), it returns `None`.  If a server was stopped and a
+         new server instance not started, it will return the old world name.
 
         
 

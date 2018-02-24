@@ -6,6 +6,7 @@
 # General Public License, version 3 or later.
 from pprint import pprint
 
+import copy
 import time
 import json
 
@@ -750,8 +751,7 @@ class Commands(object):
             reason = {'translate': 'multiplayer.disconnect.kicked'}
         else:
             reason = {'translate': 'multiplayer.disconnect.kicked',
-                      'text': all_args
-            }
+                      'text': all_args}
 
         self.wrapper.javaserver.kick_player(player_name, reason)
 
@@ -773,9 +773,14 @@ class Commands(object):
         if wl_comm in wl_commands:
             wl_commands[wl_comm](player, wl_arg)
         else:
-            player.message({'with': [{'translate': 'commands.whitelist.usage'}],
-                            'translate': 'commands.generic.usage',
-                            'color': 'red'})
+            player.message(
+                {"text": 'Usage: /whitelist <on|off|list|add|remove|reload>',
+                 'color': 'white'})
+            player.message(
+                {"text": 'Additional Proxy mode Usage: \n       /whitelist on'
+                         'line - Convert whitelist to online uuids\n       /whi'
+                         'telist offline - Convert whitelist to offline uuids',
+                 'color': 'yellow'})
 
     def _command_whitelist_add(self, player, arg):
         if not self.wrapper.proxymode:
@@ -837,27 +842,59 @@ class Commands(object):
         player.execute("whitelist remove %s" % arg)
         player.execute("whitelist reload")
 
-    def _command_whitelist_offline(self, player, arg):
+    def _command_whitelist_offline(self, player, _arg):
+        world = self.wrapper.api.minecraft.getWorldName()
+        curr_wd = "%s/%s" % (self.wrapper.serverpath, world)
+        if not world:
+            player.message("No server world found, so UUID's not converted...")
         whitelist = getjsonfile(
             "whitelist", self.wrapper.serverpath, self.wrapper.encoding
         )
         for index, entry in enumerate(whitelist):
-            newuuid = self.wrapper.uuids.getuuidfromname(
-                whitelist[index]["name"]).string
+            onlineuuid = self.wrapper.uuids.getuuidbyusername(
+                whitelist[index]["name"])
+            if not onlineuuid:
+                player.message(
+                    "Could not find Mojangs entry for %s" % whitelist[index][
+                        "name"])
+                player.message("&cSkipped!")
+                continue
+            correctnamed = self.wrapper.uuids.getusernamebyuuid(
+                onlineuuid.string)
+            whitelist[index]["name"] = correctnamed
+            newuuid = self.wrapper.uuids.getuuidfromname(correctnamed).string
             whitelist[index]["uuid"] = newuuid
-        putjsonfile(whitelist, "whitelist", self.wrapper.serverpath, )
+            if world:
+                self.wrapper.uuids.convert_files(onlineuuid, newuuid, curr_wd)
+        putjsonfile(whitelist, "whitelist", self.wrapper.serverpath)
+
+        # This part will convert files in wrapper's player cache, irresp. of whitelist  # noqa
+        player.message("Converting cached UUID files...")
+        if world:
+            self.wrapper.uuids.convert_user(self.wrapper.serverpath, world,
+                                            onlinemode=False)
         player.message("Done!")
         player.execute("whitelist reload")
 
-    def _command_whitelist_online(self, player, arg):
+    def _command_whitelist_online(self, player, _arg):
+        uuidlist = []
         whitelist = getjsonfile(
             "whitelist", self.wrapper.serverpath, self.wrapper.encoding
         )
         for index, entry in enumerate(whitelist):
             newuuid = self.wrapper.uuids.getuuidbyusername(
-                whitelist[index]["name"]).string
-            whitelist[index]["uuid"] = newuuid
+                whitelist[index]["name"])
+            if newuuid:
+                uuidlist.append(newuuid.string)
+                whitelist[index]["uuid"] = newuuid.string
         putjsonfile(whitelist, "whitelist", self.wrapper.serverpath, )
+        player.message("Converting UUID files...")
+        world = self.wrapper.api.minecraft.getWorldName()
+        if world:
+            self.wrapper.uuids.convert_user(self.wrapper.serverpath, world,
+                                            uuid_=uuidlist, onlinemode=True)
+        else:
+            player.message("No server world found, so UUID's not converted...")
         player.message("Done!")
         player.execute("whitelist reload")
 
