@@ -1,5 +1,9 @@
+Build 9  [1.0b9]
+- Critical bugfix for anyone using "BetterConsole" mode.
+
+
 Build 8  [1.0b8]
-- Improve web to get player.message() - see build 1.0b4, third bullet point.
+-Improve web to get player.message() - see build 1.0b4, third bullet point.
 - Console readouts are redirected to the player who ran the command (benefits Web).
 - Improve Web Chat and Console layouts.
 - Allow login page to capture a unique username for the WebAdmin.
