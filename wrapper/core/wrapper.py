@@ -474,7 +474,7 @@ class Wrapper(object):
 
         # if this fails due to key error, we WANT that raised, as it is
         #  a program code error, not a run-time error.
-        parse[source](message)
+        parse[source]()
 
     def getconsoleinput(self):
         """If wrapper is NOT using readline (self.use_readline == False),
