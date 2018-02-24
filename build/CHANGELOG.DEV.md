@@ -1,3 +1,8 @@
+Build 7  [1.0b7]
+- Whitelist online/offline also converts player data uuid files to their correct type, so converting
+ the server between online and offline will not hurt players inventory (provided you restart promptly).
+
+
 Build 6  [1.0b6]
 FIX Whitelisting!  #314
 - whitelist add/remove both also 'reload'... because everybody forgets that part!
