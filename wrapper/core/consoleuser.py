@@ -24,12 +24,15 @@ class ConsolePlayer(object):
 
     """
 
-    def __init__(self, wrapper):
+    def __init__(self, wrapper, outputstream=None):
         self.username = "*Console*"
         self.loggedIn = time.time()
         self.wrapper = wrapper
         self.log = wrapper.log
-        self.output_stream = self._default_output
+        if outputstream is None:
+            self.output_stream = self._default_output
+        else:
+            self.output_stream = outputstream
 
         # if self.abort is ever used, must follow `self.abort.halt`
         self.abort = wrapper.halt

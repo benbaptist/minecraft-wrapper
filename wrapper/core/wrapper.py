@@ -615,7 +615,9 @@ class Wrapper(object):
                 continue
             self.process_command(consoleinput)
 
-    def process_command(self, commandline):
+    def process_command(self, commandline, player=None):
+            if player is None:
+                player = self.xplayer
             # for use with runwrapperconsolecommand() command
             wholecommandline = commandline[0:].split(" ")
             command = str(getargs(wholecommandline, 0)).lower()
@@ -639,7 +641,7 @@ class Wrapper(object):
                 self._checkforupdate(True)
             # "plugins" command (with no slash) reserved for server commands
             elif command == "/plugins":
-                self.listplugins()
+                self.listplugins(player)
             elif command in ("/mem", "/memory", "mem", "memory"):
                 self._memory()
             elif command in ("/raw", "raw"):
@@ -650,73 +652,73 @@ class Wrapper(object):
                 self._unfreeze()
             elif command == "/version":
                 readout("/version", self.getbuildstring(),
-                        usereadline=self.use_readline)
+                        usereadline=self.use_readline, player=player)
             elif command in ("/mute", "/pause", "/cm", "/m", "/p"):
-                self._mute_console(allargs)
+                self._mute_console(allargs, player)
 
             # Commands that share the commands.py in-game interface
 
             # "reload" (with no slash) may be used by bukkit servers
             elif command == "/reload":
-                self.runwrapperconsolecommand("reload", [])
+                self.runwrapperconsolecommand("reload", [], player)
 
             # proxy mode ban system
             elif self.proxymode and command == "/ban":
-                self.runwrapperconsolecommand("ban", allargs)
+                self.runwrapperconsolecommand("ban", allargs, player)
 
             elif self.proxymode and command == "/ban-ip":
-                self.runwrapperconsolecommand("ban-ip", allargs)
+                self.runwrapperconsolecommand("ban-ip", allargs, player)
 
             elif self.proxymode and command == "/pardon-ip":
-                self.runwrapperconsolecommand("pardon-ip", allargs)
+                self.runwrapperconsolecommand("pardon-ip", allargs, player)
 
             elif self.proxymode and command == "/pardon":
-                self.runwrapperconsolecommand("pardon", allargs)
+                self.runwrapperconsolecommand("pardon", allargs, player)
 
             elif command in ("/perm", "/perms", "/super", "/permissions",
                              "perm", "perms", "super", "permissions"):
-                self.runwrapperconsolecommand("perms", allargs)
+                self.runwrapperconsolecommand("perms", allargs, player)
 
             elif command in ("/playerstats", "/stats", "playerstats", "stats"):
-                self.runwrapperconsolecommand("playerstats", allargs)
+                self.runwrapperconsolecommand("playerstats", allargs, player)
 
             elif command in ("/ent", "/entity", "/entities", "ent",
                              "entity", "entities"):
-                self.runwrapperconsolecommand("ent", allargs)
+                self.runwrapperconsolecommand("ent", allargs, player)
 
             elif command in ("/config", "/con", "/prop",
                              "/property", "/properties"):
-                self.runwrapperconsolecommand("config", allargs)
+                self.runwrapperconsolecommand("config", allargs, player)
 
             elif self.proxymode and command in ("whitelist", "/whitelist"):
-                self.runwrapperconsolecommand("whitelist", allargs)
+                self.runwrapperconsolecommand("whitelist", allargs, player)
 
             elif command in ("op", "/op"):
-                self.runwrapperconsolecommand("op", allargs)
+                self.runwrapperconsolecommand("op", allargs, player)
 
             elif command in ("kick", "/kick"):
-                self.runwrapperconsolecommand("kick", allargs)
+                self.runwrapperconsolecommand("kick", allargs, player)
 
             elif command in ("deop", "/deop"):
-                self.runwrapperconsolecommand("deop", allargs)
+                self.runwrapperconsolecommand("deop", allargs, player)
 
             elif command in ("pass", "/pass", "pw", "/pw", "password", "/password"):  # noqa
-                self.runwrapperconsolecommand("password", allargs)
+                self.runwrapperconsolecommand("password", allargs, player)
 
             # minecraft help command
             elif command == "help":
                 readout("/help", "Get wrapper.py help.",
                         separator=" (with a slash) - ",
-                        usereadline=self.use_readline)
+                        usereadline=self.use_readline, player=player)
                 self.javaserver.console(commandline)
 
             # wrapper's help (console version)
             elif command == "/help":
-                self._show_help_console()
+                self._show_help_console(player)
 
             # wrapper ban help
             elif command == "/bans":
-                self._show_help_bans()
+                self._show_help_bans(player)
 
             # Commmand not recognized by wrapper
             else:
@@ -777,9 +779,11 @@ class Wrapper(object):
                  " displays on single page!)", "mc1.7.6")
             ])
 
-    def runwrapperconsolecommand(self, wrappercommand, argslist):
+    def runwrapperconsolecommand(self, wrappercommand, argslist, player=None):
+        if player is None:
+            player = self.xplayer
         xpayload = {
-            'player': self.xplayer,
+            'player': player,
             'command': wrappercommand,
             'args': argslist
         }
@@ -802,10 +806,10 @@ class Wrapper(object):
                 return True
         return False
 
-    def listplugins(self):
+    def listplugins(self, player):
         readout("",
                 "List of Wrapper.py plugins installed:", separator="", pad=4,
-                usereadline=self.use_readline)
+                usereadline=self.use_readline, player=player)
         for plid in self.plugins:
             plugin = self.plugins[plid]
             if plugin["good"]:
@@ -817,10 +821,10 @@ class Wrapper(object):
                 plugin_version = plugin["version"]
                 sep = " - v%s - " % ".".join([str(_) for _ in plugin_version])
                 readout(name, summary, separator=sep,
-                        usereadline=self.use_readline)
+                        usereadline=self.use_readline, player=player)
             else:
                 readout("failed to load plugin", plugin, pad=25,
-                        usereadline=self.use_readline)
+                        usereadline=self.use_readline, player=player)
 
     def _start_emailer(self):
         alerts = self.config["Alerts"]["enabled"]
@@ -1078,31 +1082,35 @@ class Wrapper(object):
         else:
             return False
 
-    def _pause_console(self, pause_time):
+    def _pause_console(self, pause_time, player):
         if not self.javaserver:
             readout("ERROR - ",
                     "There is no running server instance to mute.",
-                    separator="", pad=10, usereadline=self.use_readline)
+                    separator="", pad=10,
+                    usereadline=self.use_readline, player=player)
             return
         self.javaserver.server_muted = True
         readout("Server is now muted for %d seconds." % pause_time, "",
                 separator="", command_text_fg="yellow",
-                usereadline=self.use_readline)
+                usereadline=self.use_readline, player=player)
         time.sleep(pause_time)
         readout("Server now unmuted.", "", separator="",
-                usereadline=self.use_readline)
+                usereadline=self.use_readline, player=player)
         self.javaserver.server_muted = False
         for lines in self.javaserver.queued_lines:
-            readout("Q\\", "", lines, pad=3, usereadline=self.use_readline)
+            readout("Q\\", "", lines, pad=3,
+                    usereadline=self.use_readline, player=player)
             time.sleep(.1)
         self.javaserver.queued_lines = []
 
-    def _mute_console(self, all_args):
+    def _mute_console(self, all_args, player):
         pausetime = 30
         if len(all_args) > 0:
             pausetime = get_int(all_args[0])
         # spur off a pause thread
-        cm = threading.Thread(target=self._pause_console, args=(pausetime,))
+        cm = threading.Thread(
+            target=self._pause_console, args=(pausetime, player)
+        )
         cm.daemon = True
         cm.start()
 
@@ -1190,69 +1198,69 @@ class Wrapper(object):
                 "Something went wrong when trying to unfreeze"
                 " the server! (%s)", exc)
 
-    def _show_help_console(self):
+    def _show_help_console(self, player):
         # This is the console help command display.
         readout("", "Get Minecraft help.",
                 separator="help (no slash) - ", pad=0,
-                usereadline=self.use_readline)
+                usereadline=self.use_readline, player=player)
         readout("/reload", "Reload Wrapper.py plugins.",
-                usereadline=self.use_readline)
+                usereadline=self.use_readline, player=player)
         readout("/plugins", "Lists Wrapper.py plugins.",
-                usereadline=self.use_readline)
+                usereadline=self.use_readline, player=player)
         readout("/update-wrapper",
                 "Checks for new Wrapper.py updates, and will install\n"
                 "them automatically if one is available.",
-                usereadline=self.use_readline)
+                usereadline=self.use_readline, player=player)
         readout("/stop",
                 "Stop the minecraft server without"
                 " auto-restarting and without\n"
                 "                  shuttingdown Wrapper.py.",
-                usereadline=self.use_readline)
+                usereadline=self.use_readline, player=player)
         readout("/start", "Start the minecraft server.",
-                usereadline=self.use_readline)
+                usereadline=self.use_readline, player=player)
         readout("/restart", "Restarts the minecraft server.",
-                usereadline=self.use_readline)
+                usereadline=self.use_readline, player=player)
         readout("/halt", "Shutdown Wrapper.py completely.",
-                usereadline=self.use_readline)
+                usereadline=self.use_readline, player=player)
         readout("/cm [seconds]",
                 "Mute server output (Wrapper console"
                 " logging still happens)",
-                usereadline=self.use_readline)
+                usereadline=self.use_readline, player=player)
         readout("/kill", "Force kill the server without saving.",
-                usereadline=self.use_readline)
+                usereadline=self.use_readline, player=player)
         readout("/freeze",
                 "Temporarily locks the server up"
                 " until /unfreeze is executed\n"
                 "                  (Only works on *NIX servers).",
-                usereadline=self.use_readline)
+                usereadline=self.use_readline, player=player)
         readout("/unfreeze", "Unlocks a frozen state server"
                              " (Only works on *NIX servers).",
-                usereadline=self.use_readline)
+                usereadline=self.use_readline, player=player)
         readout("/mem", "Get memory usage of the server"
                         " (Only works on *NIX servers).",
-                usereadline=self.use_readline)
+                usereadline=self.use_readline, player=player)
         readout("/raw [command]",
                 "Send command to the Minecraft"
                 " Server. Useful for Forge\n"
                 "                  commands like '/fml confirm'.",
-                usereadline=self.use_readline)
+                usereadline=self.use_readline, player=player)
         readout("/password",
                 "run `/password help` for more...)",
-                usereadline=self.use_readline)
+                usereadline=self.use_readline, player=player)
         readout("/perms", "/perms for more...)",
-                usereadline=self.use_readline)
+                usereadline=self.use_readline, player=player)
         readout("/config", "Change wrapper.properties (type"
                            " /config help for more..)",
-                usereadline=self.use_readline)
+                usereadline=self.use_readline, player=player)
         readout("/version", self.getbuildstring(),
-                usereadline=self.use_readline)
+                usereadline=self.use_readline, player=player)
         readout("/entity",
                 "Work with entities (run /entity for more...)",
-                usereadline=self.use_readline)
+                usereadline=self.use_readline, player=player)
         readout("/bans", "Display the ban help page.",
-                usereadline=self.use_readline)
+                usereadline=self.use_readline, player=player)
 
-    def _show_help_bans(self):
+    def _show_help_bans(self, player):
         # ban commands help.
         if not self.proxymode:
             readout(
@@ -1260,44 +1268,44 @@ class Wrapper(object):
                 "Wrapper proxy-mode bans are not enabled "
                 "(proxy mode is not on).", separator="",
                 pad=10,
-                usereadline=self.use_readline)
+                usereadline=self.use_readline, player=player)
             return
 
         readout(
             "",
             "Bans - To use the server's versions, do not type a slash.",
             separator="", pad=5,
-            usereadline=self.use_readline)
+            usereadline=self.use_readline, player=player)
         readout(
             "", "", separator="-----1.7.6 and later ban commands-----",
             pad=10,
-            usereadline=self.use_readline)
+            usereadline=self.use_readline, player=player)
         readout(
             "/ban",
             " - Ban a player. Specifying h:<hours> or d:<days>"
             " creates a temp ban.",
             separator="<name> [reason..] [d:<days>/h:<hours>] ",
             pad=12,
-            usereadline=self.use_readline)
+            usereadline=self.use_readline, player=player)
         readout(
             "/ban-ip",
             " - Ban an IP address. Reason and days (d:) are optional.",
             separator="<ip> [<reason..> <d:<number of days>] ", pad=12,
-            usereadline=self.use_readline)
+            usereadline=self.use_readline, player=player)
         readout(
             "/pardon",
             " - pardon a player. Default is byuuidonly.  To unban a"
             "specific name (without checking uuid), use"
             " `pardon <player> False`",
             separator="<player> [byuuidonly(true/false)]", pad=12,
-            usereadline=self.use_readline)
+            usereadline=self.use_readline, player=player)
         readout(
             "/pardon-ip", " - Pardon an IP address.",
             separator="<address> ", pad=12,
-            usereadline=self.use_readline)
+            usereadline=self.use_readline, player=player)
         readout(
             "/banlist",
             " - search and display the banlist (warning -"
             " displays on single page!)",
             separator="[players|ips] [searchtext] ", pad=12,
-            usereadline=self.use_readline)
+            usereadline=self.use_readline, player=player)

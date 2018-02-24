@@ -28,7 +28,7 @@
 
             function loginWithPassword(password){
                 console.log("start loginWithPassword");
-                var r = requests.action("login", {"password": password, "remember-me": getElem("remember-me").checked});
+                var r = requests.action("login", {"password": password, "remember-me": getElem("remember-me").checked, username: getElem("user_name").value});
                 if (r == "permission_denied"){
                     invalidLogins += 1;
                     getElem("login_invalid").style.display = "block";
@@ -63,8 +63,8 @@
             }
             function _login(){
                 console.log("starting login.");
-                console.log(getElem('login_password').value);
-                loginWithPassword(getElem('login_password').value);
+                console.log(getElem("login_password").value);
+                loginWithPassword(getElem("login_password").value);
             }
         </script>
         <style type="text/css">
@@ -89,6 +89,7 @@
                 <h4> Enter your Wrapper.py 'Web' Password. </h4>
                 <div id="login_invalid" style="display:none;" class="alert alert-danger">The password was invalid.</div>
                 <label class="sr-only">Password</label>
+                <input type="text" id="user_name" class="form-control" required value="WebAdmin">
                 <input type="password" id="login_password" class="form-control" placeholder="Password" required>
                 <div class="checkbox">
                     <label>

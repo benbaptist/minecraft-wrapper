@@ -6,7 +6,6 @@
 # General Public License, version 3 or later.
 from pprint import pprint
 
-import copy
 import time
 import json
 
@@ -354,7 +353,6 @@ class Commands(object):
         if not self._superop(player, 5):
             player.message("&cPermission Denied")
             return False
-
         if not self.wrapper.proxymode:
             player.message(
                 "&cProxy mode is off - Entity control is not enabled.")
@@ -365,7 +363,8 @@ class Commands(object):
             readout("ERROR - ",
                     "No entity code found. (no proxy/server started?)",
                     separator="", pad=10,
-                    usereadline=self.wrapper.use_readline)
+                    usereadline=self.wrapper.use_readline,
+                    player=player)
             return
         commargs = payload["args"]
         if len(commargs) < 1:
@@ -537,7 +536,8 @@ class Commands(object):
                         "clickEvent": {
                             "action": "run_command",
                             "value": "%shelp Minecraft %d" % (
-                                self.wrapper.servervitals.command_prefix, page + 2)
+                                self.wrapper.servervitals.command_prefix,
+                                page + 2)
                         }
                     }, {
                         "text": " "
@@ -555,7 +555,8 @@ class Commands(object):
                             # i is each help item, like:
                             # ('/bmlist', 'List bookmark names', None)
                             for i in group:
-                                command, args, permission = i[0].split(" ")[0], "", None
+                                command, args, permission = i[0].split(
+                                    " ")[0], "", None
                                 if len(i[0].split(" ")) > 1:
                                     # if there are args after the command
                                     args = getargsafter(i[0].split(" "), 1)
@@ -564,7 +565,7 @@ class Commands(object):
                                 if not player.hasPermission(i[2]):
                                     if player.isOp():
                                         permission = {
-                                            "text": "You do not have permission to"
+                                            "text": "You do not have permission to"  # noqa
                                                     " use this command.",
                                             "color": "gray", "italic": True
                                         }
@@ -582,8 +583,9 @@ class Commands(object):
                                         })
                                     continue
                                 if len(i) > 1 and player.isOp():
-                                    permission = {"text": "Requires permission '%s'." % i[2],
-                                                  "color": "gray", "italic": True}
+                                    permission = {"text": "Requires permission '%s'." % i[2],  # noqa
+                                                  "color": "gray",
+                                                  "italic": True}
                                 items.append({
                                     "text": "",
                                     "extra": [{
@@ -591,7 +593,9 @@ class Commands(object):
                                         "color": "gold",
                                         "clickEvent": {
                                             "action": "suggest_command",
-                                            "value": "%s%s" % (self.wrapper.servervitals.command_prefix, command[1:])
+                                            "value": "%s%s" % (
+                                                self.wrapper.servervitals.command_prefix,  # noqa
+                                                command[1:])
                                         },
                                         "hoverEvent": {
                                             "action": "show_text",
@@ -609,14 +613,16 @@ class Commands(object):
                                 items.append({
                                     "text": "",
                                     "extra": [{
-                                        "text": "No permission to run any of these commands",
+                                        "text": "No permission to run any of these commands",  # noqa
                                         "color": "gray",
                                         "italic": "true",
 
                                     }]
                                 })
-                            _showpage(player, page, items, "help %s" % groupname, 4,
-                                      command_prefix=self.wrapper.servervitals.command_prefix)
+                            _showpage(
+                                player, page, items, "help %s" % groupname,
+                                4,
+                                command_prefix=self.wrapper.servervitals.command_prefix)  # noqa
                             return
                 player.message("&cThe help group '%s' does not exist." % group)
 
@@ -661,7 +667,8 @@ class Commands(object):
                             "text": " - " + shortdesc
                         }]
                 })
-            _showpage(player, page, items, "help", 8, command_prefix=self.wrapper.servervitals.command_prefix)
+            _showpage(player, page, items, "help", 8,
+                      command_prefix=self.wrapper.servervitals.command_prefix)
         return False
 
     def command_password(self, player, payload):
@@ -1023,7 +1030,7 @@ class Commands(object):
             if subcommand in ("group", "groups", "gr", "g"):
                 player.message("&2/perms group <groupname> ...")
                 player.message("&2  new/info -create new group / get info")
-                player.message("&2  set <node> <value>  -set a perm for this group")
+                player.message("&2  set <node> <value>  -set a perm for this group")  # noqa
                 player.message("&2  delete -deletes the group entirely")
                 player.message("&2  remove <node> -just remove a node")
 
@@ -1031,11 +1038,11 @@ class Commands(object):
                 player.message("&2/perms user <player> ...")
                 player.message("&2  info -display permissions for a player")
                 player.message("&2  group <group> -assign player to <group>")
-                player.message("&2  group <group> remove -remove player from <group>")
-                player.message("&2  set <node> <value>  -set a perm for this player")
-                player.message("&2  remove <node>  -remove perm <node> for this player")
+                player.message("&2  group <group> remove -remove player from <group>")  # noqa
+                player.message("&2  set <node> <value>  -set a perm for this player")  # noqa
+                player.message("&2  remove <node>  -remove perm <node> for this player")  # noqa
             else:
-                player.message("&2The primary subcommands are group, user, RESET")
+                player.message("&2The primary subcommands are group, user, RESET")  # noqa
                 player.message("&2Help with groups use: /perms help groups")
                 player.message("&2Help with users use: /perms help users")
 
@@ -1076,7 +1083,8 @@ class Commands(object):
                 for uuid in self.wrapper.wrapper_permissions.Data["users"]:
                     if group in self.wrapper.wrapper_permissions.Data[
                             "users"][uuid]["groups"]:
-                        player.message("%s: &2%s" % (self.wrapper.uuids.getusernamebyuuid(uuid), uuid))
+                        player.message("%s: &2%s" % (
+                            self.wrapper.uuids.getusernamebyuuid(uuid), uuid))
                 player.message("&aPermissions for the group '%s':" % group)
                 for node in self.wrapper.wrapper_permissions.Data[
                         "groups"][group]["permissions"]:
@@ -1090,8 +1098,9 @@ class Commands(object):
                         player.message("- %s: &7%s" % (node, value))
             else:
                 player.message("&6List of groups:&b %s" %
-                               ", ".join(self.wrapper.wrapper_permissions.Data["groups"]))
-                usage("groups <groupName> [new|delete(group)|info]/[set|remove(node) <node> <value>]")
+                               ", ".join(self.wrapper.wrapper_permissions.Data["groups"]))  # noqa
+                usage("groups <groupName> [new|delete(group)"
+                      "|info]/[set|remove(node) <node> <value>]")
                 player.message("&cTry '/perms help groups' for more info...")
 
         elif command in ("user", "users"):
@@ -1121,7 +1130,7 @@ class Commands(object):
                 node = getargs(payload["args"], 3)
                 value = getargsafter(payload["args"], 4)
                 if len(node) > 0:
-                    call_result = self.perms.set_permission(str(uuid), node, value)
+                    call_result = self.perms.set_permission(str(uuid), node, value)  # noqa
                     player.message("&a%s" % call_result)
                 else:
                     usage("users %s set <permissionNode> [value]" % username)
@@ -1136,10 +1145,11 @@ class Commands(object):
 
             elif subcommand == "info":
                 player.message("&aUser '%s' is in these groups: " % username)
-                for group in self.wrapper.wrapper_permissions.Data["users"][str(uuid)]["groups"]:
+                for group in self.wrapper.wrapper_permissions.Data["users"][str(uuid)]["groups"]:  # noqa
                     player.message("- %s" % group)
                 player.message(
-                    "&aUser '%s' is granted these individual permissions (not including permissions inherited from groups): " % username)
+                    "&aUser '%s' is granted these individual permissions (not "
+                    "including permissions inherited from groups): " % username)
                 for node in self.wrapper.wrapper_permissions.Data[
                         "users"][str(uuid)]["permissions"]:
                     value = self.wrapper.wrapper_permissions.Data[
@@ -1155,17 +1165,19 @@ class Commands(object):
                 player.message("&cTry '/perms help users' for more info...")
 
         elif command == "RESET":
-            if self.reset_confirmed and ((time.time() - self.reset_timeout) < 30):
+            if self.reset_confirmed and ((time.time() - self.reset_timeout) < 30):  # noqa
                 self.perms.clear_group_data()
                 self.perms.clear_user_data()
                 self.reset_confirmed = False
-                player.message("&cGroup and player permissions have been cleared!")
+                player.message("&cGroup and player permissions have been cleared!")  # noqa
             else:
                 self.reset_timeout = time.time()
                 self.reset_confirmed = True
                 player.message("&cARE YOU SURE?")
-                player.message("&cThis will delete all groups and clear all user permissions!")
-                player.message("Confirm your intent by running '/perms RESET' again within 30 seconds.")
+                player.message("&cThis will delete all groups and clear "
+                               "all user permissions!")
+                player.message("Confirm your intent by running '/perms "
+                               "RESET' again within 30 seconds.")
         else:
             self.reset_confirmed = False
             usage("<help/groups/users/RESET> (Note: RESET is case-sensitive!)")

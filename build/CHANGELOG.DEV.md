@@ -1,6 +1,14 @@
+Build 8  [1.0b8]
+- Improve web to get player.message() - see build 1.0b4, third bullet point.
+- Console readouts are redirected to the player who ran the command (benefits Web).
+- Improve Web Chat and Console layouts.
+- Allow login page to capture a unique username for the WebAdmin.
+
+
 Build 7  [1.0b7]
 - Whitelist online/offline also converts player data uuid files to their correct type, so converting
  the server between online and offline will not hurt players inventory (provided you restart promptly).
+- Code staged so that name changes can incorporate the same abilities to transfer UUID information
 
 
 Build 6  [1.0b6]
@@ -12,8 +20,10 @@ FIX Whitelisting!  #314
     - /whitelist offline -  convert all whitelist names to offline uuids (to set server to offline/proxy mode)
 - uuid changes are "cosmetic" and do not affect player inventory, etc.  HOWEVER; changing a servers online mode WILL.
 
+
 Build 5  [1.0b5]
 - [#519](https://github.com/benbaptist/minecraft-wrapper/issues/519) - delay server backups during idle periods.
+
 
 Build 4 [1.0b4]
 - upgrade consoleuser.py for use with new player.message()
@@ -30,6 +40,7 @@ Build 4 [1.0b4]
 - install vanilla whitelist commands into 'commands.py' -off, on, add, remove, list, reload
 - Manually Save server before a restart (spigot plugins mess with save states).
 - Fix bug in commands.command_op that would op "False" player if name is left blank.
+
 
 Build 3 [1.0b3]
 - Fix in-game "wrapper update" command (was broken with new version format)

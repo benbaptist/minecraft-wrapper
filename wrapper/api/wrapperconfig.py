@@ -371,8 +371,8 @@ CONFIG = {
 
         {  # NODOC
             # NODOC
-            "convert-player-files": False,
-
+            "convert-player-files": "deprecated",  # NODOC
+            # NODOC
          # This actually does nothing in the code. TODO - re-implement this somewhere? perhaps in the server JSON response?
 
             "max-players": 1024,
