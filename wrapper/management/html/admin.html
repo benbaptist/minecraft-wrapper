@@ -498,16 +498,16 @@
 					</div>
 					<div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
 						<div id="tab-console">
-							<pre id="server_console" style="overflow-y:scroll;height:90%;"></pre>
+							<textarea id="server_console" rows="30" style="overflow-x:scroll;overflow-y:scroll;height:90%;" class="form-control" readonly></textarea>
 							<input type="text" onkeydown="if(event.keyCode === 13){_console(this.value);this.value='';}" placeholder="Run a command in the Minecraft server console..." class="form-control"/>
 						</div>
-						<div id="tab-chat" style="display:none;">
-							<div style="height:110%;width:19%;float:right;" class="panel panel-default">
+						<div id="tab-chat" style="display:inline-block">
+                            <textarea id="chatbox" rows="24" style="display:inline-block;overflow-x:scroll;overflow-y:scroll;height:70%;width:70%" disabled="disabled" class="form-control"></textarea>
+							<div style="display:inline-block;height:70%;width:20%;float:right;overflow-y:scroll;" class="panel panel-default">
 								<div class="panel-heading">Players</div>
 								<div id="tab-chat-players"></div>
 							</div>
-							<pre id="chatbox" style="overflow-y:scroll;height:90%;width:80%;"></pre>
-							<input type="text" onkeydown="if(event.keyCode === 13){_chat(this.value);this.value='';}" placeholder="Send a message..." class="form-control"/>
+                            <input type="text" style="display:inline-block;overflow-x:scroll;overflow-y:scroll;height:10%;width:70%" onkeydown="if(event.keyCode === 13){_chat(this.value);this.value='';}" placeholder="Send a message..." class="form-control"/>
 						</div>
 						<div id="tab-files" style="display:none;">
 							<script type="text/javascript">

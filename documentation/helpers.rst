@@ -242,8 +242,9 @@ using 'self.api.helpers'
 
     
 
--  readout(commandtext, description, separator=" - ", pad=15, command_text_fg="magenta", command_text_opts=("bold",), description_text_fg="yellow", usereadline=True)
+-  readout(commandtext, description, separator=" - ", pad=15, command_text_fg="magenta", command_text_opts=("bold",), description_text_fg="yellow", usereadline=True, player=None)
 
+    (wraps _readout)
     display console text only with no logging - useful for displaying
     pretty console-only messages.
 
@@ -257,6 +258,8 @@ using 'self.api.helpers'
         :description_text_fg: description area foreground color
         :usereadline: Use default readline  (or 'False', use
          readchar/readkey (with anti- scroll off capabilities))
+        :player: if the console, it goes via standard readout. otherwise,
+         for other players, it passes to a player.message().
 
     :returns: Nothing. Just prints to stdout/console for console
      operator readout:

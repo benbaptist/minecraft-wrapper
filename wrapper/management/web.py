@@ -69,8 +69,10 @@ class Web(object):
         self.socket = False
         self.storage = Storage("web", pickle=False)
         self.data = self.storage.Data
-        self.xplayer = ConsolePlayer(self.wrapper)
-        self.xplayer.username = "*WEB_ADMIN*"
+        self.xplayer = ConsolePlayer(self.wrapper, self.console_output)
+
+        self.adminname = "Web Admin"
+        self.xplayer.username = self.adminname
 
         self.onlyusesafe_ips = self.config["Web"]["safe-ips-use"]
         self.safe_ips = self.config["Web"]["safe-ips"]
@@ -174,6 +176,13 @@ class Web(object):
             t.start()
         self.storage.save()
 
+    def console_output(self, message):
+        display = str(message)
+        if type(message) is dict:
+            if "text" in message:
+                display = message["text"]
+        self.on_server_console({"message": display})
+
     # ========== EVENTS SECTION ==========================
 
     def on_server_console(self, payload):
@@ -240,13 +249,13 @@ class Web(object):
         self.lastAttempt = time.time()
         return False
 
-    def make_key(self, remember_me):
+    def make_key(self, remember_me, username):
         a = ""
         z = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
         for i in range(64):
             a += z[random.randrange(0, len(z))]
         # a += chr(random.randrange(97, 122))
-        self.data["keys"].append([a, time.time(), remember_me])
+        self.data["keys"].append([a, time.time(), remember_me, username])
         return a
 
     def validate_key(self, key):
@@ -260,6 +269,10 @@ class Web(object):
             if len(i) > 2:
                 expire_time = int(i[1])
                 remembered = i[2]
+                user = getargs(i, 3)
+                if user != "":
+                    self.adminname = user
+
                 # even "remembereds" should expire after a week after last use
                 if remembered:
                     expire_time += week
@@ -466,7 +479,8 @@ class Client(object):
             else:
                 value = ""
             argdict[argname] = value
-        # clean %xx items out of argument values
+
+        # convert %xx items from argument values
         scrubs = {
             "+": " ",
             "%2F": "/",
@@ -474,7 +488,8 @@ class Client(object):
             '%23': "#",
             "%20": " ",
             "%3D": "=",
-            "%3A": ":"
+            "%3A": ":",
+            "%3B": ";"
         }
         for arguments in argdict:
             temparg = copy.copy(argdict[arguments])
@@ -485,15 +500,17 @@ class Client(object):
         if action == "login":
             password = argdict["password"]
             remember_me = argdict["remember-me"]
+            user = argdict["username"]
             if remember_me == "true":
                 remember_me = True
             else:
                 remember_me = False
             log_status = self.web.check_login(password)
             if log_status:
-                key = self.web.make_key(remember_me)
-                self.log.info("%s logged in to web mode (remember me: %s)" % (
-                    self.addr[0], remember_me))
+                key = self.web.make_key(remember_me, user)
+                self.log.info(
+                    "%s/%s logged in to web mode (remember me: %s)" % (
+                     self.addr[0], user, remember_me))
                 return {"session-key": key}
             elif log_status is None:
                 return LookupError
@@ -729,7 +746,7 @@ class Client(object):
             if not self.web.validate_key(argdict["key"]):
                 return EOFError
             command = argdict["execute"]
-            self.wrapper.process_command(command)
+            self.wrapper.process_command(command, self.web.xplayer)
             self.log.info("[%s] Executed: %s" % (self.addr[0], argdict["execute"]))  # noqa
             return True
 
@@ -739,9 +756,11 @@ class Client(object):
             message = argdict["message"]
             self.web.chatScrollback.append(
                 (time.time(),
-                 {"type": "raw", "payload": "[WEB ADMIN] " + message})
+                 {"type": "raw", "payload": "[%s] %s" % (
+                     self.web.adminname, message)})
             )
-            self.wrapper.javaserver.broadcast("&c[WEB ADMIN]&r " + message)
+            self.wrapper.javaserver.broadcast("&c[%s]&r %s" % (
+                self.web.adminname, message))
             return True
 
         if action == "kick_player":

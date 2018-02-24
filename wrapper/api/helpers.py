@@ -634,8 +634,26 @@ def read_timestr(mc_time_string):
 
 
 # Single line required by documentation creator (at this time)
-def readout(commandtext, description, separator=" - ", pad=15, command_text_fg="magenta", command_text_opts=("bold",), description_text_fg="yellow", usereadline=True):  # noqa
+def _readout(commandtext, description, separator, pad,
+             command_text_fg, command_text_opts, description_text_fg,
+             usereadline):
+    commstyle = _use_style(foreground=command_text_fg,
+                           options=command_text_opts)
+    descstyle = _use_style(foreground=description_text_fg)
+    x = '{0: <%d}' % pad
+    commandtextpadded = x.format(commandtext)
+    if usereadline:
+        print("%s%s%s" % (commstyle(commandtextpadded),
+                          separator, descstyle(description)))
+    else:
+        print("\033[1A%s%s%s\n" % (commstyle(commandtextpadded),
+                                   separator, descstyle(description)))
+
+
+# Single line required by documentation creator (at this time)
+def readout(commandtext, description, separator=" - ", pad=15, command_text_fg="magenta", command_text_opts=("bold",), description_text_fg="yellow", usereadline=True, player=None):  # noqa
     """
+    (wraps _readout)
     display console text only with no logging - useful for displaying
     pretty console-only messages.
 
@@ -649,6 +667,8 @@ def readout(commandtext, description, separator=" - ", pad=15, command_text_fg="
         :description_text_fg: description area foreground color
         :usereadline: Use default readline  (or 'False', use
          readchar/readkey (with anti- scroll off capabilities))
+        :player: if the console, it goes via standard readout. otherwise,
+         for other players, it passes to a player.message().
 
     :returns: Nothing. Just prints to stdout/console for console
      operator readout:
@@ -660,17 +680,16 @@ def readout(commandtext, description, separator=" - ", pad=15, command_text_fg="
         ..
 
     """
-    commstyle = _use_style(foreground=command_text_fg,
-                           options=command_text_opts)
-    descstyle = _use_style(foreground=description_text_fg)
-    x = '{0: <%d}' % pad
-    commandtextpadded = x.format(commandtext)
-    if usereadline:
-        print("%s%s%s" % (commstyle(commandtextpadded),
-                          separator, descstyle(description)))
+
+    if player is None or player.username == "*Console*":
+        _readout(commandtext, description, separator, pad,
+                 command_text_fg, command_text_opts,
+                 description_text_fg, usereadline)
     else:
-        print("\033[1A%s%s%s\n" % (commstyle(commandtextpadded),
-                                   separator, descstyle(description)))
+        x = '{0: <%d}' % pad
+        commandtextpadded = x.format(commandtext)
+        message = "%s%s%s" % (commandtextpadded, separator, description)
+        player.message({"text": message, "color": "dark_purple"})
 
 
 def _secondstohuman(seconds):
