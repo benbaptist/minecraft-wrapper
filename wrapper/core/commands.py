@@ -323,7 +323,10 @@ class Commands(object):
             returnmessage = self.wrapper.proxy.pardonname(playername)
 
         if returnmessage[:8] == "pardoned":
-            player.message({"text": "player %s unbanned!" %
+            player.message({"text": "player %s unbanned!  You must restart "
+                                    "the server for this to take effect on the "
+                                    "Local server. Proxy should respect this "
+                                    "Starting NOW." %
                                     playername, "color": "yellow"})
         else:
             player.message({"text": "player unban %s failed!" %
@@ -341,7 +344,10 @@ class Commands(object):
 
         returnmessage = self.wrapper.proxy.pardonip(ipaddress)
         if returnmessage[:8] == "pardoned":
-            player.message({"text": "IP address %s unbanned!" %
+            player.message({"text": "IP address %s unbanned!  You must restart "
+                                    "the server for this to take effect on the "
+                                    "Local server. Proxy should respect this "
+                                    "Starting NOW." %
                                     ipaddress, "color": "yellow"})
         else:
             player.message({"text": "IP unban %s failed!" %

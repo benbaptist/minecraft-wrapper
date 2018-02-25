@@ -834,7 +834,7 @@ class Wrapper(object):
     def _startproxy(self):
         try:
             self.proxy = Proxy(self.halt, self.proxyconfig, self.servervitals,
-                               self.log, self.usercache, self.events,
+                               self.log, self.wrapper_usercache, self.events,
                                self.encoding)
         except ImportError:
             self.log.error("Proxy mode not started because of missing "

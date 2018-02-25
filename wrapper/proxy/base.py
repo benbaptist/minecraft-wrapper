@@ -71,7 +71,7 @@ class HaltSig(object):
 class ProxyConfig(object):
     def __init__(self):
         self.proxy = {
-            "convert-player-files": False,
+            "auto-name-changes": True,
             "hidden-ops": [],
             "max-players": 1024,
             "online-mode": True,
@@ -125,7 +125,7 @@ class ServerVitals(object):
 
 class Proxy(object):
     def __init__(self, termsignal, config, servervitals, loginstance,
-                 usercache, eventhandler, encoding="utf-8"):
+                 usercache_object, eventhandler, encoding="utf-8"):
 
         self.encoding = encoding
         self.srv_data = servervitals
@@ -139,7 +139,8 @@ class Proxy(object):
                            "installed to run the Proxy!")
             raise ImportError()
 
-        self.usercache = usercache
+        self.usercache = usercache_object.Data
+        self.usercache_obj = usercache_object
         self.eventhandler = eventhandler
         self.uuids = mcuuid.UUIDS(self.log, self.usercache)
 
@@ -258,7 +259,7 @@ class Proxy(object):
         packet.flush()
         self.srv_data.protocolVersion = -1
         while True:
-            pkid, original = packet.grabpacket()
+            pkid, original, orig_packet = packet.grabpacket()  # noqa
             if pkid == 0x00:
                 data = json.loads(packet.read("string:response")["response"])
                 self.srv_data.protocolVersion = data["version"][
@@ -279,10 +280,10 @@ class Proxy(object):
         attempts = ["Search: %s" % str(uuid)]
         for client in self.srv_data.clients:
             attempts.append("try: client-%s uuid-%s serveruuid-%s name-%s" %
-                            (client, client.online_uuid.string,
+                            (client, client.wrapper_uuid.string,
                              client.local_uuid.string, client.username))
             if client.local_uuid.string == str(uuid):
-                self.uuidTranslate[uuid] = client.online_uuid.string
+                self.uuidTranslate[uuid] = client.wrapper_uuid.string
                 return client
         self.log.debug("getclientbyofflineserveruuid failed: \n %s", attempts)
         self.log.debug("POSSIBLE CLIENTS: \n %s", self.srv_data.clients)

@@ -35,10 +35,20 @@
     
     .. code:: python
 
-        self.username
-        self.loggedIn
+        self.username  # client username on this server.
+        self.loggedIn  # time the player object logged on.
+
+        self.uuid  # property that returns the very best UUID available,
+                   # with the goal of never returning improper things
+                   # like `False` and `None`.
+
+        # self.uuid polls for one of these in this order until successful:
         self.mojangUuid
+        self.clientUuid  # usually = self.mojangUuid
         self.offlineUuid
+        self.serverUuid  # usually = self.offlineUuid in proxy mode.
+
+
         self.loginposition
         self.playereid
         self.ipaddress
@@ -63,6 +73,10 @@
     ..
 
     
+
+-  uuid(self)
+Return the very best UUID available, with the goal of
+        never returning improper things like False and None.
 
 -  execute(self, string)
 

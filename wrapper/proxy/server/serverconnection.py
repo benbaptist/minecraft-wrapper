@@ -38,9 +38,6 @@ class ServerConnection(object):
         of a server.
         """
 
-        # TODO server needs to be a true child of clientconnection process.
-        # It should not close its own instance, etc
-
         # basic __init__ items from passed arguments
         self.client = client
         self.proxy = client.proxy
@@ -155,7 +152,7 @@ class ServerConnection(object):
         while not self.abort:
             # get packet
             try:
-                pkid, original = self.packet.grabpacket()
+                pkid, original, orig_packet = self.packet.grabpacket()  # noqa
 
             # possible connection losses:
             except EOFError:
@@ -168,9 +165,9 @@ class ServerConnection(object):
                     "handle Exception: %s TRACEBACK: \n%s" % (e, traceback))
 
             # parse it
-            if self.parse(pkid) and self.client.state == PLAY:
+            if self.parse(pkid, orig_packet) and self.client.state == PLAY:  # noqa
                 try:
-                    self.client.packet.send_raw(original)
+                    self.client.packet.send_raw_untouched(orig_packet)
                 except Exception as e:
                     return self.close_server(
                         "handle could not send packet '%s'.  "
@@ -244,19 +241,22 @@ class ServerConnection(object):
     def _parse_login_set_compression(self):
         data = self.packet.readpkt([VARINT])
         # ("varint:threshold")
-        if data[0] != -1:
-            self.packet.compression = True
-            self.packet.compressThreshold = data[0]
-        else:
+        if data[0] == -1:
             self.packet.compression = False
-            self.packet.compressThreshold = -1
-        time.sleep(10)
-        return  # False
+        else:
+            self.packet.compression = True
+        self.packet.compressThreshold = data[0]
+        # no point - client connection already has the client waiting in
+        #  compression enabled mode
+        return False
 
-    def parse(self, pkid):
+    def parse(self, pkid, orig_payload):
         if pkid in self.parsers[self.state]:
             return self.parsers[self.state][pkid]()
-        return True
+
+        # optimization to send already compressed original packet
+        self.client.packet.send_raw_untouched(orig_payload)
+        return False  # kill parsed (decompressed) packet
 
     def _define_parsers(self):
         # the packets we parse and the methods that parse them.

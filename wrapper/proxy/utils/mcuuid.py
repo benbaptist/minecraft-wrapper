@@ -10,7 +10,7 @@ import uuid
 import hashlib
 import time
 import requests
-
+import os
 
 class MCUUID(uuid.UUID):
     """
@@ -249,6 +249,23 @@ class UUIDS(object):
                             return self.usercache[user_uuid]["name"]
                         except TypeError:
                             return False
+
+    def set_local_name(self):
+        pass
+
+    # noinspection PyBroadException
+    @staticmethod
+    def remove_uuidfiles(olduuid, cwd):
+        files = [
+            "%s/playerdata/%s.dat" % (cwd, olduuid),
+            "%s/stats/%s.json" % (cwd, olduuid),
+            "%s/advancements/%s.json" % (cwd, olduuid)
+        ]
+        for file in files:
+            try:
+                os.remove(file)
+            except Exception:
+                continue
 
     def convert_user(self, serverdirectory=".", worldname="world", uuid_="all", onlinemode=False):  # noqa
         """

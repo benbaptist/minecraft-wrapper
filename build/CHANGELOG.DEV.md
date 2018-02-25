@@ -1,3 +1,18 @@
+Build 10 [1.0b10]
+- correct compression bugs where client and server could be at different compression numbers.
+ _They must be operating at the same compression level now_ because of the "once-only compression"
+ used by proxymode now.
+- correct bug that was escaping backslash as %5C in web (MOTD).
+- refactoring of proxymode's uuid usages again.  Still trying to improve UUID handling to minimize
+ incorrect and False/None uuid issues.
+- Improved name change handling.  Name changes are now truly automatic.  If you don't want automatic
+ name change handling, set config `["Proxy"]["auto-name-changes"] = False` and wrapper will use the
+ old "falling back to..." name behavior.  If you are supporting (vanilla server) local aliases via
+ a plugin, you should set this to False.
+- Improve proxy to only use compression once (while reading a packet).  If a packet
+ is not gonig to be changed, the original, unmolested packet is resent, eliminating
+ the need to re-compress.
+
 Build 9  [1.0b9]
 - Critical bugfix for anyone using "BetterConsole" mode.
 
