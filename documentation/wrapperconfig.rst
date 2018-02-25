@@ -285,6 +285,10 @@ CONFIG = {
 
             "max-players": 1024,
 
+         # Auto name changes causes wrapper to automatically change the player's server name.  Enabling this makes name change handling automatic, but will prevent setting your own custom names on the server.
+
+            "auto-name-changes": True,
+
          # the wrapper's online mode, NOT the server.
 
             "online-mode": True,

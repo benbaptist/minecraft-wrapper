@@ -1,3 +1,13 @@
+Build 10 [1.0b10] (build not to be pushed to BenBaptist)
+- refactoring of proxymode's uuid usages again.  Still trying to improve UUID handling to minimize
+   incorrect and False/None uuid issues.
+- Improved name change handling.  Name changes are now truly automatic.  If you don't want automatic
+   name change handling, set config ``["Proxy"]["auto-name-changes"] = False` and wrapper will use the
+   old "falling back to..." name behavior.  If you are supporting (vanilla server) local aliases via
+   a plugin, you should set this to False.
+
+
+
 Build 9  [1.0b9]
 - Critical bugfix for anyone using "BetterConsole" mode.
 

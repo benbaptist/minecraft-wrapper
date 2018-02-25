@@ -59,6 +59,7 @@ class Client(object):
         self.spigot_mode = self.proxy.config["spigot-mode"]
         self.hidden_ops = self.proxy.config["hidden-ops"]
         self.silent_bans = self.proxy.config["silent-ipban"]
+        self.names_change = self.proxy.config["auto-name-changes"]
 
         # client setup and operating paramenters
         self.username = "PING REQUEST"
@@ -102,18 +103,19 @@ class Client(object):
         self.local_uuid = None
 
         # --------------------------------------------------------
-        # The client UUID authenticated by connection to session server.
-        self.online_uuid = None
+        # The client UUID authenticated by connection to session server.  It
+        # is the uuid by which wrapper has auth'ed the player.  If wrapper is
+        # in offline mode, this could be the offline uuid
+        # I changed this from uuid/online_uuid to be clearer that this
+        # the uuid wrapper is accepting from it's proxy client.
+        self.wrapper_uuid = None
+
         # --------------------------------------------------------
         # the formal, unique, mojang UUID as looked up on mojang servers.
         # This ID will be the same no matter what mode wrapper is in
         # or whether it is a lobby, etc.  This will be the formal uuid
         # to use for all wrapper internal functions for referencing a
         # unique player.
-
-        # TODO - Unused except by plugin channel.
-        # not to be confused with the fact that API player has a property
-        # with the same name.
         self.mojanguuid = None
 
         # information gathered during login or socket connection processes
@@ -253,7 +255,7 @@ class Client(object):
         if was_lobby:
             self.log.info("%s's client Returned from remote server:"
                           " (UUID: %s | IP: %s | SecureConnection: %s)",
-                          self.username, self.online_uuid.string,
+                          self.username, self.wrapper_uuid.string,
                           self.ip, self.onlinemode)
 
             self._add_client()
@@ -303,9 +305,9 @@ class Client(object):
         """  When the client first logs in to the wrapper proxy """
 
         # check for uuid ban
-        if self.proxy.isuuidbanned(self.online_uuid.string):
+        if self.proxy.isuuidbanned(self.wrapper_uuid.string):
             banreason = self.proxy.getuuidbanreason(
-                self.online_uuid.string)  # changed from __str__()
+                self.wrapper_uuid.string)  # changed from __str__()
             self.log.info("Banned player %s tried to"
                           " connect:\n %s" % (self.username, banreason))
             self.state = HANDSHAKE
@@ -317,7 +319,7 @@ class Client(object):
                 "player.preLogin", {
                     "playername": self.username,
                     "player": self.username,  # not a real player object!
-                    "online_uuid": self.online_uuid.string,
+                    "online_uuid": self.wrapper_uuid.string,
                     "server_uuid": self.local_uuid.string,
                     "ip": self.ip,
                     "secure_connection": self.onlinemode
@@ -353,7 +355,7 @@ class Client(object):
         self.permit_disconnect_from_server = True
         self.log.info("%s's Proxy Client LOGON occurred: (UUID: %s"
                       " | IP: %s | SecureConnection: %s)",
-                      self.username, self.online_uuid.string,
+                      self.username, self.wrapper_uuid.string,
                       self.ip, self.onlinemode)
         self._inittheplayer()  # set up inventory and stuff
         self._add_client()
@@ -364,7 +366,7 @@ class Client(object):
         self.packet.sendpkt(
             self.pktCB.LOGIN_SUCCESS,
             [STRING, STRING],
-            (self.online_uuid.string, self.username))
+            (self.wrapper_uuid.string, self.username))
 
         self.time_client_responded = time.time()
 
@@ -620,7 +622,7 @@ class Client(object):
                 #     ]
                 # }
                 requestdata = r.json()
-                self.online_uuid = MCUUID(requestdata["id"])  # TODO
+                self.wrapper_uuid = MCUUID(requestdata["id"])  # TODO
 
                 if requestdata["name"] != self.username:
                     self.disconnect("Client's username did not"
@@ -634,23 +636,26 @@ class Client(object):
                     if prop["name"] == "textures":
                         self.skin_blob = prop["value"]
                         self.proxy.skins[
-                            self.online_uuid.string] = self.skin_blob
+                            self.wrapper_uuid.string] = self.skin_blob
                 self.properties = requestdata["properties"]
             else:
                 self.disconnect("Proxy Client Session Error"
                                 " (HTTP Status Code %d)" % r.status_code)
                 return False
-            currentname = self.proxy.uuids.getusernamebyuuid(
-                self.online_uuid.string)
-            if currentname:
-                if currentname != self.username:
-                    self.log.info("%s's client performed LOGON in with"
-                                  " new name, falling back to %s",
-                                  self.username, currentname)
-                    self.username = currentname
+            mojang_name = self.proxy.uuids.getusernamebyuuid(
+                self.wrapper_uuid.string)
+            if mojang_name:
+                if mojang_name != self.username:
+                    if self.names_change:
+                        self._use_newname(self.username, mojang_name)
+                    else:
+                        self.log.info("%s's client performed LOGON in with "
+                                      "new name, falling back to %s",
+                                      self.username, mojang_name)
+
             self.local_uuid = self.proxy.uuids.getuuidfromname(self.username)
-            # print("_login_authenticate_client just changed self.local_uuid to %s" % self.proxy.uuids.getuuidfromname(self.username))  # noqa
-            # TODO "handle name changes better"
+            # print("_login_authenticate_client set self.local_uuid
+            # to %s" % self.proxy.uuids.getuuidfromname(self.username))
 
         # Wrapper offline and not authenticating
         # maybe it is the destination of a hub? or you use another
@@ -658,14 +663,25 @@ class Client(object):
         else:
             # I'll take your word for it, bub...  You are:
             self.local_uuid = self.proxy.uuids.getuuidfromname(self.username)
-            self.online_uuid = self.local_uuid
+            self.wrapper_uuid = self.local_uuid
             self.log.debug("Client logon with wrapper offline-"
-                           " 'self.online_uuid = OfflinePlayer:<name>'")
+                           " 'self.wrapper_uuid = OfflinePlayer:<name>'")
 
         # TODO This should follow server properties setting
         # no idea what is special about version 26
         if self.clientversion > 26:
             self.packet.setcompression(256)
+
+    def _use_newname(self, oldname, newname):
+        old_local_uuid = self.proxy.uuids.getuuidfromname(oldname)
+        new_local_uuid = self.proxy.uuids.getuuidfromname(newname)
+        cwd = "%s/%s" % (
+            self.servervitals.serverpath, self.servervitals.worldname)
+        self.proxy.uuids.convert_files(old_local_uuid, new_local_uuid, cwd)
+        self.proxy.uuids.usercache[
+            self.wrapper_uuid.string]["localname"] = self.wrapper_uuid.string
+        self.proxy.uuids.usercache_obj.save()
+        self.username = newname
 
     def _add_client(self):
         # Put XXXplayer_object_andXXX client into server data. (player login
@@ -915,11 +931,11 @@ class Client(object):
             #  way to authenticate (password plugin?)
 
             # Server UUID is always offline (at the present time)
-            self.online_uuid = self.proxy.uuids.getuuidfromname(self.username)
+            self.wrapper_uuid = self.proxy.uuids.getuuidfromname(self.username)
 
             # Since wrapper is offline, we are using offline for
-            #  self.online_uuid also
-            self.local_uuid = self.online_uuid  # MCUUID object
+            #  self.wrapper_uuid also
+            self.local_uuid = self.wrapper_uuid  # MCUUID object
 
             # log the client on
             self.state = PLAY

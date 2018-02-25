@@ -81,10 +81,20 @@ class Player(object):
     
     .. code:: python
 
-        self.username
-        self.loggedIn
+        self.username  # client username on this server.
+        self.loggedIn  # time the player object logged on.
+
+        self.uuid  # property that returns the very best UUID available,
+                   # with the goal of never returning improper things
+                   # like `False` and `None`.
+
+        # self.uuid polls for one of these in this order until successful:
         self.mojangUuid
+        self.clientUuid  # usually = self.mojangUuid
         self.offlineUuid
+        self.serverUuid  # usually = self.offlineUuid in proxy mode.
+
+
         self.loginposition
         self.playereid
         self.ipaddress
@@ -130,11 +140,15 @@ class Player(object):
         # ---------------
         # Mojang uuid - the bought and paid Mojand UUID.  Never
         # changes- our one constant point of reference per player.
+        # this is aliased by property "uuid" unless MojangUuid fails.
+        # ---------------
         # offline uuid - created as a MD5 hash of "OfflinePlayer:%s" % username
+        # ---------------
         # client uuid - what the client stores as the uuid (should be
         # the same as Mojang?) The player.uuid used by old api (and
         # internally here).
-        # server uuid = the local server uuid... used to reference
+        # ---------------
+        # server uuid - the local server uuid... used to reference
         # the player on the local server.  Could be same as Mojang UUID
         # if server is in online mode or same as offline if server is
         # in offline mode (proxy mode).
@@ -182,7 +196,7 @@ class Player(object):
                 if client.username == self.username:
                     self.client = client
                     # Both MCUUID objects
-                    self.clientUuid = client.online_uuid
+                    self.clientUuid = client.wrapper_uuid
                     self.serverUuid = client.local_uuid
 
                     self.ipaddress = client.ip
@@ -227,7 +241,15 @@ class Player(object):
 
     @property
     def uuid(self):
-        return self.mojangUuid
+        """Return the very best UUID available, with the goal of
+        never returning improper things like False and None."""
+        if self.mojangUuid:
+            return self.mojangUuid
+        if self.clientUuid:
+            return self.mojangUuid
+        if self.serverUuid:
+            return self.serverUuid
+        return self.offlineUuid
 
     def _track(self):
         """

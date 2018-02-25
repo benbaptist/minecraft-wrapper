@@ -73,15 +73,15 @@ class ParseCB(object):
             z = 0
             while z < lenhead:
                 serveruuid = self.packet.readpkt([UUID])[0]
-                playerclient = self.proxy.getclientbyofflineserveruuid(
+                clientserverid = self.proxy.getclientbyofflineserveruuid(
                     serveruuid)
-                if not playerclient:
+                if not clientserverid:
                     z += 1
                     continue
-                uuid = playerclient.online_uuid
+                uuid = clientserverid.wrapper_uuid
                 z += 1
                 if action == 0:
-                    properties = playerclient.properties
+                    properties = clientserverid.properties
                     raw = b""
                     for prop in properties:
                         raw += self.client.packet.send_string(prop["name"])
@@ -98,7 +98,7 @@ class ParseCB(object):
                     self.client.packet.sendpkt(
                         self.pktCB.PLAYER_LIST_ITEM,
                         [VARINT, VARINT, UUID, STRING, VARINT, RAW],
-                        (0, 1, uuid, playerclient.username,
+                        (0, 1, uuid, clientserverid.username,
                          len(properties), raw))
 
                 elif action == 1:
@@ -169,20 +169,20 @@ class ParseCB(object):
 
         # We dont need to read the whole thing.
         clientserverid = self.proxy.getclientbyofflineserveruuid(dt[1])
-        if clientserverid.online_uuid:
-            # print("parseCB::  %s" % clientserverid.online_uuid.string)
-            # print("parseCB::  %s" % clientserverid.online_uuid)
+        if clientserverid.wrapper_uuid:
+            # print("parseCB::  %s" % clientserverid.wrapper_uuid.string)
+            # print("parseCB::  %s" % clientserverid.wrapper_uuid)
             if self.server.version < PROTOCOL_1_8START:
                 self.client.packet.sendpkt(
                     self.pktCB.SPAWN_PLAYER,
                     [VARINT, STRING, RAW],
-                    (dt[0], clientserverid.online_uuid.string, dt[2]))
+                    (dt[0], clientserverid.wrapper_uuid.string, dt[2]))
             else:
-                # print("UUID of spawned player = %s  : Should be online uuid" % clientserverid.online_uuid)
+                # print("UUID of spawned player = %s  : Should be online uuid" % clientserverid.wrapper_uuid)
                 self.client.packet.sendpkt(
                     self.pktCB.SPAWN_PLAYER,
                     [VARINT, UUID, RAW],
-                    (dt[0], clientserverid.online_uuid, dt[2]))
+                    (dt[0], clientserverid.wrapper_uuid, dt[2]))
             return False
         return True
 
