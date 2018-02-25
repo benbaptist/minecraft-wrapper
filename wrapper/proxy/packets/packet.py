@@ -164,25 +164,48 @@ class Packet(object):
             return "-%x" % ((-d) & (2 ** (40 * 4) - 1))
         return "%x" % d
 
+    def decompress(self, datalength, payload):
+        if datalength > 0:  # it is compressed, unpack it
+            return zlib.decompress(payload)
+        else:
+            return payload
+
     def grabpacket(self):
-        length = self.unpack_varint()  # first field - entire raw packet Length
+        """  # noqa
+
+        Visual layout of packets:
+         _____________________________________________________________________
+        UnCompressed:
+            |VarInt                                     |VarInt   |ByteArray|
+            |Length of Data + Packet ID ===============>|PacketID | Data    |
+         _____________________________________________________________________
+        Compressed (*C = Compressed Field):
+            |VarInt                                                |VarInt                         |VarInt *C |ByteArray *C |
+            |Length of DataLength + (*C PacketID + *C Data)=======>|DataLength (uncompressed!) ===>|PacketID  | Data        |
+         _____________________________________________________________________
+
+        """
+
+        # first field - entire raw packet Length
+        packet_length = self.unpack_varint()
+        length = packet_length
         datalength = 0  # if 0, an uncompressed packet
         if self.compressThreshold != -1:  # if compressed:
             # length of the uncompressed (Packet ID + Data)
             datalength = self.unpack_varint()
             # find the len of the datalength field and subtract it
             # using augmented assignment in the next line seems to BREAK this
-            length = length - len(self.pack_varint(datalength))
-        payload = self.recv(length)
+            length = packet_length - len(self.pack_varint(datalength))
+        orig_payload = self.recv(length)
+        payload_read = orig_payload
 
         if datalength > 0:  # it is compressed, unpack it
-            payload = zlib.decompress(payload)
+            payload_read = zlib.decompress(orig_payload)
 
-        self.buffer = io.BytesIO(payload)
+        self.buffer = io.BytesIO(payload_read)
         pkid = self.read_varint()
 
-        # payload is untouched entire packet, containing the prefixed pkid
-        return pkid, payload
+        return pkid, payload_read, self.pack_varint(datalength) + orig_payload
 
     def pack_varint(self, val):
         total = b''
@@ -212,24 +235,51 @@ class Packet(object):
         self.send(0x03, "varint", (threshold,))
         self.compressThreshold = threshold
 
+    def socket_transmit(self, packet):
+        if self.sendCipher is None:
+            self.socket.send(packet)
+        else:
+            self.socket.send(self.sendCipher.update(packet))
+
+    def handle_compression(self, compression_threshhold, payload):
+        """  # noqa
+
+        Visual layout of packets:
+         _____________________________________________________________________
+        UnCompressed:
+            |VarInt                                     |VarInt   |ByteArray|
+            |Length of Data + Packet ID ===============>|PacketID | Data    |
+         _____________________________________________________________________
+        Compressed (*C = Compressed Field):
+            |VarInt                                                |VarInt                         |VarInt *C |ByteArray *C |
+            |Length of DataLength + (*C PacketID + *C Data)=======>|DataLength (uncompressed!) ===>|PacketID  | Data        |
+         _____________________________________________________________________
+
+        """
+        if compression_threshhold > -1:
+            # compose compressed packet
+            if len(payload) > self.compressThreshold:
+                pktcomp = self.pack_varint(len(payload)) + zlib.compress(
+                    payload)
+                return self.pack_varint(len(pktcomp)) + pktcomp
+            else:
+                packet = self.pack_varint(0) + payload
+                return self.pack_varint(len(packet)) + packet
+        else:
+            # compose uncompressed packet
+            return self.pack_varint(len(payload)) + payload
+
     def flush(self):
         while len(self.queue) > 0:
             packet_tuple = self.queue.pop(0)
-            packet = packet_tuple[1]
-            if packet_tuple[0] > -1:
-                if len(packet) > self.compressThreshold:
-                    pktcomp = self.pack_varint(len(packet)) + zlib.compress(
-                        packet)
-                    packet = self.pack_varint(len(pktcomp)) + pktcomp
-                else:
-                    packet = self.pack_varint(0) + packet
-                    packet = self.pack_varint(len(packet)) + packet
-            else:
-                packet = self.pack_varint(len(packet)) + packet
-            if self.sendCipher is None:
-                self.socket.send(packet)
-            else:
-                self.socket.send(self.sendCipher.update(packet))
+            compression = packet_tuple[0]
+            packet = packet_tuple[1]  # `payload`
+            trans_packet = self.handle_compression(compression, packet)
+            self.socket_transmit(trans_packet)
+
+    def send_raw_untouched(self, payload):
+        if not self.abort:
+            self.queue.append((-1, payload))
 
     def send_raw(self, payload):
         if not self.abort:

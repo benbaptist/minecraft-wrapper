@@ -172,7 +172,8 @@ class Client(object):
 
         while not self.abort:
             try:
-                pkid, original = self.packet.grabpacket()
+                # last three items are for sending a compressed unparsed packet.
+                pkid, original, orig_packet = self.packet.grabpacket()  # noqa
             except EOFError:
                 # This is not really an error.. It means the client
                 # is not sending packet stream anymore
@@ -202,14 +203,15 @@ class Client(object):
             # already tested - Python will not attempt eval of
             # self.server_connection.state if self.server_connection is False
 
-            if self.parse(pkid) and self.server_connection and \
+            if self.parse(pkid, orig_packet) and \
+                    self.server_connection and \
                     self.server_connection.state in (PLAY, LOBBY):
 
                 # sending to the server only happens in
                 # PLAY/LOBBY (not IDLE, HANDSHAKE, or LOGIN)
                 # wrapper handles LOGIN/HANDSHAKE with servers (via
                 # self.parse(pkid), which DOES happen in all modes)
-                self.server_connection.packet.send_raw(original)
+                self.server_connection.packet.send_raw_untouched(orig_packet)
 
         # sometimes (like during a ping request), a client may never enter PLAY
         # mode and will never be assigned a server connection...
@@ -1024,11 +1026,15 @@ class Client(object):
         # commands, so send it on to the destination.
         return True
 
-    def parse(self, pkid):
+    def parse(self, pkid, orig_payload):
+        # op, dl, pl = orig_payload, datalength, packet_length
         if pkid in self.parsers[self.state]:
+            # parser can return false
             return self.parsers[self.state][pkid]()
-        else:
-            return True
+
+        # optimization to send already compressed original packet
+        self.server_connection.packet.send_raw_untouched(orig_payload)
+        return False  # kill parsed (decompressed) packet
 
     def _define_parsers(self):
         # the packets we parse and the methods that parse them.

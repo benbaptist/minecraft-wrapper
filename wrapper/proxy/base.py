@@ -259,7 +259,7 @@ class Proxy(object):
         packet.flush()
         self.srv_data.protocolVersion = -1
         while True:
-            pkid, original = packet.grabpacket()
+            pkid, original, orig_packet = packet.grabpacket()  # noqa
             if pkid == 0x00:
                 data = json.loads(packet.read("string:response")["response"])
                 self.srv_data.protocolVersion = data["version"][
