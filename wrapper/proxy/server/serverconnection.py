@@ -241,14 +241,14 @@ class ServerConnection(object):
     def _parse_login_set_compression(self):
         data = self.packet.readpkt([VARINT])
         # ("varint:threshold")
-        if data[0] != -1:
-            self.packet.compression = True
-            self.packet.compressThreshold = data[0]
-        else:
+        if data[0] == -1:
             self.packet.compression = False
-            self.packet.compressThreshold = -1
-        time.sleep(10)
-        return  # False
+        else:
+            self.packet.compression = True
+        self.packet.compressThreshold = data[0]
+        # no point - client connection already has the client waiting in
+        #  compression enabled mode
+        return False
 
     def parse(self, pkid, orig_payload):
         if pkid in self.parsers[self.state]:

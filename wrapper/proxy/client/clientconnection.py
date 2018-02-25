@@ -672,7 +672,11 @@ class Client(object):
         # TODO This should follow server properties setting
         # no idea what is special about version 26
         if self.clientversion > 26:
-            self.packet.setcompression(256)
+            if "network-compression-threshold" in self.proxy.srv_data.properties:  # noqa
+                comp = self.proxy.srv_data.properties[
+                    "network-compression-threshold"]
+                # print("client is setting compression to %s" % comp)
+                self.packet.setcompression(comp)
 
     def _use_newname(self, oldname, newname):
         old_local_uuid = self.proxy.uuids.getuuidfromname(oldname)

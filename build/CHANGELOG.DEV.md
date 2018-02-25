@@ -1,4 +1,7 @@
-Build 10 [1.0b10]
+Builds 10 [1.0b10]
+- correct compression bugs where client an server could be at different compression numbers.
+ _They must be operating at the same compression level now_ because of the "once-only compression"
+ used by proxymode now.
 - correct bug that was escaping backslash as %5C in web (MOTD).
 - refactoring of proxymode's uuid usages again.  Still trying to improve UUID handling to minimize
  incorrect and False/None uuid issues.
