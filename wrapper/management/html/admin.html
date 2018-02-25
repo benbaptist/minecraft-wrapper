@@ -643,7 +643,7 @@
                                     }
 									var result = requests.action("save_server_props", {"propCount": lineCheck});
 									if(result === "ok")
-										alert("Successfully saved server.properties! It is recommended that you restart the server for the changes to take effect.");
+										alert("Successfully saved server.properties! It is recommended that you restart the server for the changes to take effect.  Please note that if you don't restart the server immediately, the server could later undo your changes!");
 									else
 										alert("An unknown error occurred while saving.");
 								};
