@@ -178,6 +178,7 @@ class ServerConnection(object):
     def _parse_keep_alive(self):
         data = self.packet.readpkt(
             self.pktSB.KEEP_ALIVE[PARSER])
+        # data is a list of one item  and will be sent back that way
         self.packet.sendpkt(
             self.pktSB.KEEP_ALIVE[PKT],
             self.pktSB.KEEP_ALIVE[PARSER],

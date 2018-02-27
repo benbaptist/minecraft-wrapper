@@ -18,6 +18,7 @@ import sys
 
 # local
 from proxy.utils.mcuuid import MCUUID
+from proxy.utils.constants import *
 
 # Py3-2
 PY3 = sys.version_info > (3,)
@@ -232,7 +233,8 @@ class Packet(object):
         return total
 
     def setcompression(self, threshold):
-        self.send(0x03, "varint", (threshold,))
+        self.sendpkt(0x03, [VARINT,], (threshold,))
+        # self.send(0x03, "varint", (threshold,))
         self.compressThreshold = threshold
 
     def socket_transmit(self, packet):
@@ -288,9 +290,7 @@ class Packet(object):
 
     def read(self, expression):
         """
-        a readpkt() wrapper.  This is not as fast as calling readpkt(), but
-        makes a nice abstraction and is back-wards compatible.  It is also
-        nice because it gives you a dictionary back.
+        a readpkt() wrapper.
 
         Args:
             expression: Something like "double:x|double:y|double:z|
@@ -320,8 +320,10 @@ class Packet(object):
         result = self.readpkt(args)
 
         # convert the list back to a dictionary using the names list as keys
-        for x in xrange(len(result)):
+        for x, eachone in enumerate(result):
             results[names[x]] = result[x]
+        print("\nCALLED DEPRECATED 'packet.read()'.  This will be removed "
+              "in future wrapper versions!  Use 'packet.readpkt() instead...\n")
         return results
 
     def readpkt(self, args):
@@ -346,9 +348,9 @@ class Packet(object):
 
         """
         result = []
-        argcount = len(args)
-        for index in xrange(argcount):
-            result.append(self._PKTREAD[args[index]]())
+        for arg in args:
+            item = self._PKTREAD[arg]()
+            result.append(item)
         return result
 
     def send(self, pkid, expression, payload):
@@ -379,6 +381,8 @@ class Packet(object):
 
         # obtain a list of returned arguments
         result = self.sendpkt(pkid, args, payload)
+        print("\nCALLED DEPRECATED 'packet.send()'.  This will be removed "
+              "in future wrapper versions!  Use 'packet.sendpkt() instead...\n")
         return result
 
     def sendpkt(self, pkid, args, payload):
@@ -390,9 +394,9 @@ class Packet(object):
         if argcount == 0:
             self.send_raw(result)
             return result
-        for index in xrange(argcount):
-            pay = payload[index]
-            result += self._PKTSEND[args[index]](pay)
+        for x, arg in enumerate(args):
+            pay = payload[x]
+            result += self._PKTSEND[arg](pay)
         self.send_raw(result)
         return result
 
@@ -904,7 +908,7 @@ class Packet(object):
 
     def read_int_array(self):
         size = self.read_int()
-        return [self.read_int() for _ in range(size)]
+        return [self.read_int() for _ in xrange(size)]
 
     def read_tag(self):
         a = {"type": self.read_byte()}

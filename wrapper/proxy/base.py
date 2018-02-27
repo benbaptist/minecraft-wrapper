@@ -18,6 +18,7 @@ from api.helpers import getjsonfile, putjsonfile, find_in_json
 from api.helpers import epoch_to_timestr, read_timestr
 from api.helpers import isipv4address
 from utils.py23 import py_str
+from proxy.utils.constants import *
 
 from proxy.utils import mcuuid
 from proxy.entity.entitycontrol import EntityControl
@@ -254,14 +255,15 @@ class Proxy(object):
         server_sock.connect((host, port))
         packet = Packet(server_sock, self)
 
-        packet.send(0x00, "varint|string|ushort|varint", (5, host, port, 1))
-        packet.send(0x00, "", ())
+        packet.sendpkt(
+            0x00, [VARINT, STRING, USHORT, VARINT], (5, host, port, 1))
+        packet.sendpkt(0x00, [NULL, ], ["", ])
         packet.flush()
         self.srv_data.protocolVersion = -1
         while True:
-            pkid, original, orig_packet = packet.grabpacket()  # noqa
+            pkid, original, _unused = packet.grabpacket()  # noqa
             if pkid == 0x00:
-                data = json.loads(packet.read("string:response")["response"])
+                data = json.loads(packet.readpkt([STRING, ])[0])
                 self.srv_data.protocolVersion = data["version"][
                     "protocol"]
                 self.srv_data.version = data["version"]["name"]
