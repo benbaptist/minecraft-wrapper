@@ -37,7 +37,7 @@ class Client(object):
         This class Client is a "fake" server, accepting connections
         from clients.  It receives "SERVER BOUND" packets from client,
         parses them, and forards them on to the server.  It "sends" to the
-        client (self.send() or self.sendpkt())
+        client (self.sendpkt())
 
         Client receives the parent proxy as it's argument.
         No longer receives the proxy's wrapper instance!  All
@@ -85,7 +85,7 @@ class Client(object):
         self.buildmode = False
 
         # keep alive data
-        self.time_server_pinged = 0
+        self.time_last_ping_to_client = 0
         self.time_client_responded = 0
         self.keepalive_val = 0
 
@@ -502,7 +502,7 @@ class Client(object):
         #  45 (0-44) in 1.8 and below.
         for i in self.proxy.inv_slots:
             self.inventory[i] = None
-        self.time_server_pinged = time.time()
+        self.time_last_ping_to_client = time.time()
         self.time_client_responded = time.time()
 
     def _getclientpacketset(self):
@@ -571,21 +571,25 @@ class Client(object):
     # internal client login methods
     # -----------------------------
     def _keep_alive_tracker(self):
-        """ Send keep alives to client and send client settings to server. """
+        """ Send keep alives to client. """
         while not self.abort:
-            time.sleep(.1)
+            time.sleep(1)
             if self.state in (PLAY, LOBBY):
                 # client expects < 20sec
                 # sending more frequently (5 seconds) seems to help with
                 # some slower connections.
-                if time.time() - self.time_server_pinged > 5:
-                    # create the keep alive value
-                    # MC 1.12 .2 uses a time() value.
-                    # Old way takes almost full second to generate:
+                if time.time() - self.time_last_ping_to_client > 9:
+                    # vanilla MC 1.12 .2 uses a time() value.
+                    # I use simple incrementing numbers vs randoms... I mean,
+                    # what is the point of a random keepalive?
                     if self.version < PROTOCOL_1_12_2:
-                        self.keepalive_val = random.randrange(0, 99999)
+                        # sending a keepalive every second for more than 68
+                        # years would be required to exceed the VARINT capacity
+                        self.keepalive_val += 1
                     else:
-                        self.keepalive_val = int((time.time() * 100) % 10000000)
+                        # running forever would not allow keepalive to exceed
+                        # LONG contraints
+                        self.keepalive_val += 1
 
                     # challenge the client with it
                     self.packet.sendpkt(
@@ -593,12 +597,11 @@ class Client(object):
                         self.pktCB.KEEP_ALIVE[PARSER],
                         [self.keepalive_val])
 
-                    self.time_server_pinged = time.time()
+                    self.time_last_ping_to_client = time.time()
 
                 # check for active client keep alive status:
                 # server can allow up to 30 seconds for response
-                if time.time() - self.time_client_responded > 25:  # \
-                        # and not self.abort:
+                if time.time() - self.time_client_responded > 30:
                     self.disconnect("Client closed due to lack of"
                                     " keepalive response")
                     self.log.debug("Closed %s's client thread due to "

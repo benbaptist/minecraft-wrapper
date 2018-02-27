@@ -1,3 +1,8 @@
+Build 11 [1.0b11]
+- scrub out old packet.send methods that will be deprecated.
+- clean up keep-alives a little.
+
+
 Build 10 [1.0b10]
 - correct compression bugs where client and server could be at different compression numbers.
  _They must be operating at the same compression level now_ because of the "once-only compression"
@@ -10,7 +15,7 @@ Build 10 [1.0b10]
  old "falling back to..." name behavior.  If you are supporting (vanilla server) local aliases via
  a plugin, you should set this to False.
 - Improve proxy to only use compression once (while reading a packet).  If a packet
- is not gonig to be changed, the original, unmolested packet is resent, eliminating
+ is not going to be changed, the original unmolested packet is resent, eliminating
  the need to re-compress.
 
 Build 9  [1.0b9]
