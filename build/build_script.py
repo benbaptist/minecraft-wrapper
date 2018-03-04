@@ -265,6 +265,12 @@ def format_to_rst(data):
     when the event occurs.  The call back function must reference the correct
     return payload.
     
+    When a plugin calls an event which can be aborted, it is important that
+    your code not delay in completing.  The proxy packet processing is on
+    hold while your code decides what to do with the event.  If you take too 
+    long, the client could be disconnected!  This is an aggregate time of
+    all the plugins that call this event.
+    
     :sample Plugin snippet:
     
         .. code:: python

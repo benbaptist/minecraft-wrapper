@@ -170,19 +170,17 @@ CONFIG = {
 
          # The following items thin specific mobs over the stated count.  This only happens after the total mob count threshold above is met first.  For example, 'thin-Cow: 40` starts thinning cows > 40.  Entity names must match minecraft naming exactly as they would appear in the game.
 
-            "thin-Cow": 40,
+         # Check /wrapper-data/json/entities.json
 
-         # 1.11 naming!  Check /wrapper-date/json/entities.json
-
-         # there are some surprising changes, like "PigZombie" is now zombie_pigman and EntityHorse is horse, etc
+         # there are some surprising changes after 1.11, like "PigZombie" is now zombie_pigman and EntityHorse is horse, etc.  Sheep, Cow, anc Chicken are now lower case: sheep, cow, chicken.. etc.
 
             "thin-cow": 40,
 
-            "thin-zombie_pigman": 200,
+            "thin-zombie_pigman": 40,
 
-            "thin-Sheep": 40,
+            "thin-sheep": 40,
 
-            "thin-Chicken": 30
+            "thin-chicken": 30
 
         },  # NODOC
 

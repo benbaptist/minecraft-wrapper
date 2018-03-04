@@ -252,7 +252,7 @@ class API(object):
 
         :returns:  None/Nothing
 
-        """
+        """  # noqa
         if not self.internal:
             self.wrapper.log.debug(
                 "[%s] Registered help group '%s' with %d commands",
@@ -297,10 +297,10 @@ class API(object):
 
         :returns:  None/Nothing
 
-        """
+        """  # noqa
         self.wrapper.alerts.ui_process_alerts(message, group, blocking)
 
-    def sendEmail(self, message, recipients, subject, group="wrapper", blocking=False):
+    def sendEmail(self, message, recipients, subject, group="wrapper", blocking=False):  # noqa
         """
         Use group email server settings to email a specified set of recipients
         (independent of alerts settings or enablement).
@@ -319,18 +319,18 @@ class API(object):
 
         :returns:  None/Nothing
 
-        """
-        self.wrapper.alerts.ui_send_mail(group, recipients, subject, message, blocking)
+        """  # noqa
+        self.wrapper.alerts.ui_send_mail(
+            group, recipients, subject, message, blocking)
 
-    def callEvent(self, event, payload):
-        # TODO this event's purpose/functionality and
-        # use cases are unknown at this time
+    def callEvent(self, event, payload, abortable=False):
         """
         Invokes the specific event. Payload is extra information
         relating to the event. Errors may occur if you don't specify
         the right payload information.
         """
-        return self.wrapper.callevent(event, payload)
+        # used by player sendCommand, for instance
+        return self.wrapper.callevent(event, payload, abortable)
 
     def getPluginContext(self, plugin_id):
         """

@@ -411,7 +411,7 @@ class Wrapper(object):
 
         def _console_event():
             self.events.callevent("server.consoleMessage",
-                                  {"message": message})
+                                  {"message": message}, abortable=False)
             """ eventdoc
                 <group> core/wrapper.py <group>
 
@@ -690,7 +690,7 @@ class Wrapper(object):
                              "/property", "/properties"):
                 self.runwrapperconsolecommand("config", allargs, player)
 
-            elif self.proxymode and command in ("whitelist", "/whitelist"):
+            elif command in ("whitelist", "/whitelist"):
                 self.runwrapperconsolecommand("whitelist", allargs, player)
 
             elif command in ("op", "/op"):
@@ -872,6 +872,15 @@ class Wrapper(object):
         self.log.warning(
             "\nProxy mode is now turned off in wrapper.properties.json.\n")
 
+    def enable_proxymode(self):
+        self.proxymode = True
+        self.config["Proxy"]["proxy-enabled"] = True
+        self.configManager.save()
+        self.log.warning(
+            "\nProxy mode is now back on in wrapper.properties.json.\n")
+        self.log.debug("attempting a restart of proxy mode...")
+        self._startproxy()
+
     @staticmethod
     def getbuildstring():
 
@@ -1033,7 +1042,7 @@ class Wrapper(object):
     def event_timer_second(self):
         while not self.halt.halt:
             time.sleep(1)
-            self.events.callevent("timer.second", None)
+            self.events.callevent("timer.second", None, abortable=False)
             """ eventdoc
                 <group> wrapper <group>
 
@@ -1046,7 +1055,7 @@ class Wrapper(object):
 
     def event_timer_tick(self):
         while not self.halt.halt:
-            self.events.callevent("timer.tick", None)
+            self.events.callevent("timer.tick", None, abortable=False)
             time.sleep(0.05)
             """ eventdoc
                 <group> wrapper <group>

@@ -117,6 +117,11 @@ METADATA = 17
 # It is radically different in 1.9+ now (through 11.2 atm)
 METADATA_1_9 = 19
 
+# upgrade for something that always existed:
+# this actually processes a VARINT and then the number of STRING.
+#       read returns: list of strings.
+#       send: accepts a list of strings.
+STRING_ARRAY = 20
 
 # Both of these just read or send the rest of the packet in its raw bytes form.
 REST = 90

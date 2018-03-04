@@ -18,6 +18,24 @@
         fully booted or not.
         
 
+-  changeServerProps(self, config_item, new_value, reload_server=False)
+
+        *New feature starting in version 1.0*
+
+        Edits the server.properties file
+
+        :Args:
+            :item: item, like "online-mode"
+
+            :new_value: applicable value
+
+            :reload_server: True to restart the server.
+
+        Items are changed in the config, but a server restart is required to
+         make the changes persist.
+
+        
+
 -  configWrapper(self, section, config_item, new_value, reload_file=False)
 
         *New feature starting in version 0.8.12*

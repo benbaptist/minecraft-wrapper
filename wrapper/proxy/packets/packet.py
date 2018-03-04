@@ -18,7 +18,6 @@ import sys
 
 # local
 from proxy.utils.mcuuid import MCUUID
-from proxy.utils.constants import *
 
 # Py3-2
 PY3 = sys.version_info > (3,)
@@ -55,6 +54,7 @@ _CODERS = {
     "uuid": 16,
     "metadata": 17,
     "metadata1.9": 19,
+    "stringarray": 20,
     "rest": 90,
     "raw": 90
 }
@@ -128,6 +128,7 @@ class Packet(object):
             16: self.send_uuid,
             17: self.send_metadata,
             19: self.send_metadata_1_9,
+            20: self.send_stringarray,
             90: self.send_pay,
             100: self.send_nothing
         }
@@ -152,6 +153,7 @@ class Packet(object):
             17: self.read_metadata,
             18: self.read_slot_nbtless,
             19: self.read_metadata_1_9,
+            20: self.read_stringarray,
             90: self.read_rest,
             100: self.read_none
         }
@@ -205,7 +207,7 @@ class Packet(object):
 
         self.buffer = io.BytesIO(payload_read)
         pkid = self.read_varint()
-
+        # if pkid == 0x0e: print("RAW",payload_read)  # raw packet viewer
         return pkid, payload_read, self.pack_varint(datalength) + orig_payload
 
     def pack_varint(self, val):
@@ -231,11 +233,6 @@ class Packet(object):
         if total & (1 << 31):
             total = total - (1 << 32)
         return total
-
-    def setcompression(self, threshold):
-        self.sendpkt(0x03, [VARINT,], (threshold,))
-        # self.send(0x03, "varint", (threshold,))
-        self.compressThreshold = threshold
 
     def socket_transmit(self, packet):
         if self.sendCipher is None:
@@ -285,6 +282,7 @@ class Packet(object):
 
     def send_raw(self, payload):
         if not self.abort:
+            # if len(payload) > 15: print("RAW SEND", payload)  BBstyle 1-liner!
             # [(-1, "payload"), ..., ... ]
             self.queue.append((self.compressThreshold, payload))
 
@@ -571,6 +569,17 @@ class Packet(object):
                 raise ValueError
         b += self.send_ubyte(0x7f)
         # print("\n\n%s\n\n\n" % b)
+        return b
+
+    def send_stringarray(self, payload):
+        """payload is a list of strings, but first item is a VARINT Count of
+        the number of strings in the array.  Hence, this combines the
+        Wiki.vg items of `VARINT|STRING(array of STRING)` """
+        b = b""
+        b += self.pack_varint(len(payload))
+        for strings in payload:
+            thisone = self.send_string(strings)
+            b += thisone
         return b
 
     def send_pay(self, payload):
@@ -868,6 +877,17 @@ class Packet(object):
             # nbtCount = self.read_ubyte()
             # nbt = self.read_data(nbtCount)
             return {"id": sid, "count": count, "damage": damage, "nbt": {}}
+
+    def read_stringarray(self):
+        """payload is a list of strings, but first item is a VARINT Count of
+        the number of strings in the array.  Hence, this combines the
+        Wiki.vg items of `VARINT|STRING(array of STRING)` """
+
+        b = self.read_varint()
+        pay = []
+        for _ in xrange(b):
+            pay.append(self.read_string())
+        return pay
 
     def read_rest(self):
         return self.read_data(1024 * 1024)

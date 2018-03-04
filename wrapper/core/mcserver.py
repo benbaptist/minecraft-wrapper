@@ -409,7 +409,10 @@ class MCServer(object):
         self.wrapper.backups.idle = False
         self.wrapper.events.callevent(
             "player.login",
-            {"player": self.getplayer(username)})
+            {"player": self.getplayer(username),
+             "playername": username},
+            abortable=False
+        )
 
         """ eventdoc
             <group> core/mcserver.py <group>
@@ -425,7 +428,8 @@ class MCServer(object):
             <comments>
 
             <payload>
-            "playername": player name
+            "player": player object (if object available -could be False if not)
+            "playername": user name of player (string)
             <payload>
 
         """
@@ -436,7 +440,29 @@ class MCServer(object):
         if players_name in self.vitals.players:
             self.vitals.players[players_name].abort = True
             self.wrapper.events.callevent(
-                "player.logout", {"player": self.getplayer(players_name)})
+                "player.logout", {"player": self.getplayer(players_name),
+                                  "playername": players_name},
+                abortable=True
+            )
+            """ eventdoc
+                <group> core/mcserver.py <group>
+
+                <description> When player logs out of the java MC server.
+                <description>
+
+                <abortable> No - but This will pause long enough for you to deal with the playerobject. <abortable>
+
+                <comments> All events in the core/mcserver.py group are collected
+                from the console output, do not require proxy mode, and 
+                therefore, also, cannot be aborted.
+                <comments>
+
+                <payload>
+                "player": player object (if object available -could be False if not)
+                "playername": user name of player (string)
+                <payload>
+
+            """  # noqa
             del self.vitals.players[players_name]
         if len(self.vitals.players) == 0:
             self.wrapper.backups.idle = True
@@ -500,18 +526,18 @@ class MCServer(object):
         self.vitals.state = state
         if self.vitals.state == OFF:
             self.wrapper.events.callevent(
-                "server.stopped", {"reason": reason})
+                "server.stopped", {"reason": reason}, abortable=False)
         elif self.vitals.state == STARTING:
             self.wrapper.events.callevent(
-                "server.starting", {"reason": reason})
+                "server.starting", {"reason": reason}, abortable=False)
         elif self.vitals.state == STARTED:
             self.wrapper.events.callevent(
-                "server.started", {"reason": reason})
+                "server.started", {"reason": reason}, abortable=False)
         elif self.vitals.state == STOPPING:
             self.wrapper.events.callevent(
-                "server.stopping", {"reason": reason})
+                "server.stopping", {"reason": reason}, abortable=False)
         self.wrapper.events.callevent(
-            "server.state", {"state": state, "reason": reason})
+            "server.state", {"state": state, "reason": reason}, abortable=False)
 
     def doserversaving(self, desiredstate=True):
         """
@@ -763,8 +789,8 @@ class MCServer(object):
             message = buff.replace("player>", new_usage)
             buff = message
         if "/whitelist <on|off" in buff:
-            new_usage = "on|off|list|add|remvove|reload|offline|online>"
-            message = buff.replace("player>", new_usage)
+            new_usage = "/whitelist <on|off|list|add|remvove|reload|offline|online>"  # noqa
+            message = new_usage
             buff = message
 
         if "While this makes the game possible to play" in buff:
@@ -836,14 +862,14 @@ class MCServer(object):
                     "player": self.getplayer(name),
                     "message": message,
                     "original": original
-                })
+                }, abortable=False)
                 """ eventdoc
                     <group> core/mcserver.py <group>
     
                     <description> Player chat scrubbed from the console.
                     <description>
     
-                    <abortable> 
+                    <abortable> No
                     <abortable>
     
                     <comments>
@@ -895,7 +921,7 @@ class MCServer(object):
             self.wrapper.events.callevent("player.action", {
                 "player": self.getplayer(name),
                 "action": message
-            })
+            }, abortable=False)
 
         # Player Achievement
         elif "has just earned the achievement" in buff:
@@ -904,7 +930,7 @@ class MCServer(object):
             self.wrapper.events.callevent("player.achievement", {
                 "player": name,
                 "achievement": achievement
-            })
+            }, abortable=False)
 
         # /say command
         elif getargs(
@@ -920,7 +946,7 @@ class MCServer(object):
                 "player": name,
                 "message": message,
                 "original": original
-            })
+            }, abortable=False)
 
         # Player Death
         elif second_word in self.deathprefixes:
@@ -928,44 +954,76 @@ class MCServer(object):
             self.wrapper.events.callevent("player.death", {
                 "player": self.getplayer(name),
                 "death": getargsafter(line_words, 1)
-            })
+            }, abortable=False)
 
         # server lagged
         elif "Can't keep up!" in buff:
             skipping_ticks = getargs(line_words, 17)
             self.wrapper.events.callevent("server.lagged", {
                 "ticks": get_int(skipping_ticks)
-            })
+            }, abortable=False)
 
         # player teleport
+        elif second_word == "Teleported" and getargs(line_words, 3) == "to":
+            playername = getargs(line_words, 2)
+            # [SurestTexas00: Teleported SapperLeader to 48.49417131908783, 77.67081086259394, -279.88880690937475]  # noqa
+            if playername in self.wrapper.servervitals.players:
+                playerobj = self.getplayer(playername)
+                playerobj._position = [
+                    get_int(float(getargs(line_words, 4).split(",")[0])),
+                    get_int(float(getargs(line_words, 5).split(",")[0])),
+                    get_int(float(getargs(line_words, 6).split("]")[0])), 0, 0
+                ]
+                self.wrapper.events.callevent(
+                    "player.teleport",
+                    {"player": playerobj}, abortable=False)
+
+                """ eventdoc
+                    <group> core/mcserver.py <group>
+
+                    <description> When player teleports.
+                    <description>
+
+                    <abortable> No <abortable>
+
+                    <comments> driven from console message "Teleported ___ to ....".
+                    <comments>
+
+                    <payload>
+                    "player": player object
+                    <payload>
+
+                """  # noqa
         elif first_word == "Teleported" and getargs(line_words, 2) == "to":
             playername = second_word
-            playerobj = self.getplayer(playername)
-            playerobj._position = [
-                get_int(float(getargs(line_words, 3).split(",")[0])),
-                get_int(float(getargs(line_words, 4).split(",")[0])),
-                get_int(float(getargs(line_words, 5))), 0, 0
-            ]
-            self.wrapper.events.callevent(
-                "player.teleport",
-                {"player": playerobj})
+            # Teleported SurestTexas00 to 48.49417131908783, 77.67081086259394, -279.88880690937475  # noqa
+            if playername in self.wrapper.servervitals.players:
+                playerobj = self.getplayer(playername)
+                playerobj._position = [
+                    get_int(float(getargs(line_words, 3).split(",")[0])),
+                    get_int(float(getargs(line_words, 4).split(",")[0])),
+                    get_int(float(getargs(line_words, 5))), 0, 0
+                ]
+                self.wrapper.events.callevent(
+                    "player.teleport",
+                    {"player": playerobj}, abortable=False)
 
-            """ eventdoc
-                <group> core/mcserver.py <group>
-    
-                <description> When player teleports.
-                <description>
-    
-                <abortable> No <abortable>
-    
-                <comments> driven from console message "Teleported ___ to ....".
-                <comments>
-    
-                <payload>
-                "player": player object
-                <payload>
-    
-            """
+                """ eventdoc
+                    <group> core/mcserver.py <group>
+        
+                    <description> When player teleports.
+                    <description>
+        
+                    <abortable> No <abortable>
+        
+                    <comments> driven from console message "Teleported ___ to ....".
+                    <comments>
+        
+                    <payload>
+                    "player": player object
+                    <payload>
+        
+                """  # noqa
     # mcserver.py onsecond Event Handlers
     def reboot_timer(self):
         rb_mins = self.reboot_minutes
@@ -1037,9 +1095,8 @@ class MCServer(object):
             args = comm_pay[1:]
         else:
             args = [""]
-        payload = {"player": self.wrapper.xplayer,
-                   "command": comm_pay[0],
-                   "args": args
-                   }
-
-        self.wrapper.commands.playercommand(payload)
+        new_payload = {"player": self.wrapper.xplayer,
+                       "command": comm_pay[0],
+                       "args": args
+                       }
+        self.wrapper.commands.playercommand(new_payload)

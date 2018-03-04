@@ -192,7 +192,7 @@
 
         
 
--  callEvent(self, event, payload)
+-  callEvent(self, event, payload, abortable=False)
 
         Invokes the specific event. Payload is extra information
         relating to the event. Errors may occur if you don't specify

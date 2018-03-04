@@ -98,7 +98,8 @@ class Backups(object):
                 "wrapper.backupFailure",
                 {"reasonCode": 1,
                  "reasonText": "Tar is not installed. Please install "
-                               "tar before trying to make backups."}
+                               "tar before trying to make backups."},
+                abortable=False
             )
             """ eventdoc
                 <group> Backups <group>
@@ -149,7 +150,8 @@ class Backups(object):
                 {
                  "reasonCode": 5,
                  "reasonText": "Backup location could not be found/created!"
-                }
+                },
+                abortable=False
             )
             self.log.warning("")
         self._getbackups()  # populate self.backups
@@ -237,7 +239,9 @@ class Backups(object):
                     "wrapper.backupFailure",
                     {"reasonCode": 3,
                      "reasonText": "Backup file '%s' does not "
-                                   "exist." % backup_file_and_path})
+                                   "exist." % backup_file_and_path},
+                    abortable=False
+                )
                 """ eventdoc
                                 <description> internalfunction <description>
 
@@ -263,7 +267,9 @@ class Backups(object):
                 "wrapper.backupFailure",
                 {"reasonCode": 2,
                  "reasonText": "Backup file didn't exist after the tar "
-                               "command executed - assuming failure."})
+                               "command executed - assuming failure."},
+                abortable=False
+            )
             """ eventdoc
                 <description> internalfunction <description>
 
@@ -277,10 +283,11 @@ class Backups(object):
             desc = "were backed up.  The operation took"
             summary = "%s %s %s %s" % (size_of, units, desc, timetook)
 
-        self.wrapper.events.callevent("wrapper.backupEnd",
-                                      {"file": filename,
-                                       "status": statuscode,
-                                       "summary": summary})
+        self.wrapper.events.callevent(
+            "wrapper.backupEnd",
+            {"file": filename, "status": statuscode, "summary": summary},
+            abortable=False
+        )
         """ eventdoc
             <group> Backups <group>
 
@@ -319,7 +326,8 @@ class Backups(object):
                      "reasonText": "backups.json is corrupted. Please contact"
                                    " an administer instantly, as this may be "
                                    "critical."
-                     }
+                     },
+                    abortable=False
                 )
                 """ eventdoc
                     <description> internalfunction <description>

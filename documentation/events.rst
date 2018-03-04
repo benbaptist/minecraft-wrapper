@@ -6,6 +6,12 @@
     when the event occurs.  The call back function must reference the correct
     return payload.
     
+    When a plugin calls an event which can be aborted, it is important that
+    your code not delay in completing.  The proxy packet processing is on
+    hold while your code decides what to do with the event.  If you take too 
+    long, the client could be disconnected!  This is an aggregate time of
+    all the plugins that call this event.
+    
     :sample Plugin snippet:
     
         .. code:: python
@@ -36,7 +42,8 @@
         When player logs into the java MC server.
 
     :Payload:
-        :"playername": player name
+        :"player": player object (if object available -could be False if not)
+        :"playername": user name of player (string)
 
     :Can be aborted/modified: No
 
@@ -49,13 +56,19 @@
 
     :Module: mcserver.py *(core/mcserver.py)*
 
-    :Description: player.logout
+    :Description:
+        When player logs out of the java MC server.
 
     :Payload:
-        :"player": self.getplayer(players_name)
+        :"player": player object (if object available -could be False if not)
+        :"playername": user name of player (string)
 
-    :Can be aborted/modified: 
+    :Can be aborted/modified: No - but This will pause long enough for you to deal with the playerobject.
 
+    :Comments:
+        All events in the core/mcserver.py group are collected
+        from the console output, do not require proxy mode, and
+        therefore, also, cannot be aborted.
 
 :Event: "server.stopped"
 
@@ -64,7 +77,8 @@
     :Description: server.stopped
 
     :Payload:
-        :"reason": reason
+        :"reason": reason}
+         abortable=False
 
     :Can be aborted/modified: 
 
@@ -76,7 +90,8 @@
     :Description: server.starting
 
     :Payload:
-        :"reason": reason
+        :"reason": reason}
+         abortable=False
 
     :Can be aborted/modified: 
 
@@ -88,7 +103,8 @@
     :Description: server.started
 
     :Payload:
-        :"reason": reason
+        :"reason": reason}
+         abortable=False
 
     :Can be aborted/modified: 
 
@@ -100,7 +116,8 @@
     :Description: server.stopping
 
     :Payload:
-        :"reason": reason
+        :"reason": reason}
+         abortable=False
 
     :Can be aborted/modified: 
 
@@ -113,7 +130,8 @@
 
     :Payload:
         :"state": state
-        :"reason": reason
+        :"reason": reason}
+         abortable=False
 
     :Can be aborted/modified: 
 
@@ -130,7 +148,7 @@
         :"message": <str> type - what the player said in chat. ('hello everyone')
         :"original": The original line of text from the console ('<mcplayer> hello everyone`)
 
-    :Can be aborted/modified: 
+    :Can be aborted/modified: No
 
     :Comments:
         This event is triggered by console chat which has already been sent.
@@ -146,7 +164,8 @@
 
     :Payload:
         :"player": self.getplayer(name)
-        :"action": message
+        :"action": message}
+         abortable=False
 
     :Can be aborted/modified: 
 
@@ -159,7 +178,8 @@
 
     :Payload:
         :"player": name
-        :"achievement": achievement
+        :"achievement": achievement}
+         abortable=False
 
     :Can be aborted/modified: 
 
@@ -173,7 +193,8 @@
     :Payload:
         :"player": name
         :"message": message
-        :"original": original
+        :"original": original}
+         abortable=False
 
     :Can be aborted/modified: 
 
@@ -187,7 +208,8 @@
     :Payload:
         :"player": self.getplayer(name)
         :"death": getargsafter(line_words
-         1)
+         1)}
+         abortable=False
 
     :Can be aborted/modified: 
 
@@ -199,7 +221,8 @@
     :Description: server.lagged
 
     :Payload:
-        :"ticks": get_int(skipping_ticks)
+        :"ticks": get_int(skipping_ticks)}
+         abortable=False
 
     :Can be aborted/modified: 
 
@@ -219,6 +242,21 @@
     :Comments:
         driven from console message "Teleported ___ to ....".
 
+**< Group 'api/base.py' >**
+
+:Event: "event"
+
+    :Module: base.py *(api/base.py)*
+
+    :Description: event
+
+    :Payload:
+         payload
+         abortable
+
+    :Can be aborted/modified: 
+
+
 **< Group 'wrapper' >**
 
 :Event: "timer.second"
@@ -228,7 +266,9 @@
     :Description:
         a timer that is called each second.
 
-    :Payload: None
+    :Payload:
+         None
+         abortable=False
 
     :Can be aborted/modified: No
 
@@ -241,7 +281,9 @@
         a timer that is called each 1/20th
           of a second, like a minecraft tick.
 
-    :Payload: None
+    :Payload:
+         None
+         abortable=False
 
     :Can be aborted/modified: No
 
@@ -259,7 +301,8 @@
 
     :Payload:
         :"nick": nick
-        :"channel": channel
+        :"channel": channel}
+         abortable=False
 
     :Can be aborted/modified: 
 
@@ -272,7 +315,8 @@
 
     :Payload:
         :"nick": nick
-        :"channel": channel
+        :"channel": channel}
+         abortable=False
 
     :Can be aborted/modified: 
 
@@ -286,7 +330,8 @@
     :Payload:
         :"nick": nick
         :"message": message
-        :"channel": None
+        :"channel": None}
+         abortable=False
 
     :Can be aborted/modified: 
 
@@ -301,7 +346,8 @@
         :"nick": nick
         :"channel": channel
         :"action": getargsafter(message.split(" ")
-         1)[:-1]
+         1)[:-1]}
+         abortable=False
 
     :Can be aborted/modified: 
 
@@ -315,7 +361,8 @@
     :Payload:
         :"nick": nick
         :"channel": channel
-        :"message": message
+        :"message": message}
+         abortable=False
 
     :Can be aborted/modified: 
 
@@ -363,32 +410,6 @@
         Can be aborted by returning False. Can be modified before
         passing to server.  'chatmsg' accepts both raw string
         or a dictionary payload containing ["message"] item.
-
-:Event: "player.runCommand"
-
-    :Module: parse_sb.py *(client/parse_sb.py)*
-
-    :Description:
-        When a player runs a command. Do not use
-        for registering commands.
-
-    :Payload:
-        :"player": playerobject()
-        :"command": slash command (or whatever is set in wrapper's
-         config as the command cursor).
-        :"args": the remaining words/args
-
-    :Can be aborted/modified: Yes. Registered commands ARE already aborted since they do not get passed to the server.
-
-    :Comments:
-        Called AFTER player.rawMessage event (if rawMessage
-        does not reject it).  However, rawMessage could have
-        modified it before this point.
-        
-        The best use of this event is a quick way to prevent a client from
-        passing certain commands or command arguments to the server.
-        rawMessage is better if you need something else (parsing or
-        filtering chat, for example).
 
 :Event: "player.dig"
 

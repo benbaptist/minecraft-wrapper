@@ -10,7 +10,6 @@ import threading
 import time
 import json
 import hashlib
-import random
 from socket import error as socket_error
 import requests
 
@@ -267,18 +266,18 @@ class Client(object):
         self._send_client_settings()
 
         self.packet.sendpkt(
-            self.pktCB.CHANGE_GAME_STATE,
+            self.pktCB.CHANGE_GAME_STATE[PKT],
             [UBYTE, FLOAT],
             (1, 0))
 
         self.packet.sendpkt(
-            self.pktCB.RESPAWN,
+            self.pktCB.RESPAWN[PKT],
             [INT, UBYTE, UBYTE, STRING],
             [-1, 3, 0, 'default'])
 
         if self.version < PROTOCOL_1_8START:
             self.server_connection.packet.sendpkt(
-                self.pktSB.CLIENT_STATUS,
+                self.pktSB.CLIENT_STATUS[PKT],
                 [BYTE, ],
                 (0, ))
         else:
@@ -292,12 +291,12 @@ class Client(object):
             #   (-1, 0, 0.0))
 
             self.server_connection.packet.sendpkt(
-                self.pktSB.CLIENT_STATUS,
+                self.pktSB.CLIENT_STATUS[PKT],
                 [VARINT, ],
                 (0, ))
 
             self.server_connection.packet.sendpkt(
-                self.pktSB.PLAYER,
+                self.pktSB.PLAYER[PKT],
                 [BOOL, ],
                 (True,))
 
@@ -366,7 +365,7 @@ class Client(object):
 
         # send login success to client
         self.packet.sendpkt(
-            self.pktCB.LOGIN_SUCCESS,
+            self.pktCB.LOGIN_SUCCESS[PKT],
             [STRING, STRING],
             (self.wrapper_uuid.string, self.username))
 
@@ -418,7 +417,7 @@ class Client(object):
             server_addr = "localhost\x00FML\x00"
 
         self.server_connection.packet.sendpkt(
-            self.server_connection.pktSB.HANDSHAKE,
+            self.server_connection.pktSB.HANDSHAKE[PKT],
             [VARINT, STRING, USHORT, VARINT],
             (self.clientversion, server_addr, self.serverport,
              LOGIN))
@@ -426,7 +425,7 @@ class Client(object):
         # send the login request (server is offline, so it will
         # accept immediately by sending login_success)
         self.server_connection.packet.sendpkt(
-            self.server_connection.pktSB.LOGIN_START,
+            self.server_connection.pktSB.LOGIN_START[PKT],
             [STRING],
             [self.username])
 
@@ -466,7 +465,7 @@ class Client(object):
 
         if self.state in (PLAY, LOBBY):
             self.packet.sendpkt(
-                self.pktCB.DISCONNECT,
+                self.pktCB.DISCONNECT[PKT],
                 [JSON],
                 [jsondict])
 
@@ -474,7 +473,7 @@ class Client(object):
                            self.username)
         else:
             self.packet.sendpkt(
-                self.pktCB.LOGIN_DISCONNECT,
+                self.pktCB.LOGIN_DISCONNECT[PKT],
                 [JSON],
                 [message])
 
@@ -529,12 +528,12 @@ class Client(object):
             y = position[1]
             z = position[2]
             self.server_connection.packet.sendpkt(
-                self.pktSB.PLAYER_UPDATE_SIGN,
+                self.pktSB.PLAYER_UPDATE_SIGN[PKT],
                 [INT, SHORT, INT, STRING, STRING, STRING, STRING],
                 (x, y, z, line1, line2, line3, line4))
         else:
             self.server_connection.packet.sendpkt(
-                self.pktSB.PLAYER_UPDATE_SIGN,
+                self.pktSB.PLAYER_UPDATE_SIGN[PKT],
                 [POSITION, STRING, STRING, STRING, STRING],
                 (position, line1, line2, line3, line4))
 
@@ -672,14 +671,15 @@ class Client(object):
             self.log.debug("Client logon with wrapper offline-"
                            " 'self.wrapper_uuid = OfflinePlayer:<name>'")
 
-        # TODO This should follow server properties setting
         # no idea what is special about version 26
         if self.clientversion > 26:
             if "network-compression-threshold" in self.proxy.srv_data.properties:  # noqa
                 comp = self.proxy.srv_data.properties[
                     "network-compression-threshold"]
                 # print("client is setting compression to %s" % comp)
-                self.packet.setcompression(comp)
+                self.packet.sendpkt(
+                    self.pktCB.LOGIN_SET_COMPRESSION[PKT], [VARINT], [comp])
+                self.packet.compressThreshold = comp
 
     def _use_newname(self, oldname, newname):
         old_local_uuid = self.proxy.uuids.getuuidfromname(oldname)
@@ -701,7 +701,7 @@ class Client(object):
     def _send_client_settings(self):
         if self.clientSettings and not self.clientSettingsSent:
             self.server_connection.packet.sendpkt(
-                self.pktSB.CLIENT_SETTINGS,
+                self.pktSB.CLIENT_SETTINGS[PKT],
                 [RAW, ],
                 (self.clientSettings,))
 
@@ -722,13 +722,13 @@ class Client(object):
         channel = "FML|HS"
         if self.clientversion < PROTOCOL_1_8START:
             self.packet.sendpkt(
-                self.pktCB.PLUGIN_MESSAGE,
+                self.pktCB.PLUGIN_MESSAGE[PKT],
                 [STRING, SHORT, BYTE],
                 [channel, 1, 254])
 
         else:
             self.packet.sendpkt(
-                self.pktCB.PLUGIN_MESSAGE,
+                self.pktCB.PLUGIN_MESSAGE[PKT],
                 [STRING, BYTE],
                 [channel, 254])
 
@@ -741,12 +741,12 @@ class Client(object):
         if self.server_connection:
             if self.version < PROTOCOL_1_8START:
                 self.server_connection.packet.sendpkt(
-                    self.pktSB.PLUGIN_MESSAGE,
+                    self.pktSB.PLUGIN_MESSAGE[PKT],
                     [STRING, SHORT, BYTE],
                     [channel, 1,  state])
             else:
                 self.server_connection.packet.sendpkt(
-                    self.pktSB.PLUGIN_MESSAGE,
+                    self.pktSB.PLUGIN_MESSAGE[PKT],
                     [STRING, BOOL],
                     [channel, state])
 
@@ -798,6 +798,10 @@ class Client(object):
 
     # Login parsers
     # -----------------------
+    def _parse_handshaking_legacy(self):
+        # just disconnect them.
+        self.packet.send_raw(0xff+0x00+0x00+0x00)
+
     def _parse_handshaking(self):
         # self.log.debug("HANDSHAKE")
         # "version|address|port|state"
@@ -851,7 +855,7 @@ class Client(object):
     def _parse_status_ping(self):
         # self.log.debug("SB -> STATUS PING")
         data = self.packet.readpkt([LONG])
-        self.packet.sendpkt(self.pktCB.PING_PONG, [LONG], [data[0]])
+        self.packet.sendpkt(self.pktCB.PING_PONG[PKT], [LONG], [data[0]])
         # self.log.debug("CB (W)-> STATUS PING")
         self.state = HANDSHAKE
         return False
@@ -894,7 +898,7 @@ class Client(object):
             self.MOTD["modinfo"] = self.proxy.mod_info["modinfo"]
 
         self.packet.sendpkt(
-            self.pktCB.PING_JSON_RESPONSE,
+            self.pktCB.PING_JSON_RESPONSE[PKT],
             [STRING],
             [json.dumps(self.MOTD)])
 
@@ -918,13 +922,13 @@ class Client(object):
             if self.servervitals.protocolVersion < 6:
                 # send to client 1.7
                 self.packet.sendpkt(
-                    self.pktCB.LOGIN_ENCR_REQUEST,
+                    self.pktCB.LOGIN_ENCR_REQUEST[PKT],
                     [STRING, BYTEARRAY_SHORT, BYTEARRAY_SHORT],
                     (self.serverID, self.public_key, self.verifyToken))
             else:
                 # send to client 1.8 +
                 self.packet.sendpkt(
-                    self.pktCB.LOGIN_ENCR_REQUEST,
+                    self.pktCB.LOGIN_ENCR_REQUEST[PKT],
                     [STRING, BYTEARRAY, BYTEARRAY],
                     (self.serverID, self.public_key, self.verifyToken))
 
@@ -1047,55 +1051,57 @@ class Client(object):
         # the packets we parse and the methods that parse them.
         self.parsers = {
             HANDSHAKE: {
-                self.pktSB.HANDSHAKE:
+                self.pktSB.LEGACY_HANDSHAKE[PKT]:
+                    self._parse_handshaking_legacy,
+                self.pktSB.HANDSHAKE[PKT]:
                     self._parse_handshaking,
-                self.pktSB.PLUGIN_MESSAGE:
+                self.pktSB.PLUGIN_MESSAGE[PKT]:
                     self._parse_plugin_message,
                 },
             STATUS: {
-                self.pktSB.STATUS_PING:
+                self.pktSB.STATUS_PING[PKT]:
                     self._parse_status_ping,
-                self.pktSB.REQUEST:
+                self.pktSB.REQUEST[PKT]:
                     self._parse_status_request,
-                self.pktSB.PLUGIN_MESSAGE:
+                self.pktSB.PLUGIN_MESSAGE[PKT]:
                     self._parse_plugin_message,
                 },
             LOGIN: {
-                self.pktSB.LOGIN_START:
+                self.pktSB.LOGIN_START[PKT]:
                     self._parse_login_start,
-                self.pktSB.LOGIN_ENCR_RESPONSE:
+                self.pktSB.LOGIN_ENCR_RESPONSE[PKT]:
                     self._parse_login_encr_response,
-                self.pktSB.PLUGIN_MESSAGE:
+                self.pktSB.PLUGIN_MESSAGE[PKT]:
                     self._parse_plugin_message,
                 },
             PLAY: {
                 self.pktSB.CHAT_MESSAGE[PKT]:
                     self.parse_sb.parse_play_chat_message,
-                self.pktSB.CLICK_WINDOW:
+                self.pktSB.CLICK_WINDOW[PKT]:
                     self.parse_sb.parse_play_click_window,
-                self.pktSB.CLIENT_SETTINGS:
+                self.pktSB.CLIENT_SETTINGS[PKT]:
                     self.parse_sb.parse_play_client_settings,
-                self.pktSB.HELD_ITEM_CHANGE:
+                self.pktSB.HELD_ITEM_CHANGE[PKT]:
                     self.parse_sb.parse_play_held_item_change,
                 self.pktSB.KEEP_ALIVE[PKT]:
                     self._parse_keep_alive,
-                self.pktSB.PLAYER_BLOCK_PLACEMENT:
+                self.pktSB.PLAYER_BLOCK_PLACEMENT[PKT]:
                     self.parse_sb.parse_play_player_block_placement,
-                self.pktSB.PLAYER_DIGGING:
+                self.pktSB.PLAYER_DIGGING[PKT]:
                     self.parse_sb.parse_play_player_digging,
-                self.pktSB.PLAYER_LOOK:
+                self.pktSB.PLAYER_LOOK[PKT]:
                     self.parse_sb.parse_play_player_look,
-                self.pktSB.PLAYER_POSITION:
+                self.pktSB.PLAYER_POSITION[PKT]:
                     self.parse_sb.parse_play_player_position,
                 self.pktSB.PLAYER_POSLOOK[PKT]:
                     self.parse_sb.parse_play_player_poslook,
-                self.pktSB.PLAYER_UPDATE_SIGN:
+                self.pktSB.PLAYER_UPDATE_SIGN[PKT]:
                     self.parse_sb.parse_play_player_update_sign,
-                self.pktSB.SPECTATE:
+                self.pktSB.SPECTATE[PKT]:
                     self.parse_sb.parse_play_spectate,
-                self.pktSB.USE_ITEM:
+                self.pktSB.USE_ITEM[PKT]:
                     self.parse_sb.parse_play_use_item,
-                self.pktSB.PLUGIN_MESSAGE:
+                self.pktSB.PLUGIN_MESSAGE[PKT]:
                     self._parse_plugin_message,
                 },
             LOBBY: {
@@ -1103,11 +1109,11 @@ class Client(object):
                     self._parse_keep_alive,
                 self.pktSB.CHAT_MESSAGE[PKT]:
                     self._parse_lobby_chat_message,
-                self.pktSB.PLUGIN_MESSAGE:
+                self.pktSB.PLUGIN_MESSAGE[PKT]:
                     self._parse_plugin_message,
                 },
             IDLE: {
-                self.pktSB.PLUGIN_MESSAGE:
+                self.pktSB.PLUGIN_MESSAGE[PKT]:
                     self._parse_plugin_message,
             }
         }

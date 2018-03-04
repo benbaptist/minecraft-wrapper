@@ -284,6 +284,15 @@ class Player(object):
             time.sleep(.5)
         self.data.close()
 
+    def kick(self, reason):
+        """
+        Kick a player with 'reason'.  Using this interface (versus the
+        console command) ensures the player receives the proper disconnect
+        messages based on being in proxy mode or not.
+
+        """
+        self.wrapper.javaserver.kick_player(self, self.username, reason)
+
     def execute(self, string):
         """
         Run a command as this player. If proxy mode is not enabled,
@@ -335,7 +344,7 @@ class Player(object):
 
         """
         pay = {"player": self, "command": command, "args": args}
-        self.wrapper.api.callEvent("player.runCommand", pay)
+        self.wrapper.api.callEvent("player.runCommand", pay, abortable=False)
 
     def say(self, string):
         """
@@ -482,12 +491,12 @@ class Player(object):
             return False
         if version < PROTOCOL_1_8START:
             self.client.packet.sendpkt(
-                self.clientboundPackets.PLUGIN_MESSAGE,
+                self.clientboundPackets.PLUGIN_MESSAGE[PKT],
                 [_STRING, _BYTEARRAY],
                 ("MC|RPack", url))
         else:
             self.client.packet.sendpkt(
-                self.clientboundPackets.RESOURCE_PACK_SEND,
+                self.clientboundPackets.RESOURCE_PACK_SEND[PKT],
                 [_STRING, _STRING],
                 (url, hashrp))
 
@@ -584,7 +593,7 @@ class Player(object):
             parsing = [_FLOAT, _SHORT, _SHORT]
 
         self.client.packet.sendpkt(
-            self.clientboundPackets.SET_EXPERIENCE,
+            self.clientboundPackets.SET_EXPERIENCE[PKT],
             parsing,
             (progress, level, total))
 
@@ -647,7 +656,7 @@ class Player(object):
             return False
 
         client.packet.sendpkt(
-            self.clientboundPackets.OPEN_WINDOW,
+            self.clientboundPackets.OPEN_WINDOW[PKT],
             [_UBYTE, _STRING, _JSON, _UBYTE],
             (client.windowCounter, windowtype, {"text": title},
              slots))
@@ -713,11 +722,11 @@ class Player(object):
         # Note in versions before 1.8, field of view is the
         # walking speed for client (still a float) Server
         # field of view is still walking speed
-        sendclient(self.clientboundPackets.PLAYER_ABILITIES,
+        sendclient(self.clientboundPackets.PLAYER_ABILITIES[PKT],
                    [_BYTE, _FLOAT, _FLOAT],
                    (bitfield, self.fly_speed, self.field_of_view))
 
-        sendserver(self.serverboundPackets.PLAYER_ABILITIES,
+        sendserver(self.serverboundPackets.PLAYER_ABILITIES[PKT],
                    [_BYTE, _FLOAT, _FLOAT],
                    (bitfield, self.fly_speed, self.field_of_view))
 
@@ -788,11 +797,11 @@ class Player(object):
                               _FLOAT, _FLOAT, _FLOAT, _INT]
 
         if sendblock:
-            sendclient(self.clientboundPackets.BLOCK_CHANGE,
+            sendclient(self.clientboundPackets.BLOCK_CHANGE[PKT],
                        blockparser,
                        (posx, y, x, iddata, blockdata))
         else:
-            sendclient(self.clientboundPackets.PARTICLE,
+            sendclient(self.clientboundPackets.PARTICLE[PKT],
                        particleparser,
                        (blockid, True, x + .5, y + .5, z + .5, 0, 0, 0,
                         partdata, numparticles))

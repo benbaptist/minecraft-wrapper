@@ -49,6 +49,39 @@ class Minecraft(object):
         """
         return self.wrapper.servervitals.state == 2
 
+    def changeServerProps(self, config_item, new_value, reload_server=False):
+        """
+        *New feature starting in version 1.0*
+
+        Edits the server.properties file
+
+        :Args:
+            :item: item, like "online-mode"
+
+            :new_value: applicable value
+
+            :reload_server: True to restart the server.
+
+        Items are changed in the config, but a server restart is required to
+         make the changes persist.
+
+        """
+        cont = self.wrapper.api.helpers.config_to_dict_read(
+            "server.properties",
+            self.wrapper.serverpath
+        )
+        if config_item in cont:
+            cont[config_item] = new_value
+
+            self.wrapper.api.helpers.config_write_from_dict(
+                "server.properties",
+                self.wrapper.serverpath,
+                cont
+            )
+
+        if reload_server:
+            self.wrapper.javaserver.restart()
+
     def configWrapper(self, section, config_item, new_value, reload_file=False):
         """
         *New feature starting in version 0.8.12*
