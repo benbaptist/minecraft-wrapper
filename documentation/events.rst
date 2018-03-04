@@ -242,21 +242,6 @@
     :Comments:
         driven from console message "Teleported ___ to ....".
 
-**< Group 'api/base.py' >**
-
-:Event: "event"
-
-    :Module: base.py *(api/base.py)*
-
-    :Description: event
-
-    :Payload:
-         payload
-         abortable
-
-    :Can be aborted/modified: 
-
-
 **< Group 'wrapper' >**
 
 :Event: "timer.second"

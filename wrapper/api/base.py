@@ -330,7 +330,8 @@ class API(object):
         the right payload information.
         """
         # used by player sendCommand, for instance
-        return self.wrapper.callevent(event, payload, abortable)
+        caller = self.wrapper.callevent
+        return caller(event, payload, abortable)
 
     def getPluginContext(self, plugin_id):
         """
