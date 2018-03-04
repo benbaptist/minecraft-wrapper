@@ -5,10 +5,10 @@
         1, 
         0, 
         0, 
-        "beta", 
-        12
+        "alpha", 
+        17
     ], 
     "build": 229, 
-    "release_time": 1520195736.894644, 
+    "release_time": 1520196713.991798, 
     "repotype": "dev"
 }
