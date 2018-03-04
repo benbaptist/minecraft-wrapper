@@ -94,43 +94,53 @@ class ParseSB(object):
         # determine if this is a command. act appropriately
         if chatmsg[0:self.command_prefix_len] == self.command_prefix:
             # it IS a command of some kind
-            if self.proxy.eventhandler.callevent(
-                    "player.runCommand", {
-                        "playername": self.client.username,
-                        "command": chatmsg.split(" ")[0][1:].lower(),
-                        "args": chatmsg.split(" ")[1:]}):
+            allwords = chatmsg.split(" ")
+            self.proxy.eventhandler.callevent(
+                "player.runCommand", {
+                    "playername":
+                        self.client.username,
+                    "player":
+                        self.client.servervitals.players[self.client.username],
+                    "command":
+                        allwords[0][1:],
+                    "args":
+                        allwords[1:]
+                }, abortable=False
+            )
 
-                # wrapper processed this command.. it goes no further
-                """ eventdoc
-                    <group> Proxy <group>
+            # wrapper processed this command.. it goes no further
+            """ eventdoc
+                <group> Proxy <group>
 
-                    <description> When a player runs a command. Do not use
-                    for registering commands.
-                    <description>
+                <description> internalfunction <description>
 
-                    <abortable> Yes. Registered commands ARE already aborted since they do not get passed to the server.
-                    <abortable>
+                <abortable> 
+                No. Proxy - all commands are automatically aborted and re-handled by Wrapper.
+                <abortable>
 
-                    <comments>
-                    Called AFTER player.rawMessage event (if rawMessage
-                    does not reject it).  However, rawMessage could have
-                    modified it before this point.
-                    
-                    The best use of this event is a quick way to prevent a client from 
-                    passing certain commands or command arguments to the server.
-                    rawMessage is better if you need something else (parsing or
-                    filtering chat, for example).
-                    <comments>
+                <comments>
+                 When a player runs a command. Do not use
+                for registering commands.  There is not real good use-case 
+                for a plugin developer to use this event.  Registering
+                your own commands will do the same job.  You could use this 
+                to overrided a minecraft command with your own... but again,
+                registering an identical command will do the same thing.
+                
+                Called AFTER player.rawMessage event (if rawMessage
+                does not reject it).  However, rawMessage could have
+                modified it before this point. rawMessage is better if you 
+                need to, for example, parse or filter chat.
+                <comments>
 
-                    <payload>
-                    "player": playerobject()
-                    "command": slash command (or whatever is set in wrapper's
-                    config as the command cursor).
-                    "args": the remaining words/args
-                    <payload>
+                <payload>
+                "player": playerobject()
+                "command": slash command (or whatever is set in wrapper's
+                config as the command cursor).
+                "args": the remaining words/args
+                <payload>
 
-                """
-                return False
+            """  # noqa
+            return False
 
         if chatmsg[0] == "/" and self.command_prefix_non_standard:
             # strip leading slash if using a non-slash command  prefix
@@ -330,7 +340,9 @@ class ParseSB(object):
                 "action": "useitem",
                 "origin": "pktSB.PLAYER_BLOCK_PLACEMENT"
             }):
-                self.log.debug("player helditem was None. (playerblockplacement-SB)")
+                self.log.debug(
+                    "player helditem was None. (playerblockplacement-SB)"
+                )
                 return False
 
         # block placement event
@@ -596,7 +608,7 @@ class ParseSB(object):
         for client in self.proxy.clients:
             if data[0] == client.wrapper_uuid:
                 self.client.server_connection.packet.sendpkt(
-                    self.client.pktSB.SPECTATE,
+                    self.client.pktSB.SPECTATE[PKT],
                     [UUID],
                     [client.wrapper_uuid])
                 self.log.debug("spectate returned False (SB)")

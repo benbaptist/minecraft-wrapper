@@ -26,6 +26,12 @@ using 'self.api.helpers'
 
     
 
+-  config_write_from_dict(filename, filepath, dictionary)
+
+    Use a keyed dictionary and write a disk file with '='
+    lines (like server.properties).
+    
+
 -  scrub_item_value(item)
 
     Takes a text item value and determines if it should be a boolean,

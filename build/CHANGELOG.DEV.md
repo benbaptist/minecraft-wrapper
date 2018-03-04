@@ -1,3 +1,26 @@
+Build 12 [1.0b12]
+Started as a refactor, but I discovered that Entity controls were not functioning properly.
+ (and discovered that the mineraft entity controls actually are not as robust as ours).
+- Refactored all packet constants to a standard format:
+    CONSTANT = [PACKET, [PARSING]], where PACKET = 0xNN packet number and parsing
+     is a list of constants like [VARINT, BOOL, STRING].  Some packets already
+     followed this convention, but most simply defined packets like `PACKET_NAME = 0xNN`
+- Correct errors with new mcserver.py `_console_event` function not sending commands anywhere
+ except for the wrapper interface.
+- Corrected Entities config items listing old names (i.e. - 'Sheep' was changed to 'sheep' in 11.1)
+- Added internal wrapper event 'server.autoCompletes' to process (future) autocompletions.
+- Added optimization to make non-abortable events spur off in their own thread to prevent
+ delays to wrapper (and in proxy mode, proxy packet) processing.
+- Removed "player.runCommand" event from public API.  It is now private event.  Also
+ changed the behaviour to not be "abortable".. I.e. any command _will_ abort and get
+ processed directly by _either_ wrapper or the server.
+- All registered commands run on their own thread, so wrapper plugin commands
+ do not pause proxy!
+- All non-abortable events run as a deamon thread, allowing wrapper to continue
+ running while any event runs on a separate thread.
+- Made improvements to whitelist commands `online` and `offline`.
+
+
 Build 11 [1.0b11]
 - scrub out old packet.send methods that will be deprecated.
 - clean up keep-alives a little.

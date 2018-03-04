@@ -256,7 +256,9 @@ class Proxy(object):
         packet = Packet(server_sock, self)
 
         packet.sendpkt(
-            0x00, [VARINT, STRING, USHORT, VARINT], (5, host, port, 1))
+            # 340 is protocol and 1 means "Next State = status"
+            0x00, [VARINT, STRING, USHORT, VARINT], (340, host, port, STATUS))
+        # Disconnect
         packet.sendpkt(0x00, [NULL, ], ["", ])
         packet.flush()
         self.srv_data.protocolVersion = -1
@@ -358,11 +360,14 @@ class Proxy(object):
                                self.srv_data.serverpath):
                     # this actually is not needed. Commands now handle the kick.
                     console_command = "kick %s %s" % (name, reason)
-                    self.eventhandler.callevent("proxy.console",
-                                                {"command": console_command})
+                    self.eventhandler.callevent(
+                        "proxy.console", {"command": console_command},
+                        abortable=False
+                    )
+
                     """ eventdoc
 
-                    description> internalfunction <description>
+                    <description> internalfunction <description>
 
                     """
                     return "Banned %s: %s" % (name, reason)
@@ -412,8 +417,10 @@ class Proxy(object):
                     self.log.info("kicking %s... %s", username, reason)
 
                     console_command = "kick %s Banned: %s" % (username, reason)
-                    self.eventhandler.callevent("proxy.console",
-                                                {"command": console_command})
+                    self.eventhandler.callevent(
+                        "proxy.console", {"command": console_command},
+                        abortable=False
+                    )
                     """ eventdoc
                                             <description> internalfunction <description>
 
@@ -466,7 +473,8 @@ class Proxy(object):
 
                             console_command = "kick %s Your IP is Banned!" % client.username  # noqa
                             self.eventhandler.callevent(
-                                "proxy.console", {"command": console_command}
+                                "proxy.console", {"command": console_command},
+                                abortable=False
                             )
                             """ eventdoc
                                                     <description> internalfunction <description>

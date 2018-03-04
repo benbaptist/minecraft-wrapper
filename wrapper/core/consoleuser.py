@@ -134,6 +134,9 @@ class ConsolePlayer(object):
         """
         self.wrapper.javaserver.console(string)
 
+    def kick(self, reason):
+        self.message(reason)
+
     @staticmethod
     def hasPermission(*args):
         """return console as always having the requested permission"""

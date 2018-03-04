@@ -60,12 +60,9 @@ class Commands(object):
 
         # We should get out of this by creating a wrapper command registering set # noqa
 
-        # make sure any command returns a True-ish item, or the
-        # chat packet will continue to the server
-
         if command in ("plugins", "pl"):
             self.command_plugins(player)
-            return True
+            return
 
         # some minecraft commands (like op, ban, kick) will have implementations
         # that should vary based on whether proxymode is enabled and are
@@ -73,69 +70,53 @@ class Commands(object):
         # all commands here override their Minecraft equivalent.
 
         elif command == "op":
-            self.command_op(player, payload)
-            return True
+            return self.command_op(player, payload)
 
         elif command == "deop":
-            self.command_deop(player, payload)
-            return True
+            return self.command_deop(player, payload)
 
         elif command == "kick":
-            self.command_kick(player, payload)
-            return True
+            return self.command_kick(player, payload)
 
         elif command == "whitelist":
-            self.command_whitelist(player, payload)
-            return True
+            return self.command_whitelist(player, payload)
 
         elif command == "wrapper":
-            self.command_wrapper(player, payload)
-            return True
+            return self.command_wrapper(player, payload)
 
         elif command == "reload":
-            self.command_reload(player, payload)
-            return True
+            return self.command_reload(player, payload)
 
         elif command in ("help", "?"):
-            self.command_help(player, payload)
-            return True
+            return self.command_help(player, payload)
 
         elif command == "playerstats":
-            self.command_playerstats(player, payload)
-            return True
+            return self.command_playerstats(player, payload)
 
         elif command in ("permissions", "perm", "perms", "super"):
-            self.command_perms(player, payload)
-            return True
+            return self.command_perms(player, payload)
 
         elif command in ("ent", "entity", "entities"):
-            self.command_entities(player, payload)
-            return True
+            return self.command_entities(player, payload)
 
         elif command in (
                 "config", "con", "prop", "property", "properties"):
-            self.command_setconfig(player, payload)
-            return True
+            return self.command_setconfig(player, payload)
 
         elif self.wrapper.proxymode and command == "ban":
-            self.command_banplayer(player, payload)
-            return True
+            return self.command_banplayer(player, payload)
 
         elif self.wrapper.proxymode and command == "pardon":
-            self.command_pardon(player, payload)
-            return True
+            return self.command_pardon(player, payload)
 
         elif self.wrapper.proxymode and command == "ban-ip":
-            self.command_banip(player, payload)
-            return True
+            return self.command_banip(player, payload)
 
         elif self.wrapper.proxymode and command == "pardon-ip":
-            self.command_pardonip(player, payload)
-            return True
+            return self.command_pardonip(player, payload)
 
         elif command == "password":
-            self.command_password(player, payload)
-            return True
+            return self.command_password(player, payload)
 
         # This section calls the commands defined by api.registerCommand()
         for pluginID in self.commands:
@@ -165,7 +146,7 @@ class Commands(object):
                         player.message(
                             {"translate": "commands.generic.permission",
                              "color": "red"})
-                    return True
+                    return
                 except Exception as e:
                     self.log.exception(
                         "Plugin '%s' errored out when executing command:"
@@ -175,12 +156,10 @@ class Commands(object):
                         {"text": "An internal error occurred in wrapper"
                          "while trying to execute this command. Apologies.",
                          "color": "red"})
-                    return True
-
-        # Changed the polarity to make sense and allow commands to have
-        # return values.  Returning False here will mean no plugin or
-        # wrapper command was parsed (so it passes to server).
-        return False
+                    return
+        # command was not executed by werapper, so try server.
+        player.message(commandtext)
+        player.execute(commandtext)
 
     def command_sample(self, player, payload):
         # just a sample command as a pattern for new commands
@@ -720,7 +699,7 @@ class Commands(object):
         if not player.isOp() > 3:
             player.message("&cPermission Denied")
             return
-
+        player.message("&ePlease wait as I research this..", position=2)
         subcommand = getargs(payload["args"], 0)
         totalplaytime = {}
         players = self.wrapper.api.minecraft.getAllPlayers()
@@ -791,8 +770,10 @@ class Commands(object):
                  'color': 'white'})
             player.message(
                 {"text": 'Additional Proxy mode Usage: \n       /whitelist on'
-                         'line - Convert whitelist to online uuids\n       /whi'
-                         'telist offline - Convert whitelist to offline uuids',
+                         'line - Convert whitelist to online uuids (turns off '
+                         'Proxy and restarts wrapper)\n       /whi'
+                         'telist offline - Convert whitelist to offline uuids '
+                         '(wrapper will attempt to start the proxy)',
                  'color': 'yellow'})
 
     def _command_whitelist_add(self, player, arg):
@@ -889,6 +870,12 @@ class Commands(object):
         player.message("Done!")
         player.execute("whitelist reload")
 
+        self.wrapper.api.minecraft.changeServerProps("online-mode", False)
+        self.wrapper.javaserver.restart()
+        player.message("Attempting to re-start the proxy (server is in"
+                       "offline mode now.")
+        self.wrapper.enable_proxymode()
+
     def _command_whitelist_online(self, player, _arg):
         uuidlist = []
         whitelist = getjsonfile(
@@ -910,6 +897,14 @@ class Commands(object):
             player.message("No server world found, so UUID's not converted...")
         player.message("Done!")
         player.execute("whitelist reload")
+        self.wrapper.api.minecraft.changeServerProps("online-mode", True)
+        restartmess = "The server is now going to online mode."
+        player.kick(restartmess)
+        self.wrapper.javaserver.restart(restartmess)
+        if self.wrapper.proxymode:
+            self.log.info("Wrapper must shutdown to fully close the Proxy.")
+            self.wrapper.disable_proxymode()
+            self.wrapper.shutdown()
 
     def command_deop(self, player, payload):
         # if player is None:

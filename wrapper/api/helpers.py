@@ -159,6 +159,20 @@ def config_to_dict_read(filename, filepath):
     return config_dict
 
 
+def config_write_from_dict(filename, filepath, dictionary):
+    """
+    Use a keyed dictionary and write a disk file with '='
+    lines (like server.properties).
+    """
+    config_dict = dictionary
+    newfile = ""
+    for items in config_dict:
+        newfile += "%s=%s\n" % (items, config_dict[items])
+
+    with open("%s/%s" % (filepath, filename), "w") as f:
+        f.write(newfile)
+
+
 def scrub_item_value(item):
     """
     Takes a text item value and determines if it should be a boolean,
@@ -954,6 +968,11 @@ def _test():
     x = config_to_dict_read("server.properties", testpath)
     assert 'pvp' in x
     assert x['pvp'] == new_pvp
+
+    config_write_from_dict("server.properties", testpath, x)
+    y = config_to_dict_read("server.properties", testpath)
+    print("Asserting config write works")
+    assert(x == y)
 
     assert (format_bytes(1024)) == ('1', 'KiB')
     assert (format_bytes(1048576 * 2)) == ('2', 'MiB')

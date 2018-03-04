@@ -201,12 +201,12 @@ class ServerConnection(object):
 
         if self.version < PROTOCOL_1_8START:
             self.packet.sendpkt(
-                self.pktCB.PLUGIN_MESSAGE,
+                self.pktCB.PLUGIN_MESSAGE[PKT],
                 [STRING, SHORT, BOOL, BOOL, BYTE],
                 [channel, 3, received, sent, state])
         else:
             self.packet.sendpkt(
-                self.pktCB.PLUGIN_MESSAGE,
+                self.pktCB.PLUGIN_MESSAGE[PKT],
                 [STRING, BOOL, BOOL, BYTE],
                 [channel, received, sent, state])
 
@@ -264,13 +264,13 @@ class ServerConnection(object):
         self.parsers = {
             HANDSHAKE: {},  # maps identically to OFFLINE ( '0' )
             LOGIN: {
-                self.pktCB.LOGIN_DISCONNECT:
+                self.pktCB.LOGIN_DISCONNECT[PKT]:
                     self._parse_login_disconnect,
-                self.pktCB.LOGIN_ENCR_REQUEST:
+                self.pktCB.LOGIN_ENCR_REQUEST[PKT]:
                     self._parse_login_encr_request,
-                self.pktCB.LOGIN_SUCCESS:
+                self.pktCB.LOGIN_SUCCESS[PKT]:
                     self._parse_login_success,
-                self.pktCB.LOGIN_SET_COMPRESSION:
+                self.pktCB.LOGIN_SET_COMPRESSION[PKT]:
                     self._parse_login_set_compression
             },
             PLAY: {
@@ -280,42 +280,43 @@ class ServerConnection(object):
                     self.parse_cb.parse_play_chat_message,
                 self.pktCB.JOIN_GAME[PKT]:
                     self.parse_cb.parse_play_join_game,
-                self.pktCB.TIME_UPDATE:
+                self.pktCB.TIME_UPDATE[PKT]:
                     self.parse_cb.parse_play_time_update,
-                self.pktCB.SPAWN_POSITION:
+                self.pktCB.SPAWN_POSITION[PKT]:
                     self.parse_cb.parse_play_spawn_position,
-                self.pktCB.RESPAWN:
+                self.pktCB.RESPAWN[PKT]:
                     self.parse_cb.parse_play_respawn,
                 self.pktCB.PLAYER_POSLOOK[PKT]:
                     self.parse_cb.parse_play_player_poslook,
-                self.pktCB.USE_BED:
+                self.pktCB.USE_BED[PKT]:
                     self.parse_cb.parse_play_use_bed,
-                self.pktCB.SPAWN_PLAYER:
+                self.pktCB.SPAWN_PLAYER[PKT]:
                     self.parse_cb.parse_play_spawn_player,
-                self.pktCB.CHANGE_GAME_STATE:
+                self.pktCB.CHANGE_GAME_STATE[PKT]:
                     self.parse_cb.parse_play_change_game_state,
                 self.pktCB.OPEN_WINDOW[PKT]:
                     self.parse_cb.parse_play_open_window,
-
+                self.pktCB.TAB_COMPLETE[PKT]:
+                    self.parse_cb.parse_play_tab_complete,
                 self.pktCB.SET_SLOT[PKT]:
                     self.parse_cb.parse_play_set_slot,
-                self.pktCB.PLAYER_LIST_ITEM:
+                self.pktCB.PLAYER_LIST_ITEM[PKT]:
                     self.parse_cb.parse_play_player_list_item,
-                self.pktCB.DISCONNECT:
+                self.pktCB.DISCONNECT[PKT]:
                     self.parse_cb.parse_play_disconnect,
                 }
         }
 
         if self.entity_controls:
             self.parsers[PLAY][
-                self.pktCB.SPAWN_OBJECT] = self.parse_cb.parse_play_spawn_object
+                self.pktCB.SPAWN_OBJECT[PKT]] = self.parse_cb.parse_play_spawn_object  # noqa
             self.parsers[PLAY][
-                self.pktCB.SPAWN_MOB] = self.parse_cb.parse_play_spawn_mob
+                self.pktCB.SPAWN_MOB[PKT]] = self.parse_cb.parse_play_spawn_mob
             self.parsers[PLAY][
-                self.pktCB.ENTITY_RELATIVE_MOVE] = self.parse_cb.parse_play_entity_relative_move  # noqa
+                self.pktCB.ENTITY_RELATIVE_MOVE[PKT]] = self.parse_cb.parse_play_entity_relative_move  # noqa
             self.parsers[PLAY][
-                self.pktCB.ENTITY_TELEPORT] = self.parse_cb.parse_play_entity_teleport  # noqa
+                self.pktCB.ENTITY_TELEPORT[PKT]] = self.parse_cb.parse_play_entity_teleport  # noqa
             self.parsers[PLAY][
-                self.pktCB.ATTACH_ENTITY] = self.parse_cb.parse_play_attach_entity  # noqa
+                self.pktCB.ATTACH_ENTITY[PKT]] = self.parse_cb.parse_play_attach_entity  # noqa
             self.parsers[PLAY][
-                self.pktCB.DESTROY_ENTITIES] = self.parse_cb.parse_play_destroy_entities  # noqa
+                self.pktCB.DESTROY_ENTITIES[PKT]] = self.parse_cb.parse_play_destroy_entities  # noqa

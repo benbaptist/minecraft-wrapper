@@ -31,10 +31,10 @@ TRANSLATE = {
         ],
     "whitelist":
         [
-            {'clickEvent': {'value': '/whitelist ', 'action': 'suggest_command'},
+            {'clickEvent': {'value': '/whitelist ', 'action': 'suggest_command'},  # noqa
              'translate': 'commands.whitelist.usage'},
 
-            {'clickEvent': {'action': 'suggest_command', 'value': '/whitelist '},
+            {'clickEvent': {'action': 'suggest_command', 'value': '/whitelist '},  # noqa
              'text':
                  '/whitelist <on|off|list|add|remvove|reload|offline|online>',
              'italic': True,
@@ -96,7 +96,7 @@ class ParseCB(object):
                     raw += self.client.packet.send_varint(0)
                     raw += self.client.packet.send_bool(False)
                     self.client.packet.sendpkt(
-                        self.pktCB.PLAYER_LIST_ITEM,
+                        self.pktCB.PLAYER_LIST_ITEM[PKT],
                         [VARINT, VARINT, UUID, STRING, VARINT, RAW],
                         (0, 1, uuid, clientserverid.username,
                          len(properties), raw))
@@ -110,7 +110,7 @@ class ParseCB(object):
                     # print("GAMEMODE (parse_cb): %s" % gamemode)
                     # ("varint:gamemode")
                     self.client.packet.sendpkt(
-                        self.pktCB.PLAYER_LIST_ITEM,
+                        self.pktCB.PLAYER_LIST_ITEM[PKT],
                         [VARINT, VARINT, UUID, VARINT],
                         (1, 1, uuid, gamemode))
                     # print(1, 1, uuid, gamemode)
@@ -119,7 +119,7 @@ class ParseCB(object):
                     ping = data[0]
                     # ("varint:ping")
                     self.client.packet.sendpkt(
-                        self.pktCB.PLAYER_LIST_ITEM,
+                        self.pktCB.PLAYER_LIST_ITEM[PKT],
                         [VARINT, VARINT, UUID, VARINT],
                         (2, 1, uuid, ping))
                 elif action == 3:
@@ -131,19 +131,19 @@ class ParseCB(object):
                         displayname = data[0]
                         # ("string:displayname")
                         self.client.packet.sendpkt(
-                            self.pktCB.PLAYER_LIST_ITEM,
+                            self.pktCB.PLAYER_LIST_ITEM[PKT],
                             [VARINT, VARINT, UUID, BOOL, STRING],
                             (3, 1, uuid, True, displayname))
 
                     else:
                         self.client.packet.sendpkt(
-                            self.pktCB.PLAYER_LIST_ITEM,
+                            self.pktCB.PLAYER_LIST_ITEM[PKT],
                             [VARINT, VARINT, UUID, VARINT],
                             (3, 1, uuid, False))
 
                 elif action == 4:
                     self.client.packet.sendpkt(
-                        self.pktCB.PLAYER_LIST_ITEM,
+                        self.pktCB.PLAYER_LIST_ITEM[PKT],
                         [VARINT, VARINT, UUID],
                         (4, 1, uuid))
 
@@ -157,32 +157,15 @@ class ParseCB(object):
         # client's world.  if this packet does not arrive, the other
         #  player(s) will not be visible to the client
         # it does not play a role in the player's spawing process.
-        if self.server.version < PROTOCOL_1_8START:
-            dt = self.packet.readpkt([VARINT, STRING, REST])
-        else:
-            dt = self.packet.readpkt([VARINT, UUID, REST])
-        # 1.7.6 "varint:eid|string:uuid|rest:metadt")
-        # 1.8 "varint:eid|uuid:uuid|int:x|int:y|int:z|byte:yaw|
-        #     byte:pitch|short:item|rest:metadt")
-        # 1.9 "varint:eid|uuid:uuid|int:x|int:y|int:z|byte:yaw|
-        #     yte:pitch|rest:metadt")
-
+        dt = self.packet.readpkt(self.pktCB.SPAWN_PLAYER[PARSER])
+        # dt = (eid, uuid, REST)
         # We dont need to read the whole thing.
         clientserverid = self.proxy.getclientbyofflineserveruuid(dt[1])
         if clientserverid.wrapper_uuid:
-            # print("parseCB::  %s" % clientserverid.wrapper_uuid.string)
-            # print("parseCB::  %s" % clientserverid.wrapper_uuid)
-            if self.server.version < PROTOCOL_1_8START:
-                self.client.packet.sendpkt(
-                    self.pktCB.SPAWN_PLAYER,
-                    [VARINT, STRING, RAW],
-                    (dt[0], clientserverid.wrapper_uuid.string, dt[2]))
-            else:
-                # print("UUID of spawned player = %s  : Should be online uuid" % clientserverid.wrapper_uuid)
-                self.client.packet.sendpkt(
-                    self.pktCB.SPAWN_PLAYER,
-                    [VARINT, UUID, RAW],
-                    (dt[0], clientserverid.wrapper_uuid, dt[2]))
+            self.client.packet.sendpkt(
+                self.pktCB.SPAWN_PLAYER[PKT],
+                self.pktCB.SPAWN_PLAYER[PARSER],
+                (dt[0], clientserverid.wrapper_uuid.string, dt[2]))
             return False
         return True
 
@@ -261,7 +244,9 @@ class ParseCB(object):
         if data[0] == self.client.server_eid:
             self.proxy.eventhandler.callevent(
                 "player.usebed",
-                {"playername": self.client.username, "position": data[1]})
+                {"playername": self.client.username, "position": data[1]},
+                abortable=False
+            )
 
             """ eventdoc
                 <group> Proxy <group>
@@ -295,7 +280,9 @@ class ParseCB(object):
         self.client.position = data[0]
         self.proxy.eventhandler.callevent(
             "player.spawned", {"playername": self.client.username,
-                               "position": data})
+                               "position": data},
+            abortable=False
+        )
 
         """ eventdoc
             <group> Proxy <group>
@@ -347,6 +334,46 @@ class ParseCB(object):
             self.proxy.srv_data.timeofday = data[1]
         except:
             pass
+        return True
+
+    def parse_play_tab_complete(self):
+        rawdata = self.packet.readpkt(self.pktCB.TAB_COMPLETE[PARSER])
+        data = rawdata[0]
+
+        payload = self.proxy.eventhandler.callevent(
+            "server.autoCompletes", {
+                "playername": self.client.username,
+                "completes": data})
+        """ eventdoc
+            <group> Proxy <group>
+
+            <description> internalfunction <description>
+
+            <abortable> Yes <abortable>
+
+            <comments>
+            Can be aborted by returning False. To change the contents, return
+            an alternate list of strings.
+            *This is a wrapper internal function* Errors could be created if 
+            you try to abort/edit this event payload.
+            <comments>
+            <payload>
+            "playername": player's name
+            "completes": A list of auto-completions supplied by the server.
+            <payload>
+
+        """
+
+        # allow to cancel event...
+        if payload is False:
+            return False
+
+        # change payload.
+        if type(payload) == list:
+            self.client.packet.sendpkt(self.pktCB.TAB_COMPLETE[PKT],
+                                       self.pktCB.TAB_COMPLETE[PARSER],
+                                       [payload])
+            return False
         return True
 
     # Window processing/ inventory tracking
@@ -523,7 +550,9 @@ class ParseCB(object):
                 self.proxy.eventhandler.callevent(
                     "entity.unmount", {"playername": self.client.username,
                                        "vehicle_id": vehormobeid,
-                                       "leash": leash})
+                                       "leash": leash},
+                    abortable=False
+                )
                 """ eventdoc
                     <group> Proxy <group>
 
@@ -550,7 +579,9 @@ class ParseCB(object):
                 self.proxy.eventhandler.callevent(
                     "entity.mount", {"playername": self.client.username,
                                      "vehicle_id": vehormobeid,
-                                     "leash": leash})
+                                     "leash": leash},
+                    abortable=False
+                )
                 """ eventdoc
                     <group> Proxy <group>
 

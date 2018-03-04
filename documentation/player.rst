@@ -78,6 +78,14 @@
 Return the very best UUID available, with the goal of
         never returning improper things like False and None.
 
+-  kick(self, reason)
+
+        Kick a player with 'reason'.  Using this interface (versus the
+        console command) ensures the player receives the proper disconnect
+        messages based on being in proxy mode or not.
+
+        
+
 -  execute(self, string)
 
         Run a command as this player. If proxy mode is not enabled,
