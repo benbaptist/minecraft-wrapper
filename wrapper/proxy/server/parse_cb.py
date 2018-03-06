@@ -273,6 +273,7 @@ class ParseCB(object):
         self.client.server_eid = data[0]
         self.client.gamemode = data[1]
         self.client.dimension = data[2]
+        self.server.plugin_ping()
         return True
 
     def parse_play_spawn_position(self):

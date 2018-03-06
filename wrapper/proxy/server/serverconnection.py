@@ -6,6 +6,7 @@
 # General Public License, version 3 or later.
 
 # standard
+import json
 import socket
 import threading
 import time
@@ -74,16 +75,9 @@ class ServerConnection(object):
         self.parse_cb = ParseCB(self, self.packet)
         self._define_parsers()
 
-    def send(self, packetid, xpr, payload):
-        """ Not supported. A wrapper of packet.send(), which is
-        further a wrapper for  packet.sendpkt(); both wrappers
-        exist for older code compatability purposes only for
-        0.7.x version plugins that might use it."""
-
-        self.log.debug("deprecated server.send() called.  Use "
-                       "server.packet.sendpkt() for best performance.")
-        self.packet.send(packetid, xpr, payload)
-        pass
+    # ----------------------------------------------
+    # Client calls connect(), then handle()
+    # ----------------------------------------------
 
     def connect(self):
         """ This simply establishes the tcp socket connection and
@@ -109,32 +103,6 @@ class ServerConnection(object):
         t = threading.Thread(target=self.flush_loop, args=())
         t.daemon = True
         t.start()
-
-    def close_server(self, reason="Disconnected"):
-        """
-        Client is responsible for closing the server connection and handling
-        lobby states.
-        """
-
-        self.log.debug("%s called serverconnection.close_server(): %s",
-                       self.client.username, reason)
-
-        # end 'handle' and 'flush_loop' cleanly
-        self.abort = True
-        time.sleep(0.1)
-
-        # noinspection PyBroadException
-        try:
-            self.server_socket.shutdown(2)
-            self.log.debug("Sucessfully closed server socket for"
-                           " %s", self.client.username)
-        except:
-            self.log.debug("Server socket for %s already "
-                           "closed", self.infos_debug)
-            pass
-
-        # allow packet instance to be Garbage Collected
-        self.packet = None
 
     def flush_loop(self):
         while not self.abort:
@@ -165,8 +133,11 @@ class ServerConnection(object):
                     "handle Exception: %s TRACEBACK: \n%s" % (e, traceback))
 
             # parse it
-            if self.parse(pkid, orig_packet) and self.client.state == PLAY:  # noqa
+            # send packet if parsing passed and client in play mode.
+            # all packets are parsed, but only play mode ones are transmitted.
+            if self.parse(pkid) and self.client.state == PLAY:
                 try:
+                    # self.parse will reject (False) any packet proxy modifies.
                     self.client.packet.send_raw_untouched(orig_packet)
                 except Exception as e:
                     return self.close_server(
@@ -174,6 +145,35 @@ class ServerConnection(object):
                         "Exception: %s TRACEBACK: \n%s" % (
                             pkid, e, traceback)
                     )
+
+    def close_server(self, reason="Disconnected"):
+        """
+        Client is responsible for closing the server connection and handling
+        lobby states.
+        """
+
+        self.log.debug("%s called serverconnection.close_server(): %s",
+                       self.client.username, reason)
+
+        # end 'handle' and 'flush_loop' cleanly
+        self.abort = True
+        time.sleep(0.1)
+
+        # noinspection PyBroadException
+        try:
+            self.server_socket.shutdown(2)
+            self.log.debug("Sucessfully closed server socket for"
+                           " %s", self.client.username)
+        except:
+            self.log.debug("Server socket for %s already "
+                           "closed", self.infos_debug)
+            pass
+
+        # allow packet instance to be Garbage Collected
+        self.packet = None
+
+    # PARSERS SECTION
+    # -----------------------------
 
     def _parse_keep_alive(self):
         data = self.packet.readpkt(
@@ -185,38 +185,54 @@ class ServerConnection(object):
             data)
         return False
 
-    def _transmit_upstream(self):
-        # TODO this probably needs to be removed.  Wrapper's proxy is fragile/slow enought ATM   # noqa
-        """ transmit wrapper channel status info to the server's
-         direction to help sync hub/lobby wrappers """
+    # Plugin channel senders
+    # -----------------------
 
-        channel = "WRAPPER|SYNC"
+    # SB RESP
+    def plugin_response(self):
+        channel = "WRAPPER.PY|RESP"
+        self.client.info["server-is-wrapper"] = True
+        data = json.dumps(self.client.info)
+        # only our wrappers communicate with this, so, format is not critical.
+        self.packet.sendpkt(self.pktSB.PLUGIN_MESSAGE[PKT],
+                            [STRING, STRING],
+                            (channel, data))
 
-        # received SYNC from the client (this is a child wrapper)
-        received = self.proxy.shared["received"]
+    # SB PING
+    def plugin_ping(self):
+        """ this is initiated by server/parse_cb.py parse_play_join_game """
+        channel = "WRAPPER.PY|PING"
+        data = int(time.time())
+        self.packet.sendpkt(self.pktSB.PLUGIN_MESSAGE[PKT],
+                            [STRING, INT],
+                            (channel, data))
 
-        # if true, this is a multiworld (child wrapper instance)
-        sent = self.proxy.shared["sent"]
-        state = self.state
+    def _parse_plugin_message(self):
+        """server-bound"""
+        channel = self.packet.readpkt([STRING, ])[0]
 
-        if self.version < PROTOCOL_1_8START:
-            self.packet.sendpkt(
-                self.pktCB.PLUGIN_MESSAGE[PKT],
-                [STRING, SHORT, BOOL, BOOL, BYTE],
-                [channel, 3, received, sent, state])
-        else:
-            self.packet.sendpkt(
-                self.pktCB.PLUGIN_MESSAGE[PKT],
-                [STRING, BOOL, BOOL, BYTE],
-                [channel, received, sent, state])
+        if channel not in self.proxy.registered_channels:
+            # we are not actually registering our channels with the MC server
+            # and there will be no parsing of other channels.
+            return True
 
-    # PARSERS SECTION
-    # -----------------------------
+        # SB PING
+        if channel == "WRAPPER.PY|PONG":
+            # then we now know this wrapper is a child wrapper since
+            # minecraft clients will not ping us
+            self.proxy.info_mine["client-is-wrapper"] = True
+            self.plugin_response()
+
+        # do not pass Wrapper.py registered plugin messages
+        return False
+
+    # Plugin channel parsers
+    # -----------------------
 
     # Login parsers
     # -----------------------
     def _parse_login_disconnect(self):
-        message = self.packet.readpkt([STRING])
+        message = self.packet.readpkt([STRING])[0]
         self.log.info("Disconnected from server: %s", message)
         self.close_server(message)
         self.client.notify_disconnect(message)
@@ -240,24 +256,21 @@ class ServerConnection(object):
         return False
 
     def _parse_login_set_compression(self):
-        data = self.packet.readpkt([VARINT])
+        data = self.packet.readpkt([VARINT])[0]
         # ("varint:threshold")
-        if data[0] == -1:
+        if data == -1:
             self.packet.compression = False
         else:
             self.packet.compression = True
-        self.packet.compressThreshold = data[0]
+        self.packet.compressThreshold = data
         # no point - client connection already has the client waiting in
         #  compression enabled mode
         return False
 
-    def parse(self, pkid, orig_payload):
+    def parse(self, pkid):
         if pkid in self.parsers[self.state]:
             return self.parsers[self.state][pkid]()
-
-        # optimization to send already compressed original packet
-        self.client.packet.send_raw_untouched(orig_payload)
-        return False  # kill parsed (decompressed) packet
+        return True
 
     def _define_parsers(self):
         # the packets we parse and the methods that parse them.
@@ -271,7 +284,9 @@ class ServerConnection(object):
                 self.pktCB.LOGIN_SUCCESS[PKT]:
                     self._parse_login_success,
                 self.pktCB.LOGIN_SET_COMPRESSION[PKT]:
-                    self._parse_login_set_compression
+                    self._parse_login_set_compression,
+                self.pktCB.PLUGIN_MESSAGE[PKT]:
+                    self._parse_plugin_message
             },
             PLAY: {
                 self.pktCB.KEEP_ALIVE[PKT]:
@@ -304,6 +319,8 @@ class ServerConnection(object):
                     self.parse_cb.parse_play_player_list_item,
                 self.pktCB.DISCONNECT[PKT]:
                     self.parse_cb.parse_play_disconnect,
+                self.pktCB.PLUGIN_MESSAGE[PKT]:
+                    self._parse_plugin_message
                 }
         }
 

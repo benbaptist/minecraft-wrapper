@@ -90,7 +90,16 @@ class Client(object):
 
         # client and server status
         self.abort = False
-        # Proxy ServerConnection() (not the javaserver)
+        self.non_local = False  # we'll use this for wrapper-wrapper connections
+        self.info = {
+            "client-is-wrapper": False,
+            "server-is-wrapper": False,
+            "username": "",
+            "uuid": "",  # this uuid is stored as a string, but re-converted when read  # noqa
+            "ip": ""
+        }
+
+        # Proxy ServerConnection()
         self.server_connection = None
         self.state = HANDSHAKE
         self.permit_disconnect_from_server = False
@@ -118,9 +127,6 @@ class Client(object):
         self.mojanguuid = None
 
         # information gathered during login or socket connection processes
-        # TODO in the future, we could use plugin channels to
-        # communicate these to subworld wrappers From socket data
-        self.address = None
         # this will store the client IP for use by player.py
         self.ip = self.client_address[0]
 
@@ -151,20 +157,13 @@ class Client(object):
         self.noninventoryslotcount = 0
         self.lastitem = None
 
-        # wrapper's own channel on each player client
-        self.shared = {
-            "username": "",
-            "uuid": "",
-            "ip": "",
-            "received": False,
-            "sent": False
-        }
-
     def notify_disconnect(self, message):
         if self.permit_disconnect_from_server:
             self.disconnect(message)
+            # TODO lobby code
 
     def handle(self):
+        """ Main client connection loop """
         t = threading.Thread(target=self.flush_loop, args=())
         t.daemon = True
         t.start()
@@ -196,13 +195,19 @@ class Client(object):
                 self.abort = True
                 break
 
-            # self.parse(pkid)
+            # just pass raw packets through if this proxy is acting as a
+            #  pass-through connection to another wrapper-instance.  The
+            # other wrapper must be offline.
+            if self._non_local(pkid):
+                # this sends the raw UNENCRYPTED original packet with
+                # the compression intact, if applicable.
+                self.server_connection.packet.send_raw_untouched(orig_packet)
+                continue
 
             # send packet if server available and parsing passed.
             # already tested - Python will not attempt eval of
             # self.server_connection.state if self.server_connection is False
-
-            if self.parse(pkid, orig_packet) and \
+            if self.parse(pkid) and \
                     self.server_connection and \
                     self.server_connection.state in (PLAY, LOBBY):
 
@@ -217,6 +222,17 @@ class Client(object):
         if self.server_connection:
             self.close_server_instance("Client Handle Ended")  # upon self.abort
 
+    def _non_local(self, pkid):
+        """
+        True if:
+        if server mode is remote (not the wrapped server) and this is not a
+        plugin message.
+
+        """
+        if self.non_local and pkid != self.pktSB.PLUGIN_MESSAGE[PKT]:
+            return True
+        return False
+
     def flush_loop(self):
         while not self.abort:
             try:
@@ -230,6 +246,370 @@ class Client(object):
             self.log.debug("%s clientconnection flush_loop thread ended",
                            self.username)
         self.proxy.removestaleclients()  # from proxy.srv_data.clients
+
+    def parse(self, pkid):
+        if pkid in self.parsers[self.state]:
+            # parser can return false
+            return self.parsers[self.state][pkid]()
+        return True
+
+    def _define_parsers(self):
+        # the packets we parse and the methods that parse them.
+        # this is the rough order they happen in, as well.
+        self.parsers = {
+            HANDSHAKE: {
+                self.pktSB.LEGACY_HANDSHAKE[PKT]:
+                    self._parse_handshaking_legacy,
+                self.pktSB.HANDSHAKE[PKT]:
+                    self._parse_handshaking,
+                self.pktSB.PLUGIN_MESSAGE[PKT]:
+                    self._parse_plugin_message,
+                },
+            STATUS: {
+                self.pktSB.STATUS_PING[PKT]:
+                    self._parse_status_ping,
+                self.pktSB.REQUEST[PKT]:
+                    self._parse_status_request,
+                self.pktSB.PLUGIN_MESSAGE[PKT]:
+                    self._parse_plugin_message,
+                },
+            LOGIN: {
+                self.pktSB.LOGIN_START[PKT]:
+                    self._parse_login_start,
+                self.pktSB.LOGIN_ENCR_RESPONSE[PKT]:
+                    self._parse_login_encr_response,
+                self.pktSB.PLUGIN_MESSAGE[PKT]:
+                    self._parse_plugin_message,
+                },
+            PLAY: {
+                self.pktSB.CHAT_MESSAGE[PKT]:
+                    self.parse_sb.parse_play_chat_message,
+                self.pktSB.CLICK_WINDOW[PKT]:
+                    self.parse_sb.parse_play_click_window,
+                self.pktSB.CLIENT_SETTINGS[PKT]:
+                    self.parse_sb.parse_play_client_settings,
+                self.pktSB.HELD_ITEM_CHANGE[PKT]:
+                    self.parse_sb.parse_play_held_item_change,
+                self.pktSB.KEEP_ALIVE[PKT]:
+                    self._parse_keep_alive,
+                self.pktSB.PLAYER_BLOCK_PLACEMENT[PKT]:
+                    self.parse_sb.parse_play_player_block_placement,
+                self.pktSB.PLAYER_DIGGING[PKT]:
+                    self.parse_sb.parse_play_player_digging,
+                self.pktSB.PLAYER_LOOK[PKT]:
+                    self.parse_sb.parse_play_player_look,
+                self.pktSB.PLAYER_POSITION[PKT]:
+                    self.parse_sb.parse_play_player_position,
+                self.pktSB.PLAYER_POSLOOK[PKT]:
+                    self.parse_sb.parse_play_player_poslook,
+                self.pktSB.PLAYER_UPDATE_SIGN[PKT]:
+                    self.parse_sb.parse_play_player_update_sign,
+                self.pktSB.SPECTATE[PKT]:
+                    self.parse_sb.parse_play_spectate,
+                self.pktSB.USE_ITEM[PKT]:
+                    self.parse_sb.parse_play_use_item,
+                self.pktSB.PLUGIN_MESSAGE[PKT]:
+                    self._parse_plugin_message,
+                },
+            LOBBY: {
+                self.pktSB.KEEP_ALIVE[PKT]:
+                    self._parse_keep_alive,
+                self.pktSB.PLUGIN_MESSAGE[PKT]:
+                    self._parse_plugin_message,
+                },
+            IDLE: {
+                self.pktSB.PLUGIN_MESSAGE[PKT]:
+                    self._parse_plugin_message,
+            }
+        }
+
+    def _plugin_response(self, response):
+        if "ip" in response:
+            self.info["username"] = response["username"]
+            self.info["uuid"] = response["uuid"]
+            self.info["ip"] = response["ip"]
+
+            self.ip = response["ip"]
+            self.mojanguuid = MCUUID(response["uuid"])
+            self.username = response["username"]
+            return True
+        else:
+            self.log.debug(
+                "some kind of error with _plugin_response - no 'ip' key"
+            )
+            return False
+
+    # CB PONG
+    def _plugin_poll_client_wrapper(self):
+        channel = "WRAPPER.PY|PONG"
+        data = json.dumps(self.proxy.info_mine)
+        # only our wrappers communicate with this, so, format is not critical
+        self.packet.sendpkt(self.pktCB.PLUGIN_MESSAGE[PKT], [STRING, STRING],
+                            (channel, data))
+    # PARSERS SECTION
+    # -----------------------------
+
+    # plugin channel handler
+    # -----------------------
+    def _parse_plugin_message(self):
+        """server-bound"""
+        channel = self.packet.readpkt([STRING, ])[0]
+
+        if channel not in self.proxy.registered_channels:
+            # we are not actually registering our channels with the MC server
+            # and there will be no parsing of other channels.
+            return True
+
+        # SB PING
+        if channel == "WRAPPER.PY|PING":
+            # then we now know this wrapper is a child wrapper since
+            # minecraft clients will not ping us
+            self.proxy.info_mine["client-is-wrapper"] = True
+            self._plugin_poll_client_wrapper()
+
+        # SB RESP
+        elif channel == "WRAPPER.PY|RESP":
+            # read some info the client wrapper sent
+            # since we are only communicating with wrappers; we use the modern
+            #  format:
+            datarest = self.packet.readpkt([STRING, ])[0]
+            response = json.loads(datarest.decode('utf-8'),
+                                  encoding='utf-8')
+            if self._plugin_response(response):
+                pass  # for now...
+
+        # do not pass Wrapper.py registered plugin messages
+        return False
+
+    def _parse_keep_alive(self):
+        data = self.packet.readpkt(self.pktSB.KEEP_ALIVE[PARSER])
+
+        if data[0] == self.keepalive_val:
+            self.time_client_responded = time.time()
+        return False
+
+    # Login parsers
+    # -----------------------
+    def _parse_handshaking_legacy(self):
+        # just disconnect them.
+        self.packet.send_raw(0xff+0x00+0x00+0x00)
+
+    def _parse_handshaking(self):
+        # self.log.debug("HANDSHAKE")
+        # "version|address|port|state"
+        data = self.packet.readpkt([VARINT, STRING, USHORT, VARINT])
+
+        self.clientversion = data[0]
+        self._getclientpacketset()
+
+        self.serveraddressplayerused = data[1]
+        self.serverportplayerused = data[2]
+        requestedstate = data[3]
+
+        if requestedstate == STATUS:
+            self.state = STATUS
+            # wrapper will wait for REQUEST, so do nothing further.
+            return False
+
+        if requestedstate == LOGIN:
+            # TODO - allow client connections despite lack of server connection
+
+            # If local
+            if not self.non_local:
+
+                if self.servervitals.protocolVersion == -1:
+                    #  ... returns -1 to signal no server
+                    self.disconnect(
+                        "The server is not started."
+                    )
+                    return False
+
+                if not self.servervitals.state == 2:
+                    self.disconnect(
+                        "Server has not finished booting. Please try"
+                        " connecting again in a few seconds"
+                    )
+                    return False
+
+                if PROTOCOL_1_9START < self.clientversion < PROTOCOL_1_9REL1:
+                    self.disconnect("You're running an unsupported snapshot"
+                                    " (protocol: %s)!" % self.clientversion)
+                    return False
+                if self.servervitals.protocolVersion != self.clientversion:
+                    self.disconnect("You're not running the same Minecraft"
+                                    " version as the server!")
+                    return False
+                self.state = LOGIN
+                # packet passes to server, which will also switch to Login
+                return True
+            else:
+
+                return False
+
+        # Wrong state in handshake
+        self.disconnect("Invalid HANDSHAKE: 'requested state:"
+                        " %d'" % requestedstate)
+        return False
+
+    def _parse_status_ping(self):
+        # self.log.debug("SB -> STATUS PING")
+        data = self.packet.readpkt([LONG])
+        self.packet.sendpkt(self.pktCB.PING_PONG[PKT], [LONG], [data[0]])
+        # self.log.debug("CB (W)-> STATUS PING")
+        self.state = HANDSHAKE
+        return False
+
+    def _parse_status_request(self):
+        # self.log.debug("SB -> STATUS REQUEST")
+        sample = []
+        for player in self.servervitals.players:
+            playerobj = self.servervitals.players[player]
+            if playerobj.username not in self.hidden_ops:
+                sample.append({"name": playerobj.username,
+                               "id": str(playerobj.mojangUuid)})
+            if len(sample) > 5:
+                break
+        reported_version = self.servervitals.protocolVersion
+        reported_name = self.servervitals.version
+        motdtext = self.servervitals.motd
+        if self.clientversion >= PROTOCOL_1_8START:
+            motdtext = json.loads(processcolorcodes(motdtext.replace(
+                "\\", "")))
+        self.MOTD = {
+            "description": motdtext,
+            "players": {
+                "max": int(self.servervitals.maxPlayers),
+                "online": len(self.servervitals.players),
+                "sample": sample
+            },
+            "version": {
+                "name": reported_name,
+                "protocol": reported_version
+            }
+        }
+
+        # add Favicon, if it exists
+        if self.servervitals.serverIcon:
+            self.MOTD["favicon"] = self.servervitals.serverIcon
+
+        # add Forge information, if applicable.
+        if self.proxy.forge:
+            self.MOTD["modinfo"] = self.proxy.mod_info["modinfo"]
+
+        self.packet.sendpkt(
+            self.pktCB.PING_JSON_RESPONSE[PKT],
+            [STRING],
+            [json.dumps(self.MOTD)])
+
+        # self.log.debug("CB (W)-> JSON RESPONSE")
+        # after this, proxy waits for the expected PING to
+        #  go back to Handshake mode
+        return False
+
+    def _parse_login_start(self):
+        # self.log.debug("SB -> LOGIN START")
+        data = self.packet.readpkt([STRING, NULL])
+
+        # "username"
+        self.username = data[0]
+
+        # just to be clear, this refers to wrapper's mode, not the server.
+        if self.onlinemode:
+            # Wrapper sends client a login encryption request
+
+            # 1.7.x versions
+            if self.servervitals.protocolVersion < 6:
+                # send to client 1.7
+                self.packet.sendpkt(
+                    self.pktCB.LOGIN_ENCR_REQUEST[PKT],
+                    [STRING, BYTEARRAY_SHORT, BYTEARRAY_SHORT],
+                    (self.serverID, self.public_key, self.verifyToken))
+            else:
+                # send to client 1.8 +
+                self.packet.sendpkt(
+                    self.pktCB.LOGIN_ENCR_REQUEST[PKT],
+                    [STRING, BYTEARRAY, BYTEARRAY],
+                    (self.serverID, self.public_key, self.verifyToken))
+
+            # self.log.debug("CB (W)-> LOGIN ENCR REQUEST")
+
+            # Server UUID is always offline (at the present time)
+            self.local_uuid = self.proxy.uuids.getuuidfromname(self.username)
+
+        else:
+            # Wrapper proxy offline and not authenticating
+            # maybe it is the destination of a hub? or you use another
+            #  way to authenticate (password plugin?)
+
+            # Server UUID is always offline (at the present time)
+            self.wrapper_uuid = self.proxy.uuids.getuuidfromname(self.username)
+
+            # Since wrapper is offline, we are using offline for
+            #  self.wrapper_uuid also
+            self.local_uuid = self.wrapper_uuid
+
+            # log the client on
+            self.state = PLAY
+            self.logon_client_into_proxy()
+            # connect to server
+            self.connect_to_server()
+        return False
+
+    def _parse_login_encr_response(self):
+        # the client is RESPONDING to our request for
+        #  encryption (if we sent one above)
+
+        # read response Tokens - "shared_secret|verify_token"
+        # self.log.debug("SB -> LOGIN ENCR RESPONSE")
+        if self.servervitals.protocolVersion < 6:
+            data = self.packet.readpkt([BYTEARRAY_SHORT, BYTEARRAY_SHORT])
+        else:
+            data = self.packet.readpkt([BYTEARRAY, BYTEARRAY])
+
+        sharedsecret = encryption.decrypt_PKCS1v15_shared_data(
+            data[0], self.private_key)
+        verifytoken = encryption.decrypt_PKCS1v15_shared_data(
+            data[1], self.private_key)
+        h = hashlib.sha1()
+        # self.serverID already encoded
+        h.update(self.serverID)
+        h.update(sharedsecret)
+        h.update(self.public_key)
+        serverid = self.packet.hexdigest(h)
+
+        # feed info to packet.py for parsing
+        self.packet.sendCipher = encryption.aes128cfb8(sharedsecret).encryptor()
+        self.packet.recvCipher = encryption.aes128cfb8(sharedsecret).decryptor()
+
+        # verify correct response
+        if not verifytoken == self.verifyToken:
+            self.disconnect("Verify tokens are not the same")
+            return False
+
+        # determine if IP is silent banned:
+        if self.ipbanned:
+            self.log.info("Player %s tried to connect from banned ip:"
+                          " %s", self.username, self.ip)
+            self.state = HANDSHAKE
+            if self.silent_bans:
+                self.disconnect("unknown host")
+            else:
+                # self disconnect does not "return" anything.
+                self.disconnect("Your address is IP-banned from this server!.")
+            return False
+
+        # begin Client logon process
+        # Wrapper in online mode, taking care of authentication
+        if self._login_authenticate_client(serverid) is False:
+            return False  # client failed to authenticate
+
+        # log the client on
+        self.state = PLAY
+        self.logon_client_into_proxy()
+
+        # connect to server
+        self.connect_to_server()
+        return False
 
     def change_servers(self, ip=None, port=None):
 
@@ -608,7 +988,9 @@ class Client(object):
                     return
         self.log.debug("%s Client keepalive tracker aborted", self.username)
 
-    def _login_authenticate_client(self, server_id):
+    def _login_authenticate_client(self,
+                                   server_id):
+        # future TODO have option to be online but bypass session server.
         if self.onlinemode:
             r = requests.get("https://sessionserver.mojang.com"
                              "/session/minecraft/hasJoined?username=%s"
@@ -626,7 +1008,7 @@ class Client(object):
                 #     ]
                 # }
                 requestdata = r.json()
-                self.wrapper_uuid = MCUUID(requestdata["id"])  # TODO
+                self.wrapper_uuid = MCUUID(requestdata["id"])
 
                 if requestdata["name"] != self.username:
                     self.disconnect("Client's username did not"
@@ -651,7 +1033,7 @@ class Client(object):
             if mojang_name:
                 if mojang_name != self.username:
                     if self.names_change:
-                        self._use_newname(self.username, mojang_name)
+                        self.use_newname(self.username, mojang_name)
                     else:
                         self.log.info("%s's client performed LOGON in with "
                                       "new name, falling back to %s",
@@ -660,6 +1042,13 @@ class Client(object):
             self.local_uuid = self.proxy.uuids.getuuidfromname(self.username)
             # print("_login_authenticate_client set self.local_uuid
             # to %s" % self.proxy.uuids.getuuidfromname(self.username))
+
+            # verified info we can store:
+            self.info["ip"] = self.ip
+            self.mojanguuid = self.wrapper_uuid
+            self.info["uuid"] = self.mojanguuid.string
+            self.info["username"] = self.username
+            self.info["client-is-wrapper"] = False
 
         # Wrapper offline and not authenticating
         # maybe it is the destination of a hub? or you use another
@@ -681,7 +1070,7 @@ class Client(object):
                     self.pktCB.LOGIN_SET_COMPRESSION[PKT], [VARINT], [comp])
                 self.packet.compressThreshold = comp
 
-    def _use_newname(self, oldname, newname):
+    def use_newname(self, oldname, newname):
         old_local_uuid = self.proxy.uuids.getuuidfromname(oldname)
         new_local_uuid = self.proxy.uuids.getuuidfromname(newname)
         cwd = "%s/%s" % (
@@ -731,389 +1120,3 @@ class Client(object):
                 self.pktCB.PLUGIN_MESSAGE[PKT],
                 [STRING, BYTE],
                 [channel, 254])
-
-    def _transmit_downstream(self):
-        """ transmit wrapper channel status info to the server's
-         direction to help sync hub/lobby wrappers """
-
-        channel = "WRAPPER.PY|PING"
-        state = self.state
-        if self.server_connection:
-            if self.version < PROTOCOL_1_8START:
-                self.server_connection.packet.sendpkt(
-                    self.pktSB.PLUGIN_MESSAGE[PKT],
-                    [STRING, SHORT, BYTE],
-                    [channel, 1,  state])
-            else:
-                self.server_connection.packet.sendpkt(
-                    self.pktSB.PLUGIN_MESSAGE[PKT],
-                    [STRING, BOOL],
-                    [channel, state])
-
-    def _parse_keep_alive(self):
-        data = self.packet.readpkt(self.pktSB.KEEP_ALIVE[PARSER])
-
-        if data[0] == self.keepalive_val:
-            self.time_client_responded = time.time()
-        return False
-
-    # plugin channel handler
-    # -----------------------
-    def _parse_plugin_message(self):
-        channel = self.packet.readpkt([STRING, ])[0]
-
-        if channel not in self.proxy.registered_channels:
-            # we are not actually registering our channels with the MC server.
-            return True
-
-        if channel == "WRAPPER.PY|PING":
-            self.proxy.pinged = True
-            return False
-
-        if channel == "WRAPPER.PY|":
-            if self.clientversion < PROTOCOL_1_8START:
-                datarest = self.packet.readpkt([SHORT, REST])[1]
-            else:
-                datarest = self.packet.readpkt([REST, ])[0]
-
-            # print("\nDATA REST = %s\n" % datarest)
-            response = json.loads(datarest.decode('utf-8'),
-                                  encoding='utf-8')
-            self._plugin_response(response)
-            return True
-
-        return True
-
-    # Staged for future wrapper plugin channel
-    def _plugin_response(self, response):
-        if "ip" in response:
-            self.shared = {
-                "username": response["username"],
-                "uuid": response["uuid"],
-                "ip": response["ip"],
-                "received": True,
-            }
-            self.ip = response["ip"]
-            self.mojanguuid = response["uuid"]
-
-    # Login parsers
-    # -----------------------
-    def _parse_handshaking_legacy(self):
-        # just disconnect them.
-        self.packet.send_raw(0xff+0x00+0x00+0x00)
-
-    def _parse_handshaking(self):
-        # self.log.debug("HANDSHAKE")
-        # "version|address|port|state"
-        data = self.packet.readpkt([VARINT, STRING, USHORT, VARINT])
-
-        self.clientversion = data[0]
-        self._getclientpacketset()
-
-        self.serveraddressplayerused = data[1]
-        self.serverportplayerused = data[2]
-        requestedstate = data[3]
-
-        if requestedstate == STATUS:
-            self.state = STATUS
-            # wrapper will handle responses, so do not pass this to the server.
-            return False
-
-        if requestedstate == LOGIN:
-            # TODO - coming soon: allow client connections
-            # despite lack of server connection
-
-            if self.servervitals.protocolVersion == -1:
-                #  ... returns -1 to signal no server
-                self.disconnect("The server is not started.")
-                return False
-
-            if not self.servervitals.state == 2:
-                self.disconnect("Server has not finished booting. Please try"
-                                " connecting again in a few seconds")
-                return False
-
-            if PROTOCOL_1_9START < self.clientversion < PROTOCOL_1_9REL1:
-                self.disconnect("You're running an unsupported snapshot"
-                                " (protocol: %s)!" % self.clientversion)
-                return False
-
-            if self.servervitals.protocolVersion == self.clientversion:
-                # login start...
-                self.state = LOGIN
-                # packet passes to server, which will also switch to Login
-                return True
-            else:
-                self.disconnect("You're not running the same Minecraft"
-                                " version as the server!")
-                return False
-
-        self.disconnect("Invalid HANDSHAKE: 'requested state:"
-                        " %d'" % requestedstate)
-        return False
-
-    def _parse_status_ping(self):
-        # self.log.debug("SB -> STATUS PING")
-        data = self.packet.readpkt([LONG])
-        self.packet.sendpkt(self.pktCB.PING_PONG[PKT], [LONG], [data[0]])
-        # self.log.debug("CB (W)-> STATUS PING")
-        self.state = HANDSHAKE
-        return False
-
-    def _parse_status_request(self):
-        # self.log.debug("SB -> STATUS REQUEST")
-        sample = []
-        for player in self.servervitals.players:
-            playerobj = self.servervitals.players[player]
-            if playerobj.username not in self.hidden_ops:
-                sample.append({"name": playerobj.username,
-                               "id": str(playerobj.mojangUuid)})
-            if len(sample) > 5:
-                break
-        reported_version = self.servervitals.protocolVersion
-        reported_name = self.servervitals.version
-        motdtext = self.servervitals.motd
-        if self.clientversion >= PROTOCOL_1_8START:
-            motdtext = json.loads(processcolorcodes(motdtext.replace(
-                "\\", "")))
-        self.MOTD = {
-            "description": motdtext,
-            "players": {
-                "max": int(self.servervitals.maxPlayers),
-                "online": len(self.servervitals.players),
-                "sample": sample
-            },
-            "version": {
-                "name": reported_name,
-                "protocol": reported_version
-            }
-        }
-
-        # add Favicon, if it exists
-        if self.servervitals.serverIcon:
-            self.MOTD["favicon"] = self.servervitals.serverIcon
-
-        # add Forge information, if applicable.
-        if self.proxy.forge:
-            self.MOTD["modinfo"] = self.proxy.mod_info["modinfo"]
-
-        self.packet.sendpkt(
-            self.pktCB.PING_JSON_RESPONSE[PKT],
-            [STRING],
-            [json.dumps(self.MOTD)])
-
-        # self.log.debug("CB (W)-> JSON RESPONSE")
-        # after this, proxy waits for the expected PING to
-        #  go back to Handshake mode
-        return False
-
-    def _parse_login_start(self):
-        # self.log.debug("SB -> LOGIN START")
-        data = self.packet.readpkt([STRING, NULL])
-
-        # "username"
-        self.username = data[0]
-
-        # just to be clear, this refers to wrapper's mode, not the server.
-        if self.onlinemode:
-            # Wrapper sends client a login encryption request
-
-            # 1.7.x versions
-            if self.servervitals.protocolVersion < 6:
-                # send to client 1.7
-                self.packet.sendpkt(
-                    self.pktCB.LOGIN_ENCR_REQUEST[PKT],
-                    [STRING, BYTEARRAY_SHORT, BYTEARRAY_SHORT],
-                    (self.serverID, self.public_key, self.verifyToken))
-            else:
-                # send to client 1.8 +
-                self.packet.sendpkt(
-                    self.pktCB.LOGIN_ENCR_REQUEST[PKT],
-                    [STRING, BYTEARRAY, BYTEARRAY],
-                    (self.serverID, self.public_key, self.verifyToken))
-
-            # self.log.debug("CB (W)-> LOGIN ENCR REQUEST")
-
-            # Server UUID is always offline (at the present time)
-            # MCUUID object
-            self.local_uuid = self.proxy.uuids.getuuidfromname(self.username)
-
-        else:
-            # Wrapper proxy offline and not authenticating
-            # maybe it is the destination of a hub? or you use another
-            #  way to authenticate (password plugin?)
-
-            # Server UUID is always offline (at the present time)
-            self.wrapper_uuid = self.proxy.uuids.getuuidfromname(self.username)
-
-            # Since wrapper is offline, we are using offline for
-            #  self.wrapper_uuid also
-            self.local_uuid = self.wrapper_uuid  # MCUUID object
-
-            # log the client on
-            self.state = PLAY
-            self.logon_client_into_proxy()
-            # connect to server
-            self.connect_to_server()
-        return False
-
-    def _parse_login_encr_response(self):
-        # the client is RESPONDING to our request for
-        #  encryption (if we sent one above)
-
-        # read response Tokens - "shared_secret|verify_token"
-        # self.log.debug("SB -> LOGIN ENCR RESPONSE")
-        if self.servervitals.protocolVersion < 6:
-            data = self.packet.readpkt([BYTEARRAY_SHORT, BYTEARRAY_SHORT])
-        else:
-            data = self.packet.readpkt([BYTEARRAY, BYTEARRAY])
-
-        sharedsecret = encryption.decrypt_PKCS1v15_shared_data(
-            data[0], self.private_key)
-        verifytoken = encryption.decrypt_PKCS1v15_shared_data(
-            data[1], self.private_key)
-        h = hashlib.sha1()
-        # self.serverID already encoded
-        h.update(self.serverID)
-        h.update(sharedsecret)
-        h.update(self.public_key)
-        serverid = self.packet.hexdigest(h)
-
-        # feed info to packet.py for parsing
-        self.packet.sendCipher = encryption.aes128cfb8(sharedsecret).encryptor()
-        self.packet.recvCipher = encryption.aes128cfb8(sharedsecret).decryptor()
-
-        # verify correct response
-        if not verifytoken == self.verifyToken:
-            self.disconnect("Verify tokens are not the same")
-            return False
-
-        # determine if IP is silent banned:
-        if self.ipbanned:
-            self.log.info("Player %s tried to connect from banned ip:"
-                          " %s", self.username, self.ip)
-            self.state = HANDSHAKE
-            if self.silent_bans:
-                self.disconnect("unknown host")
-            else:
-                # self disconnect does not "return" anything.
-                self.disconnect("Your address is IP-banned from this server!.")
-            return False
-
-        # begin Client logon process
-        # Wrapper in online mode, taking care of authentication
-        if self._login_authenticate_client(serverid) is False:
-            return False  # client failed to authenticate
-
-        # TODO Whitelist processing Here (or should it be at javaserver start?)
-
-        # log the client on
-        self.state = PLAY
-        self.logon_client_into_proxy()
-
-        # connect to server
-        self.connect_to_server()
-        return False
-
-    # Lobby parsers
-    # -----------------------
-    def _parse_lobby_chat_message(self):
-        data = self.packet.readpkt([STRING])
-        if data is None:
-            return True
-
-        # Get the packet chat message contents
-        chatmsg = data[0]
-
-        if chatmsg in ("/lobby", "/hub"):
-            # stop any raining
-            # close current connection and start new one
-            # noinspection PyBroadException
-
-            self.change_servers()
-            return False
-
-        # we are just sniffing this packet for lobby return
-        # commands, so send it on to the destination.
-        return True
-
-    def parse(self, pkid, orig_payload):
-        # op, dl, pl = orig_payload, datalength, packet_length
-        if pkid in self.parsers[self.state]:
-            # parser can return false
-            return self.parsers[self.state][pkid]()
-
-        # optimization to send already compressed original packet
-        self.server_connection.packet.send_raw_untouched(orig_payload)
-        return False  # kill parsed (decompressed) packet
-
-    def _define_parsers(self):
-        # the packets we parse and the methods that parse them.
-        self.parsers = {
-            HANDSHAKE: {
-                self.pktSB.LEGACY_HANDSHAKE[PKT]:
-                    self._parse_handshaking_legacy,
-                self.pktSB.HANDSHAKE[PKT]:
-                    self._parse_handshaking,
-                self.pktSB.PLUGIN_MESSAGE[PKT]:
-                    self._parse_plugin_message,
-                },
-            STATUS: {
-                self.pktSB.STATUS_PING[PKT]:
-                    self._parse_status_ping,
-                self.pktSB.REQUEST[PKT]:
-                    self._parse_status_request,
-                self.pktSB.PLUGIN_MESSAGE[PKT]:
-                    self._parse_plugin_message,
-                },
-            LOGIN: {
-                self.pktSB.LOGIN_START[PKT]:
-                    self._parse_login_start,
-                self.pktSB.LOGIN_ENCR_RESPONSE[PKT]:
-                    self._parse_login_encr_response,
-                self.pktSB.PLUGIN_MESSAGE[PKT]:
-                    self._parse_plugin_message,
-                },
-            PLAY: {
-                self.pktSB.CHAT_MESSAGE[PKT]:
-                    self.parse_sb.parse_play_chat_message,
-                self.pktSB.CLICK_WINDOW[PKT]:
-                    self.parse_sb.parse_play_click_window,
-                self.pktSB.CLIENT_SETTINGS[PKT]:
-                    self.parse_sb.parse_play_client_settings,
-                self.pktSB.HELD_ITEM_CHANGE[PKT]:
-                    self.parse_sb.parse_play_held_item_change,
-                self.pktSB.KEEP_ALIVE[PKT]:
-                    self._parse_keep_alive,
-                self.pktSB.PLAYER_BLOCK_PLACEMENT[PKT]:
-                    self.parse_sb.parse_play_player_block_placement,
-                self.pktSB.PLAYER_DIGGING[PKT]:
-                    self.parse_sb.parse_play_player_digging,
-                self.pktSB.PLAYER_LOOK[PKT]:
-                    self.parse_sb.parse_play_player_look,
-                self.pktSB.PLAYER_POSITION[PKT]:
-                    self.parse_sb.parse_play_player_position,
-                self.pktSB.PLAYER_POSLOOK[PKT]:
-                    self.parse_sb.parse_play_player_poslook,
-                self.pktSB.PLAYER_UPDATE_SIGN[PKT]:
-                    self.parse_sb.parse_play_player_update_sign,
-                self.pktSB.SPECTATE[PKT]:
-                    self.parse_sb.parse_play_spectate,
-                self.pktSB.USE_ITEM[PKT]:
-                    self.parse_sb.parse_play_use_item,
-                self.pktSB.PLUGIN_MESSAGE[PKT]:
-                    self._parse_plugin_message,
-                },
-            LOBBY: {
-                self.pktSB.KEEP_ALIVE[PKT]:
-                    self._parse_keep_alive,
-                self.pktSB.CHAT_MESSAGE[PKT]:
-                    self._parse_lobby_chat_message,
-                self.pktSB.PLUGIN_MESSAGE[PKT]:
-                    self._parse_plugin_message,
-                },
-            IDLE: {
-                self.pktSB.PLUGIN_MESSAGE[PKT]:
-                    self._parse_plugin_message,
-            }
-        }

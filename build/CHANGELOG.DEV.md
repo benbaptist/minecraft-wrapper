@@ -1,3 +1,48 @@
+Build 13 [1.0b13]
+Create wrapper channel plugin message system for sharing info between online and offline wrappers.
+
+Basic handshake:
+----------------
+SETUP:
+```
+(Minecraft server [SECOND_WORLD]) <--offline--> WrapperServer[SECOND_WORLD] <--offline--> WrapperClient[HUB_WORLD] <--`session-server`--> Minecraft client
+                                                                                                    |
+                                                          (Minecraft server [HUB_WORLD]) <--offline--
+```
+PROCESS:
+WrapperServer <===PING<=== WrapperClient
+WrapperServer ===>(self.client.info)PONG===> WrapperClient
+WrapperServer <===RESP(self.client.info)<=== WrapperClient
+
+After the third step
+
+Details:
+----------------
+1) Client wrapper (serverconnection.py) - initiates a WRAPPER.PY|PING (SB) after the player logs in.
+2) Server wrapper (clientconnection.py) - Notes that its "client-is-wrapper" = True
+3) Server wrapper - sends back a WRAPPER.PY|PONG (CB) containing it's `self.info` dictionary.
+4) Client wrapper - sends back a WRAPPER.PY|PONG (SB) containing _it's_ `self.client.info` dictionary (the one with accurate user info).
+5) Client wrapper - Notes that its "server-is-wrapper" = True
+6) Server wrapper - takes note of the client's IP, username, and UUID.
+
+```
+class Client(object):
+    def __init__(self, proxy, clientsock, client_addr, banned=False):
+    ...
+    self.info = {
+        "username": "",
+        "uuid": "",
+        "ip": "",
+        "client-is-wrapper": False,
+        "server-is-wrapper": False
+    }
+```
+
+These plugin messages will help wrapper determine it's role (HUB or subworld),
+pass server information, manage login/logouts, pass proper online UUIDs to
+plugins even if the plugin's (local) wrapper is offline.
+
+
 Build 12 [1.0b12]
 Started as a refactor, but I discovered that Entity controls were not functioning properly.
  (and discovered that the mineraft entity controls actually are not as robust as ours).
