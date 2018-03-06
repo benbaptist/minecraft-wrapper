@@ -168,19 +168,23 @@ class Proxy(object):
         self.uuidTranslate = {}
         # define the slot once here and not at each clients Instantiation:
         self.inv_slots = range(46)
+        self.entity_control = None
 
         # various contructions for non-standard
-        # client/servers (forge?) and wrapper's own channel
+        # client/servers (forge?)
         self.mod_info = {}
         self.forge = False
         self.forge_login_packet = None
-        self.registered_channels = ["WRAPPER.PY|", "WRAPPER.PY|PING", ]
-        self.pinged = False
 
+        # and wrapper's own channel for each connection
+        self.registered_channels = ["WRAPPER.PY|PONG",
+                                    "WRAPPER.PY|PING",
+                                    "WRAPPER.PY|RESP",
+                                    "WRAPPER.PY|INFO"]
+
+        # Encryption keys
         self.private_key = encryption.generate_private_key_set()
         self.public_key = encryption.get_public_key_bytes(self.private_key)
-
-        self.entity_control = None
 
     def host(self):
         """ the caller should ensure host() is not called before the 
