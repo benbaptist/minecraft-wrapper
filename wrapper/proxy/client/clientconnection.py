@@ -605,12 +605,14 @@ class Client(object):
                 if self.mojanguuid.string in uuids:
                     self._add_client()
                 else:
-                    uuids = {"uuid-uuid-uuid": "playername", }
+                    uuids = {
+                        "uuiduuid-uuid-uuid-uuid-uuiduuiduuid": "playername",
+                    }
                     putjsonfile(uuids, "bypass-player-limit", "wrapper-data")
-                    self.disconnect("I'm sorry, the server is full!")
+                    self.notify_disconnect("I'm sorry, the server is full!")
                     return False
             else:
-                self.disconnect("I'm sorry, the server is full!")
+                self.notify_disconnect("I'm sorry, the server is full!")
                 return False
 
         # check for uuid ban
@@ -924,6 +926,7 @@ class Client(object):
                 self.log.debug(
                     "State was 'other': sent LOGIN_DISCONNECT(s) to %s",
                     self.username)
+                self._remove_client_and_player()
 
         time.sleep(1)
         self.state = HANDSHAKE
@@ -1128,6 +1131,15 @@ class Client(object):
         #  will be called later by mcserver.py)
         if self not in self.proxy.srv_data.clients:
             self.proxy.srv_data.clients.append(self)
+
+    def _remove_client_and_player(self):
+        """ This is needed when the player is logged into wrapper, but not
+        onto the local server (which normally keeps tabs on player
+        and client objects)."""
+        if self.username in self.proxy.srv_data.players:
+            if self.proxy.srv_data.players[self.username].client.state != LOBBY:
+                self.proxy.srv_data.players[self.username].abort = True
+                del self.proxy.srv_data.players[self.username]
 
     def _send_client_settings(self):
         if self.clientSettings and not self.clientSettingsSent:

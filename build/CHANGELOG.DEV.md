@@ -1,6 +1,6 @@
 Build 16 [1.0b16]
 - Subworld maxplayers needs work.  The subworld disconnects excess players, but
-
+- fix rogue players who connect outside wrapper proxy.
 
 Build 16 [1.0b16]
 - Make player respawn to hub if destination connection fails.
