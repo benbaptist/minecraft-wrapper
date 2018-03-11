@@ -551,14 +551,16 @@
     :Module: parse_cb.py *(server/parse_cb.py)*
 
     :Description:
-        Sent when server advises the client of its spawn position.
+        Sent when server advises the client of the Spawn position.
 
     :Payload:
         :"playername": client username
-        :"position": position
+        :"position": Spawn's position
 
     :Can be aborted/modified: No - Notification only.
 
+    :Comments:
+        Sent by the server after login to specify the coordinates of the spawn point (the point at which players spawn at, and which the compass points to). It can be sent at any time to update the point compasses point at.
 
 :Event: "entity.unmount"
 

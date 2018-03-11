@@ -84,11 +84,10 @@ class Player(object):
         self.username  # client username on this server.
         self.loggedIn  # time the player object logged on.
 
-        self.uuid  # property that returns the very best UUID available,
-                   # with the goal of never returning improper things
-                   # like `False` and `None`.
+        self.name  # property that returns the username
+        self.uuid  # property that returns the very best UUID available.
 
-        # self.uuid polls for one of these in this order until successful:
+        # self.uuid polls perfers the first UUID it finds in this order:
         self.mojangUuid
         self.clientUuid  # usually = self.mojangUuid
         self.offlineUuid
@@ -121,51 +120,41 @@ class Player(object):
     """
 
     def __init__(self, username, wrapper):
+        """
+        :UUIDS:
+            All uuids are wrapper's MCUUID objects.  If being used in a string
+            context, they must be used with the *.string property (or str()
+            explicitly):
+                player.mojangUuid.string
+                player.mojangUuis.__str__
+                str(player.mojangUuid)
+
+            :uuid (property): This will pull the best uuid available in order-
+            :1) Mojang uuid: The bought and paid Mojand UUID.  Never changes and
+             is the prefered way to ID player keys.
+            :2) offline uuid: A MD5 hash of "OfflinePlayer:%s" % username
+            :3) client uuid: What the client believes is the uuid.
+            :4) server uuid: The player's local uuid on the server.
+
+        :param username:
+        :param wrapper:
+        """
 
         self.wrapper = wrapper
         self.javaserver = wrapper.javaserver
         self.log = wrapper.log
-
         self.username = username
         self.loggedIn = time.time()
 
-        # TODO - clean this out.  let player objects GC with their client?
         # mcserver will set this to false later to close the thread.
         self.abort = False
         # meanwhile, it still needs to respect wrapper halts
         self.wrapper_signal = self.wrapper.halt
 
-        # these are all MCUUID objects.. I have separated out various
-        #  uses of uuid to clarify for later refractoring
-        # ---------------
-        # Mojang uuid - the bought and paid Mojand UUID.  Never
-        # changes- our one constant point of reference per player.
-        # this is aliased by property "uuid" unless MojangUuid fails.
-        # ---------------
-        # offline uuid - created as a MD5 hash of "OfflinePlayer:%s" % username
-        # ---------------
-        # client uuid - what the client stores as the uuid (should be
-        # the same as Mojang?) The player.uuid used by old api (and
-        # internally here).
-        # ---------------
-        # server uuid - the local server uuid... used to reference
-        # the player on the local server.  Could be same as Mojang UUID
-        # if server is in online mode or same as offline if server is
-        # in offline mode (proxy mode).
-        # *******************
-
-        # This can be False if cache (and requests) Fail... bad name or
-        # bad Mojang service connection.
-        self.mojangUuid = self.wrapper.uuids.getuuidbyusername(username)
-
-        # IF False error carries forward, this is not a valid player,
-        # for whatever reason...
+        self.mojangUuid = False
         self.clientUuid = self.mojangUuid
-
         # These two are offline by default.
         self.offlineUuid = self.wrapper.uuids.getuuidfromname(self.username)
-        # Start out as the Offline -
-        # change it to Mojang if local server is Online
         self.serverUuid = self.offlineUuid
 
         self.ipaddress = "127.0.0.0"
@@ -195,10 +184,9 @@ class Player(object):
             for client in self.wrapper.servervitals.clients:
                 if client.username == self.username:
                     self.client = client
-                    # Both MCUUID objects
                     self.clientUuid = client.wrapper_uuid
                     self.serverUuid = client.local_uuid
-
+                    self.mojangUuid = client.mojanguuid
                     self.ipaddress = client.ip
 
                     # pktSB already set to self.wrapper.servervitals.protocolVersion  # noqa
@@ -213,6 +201,8 @@ class Player(object):
                                " someone is connecting directly to"
                                " your server port and not the wrapper"
                                " proxy port!")
+        if not self.mojangUuid:
+            self.mojangUuid = self.wrapper.uuids.getuuidbyusername(username)
 
         # Process login data
         self.data = Storage(
@@ -241,38 +231,22 @@ class Player(object):
 
     @property
     def uuid(self):
-        """Return the very best UUID available, with the goal of
-        never returning improper things like False and None."""
+        """Return the very best UUID available as a string, with
+        the goal of never returning improper things like False and None. """
         if self.mojangUuid:
-            return self.mojangUuid
+            return self.mojangUuid.string
+        if self.client and self.client.info["realuuid"] != "":
+            return self.client.info["realuuid"]
         if self.clientUuid:
-            return self.mojangUuid
+            return self.mojangUuid.string
         if self.serverUuid:
-            return self.serverUuid
-        return self.offlineUuid
+            return self.serverUuid.string
+        return self.offlineUuid.string
 
     def _track(self):
         """
         internal tracking that updates a player's server play time.
         Not a part of the public player object API.
-
-        Sample ReST formattings -
-
-        # emphasized notes
-        Note: *You do not need to run this function unless you want*
-         *certain permission nodes to be granted by default.*
-         *i.e., 'essentials.list' should be on by default, so players*
-         *can run /list without having any permissions*
-
-        # code samples
-            :sample usage:
-
-                .. code:: python
-
-                    < code here >
-
-                ..
-
         """
         self.data.Data["logins"][int(self.loggedIn)] = time.time()
         while not (self.abort or self.wrapper_signal.halt):
@@ -288,7 +262,7 @@ class Player(object):
         """
         Kick a player with 'reason'.  Using this interface (versus the
         console command) ensures the player receives the proper disconnect
-        messages based on being in proxy mode or not.
+        messages based on whether they are in proxy mode or not.
 
         """
         self.wrapper.javaserver.kick_player(self, self.username, reason)
@@ -991,20 +965,29 @@ class Player(object):
         return self.data.Data["firstLoggedIn"]
 
     # Cross-server commands
-    def connect(self, address, port):
-        # TODO - WORK IN PROGRESS
+    def connect(self, port, ip="127.0.0.1"):
         """
-        :Proxymode: Presenty buggy, at best!
+        Connect to another server.  Upon calling, the client's current
+         server instance will be closed and a new server connection made
+         to the target port of another server or wrapper instance.
 
-        Upon calling, the player object will become defunct and
-        the client will be transferred to another server or wrapper
-        instance (provided it has online-mode turned off).
+        Any such target must be in offline-mode.
+        The player object remains valid, but is largely ignored by this
+         server.
+        The player may respawn back to this server by typing `/hub`.
 
         :Args:
-            :address: server address (local address)
-            :port: server port (local port)
+            :port: server or wrapper port you are connecting to.
+            :ip:  Only specify this if you are connecting OUTSIDE of Localhost!
+             Since the target wrapper would be offline and probably publicly
+             accessible, this is not advisable... Only a cracked server
+             would operate this way.
 
         :returns: Nothing
 
         """
-        self.client.change_servers(address, port)
+        if not self.wrapper.proxymode:
+            self.log.warning("Can't use player.connect() without proxy mode.")
+            return
+
+        self.client.change_servers(port, ip)

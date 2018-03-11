@@ -63,7 +63,7 @@ class Packets(object):
         self.ENTITY_ACTION = [0x0b, [NULL, ]]
         self.STEER_VEHICLE = [0x0c, [NULL, ]]
         self.CLOSE_WINDOW = [0x0b, [NULL, ]]
-        self.CLICK_WINDOW = [0x0e, [NULL, ]]
+        self.CLICK_WINDOW = [0x0e, [BYTE, SHORT, BYTE, SHORT, BYTE, SLOT]]
         self.CONFIRM_TRANSACTION = [0x0f, [NULL, ]]
         self.CREATIVE_INVENTORY_ACTION = [0x10, [NULL, ]]
         self.ENCHANT_ITEM = [0x11, [NULL, ]]
@@ -71,7 +71,7 @@ class Packets(object):
         self.PLAYER_ABILITIES = [0x13, [NULL, ]]
         self.TAB_COMPLETE = [0x14, [NULL, ]]
         self.CLIENT_SETTINGS = [0x15, [NULL, ]]
-        self.CLIENT_STATUS = [0x16, [NULL, ]]
+        self.CLIENT_STATUS = [0x16, [BYTE, ]]
         self.PLUGIN_MESSAGE = [0x17, [NULL, ]]
         # new packets implemented after 1.7
         self.SPECTATE = [0xee, [NULL, ]]
@@ -88,7 +88,9 @@ class Packets(object):
         # Parsing changes
         if protocol >= PROTOCOL_1_8START:
             self.KEEP_ALIVE[PARSER] = [VARINT]
-            self.PLAYER_POSLOOK = [0x06, [DOUBLE, DOUBLE, DOUBLE, FLOAT, FLOAT, BOOL]]  # noqa
+            self.PLAYER_POSLOOK[PARSER] = [DOUBLE, DOUBLE, DOUBLE, FLOAT, FLOAT, BOOL]  # noqa
+            self.CLIENT_STATUS[PARSER] = [VARINT]
+            self.CLICK_WINDOW[PARSER] = [UBYTE, SHORT, BYTE, SHORT, BYTE, SLOT]
 
         if PROTOCOL_1_9START > protocol >= PROTOCOL_1_8START:
             self.SPECTATE[PKT] = 0x18
@@ -126,6 +128,9 @@ class Packets(object):
             self.SPECTATE[PKT] = 0x1b
             self.PLAYER_BLOCK_PLACEMENT[PKT] = 0x1c
             self.USE_ITEM[PKT] = 0x1d
+
+            # parsing changes:
+            self.CLICK_WINDOW[PARSER] = [UBYTE, SHORT, BYTE, SHORT, BYTE, SLOT]  # noqa
 
         if protocol > PROTOCOL_1_12START:
             # snapshots raise ValueError, so this is really >= PROTOCOL_1_12

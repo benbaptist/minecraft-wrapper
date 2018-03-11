@@ -107,13 +107,11 @@ class ParseCB(object):
                     # noinspection PyUnusedLocal
                     # todo should we be using this to set client gamemode?
                     gamemode = data[0]
-                    # print("GAMEMODE (parse_cb): %s" % gamemode)
                     # ("varint:gamemode")
                     self.client.packet.sendpkt(
                         self.pktCB.PLAYER_LIST_ITEM[PKT],
                         [VARINT, VARINT, UUID, VARINT],
                         (1, 1, uuid, gamemode))
-                    # print(1, 1, uuid, gamemode)
                 elif action == 2:
                     data = self.packet.readpkt([VARINT])
                     ping = data[0]
@@ -165,18 +163,20 @@ class ParseCB(object):
             self.client.packet.sendpkt(
                 self.pktCB.SPAWN_PLAYER[PKT],
                 self.pktCB.SPAWN_PLAYER[PARSER],
-                (dt[0], clientserverid.wrapper_uuid.string, dt[2]))
+                (dt[0], clientserverid.wrapper_uuid, dt[2]))
             return False
         return True
 
     # Wrapper events and info section:
 
     def parse_play_chat_message(self):
+        if not self.client.local:
+            return True
         data, position = self.packet.readpkt(self.pktCB.CHAT_MESSAGE[PARSER])
         # position (1.8+ only)
         # 0: chat (chat box), 1: system message (chat box), 2: above hotbar
-        # print("SEND", type(data), data)
-        # Over-ride OP help display
+
+        # Over-ride help display
 
         for eachtrans in TRANSLATE:
             if TRANSLATE[eachtrans][0] == data:
@@ -228,18 +228,18 @@ class ParseCB(object):
 
     def parse_play_player_poslook(self):
         """This packet is not actually sent very often.  Maybe on respawns
-        or position corrections."""
+        or position corrections.  Hub requires this to be updated"""
         # CAVEAT - The client and server bound packet formats are different!
         data = self.packet.readpkt(self.pktCB.PLAYER_POSLOOK[PARSER])
         relativemarker = data[5]
-        # print("PPLOOK_DATA = ", data, type(data[0]), type(data[1]),
-        #       type(data[2]), type(data[3]), type(data[4]), type(data[5]))
         # fill player pos if this is absolute position (or a pre 1.8 server)
         if relativemarker == 0 or self.server.version < PROTOCOL_1_8START:
             self.client.position = (data[0], data[1], data[2])
         return True
 
     def parse_play_use_bed(self):
+        if not self.client.local:
+            return True
         data = self.packet.readpkt([VARINT, POSITION])
         if data[0] == self.client.server_eid:
             self.proxy.eventhandler.callevent(
@@ -268,17 +268,22 @@ class ParseCB(object):
         return True
 
     def parse_play_join_game(self):
+        """Hub continues to track these items, especially dimension"""
+        self.client.server_connection.plugin_ping()
         data = self.packet.readpkt(self.pktCB.JOIN_GAME[PARSER])
-
-        self.client.server_eid = data[0]
         self.client.gamemode = data[1]
         self.client.dimension = data[2]
-        self.server.plugin_ping()
+        self.client.server_eid = data[0]
         return True
 
     def parse_play_spawn_position(self):
+        """Sent by the server after login to specify the coordinates of the
+        spawn point (the point at which players spawn at, and which the
+        compass points to). It can be sent at any time to update the point
+        compasses point at."""
+        if not self.client.local:
+            return True
         data = self.packet.readpkt([POSITION])
-        self.client.position = data[0]
         self.proxy.eventhandler.callevent(
             "player.spawned", {"playername": self.client.username,
                                "position": data},
@@ -288,23 +293,24 @@ class ParseCB(object):
         """ eventdoc
             <group> Proxy <group>
 
-            <description> Sent when server advises the client of its spawn position.
+            <description> Sent when server advises the client of the Spawn position.
             <description>
 
             <abortable> No - Notification only. <abortable>
 
-            <comments>
+            <comments>  Sent by the server after login to specify the coordinates of the spawn point (the point at which players spawn at, and which the compass points to). It can be sent at any time to update the point compasses point at.
             <comments>
 
             <payload>
             "playername": client username
-            "position": position
+            "position": Spawn's position
             <payload>
 
         """  # noqa
         return True
 
     def parse_play_respawn(self):
+        """Hub continues to track these items, especially dimension"""
         data = self.packet.readpkt([INT, UBYTE, UBYTE, STRING])
         # "int:dimension|ubyte:difficulty|ubyte:gamemode|level_type:string")
         self.client.gamemode = data[2]
@@ -312,13 +318,19 @@ class ParseCB(object):
         return True
 
     def parse_play_change_game_state(self):
+        """Hub needs to track these items to prevent perpetual raining, etc."""
         data = self.packet.readpkt([UBYTE, FLOAT])
         # ("ubyte:reason|float:value")
         if data[0] == 3:
             self.client.gamemode = data[1]
+        if data[0] == 2:
+            self.client.raining = True
+        if data[0] == 1:
+            self.client.raining = False
         return True
 
     def parse_play_disconnect(self):
+        """Hub needs to monitor this to respawn someone to the hub."""
         message = self.packet.readpkt([JSON])
         self.server.close_server("Server kicked %s with PLAY disconnect: %s" %
                                  (self.client.username, message))
@@ -327,6 +339,8 @@ class ParseCB(object):
         return False
 
     def parse_play_time_update(self):
+        if not self.client.local:
+            return True
         data = self.packet.readpkt([LONG, LONG])
         # "long:worldage|long:timeofday")
         # There could be a number of clients trying to update this at once
@@ -338,6 +352,8 @@ class ParseCB(object):
         return True
 
     def parse_play_tab_complete(self):
+        if not self.client.local:
+            return True
         rawdata = self.packet.readpkt(self.pktCB.TAB_COMPLETE[PARSER])
         data = rawdata[0]
 
@@ -377,6 +393,14 @@ class ParseCB(object):
             return False
         return True
 
+    # chunk processing
+    def parse_play_chunk_data(self):
+        """CHUNK_DATA
+        Cache first 49 raw chunks for use with respawning."""
+        if len(self.client.first_chunks) < 49:
+            data = self.packet.readpkt([RAW, ])
+            self.client.first_chunks.append(data)
+        return True
     # Window processing/ inventory tracking
 
     def parse_play_open_window(self):
@@ -384,29 +408,15 @@ class ParseCB(object):
         #  accurate inventory in wrapper
         data = self.packet.readpkt(self.pktCB.OPEN_WINDOW[PARSER])
         self.client.currentwindowid = data[0]
-        self.client.noninventoryslotcount = data[3]
+        # self.client.noninventoryslotcount = data[3]
         return True
 
     def parse_play_set_slot(self):
-        # ("byte:wid|short:slot|slot:data")
+        """Hub still needs this to set player inventory on login"""
         data = self.packet.readpkt(self.pktCB.SET_SLOT[PARSER])
-        # todo - not sure how we  are dealing with slot counts
-        # inventoryslots = 35
-        # inventoryslots = 36  # 1.9 minecraft with shield / other hand
-
-        # this is only sent on startup when server sends WID = 0 with 45/46
-        # tems and when an item is moved into players inventory from
-        # outside (like a chest or picking something up) After this, these
-        # are sent on chest opens and so forth, each WID incrementing
-        # by +1 per object opened.  The slot numbers that correspond to
-        # player's hotbar will depend on what window is opened...  the
-        # last 10 (for 1.9) or last 9 (for 1.8 and earlier) will be the
-        # player hotbar ALWAYS. to know how many packets and slots total
-        # to expect, we have to parse server-bound pktCB.OPEN_WINDOW.
 
         if data[0] == 0:
             self.client.inventory[data[1]] = data[2]
-
         if data[0] < 0:
             return True
 
@@ -414,22 +424,15 @@ class ParseCB(object):
         #  windows the player may open
         if data[0] == self.client.currentwindowid:
             currentslot = data[1]
-
-            # noinspection PyUnusedLocal
-            slotdata = data[2]  # TODO nothing is done with slot data
-
-            if currentslot >= self.client.noninventoryslotcount:
-                # any number of slot above the
-                # pktCB.OPEN_WINDOW declared self.(..)slotcount
-                # is an inventory slot for us to update.
-                self.client.inventory[
-                    currentslot - self.client.noninventoryslotcount + 9
-                ] = data[2]
+            slotdata = data[2]
+            self.client.inventory[currentslot] = slotdata
         return True
 
     # Entity processing sections.  Needed to track entities and EIDs
 
     def parse_play_spawn_object(self):
+        if not self.client.local:
+            return True
         # objects are entities and are GC-ed by detroy entities packet
         if not self.ent_control:
             return True  # return now if no object tracking
@@ -459,6 +462,8 @@ class ParseCB(object):
         return True
 
     def parse_play_spawn_mob(self):
+        if not self.client.local:
+            return True
         if not self.ent_control:
             return True
         if self.server.version < PROTOCOL_1_9START:
@@ -495,6 +500,8 @@ class ParseCB(object):
         return True
 
     def parse_play_entity_relative_move(self):
+        if not self.client.local:
+            return True
         if not self.ent_control:
             return True
         if self.server.version < PROTOCOL_1_8START:  # 1.7.10 - 1.7.2
@@ -512,6 +519,8 @@ class ParseCB(object):
         return True
 
     def parse_play_entity_teleport(self):
+        if not self.client.local:
+            return True
         if not self.ent_control:
             return True
         if self.server.version < PROTOCOL_1_8START:  # 1.7.10 and prior
@@ -532,6 +541,8 @@ class ParseCB(object):
         return True
 
     def parse_play_attach_entity(self):
+        if not self.client.local:
+            return True
         if not self.ent_control:
             return True
         data = []
@@ -618,6 +629,8 @@ class ParseCB(object):
         # Get rid of dead entities so that python can GC them.
         # TODO - not certain this works correctly (errors -
         # eids not used and too broad exception)
+        if not self.client.local:
+            return True
         if not self.ent_control:
             return True
 

@@ -12,10 +12,10 @@ import time
 import requests
 import os
 
+
 class MCUUID(uuid.UUID):
     """
-    This class is currently not being used, but may be beneficial in regards to
-    conforming UUIDs
+    This class is used to conform UUIDs as an object/class instance.
     """
 
     # noinspection PyShadowingBuiltins
@@ -35,7 +35,7 @@ class UUIDS(object):
     @staticmethod
     def formatuuid(playeruuid):
         """
-        Takes player's hex string uuid with no dashes and returns it as astring with the dashes
+        Takes player's hex string uuid with no dashes and returns it as a string with the dashes
 
         :param playeruuid: string of player uuid with no dashes (such as you might get back from Mojang)
         :return: string hex format "8-4-4-4-12"
@@ -130,7 +130,7 @@ class UUIDS(object):
         :param uselocalname:  Will return the name our server uses for this player.
 
         :returns: returns the username from the specified uuid, else returns False if failed.
-        """  # noqa
+        """
         frequency = 2592000  # if called directly, can update cache daily (refresh names list, etc)
         if forcepoll:
             frequency = 600  # 10 minute limit
@@ -249,9 +249,6 @@ class UUIDS(object):
                             return self.usercache[user_uuid]["name"]
                         except TypeError:
                             return False
-
-    def set_local_name(self):
-        pass
 
     # noinspection PyBroadException
     @staticmethod

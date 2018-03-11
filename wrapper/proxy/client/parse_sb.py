@@ -6,7 +6,7 @@
 # General Public License, version 3 or later.
 
 from proxy.utils.constants import *
-
+import threading
 
 # noinspection PyMethodMayBeStatic
 class ParseSB(object):
@@ -32,7 +32,8 @@ class ParseSB(object):
 
         # DOUBLE, DOUBLE, DOUBLE, FLOAT, FLOAT, BOOL - 1.8 and up
         # ("double:x|double:feety|double:z|float:yaw|float:pitch|bool:on_ground")
-
+        if not self.client.local:
+            return True
         data = self.packet.readpkt(self.pktSB.PLAYER_POSLOOK[PARSER])
         if self.client.clientversion > PROTOCOL_1_8START:
             self.client.position = (data[0], data[1], data[2])
@@ -49,6 +50,20 @@ class ParseSB(object):
 
         # Get the packet chat message contents
         chatmsg = data[0]
+
+        if chatmsg[:4] == "/hub":
+            # TODO fix this - add more features or just remove next three lines.
+            ip = "127.0.0.1"
+            port = 25565
+            if len(chatmsg) == 4:
+                port = self.proxy.srv_data.server_port
+            t = threading.Thread(target=self.client.change_servers,
+                                 name="hubtest", args=(port, ip))
+            t.daemon = True
+            t.start()
+            return False
+        if not self.client.local:
+            return True
 
         payload = self.proxy.eventhandler.callevent("player.rawMessage", {
             "playername": self.client.username,
@@ -151,6 +166,7 @@ class ParseSB(object):
         return False  # and cancel this original packet
 
     def parse_play_player_position(self):
+        """ hub needs accurate position """
         if self.client.clientversion < PROTOCOL_1_8START:
             data = self.packet.readpkt([DOUBLE, DOUBLE, DOUBLE, DOUBLE, BOOL])
             # ("double:x|double:y|double:yhead|double:z|bool:on_ground")
@@ -164,12 +180,15 @@ class ParseSB(object):
         return True
 
     def parse_play_player_look(self):
+        """ hub needs accurate position """
         data = self.packet.readpkt([FLOAT, FLOAT, BOOL])
         # ("float:yaw|float:pitch|bool:on_ground")
         self.client.head = (data[0], data[1])
         return True
 
     def parse_play_player_digging(self):
+        if not self.client.local:
+            return True
         if self.client.clientversion < PROTOCOL_1_7:
             data = None
             position = data
@@ -277,6 +296,8 @@ class ParseSB(object):
         return True
 
     def parse_play_player_block_placement(self):
+        if not self.client.local:
+            return True
         player = self.client.username
         hand = 0  # main hand
         helditem = self.client.inventory[36 + self.client.slot]
@@ -383,6 +404,8 @@ class ParseSB(object):
         return True
 
     def parse_play_use_item(self):  # no 1.8 or prior packet
+        if not self.client.local:
+            return True
         data = self.packet.readpkt([REST])
         # "rest:pack")
         position = self.client.lastplacecoords
@@ -398,6 +421,8 @@ class ParseSB(object):
         return True
 
     def parse_play_held_item_change(self):
+        if not self.client.local:
+            return True
         slot = self.packet.readpkt([SHORT])
         # "short:short")  # ["short"]
         if 9 > slot[0] > -1:
@@ -408,6 +433,8 @@ class ParseSB(object):
         return True
 
     def parse_play_player_update_sign(self):
+        if not self.client.local:
+            return True
         if self.client.clientversion < PROTOCOL_1_8START:
             data = self.packet.readpkt(
                 [INT, SHORT, INT, STRING, STRING, STRING, STRING])
@@ -481,6 +508,8 @@ class ParseSB(object):
         return False
 
     def parse_play_client_settings(self):  # read Client Settings
+        if not self.client.local:
+            return True
         """ This is read for later sending to servers we connect to """
         self.client.clientSettings = self.packet.readpkt([RAW])[0]
         self.client.clientSettingsSent = True
@@ -488,6 +517,8 @@ class ParseSB(object):
         return True
 
     def parse_play_click_window(self):  # click window
+        if not self.client.local:
+            return True
         if self.client.clientversion < PROTOCOL_1_8START:
             data = self.packet.readpkt(
                 [BYTE, SHORT, BYTE, SHORT, BYTE, SLOT_NO_NBT])
@@ -591,6 +622,8 @@ class ParseSB(object):
         return True
 
     def parse_play_spectate(self):
+        if not self.client.local:
+            return True
         # Spectate - convert packet to local server UUID
 
         # "Teleports the player to the given entity. The player must be in

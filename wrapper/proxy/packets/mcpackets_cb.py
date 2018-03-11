@@ -40,7 +40,7 @@ class Packets(object):
         # Login, Status, and Ping packets
         # -------------------------------
         self.LOGIN_DISCONNECT = [0x00, [NULL, ]]
-        self.LOGIN_ENCR_REQUEST = [0x01, [NULL, ]]
+        self.LOGIN_ENCR_REQUEST = [0x01, [STRING, BYTEARRAY_SHORT, BYTEARRAY_SHORT]]  # noqa
         self.LOGIN_SUCCESS = [0x02, [NULL, ]]
         self.LOGIN_SET_COMPRESSION = [0X03, [NULL, ]]
         # the json data represented as a string
@@ -57,7 +57,7 @@ class Packets(object):
         self.ENTITY_EQUIPMENT = [0x04, [NULL, ]]
         self.SPAWN_POSITION = [0x05, [NULL, ]]
         self.UPDATE_HEALTH = [0x06, [NULL, ]]
-        self.RESPAWN = [0x07, [NULL, ]]
+        self.RESPAWN = [0x07, [INT, UBYTE, UBYTE, STRING]]
         self.PLAYER_POSLOOK = [0x08, [DOUBLE, DOUBLE, DOUBLE, FLOAT, FLOAT, BOOL]]  # noqa
         self.HELD_ITEM_CHANGE = [0x09, [NULL, ]]
         self.USE_BED = [0x0a, [NULL, ]]
@@ -93,7 +93,7 @@ class Packets(object):
         self.EFFECT = [0x28, [NULL, ]]
         self.SOUND_EFFECT = [0x29, [NULL, ]]
         self.PARTICLE = [0x2a, [NULL, ]]
-        self.CHANGE_GAME_STATE = [0x2b, [NULL, ]]
+        self.CHANGE_GAME_STATE = [0x2b, [UBYTE, FLOAT]]
         self.SPAWN_GLOBAL_ENTITY = [0x2c, [NULL, ]]
         self.OPEN_WINDOW = [0x2d, [UBYTE, UBYTE, STRING, UBYTE]]
         self.CLOSE_WINDOW = [0x2e, [NULL, ]]
@@ -106,7 +106,7 @@ class Packets(object):
         self.UPDATE_BLOCK_ENTITY = [0x35, [NULL, ]]
         self.OPEN_SIGN_EDITOR = [0x36, [NULL, ]]
         self.STATISTICS = [0x37, [NULL, ]]
-        self.PLAYER_LIST_ITEM = [0x38, [NULL, ]]
+        self.PLAYER_LIST_ITEM = [0x38, [STRING, BOOL, SHORT]]
         self.PLAYER_ABILITIES = [0x39, [NULL, ]]
         self.TAB_COMPLETE = [0x3a, [STRING_ARRAY]]
         self.SCOREBOARD_OBJECTIVE = [0x3b, [NULL, ]]
@@ -147,6 +147,8 @@ class Packets(object):
 
         # 1.8 changes
         if protocol >= PROTOCOL_1_8START:
+            self.LOGIN_ENCR_REQUEST[PARSER] = [STRING, BYTEARRAY, BYTEARRAY]
+
             self.SERVER_DIFFICULTY[PKT] = 0x41
             self.COMBAT_EVENT[PKT] = 0x42
             self.CAMERA[PKT] = 0x43
@@ -164,6 +166,7 @@ class Packets(object):
             self.SET_SLOT[PARSER] = [BYTE, SHORT, SLOT]
             self.ENTITY_METADATA[PARSER] = [VARINT, METADATA]
             self.SPAWN_PLAYER[PARSER] = [VARINT, UUID, REST]
+            self.PLAYER_LIST_ITEM[PARSER] = [VARINT, VARINT, REST]
 
         # 1.9 changes
         if protocol >= PROTOCOL_1_9REL1:
