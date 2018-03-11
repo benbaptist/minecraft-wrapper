@@ -537,9 +537,9 @@ class Client(object):
             continue
 
         # log the client on
-        self.logon_client_into_proxy()
-        # connect to server
-        self.connect_to_server()
+        if self.logon_client_into_proxy():
+            # connect to server
+            self.connect_to_server()
 
     def _parse_login_encr_response(self):
         # the client is RESPONDING to our request for
