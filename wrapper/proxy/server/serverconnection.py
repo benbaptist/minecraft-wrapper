@@ -164,13 +164,14 @@ class ServerConnection(object):
             self.server_socket.shutdown(2)
             self.log.debug("Sucessfully closed server socket for"
                            " %s", self.client.username)
+            # allow packet instance to be Garbage Collected
+            self.packet = None
+            return True
         except:
             self.log.debug("Server socket for %s already "
                            "closed", self.infos_debug)
-            pass
-
-        # allow packet instance to be Garbage Collected
-        self.packet = None
+            self.packet = None
+            return False
 
     # PARSERS SECTION
     # -----------------------------

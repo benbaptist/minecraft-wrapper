@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2016, 2018 - BenBaptist and Wrapper.py developer(s).
+# Copyright (C) 2016- 2018 - BenBaptist and Wrapper.py developer(s).
 # https://github.com/benbaptist/minecraft-wrapper
 # This program is distributed under the terms of the GNU
 # General Public License, version 3 or later.
@@ -56,7 +56,9 @@ CONFIG = {
                 [
                     "server.properties",
 
-                    "world"
+                    "world",
+
+                    "wrapper-data",
 
                 ],
 
@@ -86,16 +88,6 @@ CONFIG = {
 
          # You should use a dedicated email with a password that is different from your other accounts for this purpose.
 
-         # deprecated items were incorprated into the servers dictionary.  # NODOC
-            # NODOC
-            "send-method": "deprecated",  # NODOC
-            # NODOC
-            "server-addr": "deprecated",  # NODOC
-            # NODOC
-            "server-port": "deprecated",  # NODOC
-            # NODOC
-            "login-name": "deprecated",  # NODOC
-            # NODOC
             "enabled": False,
 
          # enable a server item by setting login name to something other than "False".  Use your email address for login-name and the associated password (encrypt it first).
@@ -130,7 +122,11 @@ CONFIG = {
 
             "password-plaintext": False,
 
-            "password": "use `/password -s Alerts password <your password>` to set this (or enter a password-plaintext)."
+            "password": "use `/password -s Alerts password <your password>` to set this (or enter a password-plaintext).",
+            "send-method": "deprecated",  # NODOC
+            "server-addr": "deprecated",  # NODOC
+            "server-port": "deprecated",  # NODOC
+            "login-name": "deprecated",  # NODOC
 
         },  # NODOC
 
@@ -232,18 +228,15 @@ CONFIG = {
 
             "halt-message": "Halting Wrapper...",
 
-         # Speficy if wrapper should trap control-z and shutdown in a controlled manner (similar to ctrl-c).  If false, follows the behavior permitted by your system (and that might not end well!)  - Discussion: https://github.com/benbaptist/minecraft-wrapper/issues/521
+         # Specify if wrapper should trap control-z and shutdown in a controlled manner (similar to ctrl-c).  If false, follows the behavior permitted by your system (and that might not end well!)  - Discussion: https://github.com/benbaptist/minecraft-wrapper/issues/521
 
             "trap-ctrl-z": True,
 
-         # readline is likely to be more-cross platform, but does not use wrapper's ability to keep console keystroke entries visually intact while server produces output.  # NODOC
-            # NODOC
-            "use-readline": "deprecated",  # NODOC
-            # NODOC
          # Use-betterconsole replaces "use-readline" for clarity about what this option does.  The default is False because use-betterconsole may not be fully cross-platform.  Better Console makes it easier for the console operator too see what they are typing, even while the server or wrapper my be writing output at the same time, essentially produces jline-like functionality to the wrapper console...
 
-            "use-betterconsole": False
+            "use-betterconsole": False,
 
+            "use-readline": "deprecated",  # replaced by "use-betterconsole" for clarity about what this option does.  # NODOC
         },  # NODOC
 
 # General wrapper and server startup options
@@ -268,10 +261,7 @@ CONFIG = {
 
             "server-directory": ".",
 
-         # server-name was moved to Web (it is used only by web module in code)  # NODOC
-            # NODOC
-            "server-name": "deprecated",  # NODOC
-            # NODOC
+
             "shell-scripts": False,
 
             "timed-reboot": False,
@@ -284,26 +274,14 @@ CONFIG = {
 
             "timed-reboot-warning-minutes": 5,
 
-         # wrapper detects server version and adjusts accordingly now.  # NODOC
-            # NODOC
-            "pre-1.7-mode": "deprecated",  # NODOC
-            # NODOC
-         # Deprecated for consistency with timed reboot "warning" being in "minutes", not seconds  # NODOC
-            # NODOC
-            "timed-reboot-seconds": "deprecated",  # NODOC
-            # NODOC
-         # The remaining items and functionality were moved to group "Updates" and deprecated from this section.  # NODOC
-            # NODOC
-            "auto-update-branch": "deprecated",  # NODOC
-            # NODOC
-            "auto-update-dev-build": "deprecated",  # NODOC
-            # NODOC
-            "auto-update-wrapper": "deprecated",  # NODOC
-            # NODOC
-            "stable-branch":  "deprecated",  # NODOC
-            # NODOC
-            "dev-branch":  "deprecated",  # NODOC
-            # NODOC
+            "server-name": "deprecated",  # moved to Web (it is used only by web module in code)  # NODOC
+            "pre-1.7-mode": "deprecated",  # wrapper detects server version and adjusts accordingly now.  # NODOC
+            "timed-reboot-seconds": "deprecated",  # Deprecated for consistency with timed reboot "warning" being in "minutes", not seconds  # NODOC
+            "auto-update-branch": "deprecated",  # moved to group "Updates"  # NODOC
+            "auto-update-dev-build": "deprecated",  # moved to group "Updates"  # NODOC
+            "auto-update-wrapper": "deprecated",  # moved to group "Updates"  # NODOC
+            "stable-branch":  "deprecated", # moved to group "Updates"  # NODOC
+            "dev-branch":  "deprecated",  # moved to group "Updates"  # NODOC
         },  # NODOC
 
 # IRC - This allows your users to communicate to and from the server via IRC and vice versa.
@@ -368,10 +346,7 @@ CONFIG = {
     "Proxy":
 
         {  # NODOC
-            # NODOC
-            "convert-player-files": "deprecated",  # NODOC
-            # NODOC
-         # This actually does nothing in the code. TODO - re-implement this somewhere? perhaps in the server JSON response?
+         # The number of players the proxy will hold.  This includes connected players from all hub worlds
 
             "max-players": 1024,
 
@@ -387,21 +362,9 @@ CONFIG = {
 
             "proxy-enabled": False,
 
-         # if wrapper is a sub world (wrapper needs to do extra work to spawn the player).
-
-            "proxy-sub-world": False,
-
          # the wrapper's proxy port that accepts client connections from the internet. This port is exposed to the internet via your port forwards.
 
             "proxy-port": 25565,
-
-         # Server port is deprecated - This port is autoconfigured from server console output now.  # NODOC
-            # NODOC
-            "server-port": "deprecated",  # NODOC
-            # NODOC
-         # spigot mode has some slightly "off" bytes in the login sequence.
-
-            "spigot-mode": False,
 
          # silent bans cause your server to ignore sockets from that IP (for IP bans). This will cause your server to appear offline and avoid possible confrontations.
 
@@ -417,8 +380,11 @@ CONFIG = {
 
                     "BenBaptist"
 
-                ]
-
+                ],
+            "proxy-sub-world": "deprecated",  # This was staged and never used  # NODOC
+            "server-port": "deprecated", # This port is autoconfigured from server console output now.  # NODOC
+            "spigot-mode": "deprecated", # Wrapper now uses a compatible format for logins  # NODOC
+            "convert-player-files": "deprecated",  # this is an option under /whitelist  # NODOC
         },  # NODOC
         # NODOC
 # Web - Web mode allows you to control and monitor the server.  This is not a https connection.  Be mindful of that and don't use the same password you use anywhere else.  It is also advised that this be open only to the localhost.
@@ -426,9 +392,6 @@ CONFIG = {
     "Web":
 
         {  # NODOC
-            # NODOC
-            "public-stats": "deprecated",  # NODOC
-            # NODOC
             "web-allow-file-management": True,
 
             "web-bind": "0.0.0.0",
@@ -450,7 +413,8 @@ CONFIG = {
             "safe-ips-use": True,
 
             "server-name": "Minecraft Server",
-
+           # NODOC
+            "public-stats": "deprecated",  # NODOC
         }  # NODOC
     # NODOC
     }  # NODOC

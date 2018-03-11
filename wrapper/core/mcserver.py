@@ -260,7 +260,7 @@ class MCServer(object):
     def kick_player(self, player, reasontext):
         if self.wrapper.proxymode:
             try:
-                playerclient = self.vitals.players[player].getClient()
+                playerclient = self.vitals.players[player].client
                 playerclient.disconnect(reasontext)
             except AttributeError:
                 self.log.warning(
@@ -400,11 +400,9 @@ class MCServer(object):
         if self.vitals.players[username].ipaddress == "127.0.0.0":
             self.vitals.players[username].ipaddress = ipaddr
 
-        if self.wrapper.proxy:
-            playerclient = self.vitals.players[username].getClient()
-            if playerclient:
-                playerclient.server_eid = servereid
-                playerclient.position = position
+        if self.wrapper.proxy and self.vitals.players[username].client:
+            self.vitals.players[username].client.server_eid = servereid
+            self.vitals.players[username].client.position = position
 
         # activate backup status
         self.wrapper.backups.idle = False
@@ -472,6 +470,10 @@ class MCServer(object):
     def getplayer(self, username):
         """Returns a player object with the specified name, or
         False if the user is not logged in/doesn't exist.
+
+        this getplayer only deals with local players on this server.
+        api.minecraft.getPlayer will deal in all players, including
+        those in proxy and/or other hub servers.
         """
         if username in self.vitals.players:
             player = self.vitals.players[username]

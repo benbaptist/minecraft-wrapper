@@ -16,7 +16,6 @@ class ServerVitals(object):
         self.serverpath = ""
         self.state = 0
         self.server_port = "25564"
-        self.onlineMode = True
         self.command_prefix = "/"
 
         # Shared data structures and run-time

@@ -58,7 +58,7 @@ class ParseSB(object):
             if len(chatmsg) == 4:
                 port = self.proxy.srv_data.server_port
             t = threading.Thread(target=self.client.change_servers,
-                                 name="hubtest", args=(port, ip))
+                                 name="hubtest", args=(ip, port))
             t.daemon = True
             t.start()
             return False

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2016, 2017 - BenBaptist and Wrapper.py developer(s).
+# Copyright (C) 2016 - 2018 - BenBaptist and Wrapper.py developer(s).
 # https://github.com/benbaptist/minecraft-wrapper
 # This program is distributed under the terms of the GNU
 # General Public License, version 3 or later.
@@ -72,7 +72,7 @@ class Events(object):
 
         # create reference player object for payload, if needed.
         if payload and ("playername" in payload) and ("player" not in payload):
-            payload["player"] = self.wrapper.api.minecraft.getPlayer(
+            payload["player"] = self.wrapper.javaserver.getplayer(
                 payload["playername"])
 
         # listeners is normally empty.

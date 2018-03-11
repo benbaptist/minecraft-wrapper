@@ -24,7 +24,8 @@
     The player object has a self.__str___ representation that returns the
     player.username.  Therefore, plugins do not need to attempt string
     conversion or do explicit references to player.username in their code
-    (str(player) or player.username in plugin code).
+    (str(player) or player.username in plugin code). There is also an
+    additional property for getting the username: `name`
 
     When using events, events in the "proxy" (Group 'Proxy') section are only
     available in proxy mode.  "server" events (Group 'core/mcserver.py')
@@ -81,7 +82,8 @@ Return the very best UUID available as a string, with
 
         Kick a player with 'reason'.  Using this interface (versus the
         console command) ensures the player receives the proper disconnect
-        messages based on whether they are in proxy mode or not.
+        messages based on whether they are in proxy mode or not.  This will
+        also allow hub players to respawn in the main wrapper server.
 
         
 
@@ -141,13 +143,12 @@ Return the very best UUID available as a string, with
 
 -  getClient(self)
 
-        Returns the player client context.  Use at your own risk - items
-        in client are generally private or subject to change (you are
-        working with an undefined API!)... what works in this wrapper
-        version may not work in the next.
+        Returns the player client context.  Somewhat deprecated since
+        the player object contains client as `player.client`  Retained
+        for older plugins which still use it.
+        TODO - Deprecate by wrapper version 1.5 final.
 
-        :returns: player client object (and possibly sets self.client
-         to the matching client).
+        :returns: player client object.
 
         
 
@@ -556,7 +557,7 @@ Return the very best UUID available as a string, with
 
         
 
--  connect(self, port, ip="127.0.0.1")
+-  connect(self, ip="127.0.0.1", port=25600)
 
         Connect to another server.  Upon calling, the client's current
          server instance will be closed and a new server connection made
@@ -569,10 +570,8 @@ Return the very best UUID available as a string, with
 
         :Args:
             :port: server or wrapper port you are connecting to.
-            :ip:  Only specify this if you are connecting OUTSIDE of Localhost!
-             Since the target wrapper would be offline and probably publicly
-             accessible, this is not advisable... Only a cracked server
-             would operate this way.
+            :ip:  the destination server ip.  Should be on your own
+             network and inaccessible to outside port forwards.
 
         :returns: Nothing
 

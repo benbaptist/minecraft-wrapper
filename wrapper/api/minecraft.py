@@ -307,6 +307,10 @@ class Minecraft(object):
         Returns the player object of the specified logged-in player.
         Will raise an exception if the player is not logged in.
 
+        This includes players who are transferred to another server. If
+        you need to test whether a player is on this server; test if
+        player.client
+
         :arg username: playername
 
         :returns: The Player Class object for "playername".
