@@ -598,20 +598,20 @@ class Client(object):
         else:
             uuids = getjsonfile(
                 "bypass-maxplayers",
-                "wrapper-data",
+                "wrapper-data/json",
                 self.proxy.encoding
             )
             if uuids:
                 if self.mojanguuid.string in uuids:
                     self._add_client()
                 else:
-                    uuids = {
-                        "uuiduuid-uuid-uuid-uuid-uuiduuiduuid": "playername",
-                    }
-                    putjsonfile(uuids, "bypass-player-limit", "wrapper-data")
                     self.notify_disconnect("I'm sorry, the server is full!")
                     return False
             else:
+                uuids = {
+                    "uuiduuid-uuid-uuid-uuid-uuiduuiduuid": "playername",
+                }
+                putjsonfile(uuids, "bypass-player-limit", "wrapper-data")
                 self.notify_disconnect("I'm sorry, the server is full!")
                 return False
 
