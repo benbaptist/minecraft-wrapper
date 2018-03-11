@@ -167,7 +167,7 @@ class Proxy(object):
         self.skinTextures = {}
         self.uuidTranslate = {}
         # define the slot once here and not at each clients Instantiation:
-        self.inv_slots = range(46)
+        self.inv_slots = list(range(46))
         self.entity_control = None
 
         # various contructions for non-standard
@@ -230,6 +230,8 @@ class Proxy(object):
             banned_ip = self.isipbanned(addr)
             if self.silent_ip_banning and banned_ip:
                 sock.shutdown(0)  # 0: done receiving, 1: done sending, 2: both
+                self.log.info("Someone tried to connect from a banned ip:"
+                              " %s  (connection refused)", addr)
                 continue
 
             # spur off client thread
@@ -267,7 +269,7 @@ class Proxy(object):
         packet.flush()
         self.srv_data.protocolVersion = -1
         while True:
-            pkid, original, _unused = packet.grabpacket()  # noqa
+            pkid, original_whole_packet = packet.grabpacket()
             if pkid == 0x00:
                 data = json.loads(packet.readpkt([STRING, ])[0])
                 self.srv_data.protocolVersion = data["version"][
@@ -279,6 +281,24 @@ class Proxy(object):
 
                 break
         server_sock.close()
+
+    def use_newname(self, oldname, newname, realuuid):
+        """
+        Convert a player from old to new name.
+        :param oldname: The players old name
+        :param newname: The player's new name
+        :param realuuid: The actual string UUID used by wrapper's cache (mojang)
+
+        :returns: A tuple of the (new string name, string uuid)
+        """
+        old_local_uuid = self.uuids.getuuidfromname(oldname)
+        new_local_uuid = self.uuids.getuuidfromname(newname)
+        cwd = "%s/%s" % (
+            self.srv_data.serverpath, self.srv_data.worldname)
+        self.uuids.convert_files(old_local_uuid, new_local_uuid, cwd)
+        self.usercache[realuuid.string]["localname"] = newname
+        self.usercache_obj.save()
+        return newname
 
     def getclientbyofflineserveruuid(self, uuid):
         """
@@ -293,6 +313,7 @@ class Proxy(object):
             if client.local_uuid.string == str(uuid):
                 self.uuidTranslate[uuid] = client.wrapper_uuid.string
                 return client
+
         self.log.debug("getclientbyofflineserveruuid failed: \n %s", attempts)
         self.log.debug("POSSIBLE CLIENTS: \n %s", self.srv_data.clients)
         return False  # no client

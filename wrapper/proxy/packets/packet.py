@@ -207,8 +207,7 @@ class Packet(object):
 
         self.buffer = io.BytesIO(payload_read)
         pkid = self.read_varint()
-        # if pkid == 0x0e: print("RAW",payload_read)  # raw packet viewer
-        return pkid, payload_read, self.pack_varint(datalength) + orig_payload
+        return pkid, self.pack_varint(datalength) + orig_payload
 
     def pack_varint(self, val):
         total = b''
@@ -282,47 +281,7 @@ class Packet(object):
 
     def send_raw(self, payload):
         if not self.abort:
-            # if len(payload) > 15: print("RAW SEND", payload)  BBstyle 1-liner!
-            # [(-1, "payload"), ..., ... ]
             self.queue.append((self.compressThreshold, payload))
-
-    def read(self, expression):
-        """
-        a readpkt() wrapper.
-
-        Args:
-            expression: Something like "double:x|double:y|double:z|
-                bool:on_ground"
-
-        Returns:
-            the original-style dict of returned values - {"x": double,
-                "y": double, "z": double, "on_ground": bool}
-
-        """
-
-        names = []
-        args = []
-        results = {}
-
-        # create a list of variable names and a list of constants
-        # representing datatypes to pass to readpkt().
-        for combo in expression.split("|"):
-            type_ = combo.split(":")[0]
-            name = combo.split(":")[1]
-            # goal - create a list of the user-desired variable names
-            names.append(name)
-            # goal: create list of integers to pass as arguments/"constants"
-            args.append(_CODERS[type_])
-
-        # obtain a list of returned arguments
-        result = self.readpkt(args)
-
-        # convert the list back to a dictionary using the names list as keys
-        for x, eachone in enumerate(result):
-            results[names[x]] = result[x]
-        print("\nCALLED DEPRECATED 'packet.read()'.  This will be removed "
-              "in future wrapper versions!  Use 'packet.readpkt() instead...\n")
-        return results
 
     def readpkt(self, args):
         """
@@ -330,9 +289,6 @@ class Packet(object):
             # abstracts of integer constants
             `data = packet.readpkt(_DOUBLE, _DOUBLE, _DOUBLE, _BOOL)`
             `x, y, z, on_ground = data`
-
-        proposed as an alternative to all the string operations used by
-        the old (and new wrapper form of..) read().
 
         Args:
             args: a list of integers representing the type of read operation.
@@ -351,39 +307,24 @@ class Packet(object):
             result.append(item)
         return result
 
-    def send(self, pkid, expression, payload):
-        """
-        This is deprecated. It functions as a sendpkt() wrapper.
-        This is not as fast as calling sendpkt(), is back-wards compatible,
-        but not really any easier to use.
-
-        Args:
-            pkid: packet id (int or hex - usually as an abstracted constant)
-            expression: Something like "double|double|double|float|float"
-            payload: Something like (x, y, z, yaw, pitch,) - a tuple
-
-        Returns:
-            returns the result that was send_raw()'ed.
-
-        """
-
-        # we are not going to change the payload argument
-        #  any.. just the expression values.
-        args = []
-        # create a list of variable names and a list of constants
-        # representing datatypes to pass to sendpkt().
-        if len(payload) > 0:
-            for type_ in expression.split("|"):
-                # goal: create list of integers to pass as arguments
-                args.append(_CODERS[type_])
-
-        # obtain a list of returned arguments
-        result = self.sendpkt(pkid, args, payload)
-        print("\nCALLED DEPRECATED 'packet.send()'.  This will be removed "
-              "in future wrapper versions!  Use 'packet.sendpkt() instead...\n")
-        return result
-
     def sendpkt(self, pkid, args, payload):
+        """
+                Usage like:
+
+                    packet.sendpkt(
+                        0xnn,
+                        [DOUBLE, DOUBLE, DOUBLE, BOOl], # integer constants
+                        (123123, 1233123, 400, True)
+                    )
+
+                Args:
+                    :args: a list of integers representing the type of send operation.
+                    :payload: a tuple of the corresponding values
+
+                Returns:  A list of those read results (not a dictionary) in the
+                            same order the args were passed.
+
+                """
         result = b""  # PY 2-3
         # start with packet id
         result += self.send_varint(pkid)
@@ -633,8 +574,13 @@ class Packet(object):
         return r + struct.pack(">%di" % len(values), *values)
 
     def send_tag(self, tag):
+        """tag is what is found in the item 'nbt':
+        This one is empty:
+        {'nbt': {'type': 0}, 'count': 28, 'id': 5, 'damage': 1}"""
         # send type indicator
         r = self.send_byte(tag['type'])
+        if tag['type'] == 0:
+            return r
         # send length prefix
         r += self.send_short(len(tag["name"]))
         # send name
@@ -739,7 +685,9 @@ class Packet(object):
 
     def read_slot(self):
         sid = self.read_short()
-        if sid != -1:
+        if sid == -1:
+            return {"id": -1}
+        else:
             count = self.read_ubyte()
             damage = self.read_short()
             nbt = self.read_tag()

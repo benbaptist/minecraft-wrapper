@@ -38,11 +38,10 @@
         self.username  # client username on this server.
         self.loggedIn  # time the player object logged on.
 
-        self.uuid  # property that returns the very best UUID available,
-                   # with the goal of never returning improper things
-                   # like `False` and `None`.
+        self.name  # property that returns the username
+        self.uuid  # property that returns the very best UUID available.
 
-        # self.uuid polls for one of these in this order until successful:
+        # self.uuid polls perfers the first UUID it finds in this order:
         self.mojangUuid
         self.clientUuid  # usually = self.mojangUuid
         self.offlineUuid
@@ -75,14 +74,14 @@
     
 
 -  uuid(self)
-Return the very best UUID available, with the goal of
-        never returning improper things like False and None.
+Return the very best UUID available as a string, with
+        the goal of never returning improper things like False and None. 
 
 -  kick(self, reason)
 
         Kick a player with 'reason'.  Using this interface (versus the
         console command) ensures the player receives the proper disconnect
-        messages based on being in proxy mode or not.
+        messages based on whether they are in proxy mode or not.
 
         
 
@@ -557,17 +556,23 @@ Return the very best UUID available, with the goal of
 
         
 
--  connect(self, address, port)
+-  connect(self, port, ip="127.0.0.1")
 
-        :Proxymode: Presenty buggy, at best!
+        Connect to another server.  Upon calling, the client's current
+         server instance will be closed and a new server connection made
+         to the target port of another server or wrapper instance.
 
-        Upon calling, the player object will become defunct and
-        the client will be transferred to another server or wrapper
-        instance (provided it has online-mode turned off).
+        Any such target must be in offline-mode.
+        The player object remains valid, but is largely ignored by this
+         server.
+        The player may respawn back to this server by typing `/hub`.
 
         :Args:
-            :address: server address (local address)
-            :port: server port (local port)
+            :port: server or wrapper port you are connecting to.
+            :ip:  Only specify this if you are connecting OUTSIDE of Localhost!
+             Since the target wrapper would be offline and probably publicly
+             accessible, this is not advisable... Only a cracked server
+             would operate this way.
 
         :returns: Nothing
 

@@ -1,3 +1,16 @@
+Build 14 [1.0b14]
+- Correct error that caused wrapper to restart twice when a new config section was added.
+- Continued improvements to UUID reliability
+- create a player.uuid property that reliably returns the very best (online)
+ UUID it can find.  This uuid is used to positively ID a player for purposes
+ of uniquely identifying that player no matter what name they have.
+- Finished player.connect() function.
+- Include sample hubworlds plugin in examples and Stable plugins.
+- Correct bugs in inventory packet set_slot handling.
+- Correct bugs in SLOT reading and sending.
+- removed last of packet.send and packet.read deprecated methods, which will not be in the release.
+
+
 Build 13 [1.0b13]
 Create wrapper channel plugin message system for sharing info between online and offline wrappers.
 

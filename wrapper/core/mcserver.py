@@ -35,6 +35,7 @@ STARTING = 1
 STARTED = 2
 STOPPING = 3
 FROZEN = 4
+LOBBY = 4
 
 
 # noinspection PyBroadException,PyUnusedLocal
@@ -438,7 +439,6 @@ class MCServer(object):
         """Called when a player logs out."""
 
         if players_name in self.vitals.players:
-            self.vitals.players[players_name].abort = True
             self.wrapper.events.callevent(
                 "player.logout", {"player": self.getplayer(players_name),
                                   "playername": players_name},
@@ -463,7 +463,9 @@ class MCServer(object):
                 <payload>
 
             """  # noqa
-            del self.vitals.players[players_name]
+            if self.vitals.players[players_name].client.state != LOBBY:
+                self.vitals.players[players_name].abort = True
+                del self.vitals.players[players_name]
         if len(self.vitals.players) == 0:
             self.wrapper.backups.idle = True
 
@@ -472,7 +474,9 @@ class MCServer(object):
         False if the user is not logged in/doesn't exist.
         """
         if username in self.vitals.players:
-            return self.vitals.players[username]
+            player = self.vitals.players[username]
+            if player.client.state != LOBBY:
+                return player
         return False
 
     def reloadproperties(self):

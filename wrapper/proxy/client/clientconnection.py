@@ -6,6 +6,7 @@
 # General Public License, version 3 or later.
 
 # Standard Library imports
+import copy
 import threading
 import time
 import json
@@ -89,20 +90,26 @@ class Client(object):
         self.keepalive_val = 0
 
         # client and server status
+        self.first_chunks = []
+        self.raining = False
+        self.wait_wait_for_auth = False
+        self.local = True
         self.abort = False
-        self.non_local = False  # we'll use this for wrapper-wrapper connections
         self.info = {
             "client-is-wrapper": False,
             "server-is-wrapper": False,
             "username": "",
-            "uuid": "",  # this uuid is stored as a string, but re-converted when read  # noqa
+            # these uuids are stored as strings
+            "realuuid": "",  # if set, the real UUID from mojang API.
+            "serveruuid": "",
+            "wrapperuuid": "",  # usually the real uuid if wrapper is online.
             "ip": ""
         }
 
         # Proxy ServerConnection()
         self.server_connection = None
         self.state = HANDSHAKE
-        self.permit_disconnect_from_server = False
+        self.permit_disconnect_from_server = True
 
         # UUIDs - all should use MCUUID unless otherwise specified
 
@@ -153,25 +160,27 @@ class Client(object):
         self.clientSettingsSent = False
         self.skin_blob = {}
         self.windowCounter = 2
-        self.currentwindowid = -1
+        # this should be zero to get updates for inventory
+        self.currentwindowid = 0
         self.noninventoryslotcount = 0
         self.lastitem = None
 
     def notify_disconnect(self, message):
         if self.permit_disconnect_from_server:
             self.disconnect(message)
-            # TODO lobby code
+        else:
+            if not self.local:
+                self.change_servers(self.serverport)
 
     def handle(self):
         """ Main client connection loop """
         t = threading.Thread(target=self.flush_loop, args=())
         t.daemon = True
         t.start()
-
         while not self.abort:
             try:
                 # last three items are for sending a compressed unparsed packet.
-                pkid, original, orig_packet = self.packet.grabpacket()  # noqa
+                pkid, orig_packet = self.packet.grabpacket()  # noqa
             except EOFError:
                 # This is not really an error.. It means the client
                 # is not sending packet stream anymore
@@ -195,24 +204,17 @@ class Client(object):
                 self.abort = True
                 break
 
-            # just pass raw packets through if this proxy is acting as a
-            #  pass-through connection to another wrapper-instance.  The
-            # other wrapper must be offline.
-            if self._non_local(pkid):
-                # this sends the raw UNENCRYPTED original packet with
-                # the compression intact, if applicable.
-                self.server_connection.packet.send_raw_untouched(orig_packet)
-                continue
-
-            # send packet if server available and parsing passed.
-            # already tested - Python will not attempt eval of
-            # self.server_connection.state if self.server_connection is False
+            # send packet if parsing passes and server available.
+            # Python will not attempt eval of self.server_connection.state
+            #  if self.server_connection is first False; so this will not raise
+            #  an exception of the server_connection stops.
             if self.parse(pkid) and \
                     self.server_connection and \
-                    self.server_connection.state in (PLAY, LOBBY):
+                    self.server_connection.packet and \
+                    self.server_connection.state == PLAY:
 
                 # sending to the server only happens in
-                # PLAY/LOBBY (not IDLE, HANDSHAKE, or LOGIN)
+                # PLAY (not IDLE, HANDSHAKE, or LOGIN)
                 # wrapper handles LOGIN/HANDSHAKE with servers (via
                 # self.parse(pkid), which DOES happen in all modes)
                 self.server_connection.packet.send_raw_untouched(orig_packet)
@@ -221,17 +223,6 @@ class Client(object):
         # mode and will never be assigned a server connection...
         if self.server_connection:
             self.close_server_instance("Client Handle Ended")  # upon self.abort
-
-    def _non_local(self, pkid):
-        """
-        True if:
-        if server mode is remote (not the wrapped server) and this is not a
-        plugin message.
-
-        """
-        if self.non_local and pkid != self.pktSB.PLUGIN_MESSAGE[PKT]:
-            return True
-        return False
 
     def flush_loop(self):
         while not self.abort:
@@ -316,6 +307,8 @@ class Client(object):
                     self._parse_keep_alive,
                 self.pktSB.PLUGIN_MESSAGE[PKT]:
                     self._parse_plugin_message,
+                self.pktSB.CHAT_MESSAGE[PKT]:
+                    self.parse_sb.parse_play_chat_message,
                 },
             IDLE: {
                 self.pktSB.PLUGIN_MESSAGE[PKT]:
@@ -326,11 +319,12 @@ class Client(object):
     def _plugin_response(self, response):
         if "ip" in response:
             self.info["username"] = response["username"]
-            self.info["uuid"] = response["uuid"]
+            self.info["realuuid"] = response["realuuid"]
             self.info["ip"] = response["ip"]
 
             self.ip = response["ip"]
-            self.mojanguuid = MCUUID(response["uuid"])
+            if response["realuuid"] != "":
+                self.mojanguuid = MCUUID(response["realuuid"])
             self.username = response["username"]
             return True
         else:
@@ -342,7 +336,7 @@ class Client(object):
     # CB PONG
     def _plugin_poll_client_wrapper(self):
         channel = "WRAPPER.PY|PONG"
-        data = json.dumps(self.proxy.info_mine)
+        data = json.dumps(self.info)
         # only our wrappers communicate with this, so, format is not critical
         self.packet.sendpkt(self.pktCB.PLUGIN_MESSAGE[PKT], [STRING, STRING],
                             (channel, data))
@@ -364,7 +358,7 @@ class Client(object):
         if channel == "WRAPPER.PY|PING":
             # then we now know this wrapper is a child wrapper since
             # minecraft clients will not ping us
-            self.proxy.info_mine["client-is-wrapper"] = True
+            self.info["client-is-wrapper"] = True
             self._plugin_poll_client_wrapper()
 
         # SB RESP
@@ -373,8 +367,7 @@ class Client(object):
             # since we are only communicating with wrappers; we use the modern
             #  format:
             datarest = self.packet.readpkt([STRING, ])[0]
-            response = json.loads(datarest.decode('utf-8'),
-                                  encoding='utf-8')
+            response = json.loads(datarest, encoding='utf-8')
             if self._plugin_response(response):
                 pass  # for now...
 
@@ -404,51 +397,52 @@ class Client(object):
 
         self.serveraddressplayerused = data[1]
         self.serverportplayerused = data[2]
-        requestedstate = data[3]
+        requested_state = data[3]
 
-        if requestedstate == STATUS:
+        if requested_state == STATUS:
             self.state = STATUS
             # wrapper will wait for REQUEST, so do nothing further.
             return False
 
-        if requestedstate == LOGIN:
+        elif requested_state == LOGIN:
             # TODO - allow client connections despite lack of server connection
 
-            # If local
-            if not self.non_local:
+            splitaddress = self.serveraddressplayerused.split("\x00")
+            if len(splitaddress) > 2 and self.onlinemode is False:
+                self.info["client-is-wrapper"] = True
+                self.info["realuuid"] = splitaddress[2]
+                self.mojanguuid = MCUUID(splitaddress[2])
 
-                if self.servervitals.protocolVersion == -1:
-                    #  ... returns -1 to signal no server
-                    self.disconnect(
-                        "The server is not started."
-                    )
-                    return False
-
-                if not self.servervitals.state == 2:
-                    self.disconnect(
-                        "Server has not finished booting. Please try"
-                        " connecting again in a few seconds"
-                    )
-                    return False
-
-                if PROTOCOL_1_9START < self.clientversion < PROTOCOL_1_9REL1:
-                    self.disconnect("You're running an unsupported snapshot"
-                                    " (protocol: %s)!" % self.clientversion)
-                    return False
-                if self.servervitals.protocolVersion != self.clientversion:
-                    self.disconnect("You're not running the same Minecraft"
-                                    " version as the server!")
-                    return False
-                self.state = LOGIN
-                # packet passes to server, which will also switch to Login
-                return True
-            else:
-
+            if self.servervitals.protocolVersion == -1:
+                #  ... returns -1 to signal no server
+                self.disconnect(
+                    "The server is not started (protocol not established)."
+                )
                 return False
 
+            if not self.servervitals.state == 2:
+                self.disconnect(
+                    "Server has not finished booting. Please try"
+                    " connecting again in a few seconds"
+                )
+                return False
+
+            if PROTOCOL_1_9START < self.clientversion < PROTOCOL_1_9REL1:
+                self.disconnect("You're running an unsupported snapshot"
+                                " (protocol: %s)!" % self.clientversion)
+                return False
+            if self.servervitals.protocolVersion != self.clientversion:
+                self.disconnect("You're not running the same Minecraft"
+                                " version as the server!")
+                return False
+            self.state = LOGIN
+            # packet passes to server, which will also switch to Login
+            return True
+
         # Wrong state in handshake
-        self.disconnect("Invalid HANDSHAKE: 'requested state:"
-                        " %d'" % requestedstate)
+        else:
+            self.disconnect("Invalid HANDSHAKE: 'requested state:"
+                            " %d'" % requested_state)
         return False
 
     def _parse_status_ping(self):
@@ -509,51 +503,47 @@ class Client(object):
     def _parse_login_start(self):
         # self.log.debug("SB -> LOGIN START")
         data = self.packet.readpkt([STRING, NULL])
-
-        # "username"
         self.username = data[0]
+        t = threading.Thread(target=self._continue_login_start,
+                             name="Login", args=())
+        t.daemon = True
 
         # just to be clear, this refers to wrapper's mode, not the server.
         if self.onlinemode:
             # Wrapper sends client a login encryption request
-
-            # 1.7.x versions
-            if self.servervitals.protocolVersion < 6:
-                # send to client 1.7
-                self.packet.sendpkt(
-                    self.pktCB.LOGIN_ENCR_REQUEST[PKT],
-                    [STRING, BYTEARRAY_SHORT, BYTEARRAY_SHORT],
-                    (self.serverID, self.public_key, self.verifyToken))
-            else:
-                # send to client 1.8 +
-                self.packet.sendpkt(
-                    self.pktCB.LOGIN_ENCR_REQUEST[PKT],
-                    [STRING, BYTEARRAY, BYTEARRAY],
-                    (self.serverID, self.public_key, self.verifyToken))
-
+            self.packet.sendpkt(
+                self.pktCB.LOGIN_ENCR_REQUEST[PKT],
+                self.pktCB.LOGIN_ENCR_REQUEST[PARSER],
+                (self.serverID, self.public_key, self.verifyToken)
+            )
             # self.log.debug("CB (W)-> LOGIN ENCR REQUEST")
 
-            # Server UUID is always offline (at the present time)
+            # Server UUID (or other offline wrapper) is always offline
             self.local_uuid = self.proxy.uuids.getuuidfromname(self.username)
-
+            self.wait_wait_for_auth = True
         else:
             # Wrapper proxy offline and not authenticating
             # maybe it is the destination of a hub? or you use another
             #  way to authenticate (password plugin?)
 
-            # Server UUID is always offline (at the present time)
+            # Wrapper UUID is offline in this case.
             self.wrapper_uuid = self.proxy.uuids.getuuidfromname(self.username)
 
-            # Since wrapper is offline, we are using offline for
-            #  self.wrapper_uuid also
+            # Of course local server is offline too...
             self.local_uuid = self.wrapper_uuid
 
-            # log the client on
-            self.state = PLAY
-            self.logon_client_into_proxy()
-            # connect to server
-            self.connect_to_server()
+        # allow the socket connection to keep moving..
+        t.start()
         return False
+
+    def _continue_login_start(self):
+        while self.wait_wait_for_auth:
+            continue
+
+        # log the client on
+        self.logon_client_into_proxy()
+        # connect to server
+        self.connect_to_server()
 
     def _parse_login_encr_response(self):
         # the client is RESPONDING to our request for
@@ -583,104 +573,26 @@ class Client(object):
 
         # verify correct response
         if not verifytoken == self.verifyToken:
+            self.state = HANDSHAKE
             self.disconnect("Verify tokens are not the same")
             return False
 
-        # determine if IP is silent banned:
+        # silent IP bans already occured in proxy/base.py host()
+        # determine if IP is banned:
         if self.ipbanned:
             self.log.info("Player %s tried to connect from banned ip:"
                           " %s", self.username, self.ip)
             self.state = HANDSHAKE
-            if self.silent_bans:
-                self.disconnect("unknown host")
-            else:
-                # self disconnect does not "return" anything.
-                self.disconnect("Your address is IP-banned from this server!.")
+            self.disconnect("Your address is IP-banned from this server!.")
             return False
 
         # begin Client logon process
         # Wrapper in online mode, taking care of authentication
         if self._login_authenticate_client(serverid) is False:
+            self.state = HANDSHAKE
+            self.disconnect("Your client authentication failed.")
             return False  # client failed to authenticate
-
-        # log the client on
-        self.state = PLAY
-        self.logon_client_into_proxy()
-
-        # connect to server
-        self.connect_to_server()
         return False
-
-    def change_servers(self, ip=None, port=None):
-
-        # close current connection and start new one
-        was_lobby = False
-        if self.state == LOBBY:
-            was_lobby = True
-        # get out of PLAY "NOW" to prevent second disconnect that kills client
-        self.state = IDLE
-        # keep server from sending disconnects
-        self.server_connection.state = IDLE
-        self.close_server_instance("Lobbification")
-        # lobby_return = True
-        time.sleep(1)
-
-        # setup for connect
-        self.clientSettingsSent = False
-
-        # connect to server
-        self.state = PLAY
-        self.connect_to_server(ip, port)
-
-        # if the client was in LOBBY state (connected to remote server)
-        if was_lobby:
-            self.log.info("%s's client Returned from remote server:"
-                          " (UUID: %s | IP: %s | SecureConnection: %s)",
-                          self.username, self.wrapper_uuid.string,
-                          self.ip, self.onlinemode)
-
-            self._add_client()
-
-        # TODO whatever respawn stuff works
-        # send these right quick to client
-        self._send_client_settings()
-
-        self.packet.sendpkt(
-            self.pktCB.CHANGE_GAME_STATE[PKT],
-            [UBYTE, FLOAT],
-            (1, 0))
-
-        self.packet.sendpkt(
-            self.pktCB.RESPAWN[PKT],
-            [INT, UBYTE, UBYTE, STRING],
-            [-1, 3, 0, 'default'])
-
-        if self.version < PROTOCOL_1_8START:
-            self.server_connection.packet.sendpkt(
-                self.pktSB.CLIENT_STATUS[PKT],
-                [BYTE, ],
-                (0, ))
-        else:
-            self.packet.sendpkt(
-                0x2c,
-                [VARINT, INT, STRING, ],
-                (self.server_eid, "DURNIT"))
-
-            # self.packet.sendpkt(0x3e,
-            #   [FLOAT, VARINT, FLOAT],
-            #   (-1, 0, 0.0))
-
-            self.server_connection.packet.sendpkt(
-                self.pktSB.CLIENT_STATUS[PKT],
-                [VARINT, ],
-                (0, ))
-
-            self.server_connection.packet.sendpkt(
-                self.pktSB.PLAYER[PKT],
-                [BOOL, ],
-                (True,))
-
-        self.state = LOBBY
 
     def logon_client_into_proxy(self):
         """  When the client first logs in to the wrapper proxy """
@@ -741,22 +653,30 @@ class Client(object):
         self._inittheplayer()  # set up inventory and stuff
         self._add_client()
 
-        # start keep alives
+        # set compression
+        # compression was at the bottom of _login_authenticate_client...
+        if self.clientversion >= PROTOCOL_1_8START:
+            if "network-compression-threshold" in self.proxy.srv_data.properties:  # noqa
+                comp = self.proxy.srv_data.properties[
+                    "network-compression-threshold"]
+                self.packet.sendpkt(
+                    self.pktCB.LOGIN_SET_COMPRESSION[PKT], [VARINT], [comp])
+                self.packet.compressThreshold = comp
 
         # send login success to client
         self.packet.sendpkt(
             self.pktCB.LOGIN_SUCCESS[PKT],
             [STRING, STRING],
             (self.wrapper_uuid.string, self.username))
+        self.state = PLAY
 
+        # start keep alives
         self.time_client_responded = time.time()
-
         t_keepalives = threading.Thread(
             target=self._keep_alive_tracker,
             args=())
         t_keepalives.daemon = True
         t_keepalives.start()
-        # self.permit_disconnect_from_server = False
 
     def connect_to_server(self, ip=None, port=None):
         """
@@ -778,7 +698,7 @@ class Client(object):
         except Exception as e:
             self.disconnect("Proxy client could not connect to the server"
                             " (%s)" % e)
-            return
+            return False
 
         # start server handle() to read the packets
         t = threading.Thread(target=self.server_connection.handle, args=())
@@ -786,13 +706,14 @@ class Client(object):
         t.start()
 
         # switch server_connection to LOGIN to log in to (offline) server.
-        self.server_connection.state = LOGIN
+        # already done at server.connect()
+        # self.server_connection.state = LOGIN
 
         # now we send it a handshake to request the server go to login mode
-        server_addr = "localhost"
+        server_addr = "localhost\x00WPY\x00%s\x00" % self.mojanguuid
         if self.spigot_mode:
             server_addr = "localhost\x00%s\x00%s" % \
-                          (self.client_address[0], self.local_uuid.hex)  # TODO - does this break spigot (using serveruuid versus uuid)?  # noqa
+                          (self.client_address[0], self.local_uuid.hex)
         if self.proxy.forge:
             server_addr = "localhost\x00FML\x00"
 
@@ -808,13 +729,90 @@ class Client(object):
             self.server_connection.pktSB.LOGIN_START[PKT],
             [STRING],
             [self.username])
-
-        # LOBBY code and such to go elsewhere
+        # give it a sec to get to play mode
+        time.sleep(.5)
 
     def close_server_instance(self, term_message):
         """ Close the server connection gracefully if possible. """
         if self.server_connection:
             self.server_connection.close_server(term_message)
+
+    def lobbify(self):
+        """spawn client to different non-overworld dimension and end any
+            raining.  Prepare to collect RAW chunk data."""
+        self.first_chunks = []
+        if self.raining:
+            self.raining = False
+            self.packet.sendpkt(self.pktCB.CHANGE_GAME_STATE[PKT],
+                                self.pktCB.CHANGE_GAME_STATE[PARSER],
+                                (1, 0))
+        if self.dimension in (-1, 0):
+            self.dimension = 1
+        else:
+            self.dimension = -1
+        self.chat_to_client("§5§lHold still.. changing worlds!", 2)
+        # get fresh inventory setup
+        self._inittheplayer()
+        # This sleep gives client time to read the message above
+        time.sleep(1)
+        self.packet.sendpkt(self.pktCB.RESPAWN[PKT],
+                            self.pktCB.RESPAWN[PARSER],
+                            (self.dimension, 0, self.gamemode, "default"))
+
+    def change_servers(self, port=None, ip="127.0.0.1"):
+        self.log.debug("leaving server instance id %s ; Port %s",
+                       id(self.server_connection),
+                       port)
+        self.permit_disconnect_from_server = self.serverport == port
+        self.state = LOBBY
+        self.close_server_instance("Leaving this world...")
+        # This sleep gives server connection time to finish flush and close.
+        time.sleep(.5)
+
+        self.lobbify()
+        despawn_dimension = self.dimension
+        self.log.debug("OLD DIM %s", despawn_dimension)
+
+        # connect to server
+        self.state = PLAY
+        self.local = True
+        self.connect_to_server(ip, port)
+        self.log.debug("connected to server instance id %s ; Port %s",
+                       id(self.server_connection),
+                       port)
+
+        # give server time to send all chunks before respawn
+        time.sleep(.3)
+        new_dimension = self.dimension
+        self.log.debug("NEW DIM %s", new_dimension)
+
+        # re-send chunks
+        for chunks in copy.copy(self.first_chunks):
+            self.packet.sendpkt(self.pktCB.CHUNK_DATA[PKT], [RAW], chunks)
+
+        # spawn to overworld dimension
+        self.packet.sendpkt(self.pktCB.RESPAWN[PKT],
+                            self.pktCB.RESPAWN[PARSER],
+                            (new_dimension, 0, self.gamemode, "default"))
+
+        # send player position & look
+        self.packet.sendpkt(self.pktCB.PLAYER_POSLOOK[PKT],
+                            self.pktCB.PLAYER_POSLOOK[PARSER],
+                            (self.position[0],
+                             self.position[1] + 1,
+                             self.position[2],
+                             self.head[0], self.head[1], 0, 123))
+
+        # re-set inventory in client GUI
+        for items in self.inventory:
+            self.packet.sendpkt(self.pktCB.SET_SLOT[PKT],
+                                self.pktCB.SET_SLOT[PARSER],
+                                (0, items, self.inventory[items]))
+
+        if self.serverport != port:
+            self.local = False
+        else:
+            self.local = True
 
     # noinspection PyBroadException
     def disconnect(self, message):
@@ -880,7 +878,7 @@ class Client(object):
         # there are 46 items 0-45 in 1.9 (shield) versus
         #  45 (0-44) in 1.8 and below.
         for i in self.proxy.inv_slots:
-            self.inventory[i] = None
+            self.inventory[i] = {"id": -1}
         self.time_last_ping_to_client = time.time()
         self.time_client_responded = time.time()
 
@@ -987,6 +985,8 @@ class Client(object):
                                    "lack of keepalive response", self.username)
                     return
         self.log.debug("%s Client keepalive tracker aborted", self.username)
+        self.disconnect("Client disconnected.")
+        self.state = HANDSHAKE
 
     def _login_authenticate_client(self,
                                    server_id):
@@ -1008,7 +1008,8 @@ class Client(object):
                 #     ]
                 # }
                 requestdata = r.json()
-                self.wrapper_uuid = MCUUID(requestdata["id"])
+                playerid = requestdata["id"]
+                self.wrapper_uuid = MCUUID(playerid)
 
                 if requestdata["name"] != self.username:
                     self.disconnect("Client's username did not"
@@ -1033,20 +1034,23 @@ class Client(object):
             if mojang_name:
                 if mojang_name != self.username:
                     if self.names_change:
-                        self.use_newname(self.username, mojang_name)
+                        self.username, self.local_uuid = self.proxy.use_newname(
+                            self.username, mojang_name, self.wrapper_uuid.string
+                        )
+                        self.info["username"] = self.username
                     else:
                         self.log.info("%s's client performed LOGON in with "
                                       "new name, falling back to %s",
                                       self.username, mojang_name)
 
             self.local_uuid = self.proxy.uuids.getuuidfromname(self.username)
-            # print("_login_authenticate_client set self.local_uuid
-            # to %s" % self.proxy.uuids.getuuidfromname(self.username))
 
-            # verified info we can store:
+            # verified info we can now store:
             self.info["ip"] = self.ip
             self.mojanguuid = self.wrapper_uuid
-            self.info["uuid"] = self.mojanguuid.string
+            self.info["wrapperuuid"] = self.mojanguuid.string
+            self.info["realuuid"] = self.mojanguuid.string
+            self.info["serveruuid"] = self.local_uuid.string
             self.info["username"] = self.username
             self.info["client-is-wrapper"] = False
 
@@ -1057,18 +1061,13 @@ class Client(object):
             # I'll take your word for it, bub...  You are:
             self.local_uuid = self.proxy.uuids.getuuidfromname(self.username)
             self.wrapper_uuid = self.local_uuid
+            self.info["wrapperuuid"] = self.wrapper_uuid.string
+            self.info["serveruuid"] = self.wrapper_uuid.string
+            self.info["username"] = self.username
             self.log.debug("Client logon with wrapper offline-"
                            " 'self.wrapper_uuid = OfflinePlayer:<name>'")
 
-        # no idea what is special about version 26
-        if self.clientversion > 26:
-            if "network-compression-threshold" in self.proxy.srv_data.properties:  # noqa
-                comp = self.proxy.srv_data.properties[
-                    "network-compression-threshold"]
-                # print("client is setting compression to %s" % comp)
-                self.packet.sendpkt(
-                    self.pktCB.LOGIN_SET_COMPRESSION[PKT], [VARINT], [comp])
-                self.packet.compressThreshold = comp
+        self.wait_wait_for_auth = False
 
     def use_newname(self, oldname, newname):
         old_local_uuid = self.proxy.uuids.getuuidfromname(oldname)
@@ -1077,7 +1076,7 @@ class Client(object):
             self.servervitals.serverpath, self.servervitals.worldname)
         self.proxy.uuids.convert_files(old_local_uuid, new_local_uuid, cwd)
         self.proxy.uuids.usercache[
-            self.wrapper_uuid.string]["localname"] = self.wrapper_uuid.string
+            self.wrapper_uuid.string]["localname"] = newname
         self.proxy.uuids.usercache_obj.save()
         self.username = newname
 

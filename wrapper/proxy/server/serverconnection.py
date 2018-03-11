@@ -120,7 +120,7 @@ class ServerConnection(object):
         while not self.abort:
             # get packet
             try:
-                pkid, original, orig_packet = self.packet.grabpacket()  # noqa
+                pkid, orig_packet = self.packet.grabpacket()  # noqa
 
             # possible connection losses:
             except EOFError:
@@ -220,7 +220,7 @@ class ServerConnection(object):
         if channel == "WRAPPER.PY|PONG":
             # then we now know this wrapper is a child wrapper since
             # minecraft clients will not ping us
-            self.proxy.info_mine["client-is-wrapper"] = True
+            self.client.info["client-is-wrapper"] = True
             self.plugin_response()
 
         # do not pass Wrapper.py registered plugin messages
@@ -241,7 +241,7 @@ class ServerConnection(object):
     def _parse_login_encr_request(self):
         self.close_server("Server is in online mode. Please turn it off "
                           "in server.properties and allow Proxy to "
-                          "handle the authetication.")
+                          "handle the authentication.")
         return False
 
     # Login Success - UUID & Username are sent in this packet as strings
@@ -252,7 +252,6 @@ class ServerConnection(object):
         # noinspection PyUnusedLocal
         data = self.packet.readpkt([STRING, STRING])
         self.client.local_uuid = MCUUID(data[0])
-        # print("UUID: %s" % self.client.local_uuid)
         return False
 
     def _parse_login_set_compression(self):
@@ -320,7 +319,9 @@ class ServerConnection(object):
                 self.pktCB.DISCONNECT[PKT]:
                     self.parse_cb.parse_play_disconnect,
                 self.pktCB.PLUGIN_MESSAGE[PKT]:
-                    self._parse_plugin_message
+                    self._parse_plugin_message,
+                self.pktCB.CHUNK_DATA[PKT]:
+                    self.parse_cb.parse_play_chunk_data,
                 }
         }
 
