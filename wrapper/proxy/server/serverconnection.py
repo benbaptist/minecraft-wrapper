@@ -235,7 +235,10 @@ class ServerConnection(object):
     def _parse_login_disconnect(self):
         message = self.packet.readpkt([STRING])[0]
         self.log.info("Disconnected from server: %s", message)
-        self.close_server(message)
+        # if the server sends this, I think you are already disconnected..?
+        # self.close_server(message)
+        print(self.client.local)
+        print()
         self.client.notify_disconnect(message)
         return False
 

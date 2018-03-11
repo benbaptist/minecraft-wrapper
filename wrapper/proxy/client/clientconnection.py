@@ -170,7 +170,7 @@ class Client(object):
             self.disconnect(message)
         else:
             if not self.local:
-                self.change_servers(self.serverport)
+                self.change_servers("127.0.0.1", self.serverport)
 
     def handle(self):
         """ Main client connection loop """
@@ -611,7 +611,7 @@ class Client(object):
                 uuids = {
                     "uuiduuid-uuid-uuid-uuid-uuiduuiduuid": "playername",
                 }
-                putjsonfile(uuids, "bypass-player-limit", "wrapper-data")
+                putjsonfile(uuids, "bypass-maxplayers", "wrapper-data/json")
                 self.notify_disconnect("I'm sorry, the server is full!")
                 return False
 
@@ -913,20 +913,31 @@ class Client(object):
             self.log.debug("Sent PLAY state DISCONNECT packet to %s",
                            self.username)
         else:
-            self.packet.sendpkt(
-                self.pktCB.LOGIN_DISCONNECT[PKT],
-                [JSON],
-                [message])
-            self.packet.sendpkt(
-                self.pktCB.DISCONNECT[PKT],
-                [JSON],
-                [jsondict])
+            # self.packet.sendpkt(
+            #    self.pktCB.LOGIN_DISCONNECT[PKT],
+            #    [JSON],
+            #    [message])
+            # self.packet.sendpkt(
+            #    self.pktCB.DISCONNECT[PKT],
+            #    [JSON],
+            #    [jsondict])
 
             if self.username != "PING REQUEST":
                 self.log.debug(
-                    "State was 'other': sent LOGIN_DISCONNECT(s) to %s",
+                    "State was 'other': sent chat reason to %s",
                     self.username)
+                self.chat_to_client(jsondict)
+                time.sleep(5)
+                self.packet.sendpkt(
+                    self.pktCB.LOGIN_DISCONNECT[PKT],
+                    [JSON],
+                    [message])
                 self._remove_client_and_player()
+            else:
+                self.packet.sendpkt(
+                        self.pktCB.LOGIN_DISCONNECT[PKT],
+                        [JSON],
+                        [message])
 
         time.sleep(1)
         self.state = HANDSHAKE
