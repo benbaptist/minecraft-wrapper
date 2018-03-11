@@ -1,11 +1,15 @@
 Build 16 [1.0b16]
+- Subworld maxplayers needs work.  The subworld disconnects excess players, but
+
+
+Build 16 [1.0b16]
 - Make player respawn to hub if destination connection fails.
 
 
 Build 15 [1.0b15]
 - Lots of little bug fixes and cleanup.
 - Changed API for player connect back to connect(ip, port) (ordered arguments change)
-- Updated the plugin for new API.
+- Updated the plugins for new API.
 - Implemented "max-players" into proxy (a separate thing from the server's max players).
 
 

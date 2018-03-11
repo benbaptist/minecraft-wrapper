@@ -7,6 +7,8 @@
 
 import threading
 
+from api.player import Player
+
 
 class Events(object):
 
@@ -72,7 +74,14 @@ class Events(object):
 
         # create reference player object for payload, if needed.
         if payload and ("playername" in payload) and ("player" not in payload):
-            payload["player"] = self.wrapper.javaserver.getplayer(
+
+            for client in self.wrapper.servervitals.clients:
+                if client.username == payload["playername"]:
+                    if client.username not in self.wrapper.servervitals.players:
+                        self.wrapper.servervitals.players[
+                            client.username] = Player(client.username,
+                                                      self.wrapper)
+            payload["player"] = self.wrapper.api.minecraft.getPlayer(
                 payload["playername"])
 
         # listeners is normally empty.

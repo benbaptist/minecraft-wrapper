@@ -537,9 +537,9 @@ class Client(object):
             continue
 
         # log the client on
-        if self.logon_client_into_proxy():
-            # connect to server
-            self.connect_to_server()
+        self.logon_client_into_proxy()
+        # connect to server
+        self.connect_to_server()
 
     def _parse_login_encr_response(self):
         # the client is RESPONDING to our request for
@@ -712,9 +712,9 @@ class Client(object):
         try:
             self.server_connection.connect()
         except Exception as e:
-            self.disconnect("Proxy client could not connect to the server"
-                            " (%s)" % e)
-            return False
+            mess = "Proxy client could not connect to the server (%s)" % e
+            self.notify_disconnect(mess)
+            return False, mess
 
         # start server handle() to read the packets
         t = threading.Thread(target=self.server_connection.handle, args=())
@@ -756,7 +756,7 @@ class Client(object):
             [self.username])
         # give it a sec to get to play mode
         time.sleep(.5)
-        return True
+        return True, "Success"
 
     def close_server_instance(self, term_message):
         """ Close the server connection gracefully if possible. """
@@ -784,6 +784,7 @@ class Client(object):
         self.packet.sendpkt(self.pktCB.RESPAWN[PKT],
                             self.pktCB.RESPAWN[PARSER],
                             (self.dimension, 0, self.gamemode, "default"))
+        print("LOBBIFY LEFT DIM:", self.dimension)
 
     def change_servers(self, ip="127.0.0.1", port=25600):
         self.log.debug("leaving server instance id %s ; Port %s",
@@ -804,24 +805,29 @@ class Client(object):
 
         # connect to server
         self.state = PLAY
-        self.state = PLAY
         self.local = True
         self.permit_disconnect_from_server = False
-        server = self.connect_to_server(ip, port)
+        server_try = self.connect_to_server(ip, port)
+        time.sleep(.1)
         confirmation = "§6Connected to new world (%s)!" % port
-        if not server:
-            self.log.debug("connection to port %s failed", port)
+        if not server_try[0]:
+            self.log.debug(
+                "connection to port %s failed: %s", port, server_try[1]
+            )
             confirmation = "§5§lCould not connect to that world (%s)!" % port
             port = self.proxy.srv_data.server_port
             ip = "localhost"
             self.permit_disconnect_from_server = False
             self.first_chunks = oldchunks
             self.inventory = oldinv
+            self.state = LOBBY
             self.close_server_instance("Unsuccessful connection...")
-            time.sleep(.5)
+            time.sleep(.4)
+            self.state = PLAY
+            time.sleep(.1)
             server = self.connect_to_server(ip, port)
             time.sleep(.5)
-            if not server:
+            if not server[0]:
                 self.disconnect(
                     "Could not return to HUB from failed subworld! %s|%s" % (
                         ip, port
