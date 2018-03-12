@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2016, 2017 - BenBaptist and Wrapper.py developer(s).
+# Copyright (C) 2016 - 2018 - BenBaptist and Wrapper.py developer(s).
 # https://github.com/benbaptist/minecraft-wrapper
 # This program is distributed under the terms of the GNU
 # General Public License, version 3 or later.
 
 import threading
+
+from api.player import Player
 
 
 class Events(object):
@@ -72,6 +74,13 @@ class Events(object):
 
         # create reference player object for payload, if needed.
         if payload and ("playername" in payload) and ("player" not in payload):
+
+            for client in self.wrapper.servervitals.clients:
+                if client.username == payload["playername"]:
+                    if client.username not in self.wrapper.servervitals.players:
+                        self.wrapper.servervitals.players[
+                            client.username] = Player(client.username,
+                                                      self.wrapper)
             payload["player"] = self.wrapper.api.minecraft.getPlayer(
                 payload["playername"])
 

@@ -29,6 +29,12 @@ try:
 except ImportError:
     encryption = False
 
+# for reading skins out of our Wrapper.py:
+try:
+    import pkg_resources
+except ImportError:
+    pkg_resources = False
+
 try:
     from proxy.client.clientconnection import Client
     from proxy.packets.packet import Packet
@@ -79,17 +85,14 @@ class ProxyConfig(object):
             "proxy-bind": "0.0.0.0",
             "proxy-enabled": True,
             "proxy-port": 25570,
-            "proxy-sub-world": False,
             "silent-ipban": True,
-            "spigot-mode": False
         }
         self.entity = {
             "enable-entity-controls": False,
             "entity-update-frequency": 4,
-            "thin-Chicken": 30,
-            "thin-Cow": 40,
-            "thin-Sheep": 40,
+            "thin-chicken": 30,
             "thin-cow": 40,
+            "thin-sheep": 40,
             "thin-zombie_pigman": 200,
             "thinning-activation-threshhold": 100,
             "thinning-frequency": 30
@@ -102,7 +105,6 @@ class ServerVitals(object):
         self.serverpath = ""
         self.state = 0
         self.server_port = "25564"
-        self.onlineMode = True
         self.command_prefix = "/"
         self.players = playerobjects
         self.entity_control = None
@@ -139,6 +141,13 @@ class Proxy(object):
             self.log.error("You must have the package 'cryptography' "
                            "installed to run the Proxy!")
             raise ImportError()
+        if not pkg_resources:
+            self.log.error("You must have the package `pkg_resources` "
+                           "installed to run the Proxy!  It is usually "
+                           "distributed with setuptools. Check https://stackov"
+                           "erflow.com/questions/7446187/no-module-named-pkg-r"
+                           "esources for possible solutions")
+            raise ImportError()
 
         self.usercache = usercache_object.Data
         self.usercache_obj = usercache_object
@@ -155,6 +164,7 @@ class Proxy(object):
         self.proxy_bind = self.config["proxy-bind"]
         self.proxy_port = self.config["proxy-port"]
         self.silent_ip_banning = self.config["silent-ipban"]
+        self.srv_data.maxPlayers = self.config["max-players"]
 
         # proxy internal workings
         #
@@ -616,6 +626,7 @@ class Proxy(object):
         return False  # banlist empty or record not found
 
     def getskintexture(self, uuid):
+        import pprint
         """
         Args:
             uuid: uuid (accept MCUUID or string)
@@ -625,6 +636,8 @@ class Proxy(object):
         if "MCUUID" in str(type(uuid)):
             uuid = uuid.string
 
+        pprint.pprint(self.skins)
+        pprint.pprint(self.skinTextures)
         if uuid not in self.skins:
             return False
 
@@ -636,6 +649,10 @@ class Proxy(object):
 
         # Player has no skin, so set to Alex [fix from #160]
         if "SKIN" not in skinblob["textures"]:
+            skin = pkg_resources.resource_stream(
+                __name__, "./utils/skin.png"
+            ).read()
+            pprint.pprint(skin)
             skinblob["textures"]["SKIN"] = {
                 "url": "http://hydra-media.cursecdn.com/mine"
                        "craft.gamepedia.com/f/f2/Alex_skin.png"

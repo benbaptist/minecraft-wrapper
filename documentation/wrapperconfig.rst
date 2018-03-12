@@ -27,7 +27,9 @@ CONFIG = {
                 [
                     "server.properties",
 
-                    "world"
+                    "world",
+
+                    "wrapper-data",
 
                 ],
 
@@ -89,7 +91,7 @@ CONFIG = {
 
             "password-plaintext": False,
 
-            "password": "use `/password -s Alerts password <your password>` to set this (or enter a password-plaintext)."
+            "password": "use `/password -s Alerts password <your password>` to set this (or enter a password-plaintext).",
 
 
 # Gameplay - miscellaneous configuration items.
@@ -179,13 +181,13 @@ CONFIG = {
 
             "halt-message": "Halting Wrapper...",
 
-         # Speficy if wrapper should trap control-z and shutdown in a controlled manner (similar to ctrl-c).  If false, follows the behavior permitted by your system (and that might not end well!)  - Discussion: https://github.com/benbaptist/minecraft-wrapper/issues/521
+         # Specify if wrapper should trap control-z and shutdown in a controlled manner (similar to ctrl-c).  If false, follows the behavior permitted by your system (and that might not end well!)  - Discussion: https://github.com/benbaptist/minecraft-wrapper/issues/521
 
             "trap-ctrl-z": True,
 
          # Use-betterconsole replaces "use-readline" for clarity about what this option does.  The default is False because use-betterconsole may not be fully cross-platform.  Better Console makes it easier for the console operator too see what they are typing, even while the server or wrapper my be writing output at the same time, essentially produces jline-like functionality to the wrapper console...
 
-            "use-betterconsole": False
+            "use-betterconsole": False,
 
 
 # General wrapper and server startup options
@@ -207,6 +209,7 @@ CONFIG = {
          # Using the default '.' roots the server in the same folder with wrapper. Change this to another folder to keep the wrapper and server folders separate.  Do not use a trailing slash...  e.g. - '/full/pathto/the/server'
 
             "server-directory": ".",
+
 
             "shell-scripts": False,
 
@@ -279,7 +282,7 @@ CONFIG = {
 
     "Proxy":
 
-         # This actually does nothing in the code. TODO - re-implement this somewhere? perhaps in the server JSON response?
+         # The number of players the proxy will hold.  This includes connected players from all hub worlds
 
             "max-players": 1024,
 
@@ -295,17 +298,9 @@ CONFIG = {
 
             "proxy-enabled": False,
 
-         # if wrapper is a sub world (wrapper needs to do extra work to spawn the player).
-
-            "proxy-sub-world": False,
-
          # the wrapper's proxy port that accepts client connections from the internet. This port is exposed to the internet via your port forwards.
 
             "proxy-port": 25565,
-
-         # spigot mode has some slightly "off" bytes in the login sequence.
-
-            "spigot-mode": False,
 
          # silent bans cause your server to ignore sockets from that IP (for IP bans). This will cause your server to appear offline and avoid possible confrontations.
 
@@ -321,8 +316,7 @@ CONFIG = {
 
                     "BenBaptist"
 
-                ]
-
+                ],
 # Web - Web mode allows you to control and monitor the server.  This is not a https connection.  Be mindful of that and don't use the same password you use anywhere else.  It is also advised that this be open only to the localhost.
 
     "Web":
@@ -348,6 +342,5 @@ CONFIG = {
             "safe-ips-use": True,
 
             "server-name": "Minecraft Server",
-
 
 # 

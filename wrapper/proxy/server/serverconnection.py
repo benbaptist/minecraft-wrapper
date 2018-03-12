@@ -164,13 +164,14 @@ class ServerConnection(object):
             self.server_socket.shutdown(2)
             self.log.debug("Sucessfully closed server socket for"
                            " %s", self.client.username)
+            # allow packet instance to be Garbage Collected
+            self.packet = None
+            return True
         except:
             self.log.debug("Server socket for %s already "
                            "closed", self.infos_debug)
-            pass
-
-        # allow packet instance to be Garbage Collected
-        self.packet = None
+            self.packet = None
+            return False
 
     # PARSERS SECTION
     # -----------------------------
@@ -234,6 +235,7 @@ class ServerConnection(object):
     def _parse_login_disconnect(self):
         message = self.packet.readpkt([STRING])[0]
         self.log.info("Disconnected from server: %s", message)
+        # if the server sends this, I think you are already disconnected..?
         self.close_server(message)
         self.client.notify_disconnect(message)
         return False

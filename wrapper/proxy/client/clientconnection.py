@@ -25,7 +25,7 @@ from proxy.packets import mcpackets_cb
 from proxy.utils.constants import *
 
 from proxy.utils.mcuuid import MCUUID
-from api.helpers import processcolorcodes
+from api.helpers import processcolorcodes, getjsonfile, putjsonfile
 
 
 # noinspection PyMethodMayBeStatic
@@ -56,7 +56,7 @@ class Client(object):
         self.ipbanned = banned
 
         # constants from config:
-        self.spigot_mode = self.proxy.config["spigot-mode"]
+        # self.spigot_mode = self.proxy.config["spigot-mode"]
         self.hidden_ops = self.proxy.config["hidden-ops"]
         self.silent_bans = self.proxy.config["silent-ipban"]
         self.names_change = self.proxy.config["auto-name-changes"]
@@ -170,7 +170,7 @@ class Client(object):
             self.disconnect(message)
         else:
             if not self.local:
-                self.change_servers(self.serverport)
+                self.change_servers("127.0.0.1", self.serverport)
 
     def handle(self):
         """ Main client connection loop """
@@ -319,7 +319,7 @@ class Client(object):
     def _plugin_response(self, response):
         if "ip" in response:
             self.info["username"] = response["username"]
-            self.info["realuuid"] = response["realuuid"]
+            self.info["realuuid"] = MCUUID(response["realuuid"]).string
             self.info["ip"] = response["ip"]
 
             self.ip = response["ip"]
@@ -388,7 +388,6 @@ class Client(object):
         self.packet.send_raw(0xff+0x00+0x00+0x00)
 
     def _parse_handshaking(self):
-        # self.log.debug("HANDSHAKE")
         # "version|address|port|state"
         data = self.packet.readpkt([VARINT, STRING, USHORT, VARINT])
 
@@ -409,9 +408,12 @@ class Client(object):
 
             splitaddress = self.serveraddressplayerused.split("\x00")
             if len(splitaddress) > 2 and self.onlinemode is False:
-                self.info["client-is-wrapper"] = True
-                self.info["realuuid"] = splitaddress[2]
+                # Spigot and Wrapper share this in common:
                 self.mojanguuid = MCUUID(splitaddress[2])
+                self.info["realuuid"] = self.mojanguuid.string
+                self.ip = splitaddress[1]
+                if len(splitaddress) > 3 and splitaddress[3] == "WPY":
+                    self.info["client-is-wrapper"] = True
 
             if self.servervitals.protocolVersion == -1:
                 #  ... returns -1 to signal no server
@@ -446,15 +448,12 @@ class Client(object):
         return False
 
     def _parse_status_ping(self):
-        # self.log.debug("SB -> STATUS PING")
         data = self.packet.readpkt([LONG])
         self.packet.sendpkt(self.pktCB.PING_PONG[PKT], [LONG], [data[0]])
-        # self.log.debug("CB (W)-> STATUS PING")
         self.state = HANDSHAKE
         return False
 
     def _parse_status_request(self):
-        # self.log.debug("SB -> STATUS REQUEST")
         sample = []
         for player in self.servervitals.players:
             playerobj = self.servervitals.players[player]
@@ -472,7 +471,7 @@ class Client(object):
         self.MOTD = {
             "description": motdtext,
             "players": {
-                "max": int(self.servervitals.maxPlayers),
+                "max": int(self.proxy.config["max-players"]),
                 "online": len(self.servervitals.players),
                 "sample": sample
             },
@@ -495,13 +494,11 @@ class Client(object):
             [STRING],
             [json.dumps(self.MOTD)])
 
-        # self.log.debug("CB (W)-> JSON RESPONSE")
         # after this, proxy waits for the expected PING to
         #  go back to Handshake mode
         return False
 
     def _parse_login_start(self):
-        # self.log.debug("SB -> LOGIN START")
         data = self.packet.readpkt([STRING, NULL])
         self.username = data[0]
         t = threading.Thread(target=self._continue_login_start,
@@ -516,7 +513,6 @@ class Client(object):
                 self.pktCB.LOGIN_ENCR_REQUEST[PARSER],
                 (self.serverID, self.public_key, self.verifyToken)
             )
-            # self.log.debug("CB (W)-> LOGIN ENCR REQUEST")
 
             # Server UUID (or other offline wrapper) is always offline
             self.local_uuid = self.proxy.uuids.getuuidfromname(self.username)
@@ -541,16 +537,15 @@ class Client(object):
             continue
 
         # log the client on
-        self.logon_client_into_proxy()
-        # connect to server
-        self.connect_to_server()
+        if self.logon_client_into_proxy():
+            # connect to server
+            self.connect_to_server()
 
     def _parse_login_encr_response(self):
         # the client is RESPONDING to our request for
         #  encryption (if we sent one above)
 
         # read response Tokens - "shared_secret|verify_token"
-        # self.log.debug("SB -> LOGIN ENCR RESPONSE")
         if self.servervitals.protocolVersion < 6:
             data = self.packet.readpkt([BYTEARRAY_SHORT, BYTEARRAY_SHORT])
         else:
@@ -596,6 +591,29 @@ class Client(object):
 
     def logon_client_into_proxy(self):
         """  When the client first logs in to the wrapper proxy """
+
+        # add client (or disconnect if full
+        if len(self.proxy.srv_data.clients) < self.proxy.config["max-players"]:
+            self._add_client()
+        else:
+            uuids = getjsonfile(
+                "bypass-maxplayers",
+                "wrapper-data/json",
+                self.proxy.encoding
+            )
+            if uuids:
+                if self.mojanguuid.string in uuids:
+                    self._add_client()
+                else:
+                    self.notify_disconnect("I'm sorry, the server is full!")
+                    return False
+            else:
+                uuids = {
+                    "uuiduuid-uuid-uuid-uuid-uuiduuiduuid": "playername",
+                }
+                putjsonfile(uuids, "bypass-maxplayers", "wrapper-data/json")
+                self.notify_disconnect("I'm sorry, the server is full!")
+                return False
 
         # check for uuid ban
         if self.proxy.isuuidbanned(self.wrapper_uuid.string):
@@ -651,7 +669,6 @@ class Client(object):
                       self.username, self.wrapper_uuid.string,
                       self.ip, self.onlinemode)
         self._inittheplayer()  # set up inventory and stuff
-        self._add_client()
 
         # set compression
         # compression was at the bottom of _login_authenticate_client...
@@ -677,6 +694,7 @@ class Client(object):
             args=())
         t_keepalives.daemon = True
         t_keepalives.start()
+        return True
 
     def connect_to_server(self, ip=None, port=None):
         """
@@ -696,9 +714,9 @@ class Client(object):
         try:
             self.server_connection.connect()
         except Exception as e:
-            self.disconnect("Proxy client could not connect to the server"
-                            " (%s)" % e)
-            return False
+            mess = "Proxy client could not connect to the server (%s)" % e
+            self.notify_disconnect(mess)
+            return False, mess
 
         # start server handle() to read the packets
         t = threading.Thread(target=self.server_connection.handle, args=())
@@ -710,12 +728,21 @@ class Client(object):
         # self.server_connection.state = LOGIN
 
         # now we send it a handshake to request the server go to login mode
-        server_addr = "localhost\x00WPY\x00%s\x00" % self.mojanguuid
-        if self.spigot_mode:
-            server_addr = "localhost\x00%s\x00%s" % \
-                          (self.client_address[0], self.local_uuid.hex)
+        # This format is compatible with wrapper, spitgot and vanilla:
+        server_addr = "localhost\x00%s\x00%s\x00WPY\x00" % (
+            self.client_address[0],
+            self.mojanguuid.hex,
+        )
+        # if self.spigot_mode:
+        #    server_addr = "localhost\x00%s\x00%s" % (
+        #        self.client_address[0],
+        #        # pretty sure spigot is doing this for the same reason we are.
+        #        self.mojanguuid.hex
+        #    )
         if self.proxy.forge:
-            server_addr = "localhost\x00FML\x00"
+            server_addr = "localhost\x00FML\x00%s\x00WPY\x00" % (
+                self.mojanguuid.hex
+            )
 
         self.server_connection.packet.sendpkt(
             self.server_connection.pktSB.HANDSHAKE[PKT],
@@ -731,6 +758,7 @@ class Client(object):
             [self.username])
         # give it a sec to get to play mode
         time.sleep(.5)
+        return True, "Success"
 
     def close_server_instance(self, term_message):
         """ Close the server connection gracefully if possible. """
@@ -758,8 +786,9 @@ class Client(object):
         self.packet.sendpkt(self.pktCB.RESPAWN[PKT],
                             self.pktCB.RESPAWN[PARSER],
                             (self.dimension, 0, self.gamemode, "default"))
+        self.log.debug("LOBBIFY LEFT DIM: %s", self.dimension)
 
-    def change_servers(self, port=None, ip="127.0.0.1"):
+    def change_servers(self, ip="127.0.0.1", port=25600):
         self.log.debug("leaving server instance id %s ; Port %s",
                        id(self.server_connection),
                        port)
@@ -769,6 +798,9 @@ class Client(object):
         # This sleep gives server connection time to finish flush and close.
         time.sleep(.5)
 
+        # save these in case server can't be reached
+        oldchunks = self.first_chunks
+        oldinv = self.inventory
         self.lobbify()
         despawn_dimension = self.dimension
         self.log.debug("OLD DIM %s", despawn_dimension)
@@ -776,15 +808,47 @@ class Client(object):
         # connect to server
         self.state = PLAY
         self.local = True
-        self.connect_to_server(ip, port)
-        self.log.debug("connected to server instance id %s ; Port %s",
-                       id(self.server_connection),
-                       port)
+        self.permit_disconnect_from_server = False
+        server_try = self.connect_to_server(ip, port)
+        time.sleep(.1)
+        confirmation = "§6Connected to new world (%s)!" % port
+        if not server_try[0]:
+            self.log.debug(
+                "connection to port %s failed: %s", port, server_try[1]
+            )
+            confirmation = "§5§lCould not connect to that world (%s)!" % port
+            port = self.proxy.srv_data.server_port
+            ip = "localhost"
+            self.permit_disconnect_from_server = False
+            self.first_chunks = oldchunks
+            self.inventory = oldinv
+            self.state = LOBBY
+            self.close_server_instance("Unsuccessful connection...")
+            time.sleep(.4)
+            self.state = PLAY
+            time.sleep(.1)
+            server = self.connect_to_server(ip, port)
+            time.sleep(.5)
+            if not server[0]:
+                self.disconnect(
+                    "Could not return to HUB from failed subworld! %s|%s" % (
+                        ip, port
+                    )
+                )
+            self.permit_disconnect_from_server = True
+        else:
+            self.log.debug("connected to server instance id %s ; Port %s",
+                           id(self.server_connection),
+                           port)
 
         # give server time to send all chunks before respawn
         time.sleep(.3)
         new_dimension = self.dimension
         self.log.debug("NEW DIM %s", new_dimension)
+        if new_dimension == despawn_dimension:
+            confirmation = "§cCould not connect properly (%s)!  Wait and \n" \
+                           "§csee if you re-spawn or type: `/hub` to \n" \
+                           "§cre-spawn in the hub world" % port
 
         # re-send chunks
         for chunks in copy.copy(self.first_chunks):
@@ -811,8 +875,11 @@ class Client(object):
 
         if self.serverport != port:
             self.local = False
+            self.permit_disconnect_from_server = False
         else:
             self.local = True
+            self.permit_disconnect_from_server = True
+        self.chat_to_client(confirmation)
 
     # noinspection PyBroadException
     def disconnect(self, message):
@@ -850,15 +917,31 @@ class Client(object):
             self.log.debug("Sent PLAY state DISCONNECT packet to %s",
                            self.username)
         else:
-            self.packet.sendpkt(
-                self.pktCB.LOGIN_DISCONNECT[PKT],
-                [JSON],
-                [message])
+            # self.packet.sendpkt(
+            #    self.pktCB.LOGIN_DISCONNECT[PKT],
+            #    [JSON],
+            #    [message])
+            # self.packet.sendpkt(
+            #    self.pktCB.DISCONNECT[PKT],
+            #    [JSON],
+            #    [jsondict])
 
             if self.username != "PING REQUEST":
                 self.log.debug(
-                    "State was 'other': sent LOGIN_DISCONNECT to %s",
+                    "State was 'other': sent chat reason to %s",
                     self.username)
+                self.chat_to_client(jsondict)
+                time.sleep(5)
+                self.packet.sendpkt(
+                    self.pktCB.LOGIN_DISCONNECT[PKT],
+                    [JSON],
+                    [message])
+                self._remove_client_and_player()
+            else:
+                self.packet.sendpkt(
+                        self.pktCB.LOGIN_DISCONNECT[PKT],
+                        [JSON],
+                        [message])
 
         time.sleep(1)
         self.state = HANDSHAKE
@@ -889,16 +972,6 @@ class Client(object):
         self.pktSB = mcpackets_sb.Packets(self.clientversion)
         self.pktCB = mcpackets_cb.Packets(self.clientversion)
         self._define_parsers()
-
-    # api related
-    # -----------------------------
-    def getplayerobject(self):
-        if self.username in self.servervitals.players:
-            return self.servervitals.players[self.username]
-        self.log.error("In playerlist:\n%s\nI could not locate player: %s\n"
-                       "This resulted in setting the player object to FALSE!",
-                       self.servervitals.players, self.username)
-        return False
 
     def editsign(self, position, line1, line2, line3, line4, pre18=False):
         if pre18:
@@ -988,8 +1061,7 @@ class Client(object):
         self.disconnect("Client disconnected.")
         self.state = HANDSHAKE
 
-    def _login_authenticate_client(self,
-                                   server_id):
+    def _login_authenticate_client(self, server_id):
         # future TODO have option to be online but bypass session server.
         if self.onlinemode:
             r = requests.get("https://sessionserver.mojang.com"
@@ -1069,22 +1141,20 @@ class Client(object):
 
         self.wait_wait_for_auth = False
 
-    def use_newname(self, oldname, newname):
-        old_local_uuid = self.proxy.uuids.getuuidfromname(oldname)
-        new_local_uuid = self.proxy.uuids.getuuidfromname(newname)
-        cwd = "%s/%s" % (
-            self.servervitals.serverpath, self.servervitals.worldname)
-        self.proxy.uuids.convert_files(old_local_uuid, new_local_uuid, cwd)
-        self.proxy.uuids.usercache[
-            self.wrapper_uuid.string]["localname"] = newname
-        self.proxy.uuids.usercache_obj.save()
-        self.username = newname
-
     def _add_client(self):
-        # Put XXXplayer_object_andXXX client into server data. (player login
+        # Put client into server data. (player login
         #  will be called later by mcserver.py)
         if self not in self.proxy.srv_data.clients:
             self.proxy.srv_data.clients.append(self)
+
+    def _remove_client_and_player(self):
+        """ This is needed when the player is logged into wrapper, but not
+        onto the local server (which normally keeps tabs on player
+        and client objects)."""
+        if self.username in self.proxy.srv_data.players:
+            if self.proxy.srv_data.players[self.username].client.state != LOBBY:
+                self.proxy.srv_data.players[self.username].abort = True
+                del self.proxy.srv_data.players[self.username]
 
     def _send_client_settings(self):
         if self.clientSettings and not self.clientSettingsSent:

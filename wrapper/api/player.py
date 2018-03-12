@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2016, 2017 - BenBaptist and Wrapper.py developer(s).
+# Copyright (C) 2016 - 2018 - BenBaptist and Wrapper.py developer(s).
 # https://github.com/benbaptist/minecraft-wrapper
 # This program is distributed under the terms of the GNU
 # General Public License, version 3 or later.
 
 import time
 import threading
+import pprint
 
 from proxy.packets.mcpackets_cb import Packets as Packets_cb
 from proxy.packets.mcpackets_sb import Packets as Packets_sb
@@ -70,7 +71,8 @@ class Player(object):
     The player object has a self.__str___ representation that returns the
     player.username.  Therefore, plugins do not need to attempt string
     conversion or do explicit references to player.username in their code
-    (str(player) or player.username in plugin code).
+    (str(player) or player.username in plugin code). There is also an
+    additional property for getting the username: `name`
 
     When using events, events in the "proxy" (Group 'Proxy') section are only
     available in proxy mode.  "server" events (Group 'core/mcserver.py')
@@ -152,7 +154,7 @@ class Player(object):
         self.wrapper_signal = self.wrapper.halt
 
         self.mojangUuid = False
-        self.clientUuid = self.mojangUuid
+        self.clientUuid = False
         # These two are offline by default.
         self.offlineUuid = self.wrapper.uuids.getuuidfromname(self.username)
         self.serverUuid = self.offlineUuid
@@ -195,8 +197,14 @@ class Player(object):
                     gotclient = True
                     break
             if not gotclient:
+                pprint.pprint(self.wrapper.servervitals.clients)
+                self.log.error("UUIDS: Client-%s\nserver-%s\nMojang-%s\n",
+                               self.clientUuid,
+                               self.serverUuid,
+                               self.mojangUuid
+                               )
                 self.log.error("Proxy is on, but this client is not "
-                               "listed in wrapper.proxy.clients!")
+                               "listed in proxy.clients!")
                 self.log.error("The usual cause of this would be that"
                                " someone is connecting directly to"
                                " your server port and not the wrapper"
@@ -238,7 +246,7 @@ class Player(object):
         if self.client and self.client.info["realuuid"] != "":
             return self.client.info["realuuid"]
         if self.clientUuid:
-            return self.mojangUuid.string
+            return self.clientUuid.string
         if self.serverUuid:
             return self.serverUuid.string
         return self.offlineUuid.string
@@ -262,7 +270,8 @@ class Player(object):
         """
         Kick a player with 'reason'.  Using this interface (versus the
         console command) ensures the player receives the proper disconnect
-        messages based on whether they are in proxy mode or not.
+        messages based on whether they are in proxy mode or not.  This will
+        also allow hub players to respawn in the main wrapper server.
 
         """
         self.wrapper.javaserver.kick_player(self, self.username, reason)
@@ -341,13 +350,12 @@ class Player(object):
 
     def getClient(self):
         """
-        Returns the player client context.  Use at your own risk - items
-        in client are generally private or subject to change (you are
-        working with an undefined API!)... what works in this wrapper
-        version may not work in the next.
+        Returns the player client context.  Somewhat deprecated since
+        the player object contains client as `player.client`  Retained
+        for older plugins which still use it.
+        TODO - Deprecate by wrapper version 1.5 final.
 
-        :returns: player client object (and possibly sets self.client
-         to the matching client).
+        :returns: player client object.
 
         """
         if self.client is None:
@@ -965,7 +973,7 @@ class Player(object):
         return self.data.Data["firstLoggedIn"]
 
     # Cross-server commands
-    def connect(self, port, ip="127.0.0.1"):
+    def connect(self, ip="127.0.0.1", port=25600):
         """
         Connect to another server.  Upon calling, the client's current
          server instance will be closed and a new server connection made
@@ -978,10 +986,8 @@ class Player(object):
 
         :Args:
             :port: server or wrapper port you are connecting to.
-            :ip:  Only specify this if you are connecting OUTSIDE of Localhost!
-             Since the target wrapper would be offline and probably publicly
-             accessible, this is not advisable... Only a cracked server
-             would operate this way.
+            :ip:  the destination server ip.  Should be on your own
+             network and inaccessible to outside port forwards.
 
         :returns: Nothing
 
@@ -990,4 +996,4 @@ class Player(object):
             self.log.warning("Can't use player.connect() without proxy mode.")
             return
 
-        self.client.change_servers(port, ip)
+        self.client.change_servers(ip, port)

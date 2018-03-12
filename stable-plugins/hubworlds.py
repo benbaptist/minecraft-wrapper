@@ -25,9 +25,9 @@ DESCRIPTION = "The hubworlds plugin is a sample plugin that demonstrates " \
               "3) world2 - an unwrapped server.\n" \
               "4) Another server with no wrapper.\n\n" \
               "You can replace worlds 2 and 3 with any server or wrapper you " \
-              "like.  The actual world names on disk can be whatever you like." \
-              "\n\nSometimes, you don't spawn correctly.  This can usually be" \
-              "corrected by running /hub and trying again."
+              "like.  The actual world names on disk can be whatever you like" \
+              ".\n\nSometimes, you don't spawn correctly.  This can usually " \
+              "be corrected by running /hub and trying again."
 # The following are optional and affect the plugin import process.
 # Either do not include them or set them to = False if not used:
 
@@ -64,23 +64,19 @@ class Main:
 
     def playerLogin(self, payload):
         playerObj = payload["player"]
-        playername = str(playerObj.username)
-        self.api.minecraft.broadcast(
-            "&a&lEverybody, welcome %s and tell them what "
-            "hub worlds you have visited!" % playername
-        )
+        playerObj.message("&aType /help hubworlds for hub help.")
 
     def onDisable(self):
         pass
 
     def _s1(self, player, args):
-        player.connect(25610)
+        player.connect("localhost", 25610)
 
     def _s1p(self, player, args):
-        player.connect(25611)
+        player.connect("localhost", 25611)
 
     def _s2(self, player, args):
-        player.connect(25612)
+        player.connect("localhost", 25612)
 
     def _s3(self, player, args):
-        player.connect(25614)
+        player.connect("localhost", 25614)

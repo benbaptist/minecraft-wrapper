@@ -1,3 +1,20 @@
+Build 16 [1.0b16]
+- fix rogue players who connect outside wrapper proxy.
+
+
+Build 16 [1.0b16]
+- Make player respawn to hub if destination connection fails:
+    - If server is full
+    - If server is offline
+
+
+Build 15 [1.0b15]
+- Lots of little bug fixes and cleanup.
+- Changed API for player connect back to connect(ip, port) (ordered arguments change)
+- Updated the plugins for new API.
+- Implemented "max-players" into proxy (a separate thing from the server's max players).
+
+
 Build 14 [1.0b14]
 - Correct error that caused wrapper to restart twice when a new config section was added.
 - Continued improvements to UUID reliability

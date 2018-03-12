@@ -63,7 +63,7 @@ class ParseCB(object):
 
     def parse_play_player_list_item(self):
         """This must be parsed and modified to make sure UUIDs match.
-        Otherwise weird things can happen likee players not seeing
+        Otherwise weird things can happen like players not seeing
         each other or duplicate names on the tab list, etc."""
         if self.server.version >= PROTOCOL_1_8START:
             head = self.packet.readpkt([VARINT, VARINT])
@@ -106,6 +106,11 @@ class ParseCB(object):
 
                     # noinspection PyUnusedLocal
                     # todo should we be using this to set client gamemode?
+
+                    # I think if we are sending this packet to our own player
+                    # we need to send the client the online UUID.  Everyone
+                    # else would get the offline version
+                    # TODO Corrects the noclip spectator problem??
                     gamemode = data[0]
                     # ("varint:gamemode")
                     self.client.packet.sendpkt(
@@ -159,13 +164,14 @@ class ParseCB(object):
         # dt = (eid, uuid, REST)
         # We dont need to read the whole thing.
         clientserverid = self.proxy.getclientbyofflineserveruuid(dt[1])
-        if clientserverid.wrapper_uuid:
-            self.client.packet.sendpkt(
-                self.pktCB.SPAWN_PLAYER[PKT],
-                self.pktCB.SPAWN_PLAYER[PARSER],
-                (dt[0], clientserverid.wrapper_uuid, dt[2]))
+        if clientserverid:
+            if clientserverid.wrapper_uuid:
+                self.client.packet.sendpkt(
+                    self.pktCB.SPAWN_PLAYER[PKT],
+                    self.pktCB.SPAWN_PLAYER[PARSER],
+                    (dt[0], clientserverid.wrapper_uuid, dt[2]))
             return False
-        return True
+        return False
 
     # Wrapper events and info section:
 
@@ -331,6 +337,8 @@ class ParseCB(object):
 
     def parse_play_disconnect(self):
         """Hub needs to monitor this to respawn someone to the hub."""
+        if self.client.local:
+            return True
         message = self.packet.readpkt([JSON])
         self.server.close_server("Server kicked %s with PLAY disconnect: %s" %
                                  (self.client.username, message))
