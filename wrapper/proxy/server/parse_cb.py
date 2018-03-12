@@ -106,6 +106,11 @@ class ParseCB(object):
 
                     # noinspection PyUnusedLocal
                     # todo should we be using this to set client gamemode?
+
+                    # I think if we are sending this packet to our own player
+                    # we need to send the client the online UUID.  Everyone
+                    # else would get the offline version
+                    # TODO Corrects the noclip spectator problem??
                     gamemode = data[0]
                     # ("varint:gamemode")
                     self.client.packet.sendpkt(

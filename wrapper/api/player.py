@@ -7,6 +7,7 @@
 
 import time
 import threading
+import pprint
 
 from proxy.packets.mcpackets_cb import Packets as Packets_cb
 from proxy.packets.mcpackets_sb import Packets as Packets_sb
@@ -196,6 +197,12 @@ class Player(object):
                     gotclient = True
                     break
             if not gotclient:
+                pprint.pprint(self.wrapper.servervitals.clients)
+                self.log.error("UUIDS: Client-%s\nserver-%s\nMojang-%s\n",
+                               self.clientUuid,
+                               self.serverUuid,
+                               self.mojangUuid
+                               )
                 self.log.error("Proxy is on, but this client is not "
                                "listed in proxy.clients!")
                 self.log.error("The usual cause of this would be that"

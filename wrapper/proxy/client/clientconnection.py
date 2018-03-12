@@ -786,7 +786,7 @@ class Client(object):
         self.packet.sendpkt(self.pktCB.RESPAWN[PKT],
                             self.pktCB.RESPAWN[PARSER],
                             (self.dimension, 0, self.gamemode, "default"))
-        print("LOBBIFY LEFT DIM:", self.dimension)
+        self.log.debug("LOBBIFY LEFT DIM: %s", self.dimension)
 
     def change_servers(self, ip="127.0.0.1", port=25600):
         self.log.debug("leaving server instance id %s ; Port %s",
@@ -845,6 +845,10 @@ class Client(object):
         time.sleep(.3)
         new_dimension = self.dimension
         self.log.debug("NEW DIM %s", new_dimension)
+        if new_dimension == despawn_dimension:
+            confirmation = "§cCould not connect properly (%s)!  Wait and \n" \
+                           "§csee if you re-spawn or type: `/hub` to \n" \
+                           "§cre-spawn in the hub world" % port
 
         # re-send chunks
         for chunks in copy.copy(self.first_chunks):

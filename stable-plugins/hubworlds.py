@@ -64,11 +64,7 @@ class Main:
 
     def playerLogin(self, payload):
         playerObj = payload["player"]
-        playername = str(playerObj.username)
-        self.api.minecraft.broadcast(
-            "&a&lEverybody, welcome %s and tell them what "
-            "hub worlds you have visited!" % playername
-        )
+        playerObj.message("&aType /help hubworlds for hub help.")
 
     def onDisable(self):
         pass

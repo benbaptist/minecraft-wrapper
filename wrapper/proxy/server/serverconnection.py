@@ -236,9 +236,7 @@ class ServerConnection(object):
         message = self.packet.readpkt([STRING])[0]
         self.log.info("Disconnected from server: %s", message)
         # if the server sends this, I think you are already disconnected..?
-        # self.close_server(message)
-        print(self.client.local)
-        print()
+        self.close_server(message)
         self.client.notify_disconnect(message)
         return False
 
