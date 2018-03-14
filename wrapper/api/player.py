@@ -64,9 +64,14 @@ class Player(object):
     ..
 
     Player objects contains methods and data of a currently
-    logged-in player. This object is destroyed
-    upon logging off.  Most features are tied heavily to
+    logged-in player. Most features are tied heavily to
     proxy mode implementations and the proxy client instance.
+    Player creation happens at one of two points:
+     1) Proxy - at the player.preLogin event when the client first joins
+      the wrapper proxy.  It is created by core.events.py in response to
+      player.pre-Login's missing player argument.
+     2) Non-proxy - Created at the player.login event when they join the
+      local server.
 
     The player object has a self.__str___ representation that returns the
     player.username.  Therefore, plugins do not need to attempt string
@@ -131,12 +136,18 @@ class Player(object):
                 player.mojangUuis.__str__
                 str(player.mojangUuid)
 
-            :uuid (property): This will pull the best uuid available in order-
-            :1) Mojang uuid: The bought and paid Mojand UUID.  Never changes and
+            The only exception to this is the `uuid` property, which is always
+             a string.
+
+            :uuid (property, string): This will pull the best uuid
+             available in this order-
+            :1) mojangUuid: The bought and paid Mojand UUID.  Never changes and
              is the prefered way to ID player keys.
-            :2) offline uuid: A MD5 hash of "OfflinePlayer:%s" % username
-            :3) client uuid: What the client believes is the uuid.
-            :4) server uuid: The player's local uuid on the server.
+            :2) offlineUuid: A MD5 hash of "OfflinePlayer:%s" % username
+            :3) clientUuid: What the client believes is the uuid.  If
+             Wrapper is online, this should be the same as mojangUuid.
+            :4) serverUuid: The player's local uuid on the server,
+             usually the same as offline uuid.
 
         :param username:
         :param wrapper:
@@ -199,9 +210,9 @@ class Player(object):
             if not gotclient:
                 pprint.pprint(self.wrapper.servervitals.clients)
                 self.log.error("UUIDS: Client-%s\nserver-%s\nMojang-%s\n",
-                               self.clientUuid,
-                               self.serverUuid,
-                               self.mojangUuid
+                               self.clientUuid.string,
+                               self.serverUuid.string,
+                               self.mojangUuid.string
                                )
                 self.log.error("Proxy is on, but this client is not "
                                "listed in proxy.clients!")

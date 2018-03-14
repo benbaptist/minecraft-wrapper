@@ -934,9 +934,6 @@ class Commands(object):
             return "deop requires a running server instance"
 
     def command_op(self, player, payload):
-        # if player is None:  This is a security vulnerability.  console is
-        # already set to an xplayer
-        #    player = self.wrapper.xplayer
         if not self._superop(player, 9):
             return False
 
@@ -954,7 +951,6 @@ class Commands(object):
             return
 
         valid_uuid = self.wrapper.uuids.getuuidbyusername(new_operator_name)
-
         if not offline_mode and valid_uuid in (None, False):
             player.message(
                 "&c'%s' is not a valid player name!" % new_operator_name)
@@ -979,7 +975,6 @@ class Commands(object):
 
         if superop and superlevel > 4:
             superlevel = max(5, superlevel)
-
         # 2 = make sure server STARTED
         if self.wrapper.servervitals.state == 2:
             self.wrapper.javaserver.console("op %s" % name)
@@ -1007,7 +1002,6 @@ class Commands(object):
                 player.message("&6Ops.json file saved ok.")
             else:
                 player.message("&cSomething went wrong writing ops.json.")
-
         # update the superops.txt file
         if superop:
             set_item(name, superlevel, "superops.txt")

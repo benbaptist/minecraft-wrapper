@@ -359,11 +359,12 @@
     :Module: clientconnection.py *(client/clientconnection.py)*
 
     :Description:
-        Called before client logs on.
+        Called before client logs on.  This event marks the
+        birth of the player object in wrapper (when in proxy mode)
 
     :Payload:
         :"playername": self.username,
-        :"player": username (name only - player object does not yet exist)
+        :"player": Player object will be created by the event code
         :"online_uuid": online UUID,
         :"server_uuid": UUID on local server (offline),
         :"ip": the user/client IP on the internet.

@@ -1,3 +1,4 @@
+# coding=utf-8
 # the visible name of the plugin, seen in /plugins and whatnot
 NAME = "hubworlds"
 # the creator/developer of the plugin

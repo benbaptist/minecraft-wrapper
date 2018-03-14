@@ -43,7 +43,7 @@ class Events(object):
         This needs some standardization
         :param event: String name event
 
-        :param payload:  Should have these items.
+        :param payload:  Should have at least these items.
             :playername: Optional string playername
             :player: Player Object - Optional, unless playername is provided
 
@@ -89,7 +89,7 @@ class Events(object):
         for sock in self.listeners:
             sock.append({"event": event, "payload": payload})
 
-        payload_status = True
+        payload_status = None
         # old_payload = payload  # retaining the original payload might be helpful for the future features.  # noqa
 
         # in all plugins with this event listed..
@@ -118,23 +118,43 @@ class Events(object):
                 # However, if one plugin returns a False, no payload changes
                 #  will be possible.
                 #
-                if result in (None, True):  # Don't change the payload status
-                    pass
-                elif result is False:  # mark this event permanently as False
+                if result is False or payload_status is False:
+                    # mark this event permanently as False
                     payload_status = False
+
                 else:
                     # A payload is being returned
                     # If any plugin rejects the event, no payload changes
                     #  will be authorized.
-                    if payload_status is not False:
-                        # the next plugin looking at this event sees the
-                        #  new payload.
+
+                    # once the payload is modded, payload status must stay True
+                    if result in (None, True) and payload_status is not True:
+                        payload_status = None
+                    # the next plugin looking at this event sees the
+                    #  new payload.
+                    else:
                         if type(result) == dict:
-                            payload, payload_status = result
+                            payload = result
+                            payload_status = True
                         else:
                             # non dictionary payloads are deprecated and will
                             # be overridden by dict payloads
                             # Dict payloads are those that return the
                             # payload in the same format as it was passed.
-                            payload_status = result
-        return payload_status
+                            self.log.warning("Non-Dict payload %s %s %s",
+                                             payload_status,
+                                             result,
+                                             type(result)
+                                             )
+                            payload = result
+                            payload_status = True
+
+        # payload changed
+        if payload_status is True:
+            return payload
+        # payload did not change
+        elif payload_status is None:
+            return True
+        # payload rejected
+        else:
+            return False

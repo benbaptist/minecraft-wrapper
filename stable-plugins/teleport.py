@@ -37,9 +37,11 @@ class Main:
         self.api.registerCommand("tpaccept", self.tpaccept)
         self.api.registerCommand("tpdeny", self.tpdeny)
 
-        # self.api.registerPermission("teleport", True)  # uncomment this line to give all players permission
+        # comment this line out to only allow players with permission to use.
+        self.api.registerPermission("teleport", True)
 
-        # assigning a player permission "teleport.denied" will prevent them from using the plugin
+        # assigning a player permission "teleport.denied" will prevent 
+        # them from using the plugin.
 
     def onDisable(self):
         pass
@@ -56,7 +58,7 @@ class Main:
         """ Accept teleport request """
         otherPlayer = self._doTestTeleportReply(player)
         if otherPlayer:
-            player.message({"text": "Teleport request accepted.", "color": "yellow"})
+            player.message({"text": "Teleport request accepted.", "color": "yellow"}, 2)
             otherPlayer.message({"text": "%s accepted your teleport request." % player.username, "color": "yellow"})
             if self.data[player.username]['direction'] == 'tpa':
                 who = otherPlayer
@@ -74,7 +76,7 @@ class Main:
         """ Reject teleport request """
         otherPlayer = self._doTestTeleportReply(player)
         if otherPlayer:
-            player.message({"text": "Teleport request denied.", "color": "yellow"})
+            player.message({"text": "Teleport request denied.", "color": "yellow"}, 2)
             otherPlayer.message({"text": "%s denied your teleport request." % player.username, "color": "yellow"})
         if player.username in self.data:
             del self.data[player.username]

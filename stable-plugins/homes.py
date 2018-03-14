@@ -21,6 +21,7 @@ WEBSITE = ""
 VERSION = (1, 0, 0)
 
 
+# noinspection PyMethodMayBeStatic
 class Main:
     """Permissions:
     None - sethome/home

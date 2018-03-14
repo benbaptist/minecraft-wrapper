@@ -1,11 +1,30 @@
-Build 16 [1.0b16]
+Build 18 [1.0b18]
 - fix rogue players who connect outside wrapper proxy.
+
+
+Build 17 [1.0b17]
+- Touch up plugins some.
+- Fix bugs in Event code.  Standardize event process:
+    Plugin returns   ==   event returns
+    False            ==   False
+    None/True        ==   True
+    Payload          ==   Payload
+    Multiple plugins can modify the final event return:
+    Any plugin can permanently Abort the Event.  Any False is permanent.
+    Any plugin can None/True, but a subsequent event can False or payload it (mod it)
+    Any plugin can return a payload _if_ it has not been `False`d..
+- Fix Chat.py and move to Stable-Plugins.
+- Make player creation and destruction more consistent.  Players are created
+ at wrapper login and destroyed only at logoff (from wrapper, not the server!)
+- Clarify that the only uuid that is a string and not MCUUID is player
+ property 'uuid'.
 
 
 Build 16 [1.0b16]
 - Make player respawn to hub if destination connection fails:
     - If server is full
     - If server is offline
+- stage a skin for later use (so we don't need to download a mission one)
 
 
 Build 15 [1.0b15]

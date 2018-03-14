@@ -17,9 +17,14 @@
     ..
 
     Player objects contains methods and data of a currently
-    logged-in player. This object is destroyed
-    upon logging off.  Most features are tied heavily to
+    logged-in player. Most features are tied heavily to
     proxy mode implementations and the proxy client instance.
+    Player creation happens at one of two points:
+     1) Proxy - at the player.preLogin event when the client first joins
+      the wrapper proxy.  It is created by core.events.py in response to
+      player.pre-Login's missing player argument.
+     2) Non-proxy - Created at the player.login event when they join the
+      local server.
 
     The player object has a self.__str___ representation that returns the
     player.username.  Therefore, plugins do not need to attempt string

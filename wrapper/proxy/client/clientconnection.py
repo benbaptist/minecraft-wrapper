@@ -629,7 +629,6 @@ class Client(object):
         if not self.proxy.eventhandler.callevent(
                 "player.preLogin", {
                     "playername": self.username,
-                    "player": self.username,  # not a real player object!
                     "online_uuid": self.wrapper_uuid.string,
                     "server_uuid": self.local_uuid.string,
                     "ip": self.ip,
@@ -638,7 +637,8 @@ class Client(object):
             """ eventdoc
                 <group> Proxy <group>
 
-                <description> Called before client logs on.
+                <description> Called before client logs on.  This event marks the 
+                birth of the player object in wrapper (when in proxy mode)
                 <description>
 
                 <abortable> Yes, return False to disconnect the client. <abortable>
@@ -651,7 +651,7 @@ class Client(object):
                 <comments>
                 <payload>
                 "playername": self.username,
-                "player": username (name only - player object does not yet exist)
+                "player": Player object will be created by the event code
                 "online_uuid": online UUID,
                 "server_uuid": UUID on local server (offline),
                 "ip": the user/client IP on the internet.
@@ -662,6 +662,7 @@ class Client(object):
 
             self.state = HANDSHAKE
             self.disconnect("Login denied by a Plugin.")
+            del self.servervitals.players[self.username]
             return
         self.permit_disconnect_from_server = True
         self.log.info("%s's Proxy Client LOGON occurred: (UUID: %s"
@@ -1098,7 +1099,7 @@ class Client(object):
                             self.wrapper_uuid.string] = self.skin_blob
                 self.properties = requestdata["properties"]
             else:
-                self.disconnect("Proxy Client Session Error"
+                self.disconnect("Proxy Client Session-Server Error"
                                 " (HTTP Status Code %d)" % r.status_code)
                 return False
             mojang_name = self.proxy.uuids.getusernamebyuuid(
