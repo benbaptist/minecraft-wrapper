@@ -88,7 +88,6 @@ class UUIDS(object):
                 user_uuid_matched = useruuid  # cache for later in case multiple name changes require a uuid lookup.
 
         # try mojang  (a new player or player changed names.)
-        # requests seems to =have a builtin json() method
         r = requests.get("https://api.mojang.com/users/profiles/minecraft/%s" % user_name)
         if r.status_code == 200:
             useruuid = self.formatuuid(r.json()["id"])  # returns a string uuid with dashes

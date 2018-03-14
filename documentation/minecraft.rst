@@ -55,6 +55,32 @@
 
         
 
+-  getServerPackets(self, packetset="CB")
+
+        Get the current proxy packet set.  Packet use will also
+        require the following import at the begining of your
+        plugin:
+        .. code:: python
+
+        from proxy.utils.constants import *
+        # this line is needed to access constants for packet sending/parsing.
+
+        ..
+
+        :packets are also available from the player.api:
+            player.cbpkt
+            player.sbpkt
+
+        :Args:
+           :packetset: type(string)= "CB" or "SB". Argument is optional.
+            If not specified, the client-bound packetset is returned.  If
+            packetset is actually anything except "CB", the server-bound
+            set is returned.
+
+        :returns: The desired packet set.
+
+       
+
 -  getTimeofDay(self, dttmformat=0)
 
         get the "virtual" world time of day on the server.

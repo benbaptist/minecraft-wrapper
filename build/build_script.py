@@ -111,12 +111,13 @@ def build_the_docs():
     events_footer = "<br>**Click here for a list of Wrapper's events**<br>" \
                     "[Wrapper.py Events](/documentation/events.rst)<br>"
 
-    api_files = ["wrapperconfig", "base", "minecraft", "player", "world",
-                 "entity", "backups", "helpers"]
+    api_files = ["api/wrapperconfig", "api/base", "api/minecraft",
+                 "api/player", "api/world", "api/entity", "api/backups",
+                 "api/helpers"]
     processed = {}
 
     for files in api_files:
-        with open("wrapper/api/%s.py" % files) as f:
+        with open("wrapper/%s.py" % files) as f:
             data = f.read()
         all_items = data.split(sep)
         complete_doc = ""
@@ -152,10 +153,10 @@ def build_the_docs():
         processed[files] = complete_doc
 
     for files in api_files:
-        with open("documentation/%s.rst" % files, "w") as f:
+        with open("documentation/%s.rst" % files.split("/")[1], "w") as f:
             f.write(processed[files])
         index_file = "%s[%s](/documentation/%s.rst)\n\n" % (
-            index_file, files, files)
+            index_file, files, files.split("/")[1])
     index_file += events_footer
 
     with open("documentation/readme.md", "w") as f:

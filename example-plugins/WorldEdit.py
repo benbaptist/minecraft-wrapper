@@ -1,3 +1,4 @@
+# coding=utf-8
 from __future__ import print_function
 import traceback
 
@@ -50,6 +51,19 @@ class Main:
         self.api.registerCommand("/extinguish", self.command_extinguish, "worldedit.extinguish")
         self.api.registerEvent("player.place", self.action_rightclick)
         self.api.registerEvent("player.dig", self.action_leftclick)
+
+        # for quick testing:
+        # self.api.registerPermission("worldedit.wand", True)
+        # self.api.registerPermission("worldedit.set", True)
+        # self.api.registerPermission("worldedit.fill", True)
+        # self.api.registerPermission("worldedit.replace", True)
+        # self.api.registerPermission("worldedit.hfill", True)
+        # self.api.registerPermission("worldedit.pos1", True)
+        # self.api.registerPermission("worldedit.pos2", True)
+        # self.api.registerPermission("worldedit.replacenear", True)
+        # self.api.registerPermission("worldedit.extinguish", True)
+
+
 
     def onDisable(self):
         pass

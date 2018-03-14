@@ -86,7 +86,8 @@ class MCServer(object):
         self.server_stalled = False
         self.deathprefixes = ["fell", "was", "drowned", "blew", "walked",
                               "went", "burned", "hit", "tried", "died", "got",
-                              "starved", "suffocated", "withered", "shot"]
+                              "starved", "suffocated", "withered", "shot",
+                              "slain"]
 
         if not self.wrapper.storage["ServerStarted"]:
             self.log.warning(

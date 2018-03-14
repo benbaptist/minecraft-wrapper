@@ -1,5 +1,25 @@
 Build 18 [1.0b18]
-- fix rogue players who connect outside wrapper proxy.
+I had forgotten how effective writing and testing plugins was to determine the state of Wrapper's health...
+------------------------------
+- add documentation on packet usages and sending client packets.
+- stage some changes to build script to add other modules to the docs (like clientconnection.py).
+- small mods to the player API. try to standarize and make packet handling mode accessible to the plugin dev.
+- Cleared these Example plugins as being pretty much still functional and I updated
+   any needed updates to the modern API:
+    - poll.py - appears to work. An antique!
+    - WorldEdit - updated (and helpful to catch bugs in API.world).
+    - zombie - needed some header items to get it working.
+    - speedboost - works fine as is.
+    - open.py - updated plugin to modern methods.  Untested, alpha plugin; but a
+     good example of packet operations and client handling.
+  Only essentials and SmallBrother need work now.
+Just shoving my changes for now, before I fix more bugs:
+ - colored lines lose color in the client after first line when using &/§ codes inside a json chat object.
+ - playerobject needs destruction when keepalives abort:
+ - player is still logged into HUB when they disconnect their game from the child world.
+ - (new error) - Minecraft commands are not getting passed down to the server after wrapper has finished parsing for it's own commands.
+ - if the world is a child world, the client needs more time to spawn before officially letting the mcserver.py issue the "player.login" event.
+ - fix for rogue players that inadvertently join a proxy world directly to the server's port.  Put them in adventure/spectator mode or something..
 
 
 Build 17 [1.0b17]
