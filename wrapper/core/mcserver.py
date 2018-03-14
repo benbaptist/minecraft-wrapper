@@ -261,7 +261,7 @@ class MCServer(object):
         if self.wrapper.proxymode:
             try:
                 playerclient = self.vitals.players[player].client
-                playerclient.disconnect(reasontext)
+                playerclient.notify_disconnect(reasontext)
             except AttributeError:
                 self.log.warning(
                     "Proxy kick failed - Gould not get client %s.\n"
@@ -435,10 +435,10 @@ class MCServer(object):
 
     def logout(self, players_name):
         """Called when a player logs out."""
-
         if players_name in self.vitals.players:
+            player = self.vitals.players[players_name]
             self.wrapper.events.callevent(
-                "player.logout", {"player": self.getplayer(players_name),
+                "player.logout", {"player": player,
                                   "playername": players_name},
                 abortable=True
             )
@@ -461,8 +461,8 @@ class MCServer(object):
                 <payload>
 
             """  # noqa
-            if self.vitals.players[players_name].client.state != LOBBY:
-                self.vitals.players[players_name].abort = True
+            if player.client.state != LOBBY and player.client.local:
+                player.abort = True
                 del self.vitals.players[players_name]
         if len(self.vitals.players) == 0:
             self.wrapper.backups.idle = True
@@ -477,7 +477,7 @@ class MCServer(object):
         """
         if username in self.vitals.players:
             player = self.vitals.players[username]
-            if player.client.state != LOBBY:
+            if player.client.state != LOBBY and player.client.local:
                 return player
         return False
 

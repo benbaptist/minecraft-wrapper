@@ -309,7 +309,7 @@ class Minecraft(object):
 
         This includes players who are transferred to another server. If
         you need to test whether a player is on this server; test if
-        player.client
+        player.client and player.client.local == True
 
         :arg username: playername
 

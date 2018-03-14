@@ -2,9 +2,9 @@
 
 Example Plugins are the older example plugins.  They are for example
 purposed only, but may generally function and provide examples
-of how to write a wrapper plugin, as well as demostrate wrapper functions.
+of how to write a wrapper plugin, as well as demonstrate wrapper functions.
 
-Although not free of errors, and very simply coded, these can be adapted
+Although not free of errors, and may not even work anymore, these can be adapted
 into more robust versions with additional work.  If you wish to improve
 or add a new plugin, submit your pull request to the `submitted-plugins`
 directory.

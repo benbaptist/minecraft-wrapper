@@ -1,4 +1,5 @@
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python
+#  -*- coding: utf-8 -*-
 
 # Copyright (C) 2016 - 2018 - BenBaptist and Wrapper.py developer(s).
 # https://github.com/benbaptist/minecraft-wrapper
@@ -97,7 +98,10 @@ def main(wrapper_start_args):
         if not wrapper.configManager.exit:
             os.system("reset")
         wrapper.plugins.disableplugins()
-        wrapper.alerts.ui_process_alerts("Wrapper called SystemExit exception", blocking=True)
+        wrapper.alerts.ui_process_alerts(
+            "Wrapper called SystemExit exception",
+            blocking=True
+        )
 
         # save-all is required to have a flush argument
         wrapper.javaserver.console("save-all flush")
@@ -111,7 +115,7 @@ def main(wrapper_start_args):
         log.critical(crash_mess)
 
     except Exception as ex:
-        crash_mess = ("Wrapper.py crashed - stopping server to be safe (%s)" % ex)
+        crash_mess = ("Wrapper crashed - stopping server to be safe (%s)" % ex)
         wrapper.alerts.ui_process_alerts(crash_mess, blocking=True)
         log.critical("Wrapper.py crashed - stopping server to be safe (%s)",
                      ex, exc_info=True)

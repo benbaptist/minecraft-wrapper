@@ -184,10 +184,10 @@ class ParseCB(object):
 
         # Over-ride help display
 
-        for eachtrans in TRANSLATE:
-            if TRANSLATE[eachtrans][0] == data:
-                new_usage = TRANSLATE[eachtrans][1]
-                data = new_usage
+        #for eachtrans in TRANSLATE:
+        #    if TRANSLATE[eachtrans][0] == data:
+        #        new_usage = TRANSLATE[eachtrans][1]
+        #        data = new_usage
         # self.log.debug(data)
 
         payload = self.proxy.eventhandler.callevent(
@@ -218,18 +218,18 @@ class ParseCB(object):
         if payload is False:
             return False
 
-        # if payload returns a dictionary, convert it to string and
-        # substitute for data
-        elif type(payload) == dict:
-            data = json.dumps(payload)
+        # packet allowed to pass (but not changed by any plugin event)
+        if payload is True:
+            return True
 
-        # if payload (plugin dev) returns a string-only object...
-        elif type(payload) == str:
-            data = payload
+        # pre - 1.8 only accepts string (now it's a dict/json parse)
+        if self.client.clientversion < PROTOCOL_1_8START:
+            if type(payload) == dict:
+                payload = json.dumps(payload)
 
         self.client.packet.sendpkt(self.pktCB.CHAT_MESSAGE[PKT],
                                    self.pktCB.CHAT_MESSAGE[PARSER],
-                                   (data, position))
+                                   (payload, position))
         return False
 
     def parse_play_player_poslook(self):
