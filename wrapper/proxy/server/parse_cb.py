@@ -184,10 +184,10 @@ class ParseCB(object):
 
         # Over-ride help display
 
-        #for eachtrans in TRANSLATE:
-        #    if TRANSLATE[eachtrans][0] == data:
-        #        new_usage = TRANSLATE[eachtrans][1]
-        #        data = new_usage
+        for eachtrans in TRANSLATE:
+            if TRANSLATE[eachtrans][0] == data:
+                new_usage = TRANSLATE[eachtrans][1]
+                data = new_usage
         # self.log.debug(data)
 
         payload = self.proxy.eventhandler.callevent(
