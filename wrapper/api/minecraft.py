@@ -15,7 +15,6 @@ from api.helpers import scrub_item_value, pickle_load
 from proxy.packets.mcpackets_cb import Packets as ClientBound
 from proxy.packets.mcpackets_sb import Packets as ServerBound
 
-
 # noinspection PyBroadException
 # noinspection PyPep8Naming
 class Minecraft(object):
@@ -118,16 +117,41 @@ class Minecraft(object):
         self.log.error("API.Minecraft configWrapper failed.")
         return False
 
-    def getServerPackets(self, packets="CB"):
+    def getServerPackets(self, packetset="CB"):
+        """
+        Get the current proxy packet set.  Packet use will also
+        require the following import at the begining of your
+        plugin:
+        .. code:: python
+
+        from proxy.utils.constants import *
+        # this line is needed to access constants for packet sending/parsing.
+
+        ..
+
+        :packets are also available from the player.api:
+            player.cbpkt
+            player.sbpkt
+
+        :Args:
+           :packetset: type(string)= "CB" or "SB". Argument is optional.
+            If not specified, the client-bound packetset is returned.  If
+            packetset is actually anything except "CB", the server-bound
+            set is returned.
+
+        :returns: The desired packet set.
+
+       """
+
         if not self.wrapper.proxymode:
             return False
 
         version = self.wrapper.proxy.srv_data.protocolVersion
 
-        if packets == "CB":
-            return ClientBound(version)
-        else:
+        if packetset == "SB":
             return ServerBound(version)
+        else:
+            return ClientBound(version)
 
     def getTimeofDay(self, dttmformat=0):
         """

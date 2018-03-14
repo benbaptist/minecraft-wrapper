@@ -206,7 +206,7 @@ CONFIG = {
 
             "encoding": "utf-8",
 
-         # Using the default '.' roots the server in the same folder with wrapper. Change this to another folder to keep the wrapper and server folders separate.  Do not use a trailing slash...  e.g. - '/full/pathto/the/server'
+         # Using the default '.' roots the server in the same folder with wrapper. Change this to another folder to keep the wrapper and server folders separate.  Do not use a trailing slash...  e.g. - '/full/pathto/the/server'.  relative paths are ok too, as long as there is no trailing slash.  For instance, to use a sister directory, use `../server`.
 
             "server-directory": ".",
 

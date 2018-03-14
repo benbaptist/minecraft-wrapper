@@ -197,6 +197,10 @@
         Invokes the specific event. Payload is extra information
         relating to the event. Errors may occur if you don't specify
         the right payload information.
+
+        The only use it seems to have is internal (it is used by
+        player.sendCommand().
+
         
 
 -  getPluginContext(self, plugin_id)

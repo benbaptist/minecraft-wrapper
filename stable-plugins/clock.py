@@ -17,10 +17,15 @@ class Main:
 
     def onEnable(self):
         self.api.registerCommand("clock", self._clock, None)
-        self.api.registerHelp("Clock", "clock command", [
-            ("/clock [0-2]", "show minecraft time of day (0/ticks, 1/military, 2/am-pm)", None)])
+        self.api.registerHelp(
+            "Clock", "clock command", [
+                ("/clock [0-2]",
+                 "show minecraft time of day (0/ticks, 1/military, 2/am-pm)",
+                 None)]
+        )
 
     def onDisable(self):
+        """ onDisable is a required method"""
         pass
 
     def _clock(self, *args):

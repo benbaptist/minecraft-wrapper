@@ -68,10 +68,10 @@ class Player(object):
     proxy mode implementations and the proxy client instance.
     Player creation happens at one of two points:
      1) Proxy - at the player.preLogin event when the client first joins
-      the wrapper proxy.  It is created by core.events.py in response to
-      player.pre-Login's missing player argument.
+     the wrapper proxy.  It is created by core.events.py in response to
+     player.pre-Login's missing player argument.
      2) Non-proxy - Created at the player.login event when they join the
-      local server.
+     local server.
 
     The player object has a self.__str___ representation that returns the
     player.username.  Therefore, plugins do not need to attempt string
@@ -93,21 +93,28 @@ class Player(object):
 
         self.name  # property that returns the username
         self.uuid  # property that returns the very best UUID available.
+        # self.uuid polls for the first UUID it finds in the list below.
+        # self.uuid is also the only uuid that is a string type
 
-        # self.uuid polls perfers the first UUID it finds in this order:
+        # These UUIDs are a MCUUID object.  Warning: they will not json
+        #  serialize unless you convert them to a string!
+        # To specifically get a certain uuid:
         self.mojangUuid
-        self.clientUuid  # usually = self.mojangUuid
+        self.clientUuid  # usually = self.mojangUuid (proxy mode only)
         self.offlineUuid
         self.serverUuid  # usually = self.offlineUuid in proxy mode.
 
-
+        # These are available to non-proxy mode wrappers:
         self.loginposition
         self.playereid
         self.ipaddress
 
         # proxy only
-        self.serverUuid (proxy only)
-        self.clientUuid (proxy only)
+        #-----------
+        # player.client is the player client instance.  See the
+        #  mincraft.api for getting packet constants for use with
+        self.client
+        self.clientUuid
         self.clientgameversion
         self.clientboundPackets = Packets_cb(self.clientgameversion)
         self.serverboundPackets = Packets_sb(self.clientgameversion)
@@ -176,8 +183,8 @@ class Player(object):
 
         self.client = None
         self.clientgameversion = self.wrapper.servervitals.protocolVersion
-        self.clientboundPackets = Packets_cb(self.clientgameversion)
-        self.serverboundPackets = Packets_sb(self.clientgameversion)
+        self.cbpkt = Packets_cb(self.clientgameversion)
+        self.sbpkt = Packets_sb(self.clientgameversion)
 
         self.playereid = None
 
@@ -221,6 +228,7 @@ class Player(object):
                                " your server port and not the wrapper"
                                " proxy port!")
         if not self.mojangUuid:
+            # poll cache/mojang for proper uuid
             self.mojangUuid = self.wrapper.uuids.getuuidbyusername(username)
 
         # Process login data
@@ -250,8 +258,11 @@ class Player(object):
 
     @property
     def uuid(self):
-        """Return the very best UUID available as a string, with
-        the goal of never returning improper things like False and None. """
+        """
+        @property
+        Return the very best UUID available as a string, with
+        the goal of never returning improper things like False and None.
+        """
         if self.mojangUuid:
             return self.mojangUuid.string
         if self.client and self.client.info["realuuid"] != "":
@@ -330,11 +341,12 @@ class Player(object):
         :Args:
             :command: The wrapper (or plugin) command to execute; no
              slash prefix
-            :args: list of arguments (I think it is a list, not a
-             tuple or dict!)
+            :args: tuple/list of arguments.
 
         :returns: Nothing; passes command through commands.py function
-         'playercommand()'
+         'playercommand()'.  The player will receive any player.message()
+         the command generates, if any.  Console commands in particular
+         may only show their output at the console.
 
         """
         pay = {"player": self, "command": command, "args": args}
@@ -349,7 +361,7 @@ class Player(object):
         Beware: *in proxy mode, the message string is sent directly to*
         *the server without wrapper filtering,so it could be used to*
         *execute minecraft commands as the player if the string is*
-        *prefixed with a slash.*
+        *prefixed with a slash (assuming the player has the permission).*
 
         """
         try:
@@ -361,9 +373,11 @@ class Player(object):
 
     def getClient(self):
         """
-        Returns the player client context.  Somewhat deprecated since
-        the player object contains client as `player.client`  Retained
-        for older plugins which still use it.
+        Deprecated - use `player.client` to Access the proxy client...
+
+        Returns the player client context. Retained for older plugins
+        which still use it.
+
         TODO - Deprecate by wrapper version 1.5 final.
 
         :returns: player client object.
@@ -719,7 +733,7 @@ class Player(object):
                    [_BYTE, _FLOAT, _FLOAT],
                    (bitfield, self.fly_speed, self.field_of_view))
 
-        sendserver(self.serverboundPackets.PLAYER_ABILITIES[PKT],
+        sendserver(self.sbpkt.PLAYER_ABILITIES[PKT],
                    [_BYTE, _FLOAT, _FLOAT],
                    (bitfield, self.fly_speed, self.field_of_view))
 

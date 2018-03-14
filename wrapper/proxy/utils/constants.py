@@ -10,6 +10,8 @@
 
 # Still in development at versions 201-210(6/14/16)
 
+# def Wrapper.py Constants:
+# """
 PROTOCOL_MAX = 4000
 
 PROTOCOL_1_12_2END = 340
