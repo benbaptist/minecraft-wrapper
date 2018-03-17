@@ -1,4 +1,6 @@
-Build 20 - fix #554 player login event in sub-worlds can happen too soon for proxy..
+Build 20 - fix #551 - Minecraft commands don't get sent to server with playercommand interface
+
+Build 20 - fix #554 - player login event in sub-worlds can happen too soon for proxy..
 
 Build 19 - fix #550, 552:
  player remains connected to Hub world after player disconnects from child world.

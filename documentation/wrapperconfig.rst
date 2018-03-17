@@ -161,10 +161,6 @@ CONFIG = {
 
     "Misc":
 
-         # if you change the command-prefix, no minecraft command will work because minecraft itself only recognizes "/" commands... TODO - Bug or feature? -not sure.
-
-            "command-prefix": "/",
-
          # Reboot message occurs with automatic timed server restarts ["General"]["timed-reboot"]
 
             "reboot-message": "Server is conducting a scheduled reboot. The server will be back momentarily!",
@@ -281,6 +277,10 @@ CONFIG = {
 # Note: the online-mode option here refers to the proxy only, not to the server's offline mode.  Each server's online mode will depend on its setting in server.properties.  If you experience issues, you might try turning network-compression-threshold to -1 (off) in server.properties.
 
     "Proxy":
+
+         # Must be a single character.
+
+            "command-prefix": "/",
 
          # The number of players the proxy will hold.  This includes connected players from all hub worlds
 
