@@ -407,9 +407,13 @@ class MCServer(object):
 
         # activate backup status
         self.wrapper.backups.idle = False
+        player = self.getplayer(username)
+        # proxy will handle the login event if enabled
+        if player.client:
+            return
         self.wrapper.events.callevent(
             "player.login",
-            {"player": self.getplayer(username),
+            {"player": player,
              "playername": username},
             abortable=False
         )
