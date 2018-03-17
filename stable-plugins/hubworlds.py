@@ -28,7 +28,7 @@ DESCRIPTION = "The hubworlds plugin is a sample plugin that demonstrates " \
               "You can replace worlds 2 and 3 with any server or wrapper you " \
               "like.  The actual world names on disk can be whatever you like" \
               ".\n\nSometimes, you don't spawn correctly.  This can usually " \
-              "be corrected by running /hub and trying again."
+              "be corrected by running /main and trying again."
 # The following are optional and affect the plugin import process.
 # Either do not include them or set them to = False if not used:
 

@@ -90,10 +90,13 @@ class Client(object):
         self.keepalive_val = 0
 
         # client and server status
+        self.usehub = self.proxy.config["built-in-hub"]
         self.first_chunks = []
         self.raining = False
         self.wait_wait_for_auth = False
         self.local = True
+        self.disc_request = False
+        self.disc_reason = "No connection"
         self.abort = False
         self.info = {
             "client-is-wrapper": False,
@@ -166,8 +169,11 @@ class Client(object):
         self.lastitem = None
 
     def notify_disconnect(self, message):
+        self.disc_reason = message
+        self.disc_request = True
         if self.permit_disconnect_from_server:
             self.disconnect(message)
+            self.disc_request = False
         else:
             if not self.local:
                 self.chat_to_client(
@@ -175,7 +181,10 @@ class Client(object):
                      "color": "red"}
                 )
                 time.sleep(.4)
+                self.disc_request = False
                 self.change_servers("127.0.0.1", self.serverport)
+            else:
+                self.disc_request = True
 
     def handle(self):
         """ Main client connection loop """
@@ -805,24 +814,43 @@ class Client(object):
         """spawn client to different non-overworld dimension and end any
             raining.  Prepare to collect RAW chunk data."""
         self.first_chunks = []
+
+        # stop local rain fall.
         if self.raining:
             self.raining = False
             self.packet.sendpkt(self.pktCB.CHANGE_GAME_STATE[PKT],
                                 self.pktCB.CHANGE_GAME_STATE[PARSER],
                                 (1, 0))
+
+        self.chat_to_client("§5§lHold still.. changing worlds!", 2)
+        # This sleep gives client time to read the message above
+        time.sleep(1)
+
+        # get fresh inventory setup
+        self._inittheplayer()
+
+        # This respawns in a different dimension in preparation for respawning.
+        self.toggle_dim()
+
+        self.log.debug("LOBBIFY LEFT DIM: %s", self.dimension)
+
+    def get_port_text(self, portnumber):
+        for worlds in self.proxy.proxy_worlds:
+            if self.proxy.proxy_worlds[worlds]["port"] == portnumber:
+                infos = [worlds,
+                         self.proxy.proxy_worlds[worlds]["desc"]]
+                return infos
+        return [portnumber, "wrapper hub"]
+
+    def toggle_dim(self):
+
         if self.dimension in (-1, 0):
             self.dimension = 1
         else:
             self.dimension = -1
-        self.chat_to_client("§5§lHold still.. changing worlds!", 2)
-        # get fresh inventory setup
-        self._inittheplayer()
-        # This sleep gives client time to read the message above
-        time.sleep(1)
         self.packet.sendpkt(self.pktCB.RESPAWN[PKT],
                             self.pktCB.RESPAWN[PARSER],
                             (self.dimension, 0, self.gamemode, "default"))
-        self.log.debug("LOBBIFY LEFT DIM: %s", self.dimension)
 
     def change_servers(self, ip="127.0.0.1", port=25600):
         self.log.debug("leaving server instance id %s ; Port %s",
@@ -847,12 +875,16 @@ class Client(object):
         self.permit_disconnect_from_server = False
         server_try = self.connect_to_server(ip, port)
         time.sleep(.1)
-        confirmation = "§6Connected to new world (%s)!" % port
-        if not server_try[0]:
+        world = self.get_port_text(port)
+        confirmation = "§6Connected to %s (%s)!" % (world[1], world[0])
+        if not server_try[0] or self.disc_request:
             self.log.debug(
-                "connection to port %s failed: %s", port, server_try[1]
+                "connection to port %s failed: %s", world[0], server_try[1]
             )
-            confirmation = "§5§lCould not connect to that world (%s)!" % port
+            confirmation = {"text": "Could not connect ('%s'): %s" % (
+                world[0], self.disc_reason),
+                            "color": "dark_purple", "bold": "true"}
+            self.disc_reason = "No connection"
             port = self.proxy.srv_data.server_port
             ip = "localhost"
             self.permit_disconnect_from_server = False
@@ -877,14 +909,17 @@ class Client(object):
                            id(self.server_connection),
                            port)
 
-        # give server time to send all chunks before respawn
+        # give server time to get all chunks before respawn
         time.sleep(.3)
         new_dimension = self.dimension
         self.log.debug("NEW DIM %s", new_dimension)
         if new_dimension == despawn_dimension:
-            confirmation = "§cCould not connect properly (%s)!  Wait and \n" \
-                           "§csee if you re-spawn or type: `/hub` to \n" \
-                           "§cre-spawn in the hub world" % port
+            self.toggle_dim()
+
+            confirmation = {"text": "Could not connect properly!  Wait and "
+                                    "see if you re-spawn or type: `/hub` to "
+                                    "re-spawn in the hub world",
+                            "color": "red"}
 
         # re-send chunks
         for chunks in copy.copy(self.first_chunks):

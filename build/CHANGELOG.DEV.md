@@ -1,3 +1,8 @@
+Build 26:
+- Implement /hub as a full featured command if ["Proxy"]["built-in-hub"] is enabled. Allows full use of hub worlds
+ without requiring any plugins.
+- improved messaging to user when they cannot connect to a hub world for various reasons (whitelist, server full, etc).
+
 Build 25:
  - Fix typos in requirements.txt
  - restructure api/helpers/processcolorcodes to return dictionary versus text for json payloads (since most of the
