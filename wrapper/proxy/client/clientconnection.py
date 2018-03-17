@@ -170,7 +170,10 @@ class Client(object):
             self.disconnect(message)
         else:
             if not self.local:
-                self.chat_to_client("&cLost server connection: %s", message)
+                self.chat_to_client(
+                    {"text": "Lost server connection: %s" % message,
+                     "color": "red"}
+                )
                 time.sleep(.4)
                 self.change_servers("127.0.0.1", self.serverport)
 
@@ -468,8 +471,8 @@ class Client(object):
         reported_name = self.servervitals.version
         motdtext = self.servervitals.motd
         if self.clientversion >= PROTOCOL_1_8START:
-            motdtext = json.loads(processcolorcodes(motdtext.replace(
-                "\\", "")))
+            motdtext = processcolorcodes(motdtext.replace(
+                "\\", ""))
         self.MOTD = {
             "description": motdtext,
             "players": {

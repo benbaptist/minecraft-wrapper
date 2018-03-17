@@ -274,7 +274,7 @@ class MCServer(object):
             except Exception as e:
                 self.log.warning(
                     "Kick failed - something else went wrong:"
-                    " %s\n%s\n%s", player, e,)
+                    " %s\n%s", player, e,)
         else:
             self.console("kick %s %s" % (player, reasontext))
             # this sleep is here for Spigot McBans reasons/compatibility.
@@ -382,13 +382,14 @@ class MCServer(object):
                 self.console("tellraw %s %s" % (
                     who, json.dumps(message, ensure_ascii=False)))
         else:
+            temp = processcolorcodes(message)
             if self.vitals.version_compute < 10700:
                 temp = processcolorcodes(message)
                 self.console("say %s %s" % (
-                    who, chattocolorcodes(json.loads(temp))))
+                    who, chattocolorcodes(temp)))
             else:
                 self.console("tellraw %s %s" % (
-                    who, processcolorcodes(message)))
+                    who, json.dumps(processcolorcodes(message))))
 
     def login(self, username, servereid, position, ipaddr):
         """Called when a player logs in."""

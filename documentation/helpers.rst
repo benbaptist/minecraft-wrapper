@@ -196,7 +196,7 @@ using 'self.api.helpers'
 
     :arg messagestring: String argument with "&" codings.
 
-    :returns: Json dumps() string.
+    :returns: Dictionary chat
 
     
 

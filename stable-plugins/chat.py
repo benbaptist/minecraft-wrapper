@@ -138,8 +138,11 @@ class Main:
                     )
 
                 # allow color codes in chat
-                newtext = chatmessagetext.replace("&", SECT)
-                data["with"][1] = newtext
+                if "&" in list(chatmessagetext):
+                    newtext = self.api.helpers.processcolorcodes(
+                        chatmessagetext
+                    )
+                    data["with"][1] = newtext
 
                 # return any changes
                 return data
