@@ -1,4 +1,4 @@
-Build 20 - fix #551 - Minecraft commands don't get sent to server with playercommand interface
+Build 21 - fix #551 - Minecraft commands don't get sent to server with playercommand interface
 
 Build 20 - fix #554 - player login event in sub-worlds can happen too soon for proxy..
 
