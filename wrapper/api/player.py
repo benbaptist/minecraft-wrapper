@@ -170,6 +170,8 @@ class Player(object):
         self.abort = False
         # meanwhile, it still needs to respect wrapper halts
         self.wrapper_signal = self.wrapper.halt
+        self.kick_nonproxy_connects = self.wrapper.config["Proxy"][
+            "disconnect-nonproxy-connections"]
 
         self.mojangUuid = False
         self.clientUuid = False
@@ -216,17 +218,24 @@ class Player(object):
                     break
             if not gotclient:
                 pprint.pprint(self.wrapper.servervitals.clients)
-                self.log.error("UUIDS: Client-%s\nserver-%s\nMojang-%s\n",
-                               self.clientUuid.string,
-                               self.serverUuid.string,
-                               self.mojangUuid.string
-                               )
                 self.log.error("Proxy is on, but this client is not "
                                "listed in proxy.clients!")
                 self.log.error("The usual cause of this would be that"
-                               " someone is connecting directly to"
+                               " someone attempted to connect directly to"
                                " your server port and not the wrapper"
                                " proxy port!")
+                if self.kick_nonproxy_connects:
+                    port = self.wrapper.proxy.proxy_port
+                    self.log.info("API.player Kicked %s" % self.name)
+                    self.abort = True
+                    self.wrapper.javaserver.console(
+                        "kick %s %s" % (
+                            self.name,
+                            "Access Denied!  Use port %s instead!" % port
+                        )
+                    )
+
+                    return
         if not self.mojangUuid:
             # poll cache/mojang for proper uuid
             self.mojangUuid = self.wrapper.uuids.getuuidbyusername(username)
@@ -250,7 +259,8 @@ class Player(object):
         return self.username
 
     def __del__(self):
-        self.data.close()
+        if self.data:
+            self.data.close()
 
     @property
     def name(self):
