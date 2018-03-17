@@ -168,6 +168,7 @@ class Player(object):
 
         # mcserver will set this to false later to close the thread.
         self.abort = False
+        self.data = None
         # meanwhile, it still needs to respect wrapper halts
         self.wrapper_signal = self.wrapper.halt
         self.kick_nonproxy_connects = self.wrapper.config["Proxy"][
