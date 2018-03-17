@@ -1,3 +1,6 @@
+Build 19
+fix #550 player remains connected to Hub world after player disconnects from child world.
+
 Build 18 [1.0b18]
 I had forgotten how effective writing and testing plugins was to determine the state of Wrapper's health...
 ------------------------------
