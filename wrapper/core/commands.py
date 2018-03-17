@@ -159,7 +159,6 @@ class Commands(object):
                     return
 
         # command was not executed by werapper, so try server.
-        player.message(commandtext)
         player.execute(commandtext)
 
     def command_sample(self, player, payload):
@@ -700,6 +699,7 @@ class Commands(object):
         if not player.isOp() > 3:
             player.message("&cPermission Denied")
             return
+        # this, like all commands, is being run in a thread.
         player.message("&ePlease wait as I research this..", position=2)
         subcommand = getargs(payload["args"], 0)
         totalplaytime = {}

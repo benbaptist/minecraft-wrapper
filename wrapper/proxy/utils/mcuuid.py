@@ -153,8 +153,8 @@ class UUIDS(object):
                 return theirname
             self.log.warning("Instead of a name, this UUID returned False "
                              "because the name was not found locally and "
-                             "the minecraft service poll failed.  This will likely "
-                             "create other logical/program flow errors")
+                             "the minecraft service poll failed.  This will "
+                             "likely create other logical/program flow errors")
             return False  # total FAIL
 
         pastnames = []
