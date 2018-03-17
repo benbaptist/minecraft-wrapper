@@ -255,9 +255,11 @@ class Proxy(object):
         self.entity_control._abortep = True
 
     def removestaleclients(self):
-        """only removes aborted clients"""
+        """removes aborted client and player objects"""
         for i, client in enumerate(self.srv_data.clients):
             if self.srv_data.clients[i].abort:
+                if self.srv_data.clients[i].username in self.srv_data.players:
+                    del self.srv_data.players[self.srv_data.clients[i].username]
                 self.srv_data.clients.pop(i)
 
     def pollserver(self, host="localhost", port=None):
