@@ -165,6 +165,7 @@ class Proxy(object):
         self.proxy_port = self.config["proxy-port"]
         self.silent_ip_banning = self.config["silent-ipban"]
         self.srv_data.maxPlayers = self.config["max-players"]
+        self.proxy_worlds = self.config["worlds"]
 
         # proxy internal workings
         self.proxy_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

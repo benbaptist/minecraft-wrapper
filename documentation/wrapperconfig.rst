@@ -321,6 +321,23 @@ CONFIG = {
                     "BenBaptist"
 
                 ],
+
+         # set to True to use the wrapper built in Hub system (you must specify all your "worlds").
+
+            "built-in-hub": False,
+
+         # Define your worlds here to give players access to multiple worlds (with no plugin required).
+
+            "worlds":
+
+             # "world"= the name used in the hub/ command.  "port" = its value, corresponding to the local port. "desc" is the world's meta description that fits this sentence: ` Go to "".`.  `worlds` and `help` are reserved (do not use them for world names).
+
+                {
+
+                    "world": {"port": 25565, "desc": "a world description"},
+
+                },
+
 # Web - Web mode allows you to control and monitor the server.  This is not a https connection.  Be mindful of that and don't use the same password you use anywhere else.  It is also advised that this be open only to the localhost.
 
     "Web":

@@ -386,6 +386,23 @@ CONFIG = {
                     "BenBaptist"
 
                 ],
+
+         # set to True to use the wrapper built in Hub system (you must specify all your "worlds").
+
+            "built-in-hub": False,
+
+         # Define your worlds here to give players access to multiple worlds (with no plugin required).
+
+            "worlds":
+
+             # "world"= the name used in the hub/ command.  "port" = its value, corresponding to the local port. "desc" is the world's meta description that fits this sentence: ` Go to "".`.  `worlds` and `help` are reserved (do not use them for world names).
+
+                {
+
+                    "world": {"port": 25565, "desc": "a world description"},
+
+                },
+
             "proxy-sub-world": "deprecated",  # This was staged and never used  # NODOC
             "server-port": "deprecated", # This port is autoconfigured from server console output now.  # NODOC
             "spigot-mode": "deprecated", # Wrapper now uses a compatible format for logins  # NODOC

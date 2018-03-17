@@ -43,6 +43,73 @@ class ParseSB(object):
             self.client.head = (data[4], data[5])
         return True
 
+    def world_hub_help(self, htype):
+        if htype == "h":
+            self.client.chat_to_client(
+                {
+                    "text": "HUB System help", "color": "gold"
+                }
+            )
+            self.client.chat_to_client(
+                {
+                    "text": "---------------------------", "color": "gold"
+                }
+            )
+            self.client.chat_to_client(
+                {
+                    "text": "/hub - Return to the primary server.",
+                    "color": "dark_green"
+                }
+            )
+            self.client.chat_to_client(
+                {
+                    "text": "/hub <world_name> - Spawn in another world.",
+                    "color": "dark_green"
+                }
+            )
+            self.client.chat_to_client(
+                {
+                    "text": "/hub worlds - List available worlds.",
+                    "color": "dark_green"
+                }
+            )
+        elif htype == "w":
+            self.client.chat_to_client(
+                {
+                    "text": "Available HUB worlds", "color": "gold"
+                }
+            )
+            self.client.chat_to_client(
+                {
+                    "text": "---------------------------", "color": "gold"
+                }
+            )
+            for places in self.proxy.proxy_worlds:
+                self.client.chat_to_client(
+                    {
+                        "text": "/hub %s - Go to %s." % (
+                            places,
+                            self.proxy.proxy_worlds[places]["desc"]
+                        ),
+                        "color": "dark_green"
+                    }
+                )
+
+    def world_hub_command(self, where=""):
+        ip = "127.0.0.1"
+        if where in ("help", "?"):
+            return self.world_hub_help("h")
+        if where == "worlds":
+            return self.world_hub_help("w")
+        port = self.proxy.srv_data.server_port
+        worlds = self.proxy.proxy_worlds
+        if where in worlds:
+            port = self.proxy.proxy_worlds[where]["port"]
+        t = threading.Thread(target=self.client.change_servers,
+                             name="hub", args=(ip, port))
+        t.daemon = True
+        t.start()
+
     def parse_play_chat_message(self):
         data = self.packet.readpkt([STRING])
         if data is None:
@@ -52,16 +119,16 @@ class ParseSB(object):
         chatmsg = data[0]
 
         if chatmsg[:4] == "/hub":
-            # TODO fix this - add more features or just remove next three lines.
-            ip = "127.0.0.1"
-            port = 25565
-            if len(chatmsg) == 4:
-                port = self.proxy.srv_data.server_port
-            t = threading.Thread(target=self.client.change_servers,
-                                 name="hubtest", args=(ip, port))
-            t.daemon = True
-            t.start()
+            if self.client.usehub:
+                arg = chatmsg.split()
+                goto = ""
+                if len(arg) > 1:
+                    goto = arg[1]
+            else:
+                goto = ""
+            self.world_hub_command(goto)
             return False
+
         if not self.client.local:
             return True
 
