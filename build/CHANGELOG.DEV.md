@@ -1,3 +1,9 @@
+Build 25:
+ - Fix typos in requirements.txt
+ - restructure api/helpers/processcolorcodes to return dictionary versus text for json payloads (since most of the
+  internal api already handles dict json natively for chat).  Fixes #549 issues (which were only in the chat plugin)
+ - fix typo bug in mcserver kickplayer log entry.
+
 Build 24 - Fix playerstats in wrapper-data/players being recorded with client (possibly offline) uuid.
 
 Build 23 - fix in-game '/wrapper update' command.

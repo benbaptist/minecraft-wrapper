@@ -470,7 +470,7 @@ def processcolorcodes(messagestring):
 
     :arg messagestring: String argument with "&" codings.
 
-    :returns: Json dumps() string.
+    :returns: Dictionary chat
 
     """
     if not PY3:
@@ -566,7 +566,7 @@ def processcolorcodes(messagestring):
         "italic": italic,
         "strikethrough": strikethrough
     })
-    return json.dumps({"text": "", "extra": extras}, sort_keys=True)
+    return {"text": "", "extra": extras}
 
 
 def processoldcolorcodes(message):
