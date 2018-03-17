@@ -270,7 +270,7 @@ class MCServer(object):
                 self.console("kick %s %s" % (player, reasontext))
             except KeyError:
                 self.log.warning(
-                    "Kick failed - No proxy player called %s", player)
+                    "Kick failed - No player called %s", player)
             except Exception as e:
                 self.log.warning(
                     "Kick failed - something else went wrong:"
@@ -409,7 +409,7 @@ class MCServer(object):
         self.wrapper.backups.idle = False
         player = self.getplayer(username)
         # proxy will handle the login event if enabled
-        if player.client:
+        if player and player.client:
             return
         self.wrapper.events.callevent(
             "player.login",
@@ -466,9 +466,16 @@ class MCServer(object):
                 <payload>
 
             """  # noqa
-            if player.client.state != LOBBY and player.client.local:
+
+            if player.client is None:
                 player.abort = True
                 del self.vitals.players[players_name]
+            elif player.client.state != LOBBY and player.client.local:
+                player.abort = True
+                del self.vitals.players[players_name]
+
+            self.wrapper.proxy.removestaleclients()
+
         if len(self.vitals.players) == 0:
             self.wrapper.backups.idle = True
 
@@ -482,7 +489,7 @@ class MCServer(object):
         """
         if username in self.vitals.players:
             player = self.vitals.players[username]
-            if player.client.state != LOBBY and player.client.local:
+            if player.client and player.client.state != LOBBY and player.client.local:  # noqa
                 return player
         return False
 
