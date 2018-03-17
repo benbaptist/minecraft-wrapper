@@ -316,7 +316,6 @@ class Player(object):
         if string[0] in (self.wrapper.servervitals.command_prefix, "/"):
             string = string[1:]
         try:
-            print("/%s" % string)
             self.client.chat_to_server("/%s" % string)
         except AttributeError:
             if self.wrapper.servervitals.protocolVersion > PROTOCOL_1_7_9:
