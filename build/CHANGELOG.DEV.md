@@ -1,3 +1,5 @@
+Build 24 - Fix playerstats in wrapper-data/players being recorded with client (possibly offline) uuid.
+
 Build 23 - fix in-game '/wrapper update' command.
 
 Build 22 - fix #552, #553

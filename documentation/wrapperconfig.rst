@@ -282,11 +282,11 @@ CONFIG = {
 
             "command-prefix": "/",
 
-            # This will kick players that are not in the playerlist (because they entered the server port directly).
+         # This will kick players that are not in the playerlist (because they entered the server port directly).
 
             "disconnect-nonproxy-connections": True,
 
-            # The number of players the proxy will hold.  This includes connected players from all hub worlds
+         # The number of players the proxy will hold.  This includes connected players from all hub worlds
 
             "max-players": 1024,
 

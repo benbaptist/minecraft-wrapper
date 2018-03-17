@@ -243,7 +243,7 @@ class Player(object):
 
         # Process login data
         self.data = Storage(
-            self.clientUuid.string, root="wrapper-data/players")
+            self.mojangUuid.string, root="wrapper-data/players")
         if "firstLoggedIn" not in self.data.Data:
             self.data.Data["firstLoggedIn"] = (time.time(), time.tzname)
         if "logins" not in self.data.Data:
@@ -583,6 +583,7 @@ class Player(object):
                 sentitem = message
             else:
                 sentitem = processoldcolorcodes(message)
+                pprint.pprint(message)
 
             self.client.chat_to_client(sentitem, position)
         else:
