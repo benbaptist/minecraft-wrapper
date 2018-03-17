@@ -1,5 +1,8 @@
-Build 19
-fix #550 player remains connected to Hub world after player disconnects from child world.
+Build 20 - fix #554 player login event in sub-worlds can happen too soon for proxy..
+
+Build 19 - fix #550, 552:
+ player remains connected to Hub world after player disconnects from child world.
+ player object needs destruction after client keepalives abort.
 
 Build 18 [1.0b18]
 I had forgotten how effective writing and testing plugins was to determine the state of Wrapper's health...
