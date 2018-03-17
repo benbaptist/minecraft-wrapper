@@ -9,6 +9,7 @@ from pprint import pprint
 import time
 import json
 
+import core.buildinfo as buildinfo
 from api.helpers import format_bytes, getargs, getargsafter, readout
 from api.helpers import get_int, set_item, getjsonfile, putjsonfile
 # noinspection PyProtectedMember
@@ -412,11 +413,11 @@ class Commands(object):
                     player.message(
                         "New Wrapper.py %s version %s is available! (current "
                         "build is #%s)" % (
-                            repotype, version, self.wrapper.buildinfo.__version__  # noqa
+                            repotype, version, buildinfo.__version__  # noqa
                         )
                     )
                     player.message("&aPerforming update...")
-                    if self.wrapper.performupdate(version, build, repotype):
+                    if self.wrapper.performupdate(version, reponame):
                         player.message(
                             "&aUpdate completed! Version %s #%d (%s) is now "
                             "installed. Please reboot Wrapper.py to apply "

@@ -1,3 +1,5 @@
+Build 23 - fix in-game '/wrapper update' command.
+
 Build 22 - fix #552, #553
  old player objects still found in player list (if player was kicked by wrapper).
  kick players who connect directly to an offline wrapper or server.
