@@ -117,7 +117,6 @@ class Commands(object):
 
         elif command == "password":
             return self.command_password(player, payload)
-
         # This section calls the commands defined by api.registerCommand()
         for pluginID in self.commands:
             command = payload["command"]
@@ -157,6 +156,7 @@ class Commands(object):
                          "while trying to execute this command. Apologies.",
                          "color": "red"})
                     return
+
         # command was not executed by werapper, so try server.
         player.message(commandtext)
         player.execute(commandtext)

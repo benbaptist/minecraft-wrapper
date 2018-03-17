@@ -208,10 +208,6 @@ CONFIG = {
 
         {  # NODOC
             # NODOC
-         # if you change the command-prefix, no minecraft command will work because minecraft itself only recognizes "/" commands... TODO - Bug or feature? -not sure.
-
-            "command-prefix": "/",
-
          # Reboot message occurs with automatic timed server restarts ["General"]["timed-reboot"]
 
             "reboot-message": "Server is conducting a scheduled reboot. The server will be back momentarily!",
@@ -237,6 +233,7 @@ CONFIG = {
             "use-betterconsole": False,
 
             "use-readline": "deprecated",  # replaced by "use-betterconsole" for clarity about what this option does.  # NODOC
+            "command-prefix": "deprecated", # this only applies to proxy mode  # NODOC
         },  # NODOC
 
 # General wrapper and server startup options
@@ -346,6 +343,10 @@ CONFIG = {
     "Proxy":
 
         {  # NODOC
+         # Must be a single character.
+
+            "command-prefix": "/",
+
          # The number of players the proxy will hold.  This includes connected players from all hub worlds
 
             "max-players": 1024,

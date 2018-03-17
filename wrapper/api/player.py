@@ -313,6 +313,8 @@ class Player(object):
          "execute" command.
 
         """
+        if string[0] in (self.wrapper.servervitals.command_prefix, "/"):
+            string = string[1:]
         try:
             self.client.chat_to_server("/%s" % string)
         except AttributeError:

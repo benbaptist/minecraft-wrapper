@@ -167,9 +167,6 @@ class Proxy(object):
         self.srv_data.maxPlayers = self.config["max-players"]
 
         # proxy internal workings
-        #
-        # proxy_socket is only defined here to make the IDE type checking
-        #  happy.  The actual socket connection is created later.
         self.proxy_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.usingSocket = False
 

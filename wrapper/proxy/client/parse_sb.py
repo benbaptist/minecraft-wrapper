@@ -8,6 +8,7 @@
 from proxy.utils.constants import *
 import threading
 
+
 # noinspection PyMethodMayBeStatic
 class ParseSB(object):
     """
@@ -22,7 +23,6 @@ class ParseSB(object):
 
         self.command_prefix = self.proxy.srv_data.command_prefix
         self.command_prefix_non_standard = self.command_prefix != "/"
-        self.command_prefix_len = len(self.command_prefix)
 
     def parse_play_player_poslook(self):  # player position and look
         """decided to use this one solely for tracking the client position"""
@@ -107,7 +107,7 @@ class ParseSB(object):
             chatmsg = payload["message"]
 
         # determine if this is a command. act appropriately
-        if chatmsg[0:self.command_prefix_len] == self.command_prefix:
+        if chatmsg[0] == self.command_prefix:
             # it IS a command of some kind
             allwords = chatmsg.split(" ")
             self.proxy.eventhandler.callevent(

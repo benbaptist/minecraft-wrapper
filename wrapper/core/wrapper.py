@@ -245,7 +245,7 @@ class Wrapper(object):
             "General"]["server-directory"]
         self.servervitals.state = OFF
         self.servervitals.command_prefix = self.config[
-            "Misc"]["command-prefix"]
+            "Proxy"]["command-prefix"]
 
         self.proxyconfig = ProxyConfig()
         self.proxyconfig.proxy = self.config["Proxy"]
