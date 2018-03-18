@@ -364,7 +364,7 @@ class API(object):
         else:
             raise LookupError("Plugin %s does not exist!" % plugin_id)
 
-    def getStorage(self, name, world=False, formatting="pickle"):
+    def getStorage(self, name, world=False, pickle=True):
         """
         Returns a storage object manager.  The manager contains a
         storage dictionary called 'Data'. 'Data' contains the
@@ -380,11 +380,9 @@ class API(object):
 
         :Args:
             :name:  The name of the storage (on disk).
-            :world:
-                :False: set the storage's location to
-                 '/wrapper-data/plugins'.
-                :True: set the storage path to
-                 '<serverpath>/<worldname>/plugins'.
+            :world:  THe location of the storage on disk -
+                :False: '/wrapper-data/plugins'.
+                :True: '<serverpath>/<worldname>/plugins'.
 
             :formatting="pickle":  Pickle formatting is the default. pickling is
              less strict than json formats and leverages binary storage.
@@ -457,9 +455,6 @@ class API(object):
             ..
 
         """
-        pickle = False
-        if formatting == "pickle":
-            pickle = True
         if world:
             return Storage(name, root="%s/%s/plugins/%s" % (
                 self.serverpath, self.minecraft.getWorldName(),
