@@ -229,34 +229,32 @@
 
 -  getStorage(self, name, world=False, pickle=True)
 
-        Returns a storage object manager.  The manager contains a
-        storage dictionary called 'Data'. 'Data' contains the
-        data your plugin will remember across reboots.
-
-        :NOTE: This method is somewhat different from previous Wrapper
-         versions prior to 0.10.1 (build 182).  The storage object is
-         no longer a data object itself; It is a manager used for
-         controlling the saving of the object data.  The actual data
-         is contained in the property/dictionary variable 'Data'
-
-        ___
+        Returns a storage object manager for saving data between reboots.
 
         :Args:
             :name:  The name of the storage (on disk).
             :world:  THe location of the storage on disk -
                 :False: '/wrapper-data/plugins'.
                 :True: '<serverpath>/<worldname>/plugins'.
+            :Pickle:  Whether wrapper should pickle or save as json.
 
-            :formatting="pickle":  Pickle formatting is the default. pickling is
+            Pickle formatting is the default. pickling is
              less strict than json formats and leverages binary storage.
-             Use of json (or future implemented formats) can result in
-             errors if your keys or data do not conform to json standards
-             (like use of string keys).  However, pickle is not generally
-             human-readable, whereas json is human readable. If you need
-             a human-readable copy (for debugging), consider using
-             self.api.helpers.putjsonfile(<yourDictionary>) to write a
-             copy to disk in Json.  if you do so, check the return status
-             of `putjsonfile` to make sure it was written.
+             Use of json can result in errors if your keys or data do not
+             conform to json standards (like use of string keys).  However,
+             pickle is not generally human-readable, whereas json is human
+             readable.
+
+        :Returns: A storage object manager.  The manager contains a
+         storage dictionary called 'Data'. 'Data' contains the
+         data your plugin will remember across reboots.
+        ___
+
+        :NOTE: This method is somewhat different from previous Wrapper
+         versions prior to 0.10.1 (build 182).  The storage object is
+         no longer a data object itself; It is a manager used for
+         controlling the saving of the object data.  The actual data
+         is contained in the property/dictionary variable 'Data'
 
         ___
 

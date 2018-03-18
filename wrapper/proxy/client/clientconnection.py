@@ -890,10 +890,11 @@ class Client(object):
         world = self.get_port_text(port)
         confirmation = "§6Connected to %s (%s)!" % (world[1], world[0])
         if not server_try[0] or self.disc_request:
+            self.disc_request = False
             self.log.debug(
                 "connection to port %s failed: %s", world[0], server_try[1]
             )
-            confirmation = {"text": "Could not connect ('%s'): %s" % (
+            confirmation = {"text": "Could not connect to %s: %s" % (
                 world[0], self.disc_reason),
                             "color": "dark_purple", "bold": "true"}
             self.disc_reason = "No connection"
@@ -926,7 +927,7 @@ class Client(object):
         new_dimension = self.dimension
         self.log.debug("NEW DIM %s", new_dimension)
         if new_dimension == despawn_dimension:
-            self.toggle_dim()
+            # self.toggle_dim()
 
             confirmation = {"text": "Could not connect properly!  Wait and "
                                     "see if you re-spawn or type: `/hub` to "
@@ -957,12 +958,9 @@ class Client(object):
                                 self.pktCB.SET_SLOT[PARSER],
                                 (0, items, self.inventory[items]))
 
-        if self.serverport != port:
-            self.local = False
-            self.permit_disconnect_from_server = False
-        else:
-            self.local = True
-            self.permit_disconnect_from_server = True
+        self.local = self.serverport == port
+        self.permit_disconnect_from_server = self.serverport == port
+
         self.chat_to_client(confirmation)
 
     # noinspection PyBroadException

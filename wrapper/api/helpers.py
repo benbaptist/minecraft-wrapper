@@ -408,11 +408,14 @@ def pickle_load(path, filename):
         :path: path to file (no trailing slash)
         :filename: filename including extension
 
-    :returns: saved data.  (Assumes success; errors will raise exception.)
+    :returns: saved data.  Failure will yield empty dictionary
 
     """
     with open("%s/%s" % (path, filename), "rb") as f:
-        return Pickle.load(f)
+        try:
+            return Pickle.load(f)
+        except EOFError:
+            return {}
 
 
 def pickle_save(path, filename, data, encoding="machine"):
