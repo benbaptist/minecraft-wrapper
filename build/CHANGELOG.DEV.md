@@ -1,3 +1,9 @@
+Build 27:
+- Fixed player inventory bugginess because we were not parsing HELD_ITEM_CHANGE.
+- improved respawn process usign saved level_type and difficulty.
+- More /hub command improvements.
+- refactors of parse_play_player_list_item.
+
 Build 26:
 - Implement /hub as a full featured command if ["Proxy"]["built-in-hub"] is enabled. Allows full use of hub worlds
  without requiring any plugins.

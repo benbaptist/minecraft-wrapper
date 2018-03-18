@@ -85,14 +85,14 @@ class ParseCB(object):
                     )
                     curr_index += 1
                     continue
-                self.log.debug(
-                    "(%s)parse.cb.py - Player list item: %s" % (
-                        self.client.username,
-                        player_uuid_from_server)
-                )
-                uuid = player_client.wrapper_uuid
+                # self.log.debug(
+                #    "(%s)parse.cb.py - Player list item: %s" % (
+                #        self.client.username,
+                #        player_uuid_from_server)
+                # )
+                uuid_to_send = player_client.wrapper_uuid
                 curr_index += 1
-                #raw =b''
+                # raw = b''
 
                 # Action Add Player
                 if action == 0:
@@ -113,27 +113,24 @@ class ParseCB(object):
                     self.client.packet.sendpkt(
                         self.pktCB.PLAYER_LIST_ITEM[PKT],
                         [VARINT, VARINT, UUID, STRING, VARINT, RAW],
-                        (0, 1, uuid, player_client.username,
+                        (0, 1, uuid_to_send, player_client.username,
                          len(properties), raw))
 
                 # Action Update Gamemode
                 elif action == 1:
                     data = self.packet.readpkt([VARINT])
-
-                    # noinspection PyUnusedLocal
-                    # todo should we be using this to set client gamemode?
-
                     # I think if we are sending this packet to our own player
                     # we need to send the client the online UUID.  Everyone
                     # else would get the offline version
                     # TODO Corrects the noclip spectator problem??
                     gamemode = data[0]
                     # ("varint:gamemode")
+
                     self.client.packet.sendpkt(
                         self.pktCB.PLAYER_LIST_ITEM[PKT],
                         [VARINT, VARINT, UUID, VARINT],
-                        (1, 1, uuid, gamemode))
-                    print(number_players, "SENDLIST", uuid, gamemode)
+                        (1, 1, uuid_to_send, gamemode))
+
                 # Action Update Latency
                 elif action == 2:
                     data = self.packet.readpkt([VARINT])
@@ -142,7 +139,7 @@ class ParseCB(object):
                     self.client.packet.sendpkt(
                         self.pktCB.PLAYER_LIST_ITEM[PKT],
                         [VARINT, VARINT, UUID, VARINT],
-                        (2, 1, uuid, ping))
+                        (2, 1, uuid_to_send, ping))
 
                 # Action Update Display Name
                 elif action == 3:
@@ -156,20 +153,20 @@ class ParseCB(object):
                         self.client.packet.sendpkt(
                             self.pktCB.PLAYER_LIST_ITEM[PKT],
                             [VARINT, VARINT, UUID, BOOL, STRING],
-                            (3, 1, uuid, True, displayname))
+                            (3, 1, uuid_to_send, True, displayname))
 
                     else:
                         self.client.packet.sendpkt(
                             self.pktCB.PLAYER_LIST_ITEM[PKT],
                             [VARINT, VARINT, UUID, VARINT],
-                            (3, 1, uuid, False))
+                            (3, 1, uuid_to_send, False))
 
                 # Remove Player
                 elif action == 4:
                     self.client.packet.sendpkt(
                         self.pktCB.PLAYER_LIST_ITEM[PKT],
                         [VARINT, VARINT, UUID],
-                        (4, 1, uuid))
+                        (4, 1, uuid_to_send))
 
             # final send should go here?
             # This was indented with the elif's - would that be an error, cutting the list short??  # noqa
@@ -318,6 +315,15 @@ class ParseCB(object):
         self.client.gamemode = data[1]
         self.client.dimension = data[2]
         self.client.server_eid = data[0]
+        self.log.debug(
+            "(Client: %s) sending Join.Game GM: %s|DIM: %s| EID %s" % (
+                self.client.username,
+                self.client.gamemode,
+                self.client.dimension,
+                self.client.server_eid
+            )
+        )
+
         return True
 
     def parse_play_spawn_position(self):
@@ -357,8 +363,10 @@ class ParseCB(object):
         """Hub continues to track these items, especially dimension"""
         data = self.packet.readpkt([INT, UBYTE, UBYTE, STRING])
         # "int:dimension|ubyte:difficulty|ubyte:gamemode|level_type:string")
-        self.client.gamemode = data[2]
         self.client.dimension = data[0]
+        self.client.difficulty = data[1]
+        self.client.gamemode = data[2]
+        self.client.level_type = data[3]
         return True
 
     def parse_play_change_game_state(self):
@@ -366,7 +374,7 @@ class ParseCB(object):
         data = self.packet.readpkt([UBYTE, FLOAT])
         # ("ubyte:reason|float:value")
         if data[0] == 3:
-            self.client.gamemode = data[1]
+            self.client.gamemode = int(data[1])
         if data[0] == 2:
             self.client.raining = True
         if data[0] == 1:
@@ -447,7 +455,13 @@ class ParseCB(object):
             data = self.packet.readpkt([RAW, ])
             self.client.first_chunks.append(data)
         return True
+
     # Window processing/ inventory tracking
+    # ---------------------------------------
+
+    def parse_play_held_item_change(self):
+        data = self.packet.readpkt(self.pktCB.HELD_ITEM_CHANGE[PARSER])
+        self.client.slot = data[0]
 
     def parse_play_open_window(self):
         # This works together with SET_SLOT to maintain
@@ -468,7 +482,8 @@ class ParseCB(object):
 
         # This part updates our inventory from additional
         #  windows the player may open
-        if data[0] == self.client.currentwindowid:
+        # MC|PickItem causes windowid = -2
+        if data[0] in (self.client.currentwindowid, -2):
             currentslot = data[1]
             slotdata = data[2]
             self.client.inventory[currentslot] = slotdata

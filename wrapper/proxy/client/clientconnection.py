@@ -151,6 +151,9 @@ class Client(object):
         self.server_eid = 0
         self.gamemode = 0
         self.dimension = 0
+        self.difficulty = 0
+        self.level_type = "default"
+
         self.position = (0, 0, 0)  # X, Y, Z
         self.head = (0, 0)  # Yaw, Pitch
         self.inventory = {}
@@ -577,6 +580,14 @@ class Client(object):
     
                 """
 
+                # Our client does not get into play mode fast enough to
+                # get this when the server first sends it.
+                # print("FIRING CHANGE GAME STATE (CS) %s" % self.gamemode)
+                # self.packet.sendpkt(
+                #    self.pktCB.CHANGE_GAME_STATE[PKT],
+                #    self.pktCB.CHANGE_GAME_STATE[PARSER],
+                #    (3, self.gamemode))
+
     def _parse_login_encr_response(self):
         # the client is RESPONDING to our request for
         #  encryption (if we sent one above)
@@ -850,7 +861,8 @@ class Client(object):
             self.dimension = -1
         self.packet.sendpkt(self.pktCB.RESPAWN[PKT],
                             self.pktCB.RESPAWN[PARSER],
-                            (self.dimension, 0, self.gamemode, "default"))
+                            (self.dimension, self.difficulty,
+                             self.gamemode, self.level_type))
 
     def change_servers(self, ip="127.0.0.1", port=25600):
         self.log.debug("leaving server instance id %s ; Port %s",
@@ -928,7 +940,8 @@ class Client(object):
         # spawn to overworld dimension
         self.packet.sendpkt(self.pktCB.RESPAWN[PKT],
                             self.pktCB.RESPAWN[PARSER],
-                            (new_dimension, 0, self.gamemode, "default"))
+                            (new_dimension, self.difficulty,
+                             self.gamemode, self.level_type))
 
         # send player position & look
         self.packet.sendpkt(self.pktCB.PLAYER_POSLOOK[PKT],
