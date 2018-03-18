@@ -59,7 +59,7 @@ class Packets(object):
         self.UPDATE_HEALTH = [0x06, [NULL, ]]
         self.RESPAWN = [0x07, [INT, UBYTE, UBYTE, STRING]]
         self.PLAYER_POSLOOK = [0x08, [DOUBLE, DOUBLE, DOUBLE, FLOAT, FLOAT, BOOL]]  # noqa
-        self.HELD_ITEM_CHANGE = [0x09, [NULL, ]]
+        self.HELD_ITEM_CHANGE = [0x09, [BYTE, ]]
         self.USE_BED = [0x0a, [NULL, ]]
         self.ANIMATION = [0x0b, [NULL, ]]
         self.SPAWN_PLAYER = [0x0c, [VARINT, STRING, REST]]

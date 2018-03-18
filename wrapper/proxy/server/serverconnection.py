@@ -314,6 +314,8 @@ class ServerConnection(object):
                     self.parse_cb.parse_play_open_window,
                 self.pktCB.TAB_COMPLETE[PKT]:
                     self.parse_cb.parse_play_tab_complete,
+                self.pktCB.HELD_ITEM_CHANGE[PKT]:
+                    self.parse_cb.parse_play_held_item_change,
                 self.pktCB.SET_SLOT[PKT]:
                     self.parse_cb.parse_play_set_slot,
                 self.pktCB.PLAYER_LIST_ITEM[PKT]:

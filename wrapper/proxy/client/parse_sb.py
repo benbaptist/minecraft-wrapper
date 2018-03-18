@@ -84,6 +84,11 @@ class ParseSB(object):
                     "text": "---------------------------", "color": "gold"
                 }
             )
+            self.client.chat_to_client(
+                {
+                    "text": "/hub - back to the root server.", "color": "dark_green"
+                }
+            )
             for places in self.proxy.proxy_worlds:
                 self.client.chat_to_client(
                     {
@@ -97,14 +102,21 @@ class ParseSB(object):
 
     def world_hub_command(self, where=""):
         ip = "127.0.0.1"
-        if where in ("help", "?"):
+        if where == "help":
             return self.world_hub_help("h")
-        if where == "worlds":
+
+        elif where == "worlds":
             return self.world_hub_help("w")
-        port = self.proxy.srv_data.server_port
-        worlds = self.proxy.proxy_worlds
-        if where in worlds:
-            port = self.proxy.proxy_worlds[where]["port"]
+
+        elif where == "":
+            port = self.proxy.srv_data.server_port
+
+        else:
+            worlds = self.proxy.proxy_worlds
+            if where in worlds:
+                port = self.proxy.proxy_worlds[where]["port"]
+            else:
+                return self.world_hub_help("w")
         t = threading.Thread(target=self.client.change_servers,
                              name="hub", args=(ip, port))
         t.daemon = True
@@ -119,15 +131,18 @@ class ParseSB(object):
         chatmsg = data[0]
 
         if chatmsg[:4] == "/hub":
-            if self.client.usehub:
-                arg = chatmsg.split()
+            if len(chatmsg) == 4:
                 goto = ""
-                if len(arg) > 1:
-                    goto = arg[1]
+                self.world_hub_command(goto)
+                return False
             else:
-                goto = ""
-            self.world_hub_command(goto)
-            return False
+                if self.client.usehub:
+                    arg = chatmsg.split()
+                    # the command may have been something else like "/hubbify"..
+                    if arg[0] == "/hub" and len(arg) > 1:
+                        goto = arg[1]
+                        self.world_hub_command(goto)
+                        return False
 
         if not self.client.local:
             return True

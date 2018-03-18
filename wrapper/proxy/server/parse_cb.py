@@ -66,22 +66,37 @@ class ParseCB(object):
         Otherwise weird things can happen like players not seeing
         each other or duplicate names on the tab list, etc."""
         if self.server.version >= PROTOCOL_1_8START:
-            head = self.packet.readpkt([VARINT, VARINT])
+            header = self.packet.readpkt([VARINT, VARINT])
             # ("varint:action|varint:length")
-            lenhead = head[1]
-            action = head[0]
-            z = 0
-            while z < lenhead:
-                serveruuid = self.packet.readpkt([UUID])[0]
-                clientserverid = self.proxy.getclientbyofflineserveruuid(
-                    serveruuid)
-                if not clientserverid:
-                    z += 1
+            number_players = header[1]
+            action = header[0]
+            curr_index = 0
+
+            while curr_index < number_players:
+                player_uuid_from_server = self.packet.readpkt([UUID])[0]
+                player_client = self.proxy.getclientbyofflineserveruuid(
+                    player_uuid_from_server)
+
+                if not player_client:
+                    self.log.debug(
+                        "(%s)parse.cb.py - Player list item:  Player uuid "
+                        "not on server: %s" % (self.client.username,
+                                               player_uuid_from_server)
+                    )
+                    curr_index += 1
                     continue
-                uuid = clientserverid.wrapper_uuid
-                z += 1
+                # self.log.debug(
+                #    "(%s)parse.cb.py - Player list item: %s" % (
+                #        self.client.username,
+                #        player_uuid_from_server)
+                # )
+                uuid_to_send = player_client.wrapper_uuid
+                curr_index += 1
+                # raw = b''
+
+                # Action Add Player
                 if action == 0:
-                    properties = clientserverid.properties
+                    properties = player_client.properties
                     raw = b""
                     for prop in properties:
                         raw += self.client.packet.send_string(prop["name"])
@@ -98,25 +113,25 @@ class ParseCB(object):
                     self.client.packet.sendpkt(
                         self.pktCB.PLAYER_LIST_ITEM[PKT],
                         [VARINT, VARINT, UUID, STRING, VARINT, RAW],
-                        (0, 1, uuid, clientserverid.username,
+                        (0, 1, uuid_to_send, player_client.username,
                          len(properties), raw))
 
+                # Action Update Gamemode
                 elif action == 1:
                     data = self.packet.readpkt([VARINT])
-
-                    # noinspection PyUnusedLocal
-                    # todo should we be using this to set client gamemode?
-
                     # I think if we are sending this packet to our own player
                     # we need to send the client the online UUID.  Everyone
                     # else would get the offline version
                     # TODO Corrects the noclip spectator problem??
                     gamemode = data[0]
                     # ("varint:gamemode")
+
                     self.client.packet.sendpkt(
                         self.pktCB.PLAYER_LIST_ITEM[PKT],
                         [VARINT, VARINT, UUID, VARINT],
-                        (1, 1, uuid, gamemode))
+                        (1, 1, uuid_to_send, gamemode))
+
+                # Action Update Latency
                 elif action == 2:
                     data = self.packet.readpkt([VARINT])
                     ping = data[0]
@@ -124,7 +139,9 @@ class ParseCB(object):
                     self.client.packet.sendpkt(
                         self.pktCB.PLAYER_LIST_ITEM[PKT],
                         [VARINT, VARINT, UUID, VARINT],
-                        (2, 1, uuid, ping))
+                        (2, 1, uuid_to_send, ping))
+
+                # Action Update Display Name
                 elif action == 3:
                     data = self.packet.readpkt([BOOL])
                     # ("bool:has_display")
@@ -136,40 +153,58 @@ class ParseCB(object):
                         self.client.packet.sendpkt(
                             self.pktCB.PLAYER_LIST_ITEM[PKT],
                             [VARINT, VARINT, UUID, BOOL, STRING],
-                            (3, 1, uuid, True, displayname))
+                            (3, 1, uuid_to_send, True, displayname))
 
                     else:
                         self.client.packet.sendpkt(
                             self.pktCB.PLAYER_LIST_ITEM[PKT],
                             [VARINT, VARINT, UUID, VARINT],
-                            (3, 1, uuid, False))
+                            (3, 1, uuid_to_send, False))
 
+                # Remove Player
                 elif action == 4:
                     self.client.packet.sendpkt(
                         self.pktCB.PLAYER_LIST_ITEM[PKT],
                         [VARINT, VARINT, UUID],
-                        (4, 1, uuid))
+                        (4, 1, uuid_to_send))
 
-                return False
+            # final send should go here?
+            # This was indented with the elif's - would that be an error, cutting the list short??  # noqa
+            return False
         else:  # version < 1.7.9 needs no processing
             return True
-        return True
+
+        # moving the return False above made this line unreachable
+        #return True
 
     def parse_play_spawn_player(self):  # embedded UUID -must parse.
-        # This packet  is used to spawn other players into a player
-        # client's world.  if this packet does not arrive, the other
-        #  player(s) will not be visible to the client
-        # it does not play a role in the player's spawing process.
+        """
+        This packet  is used to spawn other players into a player
+        client's world.  if this packet does not arrive, the other
+        player(s) will not be visible to the client
+        it does not play a role in the player's spawing process.
+        """
         dt = self.packet.readpkt(self.pktCB.SPAWN_PLAYER[PARSER])
         # dt = (eid, uuid, REST)
         # We dont need to read the whole thing.
-        clientserverid = self.proxy.getclientbyofflineserveruuid(dt[1])
-        if clientserverid:
-            if clientserverid.wrapper_uuid:
+        eid, player_uuid_on_server, rest = dt
+
+        player_client = self.proxy.getclientbyofflineserveruuid(
+            player_uuid_on_server
+        )
+        self.log.debug(
+            "(%s)parse.spawn.player - My UUIDs: %s|%s\n"
+            "This uuid: %s" % (self.client.username,
+                               self.client.wrapper_uuid.string,
+                               self.client.local_uuid.string,
+                               player_uuid_on_server)
+        )
+        if player_client:
+            if player_client.wrapper_uuid:
                 self.client.packet.sendpkt(
                     self.pktCB.SPAWN_PLAYER[PKT],
                     self.pktCB.SPAWN_PLAYER[PARSER],
-                    (dt[0], clientserverid.wrapper_uuid, dt[2]))
+                    (eid, player_client.wrapper_uuid, rest))
             return False
         return False
 
@@ -280,6 +315,15 @@ class ParseCB(object):
         self.client.gamemode = data[1]
         self.client.dimension = data[2]
         self.client.server_eid = data[0]
+        self.log.debug(
+            "(Client: %s) sending Join.Game GM: %s|DIM: %s| EID %s" % (
+                self.client.username,
+                self.client.gamemode,
+                self.client.dimension,
+                self.client.server_eid
+            )
+        )
+
         return True
 
     def parse_play_spawn_position(self):
@@ -319,8 +363,10 @@ class ParseCB(object):
         """Hub continues to track these items, especially dimension"""
         data = self.packet.readpkt([INT, UBYTE, UBYTE, STRING])
         # "int:dimension|ubyte:difficulty|ubyte:gamemode|level_type:string")
-        self.client.gamemode = data[2]
         self.client.dimension = data[0]
+        self.client.difficulty = data[1]
+        self.client.gamemode = data[2]
+        self.client.level_type = data[3]
         return True
 
     def parse_play_change_game_state(self):
@@ -328,7 +374,7 @@ class ParseCB(object):
         data = self.packet.readpkt([UBYTE, FLOAT])
         # ("ubyte:reason|float:value")
         if data[0] == 3:
-            self.client.gamemode = data[1]
+            self.client.gamemode = int(data[1])
         if data[0] == 2:
             self.client.raining = True
         if data[0] == 1:
@@ -409,7 +455,13 @@ class ParseCB(object):
             data = self.packet.readpkt([RAW, ])
             self.client.first_chunks.append(data)
         return True
+
     # Window processing/ inventory tracking
+    # ---------------------------------------
+
+    def parse_play_held_item_change(self):
+        data = self.packet.readpkt(self.pktCB.HELD_ITEM_CHANGE[PARSER])
+        self.client.slot = data[0]
 
     def parse_play_open_window(self):
         # This works together with SET_SLOT to maintain
@@ -430,7 +482,8 @@ class ParseCB(object):
 
         # This part updates our inventory from additional
         #  windows the player may open
-        if data[0] == self.client.currentwindowid:
+        # MC|PickItem causes windowid = -2
+        if data[0] in (self.client.currentwindowid, -2):
             currentslot = data[1]
             slotdata = data[2]
             self.client.inventory[currentslot] = slotdata
