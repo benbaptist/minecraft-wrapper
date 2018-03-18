@@ -66,22 +66,32 @@ class ParseCB(object):
         Otherwise weird things can happen like players not seeing
         each other or duplicate names on the tab list, etc."""
         if self.server.version >= PROTOCOL_1_8START:
-            head = self.packet.readpkt([VARINT, VARINT])
+            header = self.packet.readpkt([VARINT, VARINT])
             # ("varint:action|varint:length")
-            lenhead = head[1]
-            action = head[0]
-            z = 0
-            while z < lenhead:
-                serveruuid = self.packet.readpkt([UUID])[0]
-                clientserverid = self.proxy.getclientbyofflineserveruuid(
-                    serveruuid)
-                if not clientserverid:
-                    z += 1
+            number_players = header[1]
+            action = header[0]
+            curr_index = 0
+
+            while curr_index < number_players:
+                player_uuid_from_server = self.packet.readpkt([UUID])[0]
+                player_client = self.proxy.getclientbyofflineserveruuid(
+                    player_uuid_from_server)
+
+                if not player_client:
+                    self.log.debug(
+                        "parse.cb.py - Player list item:  Player uuid not on "
+                        "server: %s" % player_uuid_from_server
+                    )
+                    curr_index += 1
                     continue
-                uuid = clientserverid.wrapper_uuid
-                z += 1
+
+                uuid = player_client.wrapper_uuid
+                curr_index += 1
+                #raw =b''
+
+                # Action Add Player
                 if action == 0:
-                    properties = clientserverid.properties
+                    properties = player_client.properties
                     raw = b""
                     for prop in properties:
                         raw += self.client.packet.send_string(prop["name"])
@@ -98,9 +108,10 @@ class ParseCB(object):
                     self.client.packet.sendpkt(
                         self.pktCB.PLAYER_LIST_ITEM[PKT],
                         [VARINT, VARINT, UUID, STRING, VARINT, RAW],
-                        (0, 1, uuid, clientserverid.username,
+                        (0, 1, uuid, player_client.username,
                          len(properties), raw))
 
+                # Action Update Gamemode
                 elif action == 1:
                     data = self.packet.readpkt([VARINT])
 
@@ -117,6 +128,8 @@ class ParseCB(object):
                         self.pktCB.PLAYER_LIST_ITEM[PKT],
                         [VARINT, VARINT, UUID, VARINT],
                         (1, 1, uuid, gamemode))
+
+                # Action Update Latency
                 elif action == 2:
                     data = self.packet.readpkt([VARINT])
                     ping = data[0]
@@ -125,6 +138,8 @@ class ParseCB(object):
                         self.pktCB.PLAYER_LIST_ITEM[PKT],
                         [VARINT, VARINT, UUID, VARINT],
                         (2, 1, uuid, ping))
+
+                # Action Update Display Name
                 elif action == 3:
                     data = self.packet.readpkt([BOOL])
                     # ("bool:has_display")
@@ -144,16 +159,20 @@ class ParseCB(object):
                             [VARINT, VARINT, UUID, VARINT],
                             (3, 1, uuid, False))
 
+                # Remove Player
                 elif action == 4:
                     self.client.packet.sendpkt(
                         self.pktCB.PLAYER_LIST_ITEM[PKT],
                         [VARINT, VARINT, UUID],
                         (4, 1, uuid))
 
-                return False
+            # This was indented with the elif's - would that be an error, cutting the list short??  # noqa
+            return False
         else:  # version < 1.7.9 needs no processing
             return True
-        return True
+
+        # moving the return False above made this line unreachable
+        #return True
 
     def parse_play_spawn_player(self):  # embedded UUID -must parse.
         # This packet  is used to spawn other players into a player
