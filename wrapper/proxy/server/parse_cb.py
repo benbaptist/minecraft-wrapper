@@ -79,12 +79,17 @@ class ParseCB(object):
 
                 if not player_client:
                     self.log.debug(
-                        "parse.cb.py - Player list item:  Player uuid not on "
-                        "server: %s" % player_uuid_from_server
+                        "(%s)parse.cb.py - Player list item:  Player uuid "
+                        "not on server: %s" % (self.client.username,
+                                               player_uuid_from_server)
                     )
                     curr_index += 1
                     continue
-
+                self.log.debug(
+                    "(%s)parse.cb.py - Player list item: %s" % (
+                        self.client.username,
+                        player_uuid_from_server)
+                )
                 uuid = player_client.wrapper_uuid
                 curr_index += 1
                 #raw =b''
@@ -128,7 +133,7 @@ class ParseCB(object):
                         self.pktCB.PLAYER_LIST_ITEM[PKT],
                         [VARINT, VARINT, UUID, VARINT],
                         (1, 1, uuid, gamemode))
-
+                    print(number_players, "SENDLIST", uuid, gamemode)
                 # Action Update Latency
                 elif action == 2:
                     data = self.packet.readpkt([VARINT])
@@ -166,6 +171,7 @@ class ParseCB(object):
                         [VARINT, VARINT, UUID],
                         (4, 1, uuid))
 
+            # final send should go here?
             # This was indented with the elif's - would that be an error, cutting the list short??  # noqa
             return False
         else:  # version < 1.7.9 needs no processing
@@ -175,20 +181,33 @@ class ParseCB(object):
         #return True
 
     def parse_play_spawn_player(self):  # embedded UUID -must parse.
-        # This packet  is used to spawn other players into a player
-        # client's world.  if this packet does not arrive, the other
-        #  player(s) will not be visible to the client
-        # it does not play a role in the player's spawing process.
+        """
+        This packet  is used to spawn other players into a player
+        client's world.  if this packet does not arrive, the other
+        player(s) will not be visible to the client
+        it does not play a role in the player's spawing process.
+        """
         dt = self.packet.readpkt(self.pktCB.SPAWN_PLAYER[PARSER])
         # dt = (eid, uuid, REST)
         # We dont need to read the whole thing.
-        clientserverid = self.proxy.getclientbyofflineserveruuid(dt[1])
-        if clientserverid:
-            if clientserverid.wrapper_uuid:
+        eid, player_uuid_on_server, rest = dt
+
+        player_client = self.proxy.getclientbyofflineserveruuid(
+            player_uuid_on_server
+        )
+        self.log.debug(
+            "(%s)parse.spawn.player - My UUIDs: %s|%s\n"
+            "This uuid: %s" % (self.client.username,
+                               self.client.wrapper_uuid.string,
+                               self.client.local_uuid.string,
+                               player_uuid_on_server)
+        )
+        if player_client:
+            if player_client.wrapper_uuid:
                 self.client.packet.sendpkt(
                     self.pktCB.SPAWN_PLAYER[PKT],
                     self.pktCB.SPAWN_PLAYER[PARSER],
-                    (dt[0], clientserverid.wrapper_uuid, dt[2]))
+                    (eid, player_client.wrapper_uuid, rest))
             return False
         return False
 
