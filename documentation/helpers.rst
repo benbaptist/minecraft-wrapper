@@ -165,7 +165,7 @@ using 'self.api.helpers'
         :path: path to file (no trailing slash)
         :filename: filename including extension
 
-    :returns: saved data.  (Assumes success; errors will raise exception.)
+    :returns: saved data.  Failure will yield empty dictionary
 
     
 

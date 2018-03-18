@@ -1,3 +1,8 @@
+Build 28:
+- slight API change in getStorage().  Third argument for pickle (a new API addition anyway) changed slightly.
+- prevent /hub being used in the main hub
+- fix error in pickle_load.  A bad file could cause wrapper to fail to start.
+
 Build 27:
 - Fixed player inventory bugginess because we were not parsing HELD_ITEM_CHANGE.
 - improved respawn process usign saved level_type and difficulty.

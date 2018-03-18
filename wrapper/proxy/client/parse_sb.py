@@ -86,7 +86,8 @@ class ParseSB(object):
             )
             self.client.chat_to_client(
                 {
-                    "text": "/hub - back to the root server.", "color": "dark_green"
+                    "text": "/hub - back to the root server.", "color":
+                    "dark_green"
                 }
             )
             for places in self.proxy.proxy_worlds:
@@ -133,8 +134,9 @@ class ParseSB(object):
         if chatmsg[:4] == "/hub":
             if len(chatmsg) == 4:
                 goto = ""
-                self.world_hub_command(goto)
-                return False
+                if not self.client.local or self.client.info["client-is-wrapper"]:  # noqa
+                    self.world_hub_command(goto)
+                    return False
             else:
                 if self.client.usehub:
                     arg = chatmsg.split()
