@@ -1,3 +1,6 @@
+Build 29:
+- parse health updates
+
 Build 28:
 - slight API change in getStorage().  Third argument for pickle (a new API addition anyway) changed slightly.
 - prevent /hub being used in the main hub

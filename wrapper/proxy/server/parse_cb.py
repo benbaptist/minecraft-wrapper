@@ -174,9 +174,6 @@ class ParseCB(object):
         else:  # version < 1.7.9 needs no processing
             return True
 
-        # moving the return False above made this line unreachable
-        #return True
-
     def parse_play_spawn_player(self):  # embedded UUID -must parse.
         """
         This packet  is used to spawn other players into a player
@@ -446,6 +443,12 @@ class ParseCB(object):
                                        [payload])
             return False
         return True
+
+    def parse_update_health(self):
+        data = self.packet.readpkt(self.pktCB.UPDATE_HEALTH[PARSER])
+        self.client.health = data[0]
+        self.client.food = int(data[1])
+        self.client.food_sat = data[2]
 
     # chunk processing
     def parse_play_chunk_data(self):

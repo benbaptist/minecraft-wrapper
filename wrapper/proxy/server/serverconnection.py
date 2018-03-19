@@ -306,6 +306,8 @@ class ServerConnection(object):
                     self.parse_cb.parse_play_player_poslook,
                 self.pktCB.USE_BED[PKT]:
                     self.parse_cb.parse_play_use_bed,
+                self.pktCB.UPDATE_HEALTH[PKT]:
+                    self.parse_cb.parse_update_health,
                 self.pktCB.SPAWN_PLAYER[PKT]:
                     self.parse_cb.parse_play_spawn_player,
                 self.pktCB.CHANGE_GAME_STATE[PKT]:

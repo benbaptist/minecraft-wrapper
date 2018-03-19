@@ -56,7 +56,7 @@ class Packets(object):
         self.TIME_UPDATE = [0x03, [NULL, ]]
         self.ENTITY_EQUIPMENT = [0x04, [NULL, ]]
         self.SPAWN_POSITION = [0x05, [NULL, ]]
-        self.UPDATE_HEALTH = [0x06, [NULL, ]]
+        self.UPDATE_HEALTH = [0x06, [SHORT, FLOAT, SHORT]]
         self.RESPAWN = [0x07, [INT, UBYTE, UBYTE, STRING]]
         self.PLAYER_POSLOOK = [0x08, [DOUBLE, DOUBLE, DOUBLE, FLOAT, FLOAT, BOOL]]  # noqa
         self.HELD_ITEM_CHANGE = [0x09, [BYTE, ]]
@@ -148,6 +148,7 @@ class Packets(object):
         # 1.8 changes
         if protocol >= PROTOCOL_1_8START:
             self.LOGIN_ENCR_REQUEST[PARSER] = [STRING, BYTEARRAY, BYTEARRAY]
+            self.UPDATE_HEALTH[PARSER] = [FLOAT, VARINT, FLOAT]
 
             self.SERVER_DIFFICULTY[PKT] = 0x41
             self.COMBAT_EVENT[PKT] = 0x42
