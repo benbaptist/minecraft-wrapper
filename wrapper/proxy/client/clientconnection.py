@@ -90,8 +90,8 @@ class Client(object):
         self.keepalive_val = 0
 
         # client and server status
-        self.health =10
-        self.food =10
+        self.health = 10
+        self.food = 10
         self.food_sat = 2.0
         self.usehub = self.proxy.config["built-in-hub"]
         self.first_chunks = []
@@ -368,7 +368,7 @@ class Client(object):
 
     def _parse_plugin_message(self):
         """server-bound"""
-        channel = self.packet.readpkt([STRING,])[0]
+        channel = self.packet.readpkt([STRING, ])[0]
 
         if channel == "MC|Brand":
             data = self.packet.readpkt([RAW, ])[0]
