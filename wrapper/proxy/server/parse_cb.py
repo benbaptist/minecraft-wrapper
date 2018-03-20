@@ -114,7 +114,7 @@ class ParseCB(object):
                         self.pktCB.PLAYER_LIST_ITEM[PKT],
                         [VARINT, VARINT, UUID, STRING, VARINT, RAW],
                         (0, 1, uuid_to_send, player_client.username,
-                         len(properties), raw))
+                         len(properties), raw), serverbound=False)
 
                 # Action Update Gamemode
                 elif action == 1:
@@ -129,7 +129,7 @@ class ParseCB(object):
                     self.client.packet.sendpkt(
                         self.pktCB.PLAYER_LIST_ITEM[PKT],
                         [VARINT, VARINT, UUID, VARINT],
-                        (1, 1, uuid_to_send, gamemode))
+                        (1, 1, uuid_to_send, gamemode), serverbound=False)
 
                 # Action Update Latency
                 elif action == 2:
@@ -139,7 +139,7 @@ class ParseCB(object):
                     self.client.packet.sendpkt(
                         self.pktCB.PLAYER_LIST_ITEM[PKT],
                         [VARINT, VARINT, UUID, VARINT],
-                        (2, 1, uuid_to_send, ping))
+                        (2, 1, uuid_to_send, ping), serverbound=False)
 
                 # Action Update Display Name
                 elif action == 3:
@@ -153,20 +153,20 @@ class ParseCB(object):
                         self.client.packet.sendpkt(
                             self.pktCB.PLAYER_LIST_ITEM[PKT],
                             [VARINT, VARINT, UUID, BOOL, STRING],
-                            (3, 1, uuid_to_send, True, displayname))
+                            (3, 1, uuid_to_send, True, displayname), serverbound=False)
 
                     else:
                         self.client.packet.sendpkt(
                             self.pktCB.PLAYER_LIST_ITEM[PKT],
                             [VARINT, VARINT, UUID, VARINT],
-                            (3, 1, uuid_to_send, False))
+                            (3, 1, uuid_to_send, False), serverbound=False)
 
                 # Remove Player
                 elif action == 4:
                     self.client.packet.sendpkt(
                         self.pktCB.PLAYER_LIST_ITEM[PKT],
                         [VARINT, VARINT, UUID],
-                        (4, 1, uuid_to_send))
+                        (4, 1, uuid_to_send), serverbound=False)
 
             # final send should go here?
             # This was indented with the elif's - would that be an error, cutting the list short??  # noqa
@@ -201,7 +201,7 @@ class ParseCB(object):
                 self.client.packet.sendpkt(
                     self.pktCB.SPAWN_PLAYER[PKT],
                     self.pktCB.SPAWN_PLAYER[PARSER],
-                    (eid, player_client.wrapper_uuid, rest))
+                    (eid, player_client.wrapper_uuid, rest), serverbound=False)
             return False
         return False
 
@@ -261,7 +261,7 @@ class ParseCB(object):
 
         self.client.packet.sendpkt(self.pktCB.CHAT_MESSAGE[PKT],
                                    self.pktCB.CHAT_MESSAGE[PARSER],
-                                   (payload, position))
+                                   (payload, position), serverbound=False)
         return False
 
     def parse_play_player_poslook(self):
@@ -440,7 +440,7 @@ class ParseCB(object):
         if type(payload) == list:
             self.client.packet.sendpkt(self.pktCB.TAB_COMPLETE[PKT],
                                        self.pktCB.TAB_COMPLETE[PARSER],
-                                       [payload])
+                                       [payload], serverbound=False)
             return False
         return True
 

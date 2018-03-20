@@ -6,7 +6,7 @@ V0x0
 p2
 tp3
 sL1L
-(VSTATUS_PING
+(VTAB_COMPLETE
 p4
 V0x1
 p5
@@ -203,10 +203,4 @@ p100
 V0xee
 p101
 tp102
-sL254L
-(VLEGACY_HANDSHAKE
-p103
-V0xfe
-p104
-tp105
 s.

@@ -394,7 +394,7 @@ class Packets(object):
         pkt_temp = {}
         for each in loc:
             if isinstance(loc[each], list):
-                if each[0:2] == "self.":
+                if each[0:2] == "__":
                     pkt_temp[loc[each][0]] = (
                         "%s" % each[2:], hex(loc[each][0])
                     )

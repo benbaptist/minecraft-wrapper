@@ -52,6 +52,14 @@ class ServerConnection(object):
         self.packet = None
         self.parse_cb = None
 
+        # Tracer items
+        self.sb_names = self.client.sb_names
+        self.cb_names = self.client.cb_names
+        self.packetlog = self.client.packetlog
+        self.ignored_cb = self.client.ignored_cb
+        self.ignored_sb = self.client.ignored_sb
+        self.packetloglevel = self.client.packetloglevel
+
         # dictionary of parser packet constants and associated parsing methods
         self.parsers = {}
         self.entity_controls = self.proxy.ent_config["enable-entity-controls"]
@@ -145,6 +153,25 @@ class ServerConnection(object):
                         "Exception: %s TRACEBACK: \n%s" % (
                             pkid, e, traceback)
                     )
+                try:
+                    name = self.cb_names[pkid][0]
+                except AttributeError:
+                    name = "NOT_FOUND"
+                hexrep = hex(pkid)
+                textualrep = str(orig_packet[2:80], encoding="cp437")
+                mapping = [('\x00', 'x_'), ('\n', 'xn'), ('\b', 'xb'),
+                           ('\t', 'xt'),
+                           ('\a', 'xa'), ('\r', 'xr')]
+                for k, v in mapping:
+                    textualrep = textualrep.replace(k, v)
+                if pkid not in self.ignored_cb:
+                    self.packetlog.info(
+                        "<<==CB %s(%d)%s-%s: '%s'",
+                        self.state,
+                        pkid,
+                        name,
+                        hexrep,
+                        textualrep)
 
     def close_server(self, reason="Disconnected"):
         """
