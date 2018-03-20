@@ -36,7 +36,7 @@ class Packets(object):
         # Base set 1.7 - 1.8.9
         # ALL VERSIONS handle chunk unloading DIFFERENTLY - CAVEAT EMPTOR!
         # METADATA -  NBT things are broke in 1.7
-
+    
         # Login, Status, and Ping packets
         # -------------------------------
         self.LOGIN_DISCONNECT = [0x00, [NULL, ]]
@@ -47,7 +47,7 @@ class Packets(object):
         self.PING_JSON_RESPONSE = [0x00, [NULL, ]]
         # PONG sent in response to Client PING
         self.PING_PONG = [0x01, [NULL, ]]
-
+    
         # play mode packets
         # -------------------------------
         self.KEEP_ALIVE = [0x00, [INT]]
@@ -140,16 +140,16 @@ class Packets(object):
         self.CRAFT_RECIPE_RESPONSE = [0xee, [NULL, ]]
         # Protocol MODS:
         # -------------------------------
-
+    
         # 1.7.9 changes
         if protocol > PROTOCOL_1_7_9:
             self.PLAYER_POSLOOK[PARSER] = [DOUBLE, DOUBLE, DOUBLE, FLOAT, FLOAT, BYTE]  # noqa
-
+    
         # 1.8 changes
         if protocol >= PROTOCOL_1_8START:
             self.LOGIN_ENCR_REQUEST[PARSER] = [STRING, BYTEARRAY, BYTEARRAY]
             self.UPDATE_HEALTH[PARSER] = [FLOAT, VARINT, FLOAT]
-
+    
             self.SERVER_DIFFICULTY[PKT] = 0x41
             self.COMBAT_EVENT[PKT] = 0x42
             self.CAMERA[PKT] = 0x43
@@ -159,7 +159,7 @@ class Packets(object):
             self.PLAYER_LIST_HEADER_AND_FOOTER[PKT] = 0x47
             self.RESOURCE_PACK_SEND[PKT] = 0x48
             self.UPDATE_ENTITY_NBT[PKT] = 0x49
-
+    
             # Parsing changes
             self.KEEP_ALIVE[PARSER] = [VARINT]
             self.CHAT_MESSAGE[PARSER] = [JSON, BYTE]
@@ -168,7 +168,7 @@ class Packets(object):
             self.ENTITY_METADATA[PARSER] = [VARINT, METADATA]
             self.SPAWN_PLAYER[PARSER] = [VARINT, UUID, REST]
             self.PLAYER_LIST_ITEM[PARSER] = [VARINT, VARINT, REST]
-
+    
         # 1.9 changes
         if protocol >= PROTOCOL_1_9REL1:
             self.SPAWN_OBJECT[PKT] = 0x00
@@ -220,7 +220,7 @@ class Packets(object):
             self.PLAYER_LIST_ITEM[PKT] = 0x2d
             self.PLAYER_POSLOOK = [0x2e, [DOUBLE, DOUBLE, DOUBLE, FLOAT, FLOAT,
                                           BYTE, VARINT]]
-
+    
             self.USE_BED[PKT] = 0x2f
             self.DESTROY_ENTITIES[PKT] = 0x30
             self.REMOVE_ENTITY_EFFECT[PKT] = 0x31
@@ -251,22 +251,22 @@ class Packets(object):
             self.ENTITY_TELEPORT[PKT] = 0x4a
             self.ENTITY_PROPERTIES[PKT] = 0x4b
             self.ENTITY_EFFECT[PKT] = 0x4c
-
+    
             # removed
             self.UPDATE_ENTITY_NBT[PKT] = 0xee
             self.MAP_CHUNK_BULK[PKT] = 0xee
             self.BROKEN_SET_COMPRESSION_REMOVED1_9[PKT] = 0xee
-
+    
             # parsing changes
             self.JOIN_GAME[PARSER] = [INT, UBYTE, INT, UBYTE, UBYTE, STRING]
-
+    
         # 1.9.4 - 1.11 changes
         # http://wiki.vg/index.php?title=Protocol&oldid=7819#Entity_Properties
         # still good packet numbers through protocol 315
         if protocol > PROTOCOL_1_9_4:
             # removed
             self.UPDATE_SIGN[PKT] = 0xee
-
+    
             # -renumbered because of UPDATE_SIGN removal
             self.SOUND_EFFECT[PKT] = 0x46
             self.PLAYER_LIST_HEADER_AND_FOOTER[PKT] = 0x47
@@ -274,30 +274,30 @@ class Packets(object):
             self.ENTITY_TELEPORT[PKT] = 0x49
             self.ENTITY_PROPERTIES[PKT] = 0x4a
             self.ENTITY_EFFECT[PKT] = 0x4b
-
+    
         # 1.12 changes
         if protocol > PROTOCOL_1_12START:
             # snapshots raise ValueError, so this is really >= PROTOCOL_1_12
-            
+    
             # re-ordered:
             self.ENTITY[PKT] = 0x25
             self.ENTITY_RELATIVE_MOVE[PKT] = 0x26
             self.ENTITY_LOOK_AND_RELATIVE_MOVE[PKT] = 0x27
             self.ENTITY_LOOK[PKT] = 0x28
-
+    
             # new
             self.UNLOCK_RECIPES[PKT] = 0x30
-            
+    
             # order bumped +1
             self.DESTROY_ENTITIES[PKT] = 0x31
             self.REMOVE_ENTITY_EFFECT[PKT] = 0x32
             self.RESOURCE_PACK_SEND[PKT] = 0x33
             self.RESPAWN[PKT] = 0x34
             self.ENTITY_HEAD_LOOK[PKT] = 0x35
-            
+    
             # new
             self.SELECT_ADVANCEMENT_TAB[PKT] = 0x36
-            
+    
             # order bumped +2
             self.WORLD_BORDER[PKT] = 0x37
             self.CAMERA[PKT] = 0x38
@@ -320,14 +320,14 @@ class Packets(object):
             self.PLAYER_LIST_HEADER_AND_FOOTER[PKT] = 0x49
             self.COLLECT_ITEM[PKT] = 0x4a
             self.ENTITY_TELEPORT[PKT] = 0x4b
-
+    
             # new
             self.ADVANCEMENTS[PKT] = 0x4c
-
+    
             # order bumped +3
             self.ENTITY_PROPERTIES[PKT] = 0x4d
             self.ENTITY_EFFECT[PKT] = 0x4e
-
+    
         # 1.12.1 CHANGES AGAIN! (to 340)
         if protocol >= PROTOCOL_1_12_1START:
             self.CRAFT_RECIPE_RESPONSE[PKT] = 0x2b
@@ -367,14 +367,14 @@ class Packets(object):
             self.ADVANCEMENTS[PKT] = 0x4d
             self.ENTITY_PROPERTIES[PKT] = 0x4e
             self.ENTITY_EFFECT[PKT] = 0x4f
-
+    
         # 1.12.2 CHANGES (340)
         if protocol >= PROTOCOL_1_12_1START:
             self.CRAFT_RECIPE_RESPONSE[PKT] = 0x2b
-
+    
             # Parsing changes
             self.KEEP_ALIVE[PARSER] = [LONG]
-
+    
             # Things that may need addressed:
             # -Open sign editor
             # -Ping values has new info
