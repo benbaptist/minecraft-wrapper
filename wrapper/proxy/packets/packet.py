@@ -161,6 +161,7 @@ class Packet(object):
         # Tracer items
         self.sb_names = self.obj.sb_names
         self.cb_names = self.obj.cb_names
+        self.display_len = self.obj.display_len
         self.packetlog = self.obj.packetlog
         self.ignored_cb = self.obj.ignored_cb
         self.ignored_sb = self.obj.ignored_sb
@@ -323,7 +324,7 @@ class Packet(object):
         except KeyError:
             name = "NOT_FOUND"
         hexrep = hex(packetid)
-        textualrep = str(payl[2:80], encoding="cp437")
+        textualrep = str(payl[2:self.display_len], encoding="cp437")
         mapping = [('\x00', 'x_'), ('\n', 'xn'), ('\b', 'xb'),
                    ('\t', 'xt'),
                    ('\a', 'xa'), ('\r', 'xr')]
@@ -333,7 +334,7 @@ class Packet(object):
             self.packetlog.warning(
                 "%s %s(%d)%s-%s: '%s'",
                 direction,
-                "-",
+                "(PROXY-MOD)",
                 packetid,
                 name,
                 hexrep,

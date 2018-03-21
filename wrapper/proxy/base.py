@@ -208,6 +208,8 @@ class Proxy(object):
         self.ignored_cb = self.config["ignored-cb-packets"]
         self.ignored_sb = self.config["ignored-sb-packets"]
         self.packetloglevel = self.config["logging-level"]
+        self.group_dupl = self.config["group-duplicates"]
+        self.display_len = self.config["display-len"]
 
     def host(self):
         """ the caller should ensure host() is not called before the 

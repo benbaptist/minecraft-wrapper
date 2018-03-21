@@ -78,6 +78,10 @@ class Client(object):
         # }
         self.ignored_cb = self.proxy.ignored_cb
         self.ignored_sb = self.proxy.ignored_sb
+        self.display_len = self.proxy.display_len
+        self.group_dupl = self.proxy.group_dupl
+        self.lastCB = 255
+        self.lastSB = 255
         self.packetloglevel = self.proxy.packetloglevel
         self.packetlog = self.getlogger("trace", self.packetloglevel)
 
@@ -217,6 +221,8 @@ class Client(object):
         t = threading.Thread(target=self.flush_loop, args=())
         t.daemon = True
         t.start()
+        pktcounter = 1
+        lastcount = 1
         while not self.abort:
             try:
                 # last three items are for sending a compressed unparsed packet.
@@ -258,26 +264,44 @@ class Client(object):
                 # wrapper handles LOGIN/HANDSHAKE with servers (via
                 # self.parse(pkid), which DOES happen in all modes)
                 self.server_connection.packet.send_raw_untouched(orig_packet)
+
+                if pkid in self.ignored_sb:
+                    pktcounter = 1
+                    lastcount = 1
+                    self.lastSB = 255
+                    continue
+                if self.group_dupl and pkid == self.lastSB:
+                    pktcounter += 1
+                    lastcount = pktcounter
+                    self.lastSB = pkid
+                    continue
+                else:
+                    pktcounter = 1
+                    self.lastSB = pkid
                 try:
                     name = self.sb_names[pkid][0]
                 except AttributeError:
                     name = "NOT_FOUND"
                 hexrep = hex(pkid)
-                textualrep = str(orig_packet[2:80], encoding="cp437")
+                textualrep = str(orig_packet[2:self.display_len], encoding="cp437")
                 mapping = [('\x00', 'x_'), ('\n', 'xn'), ('\b', 'xb'),
                            ('\t', 'xt'),
                            ('\a', 'xa'), ('\r', 'xr')]
                 for k, v in mapping:
                     textualrep = textualrep.replace(k, v)
 
-                if pkid not in self.ignored_sb:
+                self.packetlog.debug(
+                    "SB%s==>> (id_%d)%s-%s: '%s'",
+                    self.state,
+                    pkid,
+                    name,
+                    hexrep,
+                    textualrep)
+                if lastcount > 1:
                     self.packetlog.debug(
-                        "SB==>> %s(%d)%s-%s: '%s'",
-                        self.state,
-                        pkid,
-                        name,
-                        hexrep,
-                        textualrep)
+                        "       There were %s more of these: SB==>> '%s'",
+                        lastcount - 1,
+                        name)
 
         # sometimes (like during a ping request), a client may never enter PLAY
         # mode and will never be assigned a server connection...
