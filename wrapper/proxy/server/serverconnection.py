@@ -52,18 +52,6 @@ class ServerConnection(object):
         self.packet = None
         self.parse_cb = None
 
-        # Tracer items
-        self.sb_names = self.client.sb_names
-        self.cb_names = self.client.cb_names
-        self.packetlog = self.client.packetlog
-        self.ignored_cb = self.client.ignored_cb
-        self.ignored_sb = self.client.ignored_sb
-        self.display_len = self.client.display_len
-        self.packetloglevel = self.client.packetloglevel
-        self.group_dupl = self.client.group_dupl
-        self.lastCB = self.client.lastCB
-        self.lastSB = self.client.lastSB
-
         # dictionary of parser packet constants and associated parsing methods
         self.parsers = {}
         self.entity_controls = self.proxy.ent_config["enable-entity-controls"]
@@ -129,8 +117,6 @@ class ServerConnection(object):
                        self.client.username)
 
     def handle(self):
-        pktcounter = 1
-        lastcount = 1
         while not self.abort:
             # get packet
             try:
@@ -159,44 +145,6 @@ class ServerConnection(object):
                         "Exception: %s TRACEBACK: \n%s" % (
                             pkid, e, traceback)
                     )
-
-                if pkid in self.ignored_cb:
-                    pktcounter = 1
-                    lastcount = 1
-                    self.lastCB = 255
-                    continue
-
-                if self.group_dupl and pkid == self.lastCB:
-                    pktcounter += 1
-                    lastcount = pktcounter
-                    self.lastCB = pkid
-                    continue
-                else:
-                    pktcounter = 1
-                    self.lastCB = pkid
-                try:
-                    name = self.cb_names[pkid][0]
-                except AttributeError:
-                    name = "NOT_FOUND"
-                hexrep = hex(pkid)
-                textualrep = str(orig_packet[2:self.display_len], encoding="cp437")
-                mapping = [('\x00', 'x_'), ('\n', 'xn'), ('\b', 'xb'),
-                           ('\t', 'xt'),
-                           ('\a', 'xa'), ('\r', 'xr')]
-                for k, v in mapping:
-                    textualrep = textualrep.replace(k, v)
-                self.packetlog.info(
-                    "<<==CB%s (id_%d)%s-%s: '%s'",
-                    self.state,
-                    pkid,
-                    name,
-                    hexrep,
-                    textualrep)
-                if lastcount > 1:
-                    self.packetlog.info(
-                        "       There were %s more of these: <<==CB '%s'",
-                        lastcount - 1,
-                        name)
 
     def close_server(self, reason="Disconnected"):
         """
