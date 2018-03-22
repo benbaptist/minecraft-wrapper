@@ -154,8 +154,7 @@ class ParseCB(object):
                     pass  # no fields (this elif only here for readability)
 
             self.client.packet.sendpkt(
-                self.pktCB.PLAYER_LIST_ITEM[PKT], [RAW], [raw],
-                serverbound=False
+                self.pktCB.PLAYER_LIST_ITEM[PKT], [RAW], [raw]
             )
             return False
         else:  # version < 1.7.9 needs no processing
