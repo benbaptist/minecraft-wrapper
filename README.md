@@ -181,7 +181,7 @@ Download the Wrapper.py file and place it in the desired folder.
 
 - Open the wrapper properties file, set the `["General"]["command"]` item to boot the jar file and java start
  options of your choice.
- 
+
 - Wrapper supports having a separate server and wrapper folder.  This is also recommended, although you can simply put
  Wrapper in the same directory with your server.  Examples (item `["General"]["server-directory"]` in the config file):
 
@@ -307,7 +307,7 @@ Check the 'example-plugins' and 'stable-plugins' folders to see some example plu
 __Tip__:
 
 If you want to see more error messages and other useful messages while developing plugins or debugging wrapper,
-look for the logging.json file and make changes to the "console" section:  
+look for the logging.json file and make changes to the "console" section:
 
 ```json
 ...
@@ -322,3 +322,15 @@ look for the logging.json file and make changes to the "console" section:
         },
 ...
 ```
+
+# Overview #
+Tracer branch is a special wrapper fork that is co-opted for
+use as a packet tracer.
+
+Tracer wrapper will log all packets, clientbound and serverbound,
+using text names of the packets instead of just numbers.
+
+This first branch is built on Protocol 340, Minecraft 1.12.2.
+
+I am hoping to keep this branch "compatible enough" with our
+other branches to allow keeping tracer up to date with development/master.

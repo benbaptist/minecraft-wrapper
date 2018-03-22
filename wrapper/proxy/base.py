@@ -12,6 +12,7 @@ import threading
 import time
 import json
 import requests
+import pickle
 
 # imports that are still dependent upon wrapper:
 from api.helpers import getjsonfile, putjsonfile, find_in_json
@@ -136,6 +137,7 @@ class Proxy(object):
         self.ent_config = config.entity
 
         self.log = loginstance
+        self.packetlog = loginstance
         # encryption = False if proxy.utils.encryption does not import
         if not encryption and self.config["proxy-enabled"]:
             self.log.error("You must have the package 'cryptography' "
@@ -193,6 +195,21 @@ class Proxy(object):
         # Encryption keys
         self.private_key = encryption.generate_private_key_set()
         self.public_key = encryption.get_public_key_bytes(self.private_key)
+
+        # tracer items
+        ret_object = pkg_resources.resource_stream(__name__,
+                                                   "utils/CB.pkl").read()
+        self.cb_names = pickle.loads(ret_object)
+
+        ret_object = pkg_resources.resource_stream(__name__,
+                                                   "utils/SB.pkl").read()
+        self.sb_names = pickle.loads(ret_object)
+
+        self.ignored_cb = self.config["ignored-cb-packets"]
+        self.ignored_sb = self.config["ignored-sb-packets"]
+        self.packetloglevel = self.config["logging-level"]
+        self.group_dupl = self.config["group-duplicates"]
+        self.display_len = self.config["display-len"]
 
     def host(self):
         """ the caller should ensure host() is not called before the 
