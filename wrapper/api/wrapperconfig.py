@@ -343,12 +343,6 @@ CONFIG = {
     "Proxy":
 
         {  # NODOC
-            "group-duplicates": True,  # NODOC
-            "display-len": 60,  # NODOC
-            "ignored-cb-packets": [],  # NODOC
-            "ignored-sb-packets": [],  # NODOC
-            "logging-level": 0,  # 10 sets server (CB) only, 0 adds clientconnection (SB).  # NODOC
-            # NODOC
          # Must be a single character.
 
             "command-prefix": "/",

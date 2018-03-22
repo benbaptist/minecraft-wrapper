@@ -13,7 +13,6 @@ import json
 import hashlib
 from socket import error as socket_error
 import requests
-import logging
 
 # Local imports
 import proxy.utils.encryption as encryption
@@ -61,29 +60,6 @@ class Client(object):
         self.hidden_ops = self.proxy.config["hidden-ops"]
         self.silent_bans = self.proxy.config["silent-ipban"]
         self.names_change = self.proxy.config["auto-name-changes"]
-
-        # Tracer items
-        self.sb_names = self.proxy.sb_names
-        self.cb_names = self.proxy.cb_names
-
-        # names:
-        # {
-        # 0: ('PING_JSON_RESPONSE', '0x0'),
-        # 1: ('SPAWN_EXPERIENCE_ORB', '0x1'),
-        # 2: ('LOGIN_SUCCESS', '0x2'),
-        #     ...
-        # 78: ('ENTITY_PROPERTIES', '0x4e'),
-        # 79: ('ENTITY_EFFECT', '0x4f'),
-        # 238: ('REMOVED1_9', '0xee')
-        # }
-        self.ignored_cb = self.proxy.ignored_cb
-        self.ignored_sb = self.proxy.ignored_sb
-        self.display_len = self.proxy.display_len
-        self.group_dupl = self.proxy.group_dupl
-        self.lastCB = 255
-        self.lastSB = 255
-        self.packetloglevel = self.proxy.packetloglevel
-        self.packetlog = self.getlogger("trace", self.packetloglevel)
 
         # client setup and operating paramenters
         self.username = "PING REQUEST"
@@ -221,8 +197,6 @@ class Client(object):
         t = threading.Thread(target=self.flush_loop, args=())
         t.daemon = True
         t.start()
-        pktcounter = 1
-        lastcount = 1
         while not self.abort:
             try:
                 # last three items are for sending a compressed unparsed packet.
@@ -264,44 +238,6 @@ class Client(object):
                 # wrapper handles LOGIN/HANDSHAKE with servers (via
                 # self.parse(pkid), which DOES happen in all modes)
                 self.server_connection.packet.send_raw_untouched(orig_packet)
-
-                if pkid in self.ignored_sb:
-                    pktcounter = 1
-                    lastcount = 1
-                    self.lastSB = 255
-                    continue
-                if self.group_dupl and pkid == self.lastSB:
-                    pktcounter += 1
-                    lastcount = pktcounter
-                    self.lastSB = pkid
-                    continue
-                else:
-                    pktcounter = 1
-                    self.lastSB = pkid
-                try:
-                    name = self.sb_names[pkid][0]
-                except AttributeError:
-                    name = "NOT_FOUND"
-                hexrep = hex(pkid)
-                textualrep = str(orig_packet[2:self.display_len], encoding="cp437")
-                mapping = [('\x00', 'x_'), ('\n', 'xn'), ('\b', 'xb'),
-                           ('\t', 'xt'),
-                           ('\a', 'xa'), ('\r', 'xr')]
-                for k, v in mapping:
-                    textualrep = textualrep.replace(k, v)
-
-                self.packetlog.debug(
-                    "SB%s==>> (id_%d)%s-%s: '%s'",
-                    self.state,
-                    pkid,
-                    name,
-                    hexrep,
-                    textualrep)
-                if lastcount > 1:
-                    self.packetlog.debug(
-                        "       There were %s more of these: SB==>> '%s'",
-                        lastcount - 1,
-                        name)
 
         # sometimes (like during a ping request), a client may never enter PLAY
         # mode and will never be assigned a server connection...
@@ -539,7 +475,7 @@ class Client(object):
 
     def _parse_status_ping(self):
         data = self.packet.readpkt([LONG])
-        self.packet.sendpkt(self.pktCB.PING_PONG[PKT], [LONG], [data[0]], serverbound=False)
+        self.packet.sendpkt(self.pktCB.PING_PONG[PKT], [LONG], [data[0]])
         self.state = HANDSHAKE
         return False
 
@@ -603,7 +539,7 @@ class Client(object):
             self.packet.sendpkt(
                 self.pktCB.LOGIN_ENCR_REQUEST[PKT],
                 self.pktCB.LOGIN_ENCR_REQUEST[PARSER],
-                (self.serverID, self.public_key, self.verifyToken), serverbound=False
+                (self.serverID, self.public_key, self.verifyToken)
             )
 
             # Server UUID (or other offline wrapper) is always offline
@@ -792,14 +728,14 @@ class Client(object):
                 comp = self.proxy.srv_data.properties[
                     "network-compression-threshold"]
                 self.packet.sendpkt(
-                    self.pktCB.LOGIN_SET_COMPRESSION[PKT], [VARINT], [comp], serverbound=False)
+                    self.pktCB.LOGIN_SET_COMPRESSION[PKT], [VARINT], [comp])
                 self.packet.compressThreshold = comp
 
         # send login success to client
         self.packet.sendpkt(
             self.pktCB.LOGIN_SUCCESS[PKT],
             [STRING, STRING],
-            (self.wrapper_uuid.string, self.username), serverbound=False)
+            (self.wrapper_uuid.string, self.username))
         self.state = PLAY
 
         # start keep alives
@@ -898,7 +834,7 @@ class Client(object):
             self.raining = False
             self.packet.sendpkt(self.pktCB.CHANGE_GAME_STATE[PKT],
                                 self.pktCB.CHANGE_GAME_STATE[PARSER],
-                                (1, 0), serverbound=False)
+                                (1, 0))
 
         self.chat_to_client("§5§lHold still.. changing worlds!", 2)
         # This sleep gives client time to read the message above
@@ -927,7 +863,7 @@ class Client(object):
         self.packet.sendpkt(self.pktCB.RESPAWN[PKT],
                             self.pktCB.RESPAWN[PARSER],
                             (self.dimension, self.difficulty,
-                             self.gamemode, self.level_type), serverbound=False)
+                             self.gamemode, self.level_type))
 
     def change_servers(self, ip="127.0.0.1", port=25600):
         self.log.debug("leaving server instance id %s ; Port %s",
@@ -999,14 +935,14 @@ class Client(object):
 
         # re-send chunks
         for chunks in copy.copy(self.first_chunks):
-            self.packet.sendpkt(self.pktCB.CHUNK_DATA[PKT], [RAW], chunks, serverbound=False)
+            self.packet.sendpkt(self.pktCB.CHUNK_DATA[PKT], [RAW], chunks)
 
         health = (self.health, self.food, self.food_sat)
         # spawn to overworld dimension
         self.packet.sendpkt(self.pktCB.RESPAWN[PKT],
                             self.pktCB.RESPAWN[PARSER],
                             (new_dimension, self.difficulty,
-                             self.gamemode, self.level_type), serverbound=False)
+                             self.gamemode, self.level_type))
 
         # send player position & look
         self.packet.sendpkt(self.pktCB.PLAYER_POSLOOK[PKT],
@@ -1014,17 +950,17 @@ class Client(object):
                             (self.position[0],
                              self.position[1] + 1,
                              self.position[2],
-                             self.head[0], self.head[1], 0, 123), serverbound=False)
+                             self.head[0], self.head[1], 0, 123))
 
         # re-set inventory in client GUI
         for items in self.inventory:
             self.packet.sendpkt(self.pktCB.SET_SLOT[PKT],
                                 self.pktCB.SET_SLOT[PARSER],
-                                (0, items, self.inventory[items]), serverbound=False)
+                                (0, items, self.inventory[items]))
 
         self.packet.sendpkt(self.pktCB.UPDATE_HEALTH[PKT],
                             self.pktCB.UPDATE_HEALTH[PARSER],
-                            health, serverbound=False)
+                            health)
 
         self.local = self.serverport == port
         self.permit_disconnect_from_server = self.serverport == port
@@ -1062,7 +998,7 @@ class Client(object):
             self.packet.sendpkt(
                 self.pktCB.DISCONNECT[PKT],
                 [JSON],
-                [jsondict], serverbound=False)
+                [jsondict])
 
             self.log.debug("Sent PLAY state DISCONNECT packet to %s",
                            self.username)
@@ -1085,13 +1021,13 @@ class Client(object):
                 self.packet.sendpkt(
                     self.pktCB.LOGIN_DISCONNECT[PKT],
                     [JSON],
-                    [message], serverbound=False)
+                    [message])
                 self._remove_client_and_player()
             else:
                 self.packet.sendpkt(
                         self.pktCB.LOGIN_DISCONNECT[PKT],
                         [JSON],
-                        [message], serverbound=False)
+                        [message])
 
         time.sleep(1)
         self.state = HANDSHAKE
@@ -1166,7 +1102,7 @@ class Client(object):
         """
         self.packet.sendpkt(self.pktCB.CHAT_MESSAGE[PKT],
                             self.pktCB.CHAT_MESSAGE[PARSER],
-                            (message, position), serverbound=False)
+                            (message, position))
 
     # internal client login methods
     # -----------------------------
@@ -1195,7 +1131,7 @@ class Client(object):
                     self.packet.sendpkt(
                         self.pktCB.KEEP_ALIVE[PKT],
                         self.pktCB.KEEP_ALIVE[PARSER],
-                        [self.keepalive_val], serverbound=False)
+                        [self.keepalive_val])
 
                     self.time_last_ping_to_client = time.time()
 
@@ -1332,22 +1268,10 @@ class Client(object):
             self.packet.sendpkt(
                 self.pktCB.PLUGIN_MESSAGE[PKT],
                 [STRING, SHORT, BYTE],
-                [channel, 1, 254], serverbound=False)
+                [channel, 1, 254])
 
         else:
             self.packet.sendpkt(
                 self.pktCB.PLUGIN_MESSAGE[PKT],
                 [STRING, BYTE],
-                [channel, 254], serverbound=False)
-
-    @staticmethod
-    def getlogger(name, level):
-        logger = logging.getLogger(name)
-        logger.setLevel(level)
-        formatter = logging.Formatter(
-            '%(asctime)s (%(levelname)s) - %(message)s')
-        handler = logging.FileHandler('/home/surest/Desktop/%s.log' % name)
-        handler.setLevel(level)
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
-        return logger
+                [channel, 254])

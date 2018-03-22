@@ -322,15 +322,3 @@ look for the logging.json file and make changes to the "console" section:
         },
 ...
 ```
-
-# Overview #
-Tracer branch is a special wrapper fork that is co-opted for
-use as a packet tracer.
-
-Tracer wrapper will log all packets, clientbound and serverbound,
-using text names of the packets instead of just numbers.
-
-This first branch is built on Protocol 340, Minecraft 1.12.2.
-
-I am hoping to keep this branch "compatible enough" with our
-other branches to allow keeping tracer up to date with development/master.
