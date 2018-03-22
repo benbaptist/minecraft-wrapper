@@ -112,7 +112,7 @@ class ServerConnection(object):
                 self.log.debug("Socket_error- server socket was closed"
                                " %s", self.infos_debug)
                 break
-            time.sleep(0.01)
+            time.sleep(0.1)
         self.log.debug("%s serverconnection flush_loop thread ended.",
                        self.client.username)
 

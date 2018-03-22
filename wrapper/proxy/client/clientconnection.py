@@ -252,7 +252,7 @@ class Client(object):
                 self.log.debug("%s client socket closed (socket_error).",
                                self.username)
                 break
-            time.sleep(0.01)
+            time.sleep(0.1)
         if self.username != "PING REQUEST":
             self.log.debug("%s clientconnection flush_loop thread ended",
                            self.username)
