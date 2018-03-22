@@ -1,3 +1,6 @@
+Build 34:
+- Undo accidental merging of tracer branch into development.
+
 Build 32 - 33:
 - Bug fixes for player list item:
     fixed typo

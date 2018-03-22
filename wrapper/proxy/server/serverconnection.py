@@ -117,6 +117,8 @@ class ServerConnection(object):
                        self.client.username)
 
     def handle(self):
+        pktcounter = 1
+        lastcount = 1
         while not self.abort:
             # get packet
             try:
