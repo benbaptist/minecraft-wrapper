@@ -97,6 +97,7 @@ class ParseCB(object):
 
                 # Action Add Player
                 if action == 0:
+
                     name = self.packet.readpkt([STRING])[0]
                     prop_count = self.packet.readpkt([VARINT])[0]
                     raw += self.client.packet.send_string(name)
@@ -172,7 +173,7 @@ class ParseCB(object):
                     pass  # no fields (this elif only here for readability)
 
             self.client.packet.sendpkt(
-                self.pktCB.PLAYER_LIST_ITEM[PKT], [RAW], [raw]
+                self.pktCB.PLAYER_LIST_ITEM[PKT], [RAW], [raw], serverbound=False
             )
             return False
         else:  # version < 1.7.9 needs no processing
@@ -198,7 +199,7 @@ class ParseCB(object):
                 self.client.packet.sendpkt(
                     self.pktCB.SPAWN_PLAYER[PKT],
                     self.pktCB.SPAWN_PLAYER[PARSER],
-                    (eid, player_client.wrapper_uuid, rest))
+                    (eid, player_client.wrapper_uuid, rest), serverbound=False)
             return False
         return False
 
@@ -258,7 +259,7 @@ class ParseCB(object):
 
         self.client.packet.sendpkt(self.pktCB.CHAT_MESSAGE[PKT],
                                    self.pktCB.CHAT_MESSAGE[PARSER],
-                                   (payload, position))
+                                   (payload, position), serverbound=False)
         return False
 
     def parse_play_player_poslook(self):
@@ -437,7 +438,7 @@ class ParseCB(object):
         if type(payload) == list:
             self.client.packet.sendpkt(self.pktCB.TAB_COMPLETE[PKT],
                                        self.pktCB.TAB_COMPLETE[PARSER],
-                                       [payload])
+                                       [payload], serverbound=False)
             return False
         return True
 

@@ -159,6 +159,15 @@ class Packet(object):
             100: self.read_none
         }
 
+        # Tracer items
+        self.sb_names = self.obj.sb_names
+        self.cb_names = self.obj.cb_names
+        self.display_len = self.obj.display_len
+        self.packetlog = self.obj.packetlog
+        self.ignored_cb = self.obj.ignored_cb
+        self.ignored_sb = self.obj.ignored_sb
+        self.packetloglevel = self.obj.packetloglevel
+
     def close(self):
         self.abort = True
 
@@ -308,7 +317,31 @@ class Packet(object):
             result.append(item)
         return result
 
-    def sendpkt(self, pkid, args, payload):
+    def writelog(self, direction, packetid, packetset, payl):
+        ignored = packetset[0]
+        names = packetset[1]
+        try:
+            name = names[packetid][0]
+        except KeyError:
+            name = "NOT_FOUND"
+        hexrep = hex(packetid)
+        textualrep = str(payl[2:self.display_len], encoding="cp437")
+        mapping = [('\x00', 'x_'), ('\n', 'xn'), ('\b', 'xb'),
+                   ('\t', 'xt'),
+                   ('\a', 'xa'), ('\r', 'xr')]
+        for k, v in mapping:
+            textualrep = textualrep.replace(k, v)
+        if packetid not in ignored:
+            self.packetlog.warning(
+                "%s %s(%d)%s-%s: '%s'",
+                direction,
+                "(PROXY-MOD)",
+                packetid,
+                name,
+                hexrep,
+                textualrep)
+
+    def sendpkt(self, pkid, args, payload, serverbound=True):
         """
                 Usage like:
 
@@ -327,6 +360,12 @@ class Packet(object):
                             same order the args were passed.
 
                 """
+        if serverbound:
+            direction = "SB==>>"
+            packs = (self.ignored_sb, self.sb_names)
+        else:
+            direction = "<<==CB"
+            packs = (self.ignored_cb, self.cb_names)
         result = b""  # PY 2-3
         # start with packet id
         result += self.send_varint(pkid)
@@ -334,11 +373,13 @@ class Packet(object):
         argcount = len(args)
         if argcount == 0:
             self.send_raw(result)
+            self.writelog(direction, pkid, packs, result)
             return result
         for x, arg in enumerate(args):
             pay = payload[x]
             result += self._PKTSEND[arg](pay)
         self.send_raw(result)
+        self.writelog(direction, pkid, packs, result)
         return result
 
     # -- SENDING DATA TYPES -- #
