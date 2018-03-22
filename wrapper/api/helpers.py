@@ -1020,13 +1020,13 @@ def _test():
              "underlined": False, "italic": False}]}
 
     print("-------------------------")
-    print(json.dumps(newdict))
+    print(newdict)
 
     print("-------------------------")
 
     print(processcolorcodes('&o&3harro &l&6there'))
     assert processcolorcodes(
-        '&o&3harro &l&6there') == json.dumps(newdict, sort_keys=True)
+        '&o&3harro &l&6there') == newdict
 
     print("testing processcolorcodes passed")
     assert chattocolorcodes(newdict) == "§f§f§o§3harro §3§l§6there"

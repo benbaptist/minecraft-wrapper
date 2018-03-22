@@ -90,6 +90,9 @@ class Client(object):
         self.keepalive_val = 0
 
         # client and server status
+        self.health = 10
+        self.food = 10
+        self.food_sat = 2.0
         self.usehub = self.proxy.config["built-in-hub"]
         self.first_chunks = []
         self.raining = False
@@ -362,9 +365,15 @@ class Client(object):
 
     # plugin channel handler
     # -----------------------
+
     def _parse_plugin_message(self):
         """server-bound"""
         channel = self.packet.readpkt([STRING, ])[0]
+
+        if channel == "MC|Brand":
+            data = self.packet.readpkt([RAW, ])[0]
+            print(data)
+            return True
 
         if channel not in self.proxy.registered_channels:
             # we are not actually registering our channels with the MC server
@@ -938,6 +947,7 @@ class Client(object):
         for chunks in copy.copy(self.first_chunks):
             self.packet.sendpkt(self.pktCB.CHUNK_DATA[PKT], [RAW], chunks)
 
+        health = (self.health, self.food, self.food_sat)
         # spawn to overworld dimension
         self.packet.sendpkt(self.pktCB.RESPAWN[PKT],
                             self.pktCB.RESPAWN[PARSER],
@@ -957,6 +967,10 @@ class Client(object):
             self.packet.sendpkt(self.pktCB.SET_SLOT[PKT],
                                 self.pktCB.SET_SLOT[PARSER],
                                 (0, items, self.inventory[items]))
+
+        self.packet.sendpkt(self.pktCB.UPDATE_HEALTH[PKT],
+                            self.pktCB.UPDATE_HEALTH[PARSER],
+                            health)
 
         self.local = self.serverport == port
         self.permit_disconnect_from_server = self.serverport == port

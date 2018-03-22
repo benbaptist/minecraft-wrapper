@@ -65,117 +65,101 @@ class ParseCB(object):
         """This must be parsed and modified to make sure UUIDs match.
         Otherwise weird things can happen like players not seeing
         each other or duplicate names on the tab list, etc."""
+
+        # if something goes wrong in the while loops, we need to break this..
+
         if self.server.version >= PROTOCOL_1_8START:
+            raw = b""
             header = self.packet.readpkt([VARINT, VARINT])
             # ("varint:action|varint:length")
-            number_players = header[1]
             action = header[0]
+            number_players = header[1]
+
+            raw += self.client.packet.send_varint(action)
+            raw += self.client.packet.send_varint(number_players)
+
             curr_index = 0
 
             while curr_index < number_players:
                 player_uuid_from_server = self.packet.readpkt([UUID])[0]
+
                 player_client = self.proxy.getclientbyofflineserveruuid(
                     player_uuid_from_server)
 
-                if not player_client:
-                    self.log.debug(
-                        "(%s)parse.cb.py - Player list item:  Player uuid "
-                        "not on server: %s" % (self.client.username,
-                                               player_uuid_from_server)
-                    )
-                    curr_index += 1
-                    continue
-                # self.log.debug(
-                #    "(%s)parse.cb.py - Player list item: %s" % (
-                #        self.client.username,
-                #        player_uuid_from_server)
-                # )
-                uuid_to_send = player_client.wrapper_uuid
+                if player_client:
+                    raw += self.client.packet.send_uuid(
+                        player_client.wrapper_uuid)
+                else:
+                    raw += self.client.packet.send_uuid(
+                        player_uuid_from_server)
+
                 curr_index += 1
-                # raw = b''
 
                 # Action Add Player
                 if action == 0:
-                    properties = player_client.properties
-                    raw = b""
-                    for prop in properties:
-                        raw += self.client.packet.send_string(prop["name"])
-                        raw += self.client.packet.send_string(prop["value"])
-                        if "signature" in prop:
-                            raw += self.client.packet.send_bool(True)
+                    name = self.packet.readpkt([STRING])[0]
+                    prop_count = self.packet.readpkt([VARINT])[0]
+                    raw += self.client.packet.send_string(name)
+                    raw += self.client.packet.send_varint(prop_count)
+
+                    curr_prop = 0
+                    while curr_prop < prop_count:
+                        # name, value, is_signed?, signature
+                        _property = self.packet.readpkt(
+                            [STRING, STRING, BOOL])
+                        raw += self.client.packet.send_string(_property[0])
+                        raw += self.client.packet.send_string(_property[1])
+                        raw += self.client.packet.send_bool(_property[2])
+                        if _property[2]:
                             raw += self.client.packet.send_string(
-                                prop["signature"])
-                        else:
-                            raw += self.client.packet.send_bool(False)
-                    raw += self.client.packet.send_varint(0)
-                    raw += self.client.packet.send_varint(0)
-                    raw += self.client.packet.send_bool(False)
-                    self.client.packet.sendpkt(
-                        self.pktCB.PLAYER_LIST_ITEM[PKT],
-                        [VARINT, VARINT, UUID, STRING, VARINT, RAW],
-                        (0, 1, uuid_to_send, player_client.username,
-                         len(properties), raw))
+                                self.packet.readpkt([STRING])[0]
+                            )
+
+                    # gamemode, ping (milliseconds),  Has Display Name?
+                    more = self.packet.readpkt([VARINT, VARINT, BOOL])
+                    raw += self.client.packet.send_varint(more[0])
+                    raw += self.client.packet.send_varint(more[1])
+                    raw += self.client.packet.send_bool(more[2])
+
+                    # display name
+                    if more[2]:
+                        raw += self.client.packet.send_string(
+                            self.packet.readpkt([STRING])[0]
+                        )
 
                 # Action Update Gamemode
                 elif action == 1:
-                    data = self.packet.readpkt([VARINT])
-                    # I think if we are sending this packet to our own player
-                    # we need to send the client the online UUID.  Everyone
-                    # else would get the offline version
-                    # TODO Corrects the noclip spectator problem??
-                    gamemode = data[0]
-                    # ("varint:gamemode")
-
-                    self.client.packet.sendpkt(
-                        self.pktCB.PLAYER_LIST_ITEM[PKT],
-                        [VARINT, VARINT, UUID, VARINT],
-                        (1, 1, uuid_to_send, gamemode))
+                    data = self.packet.readpkt([VARINT])[0]
+                    raw += self.client.packet.send_varint(data)
 
                 # Action Update Latency
                 elif action == 2:
-                    data = self.packet.readpkt([VARINT])
-                    ping = data[0]
-                    # ("varint:ping")
-                    self.client.packet.sendpkt(
-                        self.pktCB.PLAYER_LIST_ITEM[PKT],
-                        [VARINT, VARINT, UUID, VARINT],
-                        (2, 1, uuid_to_send, ping))
+                    data = self.packet.readpkt([VARINT])[0]
+                    raw += self.client.packet.send_varint(data)
 
                 # Action Update Display Name
                 elif action == 3:
                     data = self.packet.readpkt([BOOL])
                     # ("bool:has_display")
                     hasdisplay = data[0]
-                    if hasdisplay:
-                        data = self.packet.readpkt([STRING])
-                        displayname = data[0]
-                        # ("string:displayname")
-                        self.client.packet.sendpkt(
-                            self.pktCB.PLAYER_LIST_ITEM[PKT],
-                            [VARINT, VARINT, UUID, BOOL, STRING],
-                            (3, 1, uuid_to_send, True, displayname))
+                    raw += self.client.packet.send_bool(hasdisplay)
 
-                    else:
-                        self.client.packet.sendpkt(
-                            self.pktCB.PLAYER_LIST_ITEM[PKT],
-                            [VARINT, VARINT, UUID, VARINT],
-                            (3, 1, uuid_to_send, False))
+                    if hasdisplay:
+                        raw += self.client.packet.send_string(
+                            self.packet.readpkt([STRING])[0]
+                        )
 
                 # Remove Player
                 elif action == 4:
-                    self.client.packet.sendpkt(
-                        self.pktCB.PLAYER_LIST_ITEM[PKT],
-                        [VARINT, VARINT, UUID],
-                        (4, 1, uuid_to_send))
+                    pass  # no fields (this elif only here for readability)
 
-            # final send should go here?
-            # This was indented with the elif's - would that be an error, cutting the list short??  # noqa
+            self.client.packet.sendpkt(
+                self.pktCB.PLAYER_LIST_ITEM[PKT], [RAW], [raw],
+                serverbound=False
+            )
             return False
         else:  # version < 1.7.9 needs no processing
             return True
-
-        # moving the return False above made this line unreachable
-        #return True
 
     def parse_play_spawn_player(self):  # embedded UUID -must parse.
         """
@@ -446,6 +430,12 @@ class ParseCB(object):
                                        [payload])
             return False
         return True
+
+    def parse_update_health(self):
+        data = self.packet.readpkt(self.pktCB.UPDATE_HEALTH[PARSER])
+        self.client.health = data[0]
+        self.client.food = int(data[1])
+        self.client.food_sat = data[2]
 
     # chunk processing
     def parse_play_chunk_data(self):
