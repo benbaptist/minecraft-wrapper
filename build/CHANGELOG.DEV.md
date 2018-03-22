@@ -1,3 +1,8 @@
+Build 35:
+- increased server and client flush loop sleep times.  Original wrapper
+ was .05.  Recent versions are .01.  Set it at .1.  This seems to have been
+ the cause of #547
+
 Build 34:
 - Undo accidental merging of tracer branch into development.
 
