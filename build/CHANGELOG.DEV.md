@@ -1,3 +1,7 @@
+Build 31:
+- Fixed #354 "Relogging as Spectator disables noclip"
+
+
 Build 30:
 - experiment with new branch.  Reverted changes accidentally merged to development.
 
