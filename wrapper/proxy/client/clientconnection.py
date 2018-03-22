@@ -371,8 +371,8 @@ class Client(object):
         channel = self.packet.readpkt([STRING, ])[0]
 
         if channel == "MC|Brand":
-            data = self.packet.readpkt([RAW, ])[0]
-            print(data)
+            data = self.packet.readpkt([STRING])[0]
+            self.log.debug("MC|Brand = %s", data)
             return True
 
         if channel not in self.proxy.registered_channels:
@@ -588,14 +588,6 @@ class Client(object):
                     <payload>
     
                 """
-
-                # Our client does not get into play mode fast enough to
-                # get this when the server first sends it.
-                # print("FIRING CHANGE GAME STATE (CS) %s" % self.gamemode)
-                # self.packet.sendpkt(
-                #    self.pktCB.CHANGE_GAME_STATE[PKT],
-                #    self.pktCB.CHANGE_GAME_STATE[PARSER],
-                #    (3, self.gamemode))
 
     def _parse_login_encr_response(self):
         # the client is RESPONDING to our request for
@@ -852,8 +844,6 @@ class Client(object):
         # This respawns in a different dimension in preparation for respawning.
         self.toggle_dim()
 
-        self.log.debug("LOBBIFY LEFT DIM: %s", self.dimension)
-
     def get_port_text(self, portnumber):
         for worlds in self.proxy.proxy_worlds:
             if self.proxy.proxy_worlds[worlds]["port"] == portnumber:
@@ -888,7 +878,6 @@ class Client(object):
         oldinv = self.inventory
         self.lobbify()
         despawn_dimension = self.dimension
-        self.log.debug("OLD DIM %s", despawn_dimension)
 
         # connect to server
         self.state = PLAY
@@ -934,7 +923,6 @@ class Client(object):
         # give server time to get all chunks before respawn
         time.sleep(.3)
         new_dimension = self.dimension
-        self.log.debug("NEW DIM %s", new_dimension)
         if new_dimension == despawn_dimension:
             # self.toggle_dim()
 

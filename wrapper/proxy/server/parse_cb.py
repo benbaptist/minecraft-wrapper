@@ -193,13 +193,6 @@ class ParseCB(object):
         player_client = self.proxy.getclientbyofflineserveruuid(
             player_uuid_on_server
         )
-        self.log.debug(
-            "(%s)parse.spawn.player - My UUIDs: %s|%s\n"
-            "This uuid: %s" % (self.client.username,
-                               self.client.wrapper_uuid.string,
-                               self.client.local_uuid.string,
-                               player_uuid_on_server)
-        )
         if player_client:
             if player_client.wrapper_uuid:
                 self.client.packet.sendpkt(

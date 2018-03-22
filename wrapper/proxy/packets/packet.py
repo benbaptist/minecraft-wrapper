@@ -66,6 +66,7 @@ class Packet(object):
     def __init__(self, sock, obj):
         self.socket = sock
         self.obj = obj
+        self.log = self.obj.log
         self.recvCipher = None
         self.sendCipher = None
         self.compressThreshold = -1
@@ -318,7 +319,8 @@ class Packet(object):
                     )
 
                 Args:
-                    :args: a list of integers representing the type of send operation.
+                    :args: a list of integers representing the type of send
+                     operation.
                     :payload: a tuple of the corresponding values
 
                 Returns:  A list of those read results (not a dictionary) in the
@@ -466,8 +468,8 @@ class Packet(object):
                 b += self.send_varint(value)
 
             else:
-                print("Unsupported data type '%d' for send_metadata()  "
-                      "(Class Packet)" % value_type)
+                self.log.error("Unsupported data type '%d' for"
+                               " send_metadata() (Class Packet)", value_type)
                 raise ValueError
         b += self.send_ubyte(0xff)
         return b
@@ -475,7 +477,6 @@ class Packet(object):
     def send_metadata(self, payload):
         # definitely broken in 1.7.4.  works for 1.8
         b = b""
-        # print("payload:\n%s\n\n" % payload)
         for index in payload:
             type_ = payload[index][0]
             value = payload[index][1]
@@ -505,11 +506,10 @@ class Packet(object):
                 b += self.send_float(value[1])
                 b += self.send_float(value[2])
             else:
-                print("Unsupported data type '%d' for send_metadata()  "
-                      "(Class Packet)" % type_)
+                self.log.error("Unsupported data type '%d' for"
+                               " send_metadata() (Class Packet)", type_)
                 raise ValueError
         b += self.send_ubyte(0x7f)
-        # print("\n\n%s\n\n\n" % b)
         return b
 
     def send_stringarray(self, payload):
@@ -763,13 +763,17 @@ class Packet(object):
                 meta_data[index] = (data_type, self.read_varint())
 
             elif data_type == 13:
-                print("1.9 metadata found data type 13 'nbt tag', which "
-                      "wrapper does not parse.. read as 'rest/raw'. "
-                      "Added in version 1.12 minecraft??")
+                self.log.error(
+                    "1.9 metadata found data type 13 'nbt tag',  "
+                    "which wrapper does not parse.. read as 'rest/raw'. "
+                    "Added in version 1.12 minecraft??"
+                )
                 meta_data[index] = (data_type, self.read_rest())
             else:
-                print("Unsupported data type '%d' for read_metadata_1_9()  "
-                      "(Class Packet)", data_type)
+                self.log.error(
+                    "Unsupported data type '%d' for read_metadata_1_9()  "
+                    "(Class Packet)", data_type
+                )
                 raise ValueError
 
     def read_metadata(self):
@@ -810,8 +814,10 @@ class Packet(object):
                     self.read_float(), self.read_float(), self.read_float()))
 
             else:
-                print("Unsupported data type '%d' for read_metadata()  "
-                      "(Class Packet)", data_type)
+                self.log.error(
+                    "Unsupported data type '%d' for read_metadata()  "
+                    "(Class Packet)", data_type
+                )
                 raise ValueError
 
     def read_slot_nbtless(self):
