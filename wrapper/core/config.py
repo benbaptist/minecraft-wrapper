@@ -1,118 +1,18 @@
 # -*- coding: utf-8 -*-
 
+# Copyright (C) 2016, 2017 - BenBaptist and Wrapper.py developer(s).
+# https://github.com/benbaptist/minecraft-wrapper
+# This program is distributed under the terms of the GNU
+# General Public License, version 3 or later.
+
 import os
 import sys
 import logging
-from utils.helpers import getjsonfile, putjsonfile
+from api.helpers import getjsonfile, putjsonfile
+from api.wrapperconfig import *
 
 
-# Default Configuration File
-# Config items with values of "deprecated" get removed if they exist in an active config file
-NEWCONFIG = {
-    "Backups": {
-        # Automatic backups with automatic backup pruning. Interval is in seconds.
-        "backup-compression": False,
-        # Specify files and folders you want backed up.  Items must be in your server folder (see 'General' section)
-        "backup-folders": [
-            "server.properties",
-            "world"
-        ],
-        "backup-interval": 3600,
-        "backup-location": "backup-directory",  # this location will be inside wrapper's directory
-        "backup-notification": True,
-        "backups-keep": 10,
-        "enabled": False
-    },
-    "Gameplay": {
-        "use-timer-tick-event": False,  # not recommended.  1/20th of a second timer option for plugin use. May
-                                        # impact wrapper performance negatively.
-        "enable-entity-controls": False,  # enable entity controls.
-        "thinning-frequency": 10,  # how often thinning of mobs runs, in seconds
-        "thinning-activation-threshhold": 100,  # when TOTAL mobs are below this number, thinning is skipped entirely
-        "thin-any-mob": 50,  # any mob count above this number gets thinned.
-        "thin-Cow": 30,  # Example, keeps Cows < 30.  Name must match exactly.  Overrides 'thin-any-mob'.
-        "thin-Sheep": 30,
-        "thin-Chicken": 30
-    },
-    "General": {
-        "auto-restart": True,
-        "auto-update-branch": None,  # Use "dev" or "stable", as desired
-        "auto-update-dev-build": "deprecated",  # no separate item for wrapper/dev-build.
-        "auto-update-wrapper": False,  # If True, an "auto-update-branch" must be specified.
-        # You can point these to another branch, if desired.
-        "stable-branch": "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master/build/version.json",
-        "dev-branch": "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/build/version.json",
-        # You will need to update this to your particular server start command line.
-        "command": "java -jar -Xmx2G -Xms1G server.jar nogui",
-        "encoding": "UTF-8",
-        # Set this to read the console properly for pre-1.7 servers.  DO NOT use proxy mode for pre-1.7 servers!
-        "pre-1.7-mode": False,
-        "server-directory": ".",  # Using the default '.' roots the server in the same folder with wrapper. Change
-                                  # this to another folder to keep the wrapper and server folders separate.
-                                  # Do not use a trailing slash.
-                                  # '/full/pathto/the/server'
-        "server-name": "Minecraft Server",
-        "shell-scripts": False,
-        "timed-reboot": False,
-        "timed-reboot-seconds": "86400",
-        "timed-reboot-warning-minutes": 5
-    },
-    "IRC": {
-        # This allows your users to communicate to and from the server via IRC and vise versa.
-        # _________________________________
-        "autorun-irc-commands": [
-            "COMMAND 1",
-            "COMMAND 2"
-        ],
-        "channels": [
-            "#wrapper"
-        ],
-        "command-character": ".",
-        "control-from-irc": False,
-        "control-irc-pass": "password",
-        "irc-enabled": False,
-        "nick": "MinecraftWrap",
-        "obstruct-nicknames": False,
-        "password": None,
-        "port": 6667,
-        "server": "benbaptist.com",
-        "show-channel-server": True,
-        "show-irc-join-part": True
-    },
-    "Proxy": {
-        # This is a man-in-the-middle proxy similar to BungeeCord, which is used for extra plugin functionality.
-        # online-mode must be set to False in server.properties. Make sure that the server is not accessible directly
-        # from the outside world.
-        # _________________________________
-        # Note: the online-mode option here refers to the proxy only, not to the server's offline mode.  Each server's
-        # online mode will depend on its setting in server.properties
-        # _________________________________
-        # It is recommended that you turn network-compression-threshold to -1 (off) in server.properties
-        # for fewer issues.
-        # _________________________________
-        "convert-player-files": False,
-        "max-players": 1024,
-        "online-mode": True,  # the wrapper's online mode, NOT the child server.
-        "proxy-bind": "0.0.0.0",
-        "proxy-enabled": False,
-        "proxy-port": 25565,  # the wrapper's proxy port that accepts client connections from the internet. This
-                              # port is exposed to the internet via your port forwards.
-        "server-port": 25564,  # the minecraft server port (the hub for hub setups) that traffic is directed to. This
-                               # port must not be exposed to outside traffic.
-        "spigot-mode": False
-    },
-    "Web": {
-        "public-stats": True,
-        "web-allow-file-management": True,
-        "web-bind": "0.0.0.0",
-        "web-enabled": False,
-        "web-password": "password",
-        "web-port": 8070
-    }
-}
-
-
-class Config:
+class Config(object):
     def __init__(self):
         self.log = logging.getLogger('Config')
         self.config = {}
@@ -130,7 +30,7 @@ class Config:
 
         # Create new config if none exists
         if not os.path.exists("wrapper.properties.json"):
-            putjsonfile(NEWCONFIG, "wrapper.properties", sort=True, encodedas="UTF-8")
+            putjsonfile(CONFIG, "wrapper.properties", sort=True)
             self.exit = True
 
         # Read existing configuration
@@ -148,17 +48,17 @@ class Config:
         deprecated_entries = []
         new_sections = []
         new_entries = []
-        for section in NEWCONFIG:
+        for section in CONFIG:
             if section not in self.config:
                 self.log.debug("Adding section [%s] to configuration", section)
                 new_sections.append(section)
                 changesmade = True
 
-            for configitem in NEWCONFIG[section]:
+            for configitem in CONFIG[section]:
                 if section in self.config:
                     # mark deprecated items for deletion
                     if configitem in self.config[section]:
-                        if NEWCONFIG[section][configitem] == "deprecated":
+                        if CONFIG[section][configitem] == "deprecated":
                             self.log.debug("Deprecated item '%s' in section '%s'. - removing it from"
                                            " wrapper properties", configitem, section)
                             deprecated_entries.append([section, configitem])
@@ -166,7 +66,7 @@ class Config:
                     # mark new items for addition
                     else:
                         # handle new items in an existing section
-                        if NEWCONFIG[section][configitem] != "deprecated":  # avoid re-adding deprecated items
+                        if CONFIG[section][configitem] != "deprecated":  # avoid re-adding deprecated items
                             self.log.debug("Item '%s' in section '%s' not in wrapper properties - adding it!",
                                            configitem, section)
                             new_entries.append([section, configitem])
@@ -193,7 +93,7 @@ class Config:
             # Add new entries
             if len(new_entries) > 0:
                 for added in new_entries:
-                    self.config[added[0]][added[1]] = NEWCONFIG[added[0]][added[1]]
+                    self.config[added[0]][added[1]] = CONFIG[added[0]][added[1]]
 
             self.save()
             self.exit = True
@@ -216,4 +116,4 @@ class Config:
             return False
 
     def save(self):
-        putjsonfile(self.config, "wrapper.properties", sort=True, encodedas="UTF-8")
+        putjsonfile(self.config, "wrapper.properties", sort=True)

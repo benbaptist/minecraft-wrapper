@@ -77,7 +77,7 @@ class Main:
         if len(args) < 1:
             player.message("USAGE: /addw <WNAME>")
         else:
-            self.storage[args[0]] = []
+            self.storage.Data[args[0]] = []
 
     def addCommand(self, player, args):
         if len(args) < 2:
@@ -88,21 +88,21 @@ class Main:
         a['command'] = command
         a['args'] = arguments
         a['item'] = player.getHeldItem()
-        self.storage[wname].append(a)
+        self.storage.Data[wname].append(a)
 
     def removeWindow(self, player, args):
         if len(args) < 1:
             player.message("USAGE: /remw <WNAME>")
         else:
-            self.storage[args[0]] = None
+            self.storage.Data[args[0]] = None
 
     def removeCommand(self, player, args):
         if len(args) < 2:
             player.message("USAGE: /remc <WNAME>")
             return
-        w = self.storage[args[0]]
+        w = self.storage.Data[args[0]]
         item = player.getHeldItem()
         for i in range(len(w)):
             if w[i]["item"] == item:
                 w[i] = None
-        self.storage[args[0]] = w
+        self.storage.Data[args[0]] = w

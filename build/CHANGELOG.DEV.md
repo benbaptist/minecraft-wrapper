@@ -1,17 +1,645 @@
-Build #141  version [0.9.1]
+Build 255 (next build)
+- player to player TP - Add inter-dimensional TP (1.8+) api
+  Community Input enhancement proxy mode
+
+Build 254 [0.15.0] - Master branch update
+- Correct one other Python 2/3 error in IRC
+- Add explanatory comments about player object usage in strings
+- Add warning log about web mode being presently broken
+- Build master branch to [0.15.0]
+
+Build 253
+- Correct Python 3 errors in IRC
+
+Build 252
+-correct password decryting errors in IRC
+- IRC now works in PY2 only (unicode related issues in PY3)
+
+Build 251
+- bugfixes in config and remove test code
+- apparently, Spigot/Mcbans needs more time to kick the players before
+ a server restart...
+
+Build 250
+- Fix custom messages again for non-proxy mode.
+
+Build 249
+- add config items to allow entering a plaintext password that
+ gets digested and resaved with encryption.
+- PEP-8 updates to dashboard (still not usable yet)
+- Fix error that prevented startup if user did not have cryptography
+ installed.
+
+Build 248
+- This build fixes [issue 492](https://github.com/benbaptist/minecraft-wrapper/issues/492):
+    - Fix timer loops for reboots
+    - Fix custom messages in Misc section and add new message "halt-message"
+     for when wrapper is halted.
+
+Build 247 [0.14.2] dev
+- For consistency and eliminate confusion, all wrapper internal
+ encryption uses `cryptography` package even for regular hashing
+ and password checking.
+- retained bcrypt package as on option, but it will likely only ever
+ be a part of the plugin API.
+- added plugin API (base.py) password handler functions:
+  ```
+      def hash_password(self, password):
+         """ Bcrypt-based password encryption.  Takes a raw string password
+         returns a string representation of the binary hash."""
+
+      def check_password(self, password, hashed_password):
+         """ Bcrypt-based password checker.  Takes a raw string password and
+         compares it to the hash of a previously hashed password, returning
+         True if the passwords match, or False if not.
+  ```
+
+Build 246 [0.14.1] Dev
+- fix error in core/wrapper.py that causes spamming of "Disabling proxy
+ mode because ..." to the console.
+- added text to the vanilla message to tell console user not only the
+ port of the minecraft server, but the proxy too (if proxy is enabled).
+- added module `wrapper/utils/crypt.py` with full featured password encryption schemas:
+    - `make_hash(password_string, encoding='utf-8')` - hash a password
+    - `check_pw(password_string, hashed_pw_str, encoding='utf-8')` check password against hash
+    - `phrase_to_url_safebytes(pass_phrase)` - create bytes for Fernet encryption from wrapper pass phrase
+    - `encrypt(passphrase, data)` - do a Fernet encrypt of data from bytes pass phrase
+    - `decrypt(passphrase, encrypted_str_data)` - Fernet decryption of data
+- implement a wrapper password to be used internally by wrapper to
+ store sensitive data (email passwords) that wrapper's features may use.
+- implement encryption hashing of other stored passwords to disk
+ (web, IRC, so forth.. ).
+- corrected Web/dashboard and IRC password references to use hashed
+ passwords.
+- Added /password command to wrapper to allow setting of encrypted
+ passwords in the wrapper.config.json file.
+** important note ** I may consider uniting make_hash/encrypt so that a single schema is used in the next build
+
+Build 245 [0.14.1] - Master branch update
+- fix spigot login position (due to spigot pre-pending the world name to
+ the player coordinates).
+- while at that, add IP address to player object from login text (so that
+ non-proxy wrapper's have the player IP address).
+- build a master branch with dev fixes after build 239 (especially due to
+ broken wrapper update stuff).
+
+Build 244 [0.14.0] - Development branch
+- (finally) fix chat_to_client() so that json is messaged properly.
+- fix update code in core/wrapper.  changed the config items slightly.
+- expanded capabilities of player message to send messages above XP bar (proxy mode)
+
+Build 241
+- fix chat_to_client() so that json is messaged properly.  Past couple
+builds broke advanced json chat things (like links and hoverevents).
+
+Build 240
+- more cleanup for PING requests.
+- fix bugs in player.message() displays I introduced in Build 238/239.
+
+Build 239 [0.13.6] - Development branch
+- bump version
+
+Build 238
+-fix new bug from bugfix for Spigot in build #237 that introduced new
+error preventing vanilla proxy server connections.
+-refactoring proxy again:
+    - removed "lobby" references from serverconnection: "LOBBY" could
+    never be a real state for server connection since LOBBY is not a real
+    server.  It is just a state in which client connection is active with
+    NO current server.  clientconnection.py is the valid place to
+    handle "lobby" states.
+    - clean up clientconnection references to closing server connections
+    - clean up serverconnection and parse_cb to remove old unused stuff.
+    - turn off proxy entity filtering when entity controls are disabled.
+    - remove logging/console output for "PING REQUEST" connections.
+    - refactor/rename client methods to be more/better descriptive.  For
+    instance, client_logon() to Logon_client_into_proxy() to show that
+    the client has not logged into a server yet, just into the wrapper proxy.
+    - clean up clientconnection and parse_sb to remove unused stuff.
+    - clean up the program flow for disconnections in serverconnection and
+    clientconnection.
+    - fix keepalive process to stop as soon as client aborts.  Ensure
+    a prompt abort signal for terminated connections.
+    - make normal debug messages look more like prose and less "scary".
+    reserve full bebug style messages for unexpected items/errors.
+    - improve player/client logout process to clean player and client
+    objects out reliably.  Client is only removed when the client proxy
+    flush loop ends and the player object is removed at the mcserver.py
+    logout().
+    - re-add parse_play_player_position to parse_sb.py
+    - re-implement "silent-ipbans" option.
+    - beef up chat_to_server() method (the backend for api.player say() and
+    execute() methods) to prevent a chat message being sent over 100 or 256
+    characters, as applicable to the minecraft version.
+    - added a chat_to_client() method to clientconnection.py as the
+    preferred backend for player.message() when in proxy mode.
+
+Build 237
+Improve the non-proxy event section some.
+- Add player.teleport event (core/mcserver.py)
+- API for getPosition and getDimension given non-proxy functionality:
+    -getPosition(): will return whatever position was last returned when
+     a player was teleported.
+    -getDimension just returns the overworld (versus returning nothing)
+- Upgraded the homes plugin to a more robust version that can work without
+  proxy mode and has administrative functions to list and manage homes on
+  a server.
+
+Build 235 [0.13.6] - master branch (stable)
+- Bugfix for Spigot servers.  An old attempt to fix colorization on
+  Spigot servers backfired on the newer builds.  I removed the
+  offending code in core/mcserver.py
+
+Build 234
+- change parsing for server bound PlayerPosLook.  Stop using "NULL"
+  element for 1.8+ parsing and just use if else to determine data element
+  positions.  I suspect the null component may be bugged or causing
+  parsing problems.
+
+Build 233 [0.13.5] - master branch (stable)
+- Fix minecraft.rst document header caused by module containind the name
+  "class". renamed proxy/entityclasses to entitybasics.
+- more touch ups to documentation.
+- pushed to master because there are nice bugfixes.
+
+Build 232
+- improve /perms:
+    - reimplement RESET command
+    - add individual, all user, and groups reset methods to the API
+- some refactoring of command processing portions of wrapper.py, commands.py.
+- various bugfixes to bugs I created.
+- move pickling methods to the helpers API
+- clean up documentation some more.
+
+Build 229-230 [0.13.4] - master branch (stable)
+
+Build 229 [0.13.4]
+- Bugfix in SB Parse.
+- Fixed keepalives to prevent player timeouts with slow connections
+
+Build 228 [0.13.4]
+- Fix more code in Proxy server/client parsing to improve speed and
+ reliablity for slow connection users.
+- Fix SB Parse error in yaw/pitch for 1.8+ playerposlook (create parser)
+
+Build 226 [0.13.3]
+- Fix bugs for 1.12.2 (Change of parsing for keep alive)
+
+Build 225 [0.13.2]
+- fix bug in last build with proxy handle()s.
+
+Build 223
+- improve core.storage handling of cases where pickle is used and storage
+ attempts to load any old json file.  No longer generates error just
+ because there is not an old json version.
+- clarify api.helpers getjsonfile() return codes (the difference
+ between False and None return codes).
+
+Build 220-222 [0.13.0]
+- Fixes and improvements to the help menus
+- Update for Minecraft 1.12.1 packets
+- commented out some debugging lines.
+
+Build 219
+- Issues with home and bookmark plugins not setting the location
+ correctly, sometimes causing the player to fall or be slightly
+ misplaced.  Due to specifying %d (and rounding 1/2 coords to change
+ the TP location to an adjoining block).  Fix similar error in
+ teleports.
+- fine tune and verify packets for client and serverbound use.
+- simplify constants for play states for proxy client and server.
+- pass a faux player object to player.preLogin to prevent errors in
+ trying to generate a playerobject before player is logged on.
+- fixed player object login and logout.
+- found error in Z position parse for SB playerposlook
+- API was missing permission group management commands.  Added them
+ to the base API:
+  - createGroup(groupname)
+  - deleteGroup(groupname)
+  - addGroupPerm(group, node, value=True)
+  - deleteGroupPerm(group, node)
+  - resetGroups()  - deletes all group data
+- added group manager plugin
+- correct permissions.py error where creating a self.permissions =
+ self.wrapper.permissions and later making self.permissions = {} breaks
+ the association with wrapper.permissions.
+- Correct more permissions errors.
+- have wrapper commands.py echo back typed commands to the client user.
+
+Build 218
+- fix issues with a plugin called "Name" in help menus.
+- permissions issues with bookmarks plugin allowing commands.
+- Fix example and template plugins
+
+Build 217
+- more debugging with servervitals references.
+- found a new 1.12 metadata data type.. cant parse it yet ('13' - nbt tag)
+
+Build 216 [0.12.1]
+- (reminder) player list was moved to core/wrapper.py.
+-- however.. player list is passed back into servervitals for use
+   by clientconnection
+- Removed improper player references for self.servervitals
+
+Build 215 [0.12.0]
+- update packet information to minecraft version 1.12
+
+Build 211
+- Proxy is an independent system, save for some api.helpers dependencies.
+ Proxy can now, in theory, be used without Wrapper as a stand-alone
+ component for other uses.
+- proxy is entirely refactored, separated proxy into several groups:
+ - base.py file for main Proxy class
+ - client, server, packets, utils, entity groups.
+- Entity control moved to Proxy, where it belongs
+- All wrapper and javaserver references finally removed.
+- proxy passes information back to wrapper (or whatever system) via
+ the shared data (for server and player data) or by calling events.
+ The templates for these shared structures and API's are included as
+ small classes in wrapper/proxy/base.py.
+- Another goal of separation is to make the player api less confusing,
+ since the documentation is not clear on what player API methods are
+ available with/without proxy mode.  Hopefully, movement can be made
+ to offer similar functionality for non-proxy mode (versus just
+ generating errors when an attempt is made to access player
+ data from the proxy).
+
+
+Build 210 - Fully modularize and make Proxy an independent system:
+- group encryption with proxy package (the only place it is used!).
+- Group mcuuid.py into proxy package (proxy depends on it more than
+ wrapper does... I would rather wrapper depend upon a proxy module
+ than v.v.)
+- clean up wrapper halt signal system to support separation of
+ proxy from wrapper.  Also avert possible referencing errors in
+ other places in code, like:
+    - separate player.abort signal from the wrapper.halt.halt signal.
+- create separate Proxy abort signal, separate from wrapper halt (the
+ 'caller' halt signal).
+- separate out proxy and mcserver protocol versioning variables.
+- proxy wrapper plugin channels are hardcoded to utf-8 (versus adding
+ a whole proxy argument just for the channel's encoding!)
+
+
+Build 209
+- changed api/helpers _test() to use assertions for tests. Refactor helpers some.
+
+Build 208
+- Remove readchar package and implement simpler (better IMHO)
+ readkey module.  Nothing functionally different from readchar
+ package except that references and methods wrapper uses were
+ updated accordingly. Implements all keys but ESC/F11/F12.
+- Some Py3/Py2 updates to helpers.py
+- move console output responsibility solely to core/wrapper to
+ centralize printing to the console.  Logging is still using
+ its own handler, though.
+- finally have a real working version of console imput that
+ fully supports a command history using up/down arrow keys
+ as well as properly implements delete and backspace keys.
+
+Build 205 - 207
+These builds are all various experiments and re-writes of the
+Readchar package and my attempts with implementing arrow keys
+to have a command history, as well as improve or implement editing
+functions (including the delete and backspace keys).
+
+Build 204
+ Nothing special:
+ - update readchar package (hoping to get arrow keys working soon)
+ - update wrapper's code to use modern new style python classes.
+
+Build 203 [0.11.5]
+- Add wrapper "op" command Feature Request:
+    - Added two API minecraft items to makeOP() and deOp()
+    - console and in-game command connections all use wrapper's
+      op/deop API.  See documention in api minecraft.
+- various bug fixes
+    - fix set_item to allow adding new entries to a file.
+    - tweaks here and there: converting to new classes, removing default
+     '-r' arguments for file reading, etc.
+    - clarify in code that what we called 'operatordict' in mcserver.py
+     is actually a list (and is now renamed 'operator_list').
+    - restore spawn object parsing (seems harmless since objects
+     are GC-ed as entities)
+    - remove some old debug and print statements.
+    - Fix small error in in-game /help command.
+
+Build 202
+- fix backups issue #445 caused by defective indent in timer routine.
+  (the timer.Second event would never run!)
+
+Build 201
+     Bugfixes!
+- Bugfix registered_permissions.
+- Bugfix group_delete method.
+- Bugfix entity renaming (was using pre-1.11 in call cases).
+- Correct bug in hasPermission that would set False the first time
+  a user permission was checked (even if it was a default or None)
+- Make help readout better.  Display the commands (but grayed out)
+  so that users don't get blank help pages when they have no
+  available commands on that page.
+
+Build 200 [0.11.4]
+- had to remove updates from grahamedgecombe.com because the website
+  is not playing nice with our requests module.  This was a good thing
+  due to major changes in names that needed to be addressed for 1.11
+  versus pre-1.11 servers. 1.11 renames some mobs and also changes the
+  naming scheme away from the old CamelCase (you can still /kill a
+  Camel_Case, though!).  Some things renamed entirely, though; like
+  PigZombie became zombie_pigman.
+
+Build 199 [0.11.3]:
+- Created new permissions code.
+- Implement SuperOPs system of permissions above OP 4.
+
+Build 197 -198:
+- Just various bug fixes
+- stage mew permissions code
+
+Build 184-196 [0.11.2]
+- Build 196:
+    - Fix load_json and load_pickle functions which returned the values
+      without actually updating the Data dictionary.
+    - Clean up wrapper `__main__` code and add argument parsing to
+      wrapper startup.  Added '--betterconsole' and '--encoding'.
+    - changed build script to make incrementing builds an option.
+Builds 184-196:
+- Created new documentation system to document the API and
+  the Wrapper.py events.
+
+Build 183 Version [0.11.0]
+- plugin-breaking change made to getStorage API:
+    - Had to do it!  The Storages were really a bad implementation that tried to
+      follow both Dict and json rules.  However, the implementation limits our
+      ability to leverage the full capabilities of a Dict class, including being a
+      fully compliant iterator object.  Further, by  implementing pickle methods,
+      saving the storages can be much more reliable without being limited by the
+      constraints of json formatting.  I have implemented the pickling (off by
+      default for back-wards compatibility) with cPickle for Python 2 (Pickle is
+      already C-implemented for Python 3).
+    - This changes the use of Storages some.  The close() and save() methods are
+      used as before. `data.save()`, `data.close()` ('data' being the Storage object)
+    - The data component is accessed as `data.Data`.  Data is a fully compliant
+      Python dictionary.
+
+Build 182
+- make `use-readline` default to True in the wrapper.config.json
+- Bugfix server auto-restart options
+- Clean up config some.
+- Make entity tracker code more responsive to shutdowns (close threads quicker)
+
+Build 181 Version [0.10.1]
+- Fix bugs with shutdowns SIGINT, SIGTERM, SIGTSTP
+
+Build 180 Version [0.10.0]
+- packet API is changed (pre-release 'major' version increased).  Packet constants
+    now have two fields (and are a list). The first field is the packet constant
+    (such as 0x02).  The second field is the parsing definition ( for example,
+    [JSON, BYTE]). Thus far, only applies to select play packets.
+- Missing or added parsing definition fields between minecraft versions are handled (for some
+    time now internally, anyway) by assigning a NULL type to the missing field.  For example,
+    CHAT_MESSAGE is parsed using [JSON, BYTE] in 1.8 and later and [STRING, NULL]
+    prior to 1.8.
+- split proxy modules even more. mcpackets split into client-bound and server-bound.
+    moved (and renamed) wrapper/utils/pkt_datatypes.py to proxy/constants.py.
+
+Build 179
+- Move play packets out of serverconnection to new parse_cb.py module.
+- start code to add event documentation.
+- refactor import of parsing constants using `from module import *` statements
+- Started experiment (using KEEP_ALIVE): try making packet definitions include
+ not just the packet constant, but their parsing formula as well.
+
+Build 178
+- bugfix - player.message was sending extra self argument.
+- bugfix - removed encoding argument, which is not supported in json.dumps for py3 (in MCServer.broadcast)
+- bugfix of serverconnection player.chatbox parse.
+- Moved clientconnection play packet parsers to new module parse_sb.py
+
+Build 176-177
+- Fix a couple bugs:
+    - fix broken encrytion for Python 2 introduced in build 175
+    - fix entity iteration issues under Python 3
+
+Build 175 Version [0.9.13]
+- First completely working Python 3 version.  May not be entirely bug free,
+ but any remaining problems are minor or infrequent and can be addressed as
+ discovered.
+- Pared down our version of encrytion strictly to the methods wrapper uses.
+
+Build 174 Version
+- Python 3 Bug fixes:
+    - core.mcuuids.formatuuid()
+    - core.wrapper.performupdate()
+    - core.mcserver and core.commands - small typos/improvements
+
+Build 173 Version [0.9.12]
+- First Wrapper.py to successfully run on Python 3.  Following known Py3 probems:
+    -proxy mode not working for py3
+    -some uuid methods may still be bugged.
+  wrapper does start from a fresh install, boots server, accepts EULA, and can read the console and issue commands.
+
+Build 172 Version [0.9.11]
+- FUN STUFF just for this build! - Babies are given nametags above their heads with their EID!
+   (done to test the metadata code!)
+- serious bugfix in packet.read_bool() where all booleans were always false. detected this while:
+- bring entity metadata parsing up to date (new methods for 1.9+ added)
+- implemented new 1.9 entity packet.read_metadata and packet.send_metadata.  These are suffixed as
+   _1_9 (i.e., read_metadata_1_9).
+- refactor the datatype constants for parsing to their own module (preparing for inclusion in API)
+
+Build 171 Version [0.9.10]
+- Finally bigfix wrapper /start /restart /stop /halt commands to an error-free state with serverStart flag properly set at shutdowns
+
+Build 170 Version [0.9.9]
+- turn of debug parsing by default.
+
+Build 168-169 Version [0.9.9] * potential critical bugfix
+- Completed entry of all known server-bound packets to mcpackets.py Found
+    some problems in packet assignment that could cause packet confusion.
+
+Build 167 Version [0.9.8]
+- release wrapper from BBL license to GPL version 3 or later
+- buildscript inserts LICENSE.txt into Wrapper.py at build time.
+
+Build 166 Version [0.9.7]
+- Documentation of API is created automatically as part of each build.
+- Cleaned up web.py some.
+- Cleaned up wrapper shutdown code.
+- Completed entry of all known client-bound packets to mcpackets.py
+- re-implement utils/helpers directly into api/helpers. Still contains
+    private methods, but those are marked to prevent their inclusion in
+    the documentation (or are prefixed with '_' to mark them as private
+    methods.
+
+Build 164-165 Version [0.9.6]
+- Bugfix request import
+- Big refactor of clientconnection parsing to remove all the if-elif processing.
+- making code preparations to fix player.connect()
+- fix more player-connnect stuff.  works in a limited fashion.  Respawn in new world glitches screen until player dies and respawns
+    if player does not use /lobby to get back, strange things happen if he disconnects and rejoins.  /lobby does not re-connect to
+    original server (packet length problems).
+- Same refactor of serverconnection that was done to clientconnection...
+- Changed player.usebed event.  The (head of the) bed position is passed as a payload item: "position" of x,y,z (parsed minecraft "position")
+- therefore, getBedPostion was removed from the API.player
+- fixed long-standing problem with wrapper offline mode connection.
+- introduce item self.api.wrapperHalt() to the base API.  Shuts down wrapper entirely with exit code 0.
+- add self.api.minecraft.getServerPackets(self, packets="CB") to the Minecraft API
+- add self.api.minecraft.setLocalName(MojangUUID, desired_name, kick=True) to effect local server name changes.
+- add self.api.minecraft.getUuidCache() which returns the wrapper's uuid cache.
+- spiff up the documentation to make new API documentation automatic.
+- New folder /documentation in repo for plugin API documentation
+
+Build 163 Version [0.9.4]
+- refactor packet.py
+- rewrites and bug fixes to proxy system:
+    - option to have ip bans simply drop the connection, making the server un-responsive
+    to traffic from the banned address.
+    - start cleaning up logon process in clientconnection.
+    - fix broken offline wrapper logon process (may have contributed to player.connect() issues).
+    - bigfix in ban-ip that excluded valid ipv4s from being banned.
+    - fix broken isipbanned function in proxy.base.
+
+Build 162 Version [0.9.3]
+- BugFix: Added getEntityControl() to Minecraft API so plugins can actually access the new entity control methods (gasp!)
+- Added getServerPath() to minecraft API (since server can be in other folders now and some plugins need to know this)
+- Added utils.py Utils class to API.  These wrap some useful functions from utils.helpers.
+- moved backup code out of server instance and put it in the main wrapper instance.
+- removed getHelpers from api.base (added in build 121).  Being replaced by Utils class.
+
+Build 161
+- clean up example plugins.
+- fix player death event death message (mcserver.py)
+- Fix /playerstats command (bug in getAllPlayers)
+
+Build 160 Version [0.9.2]
+- More wrapper imports improvements to dependency import process
+- Including more plugin documentation in example-plugins/example.py.
+- Strip down example-plugins/template.py to the bare minimums for a plugin shell.
+- Strip old 'Global' plugin dependency back out of teleport.py
+- Wrapper now requires requests.  It is no longer optional based on usages (proxy-mode, etc).
+
+Build 159
+- Bugfix: - core.wrapper - renamed _shutdown() back to shutdown()
+
+Build 158 Version [0.9.1]
+refactor core.plugins module:
+- Move some setup code to the init where it belongs.
+- delete old plugin modules from sys.modules so they can be reloaded.  Fix issue #365.
+- make import process cleaner, more elegant, give user better messages about missing dependencies.
+
+Build 157 Version [0.9.0]
+- refactor uuid and username methods out of core.wrapper and into new class UUIDS in core.mcuuid.py
+- refactor commands and wrapper console commands section (make it easier to read)
+- started updating master CHANGELOG.MD.
+- fix update script and error in build script.  Justifies version 0.9.0
+
+Build 156
+- generate warnings on wrapper start for python versions below 2.7.
+- move chattocolorcodes out of mcserver.py to utils/helpers.py where it can be properly debugged and refactored
+- refactored and debugged mcserver broadcast()
+
+Build 155
+- third - fix clientconnection import errors when proxy is not used and pycrypto is not installed.
+
+Build 154
+- second (typo) - fix proxy errors when proxy is not used and pycrypto is not installed.
+
+Build 152 - 153
+- remove remaining pre-1.7 mode code.  Wrapper detects server version and adjusts accordingly.
+- fix proxy errors when proxy is not used and pycrypto is not installed.
+
+Build 151
+- Minor PEP-8 and bugfix of utils/version.py
+- Bugfixes to console parsing
+- Modify the vanilla server's message to console about hackers connecting.
+
+build 150
+- changed server console parsing to be more independent of server versions
+- refactored parsing of server output
+- ... therefore, there is no "pre-1.7-mode" anymore and...
+- Proxy mode automatically configures the server port to use from server output
+- Proxy mode shuts off if version is pre-1.7.
+
+Build 149  Version [0.8.18]
+- BugFix broken "entity" command.
+- neaten up server console parsing area.
+- wrapper.py - separate the console input reading function out of the command parsing (add function getconsoleinput())
+- Add "server.lagged" event which returns payload - "ticks": (number of ticks server skipped).
+- Made entity processor speed configurable.
+- toned down thinner code to kill less aggresively.  Merely "thins" half of any detected excess at each cycle.
+- "kills" are actually "tp"'s, making the code cleaner and more reliable (server does not have to cycle doMobLoot gamerules)
+- removed option to limit all mobs (it was killing item stacks and innocent mobs under certain circumstances.
+
+Build 148
+- make wrapper's output (logger.logging() and utils.helpers.readout() ) reserve the last line for user input as well.
+
+Build 147 version [0.8.17]
+- Added console mute (/cm) function to mute a spammy server or while running wrapper commands.
+- More and more refactors and tweaks, like making 'ban' a server command again (versus wrapper proxy '.ban')
+- add /perms to console help (the command already existed, but was not documented in help)
+- OPs processing (make checking OPs less disk-intense):
+    - removed operator file reads from the player object API and moved to the server object
+    - OPs file is read ONCE by default, when server is instantiated, and at any starts and restarts.
+    - a mcserver.py MCServer class method added to be able to refresh OPs list when changes are made.
+    - The refresh_ops() will be wrapped in the player API as `refreshOpsList()` for convenience, but will obviously
+     now refresh the list for ALL players.
+    - isOp_fast() is removed due to not being needed (and no one probably EVER wrote a plugin dependent upon it).
+- fix issue with wrapper's getuuidbyusername that could cause the person's local name on the server to revert unexpectedly.
+- added neater way to read server properties and have them included in mcserver.py self.properties as a dictionary.
+- add set_item() to utils.helpers.  This will allow wrapper to easily write new server.properties values to disk.
+- add other nice helper functions.
+- Added readchar package to utils and...
+- Optional console input processing to read keystrokes (instead of waiting for /n readline) so that:
+    - I can fix issue #326 https://github.com/benbaptist/minecraft-wrapper/issues/326
+    - make console input even fancier.
+    - staged wrapper self variables to allow up/down arrow key command history.
+- removed trace-level logging.
+- staged some things to start work on the ability to restart a server and keep players connected in proxy mode.
+
+Build 146
+- custom startup/restart messages (#319)
+
+Build #145 version [0.8.16]
+- Implement 'Solutions for multiple plugins using a single wrapper event' #277
+- Implement "player.rawMessage" payload needs consistency of return values #340
+- Pulled update items out of General config and made them their own group.
+- added config item to change command prefix to something other than a '/' slash (#319)
+
+Build #144 
+- refactor API's world and entity:
+    * api.entity (class EntityControl) is now the actual Entity api versus the internal tracking methods, which are now
+    moved to the core.entities module.
+    * removed entity api methods from api.world to api.entity.
+- Added:
+```
+    def getGameRules(self):
+        """
+
+        returns: a dictionary of gamerules.
+
+        """
+```
+
+Build #143
+Bugfix: forgot to change api/world references to "Gameplay"/"Entities" section.
+
+Build #142
+- spammy console solution started.
+- quick and dirty build to move Entity config items to it's own group:
+```
+"Entities": {
+        "enable-entity-controls": False,  # enable entity controls.
+        "thinning-frequency": 10,  # how often thinning of mobs runs, in seconds
+        "thinning-activation-threshhold": 100,  # when TOTAL mobs are below this number, thinning is skipped entirely
+        "thin-any-mob": 50,  # any mob count above this number gets thinned.
+        "thin-Cow": 30,  # Example, keeps Cows < 30.  Name must match exactly.  Overrides 'thin-any-mob'.
+        "thin-Sheep": 30,
+        "thin-Chicken": 30 },
+```
+
+Build #141
 - added entity controls which are configurable.
-Defaults:
-```
-        "Gameplay": {
-            "enable-entity-controls": False,  # enable entity controls.
-            "thinning-frequency": 10,  # how often thinning of mobs runs, in seconds
-            "thinning-activation-threshhold": 100,  # when TOTAL mobs are below this number, thinning is skipped entirely
-            "thin-any-mob": 50,  # any mob count above this number gets thinned.
-            "thin-Cow": 30,  # Example, keeps Cows < 30.  Name must match exactly.  Overrides 'thin-any-mob'.
-            "thin-Sheep": 30,
-            "thin-Chicken": 30
-        },
-```
 
 Build #140
 - Fix error in serverconnection.py:
@@ -60,7 +688,7 @@ Build 133 - 134
     1) wrapper hub can connect player to second server, but Server does not send player packets to
     position (clear "download terrain") or "respawn".  The player must die to spawn into the world.
     2) After that, it works great, until the player leaves and tries to rejoin. The second joining seems to
-    "remember" toom much about the last connection
+    "remember" too much about the last connection
 The purpose of these builds is to progressively work towards full functionality.  Each build will be better
 than the last until player.connect() is fully functional.
 
@@ -254,7 +882,6 @@ Build #114 [0.8.1]:
 - A completely new rewrite.  Fully compatible with x.7.x version plugins _if_ they do not dip into wrapper's internal methods and stick strictly to the previously documented API:
 http://wrapper.benbaptist.com/docs/api.html
 - Methods in the client/server (like sending packets) are different.  Plugins doing this will need to be modified. Using the wrapper permissions or other wrapper components directly (self.wrapper.permissions, etc) by plugins will be broken with this version.
-- I take that back about packet sending... there is a wrapper that will still allow client.send() (instead of the new client.packet.sendpkt(); However, if you have debug set to true, expect the console to get spammed with 'deprecated server.send()...' messages!
 
 API changes Summary:
 
@@ -348,15 +975,15 @@ Build #110:
 - based on build 109 with all current pull requests as of 1/30/2016
 - updated md5 to hashlib in a few places (md5 is deprecated)
 - Updated the Player.chatbox event to allow the chat to modified.  Also upgraded it to handle UTF-8 and special
-		characters in chat.
+        characters in chat.
 - added to api.minecraft: getTimeofDay(self, format=0)
-		# 0 = ticks, 1 = Military, else = civilian AM/PM, return -1 if no one on or server not started
-		returns actual world time of day  (changes in server.py and API/minecraft.py)
+        # 0 = ticks, 1 = Military, else = civilian AM/PM, return -1 if no one on or server not started
+        returns actual world time of day  (changes in server.py and API/minecraft.py)
 - Added Chat.py plugin example...
 - ..that utilizes the new abilty of "player.chatbox" event to accept plugin changes to chat.
 - Added clock.py example for getTimeofDay()
 - Lots of changes to proxy.py... Added mcpkt.py file for packet number references.  Packets are now referenced (in the
-		play mode sections) by names, not hardcoded packet numbers.
+        play mode sections) by names, not hardcoded packet numbers.
 - Added file mcpkt.py, where packet definitions are stored for reference by proxy.py.
 - Beefed up player.interact event some to allow blocking of "interaction events" like lava and water placement, shooting, etc
 
@@ -384,8 +1011,8 @@ Build #106 [0.7.7 RC3]:
 - [pull request #209/issue #131] - Make groups inherit other groups
 
 - Plugin changes:
-	- WorldEdit:
-		- Fixed wand not functioning properly
+    - WorldEdit:
+        - Fixed wand not functioning properly
 
 Build #105 [0.7.7 RC2]:
 I added a new ROADMAP.md file for keeping a nice, organized file on the future of Wrapper.py updates.
@@ -396,9 +1023,9 @@ I added a new ROADMAP.md file for keeping a nice, organized file on the future o
 - Fixed indentation inconsistencies in proxy.py
 
 - Plugin changes:
-	- WorldEdit:
-		- Re-fixed double-click issue thingy or something [not entirely sure what the issue was]
-		- No longer using player.execute - doesn't require op AND permission node
+    - WorldEdit:
+        - Re-fixed double-click issue thingy or something [not entirely sure what the issue was]
+        - No longer using player.execute - doesn't require op AND permission node
 
 Build #104 [0.7.7 RC1]:
 - Fixed Control+D crash
@@ -406,10 +1033,10 @@ Build #104 [0.7.7 RC1]:
 - Fixed issue with new permissions methods not working at all
 
 - Plugin changes:
-	- WorldEdit:
-		- Added //replacenear command
-		- Added //extinguish command
-		- Added /help entry for all WorldEdit commands
+    - WorldEdit:
+        - Added //replacenear command
+        - Added //extinguish command
+        - Added /help entry for all WorldEdit commands
 
 Build #103:
 - SERIOUS bug fix: Wrapper.py spams "day changed, rotating logs..." and creates new log file every second
@@ -421,12 +1048,12 @@ Build #102:
 - Fixed support for Minecraft 1.7.10 in proxy mode
 - Fixed `/wrapper halt` command in-game
 - API changes:
-	- [issue #199] Added new methods for modifying player permissions [untested]:
-		- player.setGroup(group)
-		- player.setPermission(node, value=True) (value argument is optional, default is True)
-		- player.removePermission(node)
-		- player.removeGroup(group)
-	- [issue #164] Implemented timer.tick event (finally!)
+    - [issue #199] Added new methods for modifying player permissions [untested]:
+        - player.setGroup(group)
+        - player.setPermission(node, value=True) (value argument is optional, default is True)
+        - player.removePermission(node)
+        - player.removeGroup(group)
+    - [issue #164] Implemented timer.tick event (finally!)
 
 Build #101:
 - Fixed crashes relating to packets 0x1a (again!) and 0x1e
@@ -434,11 +1061,11 @@ Build #101:
 
 Build #100:
 - Proxy mode improvements:
-	- Fixed 1.7.10 servers not working due to changes in #98 (packet 0x2b being sent on a non-1.8 server)
-	- Fixed skin settings not persisting when changing servers
-	- Fixed status effects not disappearing when connected to a secondary server
-	- Fixed client disconnecting from 0x1a packet
-	- [issue #200] Fixed crash/chunks not loading in Nether and End
+    - Fixed 1.7.10 servers not working due to changes in #98 (packet 0x2b being sent on a non-1.8 server)
+    - Fixed skin settings not persisting when changing servers
+    - Fixed status effects not disappearing when connected to a secondary server
+    - Fixed client disconnecting from 0x1a packet
+    - [issue #200] Fixed crash/chunks not loading in Nether and End
 - API changes:
  - [*pull request #193/#194] player.getPosition() now returns the following tuple format: (x, y, z, onGround, yaw, pitch) [MAY BREAK EXISTING PLUGINS]
 
@@ -448,23 +1075,23 @@ Build #99:
 - Added /lobby command for cross-servers
 - [pull request #178] Fix player.setResourcePack
 - Removed trace amounts of try:except statements in proxy code in an effort to reduce random issues that aren't being detected
-	- I've also done some little fixes, and I think the proxy mode is a bit more stable now.
-	- Translating more packets that involve entity IDs when cross-server to fix weird issues
-		- Clothes can be changed, beds work properly, animations might work better, etc.
+    - I've also done some little fixes, and I think the proxy mode is a bit more stable now.
+    - Translating more packets that involve entity IDs when cross-server to fix weird issues
+        - Clothes can be changed, beds work properly, animations might work better, etc.
 
 Build #98:
 - Added new example plugins `teleport` and `home` by Cougar [pull requests #155 and #154 respectively]
 - Removed Top 10 Players until lag can be fixed
 - [issue #160] Fixed new players without a skin breaking parts of the Wrapper
 - Cross-server improvements:
-	- Fixed skins and duplicating players on tab list when traversing between Wrapper.py servers
-	- Weather is now accurate
+    - Fixed skins and duplicating players on tab list when traversing between Wrapper.py servers
+    - Weather is now accurate
 - [pull request #176] Parse PID 0x30 (Window Items)
 - [pull request #174/#173] Fix issue #172
 
 - Plugin changes:
-	- Essentials:
-		- [pull request #162] Assign default MOTD during login if it does not exist like /motd does
+    - Essentials:
+        - [pull request #162] Assign default MOTD during login if it does not exist like /motd does
 
 Build #97:
 - Split plugin, command, and event code into separate respectively-named files/classes for cleaner code

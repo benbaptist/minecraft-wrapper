@@ -1,12 +1,20 @@
 # -*- coding: utf-8 -*-
 
+# Copyright (C) 2016, 2017 - BenBaptist and Wrapper.py developer(s).
+# https://github.com/benbaptist/minecraft-wrapper
+# This program is distributed under the terms of the GNU
+# General Public License, version 3 or later.
+
 import time
-import fnmatch
 import json
 import threading
-import proxy.mcpackets as mcpackets
+
+from proxy.packets.mcpackets_cb import Packets as Packets_cb
+from proxy.packets.mcpackets_sb import Packets as Packets_sb
+
+from proxy.utils.constants import *
 from core.storage import Storage
-from utils.helpers import processoldcolorcodes, processcolorcodes, getjsonfile, getfileaslines
+from api.helpers import processoldcolorcodes
 
 
 # region Constants
@@ -38,88 +46,172 @@ _NULL = 100
 
 
 # noinspection PyPep8Naming
-class Player:
+class Player(object):
     """
-    Player objects contains methods and data of a currently logged-in player. This object is destroyed
-    upon logging off.
+    .. code:: python
+
+        def __init__(self, username, wrapper)
+
+    ..
+
+    This class is normally passed as an argument to an event
+    callback, but can be also be called using getPlayer(username):
+
+    .. code:: python
+
+        player = self.api.getPlayer(<username>)
+
+    ..
+
+    Player objects contains methods and data of a currently
+    logged-in player. This object is destroyed
+    upon logging off.  Most features are tied heavily to
+    proxy mode implementations and the proxy client instance.
+
+    The player object has a self.__str___ representation that returns the
+    player.username.  Therefore, plugins do not need to attempt string
+    conversion or do explicit references to player.username in their code
+    (str(player) or player.username in plugin code).
+
+    When using events, events in the "proxy" (Group 'Proxy') section are only
+    available in proxy mode.  "server" events (Group 'core/mcserver.py')
+    are available even without proxy mode, as long as the server is running.
+
+
+    Supported properties of the player:
+    
+    .. code:: python
+
+        self.username
+        self.loggedIn
+        self.mojangUuid
+        self.offlineUuid
+        self.loginposition
+        self.playereid
+        self.ipaddress
+
+        # proxy only
+        self.serverUuid (proxy only)
+        self.clientUuid (proxy only)
+        self.clientgameversion
+        self.clientboundPackets = Packets_cb(self.clientgameversion)
+        self.serverboundPackets = Packets_sb(self.clientgameversion)
+
+        # some player properties associated with abilities (proxy)
+        # default is 1.  Should normally be congruent with speed.
+        self.field_of_view = float(1)
+        # Client set godmode is 0x01
+        self.godmode = 0x00
+        # Client set creative is 0x08
+        self.creative = 0x00
+        # default is 1
+        self.fly_speed = float(1)
+
+    ..
+
     """
 
     def __init__(self, username, wrapper):
 
         self.wrapper = wrapper
         self.javaserver = wrapper.javaserver
-        self.permissions = wrapper.permissions
         self.log = wrapper.log
-        self._encoding = wrapper.config["General"]["encoding"]
-        self.serverpath = wrapper.config["General"]["server-directory"]
 
         self.username = username
         self.loggedIn = time.time()
+
+        # TODO - clean this out.  let player objects GC with their client?
+        # mcserver will set this to false later to close the thread.
         self.abort = False
+        # meanwhile, it still needs to respect wrapper halts
+        self.wrapper_signal = self.wrapper.halt
 
-        # these are all MCUUID objects.. I have separated out various uses of uuid to clarify for later refractoring
+        # these are all MCUUID objects.. I have separated out various
+        #  uses of uuid to clarify for later refractoring
         # ---------------
-        # Mojang uuid - the bought and paid Mojand UUID.  Never changes- our one constant point of reference per player.
+        # Mojang uuid - the bought and paid Mojand UUID.  Never
+        # changes- our one constant point of reference per player.
         # offline uuid - created as a MD5 hash of "OfflinePlayer:%s" % username
-        # client uuid - what the client stores as the uuid (should be the same as Mojang?) The player.uuid used by
-        #     old api (and internally here).
-        # server uuid = the local server uuid... used to reference the player on the local server.  Could be same as
-        #     Mojang UUID if server is in online mode or same as offline if server is in offline mode (proxy mode).
+        # client uuid - what the client stores as the uuid (should be
+        # the same as Mojang?) The player.uuid used by old api (and
+        # internally here).
+        # server uuid = the local server uuid... used to reference
+        # the player on the local server.  Could be same as Mojang UUID
+        # if server is in online mode or same as offline if server is
+        # in offline mode (proxy mode).
+        # *******************
 
-        # This can be False if cache (and requests) Fail... bad name or bad Mojang service connection.
-        self.mojangUuid = self.wrapper.getuuidbyusername(username)
-        # IF False error carries forward, this is not a valid player, for whatever reason...
+        # This can be False if cache (and requests) Fail... bad name or
+        # bad Mojang service connection.
+        self.mojangUuid = self.wrapper.uuids.getuuidbyusername(username)
+
+        # IF False error carries forward, this is not a valid player,
+        # for whatever reason...
         self.clientUuid = self.mojangUuid
+
         # These two are offline by default.
-        self.offlineUuid = self.wrapper.getuuidfromname(self.username)
-        self.serverUuid = self.offlineUuid  # Start out as the Offline - change it to Mojang if local server is Online
+        self.offlineUuid = self.wrapper.uuids.getuuidfromname(self.username)
+        # Start out as the Offline -
+        # change it to Mojang if local server is Online
+        self.serverUuid = self.offlineUuid
 
         self.ipaddress = "127.0.0.0"
-        self.operatordict = self._read_ops_file()
+        self.loginposition = [0, 0, 0]
+        self._position = [0, 0, 0, 0, 0]  # internally used for non-proxy mode
 
         self.client = None
-        self.clientboundPackets = mcpackets.ClientBound(self.javaserver.protocolVersion)
-        self.serverboundPackets = mcpackets.ServerBound(self.javaserver.protocolVersion)
-        self.clientgameversion = self.javaserver.protocolVersion
+        self.clientgameversion = self.wrapper.servervitals.protocolVersion
+        self.clientboundPackets = Packets_cb(self.clientgameversion)
+        self.serverboundPackets = Packets_sb(self.clientgameversion)
 
         self.playereid = None
 
         # some player properties associated with abilities
-        self.field_of_view = float(1)  # default is 1.  Should normally be congruent with speed.
-        self.godmode = 0x00  # Client set godmode is 0x01
-        self.creative = 0x00  # Client set creative is 0x08
-        self.fly_speed = float(1)  # default is 1
+        #
+        # default is 1.  Should normally be congruent with speed.
+        self.field_of_view = float(1)
+        # Client set godmode is 0x01
+        self.godmode = 0x00
+        # Client set creative is 0x08
+        self.creative = 0x00
+        # default is 1
+        self.fly_speed = float(1)
 
         if self.wrapper.proxy:
             gotclient = False
-            for client in self.wrapper.proxy.clients:
+            for client in self.wrapper.servervitals.clients:
                 if client.username == self.username:
                     self.client = client
-                    self.clientUuid = client.uuid  # Both MCUUID objects
+                    # Both MCUUID objects
+                    self.clientUuid = client.uuid
                     self.serverUuid = client.serveruuid
+
                     self.ipaddress = client.ip
-                    self.clientboundPackets = self.client.pktCB  # pktSB already set to javaserver.protocolVerion
+
+                    # pktSB already set to self.wrapper.servervitals.protocolVersion
+                    self.clientboundPackets = self.client.pktCB
                     self.clientgameversion = self.client.clientversion
                     gotclient = True
                     break
             if not gotclient:
-                self.log.error("Proxy is on, but this client is not listed in wrapper.proxy.clients!")
-        self.data = Storage(self.clientUuid.string, root="wrapper-data/players")
-        if "groups" not in self.permissions:
-            self.permissions["groups"] = {}
-            self.permissions["groups"]["Default"] = {}
-            self.permissions["groups"]["Default"]["permissions"] = {}
-        if "users" not in self.permissions:  # top -level dict item should be just checked once here (not over and over)
-            self.permissions["users"] = {}
-        if self.mojangUuid.string not in self.permissions["users"]:  # no reason not to do this here too
-            self.permissions["users"][self.mojangUuid.string] = {"groups": [], "permissions": {}}
-        if "firstLoggedIn" not in self.data:
-            self.data["firstLoggedIn"] = (time.time(), time.tzname)
-        if "logins" not in self.data:
-            self.data["logins"] = {}
-        self.data["lastLoggedIn"] = (self.loggedIn, time.tzname)
+                self.log.error("Proxy is on, but this client is not "
+                               "listed in wrapper.proxy.clients!")
+                self.log.error("The usual cause of this would be that"
+                               " someone is connecting directly to"
+                               " your server port and not the wrapper"
+                               " proxy port!")
+
+        # Process login data
+        self.data = Storage(
+            self.clientUuid.string, root="wrapper-data/players")
+        if "firstLoggedIn" not in self.data.Data:
+            self.data.Data["firstLoggedIn"] = (time.time(), time.tzname)
+        if "logins" not in self.data.Data:
+            self.data.Data["logins"] = {}
+        self.data.Data["lastLoggedIn"] = (self.loggedIn, time.tzname)
         self.data.save()
 
+        # start player logged in time tracking thread
         t = threading.Thread(target=self._track, args=())
         t.daemon = True
         t.start()
@@ -140,81 +232,85 @@ class Player:
 
     def _track(self):
         """
-        internal tracking that updates a player's server play time. Not intended as a part of the public
-        player object API
+        internal tracking that updates a player's server play time.
+        Not a part of the public player object API.
+
+        Sample ReST formattings -
+
+        # emphasized notes
+        Note: *You do not need to run this function unless you want*
+         *certain permission nodes to be granted by default.*
+         *i.e., 'essentials.list' should be on by default, so players*
+         *can run /list without having any permissions*
+
+        # code samples
+            :sample usage:
+
+                .. code:: python
+
+                    < code here >
+
+                ..
+
         """
-        self.data["logins"][int(self.loggedIn)] = time.time()
-        while not self.abort:
+        self.data.Data["logins"][int(self.loggedIn)] = time.time()
+        while not (self.abort or self.wrapper_signal.halt):
             timeupdate = time.time()
             if timeupdate % 60:  # Just update every 60 seconds
-                self.data["logins"][int(self.loggedIn)] = int(time.time())
-            time.sleep(.5)  # this needs a fast response to ensure the storage closes immediately on player logoff
+                self.data.Data["logins"][int(self.loggedIn)] = int(time.time())
+            # this needs a fast response to ensure the storage closes 
+            # immediately on player logoff
+            time.sleep(.5)
         self.data.close()
-
-    def _read_ops_file(self):
-        """
-        Internal private method - Not intended as a part of the public player object API
-        Returns: contents of ops.json as dictionary
-        :rtype: Dictionary
-        """
-        ops = False
-        if self.javaserver.protocolVersion > mcpackets.PROTOCOL_1_7:  # 1.7.6 or greater use ops.json
-            ops = getjsonfile("ops", self.serverpath, encodedas=self._encoding)
-        if not ops:
-            # try for an old "ops.txt" file instead.
-            ops = []
-            opstext = getfileaslines("ops.txt", self.serverpath)
-            if not opstext:
-                return False
-            for op in opstext:  # range(len(opstext)):
-                # create a 'fake' ops list from the old pre-1.8 text line name list
-                # notice that the level (an option not the old list) is set to 1
-                #   This will pass as true, but if the plugin is also checking op-levels, it
-                #   may not pass truth.
-                indivop = {"uuid": op,
-                           "name": op,
-                           "level": 1}
-                ops.append(indivop)
-
-        return ops
 
     def execute(self, string):
         """
         Run a command as this player. If proxy mode is not enabled,
-        it simply falls back to using the 1.8 'execute' command. To be clear, this
-        does NOT work with any Wrapper.py or plugin commands.  The command
-        does not pass through the wrapper.
+        it simply falls back to using the 1.8 'execute' command. To 
+        be clear, this does NOT work with any Wrapper.py or plugin 
+        commands.  The command does not pass through the wrapper.  
+        It is only sent to the server console (or the actual server in
+        proxy mode).
 
-        Args:
-            string: full command string send on player's behalf to server.
+        :arg string: full command string send on player's behalf to server.
 
-        Returns: Nothing; passes the server or the console as an "execute" command.
+        :returns: Nothing; passes the server or the console as an
+         "execute" command.
 
         """
         try:
-            self.client.message("/%s" % string)
+            self.client.chat_to_server("/%s" % string)
         except AttributeError:
-            if self.javaserver.protocolVersion > mcpackets.PROTOCOL_1_7_9:
-                self.wrapper.javaserver.console("execute %s ~ ~ ~ %s" % (self.username, string))
+            if self.wrapper.servervitals.protocolVersion > PROTOCOL_1_7_9:
+                self.wrapper.javaserver.console(
+                    "execute %s ~ ~ ~ %s" % (self.username, string))
             else:
-                self.log.warning("could not run player.execute - wrapper not in proxy mode and minecraft version "
-                                 "is less than 1.8 (when /execute was implemented).")
+                self.log.warning("could not run player.execute - wrapper not"
+                                 " in proxy mode and minecraft version is less"
+                                 " than 1.8 (when /execute was implemented).")
 
     def sendCommand(self, command, args):
         """
         Sends a command to the wrapper interface as the player instance.
         This would find a nice application with a '\sudo' plugin command.
 
-        Sample usage:
-            ```
-            player=getPlayer("username")
-            player.sendCommand("perms", ("users", "SurestTexas00", "info"))
-            ```
-        Args:
-            command: The wrapper (or plugin) command to execute; no slash prefix
-            args: list of arguments (I think it is a list, not a tuple or dict!)
+        :sample usage:
 
-        Returns: Nothing; passes command through commands.py function 'playercommand()'
+            .. code:: python
+
+                player=getPlayer("username")
+                player.sendCommand("perms", ("users", "SurestTexas00", "info"))
+
+            ..
+
+        :Args:
+            :command: The wrapper (or plugin) command to execute; no
+             slash prefix
+            :args: list of arguments (I think it is a list, not a
+             tuple or dict!)
+
+        :returns: Nothing; passes command through commands.py function
+         'playercommand()'
 
         """
         pay = {"player": self, "command": command, "args": args}
@@ -222,491 +318,670 @@ class Player:
 
     def say(self, string):
         """
-        :param string: message/command sent to the server as the player.
         Send a message as a player.
 
-        Beware: in proxy mode, the message string is sent directly to the server
-        without wrapper filtering,so it could be used to execute minecraft
-        commands as the player if the string is prefixed with a slash.
+        :arg string: message/command sent to the server as the player.
+
+        Beware: *in proxy mode, the message string is sent directly to*
+        *the server without wrapper filtering,so it could be used to*
+        *execute minecraft commands as the player if the string is*
+        *prefixed with a slash.*
+
         """
         try:
-            self.client.message(string)
-        except AttributeError:  # pre-1.8
-            self.wrapper.javaserver.console("say @a <%s> %s" % (self.username, string))
+            self.client.chat_to_server(string)
+        except AttributeError:
+            # pre-1.8
+            self.wrapper.javaserver.console(
+                "say @a <%s> %s" % (self.username, string))
 
     def getClient(self):
         """
-        :returns: player client object
+        Returns the player client context.  Use at your own risk - items
+        in client are generally private or subject to change (you are
+        working with an undefined API!)... what works in this wrapper
+        version may not work in the next.
+
+        :returns: player client object (and possibly sets self.client
+         to the matching client).
+
         """
         if self.client is None:
-            for client in self.wrapper.proxy.clients:
-                try:
-                    if client.username == self.username:
-                        self.client = client
-                        return self.client
-                except Exception as e:
-                    self.log.warning("getClient could not return a client for:%s \nException:%s",
-                                     (self.username, e))
+            for client in self.wrapper.servervitals.clients:
+                if client.username == self.username:
+                    self.client = client
+                    return client
+            self.log.warning("getClient could not return a client for:%s"
+                             " \nThe usual cause of this condition"
+                             " is that no client instance exists because"
+                             " proxy is not enabled.", self.username)
+            return None
         else:
             return self.client
 
-    def getBedPostion(self):
-        """
-        Returns: returns a tuple of the player's last sleeping place (position x, y, z)
-
-        IMPORTANT: wrapper does not store this permanently. It is up to the plugin to record a
-            "player.usebed" event and then store the data in their own Storage objects!
-        """
-        return self.getClient().bedposition
-
     def getPosition(self):
-        """:returns: a tuple of the player's current position x, y, z, and yaw, pitch of head.
-        Notes:
-        The player's position is obtained by parsing client packets, which are not sent until the
-        client logs in to the server.  Allow some time after server login to verify the wrapper has had
-        the oppportunity to parse a suitable packet to get the information!
         """
-        return self.getClient().position + self.getClient().head
+        Get the players position
+        
+        :Note:  The player's position is obtained by parsing client
+         packets, which are not sent until the client logs in to 
+         the server.  Allow some time after server login to verify 
+         the wrapper has had the oppportunity to parse a suitable 
+         packet to get the information!
+        
+        :returns: a tuple of the player's current position x, y, z, 
+         and yaw, pitch of head.
+        
+        """
+        if self.wrapper.proxy:
+            return self.client.position + self.client.head
+        else:
+            # Non-proxy mode:
+            return self._position
 
     def getGamemode(self):
-        """:returns:  the player's current gamemode.
-        Notes:
-        The player's gammode may be obtained by parsing server packets, which are not sent until the
-        client logs in to the server.  Allow some time after server login to verify the wrapper has had
-        the oppportunity to parse a suitable packet to get the information!
         """
-        return self.getClient().gamemode
+        Get the player's current gamemode.
+        
+        :Note:  The player's Gamemode is obtained by parsing client
+         packets, which are not sent until the client logs in to 
+         the server.  Allow some time after server login to verify 
+         the wrapper has had the oppportunity to parse a suitable 
+         packet to get the information!
+         
+        :returns:  An Integer of the the player's current gamemode.
+
+        """
+        try:
+            return self.client.gamemode
+        except AttributeError:
+            # Non-proxy mode:
+            return 0
 
     def getDimension(self):
-        """:returns: the player's current dimension.
-        -1 for Nether,
-         0 for Overworld
-         1 for End.
-        Notes:
-        The player's position is obtained by parsing server/client packets, which are not sent until the
-        client logs in to the server.  Allow some time after server login to verify the wrapper has had
-        the oppportunity to parse a suitable packet to get the information!
         """
-        return self.getClient().dimension
+        Get the player's current dimension.
 
-    def setGamemode(self, gm=0):
+        :Note:  The player's Dimension is obtained by parsing client
+         packets, which are not sent until the client logs in to 
+         the server.  Allow some time after server login to verify 
+         the wrapper has had the oppportunity to parse a suitable 
+         packet to get the information!
+         
+         :returns: the player's current dimension.
+
+             :Nether: -1
+             :Overworld: 0
+             :End: 1
+
         """
-        :param gm: desired gamemode, as a value 0-3
+        try:
+            return self.client.dimension
+        except AttributeError:
+            # Non-proxy mode:
+            return 0
+
+    def setGamemode(self, gamemode=0):
+        """
         Sets the user's gamemode.
+
+        :arg gamemode: desired gamemode, as a value 0-3
+
         """
-        if gm in (0, 1, 2, 3):
-            self.client.gamemode = gm
-            self.wrapper.javaserver.console("gamemode %d %s" % (gm, self.username))
+        if gamemode in (0, 1, 2, 3):
+            try:
+                self.client.gamemode = gamemode
+            except AttributeError:
+                # Non-proxy mode:
+                pass
+            self.wrapper.javaserver.console(
+                "gamemode %d %s" % (gamemode, self.username))
 
     def setResourcePack(self, url, hashrp=""):
         """
-        :param url: URL of resource pack
-        :param hashrp: resource pack hash
-        Sets the player's resource pack to a different URL. If the user hasn't already allowed
-        resource packs, the user will be prompted to change to the specified resource pack.
+        Sets the player's resource pack to a different URL. If the
+        user hasn't already allowed resource packs, the user will
+        be prompted to change to the specified resource pack.
         Probably broken right now.
+
+        :Args:
+            :url: URL of resource pack
+            :hashrp: resource pack hash
+        :return: False if not in proxy mode.
+        
         """
-        if self.getClient().version < mcpackets.PROTOCOL_1_8START:
-            self.client.packet.sendpkt(0x3f, [_STRING, _BYTEARRAY], ("MC|RPack", url))  # "string|bytearray"
+        try:
+            version = self.wrapper.proxy.srv_data.protocolVersion
+        except AttributeError:
+            # Non proxy mode
+            return False
+        if version < PROTOCOL_1_8START:
+            self.client.packet.sendpkt(
+                self.clientboundPackets.PLUGIN_MESSAGE,
+                [_STRING, _BYTEARRAY],
+                ("MC|RPack", url))
         else:
-            self.client.packet.sendpkt(self.clientboundPackets.RESOURCE_PACK_SEND,
-                                       [_STRING, _STRING], (url, hashrp))
+            self.client.packet.sendpkt(
+                self.clientboundPackets.RESOURCE_PACK_SEND,
+                [_STRING, _STRING],
+                (url, hashrp))
 
     def isOp(self, strict=False):
         """
-        Args:
-            strict: True - use ONLY the UUID as verification
+        Check if player has Operator status. Accepts player as OP
+        based on either the username OR server UUID (unless 'strict'
+        is set).
 
-        returns:  A 1-4 op level if the player is currently a server operator.
-                can be treated, as before, like a boolean - `if player.isOp():`, but now
-                also adds ability to granularize with the OP level
+        Note: *If a player has been opped since the last server start,*
+        *make sure that you run refreshOpsList() to ensure that*
+        *wrapper will acknowlege them as OP.*
 
-        Accepts player as OP based on either the username OR server UUID.
-        This should NOT be used in a recursive loop (like a protection plugin, etc)
-        or a very frequently run function because it accesses the disk file
-        (ops.json) at each call!  Use of isOP_fast() is recommended instead.
+        :arg strict: True - use ONLY the UUID as verification
+
+        :returns:  A 1-10 (or more?) op level if the player is currently
+         a server operator.
+
+        Can be treated, as before, like a
+        boolean - 'if player.isOp():', but now also adds ability
+        to granularize with the OP level.  Levels above 4 are
+        reserved for wrapper.  10 indicates owner. 5-9 are
+        reserved for future minecraft or wrapper levels.  pre-1.8
+        servers return 1.  levels above 4 are based on name only
+        from the file "superops.txt" in the wrapper folder.
+        To assign levels, change the lines of <PlayerName>=<oplevel>
+        to your desired names.  Player must be an actual OP before
+        the superops.txt will have any effect.  Op level of 10 is
+        be required to operate permissions commands.
+
         """
 
-        operators = self._read_ops_file()
-        if operators in (False, None):
+        if self.wrapper.servervitals.operator_list in (False, None):
             return False  # no ops in file
-        for ops in operators:
+        # each op item is a dictionary
+        for ops in self.wrapper.servervitals.operator_list:
             if ops["uuid"] == self.serverUuid.string:
                 return ops["level"]
             if ops["name"] == self.username and not strict:
                 return ops["level"]
         return False
 
-    def isOp_fast(self, strict=False):
+    def message(self, message="", position=0):
         """
-        Args:
-            strict: True - use ONLY the UUID as verification
+        Sends a message to the player.
 
-        returns:  A 1-4 op level if the player is currently a server operator.
-                can be treated, as before, like a boolean - `if player.isOp():`, but now
-                also adds ability to granularize with the OP level
+        :Args:
+            :message: Can be text, colorcoded text, or json chat
+            :position:  an integer 0-2.  2 will place it above XP bar.
+             1 or 0 will place it in the chat. Using position 2 will
+             only display any text component (or can be used to display
+             standard minecraft translates, such as
+             "{'translate': 'commands.generic.notFound', 'color': 'red'}" and
+             "{'translate': 'tile.bed.noSleep'}"
 
-        Works like isOp(), but uses an oplist cached from the __init__ of the player.py api for this player.
-        Suitable for quick fast lookup without accessing disk, but someone who is deopped after the
-        player logs in will still show as OP.
+
+        :returns: Nothing
+
+
         """
-        if self.operatordict in (False, None):
-            return False  # no ops in file
-        for ops in self.operatordict:
-            if ops["uuid"] == self.serverUuid.string:
-                return ops["level"]
-            if ops["name"] == self.username and not strict:
-                return ops["level"]
-        return False
 
-    def refreshOps(self):
-        self.operatordict = self._read_ops_file()
-
-    # region Visual notifications
-    def message(self, message=""):
-        if isinstance(message, dict):
-            self.wrapper.javaserver.console("tellraw %s %s" % (self.username, json.dumps(message)))
+        if self.wrapper.proxy:
+            self.client.chat_to_client(message, position)
         else:
-            self.wrapper.javaserver.console("tellraw %s %s" % (self.username, processcolorcodes(message)))
+            self.javaserver.broadcast(message, who=self.username)
 
     def actionMessage(self, message=""):
-        if self.getClient().version < mcpackets.PROTOCOL_1_8START:
-            parsing = [_STRING, _NULL]  # "string|null (nothing sent)"
+        try:
+            version = self.wrapper.proxy.srv_data.protocolVersion
+        except AttributeError:
+            # Non proxy mode
+            return False
+
+        if version < PROTOCOL_1_8START:
+            parsing = [_STRING, _NULL]
             data = [message]
         else:
-            parsing = [_STRING, _BYTE]  # "string|byte"
+            parsing = [_STRING, _BYTE]
             data = (json.dumps({"text": processoldcolorcodes(message)}), 2)
-        self.getClient().packet.sendpkt(self.clientboundPackets.CHAT_MESSAGE, parsing,  # "string|byte"
-                                        data)
+
+        self.client.packet.sendpkt(
+            self.clientboundPackets.CHAT_MESSAGE,
+            parsing,  # "string|byte"
+            data)
 
     def setVisualXP(self, progress, level, total):
         """
-         Change the XP bar on the client's side only. Does not affect actual XP levels.
+         Change the XP bar on the client's side only. Does not
+         affect actual XP levels.
 
-        Args:
-            progress:  Float between Between 0 and 1
-            level:  Integer (short in older versions) of EXP level
-            total: Total EXP.
+        :Args:
+            :progress:  Float between Between 0 and 1
+            :level:  Integer (short in older versions) of EXP level
+            :total: Total EXP.
 
-        Returns:
+        :returns: Nothing
 
         """
-        if self.getClient().version > mcpackets.PROTOCOL_1_8START:
-            self.getClient().packet.sendpkt(self.clientboundPackets.SET_EXPERIENCE, [_FLOAT, _VARINT, _VARINT],
-                                            (progress, level, total))
+        try:
+            version = self.wrapper.proxy.srv_data.protocolVersion
+        except AttributeError:
+            # Non proxy mode
+            return False
+
+        if version > PROTOCOL_1_8START:
+            parsing = [_FLOAT, _VARINT, _VARINT]
         else:
-            self.getClient().packet.sendpkt(self.clientboundPackets.SET_EXPERIENCE, [_FLOAT, _SHORT, _SHORT],
-                                            (progress, level, total))
+            parsing = [_FLOAT, _SHORT, _SHORT]
+
+        self.client.packet.sendpkt(
+            self.clientboundPackets.SET_EXPERIENCE,
+            parsing,
+            (progress, level, total))
 
     def openWindow(self, windowtype, title, slots):
         """
-        Opens an inventory window on the client side.  EntityHorse is not supported due to further
-        EID requirement.  1.8 experimental only.
+        Opens an inventory window on the client side.  EntityHorse
+        is not supported due to further EID requirement.  *1.8*
+        *experimental only.*
 
-        Args:
-            windowtype:  Window Type (text string). See below or applicable wiki entry
-                        (for version specific info)
-            title: Window title - wiki says chat object (could be string too?)
-            slots:
+        :Args:
+            :windowtype:  Window Type (text string). See below
+             or applicable wiki entry (for version specific info)
+            :title: Window title - wiki says chat object (could
+             be string too?)
+            :slots:
 
-        Returns: None
+        :returns: None (False if client is less than 1.8 version)
 
-        Type names (1.9)
-            minecraft:chest	Chest, large chest, or minecart with chest
-            minecraft:crafting_table	Crafting table
-            minecraft:furnace	Furnace
-            minecraft:dispenser	Dispenser
-            minecraft:enchanting_table	Enchantment table
-            minecraft:brewing_stand	Brewing stand
-            minecraft:villager	Villager
-            minecraft:beacon	Beacon
-            minecraft:anvil	Anvil
-            minecraft:hopper	Hopper or minecart with hopper
-            minecraft:dropper	Dropper
-            EntityHorse	Horse, donkey, or mule
 
+        Valid window names (1.9)
+
+        :minecraft\:chest: Chest, large chest, or minecart with chest
+
+        :minecraft\:crafting_table: Crafting table
+
+        :minecraft\:furnace: Furnace
+
+        :minecraft\:dispenser: Dispenser
+
+        :minecraft\:enchanting_table: Enchantment table
+
+        :minecraft\:brewing_stand: Brewing stand
+
+        :minecraft\:villager: Villager
+
+        :minecraft\:beacon: Beacon
+
+        :minecraft\:anvil: Anvil
+
+        :minecraft\:hopper: Hopper or minecart with hopper
+
+        :minecraft\:dropper: Dropper
+
+        :EntityHorse: Horse, donkey, or mule
 
         """
+        try:
+            version = self.wrapper.proxy.srv_data.protocolVersion
+        except AttributeError:
+            # Non proxy mode
+            return False
+        client = self.client
+        client.windowCounter += 1
+        if client.windowCounter > 200:
+            client.windowCounter = 2
 
-        self.getClient().windowCounter += 1
-        if self.getClient().windowCounter > 200:
-            self.getClient().windowCounter = 2
         # TODO Test what kind of field title is (json or text)
-        if self.getClient().version > mcpackets.PROTOCOL_1_8START:
-            self.getClient().packet.send(
-                self.clientboundPackets.OPEN_WINDOW, [_UBYTE, _STRING, _JSON, _UBYTE], (
-                    self.getClient().windowCounter, windowtype, {"text": title}, slots))
+
+        if not version > PROTOCOL_1_8START:
+            return False
+
+        client.packet.sendpkt(
+            self.clientboundPackets.OPEN_WINDOW,
+            [_UBYTE, _STRING, _JSON, _UBYTE],
+            (client.windowCounter, windowtype, {"text": title},
+             slots))
+
         return None  # return a Window object soon
-    # endregion Visual notifications
 
-    # region Abilities & Client-Side Stuff
     def setPlayerAbilities(self, fly):
-        # based on old playerSetFly (which was an unfinished function)
         """
+        *based on old playerSetFly (which was an unfinished function)*
+
+        NOTE - You are implementing these abilities on the client
+         side only.. if the player is in survival mode, the server
+         may think the client is hacking!
+
         this will set 'is flying' and 'can fly' to true for the player.
-        these flags/settings will be applied as well:
+        these flags/settings will be set according to the players
+        properties, which you can set just prior to calling this
+        method:
 
-        getPlayer().godmode  (defaults are all 0x00 - unset, or float of 1.0, as applicable)
-        getPlayer().creative
-        getPlayer().field_of_view
-        getPlayer().fly_speed
+            :getPlayer().godmode:  Hex or integer (see chart below)
 
-        Args:
-            fly: Booolean - Fly is true, (else False to unset fly mode)
+            :getPlayer().creative: Hex or integer (see chart below)
 
-        Returns: Nothing
+            :getPlayer().field_of_view: Float - default is 1.0
 
-        Bitflags used (for all versions): (so 'flying' and 'is flying' is 0x06)
-            Invulnerable	0x01
-            Flying	        0x02
-            Allow Flying	0x04
-            Creative Mode	0x08
+            :getPlayer().fly_speed: Float - default is 1.0
+
+        :arg fly: Boolean
+
+            :True: set fly mode.
+            :False: to unset fly mode
+
+        :Bitflags used (for all versions): These can be added to
+         produce combination effects.   This function sets
+         0x02 and 0x04 together (0x06).
+
+            :Invulnerable: 0x01
+            :Flying: 0x02
+            :Allow Flying: 0x04
+            :Creative Mode: 0x08
+
+        :returns: Nothing
 
         """
-        # TODO later add and keep track of godmode and creative- code will currently unset them.
+        try:
+            sendclient = self.client.packet.sendpkt
+            sendserver = self.client.server.packet.sendpkt
+        except AttributeError:
+            # Non proxy mode
+            return False
+
+        # TODO later add and keep track of godmode and creative- code
+        # will currently unset them.
+
         if fly:
             setfly = 0x06  # for set fly
         else:
             setfly = 0x00
+
         bitfield = self.godmode | self.creative | setfly
-        # Note in versions before 1.8, field of view is the walking speed for client (still a float)
-        #   Server field of view is still walking speed
-        self.getClient().packet.sendpkt(self.clientboundPackets.PLAYER_ABILITIES, [_BYTE, _FLOAT, _FLOAT],
-                                        (bitfield, self.fly_speed, self.field_of_view))
-        self.getClient().server.packet.sendpkt(self.serverboundPackets.PLAYER_ABILITIES, [_BYTE, _FLOAT, _FLOAT],
-                                               (bitfield, self.fly_speed, self.field_of_view))
 
-    def sendBlock(self, position, blockid, blockdata, sendblock=True, numparticles=1, partdata=1):
+        # Note in versions before 1.8, field of view is the
+        # walking speed for client (still a float) Server
+        # field of view is still walking speed
+        sendclient(self.clientboundPackets.PLAYER_ABILITIES,
+                   [_BYTE, _FLOAT, _FLOAT],
+                   (bitfield, self.fly_speed, self.field_of_view))
+
+        sendserver(self.serverboundPackets.PLAYER_ABILITIES,
+                   [_BYTE, _FLOAT, _FLOAT],
+                   (bitfield, self.fly_speed, self.field_of_view))
+
+    def sendBlock(self, position, blockid, blockdata, sendblock=True,
+                  numparticles=1, partdata=1):
         """
-            Used to make phantom blocks visible ONLY to the client.  Sends either a particle or a block to
-            the minecraft player's client. for blocks iddata is just block id - No need to bitwise the
-            blockdata; just pass the additional block data.  The particle sender is only a basic version
-            and is not intended to do anything more than send something like a barrier particle to
-            temporarily highlight something for the player.  Fancy particle operations should be custom
-            done by the plugin or someone can write a nicer particle-renderer.
+        Used to make phantom blocks visible ONLY to the client.  Sends
+        either a particle or a block to the minecraft player's client.
+        For blocks iddata is just block id - No need to bitwise the
+        blockdata; just pass the additional block data.  The particle
+        sender is only a basic version and is not intended to do
+        anything more than send something like a barrier particle to
+        temporarily highlight something for the player.  Fancy particle
+        operations should be custom done by the plugin or someone can
+        write a nicer particle-renderer.
 
-        :param position - players position as tuple.  The coordinates must be in the player's render distance
-            or the block will appear at odd places.
-        :param blockid - usually block id, but could be particle id too.  If sending pre-1.8 particles this is a
-            string not a number... the valid values are found here:
-                        ->http://wayback.archive.org/web/20151023030926/https://gist.github.com/thinkofdeath/5110835
-        :param blockdata - additional block meta (a number specifying a subtype).
-        :param sendblock - True for sending a block.
-        :param numparticles - if particles, their numeric count.
-        :param partdata - if particles; particle data.  Particles with additional ID cannot be used ("Ironcrack").
+        :Args:
+
+            :position: players position as tuple.  The coordinates must
+             be in the player's render distance or the block will appear
+             at odd places.
+
+            :blockid: usually block id, but could be particle id too.  If
+             sending pre-1.8 particles this is a string not a number...
+             the valid values are found here
+
+            :blockdata: additional block meta (a number specifying a subtype).
+
+            :sendblock: True for sending a block.
+
+            :numparticles: if particles, their numeric count.
+
+            :partdata: if particles; particle data.  Particles with
+             additional ID cannot be used ("Ironcrack").
+
+        :Valid 'blockid' values:
+         http://wayback.archive.org/web/20151023030926/https://gist.github.com/thinkofdeath/5110835
 
         """
+        try:
+            sendclient = self.client.packet.sendpkt
+        except AttributeError:
+            # Non proxy
+            return False
 
-        pkt_particle = self.clientboundPackets.PARTICLE
-        pkt_blockchange = self.clientboundPackets.BLOCK_CHANGE
-
+        posx = position
         x = (position[0])
         y = (position[1])
         z = (position[2])
-        if self.clientgameversion > mcpackets.PROTOCOL_1_7_9:
-            if sendblock:
-                iddata = blockid << 4 | blockdata
-                self.getClient().packet.sendpkt(pkt_blockchange, [_POSITION, _VARINT], (position, iddata))
-            else:
-                self.getClient().packet.sendpkt(
-                    pkt_particle, [_INT, _BOOL, _FLOAT, _FLOAT, _FLOAT, _FLOAT, _FLOAT, _FLOAT, _FLOAT, _INT],
-                    (blockid, True, x + .5, y + .5, z + .5, 0, 0, 0, partdata, numparticles))
-        if self.clientgameversion < mcpackets.PROTOCOL_1_8START:
-            if sendblock:
-                self.getClient().packet.sendpkt(pkt_blockchange, [_INT, _UBYTE, _INT, _VARINT, _UBYTE],
-                                                (x, y, x, blockid, blockdata))
-            else:
-                self.getClient().packet.sendpkt(
-                    pkt_particle, [_STRING, _FLOAT, _FLOAT, _FLOAT, _FLOAT, _FLOAT, _FLOAT, _FLOAT, _INT],
-                    (blockid, x + .5, y + .5, z + .5, 0, 0, 0, partdata, numparticles))
+        if self.clientgameversion > PROTOCOL_1_7_9:
+            # 1.8 +
+            iddata = blockid << 4 | blockdata
 
-    # Inventory-related actions. These will probably be split into a specific
-    # Inventory class.
+            # [1.8pos/1.7x | 1.7y | 1.7z | 1.7BlockID/1.8iddata | 1.7blockdata]
+            # these are whitespaced this way to line up visually
+            blockparser = [_POSITION, _NULL, _NULL, _VARINT,  _NULL]
+
+            particleparser = [_INT,    _BOOL, _FLOAT, _FLOAT, _FLOAT, _FLOAT,
+                              _FLOAT, _FLOAT, _FLOAT, _INT]
+        else:
+            # 1.7
+            posx = x
+            iddata = blockid
+
+            blockparser = [_INT,      _UBYTE, _INT, _VARINT, _UBYTE]
+
+            particleparser = [_STRING, _NULL, _FLOAT, _FLOAT, _FLOAT, _FLOAT,
+                              _FLOAT, _FLOAT, _FLOAT, _INT]
+
+        if sendblock:
+            sendclient(self.clientboundPackets.BLOCK_CHANGE,
+                       blockparser,
+                       (posx, y, x, iddata, blockdata))
+        else:
+            sendclient(self.clientboundPackets.PARTICLE,
+                       particleparser,
+                       (blockid, True, x + .5, y + .5, z + .5, 0, 0, 0,
+                        partdata, numparticles))
+
+    # Inventory-related actions.
     def getItemInSlot(self, slot):
-        return self.getClient().inventory[slot]
+        """
+        Returns the item object of an item currently being held.
+
+        """
+        try:
+            return self.client.inventory[slot]
+        except AttributeError:
+            # Non proxy
+            return False
 
     def getHeldItem(self):
-        """ Returns the item object of an item currently being held. """
-        return self.getClient().inventory[36 + self.getClient().slot]
+        """
+        Returns the item object of an item currently being held.
+
+        """
+        try:
+            return self.client.inventory[36 + self.client.slot]
+        except AttributeError:
+            # Non proxy
+            return False
 
     # Permissions-related
-
-    def hasPermission(self, node, another_player=False):
+    def hasPermission(self, node, another_player=False, group_match=True, find_child_groups=True):
         """
-        If the player has the specified permission node (either directly, or inherited from a group that
-        the player is in), it will return the value (usually True) of the node. Otherwise, it returns False.
+        If the player has the specified permission node (either
+        directly, or inherited from a group that the player is in),
+        it will return the value (usually True) of the node.
+        Otherwise, it returns False.  Using group_match and
+        find_child_groups are enabled by default.  Permissions
+        can be sped up by disabling child inheritance or even
+        group matching entirely (for high speed loops, for
+        instance).  Normally, permissions are related to
+        commands the player typed, so the 'cost' of child
+        inheritance is not a concern.
 
-        Args:
-            node: Permission node (string)
-            another_player: sending a string name of another player will check THAT PLAYER's permission
-                instead! Useful for checking a player's permission for someone who is not logged in and
-                has no player object.
+        :Args:
+            :node: Permission node (string)
+            :another_player: sending a string name of another player
+             will check THAT PLAYER's permission instead! Useful for
+             checking a player's permission for someone who is not
+             logged in and has no player object.
+            :group_match: return a permission for any group the player
+             is a member of.  If False, will only return permissions
+             player has directly.
+            :find_child_groups: If group matching, this will
+             additionally locate matches when a group contains
+             a permission that is another group's name.  So if group
+             'admin' contains a permission called 'moderator', anyone
+             with group admin will also have group moderator's
+             permissions as well.
 
-        Returns:  Boolean of whether player has permission or not.
+        :returns:  Boolean indicating whether player has permission or not.
 
         """
-
-        # this might be a useful thing to implement into all permissions methods
         uuid_to_check = self.mojangUuid.string
-        if node is None:
-            return True
         if another_player:
-            other_uuid = self.wrapper.getuuidbyusername(another_player)  # get other player mojang uuid
-            if other_uuid:  # make sure other player permission is initialized.
-                if self.mojangUuid.string not in self.permissions["users"]:  # no reason not to do this here too
-                    self.permissions["users"][self.mojangUuid.string] = {"groups": [], "permissions": {}}
-            else:
-                return False  # probably a bad name provided.. No further check needed.
+            # get other player mojang uuid
+            uuid_to_check = str(
+                self.wrapper.uuids.getuuidbyusername(another_player))
+            if not uuid_to_check:
+                # probably a bad name provided.. No further check needed.
+                return False
 
-        if uuid_to_check in self.permissions["users"]:  # was self.clientUuid.string
-            for perm in self.permissions["users"][uuid_to_check]["permissions"]:
-                if node in fnmatch.filter([node], perm):
-                    return self.permissions["users"][uuid_to_check]["permissions"][perm]
-        if uuid_to_check not in self.permissions["users"]:
-            return False
-        allgroups = []  # summary of groups included children groups
-        # get the parent groups
-        for group in self.permissions["users"][uuid_to_check]["groups"]:
-            if group not in allgroups:
-                allgroups.append(group)
-        itemstoprocess = allgroups[:]  # process and find child groups
-        while len(itemstoprocess) > 0:
-            parseparent = itemstoprocess.pop(0)
-            for groupPerm in self.permissions["groups"][parseparent]["permissions"]:
-                if (groupPerm in self.permissions["groups"]) and \
-                        self.permissions["groups"][parseparent]["permissions"][groupPerm] and \
-                        (groupPerm not in allgroups):
-                    allgroups.append(groupPerm)
-                    itemstoprocess.append(groupPerm)
-        for group in allgroups:
-            for perm in self.permissions["groups"][group]["permissions"]:
-                if node in fnmatch.filter([node], perm):
-                    return self.permissions["groups"][group]["permissions"][perm]
-        for perm in self.permissions["groups"]["Default"]["permissions"]:
-            if node in fnmatch.filter([node], perm):
-                return self.permissions["groups"]["Default"]["permissions"][perm]
-        for pid in self.wrapper.registered_permissions:
-            if node in self.wrapper.registered_permissions[pid]:
-                return self.wrapper.registered_permissions[pid][node]
-        return False
+        return self.wrapper.perms.has_permission(
+            uuid_to_check, node, group_match, find_child_groups)
 
     def setPermission(self, node, value=True):
         """
-        Adds the specified permission node and optionally a value to the player.
+        Adds the specified permission node and optionally a value
+        to the player.
 
-        Args:
-            node: Permission node (string)
-            value: defaults to True, but can be set to False to explicitly revoke a particular permission
-                from the player, or to any arbitrary value.
-        Returns: Nothing
+        :Args:
+            :node: Permission node (string)
+            :value: defaults to True, but can be set to False to
+             explicitly revoke a particular permission from the
+             player, or to any arbitrary value.
+
+        :returns: Nothing
 
         """
-        for uuid in self.permissions["users"]:
-            if uuid == self.mojangUuid.string:  # was self.clientUuid.string
-                self.permissions["users"][uuid]["permissions"][node] = value
-                return
+        self.wrapper.perms.set_permission(self.mojangUuid.string, node, value)
 
     def removePermission(self, node):
-        """ Completely removes a permission node from the player. They will inherit this permission from their
-         groups or from plugin defaults.
+        """
+        Completely removes a permission node from the player. They
+        will inherit this permission from their groups or from
+        plugin defaults.
 
-        If the player does not have the specific permission, an IndexError is raised. Note that this method
-        has no effect on nodes inherited from groups or plugin defaults.
+        If the player does not have the specific permission, an
+        IndexError is raised. Note that this method has no effect
+        on nodes inherited from groups or plugin defaults.
 
-        Args:
-            node: Permission node (string)
+        :arg node: Permission node (string)
 
-        Returns:  Boolean; True if operation succeeds, False if it fails (set debug mode to see/log error).
-    """
+        :returns:  Boolean; True if operation succeeds, False if
+         it fails (set debug mode to see/log error).
 
-        for uuid in self.permissions["users"]:
-            if uuid == self.mojangUuid.string:  # was self.clientUuid.string
-                if node in self.permissions["users"][uuid]["permissions"]:
-                    del self.permissions["users"][uuid]["permissions"][node]
-                    return True
-                else:
-                    self.log.debug("%s does not have permission node '%s'", (self.username, node))
-                    return False
-        self.log.debug("Player %s uuid:%s does not have permission node '%s'",
-                       (self.username, self.mojangUuid.string, node))
-        return False
+        """
+        return self.wrapper.perms.remove_permission(
+            self.mojangUuid.string, node)
+
+    def resetPerms(self, uuid):
+        """
+
+        resets all user data (removes all permissions).
+
+        :arg uuid: The online/mojang uuid (string)
+
+        :returns:  nothing
+
+        """
+        return self.wrapper.perms.fill_user(uuid)
 
     def hasGroup(self, group):
-        """ Returns a boolean of whether or not the player is in the specified permission group.
-
-        Args:
-            group: Group node (string)
-
-        Returns:  Boolean of whether player has permission or not.
         """
-        for uuid in self.permissions["users"]:
-            if uuid == self.mojangUuid.string:  # was self.clientUuid.string
-                return group in self.permissions["users"][uuid]["groups"]
-        return False
+        Returns a boolean of whether or not the player is in
+        the specified permission group.
+
+        :arg group: Group node (string)
+
+        :returns:  Boolean of whether player has permission or not.
+
+        """
+        return self.wrapper.perms.has_group(self.mojangUuid.string, group)
 
     def getGroups(self):
-        """ Returns a list of permission groups that the player is in.
-
-        Returns:  list of groups
         """
-        for uuid in self.permissions["users"]:
-            if uuid == self.mojangUuid.string:  # was self.clientUuid.string
-                return self.permissions["users"][uuid]["groups"]
-        return []  # If the user is not in the permission database, return this
+        Returns a list of permission groups that the player is in.
 
-    def setGroup(self, group):
-        """
-        Adds the player to a specified group.  Returns False if group does not exist (set debiug to see error).
-        Args:
-            group: Group node (string)
+        :returns:  list of groups
 
-        Returns:  Boolean; True if operation succeeds, False if it fails (set debug mode to see/log error).
         """
-        if group not in self.permissions["groups"]:
-            self.log.debug("No group with the name '%s' exists", group)
-            return False
-        for uuid in self.permissions["users"]:
-            if uuid == self.mojangUuid.string:  # was self.clientUuid.string
-                self.permissions["users"][uuid]["groups"].append(group)
-                return True
-        self.log.debug("Player %s uuid:%s: Could not be added to group '%s'",
-                       (self.username, self.mojangUuid.string, group))
-        return False
+        return self.wrapper.perms.get_groups(self.mojangUuid.string)
+
+    def setGroup(self, group, creategroup=True):
+        """
+        Adds the player to a specified group.  Returns False if
+        the command fails (set debiug to see error).  Failure
+        is only normally expected if the group does not exist
+        and creategroup is False.
+
+        :Args:
+            :group: Group node (string)
+            :creategroup: If True (by default), will create the
+             group if it does not exist already.  This WILL
+             generate a warning log since it is not an expected
+             condition.
+
+        :returns:  Boolean; True if operation succeeds, False
+         if it fails (set debug mode to see/log error).
+
+        """
+        return self.wrapper.perms.set_group(
+            self.mojangUuid.string, group, creategroup)
 
     def removeGroup(self, group):
-        """ Removes the player to a specified group. If they are not part of the specified
-        group, an IndexError is raised.
+        """
+        Removes the player to a specified group.
 
-        Args:
-            group: Group node (string)
+        :arg group: Group node (string)
 
-        Returns:
-            """
-        for uuid in self.permissions["users"]:
-            if uuid == self.mojangUuid.string:  # was self.clientUuid.string:
-                if group in self.permissions["users"][uuid]["groups"]:
-                    self.permissions["users"][uuid]["groups"].remove(group)
-                else:
-                    # TODO DO something about this other than raise exception??
-                    raise IndexError("%s is not part of the group '%s'" % (self.username, group))
+        :returns:  (use debug logging to see any errors)
+
+            :True: Group was found and .remove operation performed
+             (assume success if no exception raised).
+            :None: User not in group
+            :False: player uuid not found!
+
+        """
+        return self.wrapper.perms.remove_group(
+            self.mojangUuid.string, group)
 
     # Player Information
-
     def getFirstLogin(self):
-        """ Returns a tuple containing the timestamp of when the user first logged in for the first time,
-        and the timezone (same as time.tzname). """
-        return self.data["firstLoggedIn"]
+        """
+        Returns a tuple containing the timestamp of when the user
+        first logged in for the first time, and the timezone (same
+        as time.tzname).
+
+        """
+        return self.data.Data["firstLoggedIn"]
+
     # Cross-server commands
-
     def connect(self, address, port):
+        # TODO - WORK IN PROGRESS
         """
-        Upon calling, the player object will become defunct and the client will be transferred to another
-         server (provided it has online-mode turned off).
+        Upon calling, the player object will become defunct and
+        the client will be transferred to another server or wrapper
+        instance (provided it has online-mode turned off).
 
-        Args:
-            address: server address (local address)
-            port: server port (local port)
+        :Args:
+            :address: server address (local address)
+            :port: server port (local port)
 
-        Returns: Nothing
+        :returns: Nothing
+
         """
-        self.client.connect_to_server(address, port)
+        self.client.change_servers(address, port)

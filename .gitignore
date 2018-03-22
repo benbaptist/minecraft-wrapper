@@ -15,6 +15,7 @@ var/
 sdist/
 develop-eggs/
 .installed.cfg
+ *__pycache__*
 
 # Installer logs
 pip-log.txt
@@ -30,7 +31,7 @@ pip-log.txt
 .mr.developer.cfg
 
 # Minecraft Wrapper
-*.md5
+
 build/version.json
 
 # PyCharm project
@@ -38,6 +39,7 @@ build/version.json
 test.py
 
 #local test server environment
+# this list is old -update for your config, if applicable
 wrapper-plugins
 backups
 plugins

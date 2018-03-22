@@ -2,11 +2,11 @@ NAME = "clock"
 AUTHOR = "SurestTexas00"
 ID = "com.suresttexas00.plugins.clock"
 VERSION = (0, 1)
-SUMMARY = "sample plugin"
+SUMMARY = "clock plugin"
 WEBSITE = ""
 DEPENDENCIES = False
 DISABLED = False
-DESCRIPTION = "sample plugin using getTimeofDay()"
+DESCRIPTION = "clock plugin using getTimeofDay()"
 
 
 class Main:

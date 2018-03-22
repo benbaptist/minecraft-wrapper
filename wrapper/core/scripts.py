@@ -1,12 +1,17 @@
 # -*- coding: utf-8 -*-
 
+# Copyright (C) 2016, 2017 - BenBaptist and Wrapper.py developer(s).
+# https://github.com/benbaptist/minecraft-wrapper
+# This program is distributed under the terms of the GNU
+# General Public License, version 3 or later.
+
 # This looks interesting, but not quite sure the intention
 
 import os
 import stat
 
 from api.base import API
-from utils.helpers import mkdir_p
+from api.helpers import mkdir_p
 
 scripts = {
     "server-start.sh":  """ # This script is called just before the server starts. 
@@ -26,7 +31,8 @@ scripts = {
 }
 
 
-class Scripts:
+# noinspection PyMethodMayBeStatic,PyUnusedLocal
+class Scripts(object):
 
     def __init__(self, wrapper):
         self.api = API(wrapper, "Scripts", internal=True)

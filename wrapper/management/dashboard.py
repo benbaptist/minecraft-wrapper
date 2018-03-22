@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
 
+# Copyright (C) 2016, 2017 - BenBaptist and Wrapper.py developer(s).
+# https://github.com/benbaptist/minecraft-wrapper
+# This program is distributed under the terms of the GNU
+# General Public License, version 3 or later.
 
 import time
 import threading
@@ -11,29 +15,28 @@ from core.storage import Storage
 
 try:
     from flask import Flask
-    from flask_socketio import SocketIO
 except ImportError:
     Flask = False
-    flask_socketio = False
 
 if Flask:
     from flask import g, redirect, url_for, render_template, request, make_response, Response, Markup
     from flask_socketio import send, emit, join_room, leave_room
 
 
-class Web:
+class Web(object):
 
     def __init__(self, wrapper):
         self.wrapper = wrapper
         self.config = wrapper.config  # Remember if you need to save use 'wrapper.configManager.save()' not config.save
         self.log = logging.getLogger('Web')
+        self.check_password = self.wrapper.cipher.check_pw()
 
         if not Flask:
             self.config["Web"]["web-enabled"] = False
             self.wrapper.configManager.save()
             self.log.critical("You don't have the 'flask/flask_socketio' dashboard dependencies installed "
                               "on your system. You can now restart, but Web mode is disabled.")
-            self.wrapper.halt = True
+            self.wrapper.halt.halt = True
 
         self.app = Flask(__name__)
         self.app.config['SECRET_KEY'] = "".join([chr(random.randrange(48, 90)) for i in range(32)])  # LOL
@@ -48,12 +51,12 @@ class Web:
         # Register handlers
         self.add_decorators()
 
-        self.data = Storage("dash")
-        if "keys" not in self.data:
-            self.data["keys"] = []
+        self.data_storage = Storage("dash")
+        if "keys" not in self.data_storage.Data:
+            self.data_storage.Data["keys"] = []
 
         self.loginAttempts = 0
-        self.lastAttempt = 0
+        self.last_attempt = 0
         self.disableLogins = 0
 
         # Start thread for running server
@@ -62,33 +65,33 @@ class Web:
         t.start()
 
     def __del__(self):
-        self.data.close()
+        self.data_storage.close()
 
     # Authorization methods
-    def checkLogin(self, password):
+    def check_login(self, password):
         if time.time() - self.disableLogins < 60:
             return False  # Threshold for logins
-        if password == self.config["Web"]["web-password"]:
+        if self.check_password(password, self.config["Web"]["web-password"]):
             return True
         self.loginAttempts += 1
-        if self.loginAttempts > 10 and time.time() - self.lastAttempt < 60:
+        if self.loginAttempts > 10 and time.time() - self.last_attempt < 60:
             self.disableLogins = time.time()
             self.log.warning("Disabled login attempts for one minute")
-        self.lastAttempt = time.time()
+        self.last_attempt = time.time()
 
-    def makeKey(self, rememberme):
+    def make_key(self, rememberme):
         chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@-_"
-        a = "".join([random.choice(chars) for i in range(64)])
+        a = "".join([random.choice(chars) for _i in range(64)])
 
-        self.data["keys"].append([a, time.time(), rememberme])
+        self.data_storage.Data["keys"].append([a, time.time(), rememberme])
         return a
 
-    def validateKey(self):
+    def validate_key(self):
         if "__wrapper_cookie" not in request.cookie:
             return False
 
         key = request.cookie["__wrapper_cookie"]
-        for i in self.data["keys"]:
+        for i in self.data_storage.Data["keys"]:
             expiretime = 7884000  # Three weeks old
             if len(i) > 2:
                 if not i[2]:
@@ -99,10 +102,10 @@ class Web:
                 return True
         return False
 
-    def removeKey(self, key):
-        for i, v in enumerate(self.data["keys"]):
+    def remove_key(self, key):
+        for i, v in enumerate(self.data_storage.Data["keys"]):
             if v[0] == key:
-                del self.data["keys"][i]
+                del self.data_storage.Data["keys"][i]
 
     # Dectorators and misc.
     def add_decorators(self):
@@ -121,8 +124,8 @@ class Web:
                 password = request.form["password"]
                 rememberme = "remember" in request.form
 
-                if self.checkLogin(password):
-                    key = self.makeKey(rememberme)
+                if self.check_login(password):
+                    key = self.make_key(rememberme)
                     return redirect("/")
                     # self.log.warning("%s logged in to web mode (remember me: %s)", request.addr, rememberme)
                 else:
@@ -138,8 +141,9 @@ class Web:
         def handle_disconnect():
             pass
 
-    def run(self):
-        # Need a method to end this Thread!
-        # the ending code needs a self.data.close() to close the storage object
-        self.socketio.run(self.app, host=self.config["Web"]["web-bind"],
+    def run(self, halt):
+        while not self.wrapper.halt.halt:
+            self.socketio.run(self.app, host=self.config["Web"]["web-bind"],
                           port=self.config["Web"]["web-port"])
+
+        self.data_storage.close()

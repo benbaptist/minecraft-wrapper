@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 
-# p2 and py3 compliant (no PyCharm IDE-flagged errors)
-#  (still has warnings in both versions)
+# Copyright (C) 2016, 2017 - BenBaptist and Wrapper.py developer(s).
+# https://github.com/benbaptist/minecraft-wrapper
+# This program is distributed under the terms of the GNU
+# General Public License, version 3 or later.
 
 import datetime
 import time
@@ -11,13 +13,13 @@ import os
 import platform
 
 from api.base import API
-from utils.helpers import putjsonfile, getjsonfile, mkdir_p
+from api.helpers import putjsonfile, getjsonfile, mkdir_p
 
 # I should probably not use irc=True when broadcasting, and instead should just rely on events and having
 # MCserver.py and irc.py print messages themselves for the sake of consistency.
 
 
-class Backups:
+class Backups(object):
 
     def __init__(self, wrapper):
         self.wrapper = wrapper
@@ -27,6 +29,7 @@ class Backups:
         self.api = API(wrapper, "Backups", internal=True)
 
         self.interval = 0
+        self.backup_interval = self.config["Backups"]["backup-interval"]
         self.time = time.time()
         self.backups = []
         self.enabled = self.config["Backups"]["enabled"]  # allow plugins to shutdown backups via api
@@ -34,10 +37,12 @@ class Backups:
         if self.enabled and self.dotarchecks():  # only register event if used and tar installed!
             self.api.registerEvent("timer.second", self.eachsecond)
             self.timerstarted = True
+            self.log.debug("Backups Enabled..")
 
+    # noinspection PyUnusedLocal
     def eachsecond(self, payload):
         self.interval += 1
-        if time.time() - self.time > self.config["Backups"]["backup-interval"] and self.enabled:
+        if time.time() - self.time > self.backup_interval and self.enabled:
             self.dobackup()
 
     def pruneoldbackups(self, filename="IndependentPurge"):
@@ -46,6 +51,22 @@ class Backups:
             while len(self.backups) > self.config["Backups"]["backups-keep"]:
                 backup = self.backups[0]
                 if not self.wrapper.events.callevent("wrapper.backupDelete", {"file": filename}):
+                    """ eventdoc
+                                    <group> Backups <group>
+
+                                    <description> Called upon deletion of a backup file.
+                                    <description>
+
+                                    <abortable> Yes, return False to abort. <abortable>
+
+                                    <comments>
+                                    
+                                    <comments>
+                                    <payload>
+                                    "file": filename
+                                    <payload>
+
+                                """
                     break
                 try:
                     os.remove('%s/%s' % (self.config["Backups"]["backup-location"], backup[1]))
@@ -55,7 +76,7 @@ class Backups:
                               datetime.datetime.fromtimestamp(int(backup[0])).strftime('%Y-%m-%d_%H:%M:%S'))
                 # hink = self.backups[0][1][:]  # not used...
                 del self.backups[0]
-        putjsonfile(self.backups, "backups", self.config["Backups"]["backup-location"], encodedas=self.encoding)
+        putjsonfile(self.backups, "backups", self.config["Backups"]["backup-location"])
 
     def dotarchecks(self):
         # Check if tar is installed
@@ -64,6 +85,27 @@ class Backups:
             self.wrapper.events.callevent("wrapper.backupFailure",
                                           {"reasonCode": 1, "reasonText": "Tar is not installed. Please install "
                                                                           "tar before trying to make backups."})
+            """ eventdoc
+                <group> Backups <group>
+
+                <description> Indicates failure of backup.
+                <description>
+
+                <abortable> No - informatinal only <abortable>
+
+                <comments>
+                Reasoncode and text provide more detail about specific problem.
+                1 - Tar not installed.
+                2 - Backup file does not exist after the tar operation.
+                3 - Specified file does not exist.
+                4 - backups.json is corrupted
+                <comments>
+                <payload>
+                "reasonCode": an integer 1-4
+                "reasonText": a string description of the failure.
+                <payload>
+
+            """
             self.log.error("Backups will not work, because tar does not appear to be installed!")
             self.log.error("If you are on a Linux-based system, please install it through your preferred package "
                            "manager.")
@@ -73,10 +115,12 @@ class Backups:
             return True
 
     def dobackup(self):
+        self.log.debug("Backup starting.")
         self._settime()
         self._checkforbackupfolder()
         self._getbackups()  # populate self.backups
         self._performbackup()
+        self.log.debug("Backup cycle complete.")
 
     def _checkforbackupfolder(self):
         if not os.path.exists(self.config["Backups"]["backup-location"]):
@@ -119,6 +163,22 @@ class Backups:
         # Process begin Events
         if not self.wrapper.events.callevent("wrapper.backupBegin", {"file": filename}):
             self.log.warning("A backup was scheduled, but was cancelled by a plugin!")
+            """ eventdoc
+                <group> Backups <group>
+
+                <description> Indicates a backup is being initiated.
+                <description>
+
+                <abortable> Yes, return False to abort. <abortable>
+
+                <comments>
+                A console warning will be issued if a plugin cancels the backup.
+                <comments>
+                <payload>
+                "file": Name of backup file.
+                <payload>
+
+            """
             return
         if self.config["Backups"]["backup-notification"]:
             self.api.minecraft.broadcast("&cBacking up... lag may occur!", irc=False)
@@ -134,6 +194,10 @@ class Backups:
                 self.wrapper.events.callevent("wrapper.backupFailure", {"reasonCode": 3,
                                                                         "reasonText": "Backup file '%s' does not exist."
                                                                         % backup_file_and_path})
+                """ eventdoc
+                                <description> internalfunction <description>
+
+                            """
                 return
         statuscode = os.system(" ".join(arguments))
 
@@ -143,6 +207,21 @@ class Backups:
         if self.config["Backups"]["backup-notification"]:
             self.api.minecraft.broadcast("&aBackup complete!", irc=False)
         self.wrapper.events.callevent("wrapper.backupEnd", {"file": filename, "status": statuscode})
+        """ eventdoc
+            <group> Backups <group>
+
+            <description> Indicates a backup is complete.
+            <description>
+
+            <abortable> No - informational only <abortable>
+
+            <comments>
+            <comments>
+            <payload>
+            "file": Name of backup file.
+            <payload>
+
+        """
         self.backups.append((timestamp, filename))
 
         # Prune backups
@@ -153,6 +232,10 @@ class Backups:
             self.wrapper.events.callevent("wrapper.backupFailure",
                                           {"reasonCode": 2, "reasonText": "Backup file didn't exist after the tar "
                                                                           "command executed - assuming failure."})
+            """ eventdoc
+                <description> internalfunction <description>
+
+            """
 
     def _getbackups(self):
         if len(self.backups) == 0 and os.path.exists(self.config["Backups"]["backup-location"] + "/backups.json"):
@@ -166,6 +249,10 @@ class Backups:
                     "reasonText": "backups.json is corrupted. Please contact an administer instantly, as this "
                                   "may be critical."
                 })
+                """ eventdoc
+                    <description> internalfunction <description>
+
+                """
                 self.backups = []
             else:
                 self.backups = loadcode
@@ -174,6 +261,7 @@ class Backups:
                 # import old backups from previous versions of Wrapper.py
                 backuptimestamps = []
                 for backupNames in os.listdir(self.config["Backups"]["backup-location"]):
+                    # noinspection PyBroadException,PyUnusedLocal
                     try:
                         backuptimestamps.append(int(backupNames[backupNames.find('-') + 1:backupNames.find('.')]))
                     except Exception as e:

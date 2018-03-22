@@ -1,7 +1,6 @@
-# -- Speedboost -- 
-# version 1.0
-# written by benbaptist
+# -*- coding: utf-8 -*-
 
+AUTHOR = "benbaptist"
 NAME = "Speedboost"
 ID = "com.benbaptist.plugins.speedboost"
 SUMMARY = "Gives all players a speedboost when someone dies."
@@ -23,4 +22,4 @@ class Main:
         name = payload["player"]
         death = payload["death"]
         self.api.minecraft.console("effect @a 1 30 5")
-        self.api.minecraft.broadcast("&6&lEveryone was given a temporary speedboost!")
+        self.api.minecraft.broadcast("&6&lEveryone was given a temporary speedboost because %s %s!" % (name, death))

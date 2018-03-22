@@ -1,32 +1,39 @@
 # -*- coding: utf-8 -*-
 
-# p2 and py3 compliant
-#  (has errors due to the manner of import)
-
-"""
-Handle the NBT (Named Binary Tag) data format
-"""
-
-from core.exceptions import MalformedFileError
+# https://github.com/twoolie/NBT
+# https://raw.githubusercontent.com/twoolie/NBT/master/LICENSE.txt
+# Copyright (c) 2010-2013 Thomas Woolford and contributors
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:#
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
 
 from collections import MutableMapping, MutableSequence, Sequence
 from struct import Struct, error as StructError
 from gzip import GzipFile
 
-PISS = True
-try:
-    unicode
-    basestring
-except NameError:
-    unicode = str  # compatibility for Python 3
-    basestring = str  # compatibility for Python 3
-
-
-# Py3-2
 import sys
+
 PY3 = sys.version_info > (3,)
 if PY3:
     xrange = range
+    unicode = str
+    basestring = str
+
 
 TAG_END = 0
 TAG_BYTE = 1
@@ -583,10 +590,10 @@ class NBTFile(TAG_Compound):
                     self.name = name
                     self.file.close()
                 else:
-                    raise MalformedFileError(
+                    raise ValueError(
                         "First record is not a Compound Tag")
             except StructError as e:
-                raise MalformedFileError(
+                raise ValueError(
                     "Partial File Parse: file possibly truncated.")
         else:
             raise ValueError(
