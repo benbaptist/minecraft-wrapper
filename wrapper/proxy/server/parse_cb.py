@@ -100,20 +100,38 @@ class ParseCB(object):
                     name = self.packet.readpkt([STRING])[0]
                     prop_count = self.packet.readpkt([VARINT])[0]
                     raw += self.client.packet.send_string(name)
-                    raw += self.client.packet.send_varint(prop_count)
+
 
                     curr_prop = 0
+                    rawprop = b""
+                    rawprop += self.client.packet.send_varint(prop_count)
                     while curr_prop < prop_count:
+                        # These properties usually seem empty
                         # name, value, is_signed?, signature
                         _property = self.packet.readpkt(
                             [STRING, STRING, BOOL])
-                        raw += self.client.packet.send_string(_property[0])
-                        raw += self.client.packet.send_string(_property[1])
-                        raw += self.client.packet.send_bool(_property[2])
+                        rawprop += self.client.packet.send_string(_property[0])
+                        rawprop += self.client.packet.send_string(_property[1])
+                        rawprop += self.client.packet.send_bool(_property[2])
                         if _property[2]:
-                            raw += self.client.packet.send_string(
+                            rawprop += self.client.packet.send_string(
                                 self.packet.readpkt([STRING])[0]
                             )
+                    if player_client:
+                        # so, if possible, we supply them.
+                        our_prop_count = len(player_client.properties)
+                        raw += self.client.packet.send_varint(our_prop_count)
+                        for prop in player_client.properties:
+                            raw += self.client.packet.send_string(prop["name"])
+                            raw += self.client.packet.send_string(prop["value"])
+                            if "signature" in prop:
+                                raw += self.client.packet.send_bool(True)
+                                raw += self.client.packet.send_string(
+                                    prop["signature"])
+                            else:
+                                raw += self.client.packet.send_bool(False)
+                    else:
+                        raw += rawprop
 
                     # gamemode, ping (milliseconds),  Has Display Name?
                     more = self.packet.readpkt([VARINT, VARINT, BOOL])

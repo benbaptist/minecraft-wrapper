@@ -1,14 +1,16 @@
+Build 32 - 33:
+- Bug fixes for player list item:
+    fixed typo
+    Missing properties (no custom skins)
+
 Build 31:
 - Fixed #354 "Relogging as Spectator disables noclip"
-
 
 Build 30:
 - experiment with new branch.  Reverted changes accidentally merged to development.
 
-
 Build 29:
 - parse health updates
-
 
 Build 28:
 - slight API change in getStorage().  Third argument for pickle (a new API addition anyway) changed slightly.
