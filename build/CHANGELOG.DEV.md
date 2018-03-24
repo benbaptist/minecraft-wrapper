@@ -4,6 +4,8 @@ Build 36:
 - refactor clientconnection, add docstrings, prepare to publish it's
  public API.
 - improve hub disconnect messaging some.
+- fix bug in Hubs where player would logout when leaving world, but not login when returning (events)
+- Fix #570 food and health updates
 
 Build 35:
 - increased server and client flush loop sleep times.  Original wrapper

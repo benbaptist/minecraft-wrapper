@@ -54,7 +54,8 @@ class NullEventHandler(object):
         pass
 
     def callevent(self, event, payload):
-        """An event handler must have this method that expects
+        """
+        An event handler must have this method that expects
         two positional arguments:
          :event: The string name of the event.
          :payload: A dictionary of items describing the event (varies 
@@ -64,7 +65,8 @@ class NullEventHandler(object):
 
 
 class HaltSig(object):
-    """HaltSig is simply a sort of dummy class created for the
+    """
+    HaltSig is simply a sort of dummy class created for the
     proxy.  proxy expects this object with a self.halt property
     that tells proxy to shutdown.  The caller maintains control
     of the Haltsig object and uses it to signal the proxy to 

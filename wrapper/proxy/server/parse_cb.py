@@ -448,6 +448,7 @@ class ParseCB(object):
         self.client.health = data[0]
         self.client.food = int(data[1])
         self.client.food_sat = data[2]
+        return True
 
     # chunk processing
     def play_chunk_data(self):
