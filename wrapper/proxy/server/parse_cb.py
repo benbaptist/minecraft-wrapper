@@ -61,7 +61,7 @@ class ParseCB(object):
     # Items that need parsed and re-sent with proper offline/online UUID
     # translation.
 
-    def parse_play_player_list_item(self):
+    def play_player_list_item(self):
         """This must be parsed and modified to make sure UUIDs match.
         Otherwise weird things can happen like players not seeing
         each other or duplicate names on the tab list, etc."""
@@ -101,7 +101,6 @@ class ParseCB(object):
                     name = self.packet.readpkt([STRING])[0]
                     prop_count = self.packet.readpkt([VARINT])[0]
                     raw += self.client.packet.send_string(name)
-
 
                     curr_prop = 0
                     rawprop = b""
@@ -170,7 +169,7 @@ class ParseCB(object):
 
                 # Remove Player
                 elif action == 4:
-                    pass  # no fields (this elif only here for readability)
+                    pass  # no fields (this elif is only here for readability)
 
             self.client.packet.sendpkt(
                 self.pktCB.PLAYER_LIST_ITEM[PKT], [RAW], [raw]
@@ -179,7 +178,7 @@ class ParseCB(object):
         else:  # version < 1.7.9 needs no processing
             return True
 
-    def parse_play_spawn_player(self):  # embedded UUID -must parse.
+    def play_spawn_player(self):  # embedded UUID -must parse.
         """
         This packet  is used to spawn other players into a player
         client's world.  if this packet does not arrive, the other
@@ -205,7 +204,7 @@ class ParseCB(object):
 
     # Wrapper events and info section:
 
-    def parse_play_chat_message(self):
+    def play_chat_message(self):
         if not self.client.local:
             return True
         data, position = self.packet.readpkt(self.pktCB.CHAT_MESSAGE[PARSER])
@@ -262,7 +261,7 @@ class ParseCB(object):
                                    (payload, position))
         return False
 
-    def parse_play_player_poslook(self):
+    def play_player_poslook(self):
         """This packet is not actually sent very often.  Maybe on respawns
         or position corrections.  Hub requires this to be updated"""
         # CAVEAT - The client and server bound packet formats are different!
@@ -273,7 +272,7 @@ class ParseCB(object):
             self.client.position = (data[0], data[1], data[2])
         return True
 
-    def parse_play_use_bed(self):
+    def play_use_bed(self):
         if not self.client.local:
             return True
         data = self.packet.readpkt([VARINT, POSITION])
@@ -303,7 +302,7 @@ class ParseCB(object):
             """  # noqa
         return True
 
-    def parse_play_join_game(self):
+    def play_join_game(self):
         """Hub continues to track these items, especially dimension"""
         self.client.server_connection.plugin_ping()
         data = self.packet.readpkt(self.pktCB.JOIN_GAME[PARSER])
@@ -321,7 +320,7 @@ class ParseCB(object):
 
         return True
 
-    def parse_play_spawn_position(self):
+    def play_spawn_position(self):
         """Sent by the server after login to specify the coordinates of the
         spawn point (the point at which players spawn at, and which the
         compass points to). It can be sent at any time to update the point
@@ -352,9 +351,11 @@ class ParseCB(object):
             <payload>
 
         """  # noqa
+
+        self.client.send_client_settings()
         return True
 
-    def parse_play_respawn(self):
+    def play_respawn(self):
         """Hub continues to track these items, especially dimension"""
         data = self.packet.readpkt([INT, UBYTE, UBYTE, STRING])
         # "int:dimension|ubyte:difficulty|ubyte:gamemode|level_type:string")
@@ -364,7 +365,7 @@ class ParseCB(object):
         self.client.level_type = data[3]
         return True
 
-    def parse_play_change_game_state(self):
+    def play_change_game_state(self):
         """Hub needs to track these items to prevent perpetual raining, etc."""
         data = self.packet.readpkt([UBYTE, FLOAT])
         # ("ubyte:reason|float:value")
@@ -376,7 +377,7 @@ class ParseCB(object):
             self.client.raining = False
         return True
 
-    def parse_play_disconnect(self):
+    def play_disconnect(self):
         """Hub needs to monitor this to respawn someone to the hub."""
         if self.client.local:
             return True
@@ -387,7 +388,7 @@ class ParseCB(object):
         self.server.client.notify_disconnect(message)
         return False
 
-    def parse_play_time_update(self):
+    def play_time_update(self):
         if not self.client.local:
             return True
         data = self.packet.readpkt([LONG, LONG])
@@ -400,7 +401,7 @@ class ParseCB(object):
             pass
         return True
 
-    def parse_play_tab_complete(self):
+    def play_tab_complete(self):
         if not self.client.local:
             return True
         rawdata = self.packet.readpkt(self.pktCB.TAB_COMPLETE[PARSER])
@@ -442,14 +443,14 @@ class ParseCB(object):
             return False
         return True
 
-    def parse_update_health(self):
+    def update_health(self):
         data = self.packet.readpkt(self.pktCB.UPDATE_HEALTH[PARSER])
         self.client.health = data[0]
         self.client.food = int(data[1])
         self.client.food_sat = data[2]
 
     # chunk processing
-    def parse_play_chunk_data(self):
+    def play_chunk_data(self):
         """CHUNK_DATA
         Cache first 49 raw chunks for use with respawning."""
         if len(self.client.first_chunks) < 49:
@@ -460,11 +461,11 @@ class ParseCB(object):
     # Window processing/ inventory tracking
     # ---------------------------------------
 
-    def parse_play_held_item_change(self):
+    def play_held_item_change(self):
         data = self.packet.readpkt(self.pktCB.HELD_ITEM_CHANGE[PARSER])
         self.client.slot = data[0]
 
-    def parse_play_open_window(self):
+    def play_open_window(self):
         # This works together with SET_SLOT to maintain
         #  accurate inventory in wrapper
         data = self.packet.readpkt(self.pktCB.OPEN_WINDOW[PARSER])
@@ -472,7 +473,7 @@ class ParseCB(object):
         # self.client.noninventoryslotcount = data[3]
         return True
 
-    def parse_play_set_slot(self):
+    def play_set_slot(self):
         """Hub still needs this to set player inventory on login"""
         data = self.packet.readpkt(self.pktCB.SET_SLOT[PARSER])
 
@@ -492,7 +493,7 @@ class ParseCB(object):
 
     # Entity processing sections.  Needed to track entities and EIDs
 
-    def parse_play_spawn_object(self):
+    def play_spawn_object(self):
         if not self.client.local:
             return True
         # objects are entities and are GC-ed by detroy entities packet
@@ -523,7 +524,7 @@ class ParseCB(object):
             self.ent_control.entities.update(newobject)
         return True
 
-    def parse_play_spawn_mob(self):
+    def play_spawn_mob(self):
         if not self.client.local:
             return True
         if not self.ent_control:
@@ -561,7 +562,7 @@ class ParseCB(object):
             self.ent_control.entities.update(newmob)
         return True
 
-    def parse_play_entity_relative_move(self):
+    def play_entity_relative_move(self):
         if not self.client.local:
             return True
         if not self.ent_control:
@@ -580,7 +581,7 @@ class ParseCB(object):
             entupd.move_relative((data[1], data[2], data[3]))
         return True
 
-    def parse_play_entity_teleport(self):
+    def play_entity_teleport(self):
         if not self.client.local:
             return True
         if not self.ent_control:
@@ -602,7 +603,7 @@ class ParseCB(object):
             entupd.teleport((data[1], data[2], data[3]))
         return True
 
-    def parse_play_attach_entity(self):
+    def play_attach_entity(self):
         if not self.client.local:
             return True
         if not self.ent_control:
@@ -687,7 +688,7 @@ class ParseCB(object):
                     entupd.rodeBy = self.client
         return True
 
-    def parse_play_destroy_entities(self):
+    def play_destroy_entities(self):
         # Get rid of dead entities so that python can GC them.
         # TODO - not certain this works correctly (errors -
         # eids not used and too broad exception)

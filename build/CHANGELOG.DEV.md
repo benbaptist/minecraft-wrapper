@@ -1,3 +1,10 @@
+Build 36:
+- set server and client flush loop sleep times back to the original .05 (a timer
+ tick); it seems to work ok and makes mob interactions less jerky.
+- refactor clientconnection, add docstrings, prepare to publish it's
+ public API.
+- improve hub disconnect messaging some.
+
 Build 35:
 - increased server and client flush loop sleep times.  Original wrapper
  was .05.  Recent versions are .01.  Set it at .1.  This seems to have been
