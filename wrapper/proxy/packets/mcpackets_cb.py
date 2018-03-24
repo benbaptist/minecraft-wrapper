@@ -96,9 +96,9 @@ class Packets(object):
         self.CHANGE_GAME_STATE = [0x2b, [UBYTE, FLOAT]]
         self.SPAWN_GLOBAL_ENTITY = [0x2c, [NULL, ]]
         self.OPEN_WINDOW = [0x2d, [UBYTE, UBYTE, STRING, UBYTE]]
-        self.CLOSE_WINDOW = [0x2e, [NULL, ]]
-        self.SET_SLOT = [0x2f, [BYTE, SHORT, SLOT_NO_NBT]]
-        self.WINDOW_ITEMS = [0x30, [NULL, ]]
+        self.CLOSE_WINDOW = [0x2e, [UBYTE, ]]
+        self.SET_SLOT = [0x2f, [BYTE, SHORT, SLOT]]
+        self.WINDOW_ITEMS = [0x30, [UBYTE, SHORT, SLOT]]  # array of slot!
         self.WINDOW_PROPERTY = [0x31, [NULL, ]]
         self.CONFIRM_TRANSACTION = [0x32, [NULL, ]]
         self.UPDATE_SIGN = [0x33, [NULL, ]]

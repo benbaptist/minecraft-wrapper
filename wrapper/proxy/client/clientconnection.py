@@ -183,7 +183,7 @@ class Client(object):
         self.inventory = {}
         self.slot = 0
         self.windowCounter = 2
-        self.currentwindowid = 0  # zero to get updates for inventory
+        self.currentwindowid = 0  # zero for inventory
         self.noninventoryslotcount = 0
         self.lastitem = None
 
@@ -995,10 +995,6 @@ class Client(object):
         self.chat_to_client("§5§lHold still.. changing worlds!", 2)
         # This sleep gives client time to read the message above
         time.sleep(1)
-
-        # get fresh inventory setup
-        # TODO this and health updates should be done like chunks are...
-        self._inittheplayer()
 
         # This respawns in a different dimension in preparation for respawning.
         self._toggle_dim()
