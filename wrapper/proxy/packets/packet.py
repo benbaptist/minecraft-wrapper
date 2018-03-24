@@ -50,7 +50,7 @@ _CODERS = {
     "bytearray_short": 13,
     "position": 14,
     "slot": 15,
-    "slot_noNBT": 18,
+    # "slot_noNBT": 18,
     "uuid": 16,
     "metadata": 17,
     "metadata1.9": 19,
@@ -152,7 +152,7 @@ class Packet(object):
             15: self.read_slot,
             16: self.read_uuid,
             17: self.read_metadata,
-            18: self.read_slot_nbtless,
+            # 18: self.read_slot_nbtless,
             19: self.read_metadata_1_9,
             20: self.read_stringarray,
             90: self.read_rest,
@@ -683,18 +683,6 @@ class Packet(object):
             z = (z & 0x1FFFFFF) - 0x2000000
         return x, y, z
 
-    def read_slot(self):
-        sid = self.read_short()
-        if sid == -1:
-            return {"id": -1}
-        else:
-            count = self.read_ubyte()
-            damage = self.read_short()
-            nbt = self.read_tag()
-            # nbtCount = self.read_ubyte()
-            # nbt = self.read_data(nbtCount)
-            return {"id": sid, "count": count, "damage": damage, "nbt": nbt}
-
     def read_uuid(self):
         return MCUUID(bytes=self.read_data(16))
 
@@ -820,17 +808,18 @@ class Packet(object):
                 )
                 raise ValueError
 
-    def read_slot_nbtless(self):
-        """Temporary(?) solution for parsing pre-1.8 slots because
-        reading NBT fails for 1.7 NBT items"""
+    def read_slot(self):
         sid = self.read_short()
-        if sid != -1:
+        if sid == -1:
+            payload = {"id": -1}
+        else:
             count = self.read_ubyte()
             damage = self.read_short()
-            # nbt = self.read_tag()
+            nbt = self.read_tag()
             # nbtCount = self.read_ubyte()
             # nbt = self.read_data(nbtCount)
-            return {"id": sid, "count": count, "damage": damage, "nbt": {}}
+            payload = {"id": sid, "count": count, "damage": damage, "nbt": nbt}
+        return payload
 
     def read_stringarray(self):
         """payload is a list of strings, but first item is a VARINT Count of

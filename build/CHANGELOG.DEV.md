@@ -1,3 +1,6 @@
+Build 37:
+- Fix inventory tracking.
+
 Build 36:
 - set server and client flush loop sleep times back to the original .05 (a timer
  tick); it seems to work ok and makes mob interactions less jerky.

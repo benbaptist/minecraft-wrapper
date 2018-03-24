@@ -289,50 +289,62 @@ class ServerConnection(object):
                     self._parse_plugin_message
             },
             PLAY: {
+                # required base items
                 self.pktCB.KEEP_ALIVE[PKT]:
                     self._parse_keep_alive,
                 self.pktCB.CHAT_MESSAGE[PKT]:
                     self.parse_cb.play_chat_message,
-                self.pktCB.JOIN_GAME[PKT]:
-                    self.parse_cb.play_join_game,
-                self.pktCB.TIME_UPDATE[PKT]:
-                    self.parse_cb.play_time_update,
-                self.pktCB.SPAWN_POSITION[PKT]:
-                    self.parse_cb.play_spawn_position,
-                self.pktCB.RESPAWN[PKT]:
-                    self.parse_cb.play_respawn,
-                self.pktCB.PLAYER_POSLOOK[PKT]:
-                    self.parse_cb.play_player_poslook,
-                self.pktCB.USE_BED[PKT]:
-                    self.parse_cb.play_use_bed,
-                self.pktCB.UPDATE_HEALTH[PKT]:
-                    self.parse_cb.update_health,
+                self.pktCB.PLUGIN_MESSAGE[PKT]:
+                    self._parse_plugin_message,
+                self.pktCB.DISCONNECT[PKT]:
+                    self.parse_cb.play_disconnect,
+
+                # required for proper player list display
+                self.pktCB.PLAYER_LIST_ITEM[PKT]:
+                    self.parse_cb.play_player_list_item,
                 self.pktCB.SPAWN_PLAYER[PKT]:
                     self.parse_cb.play_spawn_player,
-                self.pktCB.CHANGE_GAME_STATE[PKT]:
-                    self.parse_cb.play_change_game_state,
-                self.pktCB.OPEN_WINDOW[PKT]:
-                    self.parse_cb.play_open_window,
+
+                # features
+                self.pktCB.USE_BED[PKT]:
+                    self.parse_cb.play_use_bed,
+                self.pktCB.TIME_UPDATE[PKT]:
+                    self.parse_cb.play_time_update,
                 self.pktCB.TAB_COMPLETE[PKT]:
                     self.parse_cb.play_tab_complete,
+                self.pktCB.SPAWN_POSITION[PKT]:
+                    self.parse_cb.play_spawn_position,
+
+                # Monitor player states
+                self.pktCB.CHANGE_GAME_STATE[PKT]:
+                    self.parse_cb.play_change_game_state,
+                self.pktCB.PLAYER_POSLOOK[PKT]:
+                    self.parse_cb.play_player_poslook,
+                self.pktCB.JOIN_GAME[PKT]:
+                    self.parse_cb.play_join_game,
+                # hub information
+                self.pktCB.RESPAWN[PKT]:
+                    self.parse_cb.play_respawn,
+                self.pktCB.UPDATE_HEALTH[PKT]:
+                    self.parse_cb.update_health,
+                self.pktCB.CHUNK_DATA[PKT]:
+                    self.parse_cb.play_chunk_data,
+
+                # inventory management
+                self.pktCB.OPEN_WINDOW[PKT]:
+                    self.parse_cb.play_open_window,
+                self.pktCB.WINDOW_ITEMS[PKT]:
+                    self.parse_cb.play_window_items,
                 self.pktCB.HELD_ITEM_CHANGE[PKT]:
                     self.parse_cb.play_held_item_change,
                 self.pktCB.SET_SLOT[PKT]:
-                    self.parse_cb.play_set_slot,
-                self.pktCB.PLAYER_LIST_ITEM[PKT]:
-                    self.parse_cb.play_player_list_item,
-                self.pktCB.DISCONNECT[PKT]:
-                    self.parse_cb.play_disconnect,
-                self.pktCB.PLUGIN_MESSAGE[PKT]:
-                    self._parse_plugin_message,
-                self.pktCB.CHUNK_DATA[PKT]:
-                    self.parse_cb.play_chunk_data,
-                }
+                    self.parse_cb.play_set_slot
+            }
         }
 
         if self.entity_controls:
             self.parsers[PLAY][
-                self.pktCB.SPAWN_OBJECT[PKT]] = self.parse_cb.play_spawn_object  # noqa
+                self.pktCB.SPAWN_OBJECT[PKT]] = self.parse_cb.play_spawn_object
             self.parsers[PLAY][
                 self.pktCB.SPAWN_MOB[PKT]] = self.parse_cb.play_spawn_mob
             self.parsers[PLAY][

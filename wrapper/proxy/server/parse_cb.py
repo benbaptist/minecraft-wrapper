@@ -474,6 +474,25 @@ class ParseCB(object):
         # self.client.noninventoryslotcount = data[3]
         return True
 
+    def play_close_window(self):
+        # This works together with SET_SLOT to maintain
+        #  accurate inventory in wrapper
+        self.client.currentwindowid = 0
+        # self.client.noninventoryslotcount = data[3]
+        return True
+
+    def play_window_items(self):
+        windowid = self.packet.readpkt([UBYTE])[0]
+        if windowid != 0:
+            return True
+        count = range(self.packet.readpkt([SHORT])[0] - 1)
+        for slot in count:
+            item = self.packet.readpkt([SLOT])[0]
+            if item is None:
+                item = -1
+            self.client.inventory[slot] = item
+        return True
+
     def play_set_slot(self):
         """Hub still needs this to set player inventory on login"""
         data = self.packet.readpkt(self.pktCB.SET_SLOT[PARSER])
@@ -486,7 +505,7 @@ class ParseCB(object):
         # This part updates our inventory from additional
         #  windows the player may open
         # MC|PickItem causes windowid = -2
-        if data[0] in (self.client.currentwindowid, -2):
+        if data[0] in (0, -2):
             currentslot = data[1]
             slotdata = data[2]
             self.client.inventory[currentslot] = slotdata
