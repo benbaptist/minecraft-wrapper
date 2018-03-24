@@ -54,7 +54,8 @@ class NullEventHandler(object):
         pass
 
     def callevent(self, event, payload):
-        """An event handler must have this method that expects
+        """
+        An event handler must have this method that expects
         two positional arguments:
          :event: The string name of the event.
          :payload: A dictionary of items describing the event (varies 
@@ -64,7 +65,8 @@ class NullEventHandler(object):
 
 
 class HaltSig(object):
-    """HaltSig is simply a sort of dummy class created for the
+    """
+    HaltSig is simply a sort of dummy class created for the
     proxy.  proxy expects this object with a self.halt property
     that tells proxy to shutdown.  The caller maintains control
     of the Haltsig object and uses it to signal the proxy to 
@@ -166,6 +168,8 @@ class Proxy(object):
         self.silent_ip_banning = self.config["silent-ipban"]
         self.srv_data.maxPlayers = self.config["max-players"]
         self.proxy_worlds = self.config["worlds"]
+        self.usehub = self.config["built-in-hub"]
+        self.onlinemode = self.config["online-mode"]
 
         # proxy internal workings
         self.proxy_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -184,8 +188,11 @@ class Proxy(object):
         self.forge = False
         self.forge_login_packet = None
 
-        # and wrapper's own channel for each connection
-        self.registered_channels = ["WRAPPER.PY|PONG",
+        # Channels monitored by wrapper.  We don't register our channels
+        # because they are only used between wrapper instances.  Minecraft
+        # servers and clients will ignore them.
+        self.registered_channels = ["MC|Brand",
+                                    "WRAPPER.PY|PONG",
                                     "WRAPPER.PY|PING",
                                     "WRAPPER.PY|RESP",
                                     "WRAPPER.PY|INFO"]
