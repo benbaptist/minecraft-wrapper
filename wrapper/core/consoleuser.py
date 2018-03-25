@@ -24,11 +24,15 @@ class ConsolePlayer(object):
 
     """
 
-    def __init__(self, wrapper):
+    def __init__(self, wrapper, outputstream=None):
         self.username = "*Console*"
         self.loggedIn = time.time()
         self.wrapper = wrapper
         self.log = wrapper.log
+        if outputstream is None:
+            self.output_stream = self._default_output
+        else:
+            self.output_stream = outputstream
 
         # if self.abort is ever used, must follow `self.abort.halt`
         self.abort = wrapper.halt
@@ -76,15 +80,11 @@ class ConsolePlayer(object):
         Permit the console to have a nice display instead of
         returning the object instance notation.
         """
-        return "CONSOLE OPERATOR"
+        return self.username
 
-    def message(self, message):
-        """
-        This is a substitute for the player.message() that plugins and
-        the command interface expect for player objects. It translates
-        chat type messages intended for a minecraft client into
-        printed colorized console lines.
-        """
+    def _default_output(self, message):
+        """This translates chat type messages intended for a minecraft
+        client into printed colorized console lines."""
         displaycode, displaycolor = "5", "magenta"
         display = str(message)
         if type(message) is dict:
@@ -106,6 +106,36 @@ class ConsolePlayer(object):
                     displaycolor = self.messsage_color_coders[displaycolor]
         readout(display, "", "", pad=15, command_text_fg=displaycolor,
                 usereadline=self.wrapper.use_readline)
+
+    def message(self, message, _=0):
+        """
+        This is a substitute for the player.message() that plugins and
+        the command interface expects for player objects.
+
+        :param message : message to user.
+
+        :param _ : unused by Console user interface.  Could be an
+         expected argument for player.message(message, position)
+
+        To change the output stream, pass your own function to output_stream:
+
+        `self.output_stream = my_output_function`
+
+        """
+        # only option for now is Console output, although the xPlayer/Console
+        # interface is used elsewhere in the code (like Web)
+        self.output_stream(message)
+
+    def execute(self, string):
+        """
+        execute as console player directly to server console
+        :param string: Command to execute with no leading slash
+        :return: returns nothing.. performs action
+        """
+        self.wrapper.javaserver.console(string)
+
+    def kick(self, reason):
+        self.message(reason)
 
     @staticmethod
     def hasPermission(*args):

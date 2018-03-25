@@ -50,113 +50,91 @@
         ..
 
     
+-  addGroupPerm(self, groupname, permissionnode, value=True)
 
--  registerCommand(self, command, callback, permission=None)
-
-        This registers a command that, when entered by the Minecraft
-        client, will execute `callback(player, args)`. permission is
-        an optional attribute if you want your command to only be
-        executable if the player has a specified permission node.
+        Used to add a permission node to a group.
 
         :Args:
-            :command:  The command the client enters (without the
-             slash).  using a slash will mean two slashes will have
-             to be typed (e.g. "/region" means the user must type "//region".
+            :groupname: The name of the permission group.
 
-            :callback:  The plugin method you want to call when the
-             command is typed. Expected arguments that will be returned
-             to your function will be: 1) the player  object, 2) a list
-             of the arguments (words after the command, stripped of
-             whitespace).
+            :permissionnode: The permission node to add to the group.
+             The node can be another group!  Nested permissions must be
+             enabled (see player api "hasPermission").
 
-            :permission:  A string item of your choosing, such as
-             "essentials.home".  Can be (type) None to require no
-             permission.  (See also `api.registerPermission` for another
-             way to set permission defaults.)
+            :value: value of the node.  normally True to allow the
+             permission, but can be false to deny the permission. For
+             instance, you want a "badplayer" group to be denied some
+             command that would normally be permitted.
 
-        :sample usage:
-
-            .. code:: python
-
-                self.api.registerCommand("home", self._home, None)
-            ..
-
-        :returns:  None/Nothing
+        :returns:  string message indicating the outcome
 
         
-
--  registerEvent(self, eventname, callback)
-
-        Register an event and a callback function. See
-         https://github.com/benbaptist/minecraft-wrapper/blob/development/documentation/events.rst
-         for a list of events.
-
-        :Args:
-            :eventname:  A text name from the list of built-in events,
-             for example, "player.place".
-            :callback: the plugin method you want to be called when the
-             event occurs. The contents of the payload that is passed
-             back to your method varies between events.
-
-        :returns:  None/Nothing
-
-        
-
--  registerPermission(self, permission=None, value=False)
-
-        Used to set a default for a specific permission node.
-
-        Note: *You do not need to run this function unless you want*
-        *certain permission nodes to be granted by default.*
-        *i.e., 'essentials.list' should be on by default, so players*
-        *can run /list without having any permissions*
-
-        :Args:
-            :permission:  String argument for the permission node; e.g.
-             "essentials.list"
-            :value:  Set to True to make a permission default to True.
-
-        :returns:  None/Nothing
-
-        
-
--  registerHelp(self, groupname, summary, commands)
-
-        Used to create a help group for the /help command.
-
-        :Args:
-            :groupname: The name of the help group (usually the plugin
-             name). The groupname is the name you'll see in the list
-             when you run '/help'.
-
-            :summary: The text that you'll see next next to the help
-             group's name.
-
-            :commands: a list of tuples in the following example format;
-
-                .. code:: python
-
-                    [("/command <argument>, [optional_argument]", "description", "permission.node"),
-                    ("/summon <EntityName> [x] [y] [z]", "Summons an entity", None),
-                    ("/suicide", "Kills you - beware of losing your stuff!", "essentials.suicide")]
-                ..
-
-        :returns:  None/Nothing
-
-        
-
 -  blockForEvent(self, eventtype)
 
         Blocks until the specified event is called.
         
-
--  callEvent(self, event, payload)
+-  callEvent(self, event, payload, abortable=False)
 
         Invokes the specific event. Payload is extra information
         relating to the event. Errors may occur if you don't specify
         the right payload information.
-        
 
+        The only use it seems to have is internal (it is used by
+        player.sendCommand().
+
+        
+-  checkPassword(self, password, hashed_password)
+
+        Bcrypt-based password checker.  Takes a raw string password and
+        compares it to the hash of a previously hashed password, returning True
+        if the passwords match, or False if not.
+
+        Bcrypt functions are to be used where ever you are storing a user's
+        password, but do not ever want to be able to "know" their password
+        directly.  We only need to know if the password they supplied is
+        correct or not.
+
+        :Args:
+            :password: The raw string password to be checked.
+            :hashed_password: a previously stored hash.
+
+        :returns: Boolean result of the comparison.  Returns
+         False if bcrypt is not installed on the system.
+        
+-  createGroup(self, groupname)
+
+        Used to create a permission group.
+
+        :Args:
+            :groupname: The name of the permission group.
+
+
+        :returns:  string message indicating the outcome
+
+        
+-  deleteGroup(self, groupname)
+
+        Used to delete a permission group.
+
+        :Args:
+            :groupname: The name of the permission group.
+
+
+        :returns:  string message indicating the outcome
+
+        
+-  deleteGroupPerm(self, groupname, permissionnode)
+
+        Used to remove a permission node to a group.
+
+        :Args:
+            :groupname: The name of the permission group.
+
+            :permissionnode: The permission node to remove.
+
+        :returns:  string message indicating the outcome
+
+        
 -  getPluginContext(self, plugin_id)
 
         Returns the instance (content) of another running wrapper
@@ -180,39 +158,34 @@
         :returns:  Raises exception if the specified plugin does not exist.
 
         
+-  getStorage(self, name, world=False, pickle=True)
 
--  getStorage(self, name, world=False, formatting="pickle")
+        Returns a storage object manager for saving data between reboots.
 
-        Returns a storage object manager.  The manager contains the
-        storage object, 'Data' (a dictionary). 'Data' contains the
-        data your plugin will remember across reboots.
+        :Args:
+            :name:  The name of the storage (on disk).
+            :world:  THe location of the storage on disk -
+                :False: '/wrapper-data/plugins'.
+                :True: '<serverpath>/<worldname>/plugins'.
+            :Pickle:  Whether wrapper should pickle or save as json.
+
+            Pickle formatting is the default. pickling is
+             less strict than json formats and leverages binary storage.
+             Use of json can result in errors if your keys or data do not
+             conform to json standards (like use of string keys).  However,
+             pickle is not generally human-readable, whereas json is human
+             readable.
+
+        :Returns: A storage object manager.  The manager contains a
+         storage dictionary called 'Data'. 'Data' contains the
+         data your plugin will remember across reboots.
+        ___
 
         :NOTE: This method is somewhat different from previous Wrapper
          versions prior to 0.10.1 (build 182).  The storage object is
          no longer a data object itself; It is a manager used for
          controlling the saving of the object data.  The actual data
-         is contained in Dictionary subitem 'Data'
-
-        ___
-
-        :Args:
-            :name:  The name of the storage (on disk).
-            :world:
-                :False: set the storage's location to
-                 '/wrapper-data/plugins'.
-                :True: set the storage path to
-                 '<serverpath>/<worldname>/plugins'.
-
-            :formatting="pickle":  Pickle formatting is the default. pickling is
-             less strict than json formats and leverages binary storage.
-             Use of json (or future implemented formats) can result in
-             errors if your keys or data do not conform to json standards
-             (like use of string keys).  However, pickle is not generally
-             human-readable, whereas json is human readable. If you need
-             a human-readable copy (for debugging), consider using
-             self.api.helpers.putjsonfile(<yourDictionary>) to write a
-             copy to disk in Json.  if you do so, check the return status
-             of `putjsonfile` to make sure it was written.
+         is contained in the property/dictionary variable 'Data'
 
         ___
 
@@ -274,7 +247,167 @@
             ..
 
         
+-  hashPassword(self, password)
 
+        Bcrypt-based password encryption.  Takes a raw string password
+        returns a string representation of the binary hash.
+
+        Bcrypt functions are to be used where ever you are storing a user's
+        password, but do not ever want to be able to "know" their password
+        directly.  We only need to know if the password they supplied is
+        correct or not.
+
+        :Args:
+            :password: The raw string password to be encrypted.
+
+        :returns: a string representation of the encrypted data.  Returns
+         False if bcrypt is not installed on the system.
+
+        
+-  registerCommand(self, command, callback, permission=None)
+
+        This registers a command that, when entered by the Minecraft
+        client, will execute `callback(player, args)`. permission is
+        an optional attribute if you want your command to only be
+        executable if the player has a specified permission node.
+
+        :Args:
+            :command:  The command the client enters (without the
+             slash).  using a slash will mean two slashes will have
+             to be typed (e.g. "/region" means the user must type "//region".
+
+            :callback:  The plugin method you want to call when the
+             command is typed. Expected arguments that will be returned
+             to your function will be: 1) the player  object, 2) a list
+             of the arguments (words after the command, stripped of
+             whitespace).
+
+            :permission:  A string item of your choosing, such as
+             "essentials.home".  Can be (type) None to require no
+             permission.  (See also `api.registerPermission` for another
+             way to set permission defaults.)
+
+        :sample usage:
+
+            .. code:: python
+
+                self.api.registerCommand("home", self._home, None)
+            ..
+
+        :returns:  None/Nothing
+
+        
+-  registerEvent(self, eventname, callback)
+
+        Register an event and a callback function. See
+         https://github.com/benbaptist/minecraft-wrapper/blob/development/documentation/events.rst
+         for a list of events.
+
+        :Args:
+            :eventname:  A text name from the list of built-in events,
+             for example, "player.place".
+            :callback: the plugin method you want to be called when the
+             event occurs. The contents of the payload that is passed
+             back to your method varies between events.
+
+        :returns:  None/Nothing
+
+        
+-  registerHelp(self, groupname, summary, commands)
+
+        Used to create a help group for the /help command.
+
+        :Args:
+            :groupname: The name of the help group (usually the plugin
+             name). The groupname is the name you'll see in the list
+             when you run '/help'.
+
+            :summary: The text that you'll see next next to the help
+             group's name.
+
+            :commands: a list of tuples in the following example format;
+
+                .. code:: python
+
+                    [("/command <argument>, [optional_argument]", "description", "permission.node"),
+                    ("/summon <EntityName> [x] [y] [z]", "Summons an entity", None),
+                    ("/suicide", "Kills you - beware of losing your stuff!", "essentials.suicide")]
+                ..
+
+        :returns:  None/Nothing
+
+        
+-  registerPermission(self, permission=None, value=False)
+
+        Used to set a default for a specific permission node.
+
+        Note: *You do not need to run this function unless you want*
+        *certain permission nodes to be granted by default.*
+        *i.e., 'essentials.list' should be on by default, so players*
+        *can run /list without having any permissions*
+
+        :Args:
+            :permission:  String argument for the permission node; e.g.
+             "essentials.list"
+            :value:  Set to True to make a permission default to True.
+
+        :returns:  None/Nothing
+
+        
+-  resetGroups(self)
+
+        resets group data (removes all permission groups).
+
+        :returns:  nothing
+
+        
+-  resetUsers(self)
+
+        resets all user data (removes all permissions from all users).
+
+        :returns:  nothing
+
+        
+-  sendAlerts(self, message, group="wrapper", blocking=False)
+
+        Used to send alerts outside of wrapper (email, for instance).
+
+        :Args:
+            :message: The message to be sent to the servers configured
+             and listed in the wrapper.propertues ["Alerts"]["servers"]
+             list.
+            :group: message will be sent to each of the emails/servers
+             listed that have the matching "group" in
+             wrapper.properties.json["Alerts"]["servers"][<serverindex>]["group"]
+            :blocking: if True, runs non-daemonized and holds up continued
+             wrapper execution until sending is complete.  You would want this
+             set to False normally when dealing with players.  However, at an
+             'onDisable' plugin event, or anywhere else wrapper execution may end
+             abruptly, blocking may be advisble to ensure the emails finish.
+
+        :returns:  None/Nothing
+
+        
+-  sendEmail(self, message, recipients, subject, group="wrapper", blocking=False)
+
+        Use group email server settings to email a specified set of recipients
+        (independent of alerts settings or enablement).
+
+        :Args:
+            :message: The message content to be emailed (text/string).
+            :recipients: list of email addresses, type=list (even if only one)
+            :subject: plain text
+            :group: message will be sent using the settings in the matching
+             "group" in wrapper.properties.json["Alerts"]["servers"][<serverindex>]["group"]
+            :blocking: if True, runs non-daemonized and holds up continued
+             wrapper execution until sending is complete.  You would want this
+             set to False normally when dealing with players.  However, at an
+             'onDisable' plugin event, or anywhere else wrapper execution may end
+             abruptly, blocking may be advisble to ensure the emails finish.
+
+        :returns:  None/Nothing
+
+        
 -  wrapperHalt(self)
 
         Shuts wrapper down entirely.  To use this as a wrapper-restart
@@ -309,112 +442,4 @@
                     done
             ..
 
-        
-
--  createGroup(self, groupname)
-
-        Used to create a permission group.
-
-        :Args:
-            :groupname: The name of the permission group.
-
-
-        :returns:  string message indicating the outcome
-
-        
-
--  deleteGroup(self, groupname)
-
-        Used to delete a permission group.
-
-        :Args:
-            :groupname: The name of the permission group.
-
-
-        :returns:  string message indicating the outcome
-
-        
-
--  addGroupPerm(self, groupname, permissionnode, value=True)
-
-        Used to add a permission node to a group.
-
-        :Args:
-            :groupname: The name of the permission group.
-
-            :permissionnode: The permission node to add to the group.
-             The node can be another group!  Nested permissions must be
-             enabled (see player api "hasPermission").
-
-            :value: value of the node.  normally True to allow the
-             permission, but can be false to deny the permission. For
-             instance, you want a "badplayer" group to be denied some
-             command that would normally be permitted.
-
-        :returns:  string message indicating the outcome
-
-        
-
--  deleteGroupPerm(self, groupname, permissionnode)
-
-        Used to remove a permission node to a group.
-
-        :Args:
-            :groupname: The name of the permission group.
-
-            :permissionnode: The permission node to remove.
-
-        :returns:  string message indicating the outcome
-
-        
-
--  resetGroups(self)
-
-        resets group data (removes all permission groups).
-
-        :returns:  nothing
-
-        
-
--  resetUsers(self)
-
-        resets all user data (removes all permissions from all users).
-
-        :returns:  nothing
-
-        
-
--  hash_password(self, password)
- Bcrypt-based password encryption.  Takes a raw string password
-        returns a string representation of the binary hash.
-
-        Bcrypt functions are to be used where ever you are storing a user's
-        password, but do not ever want to be able to "know" their password
-        directly.  We only need to know if the password they supplied is
-        correct or not.
-
-        :Args:
-            :password: The raw string password to be encrypted.
-
-        :returns: a string representation of the encrypted data.  Returns
-         False if bcrypt is not installed on the system.
-
-        
-
--  check_password(self, password, hashed_password)
- Bcrypt-based password checker.  Takes a raw string password and
-        compares it to the hash of a previously hashed password, returning True
-        if the passwords match, or False if not.
-
-        Bcrypt functions are to be used where ever you are storing a user's
-        password, but do not ever want to be able to "know" their password
-        directly.  We only need to know if the password they supplied is
-        correct or not.
-
-        :Args:
-            :password: The raw string password to be checked.
-            :hashed_password: a previously stored hash.
-
-        :returns: Boolean result of the comparison.  Returns
-         False if bcrypt is not installed on the system.
         

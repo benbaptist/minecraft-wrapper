@@ -220,7 +220,7 @@ class EntityControl(object):
                     entitydesc, pos[0], pos[1], pos[2], count)
 
         self.proxy.eventhandler.callevent(
-            "proxy.console", {"command": console_command})
+            "proxy.console", {"command": console_command}, abortable=False)
         """ eventdoc
                                 <description> internalfunction <description>
 
@@ -319,7 +319,8 @@ class EntityControl(object):
         # send those creatures away
         self._log.debug("killing %d %s" % (count, entity_name))
 
-        console_command = "tp @e[type=%s,x=%d,y=%d,z=%d,c=%s] ~ -500 ~" % (
+        # if self.proxy.srv_data.protocolVersion < 204:
+        console_command = "tp @e[type=%s,x=%d,y=%d,z=%d,c=%s] ~ ~-500 ~" % (
             entity_name, pos[0], pos[1], pos[2], count)
         self.proxy.eventhandler.callevent(
-                 "proxy.console", {"command": console_command})
+                 "proxy.console", {"command": console_command}, abortable=False)

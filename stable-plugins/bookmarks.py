@@ -11,6 +11,7 @@ WEBSITE = ""
 VERSION = (0, 1)
 
 
+# noinspection PyPep8Naming
 class Main:
     def __init__(self, api, log):
         self.api = api

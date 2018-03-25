@@ -32,18 +32,21 @@ class Main:
     def __init__(self, api, log):
         self.api = api
         self.log = log
-        self.data = self.api.getStorage("someFilename", False)  # use wrapper-data/plugins folder
+        # use wrapper-data/plugins folder
+        self.data = self.api.getStorage("someFilename", False)
 
     def onEnable(self):
         self.api.registerCommand("", self._command, "permission.node")
 
-        self.api.registerHelp("template", "description of plugin 'template'",
-                              [  # help items
-                                  ("/command <argument>", "how to use command", "permission.node"),
-                              ]
-                              )
-
-        self.api.registerPermission("permission.node", True)  # Everyone can use '/topic3'!
+        self.api.registerHelp(
+            "template", "description of plugin 'template'",
+            [   # help items
+                ("/command <arg>", "how to use command", "permission.node"),
+             ]
+        )
+        
+        # Everyone can use '/topic3'!
+        self.api.registerPermission("permission.node", True)
 
         # Sample registered events
         self.api.registerEvent("player.login", self.playerLogin)
@@ -53,7 +56,8 @@ class Main:
         self.log.debug("This'll only show up if you have debug mode on.")
 
     def onDisable(self):
-        self.data.close()  # save Storage to disk and close the Storage's periodicsave() thread.
+        # save Storage to disk and close the Storage's periodicsave() thread.
+        self.data.close()  
 
     # Commands section
     def _command(self, player, args):
@@ -63,4 +67,6 @@ class Main:
     def playerLogin(self, payload):
         player_obj = payload["player"]
         playername = str(player_obj.username)
-        self.api.minecraft.broadcast("&a&lEverybody, introduce %s to the server!" % playername)
+        self.api.minecraft.broadcast(
+            "&a&lEverybody, introduce %s to the server!" % playername
+        )

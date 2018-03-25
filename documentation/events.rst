@@ -1,3 +1,37 @@
+# -*- coding: utf-8 -*-
+
+***Wrapper Events***
+
+    Each Wrapper event, once registered, will call back the passed function
+    when the event occurs.  The call back function must reference the correct
+    return payload.
+    
+    When a plugin calls an event which can be aborted, it is important that
+    your code not delay in completing.  The proxy packet processing is on
+    hold while your code decides what to do with the event.  If you take too 
+    long, the client could be disconnected!  This is an aggregate time of
+    all the plugins that call this event.
+    
+    :sample Plugin snippet:
+    
+        .. code:: python
+
+            class Main:
+                def __init__(self, api, log):
+                    self.api = api
+                    
+            def onEnable(self):
+                self.api.registerEvent("player.login", _player_login_callback)
+            
+            def _player_login_callback(self, payload):
+                playername = payload["playername"]
+                player_object = self.api.getPlayer(playername)
+                self.api.minecraft.broadcast("%s joined the server!" % playername)
+                player_object.message("Welcome to the server, %s" % playername)
+                
+        ..
+
+
 **< Group 'core/mcserver.py' >**
 
 :Event: "player.login"
@@ -8,9 +42,11 @@
         When player logs into the java MC server.
 
     :Payload:
-        :"playername": player name
+        :"player": player object (if object available -could be False if not)
+        :"playername": user name of player (string)
 
     :Can be aborted/modified: No
+
     :Comments:
         All events in the core/mcserver.py group are collected
         from the console output, do not require proxy mode, and
@@ -20,12 +56,19 @@
 
     :Module: mcserver.py *(core/mcserver.py)*
 
-    :Description: player.logout
+    :Description:
+        When player logs out of the java MC server.
 
     :Payload:
-        :"player": self.getplayer(players_name)
+        :"player": player object (if object available -could be False if not)
+        :"playername": user name of player (string)
 
-    :Can be aborted/modified: 
+    :Can be aborted/modified: No - but This will pause long enough for you to deal with the playerobject.
+
+    :Comments:
+        All events in the core/mcserver.py group are collected
+        from the console output, do not require proxy mode, and
+        therefore, also, cannot be aborted.
 
 :Event: "server.stopped"
 
@@ -34,9 +77,11 @@
     :Description: server.stopped
 
     :Payload:
-        :"reason": reason
+        :"reason": reason}
+         abortable=False
 
     :Can be aborted/modified: 
+
 
 :Event: "server.starting"
 
@@ -45,9 +90,11 @@
     :Description: server.starting
 
     :Payload:
-        :"reason": reason
+        :"reason": reason}
+         abortable=False
 
     :Can be aborted/modified: 
+
 
 :Event: "server.started"
 
@@ -56,9 +103,11 @@
     :Description: server.started
 
     :Payload:
-        :"reason": reason
+        :"reason": reason}
+         abortable=False
 
     :Can be aborted/modified: 
+
 
 :Event: "server.stopping"
 
@@ -67,9 +116,11 @@
     :Description: server.stopping
 
     :Payload:
-        :"reason": reason
+        :"reason": reason}
+         abortable=False
 
     :Can be aborted/modified: 
+
 
 :Event: "server.state"
 
@@ -79,20 +130,11 @@
 
     :Payload:
         :"state": state
-        :"reason": reason
+        :"reason": reason}
+         abortable=False
 
     :Can be aborted/modified: 
 
-:Event: "server.consoleMessage"
-
-    :Module: mcserver.py *(core/mcserver.py)*
-
-    :Description: server.consoleMessage
-
-    :Payload:
-        :"message": buff
-
-    :Can be aborted/modified: 
 
 :Event: "player.message"
 
@@ -106,7 +148,8 @@
         :"message": <str> type - what the player said in chat. ('hello everyone')
         :"original": The original line of text from the console ('<mcplayer> hello everyone`)
 
-    :Can be aborted/modified: 
+    :Can be aborted/modified: No
+
     :Comments:
         This event is triggered by console chat which has already been sent.
         This event returns the player object. if used in a string context,
@@ -121,9 +164,11 @@
 
     :Payload:
         :"player": self.getplayer(name)
-        :"action": message
+        :"action": message}
+         abortable=False
 
     :Can be aborted/modified: 
+
 
 :Event: "player.achievement"
 
@@ -133,9 +178,11 @@
 
     :Payload:
         :"player": name
-        :"achievement": achievement
+        :"achievement": achievement}
+         abortable=False
 
     :Can be aborted/modified: 
+
 
 :Event: "server.say"
 
@@ -146,9 +193,11 @@
     :Payload:
         :"player": name
         :"message": message
-        :"original": original
+        :"original": original}
+         abortable=False
 
     :Can be aborted/modified: 
+
 
 :Event: "player.death"
 
@@ -159,9 +208,11 @@
     :Payload:
         :"player": self.getplayer(name)
         :"death": getargsafter(line_words
-         1)
+         1)}
+         abortable=False
 
     :Can be aborted/modified: 
+
 
 :Event: "server.lagged"
 
@@ -170,9 +221,11 @@
     :Description: server.lagged
 
     :Payload:
-        :"ticks": get_int(skipping_ticks)
+        :"ticks": get_int(skipping_ticks)}
+         abortable=False
 
     :Can be aborted/modified: 
+
 
 :Event: "player.teleport"
 
@@ -185,6 +238,7 @@
         :"player": player object
 
     :Can be aborted/modified: No
+
     :Comments:
         driven from console message "Teleported ___ to ....".
 
@@ -197,9 +251,12 @@
     :Description:
         a timer that is called each second.
 
-    :Payload: None
+    :Payload:
+         None
+         abortable=False
 
     :Can be aborted/modified: No
+
 
 :Event: "timer.tick"
 
@@ -209,9 +266,12 @@
         a timer that is called each 1/20th
           of a second, like a minecraft tick.
 
-    :Payload: None
+    :Payload:
+         None
+         abortable=False
 
     :Can be aborted/modified: No
+
     :Comments:
         Use of this timer is not suggested and is turned off
           by default in the wrapper.config.json file
@@ -226,9 +286,11 @@
 
     :Payload:
         :"nick": nick
-        :"channel": channel
+        :"channel": channel}
+         abortable=False
 
     :Can be aborted/modified: 
+
 
 :Event: "irc.part"
 
@@ -238,9 +300,11 @@
 
     :Payload:
         :"nick": nick
-        :"channel": channel
+        :"channel": channel}
+         abortable=False
 
     :Can be aborted/modified: 
+
 
 :Event: "irc.quit"
 
@@ -251,9 +315,11 @@
     :Payload:
         :"nick": nick
         :"message": message
-        :"channel": None
+        :"channel": None}
+         abortable=False
 
     :Can be aborted/modified: 
+
 
 :Event: "irc.action"
 
@@ -265,9 +331,11 @@
         :"nick": nick
         :"channel": channel
         :"action": getargsafter(message.split(" ")
-         1)[:-1]
+         1)[:-1]}
+         abortable=False
 
     :Can be aborted/modified: 
+
 
 :Event: "irc.message"
 
@@ -278,9 +346,11 @@
     :Payload:
         :"nick": nick
         :"channel": channel
-        :"message": message
+        :"message": message}
+         abortable=False
 
     :Can be aborted/modified: 
+
 
 **< Group 'Proxy' >**
 
@@ -289,17 +359,19 @@
     :Module: clientconnection.py *(client/clientconnection.py)*
 
     :Description:
-        Called before client logs on.
+        Called before client logs on.  This event marks the
+        birth of the player object in wrapper (when in proxy mode)
 
     :Payload:
         :"playername": self.username,
-        :"player": username (name only - player object does not yet exist)
+        :"player": Player object will be created by the event code
         :"online_uuid": online UUID,
-        :"offline_uuid": UUID on local server (offline),
+        :"server_uuid": UUID on local server (offline),
         :"ip": the user/client IP on the internet.
         :"secure_connection": Proxy's online mode
 
     :Can be aborted/modified: Yes, return False to disconnect the client.
+
     :Comments:
         - If aborted, the client is disconnnected with message
         "Login denied by a Plugin."
@@ -319,35 +391,11 @@
         :"message": the chat message string.
 
     :Can be aborted/modified: Yes
+
     :Comments:
         Can be aborted by returning False. Can be modified before
         passing to server.  'chatmsg' accepts both raw string
         or a dictionary payload containing ["message"] item.
-
-:Event: "player.runCommand"
-
-    :Module: parse_sb.py *(client/parse_sb.py)*
-
-    :Description:
-        When a player runs a command. Do not use
-        for registering commands.
-
-    :Payload:
-        :"player": playerobject()
-        :"command": slash command (or whatever is set in wrapper's
-         config as the command cursor).
-        :"args": the remaining words/args
-
-    :Can be aborted/modified: Yes. Registered commands ARE already aborted since they do not get passed to the server.
-    :Comments:
-        Called AFTER player.rawMessage event (if rawMessage
-        does not reject it).  However, rawMessage could have
-        modified it before this point.
-        
-        The best use of this event is a quick way to prevent a client from
-        passing certain commands or command arguments to the server.
-        rawMessage is better if you need something else (parsing or
-        filtering chat, for example).
 
 :Event: "player.dig"
 
@@ -364,6 +412,7 @@
         :"face": 0-5 (bottom, top, north, south, west, east)
 
     :Can be aborted/modified: Yes
+
     :Comments:
         Can be aborted by returning False. Note that the client
         may still believe the block is broken (or being broken).
@@ -387,6 +436,7 @@
         :"origin": Debugging information on where event was parsed.
 
     :Can be aborted/modified: Yes
+
     :Comments:
         Can be aborted by returning False. Note that the client
         may still believe the action happened, but the server
@@ -409,6 +459,7 @@
         :"origin": Debugging information on where event was parsed.
 
     :Can be aborted/modified: Yes
+
     :Comments:
         Can be aborted by returning False. Note that the client
         may still believe the action happened, but the server
@@ -433,6 +484,7 @@
         :"line4": l4
 
     :Can be aborted/modified: Yes
+
     :Comments:
         Can be aborted by returning False.
         Any of the four line arguments can be changed by
@@ -458,6 +510,7 @@
         :"clicked": item data
 
     :Can be aborted/modified: Yes
+
     :Comments:
         Can be aborted by returning False. Aborting is not recommended
         since that is how wrapper keeps tabs on inventory.
@@ -474,6 +527,7 @@
         :"json": json or string data
 
     :Can be aborted/modified: Yes
+
     :Comments:
         - The message will not reach the client if the event is returned False.
         - If json chat (dict) or text is returned, that value will be sent
@@ -492,18 +546,22 @@
 
     :Can be aborted/modified: No - The server thinks the client is in bed already.
 
+
 :Event: "player.spawned"
 
     :Module: parse_cb.py *(server/parse_cb.py)*
 
     :Description:
-        Sent when server advises the client of its spawn position.
+        Sent when server advises the client of the Spawn position.
 
     :Payload:
         :"playername": client username
-        :"position": position
+        :"position": Spawn's position
 
     :Can be aborted/modified: No - Notification only.
+
+    :Comments:
+        Sent by the server after login to specify the coordinates of the spawn point (the point at which players spawn at, and which the compass points to). It can be sent at any time to update the point compasses point at.
 
 :Event: "entity.unmount"
 
@@ -518,6 +576,7 @@
         :"leash": leash True/False
 
     :Can be aborted/modified: No - Notification only.
+
     :Comments:
         Only works if entity controls are enabled.  Entity controls
         add significant load to wrapper's packet parsing and is off by default.
@@ -535,6 +594,7 @@
         :"leash": leash True/False
 
     :Can be aborted/modified: No - Notification only.
+
     :Comments:
         Only works if entity controls are enabled.  Entity controls
         add significant load to wrapper's packet parsing and is off by default.
@@ -553,6 +613,7 @@
 
     :Can be aborted/modified: Yes, return False to abort.
 
+
 :Event: "wrapper.backupFailure"
 
     :Module: backups.py *(core/backups.py)*
@@ -565,12 +626,14 @@
         :"reasonText": a string description of the failure.
 
     :Can be aborted/modified: No - informatinal only
+
     :Comments:
         Reasoncode and text provide more detail about specific problem.
         1 - Tar not installed.
         2 - Backup file does not exist after the tar operation.
         3 - Specified file does not exist.
         4 - backups.json is corrupted
+        5 - unable to create backup directory
 
 :Event: "wrapper.backupBegin"
 
@@ -583,6 +646,7 @@
         :"file": Name of backup file.
 
     :Can be aborted/modified: Yes, return False to abort.
+
     :Comments:
         A console warning will be issued if a plugin cancels the backup.
 
@@ -595,6 +659,26 @@
 
     :Payload:
         :"file": Name of backup file.
+        :"status": Status code from TAR
+        :"summary": string summary of operation
 
     :Can be aborted/modified: No - informational only
+
+
+**< Group 'core/wrapper.py' >**
+
+:Event: "server.consoleMessage"
+
+    :Module: wrapper.py *(core/wrapper.py)*
+
+    :Description:
+        a line of Console output.
+
+    :Payload:
+        :"message": <str> type - The line of buffered output.
+
+    :Can be aborted/modified: No
+
+    :Comments:
+        This event is triggered by console output which has already been sent.
 

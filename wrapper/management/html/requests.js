@@ -1,54 +1,57 @@
 // Hooray, I just hit 111 commits on Wrapper.py's development branch. 
 // Why am I saying this here? Because easter eggs.
-requests = {}
-requests.action = function(action, arguments){
-	args = ""
-	for(i in arguments){
-		console.log(i)
-		args += "&" + i + "=" + encodeURIComponent(arguments[i])
-		if(i == undefined) continue
+
+
+function doArgs(passedargs){
+    var args = "";
+    args = "key=" + localStorage.sessionKey
+	for(i in passedargs){
+		args += "&" + i + "=" + encodeURIComponent(passedargs[i]);
+		if(i == undefined) continue;
 	}
-//	console.log("GET Regular Request: /action/"+action+"?"+args)
-	var xml = new XMLHttpRequest()
-	xml.open("GET", "/action/"+action+"?"+args, false)
-	xml.send()
-	return JSON.parse(xml.responseText)
+	// console.log("ARGS:" + args);
+	return args
 }
-requests.admin = function(action, arguments){
-	args = "key=" + localStorage.sessionKey
-	for(i in arguments){
-		if(i == undefined) continue
-		args += "&" + i + "=" + encodeURIComponent(arguments[i])
-	}
-//	console.log("GET Admin Request: /action/"+action+"?"+args)
-	var xml = new XMLHttpRequest()
-	xml.open("GET", "/action/"+action+"?"+args, false)
-	try{xml.send()}catch(err){return false}
-	var response = JSON.parse(xml.responseText)
-	if (response["status"] == "error")
-		return false
-	return response["payload"]
+
+var requests = {}
+
+requests.action = function(action, arglist){
+	var args = doArgs(arglist)
+
+	var xmlhttp;
+	xmlhttp = new XMLHttpRequest();
+	xmlhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      return JSON.parse(this.responseText)
+        }
+    };
+    // console.log("GET /action/"+action+"?"+args)
+	xmlhttp.open("GET", "/action/"+action+"?"+args, false);
+	xmlhttp.overrideMimeType("application/json");
+	xmlhttp.send(null);
+	pay = JSON.parse(xmlhttp.responseText)["payload"];
+	// console.log("PAY: "+pay);
+    return pay;
 }
-requests.adminThreaded = function(action, arguments, callBack){
-	args = "key=" + localStorage.sessionKey
-	for(i in arguments){
-		if(i == undefined) continue
-		args += "&" + i + "=" + encodeURIComponent(arguments[i])
-	}
-	try{
-		var xml = new XMLHttpRequest()
-		xml.open("GET", "/action/"+action+"?"+args, true)
-	}catch(err){return false}
-	try{xml.send()}catch(err){return false}
-	xml.onreadystatechange = function(){
-		if(xml.readyState == 4){
-			try{
-				var response = JSON.parse(xml.responseText)
-			}catch(err){
-				callBack(false)
-				return
-			}
-			callBack(response["payload"])
-		}
-	}
+
+requests.adminThreaded = function(action, arglist, callBack){
+	var args = doArgs(arglist)
+
+	var xmlhttp;
+	xmlhttp = new XMLHttpRequest();
+	xmlhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      return JSON.parse(this.responseText)
+        }
+    };
+    xmlhttp.open("GET", "/action/"+action+"?"+args, false);
+	xmlhttp.overrideMimeType("application/json");
+	xmlhttp.send(null);
+	try {
+        pay = JSON.parse(xmlhttp.responseText)["payload"];
+    }
+    catch(err) {
+        console.log("Callback PAY: "+xmlhttp.responseText);
+    }
+	callBack(pay);
 }

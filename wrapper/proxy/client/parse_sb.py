@@ -1,11 +1,16 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2016, 2017 - BenBaptist and Wrapper.py developer(s).
+# Copyright (C) 2016 - 2018 - BenBaptist and Wrapper.py developer(s).
 # https://github.com/benbaptist/minecraft-wrapper
 # This program is distributed under the terms of the GNU
 # General Public License, version 3 or later.
 
+import json
+import threading
+import time
+
 from proxy.utils.constants import *
+from proxy.utils.mcuuid import MCUUID
 
 
 # noinspection PyMethodMayBeStatic
@@ -19,12 +24,87 @@ class ParseSB(object):
         self.log = client.log
         self.packet = packet
         self.pktSB = self.client.pktSB
+        self.pktCB = self.client.pktCB
 
         self.command_prefix = self.proxy.srv_data.command_prefix
         self.command_prefix_non_standard = self.command_prefix != "/"
-        self.command_prefix_len = len(self.command_prefix)
 
-    def parse_play_player_poslook(self):  # player position and look
+    def keep_alive(self):
+        data = self.packet.readpkt(self.pktSB.KEEP_ALIVE[PARSER])
+
+        if data[0] == self.client.keepalive_val:
+            self.client.time_client_responded = time.time()
+        return False
+
+    def plugin_message(self):
+        """server-bound"""
+        channel = self.packet.readpkt([STRING, ])[0]
+
+        if channel not in self.proxy.registered_channels:
+            # we are not actually registering our channels with the MC server
+            # and there will be no parsing of other channels.
+            return True
+
+        if channel == "MC|Brand":
+            data = self.packet.readpkt([STRING])[0]
+            self.log.debug(
+                "(%s) client MC|Brand = %s", self.client.username, data
+            )
+            return True
+
+        # SB PING
+        if channel == "WRAPPER.PY|PING":
+            # then we now know this wrapper is a child wrapper since
+            # minecraft clients will not ping us
+            self.client.info["client-is-wrapper"] = True
+            self._plugin_poll_client_wrapper()
+
+        # SB RESP
+        elif channel == "WRAPPER.PY|RESP":
+            # read some info the client wrapper sent
+            # since we are only communicating with wrappers; we use the modern
+            #  format:
+            datarest = self.packet.readpkt([STRING, ])[0]
+            response = json.loads(datarest, encoding='utf-8')
+            if self._plugin_response(response):
+                pass  # for now...
+
+        # do not pass Wrapper.py registered plugin messages
+        return False
+
+    def _plugin_response(self, response):
+        """
+        Process the WRAPPER.PY|RESP plugin response packet
+        """
+        if "ip" in response:
+            self.client.info["username"] = response["username"]
+            self.client.info["realuuid"] = MCUUID(response["realuuid"]).string
+            self.client.info["ip"] = response["ip"]
+
+            self.client.ip = response["ip"]
+            if response["realuuid"] != "":
+                self.client.mojanguuid = MCUUID(response["realuuid"])
+            self.client.username = response["username"]
+            return True
+        else:
+            self.log.debug(
+                "some kind of error with _plugin_response - no 'ip' key"
+            )
+            return False
+
+    def _plugin_poll_client_wrapper(self):
+        """
+        CB PONG
+        Send this wrapper client's self.info to another wrapper that
+        PINGed this wrapper.
+        """
+        channel = "WRAPPER.PY|PONG"
+        data = json.dumps(self.client.info)
+        # only our wrappers communicate with this, so, format is not critical
+        self.packet.sendpkt(self.pktCB.PLUGIN_MESSAGE[PKT], [STRING, STRING],
+                            (channel, data), serverbound=False)
+
+    def play_player_poslook(self):  # player position and look
         """decided to use this one solely for tracking the client position"""
 
         # DOUBLE, DOUBLE, DOUBLE, DOUBLE, FLOAT, FLOAT, BOOL - 1.7 - 1.7.10
@@ -32,7 +112,8 @@ class ParseSB(object):
 
         # DOUBLE, DOUBLE, DOUBLE, FLOAT, FLOAT, BOOL - 1.8 and up
         # ("double:x|double:feety|double:z|float:yaw|float:pitch|bool:on_ground")
-
+        if not self.client.local:
+            return True
         data = self.packet.readpkt(self.pktSB.PLAYER_POSLOOK[PARSER])
         if self.client.clientversion > PROTOCOL_1_8START:
             self.client.position = (data[0], data[1], data[2])
@@ -42,13 +123,31 @@ class ParseSB(object):
             self.client.head = (data[4], data[5])
         return True
 
-    def parse_play_chat_message(self):
+    def play_chat_message(self):
         data = self.packet.readpkt([STRING])
         if data is None:
             return False
 
         # Get the packet chat message contents
         chatmsg = data[0]
+
+        if chatmsg[:4] == "/hub":
+            if len(chatmsg) == 4:
+                goto = ""
+                if not self.client.local or self.client.info["client-is-wrapper"]:  # noqa
+                    self._world_hub_command(goto)
+                    return False
+            else:
+                if self.client.usehub:
+                    arg = chatmsg.split()
+                    # the command may have been something else like "/hubbify"..
+                    if arg[0] == "/hub" and len(arg) > 1:
+                        goto = arg[1]
+                        self._world_hub_command(goto)
+                        return False
+
+        if not self.client.local:
+            return True
 
         payload = self.proxy.eventhandler.callevent("player.rawMessage", {
             "playername": self.client.username,
@@ -74,6 +173,7 @@ class ParseSB(object):
             <payload>
 
         """
+
         # This part allows the player plugin event "player.rawMessage" to...
         if payload is False:
             return False  # ..reject the packet (by returning False)
@@ -91,45 +191,55 @@ class ParseSB(object):
             chatmsg = payload["message"]
 
         # determine if this is a command. act appropriately
-        if chatmsg[0:self.command_prefix_len] == self.command_prefix:
+        if chatmsg[0] == self.command_prefix:
             # it IS a command of some kind
-            if self.proxy.eventhandler.callevent(
-                    "player.runCommand", {
-                        "playername": self.client.username,
-                        "command": chatmsg.split(" ")[0][1:].lower(),
-                        "args": chatmsg.split(" ")[1:]}):
+            allwords = chatmsg.split(" ")
+            self.proxy.eventhandler.callevent(
+                "player.runCommand", {
+                    "playername":
+                        self.client.username,
+                    "player":
+                        self.client.servervitals.players[self.client.username],
+                    "command":
+                        allwords[0][1:],
+                    "args":
+                        allwords[1:]
+                }, abortable=False
+            )
 
-                # wrapper processed this command.. it goes no further
-                """ eventdoc
-                    <group> Proxy <group>
+            # wrapper processed this command.. it goes no further
+            """ eventdoc
+                <group> Proxy <group>
 
-                    <description> When a player runs a command. Do not use
-                    for registering commands.
-                    <description>
+                <description> internalfunction <description>
 
-                    <abortable> Yes. Registered commands ARE already aborted since they do not get passed to the server.
-                    <abortable>
+                <abortable> 
+                No. Proxy - all commands are automatically aborted and re-handled by Wrapper.
+                <abortable>
 
-                    <comments>
-                    Called AFTER player.rawMessage event (if rawMessage
-                    does not reject it).  However, rawMessage could have
-                    modified it before this point.
-                    
-                    The best use of this event is a quick way to prevent a client from 
-                    passing certain commands or command arguments to the server.
-                    rawMessage is better if you need something else (parsing or
-                    filtering chat, for example).
-                    <comments>
+                <comments>
+                 When a player runs a command. Do not use
+                for registering commands.  There is not real good use-case 
+                for a plugin developer to use this event.  Registering
+                your own commands will do the same job.  You could use this 
+                to overrided a minecraft command with your own... but again,
+                registering an identical command will do the same thing.
+                
+                Called AFTER player.rawMessage event (if rawMessage
+                does not reject it).  However, rawMessage could have
+                modified it before this point. rawMessage is better if you 
+                need to, for example, parse or filter chat.
+                <comments>
 
-                    <payload>
-                    "player": playerobject()
-                    "command": slash command (or whatever is set in wrapper's
-                    config as the command cursor).
-                    "args": the remaining words/args
-                    <payload>
+                <payload>
+                "player": playerobject()
+                "command": slash command (or whatever is set in wrapper's
+                config as the command cursor).
+                "args": the remaining words/args
+                <payload>
 
-                """
-                return False
+            """  # noqa
+            return False
 
         if chatmsg[0] == "/" and self.command_prefix_non_standard:
             # strip leading slash if using a non-slash command  prefix
@@ -139,7 +249,88 @@ class ParseSB(object):
         self.client.chat_to_server(chatmsg)
         return False  # and cancel this original packet
 
-    def parse_play_player_position(self):
+    def _world_hub_command(self, where=""):
+        ip = "127.0.0.1"
+        if where == "help":
+            return self._world_hub_help("h")
+
+        elif where == "worlds":
+            return self._world_hub_help("w")
+
+        elif where == "":
+            port = self.proxy.srv_data.server_port
+
+        else:
+            worlds = self.proxy.proxy_worlds
+            if where in worlds:
+                port = self.proxy.proxy_worlds[where]["port"]
+            else:
+                return self._world_hub_help("w")
+        t = threading.Thread(target=self.client.change_servers,
+                             name="hub", args=(ip, port))
+        t.daemon = True
+        t.start()
+
+    def _world_hub_help(self, htype):
+        if htype == "h":
+            self.client.chat_to_client(
+                {
+                    "text": "HUB System help", "color": "gold"
+                }
+            )
+            self.client.chat_to_client(
+                {
+                    "text": "---------------------------", "color": "gold"
+                }
+            )
+            self.client.chat_to_client(
+                {
+                    "text": "/hub - Return to the primary server.",
+                    "color": "dark_green"
+                }
+            )
+            self.client.chat_to_client(
+                {
+                    "text": "/hub <world_name> - Spawn in another world.",
+                    "color": "dark_green"
+                }
+            )
+            self.client.chat_to_client(
+                {
+                    "text": "/hub worlds - List available worlds.",
+                    "color": "dark_green"
+                }
+            )
+        elif htype == "w":
+            self.client.chat_to_client(
+                {
+                    "text": "Available HUB worlds", "color": "gold"
+                }
+            )
+            self.client.chat_to_client(
+                {
+                    "text": "---------------------------", "color": "gold"
+                }
+            )
+            self.client.chat_to_client(
+                {
+                    "text": "/hub - back to the root server.", "color":
+                    "dark_green"
+                }
+            )
+            for places in self.proxy.proxy_worlds:
+                self.client.chat_to_client(
+                    {
+                        "text": "/hub %s - Go to %s." % (
+                            places,
+                            self.proxy.proxy_worlds[places]["desc"]
+                        ),
+                        "color": "dark_green"
+                    }
+                )
+
+    def play_player_position(self):
+        """ hub needs accurate position """
         if self.client.clientversion < PROTOCOL_1_8START:
             data = self.packet.readpkt([DOUBLE, DOUBLE, DOUBLE, DOUBLE, BOOL])
             # ("double:x|double:y|double:yhead|double:z|bool:on_ground")
@@ -152,13 +343,16 @@ class ParseSB(object):
         self.client.position = (data[0], data[1], data[3])
         return True
 
-    def parse_play_player_look(self):
+    def play_player_look(self):
+        """ hub needs accurate position """
         data = self.packet.readpkt([FLOAT, FLOAT, BOOL])
         # ("float:yaw|float:pitch|bool:on_ground")
         self.client.head = (data[0], data[1])
         return True
 
-    def parse_play_player_digging(self):
+    def play_player_digging(self):
+        if not self.client.local:
+            return True
         if self.client.clientversion < PROTOCOL_1_7:
             data = None
             position = data
@@ -265,7 +459,9 @@ class ParseSB(object):
                 """
         return True
 
-    def parse_play_player_block_placement(self):
+    def play_player_block_placement(self):
+        if not self.client.local:
+            return True
         player = self.client.username
         hand = 0  # main hand
         helditem = self.client.inventory[36 + self.client.slot]
@@ -329,7 +525,9 @@ class ParseSB(object):
                 "action": "useitem",
                 "origin": "pktSB.PLAYER_BLOCK_PLACEMENT"
             }):
-                self.log.debug("player helditem was None. (playerblockplacement-SB)")
+                self.log.debug(
+                    "player helditem was None. (playerblockplacement-SB)"
+                )
                 return False
 
         # block placement event
@@ -369,7 +567,9 @@ class ParseSB(object):
             return False
         return True
 
-    def parse_play_use_item(self):  # no 1.8 or prior packet
+    def play_use_item(self):  # no 1.8 or prior packet
+        if not self.client.local:
+            return True
         data = self.packet.readpkt([REST])
         # "rest:pack")
         position = self.client.lastplacecoords
@@ -384,7 +584,9 @@ class ParseSB(object):
                     return False
         return True
 
-    def parse_play_held_item_change(self):
+    def play_held_item_change(self):
+        if not self.client.local:
+            return True
         slot = self.packet.readpkt([SHORT])
         # "short:short")  # ["short"]
         if 9 > slot[0] > -1:
@@ -394,7 +596,9 @@ class ParseSB(object):
             return False
         return True
 
-    def parse_play_player_update_sign(self):
+    def play_player_update_sign(self):
+        if not self.client.local:
+            return True
         if self.client.clientversion < PROTOCOL_1_8START:
             data = self.packet.readpkt(
                 [INT, SHORT, INT, STRING, STRING, STRING, STRING])
@@ -467,14 +671,20 @@ class ParseSB(object):
         self.client.editsign(position, l1, l2, l3, l4, pre_18)
         return False
 
-    def parse_play_client_settings(self):  # read Client Settings
-        """ This is read for later sending to servers we connect to """
+    def play_client_settings(self):  # read Client Settings
+        """
+        This is read for later sending to servers we connect to
+        """
+        if not self.client.local:
+            return True
+
         self.client.clientSettings = self.packet.readpkt([RAW])[0]
-        self.client.clientSettingsSent = True
         # the packet is not stopped, sooo...
         return True
 
-    def parse_play_click_window(self):  # click window
+    def play_click_window(self):  # click window
+        if not self.client.local:
+            return True
         if self.client.clientversion < PROTOCOL_1_8START:
             data = self.packet.readpkt(
                 [BYTE, SHORT, BYTE, SHORT, BYTE, SLOT_NO_NBT])
@@ -577,7 +787,9 @@ class ParseSB(object):
                 return True
         return True
 
-    def parse_play_spectate(self):
+    def play_spectate(self):
+        if not self.client.local:
+            return True
         # Spectate - convert packet to local server UUID
 
         # "Teleports the player to the given entity. The player must be in
@@ -593,11 +805,11 @@ class ParseSB(object):
 
         # ("uuid:target_player")
         for client in self.proxy.clients:
-            if data[0] == client.uuid:
+            if data[0] == client.wrapper_uuid:
                 self.client.server_connection.packet.sendpkt(
-                    self.client.pktSB.SPECTATE,
+                    self.client.pktSB.SPECTATE[PKT],
                     [UUID],
-                    [client.serveruuid])
+                    [client.wrapper_uuid])
                 self.log.debug("spectate returned False (SB)")
                 return False
         return True

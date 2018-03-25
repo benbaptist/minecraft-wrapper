@@ -20,7 +20,9 @@
 
     
 
--  getEntityByEID(self, eid)
+**< class is a duplicate of proxy's entity control (
+    # we are using this for the docs).
+    def __init__(self, proxy) >**
 
         Returns the entity context or False if the specified entity
         ID doesn't exist.
@@ -30,13 +32,11 @@
         at any time!
 
         
-
 -  countActiveEntities(self)
 
         return an integer count of all entities.
 
         
-
 -  countEntitiesInPlayer(self, playername)
 
         returns a list of entity info dictionaries
@@ -59,7 +59,21 @@
             @:type Dict
 
         
+-  existsEntityByEID(self, eid)
 
+        Test whether the specified eid is valid
+
+        
+-  getEntityByEID(self, eid)
+
+        Returns the entity context or False if the specified entity
+        ID doesn't exist.
+
+        CAUTION understand that entities are very DYNAMIC.  The
+        entity object you get could be modified or even deleted
+        at any time!
+
+        
 -  getEntityInfo(self, eid)
 
         Get a dictionary of info on the specified EID.  Returns
@@ -94,13 +108,6 @@
             ..
 
         
-
--  existsEntityByEID(self, eid)
-
-        Test whether the specified eid is valid
-
-        
-
 -  killEntityByEID(self, eid, dropitems=False, count=1)
 
         Takes the entity by eid and kills the first entity of

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2016, 2017 - BenBaptist and Wrapper.py developer(s).
+# Copyright (C) 2016 - 2018 - BenBaptist and Wrapper.py developer(s).
 # https://github.com/benbaptist/minecraft-wrapper
 # This program is distributed under the terms of the GNU
 # General Public License, version 3 or later.
@@ -77,9 +77,7 @@ class Backups(object):
         Allow plugin to re-enable disabled backups or enable backups
         during this wrapper session.
 
-        :returns:
-            :True: tar is installed
-            :False: tar is not installed
+        :returns: False if tar is not installed, otherwise, nothing.
 
         """
         self.wrapper.backups.enabled = True
@@ -116,3 +114,26 @@ class Backups(object):
         num_kept = int(desired_number)
         self.wrapper.backups.config["Backups"]["backups-keep"] = num_kept
         self.wrapper.configManager.save()
+
+    def backupInProgress(self):
+        """
+        Query the state of automatic backups.  This and `backupIsIdle` are
+        just the same function phrased in opposite manner.
+
+        :returns:  True if a backup is in progress.  Otherwise, if a backup
+         is not running, returns False
+
+        """
+        return self.wrapper.backups_running()
+
+    def backupIsIdle(self):
+        """
+        Query the state of automatic backups, asking a boolean representing
+        whether the backups are currently idle.
+
+        :returns:  True if a backup is idle and not running.  Otherwise, if
+         a backup is running, returns False
+
+        """
+        return self.wrapper.backups_idle()
+

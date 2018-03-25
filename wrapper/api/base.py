@@ -252,7 +252,7 @@ class API(object):
 
         :returns:  None/Nothing
 
-        """
+        """  # noqa
         if not self.internal:
             self.wrapper.log.debug(
                 "[%s] Registered help group '%s' with %d commands",
@@ -278,15 +278,63 @@ class API(object):
                     # sock.remove(event)
             time.sleep(0.05)
 
-    def callEvent(self, event, payload):
-        # TODO this event's purpose/functionality and
-        # use cases are unknown at this time
+    def sendAlerts(self, message, group="wrapper", blocking=False):
+        """
+        Used to send alerts outside of wrapper (email, for instance).
+
+        :Args:
+            :message: The message to be sent to the servers configured
+             and listed in the wrapper.propertues ["Alerts"]["servers"]
+             list.
+            :group: message will be sent to each of the emails/servers
+             listed that have the matching "group" in
+             wrapper.properties.json["Alerts"]["servers"][<serverindex>]["group"]
+            :blocking: if True, runs non-daemonized and holds up continued
+             wrapper execution until sending is complete.  You would want this
+             set to False normally when dealing with players.  However, at an
+             'onDisable' plugin event, or anywhere else wrapper execution may end
+             abruptly, blocking may be advisble to ensure the emails finish.
+
+        :returns:  None/Nothing
+
+        """  # noqa
+        self.wrapper.alerts.ui_process_alerts(message, group, blocking)
+
+    def sendEmail(self, message, recipients, subject, group="wrapper", blocking=False):  # noqa
+        """
+        Use group email server settings to email a specified set of recipients
+        (independent of alerts settings or enablement).
+
+        :Args:
+            :message: The message content to be emailed (text/string).
+            :recipients: list of email addresses, type=list (even if only one)
+            :subject: plain text
+            :group: message will be sent using the settings in the matching
+             "group" in wrapper.properties.json["Alerts"]["servers"][<serverindex>]["group"]
+            :blocking: if True, runs non-daemonized and holds up continued
+             wrapper execution until sending is complete.  You would want this
+             set to False normally when dealing with players.  However, at an
+             'onDisable' plugin event, or anywhere else wrapper execution may end
+             abruptly, blocking may be advisble to ensure the emails finish.
+
+        :returns:  None/Nothing
+
+        """  # noqa
+        self.wrapper.alerts.ui_send_mail(
+            group, recipients, subject, message, blocking)
+
+    def callEvent(self, event, payload, abortable=False):
         """
         Invokes the specific event. Payload is extra information
         relating to the event. Errors may occur if you don't specify
         the right payload information.
+
+        The only use it seems to have is internal (it is used by
+        player.sendCommand().
+
         """
-        return self.wrapper.callevent(event, payload)
+        caller = self.wrapper.callevent
+        return caller(event, payload, abortable)
 
     def getPluginContext(self, plugin_id):
         """
@@ -316,38 +364,34 @@ class API(object):
         else:
             raise LookupError("Plugin %s does not exist!" % plugin_id)
 
-    def getStorage(self, name, world=False, formatting="pickle"):
+    def getStorage(self, name, world=False, pickle=True):
         """
-        Returns a storage object manager.  The manager contains the
-        storage object, 'Data' (a dictionary). 'Data' contains the
-        data your plugin will remember across reboots.
+        Returns a storage object manager for saving data between reboots.
+
+        :Args:
+            :name:  The name of the storage (on disk).
+            :world:  THe location of the storage on disk -
+                :False: '/wrapper-data/plugins'.
+                :True: '<serverpath>/<worldname>/plugins'.
+            :Pickle:  Whether wrapper should pickle or save as json.
+
+            Pickle formatting is the default. pickling is
+             less strict than json formats and leverages binary storage.
+             Use of json can result in errors if your keys or data do not
+             conform to json standards (like use of string keys).  However,
+             pickle is not generally human-readable, whereas json is human
+             readable.
+
+        :Returns: A storage object manager.  The manager contains a
+         storage dictionary called 'Data'. 'Data' contains the
+         data your plugin will remember across reboots.
+        ___
 
         :NOTE: This method is somewhat different from previous Wrapper
          versions prior to 0.10.1 (build 182).  The storage object is
          no longer a data object itself; It is a manager used for
          controlling the saving of the object data.  The actual data
-         is contained in Dictionary subitem 'Data'
-
-        ___
-
-        :Args:
-            :name:  The name of the storage (on disk).
-            :world:
-                :False: set the storage's location to
-                 '/wrapper-data/plugins'.
-                :True: set the storage path to
-                 '<serverpath>/<worldname>/plugins'.
-
-            :formatting="pickle":  Pickle formatting is the default. pickling is
-             less strict than json formats and leverages binary storage.
-             Use of json (or future implemented formats) can result in
-             errors if your keys or data do not conform to json standards
-             (like use of string keys).  However, pickle is not generally
-             human-readable, whereas json is human readable. If you need
-             a human-readable copy (for debugging), consider using
-             self.api.helpers.putjsonfile(<yourDictionary>) to write a
-             copy to disk in Json.  if you do so, check the return status
-             of `putjsonfile` to make sure it was written.
+         is contained in the property/dictionary variable 'Data'
 
         ___
 
@@ -409,9 +453,6 @@ class API(object):
             ..
 
         """
-        pickle = False
-        if formatting == "pickle":
-            pickle = True
         if world:
             return Storage(name, root="%s/%s/plugins/%s" % (
                 self.serverpath, self.minecraft.getWorldName(),
@@ -538,8 +579,9 @@ class API(object):
         """
         return self.wrapper.perms.clear_user_data()
 
-    def hash_password(self, password):
-        """ Bcrypt-based password encryption.  Takes a raw string password
+    def hashPassword(self, password):
+        """
+        Bcrypt-based password encryption.  Takes a raw string password
         returns a string representation of the binary hash.
 
         Bcrypt functions are to be used where ever you are storing a user's
@@ -557,8 +599,9 @@ class API(object):
 
         return self.wrapper.cipher.bcrypt_make_hash(password)
 
-    def check_password(self, password, hashed_password):
-        """ Bcrypt-based password checker.  Takes a raw string password and
+    def checkPassword(self, password, hashed_password):
+        """
+        Bcrypt-based password checker.  Takes a raw string password and
         compares it to the hash of a previously hashed password, returning True
         if the passwords match, or False if not.
 

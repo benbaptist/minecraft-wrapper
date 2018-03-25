@@ -17,6 +17,31 @@ if PY3:
     # noinspection PyShadowingBuiltins
     xrange = range
 
+TRANSLATE = {
+    "op":
+        [
+            {'clickEvent': {'action': 'suggest_command', 'value': '/op '},
+             'translate': 'commands.op.usage'},
+
+            {'clickEvent': {'action': 'suggest_command', 'value': '/op '},
+             'text':
+                 '/op <player> [-s SUPEROP] [-o OFFLINE] [-l <superoplevel>]',
+             'italic': True,
+             'color': 'yellow'}
+        ],
+    "whitelist":
+        [
+            {'clickEvent': {'value': '/whitelist ', 'action': 'suggest_command'},  # noqa
+             'translate': 'commands.whitelist.usage'},
+
+            {'clickEvent': {'action': 'suggest_command', 'value': '/whitelist '},  # noqa
+             'text':
+                 '/whitelist <on|off|list|add|remvove|reload|offline|online>',
+             'italic': True,
+             'color': 'yellow'}
+        ],
+}
+
 
 # noinspection PyMethodMayBeStatic
 class ParseCB(object):
@@ -36,146 +61,163 @@ class ParseCB(object):
     # Items that need parsed and re-sent with proper offline/online UUID
     # translation.
 
-    def parse_play_player_list_item(self):
+    def play_player_list_item(self):
         """This must be parsed and modified to make sure UUIDs match.
-        Otherwise weird things can happen likee players not seeing
+        Otherwise weird things can happen like players not seeing
         each other or duplicate names on the tab list, etc."""
+
+        # if something goes wrong in the while loops, we need to break this..
+
         if self.server.version >= PROTOCOL_1_8START:
-            head = self.packet.readpkt([VARINT, VARINT])
+            raw = b""
+            header = self.packet.readpkt([VARINT, VARINT])
             # ("varint:action|varint:length")
-            lenhead = head[1]
-            action = head[0]
-            z = 0
-            while z < lenhead:
-                serveruuid = self.packet.readpkt([UUID])[0]
-                playerclient = self.proxy.getclientbyofflineserveruuid(
-                    serveruuid)
-                if not playerclient:
-                    z += 1
-                    continue
-                try:
-                    # Not sure how could this fail. All clients have a uuid.
-                    uuid = playerclient.uuid
-                except Exception as e:
-                    # uuid = playerclient
-                    self.log.exception("playerclient.uuid failed in "
-                                       "playerlist item (%s)", e)
-                    z += 1
-                    continue
-                z += 1
+            action = header[0]
+            number_players = header[1]
+
+            raw += self.client.packet.send_varint(action)
+            raw += self.client.packet.send_varint(number_players)
+
+            curr_index = 0
+
+            while curr_index < number_players:
+                player_uuid_from_server = self.packet.readpkt([UUID])[0]
+
+                player_client = self.proxy.getclientbyofflineserveruuid(
+                    player_uuid_from_server)
+
+                if player_client:
+                    raw += self.client.packet.send_uuid(
+                        player_client.wrapper_uuid)
+                else:
+                    raw += self.client.packet.send_uuid(
+                        player_uuid_from_server)
+
+                curr_index += 1
+
+                # Action Add Player
                 if action == 0:
-                    properties = playerclient.properties
-                    raw = b""
-                    for prop in properties:
-                        raw += self.client.packet.send_string(prop["name"])
-                        raw += self.client.packet.send_string(prop["value"])
-                        if "signature" in prop:
-                            raw += self.client.packet.send_bool(True)
-                            raw += self.client.packet.send_string(
-                                prop["signature"])
-                        else:
-                            raw += self.client.packet.send_bool(False)
-                    raw += self.client.packet.send_varint(0)
-                    raw += self.client.packet.send_varint(0)
-                    raw += self.client.packet.send_bool(False)
-                    self.client.packet.sendpkt(
-                        self.pktCB.PLAYER_LIST_ITEM,
-                        [VARINT, VARINT, UUID, STRING, VARINT, RAW],
-                        (0, 1, playerclient.uuid, playerclient.username,
-                         len(properties), raw))
 
+                    name = self.packet.readpkt([STRING])[0]
+                    prop_count = self.packet.readpkt([VARINT])[0]
+                    raw += self.client.packet.send_string(name)
+
+                    curr_prop = 0
+                    rawprop = b""
+                    rawprop += self.client.packet.send_varint(prop_count)
+                    while curr_prop < prop_count:
+                        # These properties usually seem empty
+                        # name, value, is_signed?, signature
+                        _property = self.packet.readpkt(
+                            [STRING, STRING, BOOL])
+                        rawprop += self.client.packet.send_string(_property[0])
+                        rawprop += self.client.packet.send_string(_property[1])
+                        rawprop += self.client.packet.send_bool(_property[2])
+                        if _property[2]:
+                            rawprop += self.client.packet.send_string(
+                                self.packet.readpkt([STRING])[0]
+                            )
+                    if player_client:
+                        # so, if possible, we supply them.
+                        our_prop_count = len(player_client.properties)
+                        raw += self.client.packet.send_varint(our_prop_count)
+                        for prop in player_client.properties:
+                            raw += self.client.packet.send_string(prop["name"])
+                            raw += self.client.packet.send_string(prop["value"])
+                            if "signature" in prop:
+                                raw += self.client.packet.send_bool(True)
+                                raw += self.client.packet.send_string(
+                                    prop["signature"])
+                            else:
+                                raw += self.client.packet.send_bool(False)
+                    else:
+                        raw += rawprop
+
+                    # gamemode, ping (milliseconds),  Has Display Name?
+                    more = self.packet.readpkt([VARINT, VARINT, BOOL])
+                    raw += self.client.packet.send_varint(more[0])
+                    raw += self.client.packet.send_varint(more[1])
+                    raw += self.client.packet.send_bool(more[2])
+
+                    # display name
+                    if more[2]:
+                        raw += self.client.packet.send_string(
+                            self.packet.readpkt([STRING])[0]
+                        )
+
+                # Action Update Gamemode
                 elif action == 1:
-                    data = self.packet.readpkt([VARINT])
+                    data = self.packet.readpkt([VARINT])[0]
+                    raw += self.client.packet.send_varint(data)
 
-                    # noinspection PyUnusedLocal
-                    # todo should we be using this to set client gamemode?
-                    gamemode = data[0]
-                    # ("varint:gamemode")
-                    self.client.packet.sendpkt(
-                        self.pktCB.PLAYER_LIST_ITEM,
-                        [VARINT, VARINT, UUID, VARINT],
-                        (1, 1, uuid, data[0]))
-                    # print(1, 1, uuid, gamemode)
+                # Action Update Latency
                 elif action == 2:
-                    data = self.packet.readpkt([VARINT])
-                    ping = data[0]
-                    # ("varint:ping")
-                    self.client.packet.sendpkt(
-                        self.pktCB.PLAYER_LIST_ITEM,
-                        [VARINT, VARINT, UUID, VARINT],
-                        (2, 1, uuid, ping))
+                    data = self.packet.readpkt([VARINT])[0]
+                    raw += self.client.packet.send_varint(data)
+
+                # Action Update Display Name
                 elif action == 3:
                     data = self.packet.readpkt([BOOL])
                     # ("bool:has_display")
                     hasdisplay = data[0]
+                    raw += self.client.packet.send_bool(hasdisplay)
+
                     if hasdisplay:
-                        data = self.packet.readpkt([STRING])
-                        displayname = data[0]
-                        # ("string:displayname")
-                        self.client.packet.sendpkt(
-                            self.pktCB.PLAYER_LIST_ITEM,
-                            [VARINT, VARINT, UUID, BOOL, STRING],
-                            (3, 1, uuid, True, displayname))
+                        raw += self.client.packet.send_string(
+                            self.packet.readpkt([STRING])[0]
+                        )
 
-                    else:
-                        self.client.packet.sendpkt(
-                            self.pktCB.PLAYER_LIST_ITEM,
-                            [VARINT, VARINT, UUID, VARINT],
-                            (3, 1, uuid, False))
-
+                # Remove Player
                 elif action == 4:
-                    self.client.packet.sendpkt(
-                        self.pktCB.PLAYER_LIST_ITEM,
-                        [VARINT, VARINT, UUID],
-                        (4, 1, uuid))
+                    pass  # no fields (this elif is only here for readability)
 
-                return False
+            self.client.packet.sendpkt(
+                self.pktCB.PLAYER_LIST_ITEM[PKT], [RAW], [raw]
+            )
+            return False
         else:  # version < 1.7.9 needs no processing
             return True
-        return True
 
-    def parse_play_spawn_player(self):  # embedded UUID -must parse.
-        # This packet  is used to spawn other players into a player
-        # client's world.  if this packet does not arrive, the other
-        #  player(s) will not be visible to the client
-        if self.server.version < PROTOCOL_1_8START:
-            dt = self.packet.readpkt([VARINT, STRING, REST])
-        else:
-            dt = self.packet.readpkt([VARINT, UUID, REST])
-        # 1.7.6 "varint:eid|string:uuid|rest:metadt")
-        # 1.8 "varint:eid|uuid:uuid|int:x|int:y|int:z|byte:yaw|
-        #     byte:pitch|short:item|rest:metadt")
-        # 1.9 "varint:eid|uuid:uuid|int:x|int:y|int:z|byte:yaw|
-        #     yte:pitch|rest:metadt")
-
+    def play_spawn_player(self):  # embedded UUID -must parse.
+        """
+        This packet  is used to spawn other players into a player
+        client's world.  if this packet does not arrive, the other
+        player(s) will not be visible to the client
+        it does not play a role in the player's spawing process.
+        """
+        dt = self.packet.readpkt(self.pktCB.SPAWN_PLAYER[PARSER])
+        # dt = (eid, uuid, REST)
         # We dont need to read the whole thing.
-        clientserverid = self.proxy.getclientbyofflineserveruuid(dt[1])
-        if clientserverid.uuid:
-            if self.server.version < PROTOCOL_1_8START:
+        eid, player_uuid_on_server, rest = dt
+
+        player_client = self.proxy.getclientbyofflineserveruuid(
+            player_uuid_on_server
+        )
+        if player_client:
+            if player_client.wrapper_uuid:
                 self.client.packet.sendpkt(
-                    self.pktCB.SPAWN_PLAYER,
-                    [VARINT, STRING, RAW],
-                    (dt[0], str(clientserverid.uuid), dt[2]))
-            else:
-                self.client.packet.sendpkt(
-                    self.pktCB.SPAWN_PLAYER,
-                    [VARINT, UUID, RAW],
-                    (dt[0], clientserverid.uuid, dt[2]))
+                    self.pktCB.SPAWN_PLAYER[PKT],
+                    self.pktCB.SPAWN_PLAYER[PARSER],
+                    (eid, player_client.wrapper_uuid, rest))
             return False
-        return True
+        return False
 
     # Wrapper events and info section:
 
-    def parse_play_chat_message(self):
+    def play_chat_message(self):
+        if not self.client.local:
+            return True
         data, position = self.packet.readpkt(self.pktCB.CHAT_MESSAGE[PARSER])
         # position (1.8+ only)
         # 0: chat (chat box), 1: system message (chat box), 2: above hotbar
-        # print("SEND", type(data), data)
-        # Over-ride OP help display
-        if "/op <player>" in data:
-            new_usage = "player> [-s SUPER-OP] [-o OFFLINE] [-l <level>]"
-            message = data.replace("player>", new_usage)
-            data = message
+
+        # Over-ride help display
+
+        for eachtrans in TRANSLATE:
+            if TRANSLATE[eachtrans][0] == data:
+                new_usage = TRANSLATE[eachtrans][1]
+                data = new_usage
+        # self.log.debug(data)
 
         payload = self.proxy.eventhandler.callevent(
             "player.chatbox", {"playername": self.client.username,
@@ -199,45 +241,47 @@ class ParseCB(object):
             "json": json or string data
             <payload>
 
-        """
+        """  # noqa
 
         # reject the packet outright .. no chat gets sent to the client
         if payload is False:
             return False
 
-        # if payload returns a dictionary, convert it to string and
-        # substitute for data
-        elif type(payload) == dict:
-            data = json.dumps(payload)
+        # packet allowed to pass (but not changed by any plugin event)
+        if payload is True:
+            return True
 
-        # if payload (plugin dev) returns a string-only object...
-        elif type(payload) == str:
-            data = payload
+        # pre - 1.8 only accepts string (now it's a dict/json parse)
+        if self.client.clientversion < PROTOCOL_1_8START:
+            if type(payload) == dict:
+                payload = json.dumps(payload)
 
         self.client.packet.sendpkt(self.pktCB.CHAT_MESSAGE[PKT],
                                    self.pktCB.CHAT_MESSAGE[PARSER],
-                                   (data, position))
+                                   (payload, position))
         return False
 
-    def parse_play_player_poslook(self):
+    def play_player_poslook(self):
         """This packet is not actually sent very often.  Maybe on respawns
-        or position corrections."""
+        or position corrections.  Hub requires this to be updated"""
         # CAVEAT - The client and server bound packet formats are different!
         data = self.packet.readpkt(self.pktCB.PLAYER_POSLOOK[PARSER])
         relativemarker = data[5]
-        # print("PPLOOK_DATA = ", data, type(data[0]), type(data[1]),
-        #       type(data[2]), type(data[3]), type(data[4]), type(data[5]))
-        # fill player position if this is absolute position (or a pre 1.8 server)
+        # fill player pos if this is absolute position (or a pre 1.8 server)
         if relativemarker == 0 or self.server.version < PROTOCOL_1_8START:
             self.client.position = (data[0], data[1], data[2])
         return True
 
-    def parse_play_use_bed(self):
+    def play_use_bed(self):
+        if not self.client.local:
+            return True
         data = self.packet.readpkt([VARINT, POSITION])
         if data[0] == self.client.server_eid:
             self.proxy.eventhandler.callevent(
                 "player.usebed",
-                {"playername": self.client.username, "position": data[1]})
+                {"playername": self.client.username, "position": data[1]},
+                abortable=False
+            )
 
             """ eventdoc
                 <group> Proxy <group>
@@ -255,65 +299,98 @@ class ParseCB(object):
                 "position": position of bed
                 <payload>
 
-            """
+            """  # noqa
         return True
 
-    def parse_play_join_game(self):
+    def play_join_game(self):
+        """Hub continues to track these items, especially dimension"""
+        self.client.server_connection.plugin_ping()
         data = self.packet.readpkt(self.pktCB.JOIN_GAME[PARSER])
-
-        self.client.server_eid = data[0]
         self.client.gamemode = data[1]
         self.client.dimension = data[2]
+        self.client.server_eid = data[0]
+        self.log.debug(
+            "(Client: %s) sending Join.Game GM: %s|DIM: %s| EID %s" % (
+                self.client.username,
+                self.client.gamemode,
+                self.client.dimension,
+                self.client.server_eid
+            )
+        )
+
         return True
 
-    def parse_play_spawn_position(self):
+    def play_spawn_position(self):
+        """Sent by the server after login to specify the coordinates of the
+        spawn point (the point at which players spawn at, and which the
+        compass points to). It can be sent at any time to update the point
+        compasses point at."""
+        if not self.client.local:
+            return True
         data = self.packet.readpkt([POSITION])
-        self.client.position = data[0]
         self.proxy.eventhandler.callevent(
             "player.spawned", {"playername": self.client.username,
-                               "position": data})
+                               "position": data},
+            abortable=False
+        )
 
         """ eventdoc
             <group> Proxy <group>
 
-            <description> Sent when server advises the client of its spawn position.
+            <description> Sent when server advises the client of the Spawn position.
             <description>
 
             <abortable> No - Notification only. <abortable>
 
-            <comments>
+            <comments>  Sent by the server after login to specify the coordinates of the spawn point (the point at which players spawn at, and which the compass points to). It can be sent at any time to update the point compasses point at.
             <comments>
 
             <payload>
             "playername": client username
-            "position": position
+            "position": Spawn's position
             <payload>
 
-        """
+        """  # noqa
+
+        self.client.send_client_settings()
         return True
 
-    def parse_play_respawn(self):
+    def play_respawn(self):
+        """Hub continues to track these items, especially dimension"""
         data = self.packet.readpkt([INT, UBYTE, UBYTE, STRING])
         # "int:dimension|ubyte:difficulty|ubyte:gamemode|level_type:string")
-        self.client.gamemode = data[2]
         self.client.dimension = data[0]
+        self.client.difficulty = data[1]
+        self.client.gamemode = data[2]
+        self.client.level_type = data[3]
         return True
 
-    def parse_play_change_game_state(self):
+    def play_change_game_state(self):
+        """Hub needs to track these items to prevent perpetual raining, etc."""
         data = self.packet.readpkt([UBYTE, FLOAT])
         # ("ubyte:reason|float:value")
         if data[0] == 3:
-            self.client.gamemode = data[1]
+            self.client.gamemode = int(data[1])
+        if data[0] == 2:
+            self.client.raining = True
+        if data[0] == 1:
+            self.client.raining = False
         return True
 
-    def parse_play_disconnect(self):
+    def play_disconnect(self):
+        """Hub needs to monitor this to respawn someone to the hub."""
+        if self.client.local:
+            return True
         message = self.packet.readpkt([JSON])
         self.server.close_server("Server kicked %s with PLAY disconnect: %s" %
                                  (self.client.username, message))
         # client connection will determine if player needs to be kicked
+        self.server.client.notify_disconnect(message)
         return False
 
-    def parse_play_time_update(self):
+    def play_time_update(self):
+        if not self.client.local:
+            return True
         data = self.packet.readpkt([LONG, LONG])
         # "long:worldage|long:timeofday")
         # There could be a number of clients trying to update this at once
@@ -324,59 +401,121 @@ class ParseCB(object):
             pass
         return True
 
-    # Window processing/ inventory tracking
+    def play_tab_complete(self):
+        if not self.client.local:
+            return True
+        rawdata = self.packet.readpkt(self.pktCB.TAB_COMPLETE[PARSER])
+        data = rawdata[0]
 
-    def parse_play_open_window(self):
+        payload = self.proxy.eventhandler.callevent(
+            "server.autoCompletes", {
+                "playername": self.client.username,
+                "completes": data})
+        """ eventdoc
+            <group> Proxy <group>
+
+            <description> internalfunction <description>
+
+            <abortable> Yes <abortable>
+
+            <comments>
+            Can be aborted by returning False. To change the contents, return
+            an alternate list of strings.
+            *This is a wrapper internal function* Errors could be created if 
+            you try to abort/edit this event payload.
+            <comments>
+            <payload>
+            "playername": player's name
+            "completes": A list of auto-completions supplied by the server.
+            <payload>
+
+        """
+
+        # allow to cancel event...
+        if payload is False:
+            return False
+
+        # change payload.
+        if type(payload) == list:
+            self.client.packet.sendpkt(self.pktCB.TAB_COMPLETE[PKT],
+                                       self.pktCB.TAB_COMPLETE[PARSER],
+                                       [payload])
+            return False
+        return True
+
+    def update_health(self):
+        data = self.packet.readpkt(self.pktCB.UPDATE_HEALTH[PARSER])
+        self.client.health = data[0]
+        self.client.food = int(data[1])
+        self.client.food_sat = data[2]
+        return True
+
+    # chunk processing
+    def play_chunk_data(self):
+        """CHUNK_DATA
+        Cache first 49 raw chunks for use with respawning."""
+        if len(self.client.first_chunks) < 49:
+            data = self.packet.readpkt([RAW, ])
+            self.client.first_chunks.append(data)
+        return True
+
+    # Window processing/ inventory tracking
+    # ---------------------------------------
+
+    def play_held_item_change(self):
+        data = self.packet.readpkt(self.pktCB.HELD_ITEM_CHANGE[PARSER])
+        self.client.slot = data[0]
+
+    def play_open_window(self):
         # This works together with SET_SLOT to maintain
         #  accurate inventory in wrapper
         data = self.packet.readpkt(self.pktCB.OPEN_WINDOW[PARSER])
         self.client.currentwindowid = data[0]
-        self.client.noninventoryslotcount = data[3]
+        # self.client.noninventoryslotcount = data[3]
         return True
 
-    def parse_play_set_slot(self):
-        # ("byte:wid|short:slot|slot:data")
-        data = self.packet.readpkt(self.pktCB.SET_SLOT[PARSER])
-        # todo - not sure how we  are dealing with slot counts
-        # inventoryslots = 35
-        # inventoryslots = 36  # 1.9 minecraft with shield / other hand
+    def play_close_window(self):
+        # This works together with SET_SLOT to maintain
+        #  accurate inventory in wrapper
+        self.client.currentwindowid = 0
+        # self.client.noninventoryslotcount = data[3]
+        return True
 
-        # this is only sent on startup when server sends WID = 0 with 45/46
-        # tems and when an item is moved into players inventory from
-        # outside (like a chest or picking something up) After this, these
-        # are sent on chest opens and so forth, each WID incrementing
-        # by +1 per object opened.  The slot numbers that correspond to
-        # player's hotbar will depend on what window is opened...  the
-        # last 10 (for 1.9) or last 9 (for 1.8 and earlier) will be the
-        # player hotbar ALWAYS. to know how many packets and slots total
-        # to expect, we have to parse server-bound pktCB.OPEN_WINDOW.
+    def play_window_items(self):
+        windowid = self.packet.readpkt([UBYTE])[0]
+        if windowid != 0:
+            return True
+        count = range(self.packet.readpkt([SHORT])[0] - 1)
+        for slot in count:
+            item = self.packet.readpkt([SLOT])[0]
+            if item is None:
+                item = -1
+            self.client.inventory[slot] = item
+        return True
+
+    def play_set_slot(self):
+        """Hub still needs this to set player inventory on login"""
+        data = self.packet.readpkt(self.pktCB.SET_SLOT[PARSER])
 
         if data[0] == 0:
             self.client.inventory[data[1]] = data[2]
-
         if data[0] < 0:
             return True
 
         # This part updates our inventory from additional
         #  windows the player may open
-        if data[0] == self.client.currentwindowid:
+        # MC|PickItem causes windowid = -2
+        if data[0] in (0, -2):
             currentslot = data[1]
-
-            # noinspection PyUnusedLocal
-            slotdata = data[2]  # TODO nothing is done with slot data
-
-            if currentslot >= self.client.noninventoryslotcount:
-                # any number of slot above the
-                # pktCB.OPEN_WINDOW declared self.(..)slotcount
-                # is an inventory slot for us to update.
-                self.client.inventory[
-                    currentslot - self.client.noninventoryslotcount + 9
-                ] = data[2]
+            slotdata = data[2]
+            self.client.inventory[currentslot] = slotdata
         return True
 
     # Entity processing sections.  Needed to track entities and EIDs
 
-    def parse_play_spawn_object(self):
+    def play_spawn_object(self):
+        if not self.client.local:
+            return True
         # objects are entities and are GC-ed by detroy entities packet
         if not self.ent_control:
             return True  # return now if no object tracking
@@ -405,7 +544,9 @@ class ParseCB(object):
             self.ent_control.entities.update(newobject)
         return True
 
-    def parse_play_spawn_mob(self):
+    def play_spawn_mob(self):
+        if not self.client.local:
+            return True
         if not self.ent_control:
             return True
         if self.server.version < PROTOCOL_1_9START:
@@ -441,7 +582,9 @@ class ParseCB(object):
             self.ent_control.entities.update(newmob)
         return True
 
-    def parse_play_entity_relative_move(self):
+    def play_entity_relative_move(self):
+        if not self.client.local:
+            return True
         if not self.ent_control:
             return True
         if self.server.version < PROTOCOL_1_8START:  # 1.7.10 - 1.7.2
@@ -458,7 +601,9 @@ class ParseCB(object):
             entupd.move_relative((data[1], data[2], data[3]))
         return True
 
-    def parse_play_entity_teleport(self):
+    def play_entity_teleport(self):
+        if not self.client.local:
+            return True
         if not self.ent_control:
             return True
         if self.server.version < PROTOCOL_1_8START:  # 1.7.10 and prior
@@ -478,7 +623,9 @@ class ParseCB(object):
             entupd.teleport((data[1], data[2], data[3]))
         return True
 
-    def parse_play_attach_entity(self):
+    def play_attach_entity(self):
+        if not self.client.local:
+            return True
         if not self.ent_control:
             return True
         data = []
@@ -498,7 +645,9 @@ class ParseCB(object):
                 self.proxy.eventhandler.callevent(
                     "entity.unmount", {"playername": self.client.username,
                                        "vehicle_id": vehormobeid,
-                                       "leash": leash})
+                                       "leash": leash},
+                    abortable=False
+                )
                 """ eventdoc
                     <group> Proxy <group>
 
@@ -517,14 +666,17 @@ class ParseCB(object):
                     "leash": leash True/False
                     <payload>
 
-                """
-                self.log.debug("player unmount called for %s", self.client.username)
+                """  # noqa
+                self.log.debug("player unmount called for %s",
+                               self.client.username)
                 self.client.riding = None
             else:
                 self.proxy.eventhandler.callevent(
                     "entity.mount", {"playername": self.client.username,
                                      "vehicle_id": vehormobeid,
-                                     "leash": leash})
+                                     "leash": leash},
+                    abortable=False
+                )
                 """ eventdoc
                     <group> Proxy <group>
 
@@ -543,7 +695,7 @@ class ParseCB(object):
                     "leash": leash True/False
                     <payload>
 
-                """
+                """  # noqa
                 self.client.riding = vehormobeid
                 self.log.debug("player mount called for %s on eid %s",
                                self.client.username, vehormobeid)
@@ -556,10 +708,12 @@ class ParseCB(object):
                     entupd.rodeBy = self.client
         return True
 
-    def parse_play_destroy_entities(self):
+    def play_destroy_entities(self):
         # Get rid of dead entities so that python can GC them.
         # TODO - not certain this works correctly (errors -
         # eids not used and too broad exception)
+        if not self.client.local:
+            return True
         if not self.ent_control:
             return True
 

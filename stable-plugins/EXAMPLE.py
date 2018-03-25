@@ -8,7 +8,8 @@ WEBSITE = "http://wrapper.benbaptist.com/"  # the developer or plugin's website
 # the version number, with commas in place of periods.
 VERSION = (0, 1, 0)  # DEFAULT (0, 1)
 
-SUMMARY = "This plugin documents the suggested plugin structure"  # a short summary of the plugin seen in /plugins
+# a short summary of the plugin seen in /plugins
+SUMMARY = "This plugin documents the suggested plugin structure"
 DESCRIPTION = """This is a longer, more in-depth description about the plugin.
 While summaries are for quick descriptions of the plugin, the DESCRIPTION
 field will be used for a more in-depth explanation.
@@ -28,7 +29,7 @@ DISABLED = True  # DEFAULT = False
 #
 # even if there is only 1 dependency, it must be a 'list' type (enclosed in '[]').
 # NOTE - this plugin will not get imported because wrapper will not find these dependencies (except for 'home.py')
-DEPENDENCIES = ["home.py", "teleport.py",]  # DEFAULT = False
+DEPENDENCIES = ["home.py", "teleport.py", ]  # DEFAULT = False
 
 
 # The Wrapper 1.0.0 rc release is not backwards compatible with the pre-release plugin with respect to storages:
@@ -48,7 +49,7 @@ DEPENDENCIES = ["home.py", "teleport.py",]  # DEFAULT = False
 # Items outside the formal API (accessing wrapper/server/proxy/etc methods directly) are not supported.  Wrapper's own
 # internal classes and methods have been fully re-written and refactored with no support for the prior code.
 #
-# desiring to maintain backwards-compatibility in wrapper's API means maintaining the camelCase tradition for the API.
+# desiring to maintain backwards-compatibility in wrapper plugin API means maintaining the camelCase tradition for the API.
 # This reasoning is considered by PEP-8 to be a valid reason for non-compliance with the PEP.
 
 # noinspection PyPep8Naming
