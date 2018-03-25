@@ -121,7 +121,9 @@ def build_the_docs():
     all_functions = "<br>\n\n\n **Looking for a specific method?  Look in" \
                     " this list to see which api module contains the" \
                     "desired method:** \n\n"
-    function_list = []
+
+    function_list = []   # function_list for readme.md
+    functions_in_class = []
 
     for files in api_files:
         with open("wrapper/%s.py" % files) as f:
@@ -148,10 +150,14 @@ def build_the_docs():
             if "class " in all_items[each_item]:
                 header = "**< class%s >**\n" % all_items[each_item].split(
                     "class")[1].split(":")[0]
+                complete_doc = "%s\n%s%s\n" % (complete_doc, header, item)
+                if len(functions_in_class) > 0:
+                    class_functions = "\n".join(sorted(functions_in_class))
+                    complete_doc = "%s%s" % (complete_doc, class_functions)
+                    functions_in_class = []
 
             if "def " in all_items[each_item]:
                 defs = all_items[each_item].split("def")
-                # function_list.append("%s - %s" % (defs, files))
                 number_of_defs = len(defs) - 1
                 header = "- %s\n" % all_items[each_item].split(
                     "def")[number_of_defs].split(":")[0]
@@ -161,7 +167,12 @@ def build_the_docs():
                 print(header, item)
                 if header[0:3] == "-  ":
                     function_list.append("%s -> [↩%s](#%s)" % (header.split("(")[0], files.split("/")[1], files.replace("/", "")))
-                complete_doc = "%s\n%s%s\n" % (complete_doc, header, item)
+                    functions_in_class.append("%s%s" % (header, item))
+                # complete_doc = "%s\n%s%s\n" % (complete_doc, header, item)
+        if len(functions_in_class) > 0:
+            class_functions = "\n".join(sorted(functions_in_class))
+            complete_doc = "%s%s" % (complete_doc, class_functions)
+            functions_in_class = []
         processed[files] = complete_doc
 
     function_list = sorted(function_list)

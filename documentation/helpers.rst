@@ -18,27 +18,24 @@ using 'self.api.helpers'
 
     ..
 
-
+-  chattocolorcodes(jsondata)
+ Convert a chat dictionary to a string with '§_' codes
+    
+    :jsondata: Dictionary of minecraft chat 
+    :returns: a string formatted with '§_' codes
+    
+    
 -  config_to_dict_read(filename, filepath)
 
     reads a disk file with '=' lines (like server.properties) and
     returns a keyed dictionary.
 
     
-
 -  config_write_from_dict(filename, filepath, dictionary)
 
     Use a keyed dictionary and write a disk file with '='
     lines (like server.properties).
     
-
--  scrub_item_value(item)
-
-    Takes a text item value and determines if it should be a boolean,
-    integer, or text.. and returns it as the type.
-
-    
-
 -  epoch_to_timestr(epoch_time)
 
     takes a time represented as integer/string which you supply and
@@ -50,7 +47,6 @@ using 'self.api.helpers'
      suitable in ban files.
 
     
-
 -  format_bytes(number_raw_bytes)
 
     Internal wrapper function that takes number of bytes
@@ -60,7 +56,16 @@ using 'self.api.helpers'
     :returns: tuple - (string repr of 4 digits, string units)
 
     
+-  get_int(s)
 
+    returns an integer representations of a string, no matter what
+    the input value.
+
+    :arg s: Any string value.
+
+    :returns: Applicable value (or 0 for values it can't convert)
+
+    
 -  getargs(arginput, i)
 
     returns a certain index of argument (without producing an
@@ -74,7 +79,6 @@ using 'self.api.helpers'
      exist, returns ""
 
     
-
 -  getargsafter(arginput, i)
 
     returns all arguments starting at position. (positions start
@@ -87,23 +91,6 @@ using 'self.api.helpers'
     :returns: sub list of arguments
 
     
-
--  getjsonfile(filename, directory=".", encodedas="UTF-8")
-
-    Read a json file and return its contents as a dictionary.
-
-    :Args:
-        :filename: filename without extension.
-        :directory: by default, wrapper script directory.
-        :encodedas: the encoding
-
-    :returns:
-        :if successful: a dictionary
-        :if unsuccessful:  None/{}
-        :File not found: False (any requested directory would be created)
-
-    
-
 -  getfileaslines(filename, directory=".")
 
     Reads a file with lines and turns it into a list containing
@@ -122,28 +109,21 @@ using 'self.api.helpers'
     :rtype: list
 
     
+-  getjsonfile(filename, directory=".", encodedas="UTF-8")
 
--  mkdir_p(path)
+    Read a json file and return its contents as a dictionary.
 
-    A simple way to recursively make a directory under any Python.
+    :Args:
+        :filename: filename without extension.
+        :directory: by default, wrapper script directory.
+        :encodedas: the encoding
 
-    :arg path: The desired path to create.
-
-    :returns: Nothing - Raises Exception if it fails
-
-    
-
--  get_int(s)
-
-    returns an integer representations of a string, no matter what
-    the input value.
-
-    :arg s: Any string value.
-
-    :returns: Applicable value (or 0 for values it can't convert)
+    :returns:
+        :if successful: a dictionary
+        :if unsuccessful:  None/{}
+        :File not found: False (any requested directory would be created)
 
     
-
 -  isipv4address(addr)
 
     Returns a Boolean indicating if the address is a valid IPv4
@@ -154,7 +134,15 @@ using 'self.api.helpers'
     :returns: True or False
 
     
+-  mkdir_p(path)
 
+    A simple way to recursively make a directory under any Python.
+
+    :arg path: The desired path to create.
+
+    :returns: Nothing - Raises Exception if it fails
+
+    
 -  pickle_load(path, filename)
 
     Load data from a Pickle file (*.pkl).  Normally the returned data would
@@ -168,7 +156,6 @@ using 'self.api.helpers'
     :returns: saved data.  Failure will yield empty dictionary
 
     
-
 -  pickle_save(path, filename, data, encoding="machine")
 
     Save data to Pickle file (*.pkl).  Allows saving dictionary or other
@@ -185,7 +172,6 @@ using 'self.api.helpers'
     :returns: Nothing.  Assumes success; errors will raise exception.
 
     
-
 -  processcolorcodes(messagestring)
 
     Mostly used internally to process old-style color-codes with
@@ -199,14 +185,12 @@ using 'self.api.helpers'
     :returns: Dictionary chat
 
     
-
 -  processoldcolorcodes(message)
 
     Just replaces text containing the (&) ampersand with section
     signs instead (§).
 
     
-
 -  putjsonfile(data, filename, directory=".", indent_spaces=2, sort=True)
 
     Writes entire data dictionary to a json file.
@@ -228,7 +212,6 @@ using 'self.api.helpers'
             :False: File/directory not found / not accessible:
 
     
-
 -  read_timestr(mc_time_string)
 
     The Minecraft server (or wrapper, using epoch_to_timestr) creates
@@ -247,7 +230,6 @@ using 'self.api.helpers'
          (like "forever").
 
     
-
 -  readout(commandtext, description, separator=" - ", pad=15, command_text_fg="magenta", command_text_opts=("bold",), description_text_fg="yellow", usereadline=True, player=None)
 
     (wraps _readout)
@@ -277,7 +259,12 @@ using 'self.api.helpers'
         ..
 
     
+-  scrub_item_value(item)
 
+    Takes a text item value and determines if it should be a boolean,
+    integer, or text.. and returns it as the type.
+
+    
 -  set_item(item, string_val, filename, path='.')
 
     Reads a file with "item=" lines and looks for 'item'. If
@@ -296,12 +283,4 @@ using 'self.api.helpers'
      the file is not found.  Adds the entry to end of file if
      it is missing.
 
-    
-
--  chattocolorcodes(jsondata)
- Convert a chat dictionary to a string with '§_' codes
-    
-    :jsondata: Dictionary of minecraft chat 
-    :returns: a string formatted with '§_' codes
-    
     
