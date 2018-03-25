@@ -883,7 +883,7 @@ class Player(object):
         :returns:  Boolean indicating whether player has permission or not.
 
         """
-        uuid_to_check = self.mojangUuid.string
+        uuid_to_check = self.uuid
         if another_player:
             # get other player mojang uuid
             uuid_to_check = str(
@@ -895,7 +895,7 @@ class Player(object):
         return self.wrapper.perms.has_permission(
             uuid_to_check, node, group_match, find_child_groups)
 
-    def setPermission(self, node, value=True):
+    def setPermission(self, node, value=True, uuid=None):
         """
         Adds the specified permission node and optionally a value
         to the player.
@@ -905,13 +905,22 @@ class Player(object):
             :value: defaults to True, but can be set to False to
              explicitly revoke a particular permission from the
              player, or to any arbitrary value.
+            :uuid: Optional MCUUID/string UUID of a (different) player.
 
         :returns: Nothing
 
         """
-        self.wrapper.perms.set_permission(self.mojangUuid.string, node, value)
+        try:
+            uuid = uuid.string
+        except AttributeError:
+            pass
 
-    def removePermission(self, node):
+        if uuid:
+            self.wrapper.perms.set_permission(uuid, node, value)
+        else:
+            self.wrapper.perms.set_permission(self.uuid, node, value)
+
+    def removePermission(self, node, uuid=None):
         """
         Completely removes a permission node from the player. They
         will inherit this permission from their groups or from
@@ -922,48 +931,82 @@ class Player(object):
         on nodes inherited from groups or plugin defaults.
 
         :arg node: Permission node (string)
+        :arg uuid: Optional MCUUID/string UUID of a (different) player.
 
         :returns:  Boolean; True if operation succeeds, False if
          it fails (set debug mode to see/log error).
 
         """
-        return self.wrapper.perms.remove_permission(
-            self.mojangUuid.string, node)
+        try:
+            uuid = uuid.string
+        except AttributeError:
+            pass
 
-    def resetPerms(self, uuid):
+        if uuid:
+            return self.wrapper.perms.remove_permission(uuid, node)
+        else:
+            return self.wrapper.perms.remove_permission(self.uuid, node)
+
+    def resetPerms(self, uuid=None):
         """
 
         resets all user data (removes all permissions).
 
-        :arg uuid: The online/mojang uuid (string)
+        :arg uuid: Optional MCUUID/string UUID of a (different) player.
 
         :returns:  nothing
 
         """
-        return self.wrapper.perms.fill_user(uuid)
+        try:
+            uuid = uuid.string
+        except AttributeError:
+            pass
 
-    def hasGroup(self, group):
+        if uuid:
+            return self.wrapper.perms.fill_user(uuid)
+        else:
+            return self.wrapper.perms.fill_user(self.uuid)
+
+    def hasGroup(self, group, uuid=None):
         """
         Returns a boolean of whether or not the player is in
         the specified permission group.
 
         :arg group: Group node (string)
+        :arg uuid: Optional MCUUID/string UUID of a (different) player.
 
         :returns:  Boolean of whether player has permission or not.
 
         """
-        return self.wrapper.perms.has_group(self.mojangUuid.string, group)
+        try:
+            uuid = uuid.string
+        except AttributeError:
+            pass
+        if uuid:
+            return self.wrapper.perms.has_group(uuid, group)
+        else:
+            return self.wrapper.perms.has_group(self.uuid, group)
 
-    def getGroups(self):
+    def getGroups(self, uuid=None):
         """
         Returns a list of permission groups that the player is in.
+
+        :arg uuid: Optional MCUUID/string UUID of a (different) player.
 
         :returns:  list of groups
 
         """
-        return self.wrapper.perms.get_groups(self.mojangUuid.string)
+        try:
+            uuid = uuid.string
+        except AttributeError:
+            pass
 
-    def setGroup(self, group, creategroup=True):
+        if uuid:
+            return self.wrapper.perms.get_groups(uuid)
+        else:
+            return self.wrapper.perms.get_groups(self.uuid)
+
+    def setGroup(self, group, creategroup=True, uuid=None):
         """
         Adds the player to a specified group.  Returns False if
         the command fails (set debiug to see error).  Failure
@@ -976,19 +1019,32 @@ class Player(object):
              group if it does not exist already.  This WILL
              generate a warning log since it is not an expected
              condition.
+            :uuid: Optional MCUUID/string UUID of a (different) player.
 
         :returns:  Boolean; True if operation succeeds, False
          if it fails (set debug mode to see/log error).
 
         """
-        return self.wrapper.perms.set_group(
-            self.mojangUuid.string, group, creategroup)
+        try:
+            uuid = uuid.string
+        except AttributeError:
+            pass
 
-    def removeGroup(self, group):
+        if uuid:
+            return self.wrapper.perms.set_group(
+                uuid, group, creategroup
+            )
+        else:
+            return self.wrapper.perms.set_group(
+                self.uuid, group, creategroup
+            )
+
+    def removeGroup(self, group, uuid=None):
         """
         Removes the player to a specified group.
 
         :arg group: Group node (string)
+        :arg uuid: Optional MCUUID/string UUID of a (different) player.
 
         :returns:  (use debug logging to see any errors)
 
@@ -998,8 +1054,17 @@ class Player(object):
             :False: player uuid not found!
 
         """
-        return self.wrapper.perms.remove_group(
-            self.mojangUuid.string, group)
+        try:
+            uuid = uuid.string
+        except AttributeError:
+            pass
+
+        if uuid:
+            return self.wrapper.perms.remove_group(
+                uuid, group)
+        else:
+            return self.wrapper.perms.remove_group(
+                self.uuid, group)
 
     # Player Information
     def getFirstLogin(self):

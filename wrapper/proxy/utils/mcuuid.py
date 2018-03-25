@@ -77,7 +77,7 @@ class UUIDS(object):
             frequency = 3600  # do not allow more than hourly
         user_uuid_matched = None
         for useruuid in self.usercache:  # try wrapper cache first
-            if user_name == self.usercache[useruuid]["localname"]:
+            if user_name.lower() == self.usercache[useruuid]["localname"].lower():
                 # This search need only be done by 'localname', which is always populated and is always
                 # the same as the 'name', unless a localname has been assigned on the server (such as
                 # when "falling back' on an old name).'''

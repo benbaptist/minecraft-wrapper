@@ -168,9 +168,11 @@
         :returns:  An Integer of the the player's current gamemode.
 
         
--  getGroups(self)
+-  getGroups(self, uuid=None)
 
         Returns a list of permission groups that the player is in.
+
+        :arg uuid: Optional MCUUID/string UUID of a (different) player.
 
         :returns:  list of groups
 
@@ -203,12 +205,13 @@
          and yaw, pitch of head.
         
         
--  hasGroup(self, group)
+-  hasGroup(self, group, uuid=None)
 
         Returns a boolean of whether or not the player is in
         the specified permission group.
 
         :arg group: Group node (string)
+        :arg uuid: Optional MCUUID/string UUID of a (different) player.
 
         :returns:  Boolean of whether player has permission or not.
 
@@ -342,11 +345,12 @@
         :EntityHorse: Horse, donkey, or mule
 
         
--  removeGroup(self, group)
+-  removeGroup(self, group, uuid=None)
 
         Removes the player to a specified group.
 
         :arg group: Group node (string)
+        :arg uuid: Optional MCUUID/string UUID of a (different) player.
 
         :returns:  (use debug logging to see any errors)
 
@@ -356,7 +360,7 @@
             :False: player uuid not found!
 
         
--  removePermission(self, node)
+-  removePermission(self, node, uuid=None)
 
         Completely removes a permission node from the player. They
         will inherit this permission from their groups or from
@@ -367,17 +371,18 @@
         on nodes inherited from groups or plugin defaults.
 
         :arg node: Permission node (string)
+        :arg uuid: Optional MCUUID/string UUID of a (different) player.
 
         :returns:  Boolean; True if operation succeeds, False if
          it fails (set debug mode to see/log error).
 
         
--  resetPerms(self, uuid)
+-  resetPerms(self, uuid=None)
 
 
         resets all user data (removes all permissions).
 
-        :arg uuid: The online/mojang uuid (string)
+        :arg uuid: Optional MCUUID/string UUID of a (different) player.
 
         :returns:  nothing
 
@@ -462,7 +467,7 @@
         :arg gamemode: desired gamemode, as a value 0-3
 
         
--  setGroup(self, group, creategroup=True)
+-  setGroup(self, group, creategroup=True, uuid=None)
 
         Adds the player to a specified group.  Returns False if
         the command fails (set debiug to see error).  Failure
@@ -475,12 +480,13 @@
              group if it does not exist already.  This WILL
              generate a warning log since it is not an expected
              condition.
+            :uuid: Optional MCUUID/string UUID of a (different) player.
 
         :returns:  Boolean; True if operation succeeds, False
          if it fails (set debug mode to see/log error).
 
         
--  setPermission(self, node, value=True)
+-  setPermission(self, node, value=True, uuid=None)
 
         Adds the specified permission node and optionally a value
         to the player.
@@ -490,6 +496,7 @@
             :value: defaults to True, but can be set to False to
              explicitly revoke a particular permission from the
              player, or to any arbitrary value.
+            :uuid: Optional MCUUID/string UUID of a (different) player.
 
         :returns: Nothing
 

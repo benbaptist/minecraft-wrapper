@@ -6,9 +6,9 @@
         0, 
         0, 
         "rc", 
-        0
+        1
     ], 
     "build": 229, 
-    "release_time": 1522003731.642959, 
+    "release_time": 1522020487.404566, 
     "repotype": "stable"
 }
