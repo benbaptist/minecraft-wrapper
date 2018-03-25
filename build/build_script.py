@@ -157,7 +157,7 @@ def build_the_docs():
             if "-  _" not in header and header != "****\n":
                 print(header, item)
                 if header[0:3] == "-  ":
-                    function_list.append("%s -> #%s" % (header.split("(")[0], files))
+                    function_list.append("%s -> [↩%s](#%s)" % (header.split("(")[0], files, files))
                 complete_doc = "%s\n%s%s\n" % (complete_doc, header, item)
         processed[files] = complete_doc
 
@@ -167,12 +167,11 @@ def build_the_docs():
     for files in api_files:
         with open("documentation/%s.rst" % files.split("/")[1], "w") as f:
             f.write(processed[files])
-        index_file = "%s [#%s](/documentation/%s.rst)\n\n" % (
-            index_file, files, files.split("/")[1])
+        index_file = "%s #%s - [%s](/documentation/%s.rst)\n\n" % (
+            index_file, files, files, files.split("/")[1])
     index_file += events_footer + all_functions
 
     with open("documentation/readme.md", "w") as f:
-        f.write("-*- coding: utf-8 -*-\n")
         f.write("Copyright (C) 2016 - 2018 - BenBaptist and Wrapper.py "
                 "developer(s).\n\n")
         f.write(index_file)
