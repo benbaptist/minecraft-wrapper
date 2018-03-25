@@ -323,7 +323,10 @@ class Permissions(object):
 
         if uuid not in self.wrapper.wrapper_permissions.Data["users"]:
             self.fill_user(uuid)
-        self.wrapper.wrapper_permissions.Data["users"][uuid]["groups"].append(group)
+        if group not in self.wrapper.wrapper_permissions.Data[
+                "users"][uuid]["groups"]:
+            self.wrapper.wrapper_permissions.Data[
+                "users"][uuid]["groups"].append(group)
 
         # return the resulting change (as verification)
         return self.has_group(uuid, group)
