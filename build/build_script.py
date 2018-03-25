@@ -157,7 +157,7 @@ def build_the_docs():
             if "-  _" not in header and header != "****\n":
                 print(header, item)
                 if header[0:3] == "-  ":
-                    function_list.append("%s -> [↩%s](#%s)" % (header.split("(")[0], files.split("/")[0], files.strip("/")))
+                    function_list.append("%s -> [↩%s](#%s)" % (header.split("(")[0], files.split("/")[1], files.replace("/", "")))
                 complete_doc = "%s\n%s%s\n" % (complete_doc, header, item)
         processed[files] = complete_doc
 
