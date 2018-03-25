@@ -1,8 +1,8 @@
 <sup>Copyright (C) 2016 - 2018 - BenBaptist and Wrapper.py developer(s).</sup>
 
-*Welcome to the Wrapper.py Plugin API documentation!*
+#Welcome to the Wrapper.py Plugin API documentation!#
 
-The API is divided into modules.  **Click on each module to see it's documentation**
+**The API is divided into modules.  Click on each module to see it's documentation**
 
  ##### [api/wrapperconfig](/documentation/wrapperconfig.rst)
 

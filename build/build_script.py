@@ -106,8 +106,8 @@ def build_the_docs():
     sep = '"""'
     copy_right = "<sup>Copyright (C) 2016 - 2018 - BenBaptist and Wrapper.py" \
                  " developer(s).</sup>\n\n"
-    index_file = "*Welcome to the Wrapper.py Plugin API documentation!" \
-                 "*\n\nThe API is divided into modules.  **Click on each " \
+    index_file = "#Welcome to the Wrapper.py Plugin API documentation!#" \
+                 "\n\n**The API is divided into modules.  Click on each " \
                  "module to see it's documentation**\n\n"
 
     events_footer = "<br>**Click here for a list of Wrapper's events**<br>" \
@@ -164,7 +164,6 @@ def build_the_docs():
 
             # dont create documentation for private functions
             if "-  _" not in header and header != "****\n":
-                print(header, item)
                 if header[0:3] == "-  ":
                     function_list.append("%s -> [↩%s](#%s)" % (header.split("(")[0], files.split("/")[1], files.replace("/", "")))
                     functions_in_class.append("%s%s" % (header, item))
