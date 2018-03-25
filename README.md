@@ -64,10 +64,8 @@ Wrapper.py requires the following packages: </br>
 
 ###  **Start Up**
 
-You only need to download Wrapper.py.  The 'wrapper' folder is the source code and is just the extracted version
+You only need to download Wrapper.py.  The '\wrapper' folder is the source code and is just the extracted version
  of Wrapper.py.  Wrapper.py is a Python-executable archive folder containing the sourcecode.</br>
-
-#### [**Windows Download and setup**](/documentation/windows.md)
 
 To start Wrapper, open a console where the `Wrapper.py` or `/wrapper` sourcecode are
 located and type `python Wrapper.py|/wrapper [--passphrase 'passphrase']` in a
@@ -79,9 +77,8 @@ Once wrapper has started:
 - Open the wrapper.properties.json file and tune the file to your remaining preferences.
 - Tune and setup your server and server.properties accordingly.
 - Restart wrapper.
-- The server will start and accept the Eula for you <sup id="a2">[2](#f2)</sup>
+
     ```
-    [15:28:06] [Wrapper.py/WARNING]: EULA agreement was not accepted, accepting on your behalf...
     [15:28:08] [Server thread/INFO]: Starting minecraft server version 1.12.2
     [15:28:08] [Server thread/INFO]: Loading properties
      ...
