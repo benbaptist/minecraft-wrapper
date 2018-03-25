@@ -116,6 +116,10 @@ def build_the_docs():
                  "api/helpers"]
     processed = {}
 
+    all_functions = "\n\n\nLooking for a specific method?  search this list " \
+                    "to see which api module has it:\n\n"
+    function_list = []
+
     for files in api_files:
         with open("wrapper/%s.py" % files) as f:
             data = f.read()
@@ -123,6 +127,7 @@ def build_the_docs():
         complete_doc = ""
         item_count = len(all_items) - 1
         total_items = range(0, item_count, 2)
+
         for each_item in total_items:
             # each_item.split(endsep)[0]
             item = all_items[each_item + 1]
@@ -135,6 +140,7 @@ def build_the_docs():
             # remove trailing \n created at last entry
             item = newlines[:-1]
 
+            # add classes and Defs
             header = "****\n"
             if "class " in all_items[each_item]:
                 header = "**< class%s >**\n" % all_items[each_item].split(
@@ -142,24 +148,33 @@ def build_the_docs():
 
             if "def " in all_items[each_item]:
                 defs = all_items[each_item].split("def")
+                # function_list.append("%s - %s" % (defs, files))
                 number_of_defs = len(defs) - 1
                 header = "- %s\n" % all_items[each_item].split(
                     "def")[number_of_defs].split(":")[0]
 
             # dont create documentation for private functions
             if "-  _" not in header and header != "****\n":
+                print(header, item)
+                if header[0:3] == "-  ":
+                    function_list.append("%s -> #%s" % (header.split("(")[0], files))
                 complete_doc = "%s\n%s%s\n" % (complete_doc, header, item)
-
         processed[files] = complete_doc
+
+    function_list = sorted(function_list)
+    all_functions += "\n".join(function_list)
 
     for files in api_files:
         with open("documentation/%s.rst" % files.split("/")[1], "w") as f:
             f.write(processed[files])
-        index_file = "%s[%s](/documentation/%s.rst)\n\n" % (
+        index_file = "%s [#%s](/documentation/%s.rst)\n\n" % (
             index_file, files, files.split("/")[1])
-    index_file += events_footer
+    index_file += events_footer + all_functions
 
     with open("documentation/readme.md", "w") as f:
+        f.write("-*- coding: utf-8 -*-\n")
+        f.write("Copyright (C) 2016 - 2018 - BenBaptist and Wrapper.py "
+                "developer(s).\n\n")
         f.write(index_file)
 
 

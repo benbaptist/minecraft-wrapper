@@ -251,10 +251,12 @@ If you have questions, please use our [Gitter page](https://gitter.im/benbaptist
 
 # Features #
 Wrapper.py supports the following features:
-  - [Plugin system](/documentation/readme.md) for adding Bukkit-like features to a vanilla server
-  - Proxy mode allows you to add extra functionality to plugins, such as real /commands
-  - Permissions system with group support
-  - Jump to different servers without reconnecting *(alpha feature that does not work well or at all, can be used by calling api.minecraft.connect(ip, port) )*
+- [Plugin system](/documentation/readme.md) for adding Bukkit-like features to a vanilla server.
+- Proxy mode allows you to add extra functionality to plugins, such as real /commands.
+- Permissions system with group support.
+- Built in Hub world / Multi-server support!
+  - Use the built-in /hub functionality with world configurations set up in the wrapper config, __or__
+  - Implement you own customized version with the plugin API by calling
 - Automatic Backups
   - Automatically delete the oldest backups once you reach amount of backups
   - Specify which folders and files get backed up
@@ -269,7 +271,7 @@ Wrapper.py supports the following features:
 - Colorized console output.
 
 # API #
-The documentation for Wrapper.py is not complete, but you can find a reference on the wrapper plugin API here:
+The references for the wrapper plugin API are here:
 [Wrapper.py Plugin API](/documentation/readme.md)
 
 #### New Permissions System ####
@@ -289,20 +291,19 @@ Wrapper continues to be a work in progress and changes often happen faster than 
  get documented, but this should help give you an idea of the methods that can be used.
  below is a list of plugin events that can be registered in your plugins:
 
-- The modern event list is updated with each build:
+- The modern event list is updated with each build <sup id="a1">[1](#f1)</sup>:
     [Wrapper events](/documentation/events.rst)
-
-- The original Event list (Wrapper version 0.7.6):
-    [Old 0.7.6 Wrapper list of events](https://docs.google.com/spreadsheet/ccc?key=0AoWx24EFSt80dDRiSGVxcW1xQkVLb2dWTUN4WE5aNmc&usp=sharing)
 
 Check the 'example-plugins' and 'stable-plugins' folders to see some example plugins.  These are very useful for seeing how the API functions.
 
-- template.py does nothing - it is just the shell of a plugin to work off of.
-- example.py contains some more example functions.
+- TEMPLATE.py and EXAMPLE.py are mostly just shells of a plugin to work off of.  They contain useful tutorial comments.
 - zombie.py is a fun test plugin that leaves behind undead versions of people when killed by undead mobs.
 - speedboost.py gives everyone a speedboost when someone dies - similar to survival games.
 - poll.py allows players to vote for certain things on the server. It isn't very up-to-date at the moment, however.
-
+- Essentials is a plugin loosely based off of Essentials for Bukkit.
+- WorldEdit - is a plugin loosely based on the WorldEdit for Bukkit by sk89q
+- SmallBrother is a lightweight logging plugin based on the old Bukkit plugin, BigBrother
+- Open.py is a plugin that opens a window with nothing.  This plugin was probably just a test plugin and may not work, but contains example code for accessing packets from the player api.
 
 __Tip__:
 
@@ -322,3 +323,5 @@ look for the logging.json file and make changes to the "console" section:
         },
 ...
 ```
+
+<b id="f1">1</b> The original Event list (Wrapper version 0.7.6) - [0.7.6 Wrapper list of events](https://docs.google.com/spreadsheet/ccc?key=0AoWx24EFSt80dDRiSGVxcW1xQkVLb2dWTUN4WE5aNmc&usp=sharing) [↩](#a1)

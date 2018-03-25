@@ -102,8 +102,8 @@ class Main:
 
         # This gets server packet set using api.minecraft (player not avail).
         pkt = self.api.minecraft.getServerPackets()
-        # Accessing the client using getClient() is deprecated and will
-        #  be removed by wrapper 1.5.
+        # Accessing the client using getClient() is deprecated and may
+        #  be removed in wrapper starting with version 2.0.
         if payload["wid"] == payload["player"].getClient().windowCounter:
 
             payload['player'].getClient().packet.sendpkt(
