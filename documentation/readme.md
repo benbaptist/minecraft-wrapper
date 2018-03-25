@@ -22,7 +22,7 @@ The API is divided into modules.  Click on each module to see it's documentation
 
 <br>**Click here for a list of Wrapper's events**<br>[Wrapper.py Events](/documentation/events.rst)<br>
 
-
+<br>
 
 
  **Looking for a specific method?  search this list to see which api module has it:** 

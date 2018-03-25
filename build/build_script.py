@@ -118,7 +118,7 @@ def build_the_docs():
                  "api/helpers"]
     processed = {}
 
-    all_functions = "\n\n\n **Looking for a specific method?  search this " \
+    all_functions = "<br>\n\n\n **Looking for a specific method?  search this " \
                     "list to see which api module has it:** \n\n"
     function_list = []
 
