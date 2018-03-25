@@ -30,7 +30,7 @@ Wrapper.py supports the following features:
     - player block /digging/placement.
     - player inventory.
 - Automatic Backups
-  - Automatically delete the oldest backups once you reach amount of backups
+  - Automatically delete the oldest backups once you reach a specified number of backups
   - Specify which folders and files get backed up
 - IRC bridge
   - Controlling server from IRC
@@ -55,7 +55,7 @@ Python 3.5 + is suggested,
 Wrapper.py requires the following packages: </br>
 - Python packages: `pip, requests, cryptography, bcrypt, setuptools, pkg_resources`
 - Tar is required for backups.
-- ***[More...](/documentation/depends.md)***
+ - ***[More...](/documentation/depends.md)***
 
 
 #### [**LINUX download and setup**](/documentation/linux.md)
