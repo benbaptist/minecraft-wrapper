@@ -108,7 +108,7 @@ def build_the_docs():
                 " developer(s).</sup>\n\n"
     index_file = "**Welcome to the Wrapper.py Plugin API documentation!" \
                  "**\n\nThe API is divided into modules.  Click on each " \
-                 "module to see it's documentation.\n\n"
+                 "module to see it's documentation\n\n"
 
     events_footer = "<br>**Click here for a list of Wrapper's events**<br>" \
                     "[Wrapper.py Events](/documentation/events.rst)<br>"
@@ -118,8 +118,8 @@ def build_the_docs():
                  "api/helpers"]
     processed = {}
 
-    all_functions = "\n\n\n**Looking for a specific method?  search this list" \
-                    " to see which api module has it:**\n\n"
+    all_functions = "\n\n<br>\n**Looking for a specific method?  search this " \
+                    "list to see which api module has it:**\n\n"
     function_list = []
 
     for files in api_files:
