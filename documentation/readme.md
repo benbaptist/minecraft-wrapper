@@ -4,21 +4,21 @@ Copyright (C) 2016 - 2018 - BenBaptist and Wrapper.py developer(s).
 
 The API is divided into modules.  Click on each module to see it's documentation.
 
- #####api/wrapperconfig##### - [api/wrapperconfig](/documentation/wrapperconfig.rst)
+ ##### api/wrapperconfig ##### - [api/wrapperconfig](/documentation/wrapperconfig.rst)
 
- #####api/base##### - [api/base](/documentation/base.rst)
+ ##### api/base ##### - [api/base](/documentation/base.rst)
 
- #####api/minecraft##### - [api/minecraft](/documentation/minecraft.rst)
+ ##### api/minecraft ##### - [api/minecraft](/documentation/minecraft.rst)
 
- #####api/player##### - [api/player](/documentation/player.rst)
+ ##### api/player ##### - [api/player](/documentation/player.rst)
 
- #####api/world##### - [api/world](/documentation/world.rst)
+ ##### api/world ##### - [api/world](/documentation/world.rst)
 
- #####api/entity##### - [api/entity](/documentation/entity.rst)
+ ##### api/entity ##### - [api/entity](/documentation/entity.rst)
 
- #####api/backups##### - [api/backups](/documentation/backups.rst)
+ ##### api/backups ##### - [api/backups](/documentation/backups.rst)
 
- #####api/helpers##### - [api/helpers](/documentation/helpers.rst)
+ ##### api/helpers ##### - [api/helpers](/documentation/helpers.rst)
 
 <br>**Click here for a list of Wrapper's events**<br>[Wrapper.py Events](/documentation/events.rst)<br>
 
