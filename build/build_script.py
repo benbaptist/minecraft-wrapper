@@ -118,8 +118,8 @@ def build_the_docs():
                  "api/helpers"]
     processed = {}
 
-    all_functions = "<br>\n\n\n **Looking for a specific method?  search this " \
-                    "list to see which api module has it:** \n\n"
+    all_functions = "<br>\n\n\n **Looking for a specific method?  Look in" \
+                    " this list to see which api module has it:** \n\n"
     function_list = []
 
     for files in api_files:
@@ -159,7 +159,7 @@ def build_the_docs():
             if "-  _" not in header and header != "****\n":
                 print(header, item)
                 if header[0:3] == "-  ":
-                    function_list.append("%s -> [↩%s](#%s)" % (header.split("(")[0], files.split("/")[1], files.replace("/", "")))
+                    function_list.append("%s -> [↩%s](#%s)" % (header.split("(")[0].strip("-  "), files.split("/")[1], files.replace("/", "")))
                 complete_doc = "%s\n%s%s\n" % (complete_doc, header, item)
         processed[files] = complete_doc
 
