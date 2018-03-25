@@ -1,5 +1,107 @@
 #Changelog#
 
+<h4>1.0.0 rc 0</h4>
+- Finished player.connect() function.
+- Include sample hubworlds plugin in examples and Stable plugins.
+- Implement /hub as a full featured command if ["Proxy"]["built-in-hub"] is enabled. Allows full use of hub worlds
+ without requiring any plugins.
+- Make player respawn to hub if destination connection fails
+- Implemented "max-players" into proxy (a separate thing from the server's max players).
+- wrapper uses extra LOGIN arguments and minecraft plugin chanels to communicate UUID and IP between wrapper instances.
+- These plugin messages will help wrapper determine it's role (HUB or subworld),
+    pass server information, manage login/logouts, pass proper online UUIDs to
+    plugins even if the plugin's (local) wrapper is offline.
+- Continued improvements to UUID reliability
+- create a player.uuid property that reliably returns the very best (online)
+ UUID it can find.  This uuid is used to positively ID a player for purposes
+ of uniquely identifying that player no matter what name they have.
+ - Clarify that the only uuid that is a string and not MCUUID is player
+ property 'uuid'.
+- kick rogue players that inadvertently join a proxy world directly to the server's port.  
+- Fix bugs in Event code.  Standardize event process:
+        Plugin returns   ==   event returns
+        False            ==   False
+        None/True        ==   True
+        Payload          ==   Payload
+        Multiple plugins can modify the final event return:
+        Any plugin can permanently Abort the Event.  Any False is permanent.
+        Any plugin can None/True, but a subsequent event can False or payload it (mod it)
+        Any plugin can return a payload _if_ it has not been `False`d..
+- Refactored all packet constants to a standard format:
+    CONSTANT = [PACKET, [PARSING]], where PACKET = 0xNN packet number and parsing
+     is a list of constants like [VARINT, BOOL, STRING].
+- Corrected Entities config items listing old names (i.e. - 'Sheep' was changed to 'sheep' in 11.1)
+- Added internal wrapper event 'server.autoCompletes' to process (future) autocompletions.
+- Removed "player.runCommand" event from public API.  It is now private event.  Also
+ changed the behaviour to not be "abortable".. I.e. any command _will_ abort and get
+ processed directly by _either_ wrapper or the server.
+- All registered commands and non-abortable events run on their own thread, so
+  wrapper plugin and commands do not pause proxy!
+- scrub out old packet.send methods that are now deprecated.
+- Improved name change handling.  Name changes are now automatic.  If you don't want automatic
+ name change handling, set config `["Proxy"]["auto-name-changes"] = False` and wrapper will use the
+ old "falling back to..." name behavior.  If you are supporting (vanilla server) local aliases via
+ a plugin, you should set this to False.
+- Improve proxy to only use compression once (while reading a packet).  If a packet
+ is not going to be changed, the original unmolested packet is resent, eliminating
+ the need to re-compress.
+- correct compression bugs where client and server could be at different compression numbers.
+ _They must be operating at the same compression level now_ because of the "once-only compression"
+ used by proxymode now.
+- whitelist add/remove both also 'reload'... because everybody forgets that part!
+- whitelist adds players using offline uuids while in proxy mode.
+- install vanilla whitelist commands into 'commands.py' -off, on, add, remove, list, reload
+- two new commands added:
+    - /whitelist online - convert all whitelist names to online uuids (to set server to online mode)
+    - /whitelist offline -  convert all whitelist names to offline uuids (to set server to offline/proxy mode)
+- Whitelist online/offline also converts player data uuid files to their correct type, so converting
+   the server between online and offline will not hurt players inventory (provided you restart promptly).
+- [#519](https://github.com/benbaptist/minecraft-wrapper/issues/519) - delay server backups during idle periods.
+- upgrade consoleuser.py for use with new player.message()
+- add its 'execute()' method.
+- create support for alternate output streams besides the console.
+- Manually Save server before a restart (spigot plugins mess with save states).
+- Ensure server auto-restarts don't happen during a backup cycle.
+- added some API.backups functions to test backup status.
+- Fix [#521](https://github.com/benbaptist/minecraft-wrapper/issues/521)
+   using a config item in Misc: "trap-ctrl-z"
+- removed option to disable wrapper passphrase.
+- Player.message takes second argument for position of message (0,1,2)
+- restage version.py and make buildscript.py comply with 5 part format.
+- build numbers are now unique only to major version and release type (X.x.x, 'a','b', 'rc', 'final')
+- remove PyCrypto dependency!  PyCrypto is no longer maintained.
+- wrapper dependencies are only `requests`, `cryptography` and `bcrypt`:
+- added file "requirements.txt" to be useful for `pip install -r requirements.txt`
+- Fixed numerous Web module bugs plus new features:
+    - Fixed bug that prevented browsing into directories with periods (like com.banbaptist.some.plugin)
+    - Added a feature for only allowing connections from 'safe-ips'.
+    - Server properties - can be saved and reloaded.
+    - plugins - can be disabled.  If all plugins are disabled, all disabled plugins can be reloaded.
+    - Py3 fixes for Web mode.
+    - Add Wrapper memory usage items to Web.
+    - Web console commands pass through wrappers console parsing, so that wrapper
+       commands can be run in Web.
+    - Allow login page to capture a unique username for the WebAdmin.
+
+- Add api.base items to api:
+  - sendAlerts(self, message, group="wrapper")
+  - sendEmail( message, recipients, subject, group="wrapper")
+- Built-in alerts for wrapper startup, shutdown, and crashes.  Alerts allow wrapper to send emails:
+    - api.base - 
+    - New wrapper.properties.json section: "Alerts".
+- Warning messages in wrapper startup.
+- Warning messages in Login.html.
+- Add countdown timers of 45, 30, 15 and then 5-1 seconds to the reboot timers broadcasts
+- Add a backups summary text.
+- fix spigot bug where nicknamed players producing chat results in
+ an invalid playerobject being generated with a player.message event
+ because the nickname is not a logged on player.
+- A few documentation updates/corrections.
+- update change logs (not done properly since 0.7.7)
+- Fixed #354 "Relogging as Spectator disables noclip"
+- slight API change in getStorage().  Third argument for pickle (a new API addition anyway) changed slightly.
+
+
 <h4>0.15.0</h4>
 Build 254 [0.15.0] - Master branch update - Wrapper now implements password encryption
 
@@ -549,10 +651,10 @@ Server jumping still seems super buggy and weird. It only works in my test envir
 <h4>0.6.0</h4>
 - Added an in-development plugin system! Super early, but it works great, it seems.
 <ul>
-	<li>Plugins are hosted in the 'wrapper-plugins' folder as single .py files or Python package folders</li>
-	<li>Type '/plugins' in the console to see a list of loaded Wrapper.py plugins</li>
-	<li>Type '/reloadplugins' to reload plugins</li>
-	<li>More documentation for writing plugins will be released soon</li>
+    <li>Plugins are hosted in the 'wrapper-plugins' folder as single .py files or Python package folders</li>
+    <li>Type '/plugins' in the console to see a list of loaded Wrapper.py plugins</li>
+    <li>Type '/reloadplugins' to reload plugins</li>
+    <li>More documentation for writing plugins will be released soon</li>
 </ul> 
 - Fixed crash when typing 'list' command in console (I thought I fixed this crash long ago, but apparently not!)
 - Added .about command in IRC to see Wrapper.py version
