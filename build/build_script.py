@@ -104,8 +104,8 @@ def build_the_docs():
     """
 
     sep = '"""'
-    copy_right = "<sup>Copyright (C) 2016 - 2018 - BenBaptist and Wrapper.py "\
-                "developer(s).</sup>\n\n"
+    copy_right = "<sup>Copyright (C) 2016 - 2018 - BenBaptist and Wrapper.py" \
+                " developer(s).</sup>\n\n"
     index_file = "**Welcome to the Wrapper.py Plugin API documentation!" \
                  "**\n\nThe API is divided into modules.  Click on each " \
                  "module to see it's documentation.\n\n"
@@ -118,8 +118,8 @@ def build_the_docs():
                  "api/helpers"]
     processed = {}
 
-    all_functions = "\n\n\n**Looking for a specific method?  search this list " \
-                    "to see which api module has it:\n\n"
+    all_functions = "\n\n\n**Looking for a specific method?  search this list" \
+                    " to see which api module has it:**\n\n"
     function_list = []
 
     for files in api_files:

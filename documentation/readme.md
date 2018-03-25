@@ -24,7 +24,7 @@ The API is divided into modules.  Click on each module to see it's documentation
 
 
 
-**Looking for a specific method?  search this list to see which api module has it:
+**Looking for a specific method?  search this list to see which api module has it:**
 
 -  Config file items and layout
  -> [↩wrapperconfig](#apiwrapperconfig)
