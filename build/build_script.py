@@ -118,8 +118,8 @@ def build_the_docs():
                  "api/helpers"]
     processed = {}
 
-    all_functions = "\n\n<br>\n **Looking for a specific method?  search this " \
-                    "list to see which api module has it: **\n<br>\n"
+    all_functions = "\n\n\n **Looking for a specific method?  search this " \
+                    "list to see which api module has it:** \n\n"
     function_list = []
 
     for files in api_files:
@@ -171,7 +171,7 @@ def build_the_docs():
             f.write(processed[files])
         index_file = "%s ##### [%s](/documentation/%s.rst)\n\n" % (
             index_file, files, files.split("/")[1])
-    index_file += events_footer + "\n" + all_functions
+    index_file += events_footer + "\n\n" + all_functions
 
     with open("documentation/readme.md", "w") as f:
         f.write(copy_right)
