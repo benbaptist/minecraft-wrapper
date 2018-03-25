@@ -106,9 +106,9 @@ def build_the_docs():
     sep = '"""'
     copy_right = "<sup>Copyright (C) 2016 - 2018 - BenBaptist and Wrapper.py" \
                  " developer(s).</sup>\n\n"
-    index_file = "**Welcome to the Wrapper.py Plugin API documentation!" \
-                 "**\n\nThe API is divided into modules.  Click on each " \
-                 "module to see it's documentation\n\n"
+    index_file = "*Welcome to the Wrapper.py Plugin API documentation!" \
+                 "*\n\nThe API is divided into modules.  **Click on each " \
+                 "module to see it's documentation**\n\n"
 
     events_footer = "<br>**Click here for a list of Wrapper's events**<br>" \
                     "[Wrapper.py Events](/documentation/events.rst)<br>"
@@ -119,7 +119,7 @@ def build_the_docs():
     processed = {}
 
     all_functions = "<br>\n\n\n **Looking for a specific method?  Look in" \
-                    " this list to see which api module contains the" \
+                    " this list to see which api module contains the " \
                     "desired method:** \n\n"
 
     function_list = []   # function_list for readme.md
