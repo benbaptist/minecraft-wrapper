@@ -21,14 +21,15 @@ Wrapper.py supports the following features:
 - Permissions system with group support.
 - Proxy mode operation allows you to add extra bukkit-like functionality to plugins:
   - Real `/` command interface.
-  - Built in Hub world / Multi-server support!
+  - Built in hub worlds / multi-server support!
     - Use the built-in /hub functionality with world configurations set up in the wrapper config, __or__
-    - Implement you own customized version with the plugin API by calling
-  - Limit entity breeding / spawning.
+    - Implement your own customized version with the plugin API by calling the player.connect() method.
+  - Limit entity breeding / spawning with entity controls.
   - Monitor, Modify, and change:
     - player chat.
     - player block /digging/placement.
     - player inventory.
+    - .. and More!
 - Automatic Backups
   - Automatically delete the oldest backups once you reach a specified number of backups
   - Specify which folders and files get backed up
