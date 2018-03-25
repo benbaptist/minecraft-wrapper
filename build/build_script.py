@@ -167,7 +167,7 @@ def build_the_docs():
     for files in api_files:
         with open("documentation/%s.rst" % files.split("/")[1], "w") as f:
             f.write(processed[files])
-        index_file = "%s #####[%s](/documentation/%s.rst)\n\n" % (
+        index_file = "%s ##### [%s](/documentation/%s.rst)\n\n" % (
             index_file, files, files.split("/")[1])
     index_file += events_footer + all_functions
 
