@@ -106,7 +106,7 @@ def build_the_docs():
     sep = '"""'
     copy_right = "<sup>Copyright (C) 2016 - 2018 - BenBaptist and Wrapper.py" \
                  " developer(s).</sup>\n\n"
-    index_file = "#Welcome to the Wrapper.py Plugin API documentation!#" \
+    index_file = "# Welcome to the Wrapper.py Plugin API documentation! #" \
                  "\n\n**The API is divided into modules.  Click on each " \
                  "module to see it's documentation**\n\n"
 
