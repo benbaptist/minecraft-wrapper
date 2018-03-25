@@ -6,7 +6,7 @@ The API is divided into modules.  Click on each module to see it's documentation
 
  #api/wrapperconfig - [api/wrapperconfig](/documentation/wrapperconfig.rst)
 
- #api/base - [api/base](/documentation/base.rst)
+ # api/base - [api/base](/documentation/base.rst)
 
  #api/minecraft - [api/minecraft](/documentation/minecraft.rst)
 
