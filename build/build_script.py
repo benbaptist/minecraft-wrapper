@@ -119,7 +119,7 @@ def build_the_docs():
     processed = {}
 
     all_functions = "<br>\n\n\n **Looking for a specific method?  Look in" \
-                    " this list to see which api module contains the " \
+                    " this list to see which api module contains your " \
                     "desired method:** \n\n"
 
     function_list = []   # function_list for readme.md
@@ -184,7 +184,7 @@ def build_the_docs():
             index_file, files, files.split("/")[1])
     index_file += events_footer + "\n\n" + all_functions
 
-    with open("documentation/readme.md", "w") as f:
+    with open("documentation/plugin_api.md", "w") as f:
         f.write(copy_right)
         f.write(index_file)
 
