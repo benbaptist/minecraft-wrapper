@@ -1,4 +1,4 @@
-Copyright (C) 2016 - 2018 - BenBaptist and Wrapper.py developer(s).
+<sup>Copyright (C) 2016 - 2018 - BenBaptist and Wrapper.py developer(s).</sup>
 
 **Welcome to the Wrapper.py Plugin API documentation!**
 
@@ -23,7 +23,8 @@ The API is divided into modules.  Click on each module to see it's documentation
 <br>**Click here for a list of Wrapper's events**<br>[Wrapper.py Events](/documentation/events.rst)<br>
 
 
-Looking for a specific method?  search this list to see which api module has it:
+
+**Looking for a specific method?  search this list to see which api module has it:
 
 -  Config file items and layout
  -> [↩wrapperconfig](#apiwrapperconfig)

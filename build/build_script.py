@@ -104,6 +104,8 @@ def build_the_docs():
     """
 
     sep = '"""'
+    copy_right = "<sup>Copyright (C) 2016 - 2018 - BenBaptist and Wrapper.py "\
+                "developer(s).</sup>\n\n"
     index_file = "**Welcome to the Wrapper.py Plugin API documentation!" \
                  "**\n\nThe API is divided into modules.  Click on each " \
                  "module to see it's documentation.\n\n"
@@ -116,7 +118,7 @@ def build_the_docs():
                  "api/helpers"]
     processed = {}
 
-    all_functions = "\n\n\nLooking for a specific method?  search this list " \
+    all_functions = "\n\n\n**Looking for a specific method?  search this list " \
                     "to see which api module has it:\n\n"
     function_list = []
 
@@ -169,11 +171,10 @@ def build_the_docs():
             f.write(processed[files])
         index_file = "%s ##### [%s](/documentation/%s.rst)\n\n" % (
             index_file, files, files.split("/")[1])
-    index_file += events_footer + all_functions
+    index_file += events_footer + "\n" + all_functions
 
     with open("documentation/readme.md", "w") as f:
-        f.write("Copyright (C) 2016 - 2018 - BenBaptist and Wrapper.py "
-                "developer(s).\n\n")
+        f.write(copy_right)
         f.write(index_file)
 
 
