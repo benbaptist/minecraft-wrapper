@@ -1,68 +1,61 @@
 # Overview #
-
+-------------------------------------------
 Wrapper.py is an easy to use Minecraft server wrapper for adding extra functionality into the server without modifying 
-the server jar file.
-
-It also comes with a relatively simple and straight-forward - yet powerful - plugin API that can be used
- to create Bukkit-like plugins with no server modding.  The API works best when operated in proxy mode.
-
+the server jar file.  It also comes with a relatively simple and straight-forward - yet powerful - plugin API that can be used
+to create Bukkit-like plugins with no server modding.  The API works best when operated in proxy mode.
 
 We also have a gitter channel: [![Join the chat at https://gitter.im/benbaptist/minecraft-wrapper](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/benbaptist/minecraft-wrapper?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-NOTICE: Wrapper will Accept the minecraft server EULA on your behalf.  Using wrapper means you also accept the EULA, which
-will be set to true in the eula.txt file in your server folder.
-[Mojang EULA](https://account.mojang.com/documents/minecraft_eula)
+###  **Wrapper.py Versions**
+
+ - [Master branch "stable"](https://github.com/benbaptist/minecraft-wrapper/tree/master):  Stable branch that is only updated with serious bug fixes and major releases. <sup id="a1">[1](#f1)</sup>
+ - [Development branch "dev"](https://github.com/benbaptist/minecraft-wrapper/tree/development):  Development branch with newer features.
+
+NOTICE: Wrapper will Accept the minecraft server EULA on your behalf. <sup id="a2">[2](#f2)</sup>
+
+
+# Features #
+-------------------------------------------
+Wrapper.py supports the following features:
+- [Plugin system](/documentation/plugin_api.md) for adding extra features to a vanilla server.
+- Permissions system with group support.
+- Proxy mode operation allows you to add extra bukkit-like functionality to plugins:
+  - Real `/` command interface.
+  - Built in Hub world / Multi-server support!
+    - Use the built-in /hub functionality with world configurations set up in the wrapper config, __or__
+    - Implement you own customized version with the plugin API by calling
+  - Limit entity breeding / spawning.
+  - Monitor, Modify, and change:
+    - player chat.
+    - player block /digging/placement.
+    - player inventory.
+- Automatic Backups
+  - Automatically delete the oldest backups once you reach amount of backups
+  - Specify which folders and files get backed up
+- IRC bridge
+  - Controlling server from IRC
+  - Achievements, deaths, and whatnot appear on IRC
+  - Chat between Minecraft server and IRC channels
+- Scheduled reboots
+- Web remote for controlling the server and the wrapper through your web browser
+- Shell scripts that are called upon certain events (similar to plugin events, but quicker and easier)
+- Minecraft 1.7 and later support
+- Colorized console logging.
 
 
 # Installation #
 
 ###  **Python Versions**
-Python 3.5 or higher is the recommended Python version to use with Wrapper.
 
-*Wrapper is only designed to be compatible with Python 3.4+ and python 2.7+ versions (Using a python 2.7 version below 2.7.11 is also _not_ recommended)
-
-*It may run under python 2.6, but this is untested and may cause errors.  Certain Linux distros with Python 2.7 also have known issues with the requests module.*
-
+Python 3.5 + is suggested,
+[***However...***](/documentation/pyversions.md)
 
 ###  **Dependencies**
-You must have a pip version > 9.0.1 to ensure wrapper's dependencies will install correctly. Bcrypt and cryptography
- may not install correctly if your pip version is not at least 9.0.1.
-To ensure you have the correct pip version:
-
- `pip install --upgrade pip>=9.0.1`
 
 Wrapper.py requires the following packages: </br>
-- `requests` - Extensively used by Wrapper to handle internet data requests.
-- `cryptography` - required for Proxy mode and internal wrapper password handling.
-- `bcrypt` - Only required for the plugin API functions 'hashPassword' and 'checkPassword'
-- `setuptools` - Most python libraries already have this now.  Used by the Web interface.
-
-It is recommended that you install the requirements by using the requirements.txt
- file from the repo.  Save it to your hard drive.  Then from the same folder, you
- can type `pip install -r requirements.txt` in the console.  This will ensure you
- have these packages and their dependencies, with the proper versions.
-
-If needed, install any older missing dependencies in older distros (using a current pip version and setuptools will usually avoid this):
-```
-pip install pkg_resources
-```
-
-If you have issues with bcrypt, please go to the bcrypt website on pypi for installation of bcrypt (depending on
-your system, additional dependencies may be required):
-[pypi.python.org](https://pypi.python.org/pypi/bcrypt/3.1.4).
-Bcrypt is not critical to wrapper.  It is used in the plugin API.  It may be removed at a future date, depending on how useful (or not useful) it ends up being.
-
-</br> Please do not submit issues regarding installing dependencies.  These are beyond
- the scope of this document or the author's expertise (in general); please research
- the solution applicable to your platform.  Some variants of the pip installation
- that can help if you are having permission problems:
- 1) Use sudo with the -H flag (this example for Ubuntu type systems):
-    `sudo -H pip install --upgrade pip>=9.0.1`: Only do this if you want the packages system-wide and you also _possibly_ risk breaking your packaging system or some other dependency.
- 2) Better solution - use the --user flag for pip:
-    `pip install --user --upgrade pip>=9.0.1`
-
-You will also need "tar" installed if you need backups. Most Linux distros have this pre-installed, but you may need to
- install it manually on Windows: http://gnuwin32.sourceforge.net/packages/gtar.htm
+- Python packages: `pip, requests, cryptography, bcrypt, setuptools, pkg_resources`
+- Tar is required for backups.
+[***More...***](/documentation/depends.md)
 
 
 ###  **Wrapper.py Versions**
@@ -70,67 +63,10 @@ You will also need "tar" installed if you need backups. Most Linux distros have 
 You only need to download Wrapper.py.  The 'wrapper' folder is the source code and is just the extracted version
  of Wrapper.py.  Wrapper.py is a Python-executable archive folder containing the sourcecode.</br>
 
-The old stable branch "master", version 0.7.6, build 83 has now been archived in the ["Original"](https://github.com/benbaptist/minecraft-wrapper/tree/Original) branch. The original
-version only supports minecraft versions up to 1.8.
 
-[Master branch "stable"](https://github.com/benbaptist/minecraft-wrapper/tree/master):  Stable branch that is only updated with serious bug fixes and major releases
+### [**LINUX download and setup**](/documentation/linux.md)
 
-[Development branch "dev"](https://github.com/benbaptist/minecraft-wrapper/tree/development):  Development branch with newer features.
-
-<br>
-
-[SurestTexas Development branch "dev"](https://github.com/suresttexas00/minecraft-wrapper/tree/development):  SurestTexas00's development fork.  Might have bleeding edge stuff.
-
-
-### **LINUX download and setup**
-
-if you have wget installed, You can  use it to get Wrapper.py and its dependency lists.
-
-For the stable Wrapper.py:
-
-```
-wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master/Wrapper.py
-wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master/requirements.txt
-```
-
-Or for the development version of Wrapper.py:
-```
-wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/Wrapper.py
-wget https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development/requirements.txt
-```
-
-To install dependencies, [See dependencies section](#dependencies)
-
-
-### **Windows Download and setup**
-
-You may need to get [python](https://www.python.org/downloads/) as it does not normally come with Windows. For
- best results, make sure the location of the python.exe file is in your system 'path' variable.
-
-Windows installations of Python are mostly beyond the scope of this document.  If you get errors; investigate,
- Google it, Stack Overflow it, and read any error messages carefully to find out what additional pieces of Windows-ware
- you will need to get it working.  For convenience, these Python 2.7 instructions were made when I first started using
- wrapper with Windows (2014).  They are not completely accurate or up to date any more:
-
-
-Python 2.7 should already have pip and setuptools installed, however they will be old versions.  You should manually remove them and install the updated versions from the command prompt (need to be administrator to do this):
-```
-pip uninstall setuptools
-pip install pip
-pip install setuptools
-```
-
-Before installing requests, you will need to install the [Microsoft Visual C++ Compiler for Python 2.7](http://www.microsoft.com/en-us/download/details.aspx?id=44266).
-
-Then from the command prompt:
-```
-pip install requests
-pip install cryptography
-pip install bcrypt
-```
-
-Download the Wrapper.py file and place it in the desired folder.
-
+### [**Windows Download and setup**](/documentation/linux.md)
 
 ###  **Start Up**
 
@@ -249,27 +185,6 @@ If you run into any bugs, please _do_ report them!
 If you have questions, please use our [Gitter page](https://gitter.im/benbaptist/minecraft-wrapper) instead of creating an issue.
 
 
-# Features #
-Wrapper.py supports the following features:
-- [Plugin system](/documentation/readme.md) for adding Bukkit-like features to a vanilla server.
-- Proxy mode allows you to add extra functionality to plugins, such as real /commands.
-- Permissions system with group support.
-- Built in Hub world / Multi-server support!
-  - Use the built-in /hub functionality with world configurations set up in the wrapper config, __or__
-  - Implement you own customized version with the plugin API by calling
-- Automatic Backups
-  - Automatically delete the oldest backups once you reach amount of backups
-  - Specify which folders and files get backed up
-- IRC bridge
-  - Controlling server from IRC
-  - Achievements, deaths, and whatnot appear on IRC
-  - Chat between Minecraft server and IRC channels
-- Scheduled reboots
-- Web remote for controlling the server and the wrapper through your web browser
-- Shell scripts that are called upon certain events (similar to plugin events, but quicker and easier)
-- Minecraft 1.7 and later support
-- Colorized console output.
-
 # API #
 The references for the wrapper plugin API are here:
 [Wrapper.py Plugin API](/documentation/readme.md)
@@ -291,8 +206,7 @@ Wrapper continues to be a work in progress and changes often happen faster than 
  get documented, but this should help give you an idea of the methods that can be used.
  below is a list of plugin events that can be registered in your plugins:
 
-- The modern event list is updated with each build <sup id="a1">[1](#f1)</sup>:
-    [Wrapper events](/documentation/events.rst)
+- The modern event list is updated with each build: [Wrapper events](/documentation/events.rst) <sup id="a3">[3](#f3</sup>
 
 Check the 'example-plugins' and 'stable-plugins' folders to see some example plugins.  These are very useful for seeing how the API functions.
 
@@ -323,5 +237,8 @@ look for the logging.json file and make changes to the "console" section:
         },
 ...
 ```
-
-<b id="f1">1</b> The original Event list (Wrapper version 0.7.6) - [0.7.6 Wrapper list of events](https://docs.google.com/spreadsheet/ccc?key=0AoWx24EFSt80dDRiSGVxcW1xQkVLb2dWTUN4WE5aNmc&usp=sharing) [↩](#a1)
+<br><br>
+<sup><b id="f1">1</b></sup> - The old stable branch "master", version 0.7.6, build 83 has now been archived in the ["Original"](https://github.com/benbaptist/minecraft-wrapper/tree/Original) branch. The original
+version only supports minecraft versions up to 1.8.    [↩](#a1)
+<sup><b id="f2">2</b></sup> - Using wrapper means you also accept the EULA, which will be set to true in the eula.txt file in your server folder. [Mojang EULA](https://account.mojang.com/documents/minecraft_eula)   [↩](#a2)
+<sup><b id="f3">3</b></sup> - The original Event list (Wrapper version 0.7.6) - [0.7.6 Wrapper list of events](https://docs.google.com/spreadsheet/ccc?key=0AoWx24EFSt80dDRiSGVxcW1xQkVLb2dWTUN4WE5aNmc&usp=sharing)   [↩](#a3)
