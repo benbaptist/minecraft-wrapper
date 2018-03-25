@@ -68,8 +68,11 @@ You only need to download Wrapper.py.  The '\wrapper' folder is the source code 
  of Wrapper.py.  Wrapper.py is a Python-executable archive folder containing the sourcecode.</br>
 
 To start Wrapper, open a console where the `Wrapper.py` or `/wrapper` sourcecode are
-located and type `python Wrapper.py|/wrapper [--passphrase 'passphrase']` in a
-console to start (passphrase must be 8 or more characters in length).
+located and type the following into the console to start:
+
+ `python Wrapper.py|/wrapper [--passphrase 'passphrase']`
+
+The passphrase must be 8 or more characters in length!
 
 #### [Starting Wrapper.py for the first time...](/documentation/first_start.md)
 
