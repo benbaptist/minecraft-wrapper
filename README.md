@@ -123,7 +123,7 @@ Higher op levels are required to run sensitive wrapper commands like `/perms`.
 
 #### Plugins ####
 
-The modern event list is updated with each build: [Wrapper events](/documentation/events.rst) <sup id="a3">[3](#f3</sup>
+The modern event list is updated with each build: [Wrapper events](/documentation/events.rst) <sup id="a3">[3](#f3)</sup>
 
 Check the 'example-plugins' and 'stable-plugins' folders to see some example plugins.  These are very useful for seeing how the API functions.
 
