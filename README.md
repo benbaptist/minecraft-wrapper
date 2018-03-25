@@ -71,7 +71,7 @@ To start Wrapper, open a console where the `Wrapper.py` or `/wrapper` sourcecode
 located and type `python Wrapper.py|/wrapper [--passphrase 'passphrase']` in a
 console to start (passphrase must be 8 or more characters in length).
 
-#### [**Starting Wrapper.py for the first time.. **](/documentation/first_start.md)
+#### [Starting Wrapper.py for the first time...](/documentation/first_start.md)
 
 Once wrapper has started:
 - Open the wrapper.properties.json file and tune the file to your remaining preferences.
@@ -90,14 +90,14 @@ Once wrapper has started:
 
 ### Operating wrapper ###
 
-- Any console command beginning with a slash (/) will be interpreted as a Wrapper.py command.<br>
+- Any console command beginning with a slash (/) will be interpreted firstly as a Wrapper.py command.<br>
 - Type /help to see a list of Wrapper.py commands.<br>
 - To completely shutdown the wrapper, type /halt.</br>
 
 - To enter passwords into the wrapper.properties.config file, use the `/password` console command to enter the applicable password:
     `/password Web web-password <new password>`
 
-Please read our [wiki](https://github.com/benbaptist/minecraft-wrapper/wiki) for additional information and review the issues page before submitting bug reports.<br>
+Please read our [Doc page](/documentation/readme.md) for additional information and review the issues page before submitting bug reports.<br>
 If you run into any bugs, please _do_ report them!
 
 If you have questions, please use our [Gitter page](https://gitter.im/benbaptist/minecraft-wrapper) instead of creating an issue.
@@ -116,6 +116,7 @@ Sample `superops.txt`:
 Suresttexas00=5
 BenBaptist=9
 ```
+
 Higher op levels are required to run sensitive wrapper commands like `/perms`.
 
 #### Plugins ####
