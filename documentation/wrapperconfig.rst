@@ -1,5 +1,5 @@
 
--  Config file items and layout
+**< class Config file items and layout >**
 
 '''
 

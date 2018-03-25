@@ -1,3 +1,6 @@
+Build 38:
+Mostly just a documentation update.  No wrapper code changes.
+
 Build 37:
 - Fix inventory tracking.
 

@@ -104,9 +104,11 @@ def build_the_docs():
     """
 
     sep = '"""'
-    index_file = "**Welcome to the Wrapper.py Plugin API documentation!" \
-                 "**\n\nThe API is divided into modules.  Click on each " \
-                 "module to see it's documentation.\n\n"
+    copy_right = "<sup>Copyright (C) 2016 - 2018 - BenBaptist and Wrapper.py" \
+                 " developer(s).</sup>\n\n"
+    index_file = "# Welcome to the Wrapper.py Plugin API documentation! #" \
+                 "\n\n**The API is divided into modules.  Click on each " \
+                 "module to see it's documentation**\n\n"
 
     events_footer = "<br>**Click here for a list of Wrapper's events**<br>" \
                     "[Wrapper.py Events](/documentation/events.rst)<br>"
@@ -116,6 +118,13 @@ def build_the_docs():
                  "api/helpers"]
     processed = {}
 
+    all_functions = "<br>\n\n\n **Looking for a specific method?  Look in" \
+                    " this list to see which api module contains your " \
+                    "desired method:** \n\n"
+
+    function_list = []   # function_list for readme.md
+    functions_in_class = []
+
     for files in api_files:
         with open("wrapper/%s.py" % files) as f:
             data = f.read()
@@ -123,6 +132,7 @@ def build_the_docs():
         complete_doc = ""
         item_count = len(all_items) - 1
         total_items = range(0, item_count, 2)
+
         for each_item in total_items:
             # each_item.split(endsep)[0]
             item = all_items[each_item + 1]
@@ -135,10 +145,16 @@ def build_the_docs():
             # remove trailing \n created at last entry
             item = newlines[:-1]
 
+            # add classes and Defs
             header = "****\n"
             if "class " in all_items[each_item]:
                 header = "**< class%s >**\n" % all_items[each_item].split(
                     "class")[1].split(":")[0]
+                complete_doc = "%s\n%s%s\n" % (complete_doc, header, item)
+                if len(functions_in_class) > 0:
+                    class_functions = "\n".join(sorted(functions_in_class))
+                    complete_doc = "%s%s" % (complete_doc, class_functions)
+                    functions_in_class = []
 
             if "def " in all_items[each_item]:
                 defs = all_items[each_item].split("def")
@@ -148,18 +164,28 @@ def build_the_docs():
 
             # dont create documentation for private functions
             if "-  _" not in header and header != "****\n":
-                complete_doc = "%s\n%s%s\n" % (complete_doc, header, item)
-
+                if header[0:3] == "-  ":
+                    function_list.append("%s -> [↩%s](#%s)" % (header.split("(")[0], files.split("/")[1], files.replace("/", "")))
+                    functions_in_class.append("%s%s" % (header, item))
+                # complete_doc = "%s\n%s%s\n" % (complete_doc, header, item)
+        if len(functions_in_class) > 0:
+            class_functions = "\n".join(sorted(functions_in_class))
+            complete_doc = "%s%s" % (complete_doc, class_functions)
+            functions_in_class = []
         processed[files] = complete_doc
+
+    function_list = sorted(function_list)
+    all_functions += "\n".join(function_list)
 
     for files in api_files:
         with open("documentation/%s.rst" % files.split("/")[1], "w") as f:
             f.write(processed[files])
-        index_file = "%s[%s](/documentation/%s.rst)\n\n" % (
+        index_file = "%s ##### [%s](/documentation/%s.rst)\n\n" % (
             index_file, files, files.split("/")[1])
-    index_file += events_footer
+    index_file += events_footer + "\n\n" + all_functions
 
-    with open("documentation/readme.md", "w") as f:
+    with open("documentation/plugin_api.md", "w") as f:
+        f.write(copy_right)
         f.write(index_file)
 
 

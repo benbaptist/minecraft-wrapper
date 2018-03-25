@@ -7,7 +7,7 @@
 
 # noinspection PySingleQuotedDocstring
 '''
-This file format is a bit non-pythonic, but is intended to produce a nicer
+This file format is a bit non-pythonic, but is intended to produce a
 ReST file for the documentation. Three `'` quotes are disregarded by
 our document production methods.  Lines are also greater than 79 characters...
 In fact, they are whatever length should get grouped together as a single
@@ -19,7 +19,7 @@ Lines ending in '# NODOC' (no trailing whitespace!) are removed from the rst
 
 '''
 
-# def Config file items and layout:
+# class Config file items and layout:
 # """
 '''
 
