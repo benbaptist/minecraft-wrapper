@@ -122,7 +122,6 @@ def build_the_docs():
                     " this list to see which api module contains the" \
                     "desired method:** \n\n"
     function_list = []
-    doclist = []
 
     for files in api_files:
         with open("wrapper/%s.py" % files) as f:
@@ -162,11 +161,7 @@ def build_the_docs():
                 print(header, item)
                 if header[0:3] == "-  ":
                     function_list.append("%s -> [↩%s](#%s)" % (header.split("(")[0], files.split("/")[1], files.replace("/", "")))
-                    doclist.append("%s%s" % (header, item))
-                else:
-                    functions = "\n".join(sorted(doclist))
-                    complete_doc = "%s\n%s%s%s\n" % (complete_doc, header, item, functions)
-        # complete_doc = "\n".join(sorted(doclist))
+                complete_doc = "%s\n%s%s\n" % (complete_doc, header, item)
         processed[files] = complete_doc
 
     function_list = sorted(function_list)

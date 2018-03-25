@@ -27,8 +27,6 @@ The API is divided into modules.  Click on each module to see it's documentation
 
  **Looking for a specific method?  Look in this list to see which api module contains thedesired method:** 
 
--  Config file items and layout
- -> [↩wrapperconfig](#apiwrapperconfig)
 -  addGroupPerm -> [↩base](#apibase)
 -  adjustBackupInterval -> [↩backups](#apibackups)
 -  adjustBackupsKept -> [↩backups](#apibackups)
