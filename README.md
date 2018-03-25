@@ -48,14 +48,15 @@ Wrapper.py supports the following features:
 ###  **Python Versions**
 
 Python 3.5 + is suggested,
-[***However...***](/documentation/pyversions.md)
+***[However...](/documentation/pyversions.md)***
 
 ###  **Dependencies**
 
 Wrapper.py requires the following packages: </br>
 - Python packages: `pip, requests, cryptography, bcrypt, setuptools, pkg_resources`
 - Tar is required for backups.
-[***More...***](/documentation/depends.md)
+
+***[More...](/documentation/depends.md)***
 
 
 ###  **Wrapper.py Versions**
@@ -64,9 +65,9 @@ You only need to download Wrapper.py.  The 'wrapper' folder is the source code a
  of Wrapper.py.  Wrapper.py is a Python-executable archive folder containing the sourcecode.</br>
 
 
-### [**LINUX download and setup**](/documentation/linux.md)
+#### [**LINUX download and setup**](/documentation/linux.md)
 
-### [**Windows Download and setup**](/documentation/linux.md)
+#### [**Windows Download and setup**](/documentation/linux.md)
 
 ###  **Start Up**
 
@@ -240,5 +241,8 @@ look for the logging.json file and make changes to the "console" section:
 <br><br>
 <sup><b id="f1">1</b></sup> - The old stable branch "master", version 0.7.6, build 83 has now been archived in the ["Original"](https://github.com/benbaptist/minecraft-wrapper/tree/Original) branch. The original
 version only supports minecraft versions up to 1.8.    [↩](#a1)
+
 <sup><b id="f2">2</b></sup> - Using wrapper means you also accept the EULA, which will be set to true in the eula.txt file in your server folder. [Mojang EULA](https://account.mojang.com/documents/minecraft_eula)   [↩](#a2)
+
 <sup><b id="f3">3</b></sup> - The original Event list (Wrapper version 0.7.6) - [0.7.6 Wrapper list of events](https://docs.google.com/spreadsheet/ccc?key=0AoWx24EFSt80dDRiSGVxcW1xQkVLb2dWTUN4WE5aNmc&usp=sharing)   [↩](#a3)
+
