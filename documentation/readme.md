@@ -16,7 +16,7 @@ The API is divided into modules.  Click on each module to see it's documentation
 
  ##### api/entity - [api/entity](/documentation/entity.rst)
 
- ##### api/backups ##### - [api/backups](/documentation/backups.rst)
+ ##### api/backups - [api/backups](/documentation/backups.rst)
 
  ##### api/helpers ##### - [api/helpers](/documentation/helpers.rst)
 
