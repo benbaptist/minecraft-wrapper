@@ -55,14 +55,7 @@ Python 3.5 + is suggested,
 Wrapper.py requires the following packages: </br>
 - Python packages: `pip, requests, cryptography, bcrypt, setuptools, pkg_resources`
 - Tar is required for backups.
-
-***[More...](/documentation/depends.md)***
-
-
-###  **Wrapper.py Versions**
-
-You only need to download Wrapper.py.  The 'wrapper' folder is the source code and is just the extracted version
- of Wrapper.py.  Wrapper.py is a Python-executable archive folder containing the sourcecode.</br>
+- ***[More...](/documentation/depends.md)***
 
 
 #### [**LINUX download and setup**](/documentation/linux.md)
@@ -70,6 +63,9 @@ You only need to download Wrapper.py.  The 'wrapper' folder is the source code a
 #### [**Windows Download and setup**](/documentation/linux.md)
 
 ###  **Start Up**
+
+You only need to download Wrapper.py.  The 'wrapper' folder is the source code and is just the extracted version
+ of Wrapper.py.  Wrapper.py is a Python-executable archive folder containing the sourcecode.</br>
 
 - Run `python Wrapper.py [--passphrase 'passphrase']` to start (passphrase must be 8 or more characters in length).
 
@@ -188,7 +184,7 @@ If you have questions, please use our [Gitter page](https://gitter.im/benbaptist
 
 # API #
 The references for the wrapper plugin API are here:
-[Wrapper.py Plugin API](/documentation/readme.md)
+[Wrapper.py Plugin API](/documentation/plugin_api.md)
 
 #### New Permissions System ####
 
@@ -203,11 +199,7 @@ Higher op levels are required to run sensitive wrapper commands like `/perms`.
 
 #### Plugins ####
 
-Wrapper continues to be a work in progress and changes often happen faster than they
- get documented, but this should help give you an idea of the methods that can be used.
- below is a list of plugin events that can be registered in your plugins:
-
-- The modern event list is updated with each build: [Wrapper events](/documentation/events.rst) <sup id="a3">[3](#f3</sup>
+The modern event list is updated with each build: [Wrapper events](/documentation/events.rst) <sup id="a3">[3](#f3</sup>
 
 Check the 'example-plugins' and 'stable-plugins' folders to see some example plugins.  These are very useful for seeing how the API functions.
 
