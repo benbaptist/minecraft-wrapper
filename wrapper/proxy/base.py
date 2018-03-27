@@ -299,7 +299,7 @@ class Proxy(object):
                 break
         server_sock.close()
 
-    def use_newname(self, oldname, newname, realuuid):
+    def use_newname(self, oldname, newname, realuuid: str):
         """
         Convert a player from old to new name.
         :param oldname: The players old name
@@ -313,7 +313,7 @@ class Proxy(object):
         cwd = "%s/%s" % (
             self.srv_data.serverpath, self.srv_data.worldname)
         self.uuids.convert_files(old_local_uuid, new_local_uuid, cwd)
-        self.usercache[realuuid.string]["localname"] = newname
+        self.usercache[realuuid]["localname"] = newname
         self.usercache_obj.save()
         return newname
 

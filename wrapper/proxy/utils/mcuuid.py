@@ -117,7 +117,7 @@ class UUIDS(object):
                 "will likely create other logical/program flow errors")
             return False  # No other options but to fail request
 
-    def getusernamebyuuid(self, useruuid, forcepoll=False, uselocalname=True):
+    def getusernamebyuuid(self, useruuid: str, forcepoll=False, uselocalname=True):
         """
         Returns the username from the specified UUID.
         If the player has never logged in before and isn't in the user cache, it will poll Mojang's API.
