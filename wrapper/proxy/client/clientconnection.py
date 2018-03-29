@@ -374,7 +374,7 @@ class Client(object):
             )
         )
         self.packet.send_raw(0xff+0x00+0x00+0x00)
-        self.client_socket.shutdown(self.client_socket.SHUT_RDWR)
+        self.client_socket.shutdown(2)
         self.abort = True
 
     def _parse_handshaking(self):
@@ -466,8 +466,8 @@ class Client(object):
         data = self.packet.readpkt([LONG])
         self.packet.sendpkt(self.pktCB.PING_PONG[PKT], [LONG], [data[0]])
         self.state = HANDSHAKE
-        self.client_socket.shutdown(self.client_socket.SHUT_RDWR)
-        self.abort = True
+
+        # self.abort = True
         return False
 
     def _parse_status_request(self):
@@ -1092,9 +1092,6 @@ class Client(object):
         self.state = HANDSHAKE
         self._close_server_instance(
             "Just ran Disconnect() client.  Aborting client thread")
-        if self.client_socket:
-            self.client_socket.shudown(2)
-
         self.abort = True
 
     # internal init and properties
