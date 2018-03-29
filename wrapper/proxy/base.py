@@ -173,6 +173,7 @@ class Proxy(object):
 
         # proxy internal workings
         self.proxy_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.proxy_socket.setdefaulttimeout(40)
         self.usingSocket = False
 
         self.skins = {}
@@ -244,7 +245,8 @@ class Proxy(object):
 
             banned_ip = self.isipbanned(addr)
             if self.silent_ip_banning and banned_ip:
-                sock.shutdown(0)  # 0: done receiving, 1: done sending, 2: both
+                # 0: done receiving, 1: done sending, 2: both
+                sock.shutdown(sock.SHUT_RDWR)
                 self.log.info("Someone tried to connect from a banned ip:"
                               " %s  (connection refused)", addr)
                 continue

@@ -48,7 +48,6 @@ class Client(object):
 
         # basic __init__ items from passed arguments
         self.client_socket = clientsock
-        self.client_socket = clientsock
         self.client_address = client_addr
         self.proxy = proxy
         self.public_key = self.proxy.public_key
@@ -233,18 +232,11 @@ class Client(object):
                 # last three items are for sending a compressed unparsed packet.
                 pkid, orig_packet = self.packet.grabpacket()  # noqa
             except EOFError:
-                # This is not really an error.. It means the client
-                # is not sending packet stream anymore
-                if self.username != "PING REQUEST":
-                    self.log.debug("%s Client Packet stream ended [EOF]",
-                                   self.username)
+                # The client closed the socket connection
                 self.abort = True
                 break
             except socket_error:
-                # occurs anytime a socket is closed.
-                if self.username != "PING REQUEST":
-                    self.log.debug("%s Client Proxy Failed to grab packet",
-                                   self.username)
+                # Socket closed (abruptly).
                 self.abort = True
                 break
             except Exception as e:
@@ -255,10 +247,7 @@ class Client(object):
                 self.abort = True
                 break
 
-            # send packet if parsing passes and server available.
-            # Python will not attempt eval of self.server_connection.state
-            #  if self.server_connection is first False; so this will not raise
-            #  an exception if the server_connection stops.
+            # Each condition is executed and evaluated in sequence:
             if self._parse(pkid) and \
                     self.server_connection and \
                     self.server_connection.packet and \
@@ -379,7 +368,14 @@ class Client(object):
     # -----------------------
     def _parse_handshaking_legacy(self):
         # just disconnect them.
+        self.log.debug(
+            "Received Lagacy Handshake (closed unceremoniously) from %s." % (
+                self.ip
+            )
+        )
         self.packet.send_raw(0xff+0x00+0x00+0x00)
+        self.client_socket.shutdown(self.client_socket.SHUT_RDWR)
+        self.abort = True
 
     def _parse_handshaking(self):
         """
@@ -470,6 +466,8 @@ class Client(object):
         data = self.packet.readpkt([LONG])
         self.packet.sendpkt(self.pktCB.PING_PONG[PKT], [LONG], [data[0]])
         self.state = HANDSHAKE
+        self.client_socket.shutdown(self.client_socket.SHUT_RDWR)
+        self.abort = True
         return False
 
     def _parse_status_request(self):
@@ -1073,8 +1071,10 @@ class Client(object):
 
             if self.username != "PING REQUEST":
                 self.log.debug(
-                    "State was 'other': sent chat reason to %s",
-                    self.username)
+                    "Client '%s', IP: '%s', State: %s': \n Disconnected: "
+                    "''", self.username, self.client_address[0], self.state,
+                    message)
+
                 self.chat_to_client(jsondict)
                 time.sleep(5)
                 self.packet.sendpkt(
@@ -1092,6 +1092,9 @@ class Client(object):
         self.state = HANDSHAKE
         self._close_server_instance(
             "Just ran Disconnect() client.  Aborting client thread")
+        if self.client_socket:
+            self.client_socket.shudown(2)
+
         self.abort = True
 
     # internal init and properties
