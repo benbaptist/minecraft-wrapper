@@ -1,3 +1,12 @@
+Build 2:
+- give plugins ability to return a False for onEnable().
+Fixed a UUID error in API:
+    - Turns out that plugins can call api.minecraft.lookupbyUUID and if a MCUUID
+      object gets passed, you fry the wrapper cache with a non-json-serializable
+      MCUUID(xx-xx--x--x--) object as the uuid index.
+- start adding some type-hinting to wrapper functions.
+- clean up stable plugins
+
 Build 1:
 - small footnote typo in main README.md corrected
 - made the UUID lookups for getuuidbyusername case in-sensitive.  This was
@@ -8,7 +17,6 @@ Build 1:
 - upgrade player permission items to operate with optional uuid=<MCUUID> to
  operate upon another player (logged on or not).
 - add plugins "groupsmanager" and "portals" to stable plugins.
-
 
 Starting with:
 Build 0 [1.0.0 RC 0] - Development branch update

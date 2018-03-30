@@ -3,6 +3,8 @@
 AUTHOR = "SurestTexas00"
 WEBSITE = ""
 VERSION = (1, 0, 0)
+NAME = "groupsmanager"
+ID = "com.suresttexas00.plugins.groupsmanager"
 SUMMARY = "Permission Group Manager for Wrapper plugins"
 DESCRIPTION = """
 Permission Manager allows for group permission management.  
@@ -22,9 +24,6 @@ and blank lines are permitted.
 Each group name in groups.txt must has a corresponding <group>.txt file 
 in `/wrapper-data/plugins/groupsmanager/`
 """
-
-NAME = "groupsmanager"
-ID = "com.suresttexas00.plugins.groupsmanager"
 
 SAMPLE_GROUPS_TEXT = """admin
 moderator

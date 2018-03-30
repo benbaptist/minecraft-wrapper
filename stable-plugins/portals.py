@@ -14,7 +14,8 @@ up to you to create the physical appearance of the portals.
 """
 
 
-# noinspection PyUnusedLocal
+# noinspection PyPep8Naming,PyMethodMayBeStatic,PyUnusedLocal
+# noinspection PyClassicStyleClass,PyAttributeOutsideInit
 class Main:
     def __init__(self, api, log):
         self.api = api
