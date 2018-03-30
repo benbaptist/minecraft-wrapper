@@ -244,13 +244,15 @@ class Proxy(object):
 
             banned_ip = self.isipbanned(addr)
             if self.silent_ip_banning and banned_ip:
-                sock.shutdown(0)  # 0: done receiving, 1: done sending, 2: both
+                # 0: done receiving, 1: done sending, 2: both
+                sock.shutdown(2)
                 self.log.info("Someone tried to connect from a banned ip:"
                               " %s  (connection refused)", addr)
                 continue
 
             # spur off client thread
             # self.server_temp = ServerConnection(self, ip, port)
+            sock.settimeout(5)
             client = Client(self, sock, addr, banned=banned_ip)
             t = threading.Thread(target=client.handle, args=())
             t.daemon = True
@@ -299,7 +301,7 @@ class Proxy(object):
                 break
         server_sock.close()
 
-    def use_newname(self, oldname, newname, realuuid):
+    def use_newname(self, oldname, newname, realuuid: str):
         """
         Convert a player from old to new name.
         :param oldname: The players old name
@@ -313,7 +315,7 @@ class Proxy(object):
         cwd = "%s/%s" % (
             self.srv_data.serverpath, self.srv_data.worldname)
         self.uuids.convert_files(old_local_uuid, new_local_uuid, cwd)
-        self.usercache[realuuid.string]["localname"] = newname
+        self.usercache[realuuid]["localname"] = newname
         self.usercache_obj.save()
         return newname
 

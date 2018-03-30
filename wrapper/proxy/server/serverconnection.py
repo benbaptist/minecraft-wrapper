@@ -168,8 +168,6 @@ class ServerConnection(object):
             self.packet = None
             return True
         except:
-            self.log.debug("Server socket for %s already "
-                           "closed", self.infos_debug)
             self.packet = None
             return False
 

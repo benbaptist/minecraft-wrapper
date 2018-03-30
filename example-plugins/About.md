@@ -1,7 +1,7 @@
 # Overview #
 
 Example Plugins are the older example plugins.  They are for example
-purposed only, but may generally function and provide examples
+purposes only, but may generally function and provide examples
 of how to write a wrapper plugin, as well as demonstrate wrapper functions.
 
 Although not free of errors, and may not even work anymore, these can be adapted

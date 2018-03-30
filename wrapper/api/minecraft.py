@@ -15,6 +15,7 @@ from api.helpers import scrub_item_value, pickle_load
 from proxy.packets.mcpackets_cb import Packets as ClientBound
 from proxy.packets.mcpackets_sb import Packets as ServerBound
 
+
 # noinspection PyBroadException
 # noinspection PyPep8Naming
 class Minecraft(object):
@@ -399,7 +400,7 @@ class Minecraft(object):
         dictitem = {"uuid": uuid, "name": name}
         return dictitem
 
-    def lookupbyUUID(self, uuid):
+    def lookupbyUUID(self, uuid: str):
         """
         Returns the username from the specified UUID.
         If the player has never logged in before and isn't in the user
@@ -411,6 +412,13 @@ class Minecraft(object):
         :returns: username
 
         """
+        # just in case MCUUID was passed instead.
+        # passing a MCUUID to this can fry the wrapper.usercache!
+        try:
+            # noinspection PyUnresolvedReferences
+            uuid = uuid.string
+        except AttributeError:
+            pass
         return self.wrapper.uuids.getusernamebyuuid(uuid)
 
     def lookupbyName(self, name):
@@ -423,6 +431,9 @@ class Minecraft(object):
         :arg name:  player name
 
         :returns: a UUID object (wrapper type MCUUID)
+
+        Remember to use the MCUUID.string to get a string when
+         using this for string purposes (json keys)!
 
         """
         return self.wrapper.uuids.getuuidbyusername(name)
@@ -452,6 +463,11 @@ class Minecraft(object):
         sourcedir = "%s/playerdata/%s.dat" % (worldname, orig_server_uuid)
         destdir = "%s/playerdata/%s.dat" % (worldname, new_server_uuid)
 
+        # just in case MCUUID was passed instead.
+        try:
+            MojangUUID = MojangUUID.string
+        except AttributeError:
+            pass
         # do the name change in the cache
         if MojangUUID in cache:
             cache[MojangUUID]["localname"] = desired_name

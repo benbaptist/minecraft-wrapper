@@ -309,14 +309,6 @@ class ParseCB(object):
         self.client.gamemode = data[1]
         self.client.dimension = data[2]
         self.client.server_eid = data[0]
-        self.log.debug(
-            "(Client: %s) sending Join.Game GM: %s|DIM: %s| EID %s" % (
-                self.client.username,
-                self.client.gamemode,
-                self.client.dimension,
-                self.client.server_eid
-            )
-        )
 
         return True
 
