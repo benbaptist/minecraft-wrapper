@@ -513,8 +513,7 @@ class Client(object):
         self.packet.sendpkt(
             self.pktCB.PING_JSON_RESPONSE[PKT],
             [STRING],
-            [json.dumps(self.MOTD)],
-            serverbound=False
+            [json.dumps(self.MOTD)]
         )
 
         # after this, proxy waits for the expected PING to

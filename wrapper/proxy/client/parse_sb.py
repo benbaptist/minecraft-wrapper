@@ -102,7 +102,7 @@ class ParseSB(object):
         data = json.dumps(self.client.info)
         # only our wrappers communicate with this, so, format is not critical
         self.packet.sendpkt(self.pktCB.PLUGIN_MESSAGE[PKT], [STRING, STRING],
-                            (channel, data), serverbound=False)
+                            (channel, data))
 
     def play_player_poslook(self):  # player position and look
         """decided to use this one solely for tracking the client position"""

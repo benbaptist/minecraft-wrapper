@@ -308,7 +308,7 @@ class Packet(object):
             result.append(item)
         return result
 
-    def sendpkt(self, pkid, args, payload, serverbound=True):
+    def sendpkt(self, pkid, args, payload,):
         """
                 Usage like:
 
@@ -394,6 +394,7 @@ class Packet(object):
 
     def send_position(self, payload):
         x, y, z = payload
+        # position is a Ulong (reason for `Q`)
         return struct.pack(">Q", ((x & 0x3FFFFFF) << 38)
                            | ((y & 0xFFF) << 26)
                            | (z & 0x3FFFFFF))
@@ -879,6 +880,3 @@ class Packet(object):
             a["name"] = self.read_short_string()
             a["value"] = self._DECODERS[a["type"]]()
         return a
-
-    def read_ulong(self):  # unused ...?
-        return struct.unpack(">Q", self.read_data(8))[0]
