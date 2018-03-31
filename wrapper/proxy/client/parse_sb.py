@@ -353,20 +353,12 @@ class ParseSB(object):
     def play_player_digging(self):
         if not self.client.local:
             return True
-        if self.client.clientversion < PROTOCOL_1_7:
+        data = self.packet.readpkt(self.pktSB.PLAYER_DIGGING[PARSER])
+        if self.client.clientversion < PROTOCOL_1_8START:
             data = None
-            position = data
-        elif PROTOCOL_1_7 <= self.client.clientversion < PROTOCOL_1_8START:
-            data = self.packet.readpkt([BYTE, INT, UBYTE, INT, BYTE])
-            # "byte:status|int:x|ubyte:y|int:z|byte:face")
             position = (data[1], data[2], data[3])
         else:
-            data = self.packet.readpkt([BYTE, POSITION, NULL, NULL, BYTE])
-            # "byte:status|position:position|byte:face")
             position = data[1]
-
-        if data is None:
-            return True
 
         # finished digging
         if data[0] == 2:
