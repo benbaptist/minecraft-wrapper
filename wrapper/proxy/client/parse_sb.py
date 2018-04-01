@@ -350,6 +350,7 @@ class ParseSB(object):
         self.client.head = (data[0], data[1])
         return True
 
+
     def play_player_digging(self):
         if not self.client.local:
             return True
@@ -414,41 +415,41 @@ class ParseSB(object):
                     "face": data[4]
                 }):
                     return False
-        if data[0] == 5 and position == (0, 0, 0):
-                playerpos = self.client.position
-                if not self.proxy.eventhandler.callevent("player.interact", {
-                    "playername": self.client.username,
-                    "position": playerpos,
-                    "action": "finish_using",
-                    "origin": "pktSB.PLAYER_DIGGING"
-                }):
-                    return False
-                """ eventdoc
-                    <group> Proxy <group>
+        if data[0] == 5:  # and position == (0, 0, 0):
+            playerpos = self.client.position
+            if not self.proxy.eventhandler.callevent("player.interact", {
+                "playername": self.client.username,
+                "position": playerpos,
+                "action": "finish_using",
+                "origin": "pktSB.PLAYER_DIGGING"
+            }):
+                return False
+            """ eventdoc
+                <group> Proxy <group>
 
-                    <description> Called when the client is eating food, 
-                    pulling back bows, using buckets, etc.
-                    <description>
+                <description> Called when the client is eating food, 
+                pulling back bows, using buckets, etc.
+                <description>
 
-                    <abortable> Yes <abortable>
+                <abortable> Yes <abortable>
 
-                    <comments>
-                    Can be aborted by returning False. Note that the client
-                    may still believe the action happened, but the server
-                    will act as though the event did not happen.  This 
-                    could be confusing to a player.  If the event is aborted, 
-                    consider some feedback to the client (a message, fake 
-                    particles, etc.)
-                    <comments>
+                <comments>
+                Can be aborted by returning False. Note that the client
+                may still believe the action happened, but the server
+                will act as though the event did not happen.  This 
+                could be confusing to a player.  If the event is aborted, 
+                consider some feedback to the client (a message, fake 
+                particles, etc.)
+                <comments>
 
-                    <payload>
-                    "playername": playername (not the player object!)
-                    "position":  the PLAYERS position - x, y, z, pitch, yaw
-                    "action": "finish_using"  or "use_item"
-                    "origin": Debugging information on where event was parsed.
-                    <payload>
+                <payload>
+                "playername": playername (not the player object!)
+                "position":  the PLAYERS position - x, y, z, pitch, yaw
+                "action": "finish_using"  or "use_item"
+                "origin": Debugging information on where event was parsed.
+                <payload>
 
-                """
+            """
         return True
 
     def play_player_block_placement(self):
@@ -494,6 +495,7 @@ class ParseSB(object):
         # Face and Position exist in all version protocols at this point
         clickposition = position
         face = data[3]
+        self.client.lastplacecoords = position, time.time()
 
         if face == 0:  # Compensate for block placement coordinates
             position = (position[0], position[1] - 1, position[2])
@@ -523,7 +525,6 @@ class ParseSB(object):
                 return False
 
         # block placement event
-        self.client.lastplacecoords = position
         # position is where new block goes
         # clickposition is the block actually clicked
         if not self.proxy.eventhandler.callevent(
@@ -562,25 +563,26 @@ class ParseSB(object):
     def play_use_item(self):  # no 1.8 or prior packet
         if not self.client.local:
             return True
-        data = self.packet.readpkt([REST])
-        # "rest:pack")
-        position = self.client.lastplacecoords
-        if "pack" in data:
-            if data[0] == '\x00':
-                if not self.proxy.eventhandler.callevent("player.interact", {
-                    "playername": self.client.username,
-                    "position": position,
-                    "action": "useitem",
-                    "origin": "pktSB.USE_ITEM"
-                }):
-                    return False
+        data = self.packet.readpkt([VARINT])[0]
+        position = self.client.position
+        et = time.time() - self.client.lastplacecoords[1]
+        # the time frame for this is to ensure coords are still relavant.
+        if et < .5:
+            position = self.client.lastplacecoords[0]
+        if not self.proxy.eventhandler.callevent("player.interact", {
+            "playername": self.client.username,
+            "position": position,
+            "action": "use_item",
+            "hand": data,
+            "origin": "pktSB.USE_ITEM"
+        }):
+            return False
         return True
 
     def play_held_item_change(self):
         if not self.client.local:
             return True
         slot = self.packet.readpkt([SHORT])
-        # "short:short")  # ["short"]
         if 9 > slot[0] > -1:
             self.client.slot = slot[0]
         else:
