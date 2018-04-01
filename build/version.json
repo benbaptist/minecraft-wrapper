@@ -1,5 +1,5 @@
 {
-    "__branch__": "stable", 
+    "__branch__": "dev", 
     "__build__": 266, 
     "__version__": [
         1, 
@@ -9,6 +9,6 @@
         4
     ], 
     "build": 229, 
-    "release_time": 1522587096.706134, 
+    "release_time": 1522587665.780584, 
     "repotype": "stable"
 }
