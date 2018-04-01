@@ -219,12 +219,7 @@ class EntityControl(object):
             console_command = "tp @e[type=%s,x=%d,y=%d,z=%d,c=%s] ~ -500 ~" % (
                     entitydesc, pos[0], pos[1], pos[2], count)
 
-        self.proxy.eventhandler.callevent(
-            "proxy.console", {"command": console_command}, abortable=False)
-        """ eventdoc
-                                <description> internalfunction <description>
-
-                            """
+        self.proxy.run_command(console_command)
 
     def _entity_processor(self):
         self._log.debug("_entityprocessor thread started.")
@@ -322,5 +317,4 @@ class EntityControl(object):
         # if self.proxy.srv_data.protocolVersion < 204:
         console_command = "tp @e[type=%s,x=%d,y=%d,z=%d,c=%s] ~ ~-500 ~" % (
             entity_name, pos[0], pos[1], pos[2], count)
-        self.proxy.eventhandler.callevent(
-                 "proxy.console", {"command": console_command}, abortable=False)
+        self.proxy.run_command(console_command)
