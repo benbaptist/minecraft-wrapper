@@ -199,7 +199,7 @@ class ParseSB(object):
                     "playername":
                         self.client.username,
                     "player":
-                        self.client.servervitals.players[self.client.username],
+                        self.client.srv_data.players[self.client.username],
                     "command":
                         allwords[0][1:],
                     "args":

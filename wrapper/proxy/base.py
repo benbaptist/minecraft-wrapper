@@ -252,7 +252,6 @@ class Proxy(object):
 
             # spur off client thread
             # self.server_temp = ServerConnection(self, ip, port)
-            sock.settimeout(5)
             client = Client(self, sock, addr, banned=banned_ip)
             t = threading.Thread(target=client.handle, args=())
             t.daemon = True
@@ -276,7 +275,6 @@ class Proxy(object):
         server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
         # server_sock = socket.socket()
-        server_sock.settimeout(5)
         server_sock.connect((host, port))
         packet = Packet(server_sock, self)
 
@@ -288,7 +286,7 @@ class Proxy(object):
         packet.flush()
         self.srv_data.protocolVersion = -1
         while True:
-            pkid, original_whole_packet = packet.grabpacket()
+            pkid, packet_tuple = packet.grabpacket()
             if pkid == 0x00:
                 data = json.loads(packet.readpkt([STRING, ])[0])
                 self.srv_data.protocolVersion = data["version"][

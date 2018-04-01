@@ -45,6 +45,7 @@ class ServerConnection(object):
         self.log = client.log
         self.ip = ip
         self.port = port
+        self.srv_data = self.proxy.srv_data
 
         # server setup and operating paramenters
         self.abort = False
@@ -130,7 +131,9 @@ class ServerConnection(object):
                 return self.close_server("handle socket.error")
             except Exception as e:
                 return self.close_server(
-                    "handle Exception: %s TRACEBACK: \n%s" % (e, traceback))
+                    "handle Exception: %s TRACEBACK: \n%s" % (
+                        e, traceback.format_exc())
+                )
 
             # parse it
             # send packet if parsing passed and client in play mode.
@@ -143,7 +146,7 @@ class ServerConnection(object):
                     return self.close_server(
                         "handle could not send packet '%s'.  "
                         "Exception: %s TRACEBACK: \n%s" % (
-                            pkid, e, traceback)
+                            pkid, e, traceback.format_exc())
                     )
 
     def close_server(self, reason="Disconnected"):

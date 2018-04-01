@@ -1,3 +1,9 @@
+Build 3:
+- implement PARSER for player digging (internal refactor).
+- remove some more test code (tracer branch leftovers).
+- push build with staged code.  Has a bug:
+    does not work with compression disabled.
+
 Build 2:
 - give plugins ability to return a False for onEnable().
 Fixed a UUID error in API:
