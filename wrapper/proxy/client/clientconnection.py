@@ -1237,20 +1237,22 @@ class Client(object):
                                 " (HTTP Status Code %d)" % r.status_code)
                 return False
             mojang_name = self.proxy.uuids.getusernamebyuuid(
-                self.wrapper_uuid.string)
+                self.wrapper_uuid.string, uselocalname=False)
             self.local_uuid = self.proxy.uuids.getuuidfromname(self.username)
-
+            local_name = self.proxy.usercache[
+                self.wrapper_uuid.string]["localname"]
             if mojang_name:
-                if mojang_name != self.username:
+                if mojang_name != local_name:
                     if self.names_change:
                         self.username, self.local_uuid = self.proxy.use_newname(
-                            self.username, mojang_name, self.wrapper_uuid.string
+                            local_name, self.username, self.wrapper_uuid.string
                         )
                         self.info["username"] = self.username
                     else:
                         self.log.info("%s's client performed LOGON in with "
                                       "new name, falling back to %s",
-                                      self.username, mojang_name)
+                                      self.username, local_name)
+                        self.username = local_name
 
             # verified info we can now store:
             self.info["ip"] = self.ip
