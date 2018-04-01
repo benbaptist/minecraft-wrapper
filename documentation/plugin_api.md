@@ -157,3 +157,4 @@
 -  uuid -> [↩player](#apiplayer)
 -  verifyTarInstalled -> [↩backups](#apibackups)
 -  wrapperHalt -> [↩base](#apibase)
+-  wrapper_version -> [↩base](#apibase)

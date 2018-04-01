@@ -171,7 +171,7 @@ class Client(object):
         self.head = (0, 0)  # Yaw, Pitch
         self.riding = None
         # last placement (for use in cases of bucket use)
-        self.lastplacecoords = (0, 0, 0)
+        self.lastplacecoords = (0, 0, 0), 0
 
         # misc client attributes
         self.properties = {}

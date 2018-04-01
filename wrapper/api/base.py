@@ -12,7 +12,7 @@ from api.minecraft import Minecraft
 from core.storage import Storage
 from api.backups import Backups
 from api import helpers
-
+from utils import version as version_mod
 
 # noinspection PyPep8Naming
 class API(object):
@@ -132,6 +132,27 @@ class API(object):
             self.id = name
         else:
             self.id = someid
+
+    @property
+    def wrapper_version(self):
+        """
+        A property to determine wrapper's version information
+
+        :return: major: int, minor: int, patch: int , release type: str
+
+            :Release type: will be one of:
+             - `experimental` (alpha/beta)
+             - `development` (rc)
+             - `master` (final)
+
+        """
+        release = version_mod.get_docs_version()
+        final = []
+        semparts = version_mod.get_main_version().split(".")
+        for each in semparts:
+            final.append(int(each))
+        final.append(release)
+        return final
 
     def registerCommand(self, command, callback, permission=None):
         """

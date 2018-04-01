@@ -443,3 +443,15 @@
             ..
 
         
+-  wrapper_version(self)
+
+        A property to determine wrapper's version information
+
+        :return: major: int, minor: int, patch: int , release type: str
+
+            :Release type: will be one of:
+             - `experimental` (alpha/beta)
+             - `development` (rc)
+             - `master` (final)
+
+        
