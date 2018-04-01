@@ -299,7 +299,25 @@ class Proxy(object):
                 break
         server_sock.close()
 
-    def use_newname(self, oldname, newname, realuuid: str):
+    def run_command(self, command):
+        """
+        Runs a command on the wrapped server.
+
+        :param minecraft server command:
+        :return:
+        """
+        self.eventhandler.callevent(
+            "proxy.console", {"command": command},
+            abortable=False
+        )
+
+        """ eventdoc
+    
+        <description> internalfunction <description>
+    
+        """
+
+    def use_newname(self, oldname, newname, realuuid: str, client):
         """
         Convert a player from old to new name.
         :param oldname: The players old name
@@ -314,8 +332,10 @@ class Proxy(object):
             self.srv_data.serverpath, self.srv_data.worldname)
         self.uuids.convert_files(old_local_uuid, new_local_uuid, cwd)
         self.usercache[realuuid]["localname"] = newname
+        client.info["username"] = newname
+        client.username = newname
         self.usercache_obj.save()
-        return newname, new_local_uuid
+        return new_local_uuid
 
     def getclientbyofflineserveruuid(self, uuid):
         """
@@ -402,16 +422,8 @@ class Proxy(object):
                                self.srv_data.serverpath):
                     # this actually is not needed. Commands now handle the kick.
                     console_command = "kick %s %s" % (name, reason)
-                    self.eventhandler.callevent(
-                        "proxy.console", {"command": console_command},
-                        abortable=False
-                    )
+                    self.run_command(console_command)
 
-                    """ eventdoc
-
-                    <description> internalfunction <description>
-
-                    """
                     return "Banned %s: %s" % (name, reason)
                 return "Could not write banlist to disk"
         else:
@@ -459,14 +471,8 @@ class Proxy(object):
                     self.log.info("kicking %s... %s", username, reason)
 
                     console_command = "kick %s Banned: %s" % (username, reason)
-                    self.eventhandler.callevent(
-                        "proxy.console", {"command": console_command},
-                        abortable=False
-                    )
-                    """ eventdoc
-                                            <description> internalfunction <description>
+                    self.run_command(console_command)
 
-                                        """  # noqa
                     return "Banned %s: %s - %s" % (username, uuid, reason)
                 return "Could not write banlist to disk"
         else:
@@ -514,14 +520,8 @@ class Proxy(object):
                         if client.ip == str(ipaddress):
 
                             console_command = "kick %s Your IP is Banned!" % client.username  # noqa
-                            self.eventhandler.callevent(
-                                "proxy.console", {"command": console_command},
-                                abortable=False
-                            )
-                            """ eventdoc
-                                                    <description> internalfunction <description>
+                            self.run_command(console_command)
 
-                                                """  # noqa
                             banned += "\n%s" % client.username
                     return "Banned ip address: %s\nPlayers kicked as " \
                            "a result:%s" % (ipaddress, banned)

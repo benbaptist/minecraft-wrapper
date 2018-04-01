@@ -524,13 +524,16 @@ class Client(object):
         """
         client requests a login NOW.
         """
-        data = self.packet.readpkt([STRING, NULL])
-        self.username = data[0]
+        # This blocks waiting for _login_authenticate_client to finish.
+        self.wait_wait_for_auth = True
         t = threading.Thread(target=self._continue_login_start,
                              name="Login", args=())
         t.daemon = True
+        t.start()
+        data = self.packet.readpkt([STRING, NULL])
+        self.username = data[0]
 
-        # just to be clear, this refers to wrapper's mode, not the server.
+        # just to be clear, this refers to wrapper's proxy mode, not the server.
         if self.onlinemode:
             # Wrapper sends client a login encryption request
             self.packet.sendpkt(
@@ -541,24 +544,20 @@ class Client(object):
 
             # Server UUID (or other offline wrapper) is always offline
             self.local_uuid = self.proxy.uuids.getuuidfromname(self.username)
-            self.wait_wait_for_auth = True
+
+            # allow the socket to keep moving while _continue_login_start
+            #  continues to wait for auth..
+            return False
+
         else:
             # Wrapper proxy offline and not authenticating
             # maybe it is the destination of a hub? or you use another
             #  way to authenticate (password plugin?)
+            self._login_authenticate_client(None)
 
-            # Wrapper UUID is offline in this case.
-            self.wrapper_uuid = self.proxy.uuids.getuuidfromname(self.username)
-
-            # Of course local server is offline too...
-            self.local_uuid = self.wrapper_uuid
-
-        # allow the socket connection to keep moving while _continue_login_start
-        #  continues to run..
-        # We dont start() before this because self.wait_wait_for_auth = True
-        #  has to be set first... (for online mode).
-        t.start()
-        return False
+            # _login_authenticate_client already blocking since we called it...
+            self.wait_wait_for_auth = False
+            return False
 
     def _continue_login_start(self):
         """
@@ -1237,20 +1236,22 @@ class Client(object):
                                 " (HTTP Status Code %d)" % r.status_code)
                 return False
             mojang_name = self.proxy.uuids.getusernamebyuuid(
-                self.wrapper_uuid.string)
+                self.wrapper_uuid.string, uselocalname=False)
             self.local_uuid = self.proxy.uuids.getuuidfromname(self.username)
-
+            local_name = self.proxy.usercache[
+                self.wrapper_uuid.string]["localname"]
             if mojang_name:
-                if mojang_name != self.username:
+                if mojang_name != local_name:
                     if self.names_change:
-                        self.username, self.local_uuid = self.proxy.use_newname(
-                            self.username, mojang_name, self.wrapper_uuid.string
+                        self.local_uuid = self.proxy.use_newname(
+                            local_name, self.username, self.wrapper_uuid.string,
+                            self
                         )
-                        self.info["username"] = self.username
                     else:
                         self.log.info("%s's client performed LOGON in with "
                                       "new name, falling back to %s",
-                                      self.username, mojang_name)
+                                      self.username, local_name)
+                        self.username = local_name
 
             # verified info we can now store:
             self.info["ip"] = self.ip
@@ -1265,7 +1266,26 @@ class Client(object):
         # maybe it is the destination of a hub? or you use another
         # way to authenticate (passwords?)
         else:
-            # I'll take your word for it, bub...  You are:
+            local_name = self.username
+            mojanguuid = self.proxy.uuids.getuuidfromname(local_name).string
+
+            if self.mojanguuid:
+                mojanguuid = self.mojanguuid.string
+
+            if len(self.info["realuuid"]) > 0:
+                mojanguuid = self.info["realuuid"]
+                local_name = self.proxy.usercache[mojanguuid]["localname"]
+            if local_name != self.username:
+                if self.names_change:
+                    self.local_uuid = self.proxy.use_newname(
+                        local_name, self.username, mojanguuid, self
+                    )
+
+                else:
+                    self.log.info("%s's client performed LOGON in with "
+                                  "new name, falling back to %s",
+                                  self.username, local_name)
+                    self.username = local_name
             self.local_uuid = self.proxy.uuids.getuuidfromname(self.username)
             self.wrapper_uuid = self.local_uuid
             self.info["wrapperuuid"] = self.wrapper_uuid.string
