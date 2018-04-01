@@ -7,14 +7,14 @@ PY3 = sys.version_info[0] > 2
 NAME = "chat"
 AUTHOR = "SurestTexas00"
 ID = "com.suresttexas00.chat"
-VERSION = (0, 1)
-SUMMARY = "Chat handler."
+VERSION = (1, 0)
+SUMMARY = "A chat handler that adds ranks."
 WEBSITE = ""
 DISABLED = False
 if not PY3:
     DISABLED = True
 DEPENDENCIES = False
-DESCRIPTION = """ simple chat modifier to add rank prefixes and suffixes, 
+DESCRIPTION = """ A simple chat modifier to add rank prefixes and suffixes, 
 and let players create colored/styled chat.
 """
 
@@ -86,7 +86,7 @@ class Main:
 
         All the permissions legwork that could slow up the code
         is already done just once at login.. we have to keep this
-        pakect moving to prevent lag!
+        packet moving to prevent lag!
 
         {'translate': 'chat.type.text',
          'with': [__[0]__{'clickEvent': {'action': 'suggest_command',

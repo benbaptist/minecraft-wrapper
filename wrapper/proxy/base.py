@@ -244,7 +244,8 @@ class Proxy(object):
 
             banned_ip = self.isipbanned(addr)
             if self.silent_ip_banning and banned_ip:
-                sock.shutdown(0)  # 0: done receiving, 1: done sending, 2: both
+                # 0: done receiving, 1: done sending, 2: both
+                sock.shutdown(2)
                 self.log.info("Someone tried to connect from a banned ip:"
                               " %s  (connection refused)", addr)
                 continue
@@ -274,7 +275,6 @@ class Proxy(object):
         server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
         # server_sock = socket.socket()
-        server_sock.settimeout(5)
         server_sock.connect((host, port))
         packet = Packet(server_sock, self)
 
@@ -286,7 +286,7 @@ class Proxy(object):
         packet.flush()
         self.srv_data.protocolVersion = -1
         while True:
-            pkid, original_whole_packet = packet.grabpacket()
+            pkid, packet_tuple = packet.grabpacket()
             if pkid == 0x00:
                 data = json.loads(packet.readpkt([STRING, ])[0])
                 self.srv_data.protocolVersion = data["version"][
@@ -299,7 +299,7 @@ class Proxy(object):
                 break
         server_sock.close()
 
-    def use_newname(self, oldname, newname, realuuid):
+    def use_newname(self, oldname, newname, realuuid: str):
         """
         Convert a player from old to new name.
         :param oldname: The players old name
@@ -313,9 +313,9 @@ class Proxy(object):
         cwd = "%s/%s" % (
             self.srv_data.serverpath, self.srv_data.worldname)
         self.uuids.convert_files(old_local_uuid, new_local_uuid, cwd)
-        self.usercache[realuuid.string]["localname"] = newname
+        self.usercache[realuuid]["localname"] = newname
         self.usercache_obj.save()
-        return newname
+        return newname, new_local_uuid
 
     def getclientbyofflineserveruuid(self, uuid):
         """

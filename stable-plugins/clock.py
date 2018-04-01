@@ -1,3 +1,4 @@
+# coding=utf-8
 NAME = "clock"
 AUTHOR = "SurestTexas00"
 ID = "com.suresttexas00.plugins.clock"

@@ -165,7 +165,13 @@ def build_the_docs():
             # dont create documentation for private functions
             if "-  _" not in header and header != "****\n":
                 if header[0:3] == "-  ":
-                    function_list.append("%s -> [↩%s](#%s)" % (header.split("(")[0], files.split("/")[1], files.replace("/", "")))
+                    function_list.append(
+                        "%s -> [↩%s](#%s)" % (
+                            header.split("(")[0],
+                            files.split("/")[1],
+                            files.replace("/", "")
+                        )
+                    )
                     functions_in_class.append("%s%s" % (header, item))
                 # complete_doc = "%s\n%s%s\n" % (complete_doc, header, item)
         if len(functions_in_class) > 0:

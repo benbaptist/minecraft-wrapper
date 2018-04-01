@@ -26,16 +26,19 @@ DISABLED = True  # DEFAULT = False
 # DEPENDENCIES = [...]  # DEFAULT = False
 
 
-# camelCase of the plugin API is the historical standard
-# noinspection PyPep8Naming
+# noinspection PyMethodMayBeStatic,PyUnusedLocal
+# noinspection PyPep8Naming,PyClassicStyleClass,PyAttributeOutsideInit
 class Main:
     def __init__(self, api, log):
         self.api = api
         self.log = log
+
+    def onEnable(self):
+        # you can disable the plugin by returning False!
+
         # use wrapper-data/plugins folder
         self.data = self.api.getStorage("someFilename", False)
 
-    def onEnable(self):
         self.api.registerCommand("", self._command, "permission.node")
 
         self.api.registerHelp(
@@ -57,7 +60,7 @@ class Main:
 
     def onDisable(self):
         # save Storage to disk and close the Storage's periodicsave() thread.
-        self.data.close()  
+        self.data.close()
 
     # Commands section
     def _command(self, player, args):

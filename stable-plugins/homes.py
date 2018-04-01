@@ -21,7 +21,7 @@ WEBSITE = ""
 VERSION = (1, 0, 0)
 
 
-# noinspection PyMethodMayBeStatic
+# noinspection PyMethodMayBeStatic,PyAttributeOutsideInit
 class Main:
     """Permissions:
     None - sethome/home
@@ -39,17 +39,20 @@ class Main:
         self.api = api
         self.minecraft = api.minecraft
         self.log = log
-        self.data = self.api.getStorage("homes", False)
         self.getarg = self.api.helpers.getargs
         self.getint = self.api.helpers.get_int
 
     def onEnable(self):
+        self.data = self.api.getStorage("homes", False)
+
         self.api.registerHelp("homes", "Commands from the Home plugin", [
             ("/sethome", "Save curremt position as home", None),
             ("/home", "Teleports you to your home set by /sethome", None),
             ("/home <player> set", "set a home for <player>", "home.admin"),
-            ("/home <player> visit", "Visit <player>'s home", "home.admin.visit"),
-            ("/home <player> del", "Delete <player>'s home", "home.admin.super"),
+            ("/home <player> visit", "Visit <player>'s home",
+             "home.admin.visit"),
+            ("/home <player> del", "Delete <player>'s home",
+             "home.admin.super"),
             ("/homes", "Find and administer homes", "home.admin.homes"),
         ])
 
@@ -85,7 +88,7 @@ class Main:
                 self.sethome(player, words[1:])
             elif command in ("mark", "set"):
                 self.api.minecraft.console("/tp %s ~ ~ ~ " % player.username)
-            elif command == "homes" and player.hasPermission("home.admin.homes"):
+            elif command == "homes" and player.hasPermission("home.admin.homes"):  # noqa
                 self._homes(player, words[1:])
 
     def sethome(self, player, args):
@@ -104,9 +107,10 @@ class Main:
 
     def _sethome(self, userobj, username, playeruuid, xyzcoords):
         if not userobj.getDimension() == 0:
-            userobj.message({
-                               "text": "Sorry, but you can't do this from the Nether or End.",
-                               "color": "red"})
+            userobj.message(
+                {"text": "Sorry, but you can't do this from the Nether or End.",
+                 "color": "red"}
+            )
             return
         self.data.Data[playeruuid] = xyzcoords
         # also change their spawnpoint
@@ -170,7 +174,9 @@ class Main:
         if (command in ("delete", "del", "rem", "remove")) and (
                 admin_player.hasPermission("home.admin.super")):
             if polleduuid not in self.data.Data:
-                admin_player.message("&c%s does not have a home to delete." % username)
+                admin_player.message(
+                    "&c%s does not have a home to delete." % username
+                )
                 return
             del self.data.Data[polleduuid]
             admin_player.message("&edeleted %s's home..." % username)
@@ -179,7 +185,9 @@ class Main:
         if command in ("sethome", "set"):
             # only a higher admin can change an existing home.
             # if no home is set, any helpful person with home.admin can help:
-            if polleduuid in self.data.Data and not admin_player.hasPermission("home.admin.super"):
+            if polleduuid in self.data.Data and not admin_player.hasPermission(
+                    "home.admin.super"
+            ):
                 admin_player.message(
                     "&cYou can't create a home for %s - this feature is only "
                     "allowed to be used once for a new player." % username)
@@ -194,7 +202,10 @@ class Main:
                     "&cSorry, you do not have visiting permissions")
                 return
             if polleduuid not in self.data.Data:
-                admin_player.message("&c%s does not have a home (you can set it for him if he wants)" % username)
+                admin_player.message(
+                    "&c%s does not have a home (you can set it for "
+                    "him if he wants)" % username
+                )
                 return
             admin_player.message("&eWarping you %s's house..." % username)
             position = self.data.Data[polleduuid]
@@ -236,8 +247,10 @@ class Main:
                 hx = self.getint(loc[0])
                 hz = self.getint(loc[2])
 
-                if (hx > xlow) and (hx < xhigh) and (hz > zlow) and (hz < zhigh):
-                    homeslist.append(self._make_homes_item(playername, textcoords))
+                if (hx > xlow) and (hx < xhigh) and (hz > zlow) and (hz < zhigh):  # noqa
+                    homeslist.append(
+                        self._make_homes_item(playername, textcoords)
+                    )
                     homefound = True
 
         elif subcomm in ("name", "n", "nm", "named") and textsearch != "":
@@ -247,7 +260,9 @@ class Main:
                 textcoords = "%.1f, %.1f, %.1f" % (loc[0], loc[1], loc[2],)
                 search = playername.lower().find(textsearch.lower())
                 if search != -1:
-                    homeslist.append(self._make_homes_item(playername, textcoords))
+                    homeslist.append(
+                        self._make_homes_item(playername, textcoords)
+                    )
                     homefound = True
 
         else:
@@ -315,7 +330,8 @@ class Main:
              "color": "yellow"})
         player.message(
             {
-                "text": "-radius argument (number) is blocks distance in a square.",
+                "text": "-radius argument (number) is blocks distance "
+                        "in a square.",
                 "color": "yellow"})
         player.message(
             {
@@ -323,26 +339,31 @@ class Main:
                 "color": "yellow"})
         return
 
-    def printlist(self, itemlist, itemdesc, x, playerobj, page):
-        """I'd like to deprecate this method in favor of printpage, which just takes a blob of
-        multiline text and prints that instead.  This printlist method needs the items passed
-        separately as a list.
+    def printlist(self, itemlist, itemdesc, linecount, playerobj, page):
+        """
+        'Takes an itemlist and prints it'
         :param itemlist: list of help items.
         :param itemdesc: name of items.
-        :param x: total number of item lines
+        :param linecount: total number of item lines
         :param playerobj: player object
         :param page: page to print (player.message)
-        'Takes an itemlist and prints it'
-        'usage: SurestLib.printlist(itemlist, nameofItemsinlist, Total#lines, playerobj, whichpagetoprint)'"""
-        pages = float(x // 7)  # explicit floor division, converted to float 'x.0'
-        if pages != x / 7.0:  # this means a partial page still exists
+
+        """
+        # explicit floor division, converted to float 'x.0'
+        pages = float(linecount // 7)
+        # this means a partial page still exists
+        if pages != linecount / 7.0:
             pages += 1
         if pages < 2:
             page = 1
         if page > pages:
             page = pages
-        playerobj.message({"text": "List of " + itemdesc + ": ", "color": "yellow",
-                           "extra": [{"text": "Page " + str(page) + " of " + str(pages), "color": "green"}]})
+        playerobj.message(
+            {"text": "List of " + itemdesc + ": ", "color": "yellow",
+             "extra": [{"text": "Page " + str(page) + " of " + str(pages),
+                        "color": "green"}]
+             }
+        )
         y = (page - 1) * 7
         while y < ((page - 1) * 7) + 7:
             try:
