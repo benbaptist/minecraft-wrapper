@@ -1,4 +1,7 @@
 Build 3:
+- critical bug fix for name changes.
+
+Build 3:
 - implement PARSER for player digging (internal refactor).
 - remove some more test code (tracer branch leftovers).
 - push build with staged code.  Has a bug:

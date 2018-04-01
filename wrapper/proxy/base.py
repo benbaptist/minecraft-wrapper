@@ -315,7 +315,7 @@ class Proxy(object):
         self.uuids.convert_files(old_local_uuid, new_local_uuid, cwd)
         self.usercache[realuuid]["localname"] = newname
         self.usercache_obj.save()
-        return newname
+        return newname, new_local_uuid
 
     def getclientbyofflineserveruuid(self, uuid):
         """

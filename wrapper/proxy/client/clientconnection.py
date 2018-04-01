@@ -1238,6 +1238,8 @@ class Client(object):
                 return False
             mojang_name = self.proxy.uuids.getusernamebyuuid(
                 self.wrapper_uuid.string)
+            self.local_uuid = self.proxy.uuids.getuuidfromname(self.username)
+
             if mojang_name:
                 if mojang_name != self.username:
                     if self.names_change:
@@ -1249,8 +1251,6 @@ class Client(object):
                         self.log.info("%s's client performed LOGON in with "
                                       "new name, falling back to %s",
                                       self.username, mojang_name)
-
-            self.local_uuid = self.proxy.uuids.getuuidfromname(self.username)
 
             # verified info we can now store:
             self.info["ip"] = self.ip
