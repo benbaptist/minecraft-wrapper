@@ -583,7 +583,6 @@ class Player(object):
                 sentitem = message
             else:
                 sentitem = processoldcolorcodes(message)
-                pprint.pprint(message)
 
             self.client.chat_to_client(sentitem, position)
         else:

@@ -42,7 +42,7 @@ class Client(object):
 
            Client receives the parent proxy as it's argument.
            No longer receives the proxy's wrapper instance!  All
-           data is passed via servervitals from proxy's srv_data.
+           data is passed via srv_data from proxy's srv_data.
     """
     def __init__(self, proxy, clientsock, client_addr, banned=False):
 
@@ -52,7 +52,7 @@ class Client(object):
         self.proxy = proxy
         self.public_key = self.proxy.public_key
         self.private_key = self.proxy.private_key
-        self.servervitals = self.proxy.srv_data
+        self.srv_data = self.proxy.srv_data
         self.log = self.proxy.log
         self.ipbanned = banned
 
@@ -72,9 +72,9 @@ class Client(object):
         self.MOTD = {}
 
         # client will reset this later, if need be..
-        self.clientversion = self.servervitals.protocolVersion
+        self.clientversion = self.srv_data.protocolVersion
         # default server port (to this wrapper's server)
-        self.serverport = self.servervitals.server_port
+        self.serverport = self.srv_data.server_port
 
         # packet stuff
         self.pktSB = mcpackets_sb.Packets(self.clientversion)
@@ -426,14 +426,14 @@ class Client(object):
                 if len(splitaddress) > 3 and splitaddress[3] == "WPY":
                     self.info["client-is-wrapper"] = True
 
-            if self.servervitals.protocolVersion == -1:
+            if self.srv_data.protocolVersion == -1:
                 #  ... returns -1 to signal no server
                 self.disconnect(
                     "The server is not started (protocol not established)."
                 )
                 return False
 
-            if not self.servervitals.state == 2:
+            if not self.srv_data.state == 2:
                 self.disconnect(
                     "Server has not finished booting. Please try"
                     " connecting again in a few seconds"
@@ -444,7 +444,7 @@ class Client(object):
                 self.disconnect("You're running an unsupported snapshot"
                                 " (protocol: %s)!" % self.clientversion)
                 return False
-            if self.servervitals.protocolVersion != self.clientversion:
+            if self.srv_data.protocolVersion != self.clientversion:
                 self.disconnect("You're not running the same Minecraft"
                                 " version as the server!")
                 return False
@@ -476,16 +476,16 @@ class Client(object):
         back to HANDSHAKE mode.
         """
         sample = []
-        for player in self.servervitals.players:
-            playerobj = self.servervitals.players[player]
+        for player in self.srv_data.players:
+            playerobj = self.srv_data.players[player]
             if playerobj.username not in self.hidden_ops:
                 sample.append({"name": playerobj.username,
                                "id": str(playerobj.mojangUuid)})
             if len(sample) > 5:
                 break
-        reported_version = self.servervitals.protocolVersion
-        reported_name = self.servervitals.version
-        motdtext = self.servervitals.motd
+        reported_version = self.srv_data.protocolVersion
+        reported_name = self.srv_data.version
+        motdtext = self.srv_data.motd
         if self.clientversion >= PROTOCOL_1_8START:
             motdtext = processcolorcodes(motdtext.replace(
                 "\\", ""))
@@ -493,7 +493,7 @@ class Client(object):
             "description": motdtext,
             "players": {
                 "max": int(self.proxy.config["max-players"]),
-                "online": len(self.servervitals.players),
+                "online": len(self.srv_data.players),
                 "sample": sample
             },
             "version": {
@@ -503,8 +503,8 @@ class Client(object):
         }
 
         # add Favicon, if it exists
-        if self.servervitals.serverIcon:
-            self.MOTD["favicon"] = self.servervitals.serverIcon
+        if self.srv_data.serverIcon:
+            self.MOTD["favicon"] = self.srv_data.serverIcon
 
         # add Forge information, if applicable.
         if self.proxy.forge:
@@ -513,8 +513,7 @@ class Client(object):
         self.packet.sendpkt(
             self.pktCB.PING_JSON_RESPONSE[PKT],
             [STRING],
-            [json.dumps(self.MOTD)],
-            serverbound=False
+            [json.dumps(self.MOTD)]
         )
 
         # after this, proxy waits for the expected PING to
@@ -604,7 +603,7 @@ class Client(object):
         """
 
         # read response Tokens - "shared_secret|verify_token"
-        if self.servervitals.protocolVersion < 6:
+        if self.srv_data.protocolVersion < 6:
             data = self.packet.readpkt([BYTEARRAY_SHORT, BYTEARRAY_SHORT])
         else:
             data = self.packet.readpkt([BYTEARRAY, BYTEARRAY])
@@ -723,7 +722,7 @@ class Client(object):
 
             self.state = HANDSHAKE
             self.disconnect("Login denied by a Plugin.")
-            del self.servervitals.players[self.username]
+            del self.srv_data.players[self.username]
             return
 
         self.permit_disconnect_from_server = True
@@ -1239,6 +1238,8 @@ class Client(object):
                 return False
             mojang_name = self.proxy.uuids.getusernamebyuuid(
                 self.wrapper_uuid.string)
+            self.local_uuid = self.proxy.uuids.getuuidfromname(self.username)
+
             if mojang_name:
                 if mojang_name != self.username:
                     if self.names_change:
@@ -1250,8 +1251,6 @@ class Client(object):
                         self.log.info("%s's client performed LOGON in with "
                                       "new name, falling back to %s",
                                       self.username, mojang_name)
-
-            self.local_uuid = self.proxy.uuids.getuuidfromname(self.username)
 
             # verified info we can now store:
             self.info["ip"] = self.ip

@@ -56,7 +56,7 @@ class Packets(object):
         self.PLAYER_POSITION = [0x04, [NULL, ]]
         self.PLAYER_LOOK = [0x05, [NULL, ]]
         self.PLAYER_POSLOOK = [0x06, [DOUBLE, DOUBLE, DOUBLE, DOUBLE, FLOAT, FLOAT, BOOL]]  # noqa
-        self.PLAYER_DIGGING = [0x07, [NULL, ]]
+        self.PLAYER_DIGGING = [0x07, [BYTE, INT, UBYTE, INT, BYTE]]
         self.PLAYER_BLOCK_PLACEMENT = [0x08, [NULL, ]]
         self.HELD_ITEM_CHANGE = [0x09, [NULL, ]]
         self.ANIMATION = [0x0a, [NULL, ]]
@@ -89,6 +89,7 @@ class Packets(object):
         if protocol >= PROTOCOL_1_8START:
             self.KEEP_ALIVE[PARSER] = [VARINT]
             self.PLAYER_POSLOOK[PARSER] = [DOUBLE, DOUBLE, DOUBLE, FLOAT, FLOAT, BOOL]  # noqa
+            self.PLAYER_DIGGING[PARSER] = [BYTE, POSITION, NULL, NULL, BYTE]
             self.CLIENT_STATUS[PARSER] = [VARINT]
             self.CLICK_WINDOW[PARSER] = [UBYTE, SHORT, BYTE, SHORT, BYTE, SLOT]
 

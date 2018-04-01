@@ -102,7 +102,7 @@ class ParseSB(object):
         data = json.dumps(self.client.info)
         # only our wrappers communicate with this, so, format is not critical
         self.packet.sendpkt(self.pktCB.PLUGIN_MESSAGE[PKT], [STRING, STRING],
-                            (channel, data), serverbound=False)
+                            (channel, data))
 
     def play_player_poslook(self):  # player position and look
         """decided to use this one solely for tracking the client position"""
@@ -199,7 +199,7 @@ class ParseSB(object):
                     "playername":
                         self.client.username,
                     "player":
-                        self.client.servervitals.players[self.client.username],
+                        self.client.srv_data.players[self.client.username],
                     "command":
                         allwords[0][1:],
                     "args":
@@ -353,20 +353,12 @@ class ParseSB(object):
     def play_player_digging(self):
         if not self.client.local:
             return True
-        if self.client.clientversion < PROTOCOL_1_7:
+        data = self.packet.readpkt(self.pktSB.PLAYER_DIGGING[PARSER])
+        if self.client.clientversion < PROTOCOL_1_8START:
             data = None
-            position = data
-        elif PROTOCOL_1_7 <= self.client.clientversion < PROTOCOL_1_8START:
-            data = self.packet.readpkt([BYTE, INT, UBYTE, INT, BYTE])
-            # "byte:status|int:x|ubyte:y|int:z|byte:face")
             position = (data[1], data[2], data[3])
         else:
-            data = self.packet.readpkt([BYTE, POSITION, NULL, NULL, BYTE])
-            # "byte:status|position:position|byte:face")
             position = data[1]
-
-        if data is None:
-            return True
 
         # finished digging
         if data[0] == 2:
