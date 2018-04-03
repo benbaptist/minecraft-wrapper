@@ -47,7 +47,7 @@ except ImportError:
 DISCLAIMER = "Web mode is a beta feature and does not use HTTPS to send your " \
              "password to the server (just uses a plain-text HTTP GET).  " \
              "Besides password protection, we also have a setting in the " \
-             "'Web' section to only allow only certain IPs to connect.  If " \
+             "'Web' section to    only allow only certain IPs to connect.  If " \
              "you need to use web remotely, it is recommended to turn this " \
              "feature on and add the IP address from where you will be using " \
              "the web interface into the 'safe-ips' config item.  That said" \
@@ -205,6 +205,10 @@ class Web(object):
                                        "message": payload["message"]}}])
 
     def on_player_join(self, payload):
+        # abrupt disconnections can cause player on-join although player is
+        # not on...
+        if not payload["player"]:
+            return
         while len(self.chatScrollback) > 200:
             self.chatScrollback.pop()
         self.chatScrollback.append([
