@@ -1,3 +1,7 @@
+Build 7
+- Harden up wrappers handling of disconnected players.
+- Patch resource imports that may not work on Windows.
+
 Build 6 [1.0.4 RC 6]
 - Fixed wrapper's player.interact use_item event that has been broken
  ever since wrapper stopped using the old string-keys packet read() format.
