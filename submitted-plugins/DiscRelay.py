@@ -16,8 +16,9 @@ class Main:
 
     def onEnable(self):
         self.client = discord.Client()
+        self.server = discord.Server(kwargs={"id":"serverID"})
         self.sendChannel = discord.Channel(kwargs={"name": "channelName",
-                                                   "server": "serverName",
+                                                   "server": self.server,
                                                    "id": "channelID"})
 
         self.api.registerEvent("player.message", self.playerMessage)
