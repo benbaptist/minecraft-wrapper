@@ -26,7 +26,7 @@ class Main:
         async def on_message(self, message):
             self.api.minecraft.broadcast(message)
 
-        self.client.start(kwargs = {"bot": True})
+        self.client.start('token', kwargs = {"bot": True})
 
     def onDisable(self):
         self.client.logout()
