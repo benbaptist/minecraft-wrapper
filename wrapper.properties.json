@@ -1,0 +1,130 @@
+{
+  "Alerts": {
+    "enabled": false,
+    "password": "use `/password -s Alerts password <your password>` to set this (or enter a password-plaintext).",
+    "password-plaintext": false,
+    "servers": [
+      {
+        "address": "smtp.gmail.com",
+        "encrypted-password": "Copy and Paste from 'password' after wrapper encrypts it.",
+        "group": "wrapper",
+        "login-name": false,
+        "port": 587,
+        "recipients": [
+          "email1@provider.com",
+          "email2@provider.com"
+        ],
+        "subject": "Wrapper.py Alert",
+        "type": "email"
+      }
+    ]
+  },
+  "Backups": {
+    "backup-compression": false,
+    "backup-folders": [
+      "server.properties",
+      "world",
+      "wrapper-data"
+    ],
+    "backup-interval": 3600,
+    "backup-location": "backup-directory",
+    "backup-notification": true,
+    "backups-keep": 10,
+    "enabled": false
+  },
+  "Entities": {
+    "enable-entity-controls": false,
+    "entity-update-frequency": 4,
+    "thin-chicken": 30,
+    "thin-cow": 40,
+    "thin-sheep": 40,
+    "thin-zombie_pigman": 40,
+    "thinning-activation-threshhold": 100,
+    "thinning-frequency": 30
+  },
+  "Gameplay": {
+    "use-timer-tick-event": false
+  },
+  "General": {
+    "auto-restart": true,
+    "command": "java -jar -Xmx2G -Xms1G server.jar nogui",
+    "encoding": "utf-8",
+    "salt": "jZO2tMo9UbUdAi6lwRovag==",
+    "server-directory": ".",
+    "shell-scripts": false,
+    "timed-reboot": false,
+    "timed-reboot-minutes": 1440,
+    "timed-reboot-warning-minutes": 5
+  },
+  "IRC": {
+    "autorun-irc-commands": [
+      "COMMAND 1",
+      "COMMAND 2"
+    ],
+    "channels": [
+      "#wrapper"
+    ],
+    "command-character": ".",
+    "control-from-irc": false,
+    "control-irc-pass": "from console use `/password IRC control-irc-pass <your password>`",
+    "control-irc-pass-plaintext": false,
+    "irc-enabled": false,
+    "nick": "MinecraftWrap",
+    "obstruct-nicknames": false,
+    "password": "from console use `/password IRC password <your password>`",
+    "password-plaintext": false,
+    "port": 6667,
+    "server": "benbaptist.com",
+    "show-channel-server": true,
+    "show-irc-join-part": true
+  },
+  "Misc": {
+    "default-restart-message": "Server restarting...",
+    "halt-message": "Halting Wrapper...",
+    "reboot-message": "Server is conducting a scheduled reboot. The server will be back momentarily!",
+    "stop-message": "Stopping The Minecraft Server",
+    "trap-ctrl-z": true,
+    "use-betterconsole": false
+  },
+  "Proxy": {
+    "auto-name-changes": true,
+    "built-in-hub": false,
+    "command-prefix": "/",
+    "disconnect-nonproxy-connections": true,
+    "hidden-ops": [
+      "SurestTexas00",
+      "BenBaptist"
+    ],
+    "max-players": 1024,
+    "online-mode": true,
+    "proxy-bind": "0.0.0.0",
+    "proxy-enabled": true,
+    "proxy-port": 25565,
+    "silent-ipban": true,
+    "worlds": {
+      "world": {
+        "desc": "a world description",
+        "port": 25565
+      }
+    }
+  },
+  "Updates": {
+    "auto-update-branch": null,
+    "auto-update-wrapper": false,
+    "dev-branch": "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development",
+    "stable-branch": "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/master"
+  },
+  "Web": {
+    "safe-ips": [
+      "127.0.0.1"
+    ],
+    "safe-ips-use": true,
+    "server-name": "Minecraft Server",
+    "web-allow-file-management": true,
+    "web-bind": "0.0.0.0",
+    "web-enabled": false,
+    "web-password": "to set this, from console use `/password Web web-password <your password>`",
+    "web-password-plaintext": false,
+    "web-port": 8070
+  }
+}
