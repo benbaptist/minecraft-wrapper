@@ -761,7 +761,6 @@ class MCServer(object):
         # .. and load the proper ops file
         if "Starting minecraft server version" in buff and \
                 self.prepends_offset == 0:
-
             for place in range(len(line_words)-1):
                 self.prepends_offset = place
                 if line_words[place] == "Starting":
@@ -775,6 +774,9 @@ class MCServer(object):
             minor = get_int(getargs(semantics, 2))
             self.vitals.version_compute = minor + (major * 100) + (release * 10000)  # noqa
 
+            if len(self.vitals.version.split("w")) > 1:
+                # It is a snap shot
+                self.vitals.version_compute = 10800
             # 1.7.6 (protocol 5) is the cutoff where ops.txt became ops.json
             if self.vitals.version_compute > 10705 and self.vitals.protocolVersion < 0:  # noqa
                 self.vitals.protocolVersion = 5

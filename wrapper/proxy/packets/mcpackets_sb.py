@@ -188,3 +188,9 @@ class Packets(object):
             self.VEHICLE_MOVE[PKT] = 0x10
             self.STEER_BOAT[PKT] = 0x11
             self.CRAFT_RECIPE_REQUEST[PKT] = 0x12
+
+        if protocol >= PROTOCOL_PRE_RELEASE:
+            self.CHAT_MESSAGE[PKT] = 0x01
+            self.CLIENT_STATUS[PKT] = 0x02
+            self.CLIENT_SETTINGS[PKT] = 0x03
+            self.TAB_COMPLETE[PKT] = 0x04
