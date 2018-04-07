@@ -22,13 +22,12 @@ class Main:
 
         self.api.registerEvent("player.message", self.playerMessage)
         self.api.registerEvent("player.login", self.login)
-        
         self.discord_storage = self.api.getStorage("discord")
         self.player_data = self.discord_storage.Data
 
-        self.api.registerCommand("discord", self._toggle, None)
+        self.api.registerCommand("disctoggle", self._toggle, None)
         self.api.registerHelp("DiscordRelay","sends and receives messages from Discord",
-                              [("/discord toggle",
+                              [("/disctoggle",
                                 "toggles whether you want to communicate with the Discord server",
                                 None)])
 
@@ -63,13 +62,9 @@ class Main:
         pass
 
     def _toggle(self, player, args):
-        if args[0] == "toggle":
-            if self.player_data[player.uuid] == True:
-                self.player_data[player.uuid] = False
-                player.message("Disabled message relay with Discord.")
-            else:
-                self.player_data[player.uuid] = True
-                player.message("Enabled message relay with Discord.")
+        if self.player_data[player.uuid] == True:
+            self.player_data[player.uuid] = False
+            player.message("Disabled message relay with Discord.")
         else:
-            player.message("Wrong argument: type 'toggle'")
-        
+            self.player_data[player.uuid] = True
+            player.message("Enabled message relay with Discord.")
