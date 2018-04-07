@@ -1,3 +1,7 @@
+Build 8 [1.0.6 RC 8]
+- api.helpers.get_int - accepts possible booleans
+- add Regions suite to stable plugins.
+
 Build 7 [1.0.5 RC 7]
 - Make wrapper current through snapshot 18w14b:
     - add protocol 368 as PROTOCOL_PRE_RELEASE

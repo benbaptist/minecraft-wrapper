@@ -369,13 +369,19 @@ def get_int(s):
 
     :arg s: Any string value.
 
-    :returns: Applicable value (or 0 for values it can't convert)
+    :returns: Applicable value (or 0 for values it can't convert). Booleans or
+     other types return their truth value as 1 (true) or 0 (false)
 
     """
     try:
         val = int(s)
     except ValueError:
         val = 0
+    except TypeError:
+        if s:
+            val = 1
+        else:
+            val = 0
     return val
 
 
