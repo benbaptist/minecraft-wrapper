@@ -63,7 +63,8 @@ using 'self.api.helpers'
 
     :arg s: Any string value.
 
-    :returns: Applicable value (or 0 for values it can't convert)
+    :returns: Applicable value (or 0 for values it can't convert). Booleans or
+     other types return their truth value as 1 (true) or 0 (false)
 
     
 -  getargs(arginput, i)
