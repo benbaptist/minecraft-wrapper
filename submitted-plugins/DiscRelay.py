@@ -33,7 +33,6 @@ class Main:
             for p in self.api.minecraft.getPlayers():
                 if self.online_players[p.uuid] == True:
                     p.message(message)
-            #(p.message(message, 0) for p in self.api.minecraft.getPlayers if p.uuid in self.online_players)
 
         self.client.start("token")
 
