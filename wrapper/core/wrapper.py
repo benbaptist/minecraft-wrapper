@@ -14,7 +14,6 @@ import hashlib
 import threading
 import time
 import os
-import resource
 import logging
 # import smtplib
 import sys  # used to pass sys.argv to server
@@ -30,6 +29,11 @@ try:
     import requests
 except ImportError:
     requests = False
+
+try:
+    import resource
+except ImportError:
+    resource = False
 
 # small feature and helpers
 # noinspection PyProtectedMember
@@ -1163,8 +1167,11 @@ class Wrapper(object):
         except:
             try:
                 # this might be cross-platform
-                temp = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-                totmem = {'peak': temp, 'rss': temp}
+                if resource:
+                    temp = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+                    totmem = {'peak': temp, 'rss': temp}
+                else:
+                    totmem = {'peak': 0, 'rss': 0}
             except:
                 # all efforts fail...
                 totmem = {'peak': 0, 'rss': 0}

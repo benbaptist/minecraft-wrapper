@@ -396,8 +396,28 @@ class ParseCB(object):
     def play_tab_complete(self):
         if not self.client.local:
             return True
-        rawdata = self.packet.readpkt(self.pktCB.TAB_COMPLETE[PARSER])
-        data = rawdata[0]
+        new_format = False
+        trans_id, start, length, rawdata = self.packet.readpkt(
+            self.pktCB.TAB_COMPLETE[PARSER]
+        )
+
+        data = rawdata
+        if type(data) is not list:
+            new_format = True
+
+        if new_format:
+            count = rawdata
+            data = []
+            for x in range(count):
+                match = self.packet.read_string()
+                tooltip = self.packet.read_bool()
+                if tooltip:
+                    tooltip = self.packet.read_json()
+                    data.append([match, "HasToolTip", tooltip])
+                    print([match, "HasToolTip", tooltip])
+                else:
+                    data.append([match])
+                    print([match])
 
         payload = self.proxy.eventhandler.callevent(
             "server.autoCompletes", {
@@ -426,7 +446,7 @@ class ParseCB(object):
         # allow to cancel event...
         if payload is False:
             return False
-
+        # TODO - parse new_format
         # change payload.
         if type(payload) == list:
             self.client.packet.sendpkt(self.pktCB.TAB_COMPLETE[PKT],

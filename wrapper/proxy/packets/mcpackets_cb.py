@@ -108,7 +108,7 @@ class Packets(object):
         self.STATISTICS = [0x37, [NULL, ]]
         self.PLAYER_LIST_ITEM = [0x38, [STRING, BOOL, SHORT]]
         self.PLAYER_ABILITIES = [0x39, [NULL, ]]
-        self.TAB_COMPLETE = [0x3a, [STRING_ARRAY]]
+        self.TAB_COMPLETE = [0x3a, [NULL, NULL, NULL, STRING_ARRAY]]
         self.SCOREBOARD_OBJECTIVE = [0x3b, [NULL, ]]
         self.UPDATE_SCORE = [0x3c, [NULL, ]]
         self.DISPLAY_SCOREBOARD = [0x3d, [NULL, ]]
@@ -138,6 +138,14 @@ class Packets(object):
         self.SELECT_ADVANCEMENT_TAB = [0xee, [NULL, ]]
         self.ADVANCEMENTS = [0xee, [NULL, ]]
         self.CRAFT_RECIPE_RESPONSE = [0xee, [NULL, ]]
+
+        # NEW TODO snapshot
+        self.DECLARE_COMMANDS = [0xee, [NULL, ]]
+        self.FACE_PLAYER = [0xee, [NULL, ]]
+        self.STOP_SOUND = [0xee, [NULL, ]]
+        self.DECLARE_RECIPES = [0xee, [NULL, ]]
+        self.TAGS = [0xee, [NULL, ]]
+
         # Protocol MODS:
         # -------------------------------
     
@@ -379,3 +387,79 @@ class Packets(object):
             # -Open sign editor
             # -Ping values has new info
             # -Display scoreboard has new info for team play
+
+        if protocol >= PROTOCOL_PRE_RELEASE:
+            self.CHAT_MESSAGE[PKT] = 0x0e
+            self.MULTI_BLOCK_CHANGE[PKT] = 0x0f
+            self.TAB_COMPLETE = [
+                0x10,[VARINT, VARINT, VARINT, VARINT, ]]
+            self.DECLARE_COMMANDS[PKT] = 0x11  # TODO NEW
+
+            self.CONFIRM_TRANSACTION[PKT] = 0x12
+            self.CLOSE_WINDOW[PKT] = 0x13
+            self.OPEN_WINDOW[PKT] = 0x14
+            self.WINDOW_ITEMS[PKT] = 0x15
+            self.WINDOW_PROPERTY[PKT] = 0x16
+            self.SET_SLOT[PKT] = 0x17
+            self.SET_COOLDOWN[PKT] = 0x18
+            self.PLUGIN_MESSAGE[PKT] = 0x19
+            self.NAMED_SOUND_EFFECT[PKT] = 0x1a
+            self.DISCONNECT[PKT] = 0x1b
+            self.ENTITY_STATUS[PKT] = 0x1c
+            self.EXPLOSION[PKT] = 0x1d
+            self.UNLOAD_CHUNK[PKT] = 0x1e
+            self.CHANGE_GAME_STATE[PKT] = 0x1f
+            self.KEEP_ALIVE[PKT] = 0x20
+            self.CHUNK_DATA[PKT] = 0x21
+            self.EFFECT[PKT] = 0x22
+            self.PARTICLE[PKT] = 0x23
+            self.JOIN_GAME[PKT] = 0x24
+            self.MAP[PKT] = 0x25
+            self.ENTITY[PKT] = 0x26
+            self.ENTITY_RELATIVE_MOVE[PKT] = 0x27
+            self.ENTITY_LOOK_AND_RELATIVE_MOVE[PKT] = 0x28
+            self.ENTITY_LOOK[PKT] = 0x29
+            self.VEHICLE_MOVE[PKT] = 0x2a
+            self.OPEN_SIGN_EDITOR[PKT] = 0x2b
+            self.CRAFT_RECIPE_RESPONSE[PKT] = 0x2c
+            self.PLAYER_ABILITIES[PKT] = 0x2d
+            self.COMBAT_EVENT[PKT] = 0x2e
+            self.PLAYER_LIST_ITEM[PKT] = 0x2f
+            self.FACE_PLAYER[PKT] = 0x30  # TODO NEW
+            self.PLAYER_POSLOOK[PKT] = 0x31
+            self.USE_BED[PKT] = 0x32
+            self.UNLOCK_RECIPES[PKT] = 0x33
+            self.DESTROY_ENTITIES[PKT] = 0x34
+            self.REMOVE_ENTITY_EFFECT[PKT] = 0x35
+            self.RESOURCE_PACK_SEND[PKT] = 0x36
+            self.RESPAWN[PKT] = 0x37
+            self.ENTITY_HEAD_LOOK[PKT] = 0x38
+            self.SELECT_ADVANCEMENT_TAB[PKT] = 0x39
+            self.WORLD_BORDER[PKT] = 0x3a
+            self.CAMERA[PKT] = 0x3b
+            self.HELD_ITEM_CHANGE[PKT] = 0x3c
+            self.DISPLAY_SCOREBOARD[PKT] = 0x3d
+            self.ENTITY_METADATA[PKT] = 0x3e
+            self.ATTACH_ENTITY[PKT] = 0x3f
+            self.ENTITY_VELOCITY[PKT] = 0x40
+            self.ENTITY_EQUIPMENT[PKT] = 0x41
+            self.SET_EXPERIENCE[PKT] = 0x42
+            self.UPDATE_HEALTH[PKT] = 0x43
+            self.SCOREBOARD_OBJECTIVE[PKT] = 0x44
+            self.SET_PASSENGERS[PKT] = 0x45
+            self.TEAMS[PKT] = 0x46
+            self.UPDATE_SCORE[PKT] = 0x47
+            self.SPAWN_POSITION[PKT] = 0x48
+            self.TIME_UPDATE[PKT] = 0x49
+            self.TITLE[PKT] = 0x4a
+            self.STOP_SOUND[PKT] = 0x4b
+            self.UPDATE_SIGN[PKT] = 0xee  # TODO ?? (Was 0x46)
+            self.SOUND_EFFECT[PKT] = 0x4c
+            self.PLAYER_LIST_HEADER_AND_FOOTER[PKT] = 0x4d
+            self.COLLECT_ITEM[PKT] = 0x4e
+            self.ENTITY_TELEPORT[PKT] = 0x4f
+            self.ADVANCEMENTS[PKT] = 0x50
+            self.ENTITY_PROPERTIES[PKT] = 0x51
+            self.ENTITY_EFFECT[PKT] = 0x52
+            self.DECLARE_RECIPES[PKT] = 0x53
+            self.TAGS[PKT] = 0x54

@@ -1,3 +1,15 @@
+Build 7 [1.0.5 RC 7]
+- Make wrapper current through snapshot 18w14b:
+    - add protocol 368 as PROTOCOL_PRE_RELEASE
+    - add PROTOCOL_PRE_RELEASE packets for CB and SB.
+    - Fix slot parsing, which has changed with new snapshots.
+    **TEMPORARILY BROKE / not implemented yet** - server.autoCompletes
+     (parse_cb.py) event is not compliant for sending/modding the new packet.
+- Fix error that causes wrapper to think snapshots are pre-netty.
+- Fix old Py3 Errors in NBT things
+- Harden up wrapper's handling of disconnected players.
+- Patch resource imports that may not work on Windows.
+
 Build 6 [1.0.4 RC 6]
 - Fixed wrapper's player.interact use_item event that has been broken
  ever since wrapper stopped using the old string-keys packet read() format.

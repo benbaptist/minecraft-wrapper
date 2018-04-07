@@ -14,6 +14,8 @@
 # """
 PROTOCOL_MAX = 4000
 
+PROTOCOL_PRE_RELEASE = 368
+
 PROTOCOL_1_12_2END = 340
 PROTOCOL_1_12_2 = 340
 PROTOCOL_1_12_2START = 339
@@ -75,6 +77,7 @@ UNSUPPORTED = UNSUPPORTED + list(range(PROTOCOL_1_9START, PROTOCOL_1_9REL1, 1))
 UNSUPPORTED = UNSUPPORTED + list(range(111, 201, 1))
 UNSUPPORTED = UNSUPPORTED + list(range(211, 301, 1))
 UNSUPPORTED = UNSUPPORTED + list(range(PROTOCOL_1_11END, PROTOCOL_1_12START, 1))
+UNSUPPORTED = UNSUPPORTED + list(range(341, 367, 1))
 
 """Minecraft version 1.6.4 and older used a protocol versioning
 scheme separate from the current one. Accordingly, an old protocol

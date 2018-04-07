@@ -1368,10 +1368,15 @@ class Client(object):
 
         """
         if self.clientSettings:
-            self.server_connection.packet.sendpkt(
-                self.pktSB.CLIENT_SETTINGS[PKT],
-                [RAW, ],
-                (self.clientSettings,))
+            try:
+                self.server_connection.packet.sendpkt(
+                    self.pktSB.CLIENT_SETTINGS[PKT],
+                    [RAW, ],
+                    (self.clientSettings,))
+            except AttributeError:
+                # this will fail under certain circumstances when a player
+                # disconnects abruptly.
+                pass
 
     def _send_forge_client_handshakereset(self):
         """
