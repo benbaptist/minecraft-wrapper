@@ -31,7 +31,7 @@ class Main:
         @self.client.event
         async def on_message(message):
             for p in self.api.minecraft.getPlayers():
-                if p.uuid in self.online_players:
+                if self.online_players[p.uuid] == True:
                     p.message(message)
             #(p.message(message, 0) for p in self.api.minecraft.getPlayers if p.uuid in self.online_players)
 
