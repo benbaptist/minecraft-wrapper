@@ -16,7 +16,8 @@ class Main:
 
     def onEnable(self):
         self.client = discord.Client()
-        self.server = discord.Server(kwargs={"id":"serverID"})
+        self.server = discord.Server(kwargs={"id": "serverID"})
+
         self.sendChannel = discord.Channel(kwargs={"name": "channelName",
                                                    "server": self.server,
                                                    "id": "channelID"})
@@ -27,7 +28,7 @@ class Main:
         async def on_message(self, message):
             self.api.minecraft.broadcast(message)
 
-        self.client.start('token', kwargs = {"bot": True})
+        self.client.start("token")
 
     def onDisable(self):
         self.client.logout()
@@ -39,7 +40,7 @@ class Main:
 
         @self.client.event
         async def discMessage():
-            await self.client.edit_profile(fields={"username":playerName})
+            await self.client.edit_profile(fields = {"username": playerName})
             await self.client.send_message(self.sendChannel, payload["message"])
 
         discMessage()
