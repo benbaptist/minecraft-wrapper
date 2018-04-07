@@ -397,7 +397,9 @@ class ParseCB(object):
         if not self.client.local:
             return True
         new_format = False
-        trans_id, start, length, rawdata = self.packet.readpkt(self.pktCB.TAB_COMPLETE[PARSER])
+        trans_id, start, length, rawdata = self.packet.readpkt(
+            self.pktCB.TAB_COMPLETE[PARSER]
+        )
 
         data = rawdata
         if type(data) is not list:
