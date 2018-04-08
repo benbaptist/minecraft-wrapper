@@ -30,7 +30,7 @@ From the console, type:<br>
 
 
 In the `/wrapper-data/plugins/groupsmanager` directory, create the 
-group manager text files.  First, create the group definitions file:<br><br>
+group manager text files.  First, create the groups definition file:<br><br>
 _"groups.txt"_
 ```
 owner
@@ -96,8 +96,8 @@ player - `/perms user <player> group trusted`<br>
 
  1) get the wand:  `//wand`.
  2) Using the wand, right click and left click on two opposing blocks
-  (_note: you can also manually select the positions by standing in a location
-   and using the `//pos1` and `//pos2` commands_).
+  (_note: you can also manually input the positions by using the
+  `//pos1 <x> <y> <z>` and `//pos2 <x> <y> <z>` commands_).
  3) Once the corners are selected, decide on a name for the region and type (I'll use
   'myproperty' here):<br> `//rg define myproperty`<br>
  4) now select the region for further edits:<br>`//rg use myproperty`<br>
@@ -215,6 +215,24 @@ You can located region based on:
 //rg find name <matching name text>
 //rg find near [number besides 50]
 ```
+<br>
+
+### Goto a region ###
+
+The goto subcommand allows you to goto a region:<br>
+`//rg goto myproperty`
+<br>
+
+This will place you "somewhere" in your claim (by a random 'spreadplayers' command).
+
+Those with the 'regions.home' permission can use the `//home` command, which will
+send the player to the first region it finds in this order:<br>
+1) The first region it finds where they are the owner.
+2) The first region it finds where they are on the "AccessPlayers" list.
+
+//home places the user near the POS1 of the region using a tight 2 block
+ spreadplayers radius.
+
 
 ### Debugging, examining, or modifying the regions data files ###
 
