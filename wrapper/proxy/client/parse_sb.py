@@ -350,7 +350,6 @@ class ParseSB(object):
         self.client.head = (data[0], data[1])
         return True
 
-
     def play_player_digging(self):
         if not self.client.local:
             return True
@@ -509,20 +508,6 @@ class ParseSB(object):
             position = (position[0] - 1, position[1], position[2])
         elif face == 5:
             position = (position[0] + 1, position[1], position[2])
-
-        if helditem is None or ("id" in helditem and helditem["id"] == -1):
-            # if no item, treat as interaction (according to wrappers
-            # inventory :(, return False  )
-            if not self.proxy.eventhandler.callevent("player.interact", {
-                "playername": player,
-                "position": position,
-                "action": "useitem",
-                "origin": "pktSB.PLAYER_BLOCK_PLACEMENT"
-            }):
-                self.log.debug(
-                    "player helditem was None. (playerblockplacement-SB)"
-                )
-                return False
 
         # block placement event
         # position is where new block goes
