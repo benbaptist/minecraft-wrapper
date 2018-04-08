@@ -108,9 +108,9 @@ class Main:
             [
                 ("//wand", "Gives the editing wand",
                  "region.wand"),
-                ("//pos1", "Select pos1",
+                ("//pos1 <x> <y> <z>", "Input pos1",
                  "region.wand"),
-                ("//pos2", "Select pos2",
+                ("//pos2 <x> <y> <z>", "Input pos2",
                  "region.wand"),
                 ("//file", "display the region file name for the region "
                            "you are standing in.",
@@ -1039,12 +1039,12 @@ class Main:
                     "spreadplayers %s %s 1 2 false %s" % (x, z, player.username)
                 )
                 player.message(
-                    "&5Make sure you /sethome again (this command won't "
+                    "&5Be sure you /sethome if possible (this command may not "
                     "be here forever!"
                 )
                 return
         player.message(
-            "&cBummer!  I could not find your old base (you never claimed it?)"
+            "&cBummer!  I could not find your base (you never claimed one?)"
         )
         player.message(
             "&5I'll try to get you to a friends house..."
@@ -1057,7 +1057,7 @@ class Main:
                     "spreadplayers %s %s 1 2 false %s" % (x, z, player.username)
                 )
                 player.message(
-                    "&5Make sure you /sethome again (this command won't "
+                    "&5Be sure you /sethome if possible (this command won't "
                     "be here forever!"
                 )
                 return
