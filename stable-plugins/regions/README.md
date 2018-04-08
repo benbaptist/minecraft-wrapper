@@ -25,11 +25,12 @@ but let's do it the easier way:
 Use the GroupsManager plugin:<br>
 set your permission to use it (level 10 Superops [./superops.txt] don't
  need to do this):<br>
+From the console, type:<br>
 `/perms users <username> set groupsmanager.auth True`
 
 
 In the `/wrapper-data/plugins/groupsmanager` directory, create the 
-group manager files.  First, create the group definitions file:<br><br>
+group manager text files.  First, create the group definitions file:<br><br>
 _"groups.txt"_
 ```
 owner
@@ -56,7 +57,7 @@ region.define
 region.protect
 region.adjust
 region.setowner
-SurestTexas0
+
 # own more than one region (optional, not needed for admin duties)
 region.multiple
 
@@ -79,8 +80,8 @@ region.dumps
 admin
 ```
 
-run the following command to load the files into the wrapper permission
-system:<br><br>
+From in-game, run the following command to load the files into the wrapper's 
+permission system:<br><br>
 ```
 /loadgr
 ```
@@ -116,20 +117,20 @@ Regions have these attributes and lists associated with them:
 - Break players
 - Place players
 - Access players
-- banned players
+- Banned players
 - The region definition (the two corners that define it, dimension, and
  whether it is protected).
 
 ### Abilities / region properties ###
-    - The Owner can administer any of the player lists, even if he only has
+- The Owner can administer any of the player lists, even if he only has
      region.player permission.
-    - Break players can break/mine things inside the region.
-    - place players can place blocks and items inside the region.
-    - Access players can perform actions in the region.  For instance:
-        - Use buckets to place water/lava.
-        - operate switches, levers, doors, chests, furnaces, etc.
-        - Use items such as flint/steel, bows, even eat!
-    - Banned players cannot enter your region.  Once they step into your
+- Break players can break/mine things inside the region.
+- Place players can place blocks and items inside the region.
+- Access players can perform actions in the region.  For instance:
+    - Use buckets to place water/lava.
+    - Operate switches, levers, doors, chests, furnaces, etc.
+    - Use items such as flint/steel, bows, even eat!
+- Banned players cannot enter your region.  Once they step into your
     region, they are teleported some distance back along their original path.  If
     they persist, they will be stuck at your border (although they can still
     walk away).
@@ -137,14 +138,14 @@ Regions have these attributes and lists associated with them:
 
 ### Adding a player to your region ###
 
-To add a player to you region, you give him easch of the permissions you want
+To add a player to you region, you give him each of the permissions you want
  him to have in your region:<br><br>
 The command format is:<br>
 `//rg set [region_name] break|access|place|ban|remove <playername>`<br><br>
 
-set `//rg use myproperty` so that you don't need to use the region_name:<br>
+Set `//rg use myproperty` so that you don't need to use the region_name:<br>
 `//rg use myproperty`<br><br>
-set the player for full permission in your region:<br>
+Set the player for full permission in your region:<br>
 
 ```
 //rg set break <playername>
@@ -164,7 +165,7 @@ To ban a player:<br>
 `//rg set ban <playername>` (player should be removed from other lists first)<br>
 
 
-### resizing a region ###
+### Resizing a region ###
 
 To resize a region,  make new 'pos1' and 'pos2' selections.  Then type:<br>
 `//rg resize myproperty` (or whatever region name you use).
@@ -181,7 +182,7 @@ Depending on the roof and floor settings, you may not see the entire thing.<br>
 
 ### Delete a region ###
 
-You must type the region name for this command:<br>
+You must type the regiopermissionn name for this command:<br>
 `//rg delete myproperty`
 <br>
 
@@ -216,7 +217,7 @@ You can located region based on:
 //rg find near [number besides 50]
 ```
 
-### debugging, examining, or modifying the regions data files ###
+### Debugging, examining, or modifying the regions data files ###
 
 The regions data Storage files are `regions.pkl` and `files.pkl` and are in their
 plugin folder 'com.suresttexas00.regions'.  The pickling is usually "human readable",
