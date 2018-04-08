@@ -510,7 +510,7 @@ class ParseSB(object):
         elif face == 5:
             position = (position[0] + 1, position[1], position[2])
 
-        if helditem is None:
+        if helditem is None or ("id" in helditem and helditem["id"] == -1):
             # if no item, treat as interaction (according to wrappers
             # inventory :(, return False  )
             if not self.proxy.eventhandler.callevent("player.interact", {
@@ -561,6 +561,7 @@ class ParseSB(object):
         return True
 
     def play_use_item(self):  # no 1.8 or prior packet
+        """intercept things like lava and water bukkit placement"""
         if not self.client.local:
             return True
         data = self.packet.readpkt([VARINT])[0]
@@ -706,7 +707,8 @@ class ParseSB(object):
             "mode": data[4],
             "clicked": data[5]  # item data
         }
-
+        if data[5] == {"id": -1}:
+            data[5] = None
         if not self.proxy.eventhandler.callevent("player.slotClick", datadict):
             return False
         """ eventdoc
@@ -748,14 +750,14 @@ class ParseSB(object):
         if data[0] == 0 and data[2] in (0, 1):
             # player first clicks on an empty slot - mark empty.
             if self.client.lastitem is None and data[5] is None:
-                self.client.inventory[data[1]] = None
+                self.client.inventory[data[1]] = {"id": -1}
 
             # player first clicks on a slot where there IS some data..
             if self.client.lastitem is None:
                 # having clicked on it puts the slot into NONE
                 # status (since it can now be moved).
                 # So we set the current slot to empty/none
-                self.client.inventory[data[1]] = None
+                self.client.inventory[data[1]] = {"id": -1}
                 # ..and we cache the new slot data to see where it goes
                 self.client.lastitem = data[5]
                 return True

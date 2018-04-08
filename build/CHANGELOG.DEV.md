@@ -1,3 +1,5 @@
+Build 9 [1.0.7 RC 9]
+
 Build 8 [1.0.6 RC 8]
 - api.helpers.get_int - accepts possible booleans
 - add Regions suite to stable plugins.

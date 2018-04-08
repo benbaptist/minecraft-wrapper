@@ -58,7 +58,8 @@ region.protect
 region.adjust
 region.setowner
 
-# own more than one region (optional, not needed for admin duties)
+# own more than one region (staff need this to create additioinal regions
+#  for other players while stiff having a claim of their own).
 region.multiple
 
 # inherit trusted
@@ -112,6 +113,9 @@ player - `/perms user <player> group trusted`<br>
 
 ## Editing region properties ##
 
+The command format is:<br>
+`//rg set [region_name] break|access|place|ban|unban|remove <playername>`<br><br>
+
 Regions have these attributes and lists associated with them:
 - Owner
 - Break players
@@ -125,23 +129,26 @@ Regions have these attributes and lists associated with them:
 - The Owner can administer any of the player lists, even if he only has
      region.player permission.
 - Break players can break/mine things inside the region.
-- Place players can place blocks and items inside the region.
-- Access players can perform actions in the region.  For instance:
+- Place players can place blocks, operate switches, open chests, and use items inside the region.
+- Access players can perform certain actions in the region.  For instance:
     - Use buckets to place water/lava.
-    - Operate switches, levers, doors, chests, furnaces, etc.
-    - Use items such as flint/steel, bows, even eat!
+    - Use items like bows or eat
 - Banned players cannot enter your region.  Once they step into your
     region, they are teleported some distance back along their original path.  If
     they persist, they will be stuck at your border (although they can still
     walk away).
 <br>
 
+### Changing the owner ##
+
+When a staff member creates a region for another player, the next step is to
+transfer ownership of the region to the player:<br>
+`//rg set owner <playername>`<br>
+
 ### Adding a player to your region ###
 
 To add a player to you region, you give him each of the permissions you want
  him to have in your region:<br><br>
-The command format is:<br>
-`//rg set [region_name] break|access|place|ban|remove <playername>`<br><br>
 
 Set `//rg use myproperty` so that you don't need to use the region_name:<br>
 `//rg use myproperty`<br><br>
@@ -155,15 +162,17 @@ Set the player for full permission in your region:<br>
 <br>
 
 
-### Removing and banning a player ###
+### Removing and banning/unbanning a player ###
 
-To remove a player from all the regions lists (including the ban list):
+To remove a player from all access lists:
 <br>
 (using the region)`//rg set remove <playername>`<br><br>
 
 To ban a player:<br>
-`//rg set ban <playername>` (player should be removed from other lists first)<br>
+`//rg set ban <playername>`<br>
 
+To ban a player:<br>
+`//rg set unban <playername>`<br>
 
 ### Resizing a region ###
 

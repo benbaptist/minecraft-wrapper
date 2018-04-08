@@ -3,7 +3,7 @@
 NAME = "Region Manager"
 AUTHOR = "SurestTexas00"
 ID = "com.suresttexas00.regionmanager"
-VERSION = (0, 2, 2)
+VERSION = (1, 0, 0)
 SUMMARY = "User interface for world regions editing and protection."
 WEBSITE = ""
 DESCRIPTION = """
@@ -28,6 +28,7 @@ class Main:
         self.api = api
         self.log = log
         self.players = {}
+        self.version = float("%d.%d" % (VERSION[0], VERSION[1]))
         self.res_messages = {
             "Nosel": "&bYou must select a region first! (use wooden"
                      " axe or see help)",
@@ -63,7 +64,7 @@ class Main:
 
         # get the regions plugin:
         self.regions = self.api.getPluginContext("com.suresttexas00.regions")
-        if self.regions.version < 1.1:
+        if self.regions.version < 1.2:
             self.log.error(
                 "Regions.py is out of date!, Regionmanager not enabled."
             )
@@ -239,16 +240,22 @@ class Main:
     def _regionhelp_set(player):
         player.message("&6Usage '//rg set [region] &e<attribute>&6 <player>'")
         player.message("&e   --Attributes--")
-        # owner | canbreak | canplace | canaccess | ban
+        # owner | canbreak | canplace | canaccess | ban | unban
         player.message("&e owner &a- Set player as owner.")
         player.message(
             "&e break/canbreak &a- Allow specified player to break blocks."
         )
-        player.message("&e place/canplace &a- Allow player to place blocks.")
+        player.message(
+            "&e place/canplace &a- Allow player to place blocks, open "
+            "chests, etc."
+        )
+        player.message(
+            "&e ban|unban &a- Ban or Unban a player form the region."
+        )
         player.message("&e remove &a- remove all player's permissions.")
         player.message(
-            "&e access/canaccess &a-player can operate things &a(eat/"
-            "shoot/sleep,etc)."
+            "&e access/canaccess &a-player can place buckets / eat /"
+            " use bow,etc)."
         )
 
     def _region_help(self, player):
@@ -602,6 +609,22 @@ class Main:
                              "color": "gold", "extra": [
                                 {"text": targetname, "color": "dark_green"},
                                 {"text": " has been added to your banlist for "
+                                         "region ", "color": "gold"},
+                                {"text": editregion, "color": "dark_purple"},
+                                {"text": ".", "color": "gold"}
+                              ]
+                             }
+                        )
+                        return
+                    if args[2].lower() == "unban":
+                        editregion = self.regions.rgedit(
+                            namex, playername=targetname, unban=True
+                        )
+                        player.message(
+                            {"text": "Player ",
+                             "color": "gold", "extra": [
+                                {"text": targetname, "color": "dark_green"},
+                                {"text": " has been unbanned from "
                                          "region ", "color": "gold"},
                                 {"text": editregion, "color": "dark_purple"},
                                 {"text": ".", "color": "gold"}

@@ -16,7 +16,7 @@ if PY3:
 NAME = "Regions"
 AUTHOR = "SurestTexas00"
 ID = "com.suresttexas00.regions"
-VERSION = (1, 1, 0)
+VERSION = (1, 2, 0)
 SUMMARY = "World regions editing and protection."
 WEBSITE = "" 
 DESCRIPTION = """
@@ -103,6 +103,7 @@ class Main:
         rw.start()
 
         if self.pos_tracking:
+            self.spawn = self.api.minecraft.getSpawnPoint()
             # player pos tracker
             self.movement_walk = 6
             self.movement_numbers = 10
@@ -124,6 +125,10 @@ class Main:
         self.pkts_cb = self.api.minecraft.getServerPackets()
 
     def _pos_tracker(self):
+        """Position tracker is also a global thread working with all player
+         clients, so it must use the try-except clauses.  If it fails
+         because one of the clients logs out, etc, the entire thread will
+         fail to perform its job."""
         locs = {}
         while self.run:
             time.sleep(1)
@@ -134,6 +139,7 @@ class Main:
                 try:
                     gm = player.getGamemode()
                     dim = player.getDimension()
+                    uuid = player.uuid
                 except AttributeError:
                     self.log.debug(
                         "region POS_tracker bad payload - missing GM or dim"
@@ -141,14 +147,17 @@ class Main:
                     continue
                 l_pos = player.getPosition()
                 present_pos = int(l_pos[0]), int(l_pos[1]), int(l_pos[2]), dim
-                if player.uuid not in locs:
-                    locs[player.uuid] = {}
-                    locs[player.uuid]["track"] = [present_pos, ]
-                    locs[player.uuid]["back"] = present_pos
+                if uuid not in locs:
+                    locs[uuid] = {}
+                    locs[uuid]["track"] = [present_pos, ]
+                    locs[uuid]["back"] = present_pos
                     continue
                 pos_triple = int(l_pos[0]), int(l_pos[1]), int(l_pos[2])
                 if self._banned_from_area(gm, pos_triple, dim, player):
-                    new_pos = locs[player.uuid]["track"][-3]
+                    try:
+                        new_pos = locs[uuid]["track"][-3]
+                    except IndexError:
+                        new_pos = self.spawn
                     self.api.minecraft.console(
                         "tp %s %d %d %d" % (
                             player.username, new_pos[0],
@@ -157,19 +166,19 @@ class Main:
                     )
                     continue
                 if self._signif_move(
-                        locs[player.uuid]["track"][-1],
+                        locs[uuid]["track"][-1],
                         present_pos,
                         self.movement_tp
                 ):
-                    locs[player.uuid]["back"] = locs[player.uuid]["track"][-1]
+                    locs[uuid]["back"] = locs[uuid]["track"][-1]
                 if self._signif_move(
-                        locs[player.uuid]["track"][-1],
+                        locs[uuid]["track"][-1],
                         present_pos,
                         self.movement_walk
                 ):
-                    locs[player.uuid]["track"].append(present_pos)
-                    while len(locs[player.uuid]["track"]) > self.movement_numbers:  # noqa
-                        locs[player.uuid]["track"].pop(0)
+                    locs[uuid]["track"].append(present_pos)
+                    while len(locs[uuid]["track"]) > self.movement_numbers:  # noqa
+                        locs[uuid]["track"].pop(0)
 
     def _banned_from_area(self, gamemode, pos, dim, player):
         if gamemode in (0, 2):
@@ -191,7 +200,11 @@ class Main:
         """
         action | player | position | region
 
+        Restore world is global thread that handles all player clients, so
+        it must use the try-except clauses.  If it fails because one of the
+        clients logs out, etc, the entire thread will fail to perform its job.
         """
+
         while self.run:
             time.sleep(.5)
             while len(self.clicks_queue) > 0:
@@ -202,11 +215,18 @@ class Main:
                 face = 1
                 if action == "break":
                     # get the original block to display
-                    player.client.server_connection.packet.sendpkt(
+                    try:
+                        # These must run in a try-except.  If it fails because
+                        # one of the clients logged out, etc, the entire thread
+                        # will fail to perform its job.
+                        player.client.server_connection.packet.sendpkt(
                         self.pkts_sb.PLAYER_DIGGING[PKT],
                         [BYTE, POSITION, BYTE],
                         (status, position, face)
-                    )
+                        )
+                    except AttributeError:
+                        continue
+
                 elif action == "place":
                     # get the original block to display
                     face_places = [(status, position, face)]
@@ -219,18 +239,23 @@ class Main:
                     face_places.append((status, (p[0], p[1], p[2] + 1), face))
 
                     for places in face_places:
-                        player.client.server_connection.packet.sendpkt(
-                            self.pkts_sb.PLAYER_DIGGING[PKT],
-                            [BYTE, POSITION, BYTE],
-                            places
-                        )
-
-                    for slots in player.client.inventory:
-                        player.client.packet.sendpkt(
-                            self.pkts_cb.SET_SLOT[PKT],
-                            self.pkts_cb.SET_SLOT[PARSER],
-                            (0, slots, player.client.inventory[slots])
-                        )
+                        try:
+                            player.client.server_connection.packet.sendpkt(
+                                self.pkts_sb.PLAYER_DIGGING[PKT],
+                                [BYTE, POSITION, BYTE],
+                                places
+                            )
+                        except AttributeError:
+                            continue
+                    try:
+                        for slots in player.client.inventory:
+                                player.client.packet.sendpkt(
+                                    self.pkts_cb.SET_SLOT[PKT],
+                                    self.pkts_cb.SET_SLOT[PARSER],
+                                    (0, slots, player.client.inventory[slots])
+                                )
+                    except AttributeError:
+                        continue
 
     def _act_on_break(self, player, position, region):
         if player.uuid not in self.lastmessage:
@@ -747,8 +772,7 @@ class Main:
         :param addaccess:  - Playername can access controls/chests, etc.
         :param addban: Ban playername from this region.
         :param remove: Remove access to region (owner still has access always).
-        :param unban: Un ban player name (not implemented)
-
+        :param unban: Un ban player name
         :returns: regionname if the region exists (and edits presumed
          to be made).  False if region does not exist.  Nothing is likely
          if another falure occured.
