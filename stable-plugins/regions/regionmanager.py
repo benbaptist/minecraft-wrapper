@@ -51,7 +51,9 @@ class Main:
             8: "&efind &2<near|named|owner|region|here> <arg (except "
                "region|here)>&f - find regions]'",
             9: "&eshow &2<region>&f - display region metadata.",
-            10: "&eset&f - type &2//region set&f for more info..."
+            10: "&egoto &2<region>&f - Teleport to a random "
+                "location in the region.",
+            11: "&eset&f - type &2//region set&f for more info..."
         }
         self.getargs = self.api.helpers.getargs
         self.getint = self.api.helpers.get_int
