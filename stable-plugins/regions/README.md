@@ -202,15 +202,14 @@ You can located region based on:
  - near - List all regions near by (with-in a 50 block square radius by default).
  - here - Where you are standing.
 
-"here" and "region" are based on where you are standing and require no arguments:<br><br>
+"here" and "region" are based on where you are standing and require no arguments:<br>
 ```
 //rg find here
 //rg find region
 ```
 
 "Near" can also be used with no argument, if you wish to use the default square radius.
-
-<br><br>
+<br>
 ```
 //rg find owner <playername>
 //rg find name <matching name text>
