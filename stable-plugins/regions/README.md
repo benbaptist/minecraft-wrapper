@@ -220,7 +220,7 @@ You can located region based on:
 
 The regions data Storage files are `regions.pkl` and `files.pkl` and are in their
 plugin folder 'com.suresttexas00.regions'.  The pickling is usually "human readable",
-but is not easy to read or edit.  To get a pretty json copy or these files, run:<br>
+but they are not easy to read or edit.  To get 'pretty' json copies of these files, run:<br>
 `//jsondumps`
 <br>
 
