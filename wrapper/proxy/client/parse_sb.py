@@ -151,6 +151,7 @@ class ParseSB(object):
 
         payload = self.proxy.eventhandler.callevent("player.rawMessage", {
             "playername": self.client.username,
+            "player": self.client.srv_data.players[self.client.username],
             "message": chatmsg
         })
         """ eventdoc
@@ -168,7 +169,8 @@ class ParseSB(object):
             or a dictionary payload containing ["message"] item.
             <comments>
             <payload>
-            "player": player's name
+            "player": player object
+            "playername": player's name
             "message": the chat message string.
             <payload>
 
@@ -233,6 +235,7 @@ class ParseSB(object):
 
                 <payload>
                 "player": playerobject()
+                "playername": player's name
                 "command": slash command (or whatever is set in wrapper's
                 config as the command cursor).
                 "args": the remaining words/args
@@ -350,7 +353,6 @@ class ParseSB(object):
         self.client.head = (data[0], data[1])
         return True
 
-
     def play_player_digging(self):
         if not self.client.local:
             return True
@@ -365,6 +367,7 @@ class ParseSB(object):
         if data[0] == 2:
             if not self.proxy.eventhandler.callevent("player.dig", {
                 "playername": self.client.username,
+                "player": self.client.srv_data.players[self.client.username],
                 "position": position,
                 "action": "end_break",
                 "face": data[4]
@@ -390,7 +393,8 @@ class ParseSB(object):
                         <comments>
 
                         <payload>
-                        "playername": playername (not the player object!)
+                        "playername": player's name
+                        "player": player object
                         "position": x, y, z block position
                         "action": begin_break or end_break (string)
                         "face": 0-5 (bottom, top, north, south, west, east)
@@ -402,6 +406,8 @@ class ParseSB(object):
             if self.client.gamemode != 1:
                 if not self.proxy.eventhandler.callevent("player.dig", {
                     "playername": self.client.username,
+                    "player": self.client.srv_data.players[
+                        self.client.username],
                     "position": position,
                     "action": "begin_break",
                     "face": data[4]
@@ -410,6 +416,8 @@ class ParseSB(object):
             else:
                 if not self.proxy.eventhandler.callevent("player.dig", {
                     "playername": self.client.username,
+                    "player": self.client.srv_data.players[
+                        self.client.username],
                     "position": position,
                     "action": "end_break",
                     "face": data[4]
@@ -419,6 +427,7 @@ class ParseSB(object):
             playerpos = self.client.position
             if not self.proxy.eventhandler.callevent("player.interact", {
                 "playername": self.client.username,
+                "player": self.client.srv_data.players[self.client.username],
                 "position": playerpos,
                 "action": "finish_using",
                 "origin": "pktSB.PLAYER_DIGGING"
@@ -443,7 +452,8 @@ class ParseSB(object):
                 <comments>
 
                 <payload>
-                "playername": playername (not the player object!)
+                "playername": player's name
+                "player": player object
                 "position":  the PLAYERS position - x, y, z, pitch, yaw
                 "action": "finish_using"  or "use_item"
                 "origin": Debugging information on where event was parsed.
@@ -510,26 +520,14 @@ class ParseSB(object):
         elif face == 5:
             position = (position[0] + 1, position[1], position[2])
 
-        if helditem is None or ("id" in helditem and helditem["id"] == -1):
-            # if no item, treat as interaction (according to wrappers
-            # inventory :(, return False  )
-            if not self.proxy.eventhandler.callevent("player.interact", {
-                "playername": player,
-                "position": position,
-                "action": "useitem",
-                "origin": "pktSB.PLAYER_BLOCK_PLACEMENT"
-            }):
-                self.log.debug(
-                    "player helditem was None. (playerblockplacement-SB)"
-                )
-                return False
-
         # block placement event
         # position is where new block goes
         # clickposition is the block actually clicked
         if not self.proxy.eventhandler.callevent(
                 "player.place",
-                {"playername": player, "position": position,
+                {"playername": player,
+                 "player": self.client.srv_data.players[self.client.username],
+                 "position": position,
                  "clickposition": clickposition,
                  "hand": hand, "item": helditem}):
             """ eventdoc
@@ -550,7 +548,8 @@ class ParseSB(object):
                 <comments>
 
                 <payload>
-                "playername": playername (not the player object!)
+                "playername": player's name
+                "player": player object
                 "position":  the PLAYERS position - x, y, z, pitch, yaw
                 "action": "finish_using"  or "use_item"
                 "origin": Debugging information on where event was parsed.
@@ -572,6 +571,7 @@ class ParseSB(object):
             position = self.client.lastplacecoords[0]
         if not self.proxy.eventhandler.callevent("player.interact", {
             "playername": self.client.username,
+            "player": self.client.srv_data.players[self.client.username],
             "position": position,
             "action": "use_item",
             "hand": data,
@@ -615,6 +615,7 @@ class ParseSB(object):
         l4 = data[6]
         payload = self.proxy.eventhandler.callevent("player.createSign", {
             "playername": self.client.username,
+            "player": self.client.srv_data.players[self.client.username],
             "position": position,
             "line1": l1,
             "line2": l2,
@@ -654,7 +655,8 @@ class ParseSB(object):
             <comments>
 
             <payload>
-            "player": player name
+            "player": player object
+            "playername": player's name
             "position": position of sign
             "line1": l1
             "line2": l2
@@ -700,6 +702,7 @@ class ParseSB(object):
 
         datadict = {
             "playername": self.client.username,
+            "player": self.client.srv_data.players[self.client.username],
             "wid": data[0],  # window id ... always 0 for inventory
             "slot": data[1],  # slot number
             "button": data[2],  # mouse / key button
@@ -725,7 +728,8 @@ class ParseSB(object):
             <comments>
 
             <payload>
-            "player": Players name (not the object!)
+            "player": Player object
+            "playername": the player's name
             "wid": window id ... always 0 for inventory
             "slot": slot number
             "button": mouse / key button

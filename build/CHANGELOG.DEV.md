@@ -1,4 +1,18 @@
+Build 10 [1.0.8 RC 10]
+- Remove player.interact event out of the block placement code because there
+ really is no way to tell if the client is interacting or not based on inventory.
+ clicking on a chest with no item or clicking on a chest with a block in hand still
+ opens the chest, for example.
+- added a player object "player" to event payloads that did not have it.  This is
+ only a cosmetic change in the API (and a speed optimization) because the event
+ code already added "player" objects to payloads missing the player object,  This
+ also corrects the documentation that did not list player as a payload.  Retained
+ the "playername" payload in these events, for backwards compatibility.
+- Optimize regions plugin some more.
+
 Build 9 [1.0.7 RC 9]
+- Fix wrapper client inventory bugs (inconsistent use of None versus {"id" = -1}
+ in code.
 
 Build 8 [1.0.6 RC 8]
 - api.helpers.get_int - accepts possible booleans

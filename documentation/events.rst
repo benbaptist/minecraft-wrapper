@@ -387,7 +387,8 @@
         Contains the "/", if present.
 
     :Payload:
-        :"player": player's name
+        :"player": player object
+        :"playername": player's name
         :"message": the chat message string.
 
     :Can be aborted/modified: Yes
@@ -406,7 +407,8 @@
         only supports starting and finishing a dig.
 
     :Payload:
-        :"playername": playername (not the player object!)
+        :"playername": player's name
+        :"player": player object
         :"position": x, y, z block position
         :"action": begin_break or end_break (string)
         :"face": 0-5 (bottom, top, north, south, west, east)
@@ -430,7 +432,8 @@
         pulling back bows, using buckets, etc.
 
     :Payload:
-        :"playername": playername (not the player object!)
+        :"playername": player's name
+        :"player": player object
         :"position":  the PLAYERS position - x, y, z, pitch, yaw
         :"action": "finish_using"  or "use_item"
         :"origin": Debugging information on where event was parsed.
@@ -453,7 +456,8 @@
         Called when the client places an item
 
     :Payload:
-        :"playername": playername (not the player object!)
+        :"playername": player's name
+        :"player": player object
         :"position":  the PLAYERS position - x, y, z, pitch, yaw
         :"action": "finish_using"  or "use_item"
         :"origin": Debugging information on where event was parsed.
@@ -476,7 +480,8 @@
         When a player creates a sign and finishes editing it
 
     :Payload:
-        :"player": player name
+        :"player": player object
+        :"playername": player's name
         :"position": position of sign
         :"line1": l1
         :"line2": l2
@@ -501,7 +506,8 @@
         When a player clicks a window slot
 
     :Payload:
-        :"player": Players name (not the object!)
+        :"player": Player object
+        :"playername": the player's name
         :"wid": window id ... always 0 for inventory
         :"slot": slot number
         :"button": mouse / key button
@@ -524,6 +530,7 @@
 
     :Payload:
         :"playername": client username
+        :"player": player object
         :"json": json or string data
 
     :Can be aborted/modified: Yes
@@ -542,6 +549,7 @@
 
     :Payload:
         :"playername": client username
+        :"player": player object
         :"position": position of bed
 
     :Can be aborted/modified: No - The server thinks the client is in bed already.
@@ -556,6 +564,7 @@
 
     :Payload:
         :"playername": client username
+        :"player": player object
         :"position": Spawn's position
 
     :Can be aborted/modified: No - Notification only.
@@ -572,6 +581,7 @@
 
     :Payload:
         :"playername": client username
+        :"player": player object
         :"vehicle_id": EID of vehicle or MOB
         :"leash": leash True/False
 
@@ -590,6 +600,7 @@
 
     :Payload:
         :"playername": client username
+        :"player": player object
         :"vehicle_id": EID of vehicle or MOB
         :"leash": leash True/False
 
