@@ -1,4 +1,4 @@
-Build 10 [1.0.8 RC 10]
+Build 11 [1.0.8 RC 11]
 - Remove player.interact event out of the block placement code because there
  really is no way to tell if the client is interacting or not based on inventory.
  clicking on a chest with no item or clicking on a chest with a block in hand still
@@ -9,6 +9,7 @@ Build 10 [1.0.8 RC 10]
  also corrects the documentation that did not list player as a payload.  Retained
  the "playername" payload in these events, for backwards compatibility.
 - Optimize regions plugin some more.
+- adds DiscordRelay plugin by @PurePi
 
 Build 9 [1.0.7 RC 9]
 - Fix wrapper client inventory bugs (inconsistent use of None versus {"id" = -1}
