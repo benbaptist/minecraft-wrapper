@@ -191,7 +191,7 @@ Depending on the roof and floor settings, you may not see the entire thing.<br>
 
 ### Delete a region ###
 
-You must type the regiopermissionn name for this command:<br>
+You must type the region name for this command:<br>
 `//rg delete myproperty`
 <br>
 
