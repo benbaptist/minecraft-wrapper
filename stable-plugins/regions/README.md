@@ -106,7 +106,7 @@ player - `/perms user <player> group trusted`<br>
   `//rg floor 5`<br>
   `//rg roof 256`<br>
  6) The region is now created!  The next step is to activate protection:<br>
-  `rg protect on`
+  `//rg protect on`
 
   __NOTE__ _Region names must be unique.  For instance, only one person_
    _could actually call their region 'myproperty'..._
