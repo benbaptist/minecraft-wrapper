@@ -204,7 +204,7 @@ To see all the data assocated with a region, run "show":<br>
 
 The "find" command can be used to locate or list regions.<br>
 
-You can located region based on:
+You can locate a region based on:
  - Owner - The owner of the region
  - name - The name or part of the name of the region)
  - region - List all regions in the present "minecraft region" (16x16 chunks)
