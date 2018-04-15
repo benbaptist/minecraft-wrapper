@@ -249,7 +249,11 @@
     :Module: wrapper.py *(core/wrapper.py)*
 
     :Description:
-        a timer that is called each second.
+        a timer that is called each second.  Do
+          not rely on these events to happen 'on-time'!  They
+          can be delayed based on their position the queue, as
+          well as the total number of timer.second events being
+          called.
 
     :Payload:
          None
@@ -273,8 +277,12 @@
     :Can be aborted/modified: No
 
     :Comments:
-        Use of this timer is not suggested and is turned off
-          by default in the wrapper.config.json file
+        Use of this timer is deprecated and is turned off
+          by default in the wrapper.config.json file.  the final
+          wrapper version 1.0 final will not support this timer. Its
+          use in wrapper has always been a bad idea. Starting with
+          wrapper 1.0.9 RC 12, this timer will be somewhat buggy,
+          running two or more ticks behind.
 
 **< Group 'core/irc.py' >**
 

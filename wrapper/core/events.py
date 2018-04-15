@@ -6,6 +6,7 @@
 # General Public License, version 3 or later.
 
 import threading
+import time
 
 from api.player import Player
 
@@ -17,6 +18,12 @@ class Events(object):
         self.log = wrapper.log
         self.listeners = []
         self.events = {}
+
+        self.event_queue = []
+        t = threading.Thread(target=self._event_processor,
+                             name="event_processor", args=())
+        t.daemon = True
+        t.start()
 
     def __getitem__(self, index):
         if not type(index) == str:
@@ -61,11 +68,15 @@ class Events(object):
         if abortable:
             return self._callevent(event, payload)
         else:
-            t = threading.Thread(target=self._callevent,
-                                 name="EventProcessor", args=(event, payload))
-            t.daemon = True
-            t.start()
+            self.event_queue.append((event, payload))
             return
+
+    def _event_processor(self):
+        while not self.wrapper.halt.halt:
+            while len(self.event_queue) > 0:
+                _event, _payload = self.event_queue.pop(0)
+                self._callevent(_event, _payload)
+            time.sleep(0.1)
 
     def _callevent(self, event, payload):
         if event == "player.runCommand":

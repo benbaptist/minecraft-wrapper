@@ -11,6 +11,7 @@ import time
 import subprocess
 import os
 import platform
+import threading
 
 from api.base import API
 from api.helpers import putjsonfile, getjsonfile, mkdir_p
@@ -35,23 +36,39 @@ class Backups(object):
         self.idle = True
         self.inprogress = False
         self.backup_interval = self.config["Backups"]["backup-interval"]
-        self.time = time.time()
+        self.timer = time.time()
         self.backups = []
 
         # allow plugins to shutdown backups via api
         self.enabled = self.config["Backups"]["enabled"]
 
-        # only register event if used and tar installed.
+        self._start()
+
+    def _start(self):
+        try:
+            self.timer = self.wrapper.storage["backup-timer"]
+        except KeyError:
+            self.timer = time.time()
+        self.backups = []
+        # only start timer if used and tar installed.
         if self.enabled and self.dotarchecks():
-            self.api.registerEvent("timer.second", self.eachsecond)
             self.log.debug("Backups Enabled..")
+            rw = threading.Thread(target=self._bu_process,
+                                  name="backup_process", args=())
+            rw.daemon = True
+            rw.start()
 
     # noinspection PyUnusedLocal
-    def eachsecond(self, payload):
-        # only run backups in server running/starting states
-        if self.wrapper.javaserver.vitals.state in (1, 2) and not self.idle:
-            if time.time() - self.time > self.backup_interval and self.enabled:
-                self.dobackup()
+    def _bu_process(self, payload):
+        while not self.wrapper.halt.halt:
+            time.sleep(1)
+            # only run backups in server running/starting states
+            if self.wrapper.javaserver.vitals.state in (1, 2) and not self.idle:
+                if time.time() - self.timer > self.backup_interval and self.enabled:  # noqa
+                    self.dobackup()
+            else:
+                self.timer += 1
+            self.wrapper.storage["backup-timer"] = self.timer
 
     def pruneoldbackups(self, filename="IndependentPurge"):
         if len(self.backups) > self.config["Backups"]["backups-keep"]:
@@ -142,7 +159,7 @@ class Backups(object):
     def dobackup(self):
         self.inprogress = True
         self.log.debug("Backup starting.")
-        self._settime()
+        self.timer = time.time()
         if not self._checkforbackupfolder():
             self.inprogress = False
             self.wrapper.events.callevent(
@@ -353,6 +370,3 @@ class Backups(object):
                     self.backups.append(
                         (int(backupI), "backup-%s.tar" % str(backupI))
                     )
-
-    def _settime(self):
-        self.time = time.time()

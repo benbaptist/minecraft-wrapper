@@ -41,7 +41,6 @@ from api.helpers import format_bytes, getargs, getargsafter, readout, get_int
 from api.helpers import putjsonfile
 from utils import readkey
 from utils import version as version_mod
-from utils.crypt import phrase_to_url_safebytes, gensalt
 
 # core items
 from core.mcserver import MCServer
@@ -58,8 +57,7 @@ from core.backups import Backups
 from core.consoleuser import ConsolePlayer
 from core.permissions import Permissions
 from core.alerts import Alerts
-from utils.crypt import Crypt
-
+from utils.crypt import Crypt, phrase_to_url_safebytes, gensalt
 
 # optional API type stuff
 from core.servervitals import ServerVitals
@@ -119,6 +117,7 @@ class Wrapper(object):
         self.serverpath = self.config["General"]["server-directory"]
         self.api = API(self, "Wrapper.py")
         self.alerts = Alerts(self)
+        self.alerts_on = self.config["Alerts"]["enabled"]
 
         # Read Config items
         # hard coded cursor for non-readline mode
@@ -184,8 +183,18 @@ class Wrapper(object):
         self.use_readline = not(self.config["Misc"]["use-betterconsole"])
         self.trap_ctrlz = self.config["Misc"]["trap-ctrl-z"]
 
+        #  HaltSig - Why? ... because if self.halt was just `False`, passing
+        #  a self.halt would simply be passing `False` (immutable).  Changing
+        # the value of self.halt would not necessarily change the value of the
+        # passed parameter (unless it was specifically referenced back as
+        # `wrapper.halt`). Since the halt signal needs to be passed, possibly
+        # several layers deep, and into modules that it may be desireable to
+        # not have direct access to wrapper, using a HaltSig object is
+        # more desireable and reliable in behavior.
+        self.halt = HaltSig()
+
         # Storages
-        self.wrapper_storage = Storage("wrapper")
+        self.wrapper_storage = Storage("wrapper", pickle=False)
         self.wrapper_permissions = Storage("permissions", pickle=False)
         self.wrapper_usercache = Storage("usercache", pickle=False)
 
@@ -215,16 +224,6 @@ class Wrapper(object):
         self.web = None
         self.proxy = None
         self.backups = None
-
-        #  HaltSig - Why? ... because if self.halt was just `False`, passing
-        #  a self.halt would simply be passing `False` (immutable).  Changing
-        # the value of self.halt would not necessarily change the value of the
-        # passed parameter (unless it was specifically referenced back as
-        # `wrapper.halt`). Since the halt signal needs to be passed, possibly
-        # several layers deep, and into modules that it may be desireable to
-        # not have direct access to wrapper, using a HaltSig object is
-        # more desireable and reliable in behavior.
-        self.halt = HaltSig()
 
         self.updated = False
         # future plan to expose this to api
@@ -343,7 +342,10 @@ class Wrapper(object):
             t.start()
 
         # Alert sent by daemonized thread to prevent wrapper execution blocking
-        self.alerts.ui_process_alerts("Wrapper.py started at %s" % time.time())
+        if self.alerts_on:
+            self.alerts.ui_process_alerts(
+                "Wrapper.py started at %s" % time.time()
+            )
 
         self.javaserver.handle_server()
         # handle_server always runs, even if the actual server is not started
@@ -356,7 +358,10 @@ class Wrapper(object):
         self.log.info("Wrapper Storages closed and saved.")
 
         # use non-daemon thread to ensure alert gets sent before wrapper closes
-        self.alerts.ui_process_alerts("Wrapper.py stopped at %s" % time.time(), blocking=True)  # noqa
+        if self.alerts_on:
+            self.alerts.ui_process_alerts(
+                "Wrapper.py stopped at %s" % time.time(), blocking=True
+            )
 
         # wrapper execution ends here.  handle_server ends when
         # wrapper.halt.halt is True.
@@ -804,10 +809,11 @@ class Wrapper(object):
         if self.proxymode:
             # if wrapper is using proxy mode (which should be set to online)
             return self.config["Proxy"]["online-mode"]
-        if self.javaserver is not None:
-            if self.servervitals.onlineMode:
-                # if local server is online-mode
-                return True
+        if self.javaserver:
+            try:
+                return self.servervitals.properties["online-mode"]
+            except KeyError:
+                pass
         return False
 
     def listplugins(self, player):
@@ -1050,7 +1056,11 @@ class Wrapper(object):
             """ eventdoc
                 <group> wrapper <group>
 
-                <description> a timer that is called each second.
+                <description> a timer that is called each second.  Do
+                <sp> not rely on these events to happen 'on-time'!  They
+                <sp> can be delayed based on their position the queue, as 
+                <sp> well as the total number of timer.second events being 
+                <sp> called.                
                 <description>
 
                 <abortable> No <abortable>
@@ -1071,8 +1081,12 @@ class Wrapper(object):
                 <abortable> No <abortable>
 
                 <comments>
-                Use of this timer is not suggested and is turned off
-                <sp> by default in the wrapper.config.json file
+                Use of this timer is deprecated and is turned off
+                <sp> by default in the wrapper.config.json file.  the final 
+                <sp> wrapper version 1.0 final will not support this timer. Its
+                <sp> use in wrapper has always been a bad idea. Starting with
+                <sp> wrapper 1.0.9 RC 12, this timer will be somewhat buggy,
+                <sp> running two or more ticks behind.
                 <comments>
 
             """

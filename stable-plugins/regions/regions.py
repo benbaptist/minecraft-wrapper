@@ -16,7 +16,7 @@ if PY3:
 NAME = "Regions"
 AUTHOR = "SurestTexas00"
 ID = "com.suresttexas00.regions"
-VERSION = (1, 2, 0)
+VERSION = (1, 3, 0)
 SUMMARY = "World regions editing and protection."
 WEBSITE = "" 
 DESCRIPTION = """
@@ -189,7 +189,7 @@ class Main:
 
     def _restoreworld(self):
         """
-        action | player | position | region
+        action | player | position
 
         Restore world is global thread that handles all player clients, so
         it must use the try-except clauses.  If it fails because one of the
@@ -499,7 +499,7 @@ class Main:
             self.rg_regions[regionname]["accessplayers"] = {}
             self.rg_regions[regionname]["banplayers"] = {}
             return regionname
-        self.log.debug("Region '' already exists." % regionname)
+        self.log.debug("Region '%s' already exists." % regionname)
 
     def rgdelete(self, region_name: str):
         """
@@ -554,11 +554,11 @@ class Main:
 
         :return:
         """
-        if regionname in self.rg_regions:
-            if infokey in self.rg_regions[regionname]:
-                return self.rg_regions[regionname][infokey]
-        self.log.debug("bad region/key - %s %s" % (regionname, infokey))
-        return False
+        try:
+            return self.rg_regions[regionname][infokey]
+        except KeyError:
+            self.log.debug("bad region/key - %s %s" % (regionname, infokey))
+            return False
 
     def getregionlist(self, prot_dim, lowcoords, highcoords):
         """
@@ -658,7 +658,9 @@ class Main:
         """
         matchingregions = []
         region_claims = []
-        lowcoord, highcoord = self._normalize_selection(sel1coords, sel2coords)
+        lowcoord, highcoord = self.stat_normalize_selection(
+            sel1coords, sel2coords
+        )
         # get list of possible regions covered by this area
         area_regions = self.getregionlist(dim, lowcoord, highcoord)
 
@@ -740,13 +742,14 @@ class Main:
         #  what goes in the regionfile index lists
         if protected:
             self.protection_off(regionname)
+        time.sleep(.1)
 
         # edit applicable parameters
         if new_owner_name:
             new_uuid = self.api.minecraft.lookupbyName(playername).string
             self.rg_regions[regionname]["ownerUuid"] = new_uuid
         if edit_coords:
-            lowcoord, highcoord = self._normalize_selection(
+            lowcoord, highcoord = self.stat_normalize_selection(
                 low_corner, high_corner
             )
             self.rg_regions[regionname]["pos1"] = lowcoord
@@ -1031,7 +1034,7 @@ class Main:
         if p["dim1"] != p["dim2"]:
             return "bad_dim"
         if p["sel1"] and p["sel2"]:
-            p["sel1"], p["sel2"] = self._normalize_selection(
+            p["sel1"], p["sel2"] = self.stat_normalize_selection(
                 p["sel1"], p["sel2"]
             )
         else:
@@ -1174,7 +1177,7 @@ class Main:
         return
 
     @staticmethod
-    def _normalize_selection(coords1, coords2):
+    def stat_normalize_selection(coords1, coords2):
         """
         takes two 3-axis coordinate tuples, interprets these coordinates as two
         opposing corners of a cube.  It then determines which two of the cubes 

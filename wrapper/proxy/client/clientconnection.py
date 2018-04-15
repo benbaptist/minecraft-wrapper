@@ -1070,7 +1070,7 @@ class Client(object):
             if self.username != "PING REQUEST":
                 self.log.debug(
                     "Client '%s', IP: '%s', State: %s': \n Disconnected: "
-                    "''", self.username, self.client_address[0], self.state,
+                    "'%s'", self.username, self.client_address[0], self.state,
                     message)
 
                 self.chat_to_client(jsondict)

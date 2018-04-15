@@ -4,11 +4,11 @@
     "__version__": [
         1, 
         0, 
-        8, 
+        9, 
         "rc", 
-        11
+        12
     ], 
     "build": 229, 
-    "release_time": 1523232702.390769, 
+    "release_time": 1523826223.903673, 
     "repotype": "stable"
 }
