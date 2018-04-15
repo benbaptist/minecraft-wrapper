@@ -81,12 +81,10 @@ class Backups(object):
 
         """
         self.wrapper.backups.enabled = True
-        if not self.wrapper.backups.timerstarted:
+        if not self.wrapper.backups.enabled:
             if not self.wrapper.backups.dotarchecks():
                 return False
-            self.wrapper.backups.timerstarted = True
-            self.wrapper.backups.api.registerEvent(
-                "timer.second", self.wrapper.backups.eachsecond)
+            self.wrapper.backups.start()
 
     def adjustBackupInterval(self, desired_interval):
         """
@@ -136,4 +134,3 @@ class Backups(object):
 
         """
         return self.wrapper.backups_idle()
-

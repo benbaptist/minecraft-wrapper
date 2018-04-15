@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 
 import time
+import threading
 
 NAME = "portals"
 AUTHOR = "SurestTexas00"
 ID = "com.suresttexas00.plugins.portals"
-VERSION = (1, 0, 0)
+VERSION = (1, 0, 1)
 SUMMARY = "A plugin to create portals"
 WEBSITE = ""
 DESCRIPTION = """
@@ -52,23 +53,31 @@ class Main:
             self.portals["portal0"] = self.default_portal
 
         self.portalcount = self.portals["numberofportals"]
-        self.api.registerEvent("timer.second", self._onSecond)
+
+        self.run = True
+
+        t = threading.Thread(target=self._on_timer,
+                              name="ontimer_portals", args=())
+        t.daemon = True
+        t.start()
 
     def onDisable(self):
+        self.run = False
         self.data_storageobject.close()
 
-    def _onSecond(self, payload):
-        serverplayers = self.api.minecraft.getPlayers()
-        for x in serverplayers:
-            currentplayer = self.api.minecraft.getPlayer(x)
-            position = currentplayer.getPosition()
-            currposition = "%d %d %d" % (
-                int(position[0]), int(position[1]), int(position[2]))
-            for portal in range(self.portalcount):
-                portalname = "portal%d" % portal
-                if self.portals[portalname]["location"] == currposition:
-                    self.doportalcommand(portal, currentplayer)
-                    return
+    def _on_timer(self):
+        while self.run:
+            time.sleep(.5)
+            serverplayers = self.api.minecraft.getPlayers()
+            for x in serverplayers:
+                currentplayer = self.api.minecraft.getPlayer(x)
+                position = currentplayer.getPosition()
+                currposition = "%d %d %d" % (
+                    int(position[0]), int(position[1]), int(position[2]))
+                for portal in range(self.portalcount):
+                    portalname = "portal%d" % portal
+                    if self.portals[portalname]["location"] == currposition:
+                        self.doportalcommand(portal, currentplayer)
 
     def doportalcommand(self, portal, player):
         portalname = "portal%d" % portal

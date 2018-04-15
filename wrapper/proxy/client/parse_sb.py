@@ -149,9 +149,13 @@ class ParseSB(object):
         if not self.client.local:
             return True
 
+        try:
+            player = self.client.srv_data.players[self.client.username]
+        except KeyError:
+            return False
         payload = self.proxy.eventhandler.callevent("player.rawMessage", {
             "playername": self.client.username,
-            "player": self.client.srv_data.players[self.client.username],
+            "player": player,
             "message": chatmsg
         })
         """ eventdoc
@@ -363,11 +367,15 @@ class ParseSB(object):
         else:
             position = data[1]
 
+        try:
+            player = self.client.srv_data.players[self.client.username]
+        except KeyError:
+            return False
         # finished digging
         if data[0] == 2:
             if not self.proxy.eventhandler.callevent("player.dig", {
                 "playername": self.client.username,
-                "player": self.client.srv_data.players[self.client.username],
+                "player": player,
                 "position": position,
                 "action": "end_break",
                 "face": data[4]
@@ -427,7 +435,7 @@ class ParseSB(object):
             playerpos = self.client.position
             if not self.proxy.eventhandler.callevent("player.interact", {
                 "playername": self.client.username,
-                "player": self.client.srv_data.players[self.client.username],
+                "player": player,
                 "position": playerpos,
                 "action": "finish_using",
                 "origin": "pktSB.PLAYER_DIGGING"
@@ -465,7 +473,6 @@ class ParseSB(object):
     def play_player_block_placement(self):
         if not self.client.local:
             return True
-        player = self.client.username
         hand = 0  # main hand
         helditem = self.client.inventory[36 + self.client.slot]
 
@@ -520,13 +527,18 @@ class ParseSB(object):
         elif face == 5:
             position = (position[0] + 1, position[1], position[2])
 
+        try:
+            player = self.client.srv_data.players[self.client.username]
+        except KeyError:
+            return False
+
         # block placement event
         # position is where new block goes
         # clickposition is the block actually clicked
         if not self.proxy.eventhandler.callevent(
                 "player.place",
-                {"playername": player,
-                 "player": self.client.srv_data.players[self.client.username],
+                {"playername": self.client.username,
+                 "player": player,
                  "position": position,
                  "clickposition": clickposition,
                  "hand": hand, "item": helditem}):
@@ -569,9 +581,14 @@ class ParseSB(object):
         # the time frame for this is to ensure coords are still relavant.
         if et < .5:
             position = self.client.lastplacecoords[0]
+
+        try:
+            player = self.client.srv_data.players[self.client.username]
+        except KeyError:
+            return False
         if not self.proxy.eventhandler.callevent("player.interact", {
             "playername": self.client.username,
-            "player": self.client.srv_data.players[self.client.username],
+            "player": player,
             "position": position,
             "action": "use_item",
             "hand": data,
@@ -613,9 +630,14 @@ class ParseSB(object):
         l2 = data[4]
         l3 = data[5]
         l4 = data[6]
+
+        try:
+            player = self.client.srv_data.players[self.client.username]
+        except KeyError:
+            return False
         payload = self.proxy.eventhandler.callevent("player.createSign", {
             "playername": self.client.username,
-            "player": self.client.srv_data.players[self.client.username],
+            "player": player,
             "position": position,
             "line1": l1,
             "line2": l2,
@@ -700,9 +722,13 @@ class ParseSB(object):
         else:
             data = [False, 0, 0, 0, 0, 0, 0]
 
+        try:
+            player = self.client.srv_data.players[self.client.username]
+        except KeyError:
+            return False
         datadict = {
             "playername": self.client.username,
-            "player": self.client.srv_data.players[self.client.username],
+            "player": player,
             "wid": data[0],  # window id ... always 0 for inventory
             "slot": data[1],  # slot number
             "button": data[2],  # mouse / key button

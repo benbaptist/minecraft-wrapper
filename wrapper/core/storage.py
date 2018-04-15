@@ -37,7 +37,13 @@ class Storage(object):
 
     """
 
-    def __init__(self, name, root="wrapper-data/json", pickle=True):
+    def __init__(self, name: str, root="wrapper-data/json", pickle=True):
+        """
+        :param name: Name of Storage
+        :param root: Path on disk to storage data
+        :param pickle: Boolean; Pickle (True) or not (False, use Json)
+
+        """
         self.Data = {}
         self.name = name
         self.root = root

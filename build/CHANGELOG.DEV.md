@@ -1,3 +1,15 @@
+Build 12 [1.0.9 RC 12]
+- Only call Wrapper Alerts if enabled.
+- Remove on-second timer from backups.
+- Change event coding to use a single thread for processing non-blocking events, utilizing a queue.
+- Backups timer uses wrapper storage to store it's backup timer between restarts.
+- fix bug clientconnection.py line 1074 (not enough args for log formatting).
+- fix bug in parse_sb.py and parse_cb.py player objects, usually caused by player disconnection.
+- Changed existing plugins that use timer.second to implement their own timers.
+- Various regions plugin bugfixes and improvements.
+- Fix bug in api.backups.enableBackups.
+- fix bug in portals.py
+
 Build 11 [1.0.8 RC 11]
 - Remove player.interact event out of the block placement code because there
  really is no way to tell if the client is interacting or not based on inventory.

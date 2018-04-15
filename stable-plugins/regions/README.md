@@ -106,7 +106,7 @@ player - `/perms user <player> group trusted`<br>
   `//rg floor 5`<br>
   `//rg roof 256`<br>
  6) The region is now created!  The next step is to activate protection:<br>
-  `rg protect on`
+  `//rg protect on`
 
   __NOTE__ _Region names must be unique.  For instance, only one person_
    _could actually call their region 'myproperty'..._
@@ -191,7 +191,7 @@ Depending on the roof and floor settings, you may not see the entire thing.<br>
 
 ### Delete a region ###
 
-You must type the regiopermissionn name for this command:<br>
+You must type the region name for this command:<br>
 `//rg delete myproperty`
 <br>
 
@@ -204,7 +204,7 @@ To see all the data assocated with a region, run "show":<br>
 
 The "find" command can be used to locate or list regions.<br>
 
-You can located region based on:
+You can locate a region based on:
  - Owner - The owner of the region
  - name - The name or part of the name of the region)
  - region - List all regions in the present "minecraft region" (16x16 chunks)

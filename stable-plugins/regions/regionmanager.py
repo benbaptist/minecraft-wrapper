@@ -9,13 +9,9 @@ WEBSITE = ""
 DESCRIPTION = """
 Regions Manager is the front-end command interface for the regions
 protection plugin and can be used to create, administer, and maintain
-regions.  Also does some basic world edit functions.  It is not user
-friendly and is intended for operation by an admin/staff member, but
-this can be customized by permissions.  Regions Manager can itself
-be used as a back end for a higher level player-friendly land claim
-system.
-
-
+regions.  It also does some basic world edit functions.  It is not very
+user friendly and most commands are intended for use by an admin/staff 
+member, but this can be customized by permissions.
 """
 DEPENDENCIES = ["regions.py", ]
 
@@ -64,7 +60,7 @@ class Main:
 
         # get the regions plugin:
         self.regions = self.api.getPluginContext("com.suresttexas00.regions")
-        if self.regions.version < 1.2:
+        if self.regions.version < 1.3:
             self.log.error(
                 "Regions.py is out of date!, Regionmanager not enabled."
             )
@@ -77,7 +73,7 @@ class Main:
                 ("//rg define <region>", "defines a region named <region>",
                  "region.define"),
                 ("//rg use <region>", "use [<region>] for subsequent commands",
-                 "region.wand"),
+                 "region.select"),
                 ("//rg roof [region] <height>", "changes y coord height",
                  "region.adjust"),
                 ("//rg floor [region] <height>", "changes y coord depth",
@@ -167,16 +163,6 @@ class Main:
 
         self.api.registerCommand("/home", self._home, "region.home")
         self.api.registerCommand("/jsondumps", self._jsondumps, "region.dumps")
-
-        # Register default permissions
-        # self.api.registerPermission("region.wand", True)
-        # self.api.registerPermission("region.player", True)
-        # self.api.registerPermission("region.delete", True)
-        # self.api.registerPermission("region.define", True)
-        # self.api.registerPermission("region.protect", True)
-        # self.api.registerPermission("region.adjust", True)
-        # self.api.registerPermission("region.multiple", True)
-        # self.api.registerPermission("region.setowner", True)
         
     def _region(self, player, args):
         """
@@ -285,7 +271,8 @@ class Main:
             if not player.hasPermission("region.multiple"):
                 regionname = player.username
                 for region in self.regions.rg_regions:
-                    if self.regions.rg_regions[region]["ownerUuid"] == player.uuid:  # noqa
+                    if self.regions.rg_regions[
+                            region]["ownerUuid"] == player.uuid:
                         player.message(
                             "&cYou already made another region.  You don't "
                             "have permission to make another."
@@ -315,7 +302,7 @@ class Main:
                     {"text": "Region ", "color": "gold", "extra": [
                         {"text": definedregion, "color": "dark_purple"},
                         {"text": " created and selected!", "color": "gold"}
-                    ]
+                      ]
                      }
                 )
             return
@@ -328,7 +315,8 @@ class Main:
             name = (args[1])
             for namex in self.regions.rg_regions:
                 if namex == name:
-                    if not player.uuid == self.regions.rg_regions[namex]["ownerUuid"]:  # noqa
+                    if not player.uuid == self.regions.rg_regions[
+                            namex]["ownerUuid"]:
                         player.message(
                             {"text": "WARNING: Region selected for use, but "
                                      "is not owned by you.", "color": "Red"}
@@ -788,7 +776,7 @@ class Main:
             player.message("&4&lFound no records.", 2)
 
     def _rg_display(self, player, args):
-        argument = self.getargs(args, 1).lower()
+        argument = self.getargs(args, 1)
         if argument == "":
             player.message("&cNo <region> arg!")
             player.message(self.rg_help_messages[9])
@@ -829,10 +817,10 @@ class Main:
             return ", ".join(names)
 
     def _rg_goto(self, player, args):
-        argument = self.getargs(args, 1).lower()
+        argument = self.getargs(args, 1)
         if argument == "":
             player.message("&cNo <region> arg!")
-            player.message(self.rg_help_messages[9])
+            player.message(self.rg_help_messages[10])
             return
         if argument not in self.regions.rg_regions:
             player.message("&cNo such region '%s'!" % argument)
@@ -1041,8 +1029,6 @@ class Main:
         )
 
     def _file(self, player, args):
-        if not player.hasPermission("region.player"):
-            return
         coords = player.getPosition()
         filename = self.regions.getregionfilename(coords[0], coords[2])
         player.message({"text": "Region filename is ", "color": "aqua",

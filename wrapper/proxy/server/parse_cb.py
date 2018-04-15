@@ -219,10 +219,13 @@ class ParseCB(object):
                 data = new_usage
         # self.log.debug(data)
 
+        try:
+            player = self.client.srv_data.players[self.client.username]
+        except KeyError:
+            return False
         payload = self.proxy.eventhandler.callevent(
             "player.chatbox", {"playername": self.client.username,
-                               "player": self.client.srv_data.players[
-                                   self.client.username],
+                               "player": player,
                                "json": data})
         """ eventdoc
             <group> Proxy <group>
@@ -279,11 +282,16 @@ class ParseCB(object):
         if not self.client.local:
             return True
         data = self.packet.readpkt([VARINT, POSITION])
+
+        try:
+            player = self.client.srv_data.players[self.client.username]
+        except KeyError:
+            return False
         if data[0] == self.client.server_eid:
             self.proxy.eventhandler.callevent(
                 "player.usebed",
                 {"playername": self.client.username,
-                 "player": self.client.srv_data.players[self.client.username],
+                 "player": player,
                  "position": data[1]},
                 abortable=False
             )
@@ -326,10 +334,14 @@ class ParseCB(object):
         if not self.client.local:
             return True
         data = self.packet.readpkt([POSITION])
+
+        try:
+            player = self.client.srv_data.players[self.client.username]
+        except KeyError:
+            return False
         self.proxy.eventhandler.callevent(
             "player.spawned", {"playername": self.client.username,
-                               "player": self.client.srv_data.players[
-                                   self.client.username],
+                               "player": player,
                                "position": data},
             abortable=False
         )
@@ -428,10 +440,14 @@ class ParseCB(object):
                     data.append([match])
                     print([match])
 
+        try:
+            player = self.client.srv_data.players[self.client.username]
+        except KeyError:
+            return False
         payload = self.proxy.eventhandler.callevent(
             "server.autoCompletes", {
                 "playername": self.client.username,
-                "player": self.client.srv_data.players[self.client.username],
+                "player": player,
                 "completes": data})
         """ eventdoc
             <group> Proxy <group>
@@ -664,11 +680,16 @@ class ParseCB(object):
         vehormobeid = data[1]  # vehicle, leashed entity, etc
 
         if entityeid == self.client.server_eid:
+
+            try:
+                player = self.client.srv_data.players[self.client.username]
+            except KeyError:
+                return False
             if not leash:
+
                 self.proxy.eventhandler.callevent(
                     "entity.unmount", {"playername": self.client.username,
-                                       "player": self.client.srv_data.players[
-                                           self.client.username],
+                                       "player": player,
                                        "vehicle_id": vehormobeid,
                                        "leash": leash},
                     abortable=False
@@ -699,8 +720,7 @@ class ParseCB(object):
             else:
                 self.proxy.eventhandler.callevent(
                     "entity.mount", {"playername": self.client.username,
-                                     "player": self.client.srv_data.players[
-                                         self.client.username],
+                                     "player": player,
                                      "vehicle_id": vehormobeid,
                                      "leash": leash},
                     abortable=False
