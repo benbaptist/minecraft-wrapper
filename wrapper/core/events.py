@@ -76,7 +76,7 @@ class Events(object):
             while len(self.event_queue) > 0:
                 _event, _payload = self.event_queue.pop(0)
                 self._callevent(_event, _payload)
-            time.sleep(0.1)
+            time.sleep(0.01)
 
     def _callevent(self, event, payload):
         if event == "player.runCommand":

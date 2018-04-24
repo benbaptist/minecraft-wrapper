@@ -373,7 +373,6 @@ class ParseSB(object):
             return False
         # finished digging
         if data[0] == 2:
-            print("CALL FINISH DIGGING", time.time())
             if not self.proxy.eventhandler.callevent("player.dig", {
                 "playername": self.client.username,
                 "player": player,
@@ -382,7 +381,6 @@ class ParseSB(object):
                 "face": data[4]
             }):
                 return False  # stop packet if  player.dig returns False
-            print("DIG FINISHED", time.time())
             """ eventdoc
                         <group> Proxy <group>
 
@@ -473,7 +471,6 @@ class ParseSB(object):
                 <payload>
 
             """
-        print("DIG RETURNS TRUE", time.time())
         return True
 
     def play_player_block_placement(self):
