@@ -16,7 +16,7 @@ DESCRIPTION = """ This plugin sends all players' messages to a Discord server
 and broadcasts messages from the Discord server to the Minecraft server
 """
 
-DISABLED = False
+DISABLED = True
 
 
 # noinspection PyAttributeOutsideInit,PyPep8Naming

@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import time
-from copy import deepcopy
 import threading
 
 NAME = "VanillaClaims"
@@ -13,8 +12,6 @@ WEBSITE = ""
 DESCRIPTION = "Uses regions.py as the backend for protecting player claims."
 DEPENDENCIES = ["regions.py", ]
 
-
-DISABLED = False
 BEDROCK = 7
 GOLDBLOCK = 41
 DIAMONDBLOCK = 57
@@ -39,9 +36,6 @@ class Main:
         self.maxclaims = 5  # -           max claims per player
         self.minclaimsize = 81  # -       minimum claim size
         self.minclaimwidth = 6  # -       minimum claim width
-
-        # whether player must make their own gold spade
-        self.earnspade = False
 
         # temporary run-time player data
         self.player_dat = {}
@@ -120,7 +114,7 @@ class Main:
         self.api.registerCommand(
             "transferclaim", self._transferclaim_comm, admin)
         self.api.registerCommand(
-            ("claimblocks", "claimblock", "claimsblock", "claimsblocks"), 
+            ("claimblocks", "claimblock", "claimsblock", "claimsblocks"),
             self._claimblocks_comm, user)
         self.api.registerCommand(
             "trust", self._trust_comm, user)
@@ -141,29 +135,32 @@ class Main:
         tr.daemon = True
         tr.start()
 
-        ts = threading.Thread(target=self.on_timer,
-                              name="inv_timer", args=())
-        ts.daemon = True
-        ts.start()
-
     def onDisable(self):
         self.run = False
         self.data_storageobject.close()
 
-    def get_claim_data(self, uuid, playername):
+    def get_claim_data(self, playerobj):
+        """
+        Get the player's claim data.
+
+        :param playerobj:
+        :returns:  A dictionary of player claim data.
+
+        """
         try:
-            return self.data[uuid]
+            return self.data[playerobj.uuid]
         except KeyError:
-            self.data[uuid] = {
+            self.data[playerobj.uuid] = {
                 "blocks": self.defaultclaimblocks,
                 "blocksused": 0,
                 "activity": 0,
-                "playername": playername,
+                "playername": playerobj.username,
                 "claimlist": [],
                 "claiminfo": {},
                 "laston": time.time(),
+                "admin": playerobj.hasPermission("vclaims.admin")
             }
-            return self.player_dat[uuid]
+            return self.data[playerobj.uuid]
 
     def get_player_data(self, name):
         """
@@ -174,84 +171,80 @@ class Main:
 
         :returns:  A dictionary of player selection data.
         {
-            "point1" (cubical tuple)
-            "point2" (cubical tuple)
+            "point1"
+            "point2"
             "dim1"
             "dim2"
             "mode"  # selection modes ...
-            "point"
-            "target"
+            "point" # which point is being selected
+            "proposed"  # cubic tuple (a set of hi/low coords)
+            "rgedit" name of region being edited/resized
             }
-
         """
         try:
             return self.player_dat[name]
         except KeyError:
-            self.player_dat[name] = {
-                "point1": None, "point2": None,
-                "dim1": None, "dim2": None,
-                "mode": None,
-                "point": None,
-                "target": None
-            }
+            self.player_dat[name] = {}
+            self._finishwithselectionmode(name)
             return self.player_dat[name]
 
     def _track_activity(self):
         """
-        Each item is just a playeruuid entry.
+        Each item is a playeruuid, player object entry.
         """
 
         while self.run:
-            time.sleep(1)
+            time.sleep(.4)
+            self._on_timer()
+            time.sleep(.4)
+            self._on_timer()
             while len(self.action_queue) > 0:
                 # grab next change
-                uuid = self.action_queue.pop(0)
+                player = self.action_queue.pop(0)
+                p = self.get_claim_data(player)
                 # block increaser
-                self.data[uuid]["activitycount"] += 1
-                activities = self.data[uuid]["activitycount"]
+                p["activity"] += 1
+                activities = p["activity"]
                 if activities % self.actionsperblock is not 0:
                     continue
-                self.data[uuid]["activitycount"] = 0
-                idleclaimblocks = self.data[uuid]["claimblocks"]
-                inuseblocks = self.data[uuid]["claimblocksused"]
-                if (idleclaimblocks + inuseblocks) < self.maxclaimblocks:
-                    self.data[uuid]["claimblocks"] += 1
+                p["activity"] = 0
+                if p["blocks"] < self.maxclaimblocks:
+                    p["blocks"] += 1
 
-    def on_timer(self):
+    def _on_timer(self):
+        """
+        Puts each player in or out of claims mode.
+        Modes:
+          None: has no shovel
+          Idle: has shovel, no action taken yet
+
+        """
         while self.run:
             time.sleep(.5)
             for players in self.api.minecraft.getPlayers():
                 player = self.api.minecraft.getPlayer(players)
                 try:
-                    playeruuid = player.uuid
-                    item = player.getHeldItem()
-                    itemid = item["id"]
+                    itemid = player.getHeldItem()["id"]
                 except AttributeError:
                     # probably a bad player object
                     continue
 
                 p = self.get_player_data(player.username)
 
-                try:
-                    mode = p["selection"]
-                except KeyError:
-                    mode = "idle"
-                    self.data[playeruuid]["selectionmode"] = "idle"
-
-                if itemid != 284 and mode != "none":
+                # "mode" = selection mode
+                if itemid == 284 and p["mode"] is None:
                     player.message(
-                        "&2Shovel put away... Switching out of claims "
-                        "selection mode"
-                    )
-                    self._finishwithselectionmode(playeruuid)
-                if itemid == 284 and mode == "none":
-                    # This just exists to notify player they can use gold
-                    # shovel now for claims
-                    player.message(
-                        "&2Claims shovel active... Click and area to edit "
+                        "&2Claims shovel active... Click an area to edit "
                         "or to claim."
                     )
-                    self.data[playeruuid]["selectionmode"] = "idle"
+                    p["mode"] = "idle"
+
+                if itemid != 284 and p["mode"]:
+                    player.message(
+                        "&2Shovel put away... Switching out of claims "
+                        "mode"
+                    )
+                    self._finishwithselectionmode(player.username)
 
     def playerSpawned(self, payload):
         try:
@@ -260,333 +253,284 @@ class Main:
             self.log.error("VanillaClaims player spawn not successful.  "
                            "Payload: %s" % payload)
             return
-        p = self.get_claim_data(player.uuid, player.username)
-        p["laston"] = time.time()
+        cl = self.get_claim_data(player)
+        cl["laston"] = time.time()
+        cl["admin"] = player.hasPermission("vclaims.admin")
 
     def action_dig(self, payload):
         try:
-            position = payload["position"]
             player = payload["player"]
             action = payload["action"]
-            playeruuid = player.uuid
             itemid = player.getHeldItem()["id"]
-            dim = player.getDimension()
         except AttributeError:
             # probably a bad player object
             return False
+        if itemid == 284:
+            if action == "begin_break":
+                try:
+                    position = payload["position"]
+                    dim = player.getDimension()
+                except AttributeError:
+                    return False
+                self.wand_use(player, player.uuid, position, dim)
+            return False
 
-        if itemid == 284 and action == "end_break":
-            player.sendBlock(position, BEDROCK, 0)
-            player.message("&5Easy slick.. just a light click will do!")
-            return False
-        if itemid == 284 and action == "begin_break":
-            self.wand_use(player, playeruuid, position, dim)
-            return False
+        # update activity
         if action == "end_break":
-            self.action_queue.append(playeruuid)
+            self.action_queue.append(player)
 
     def action_place(self, payload):
         try:
             player = payload["player"]
-            dim = int(player.getDimension())
-            clickposition = (
-                payload["clickposition"][0],
-                payload["clickposition"][1],
-                payload["clickposition"][2]
-            )
             itemid = player.getHeldItem()["id"]
-            playeruuid = player.uuid
         except AttributeError:
             return False
 
         if itemid == 284:
-            self.wand_use(player, playeruuid, clickposition, dim)
+            try:
+                dim = int(player.getDimension())
+                clickposition = payload["clickposition"]
+            except AttributeError:
+                return False
+            self.wand_use(player, player.uuid, clickposition, dim)
             # never allow gold shovel use - reserved for claims
             return False
-        self.action_queue.append(playeruuid)
+        self.action_queue.append(player)
 
     def wand_use(self, player, playeruuid, position, dim):
-        """redefines things a bit.
-        Point parameters are now: point1 now means goal is point one selection,
-        point2 means goal is point2 selection.  Error means error occurred with
-        selection (too small, ovelapping region, etc, etc...). """
-        # "none", "point1" "point2", "error"
-        # "none, "new", "edit", "idle"
-        point = self.data[playeruuid]["selectionpoint"]
-        mode = self.data[playeruuid]["selectionmode"]
+        """
+
+        :param player:
+        :param playeruuid:
+        :param position:
+        :param dim:
+        :return:
+        """
+
+        p = self.get_player_data(player.username)
+        cl = self.get_claim_data(player)
+
+        # point = self.data[playeruuid]["point"]
+        # mode = p["mode"]
         anyregion = self.regions.regionname(position, dim)
-        if mode == "new":
-            # entering new mode should have point set to point1.
-            if point == "error":
-                #
-                # Only clicking a previously selected corner 
-                # ill restore to point selection
-                if position == self.data[playeruuid]["point2"]:
-                    # Contine point 2 selection
-                    self.data[playeruuid]["selectionpoint"] = "point2"
-                    return
-                if position == self.data[playeruuid]["point1"]:
-                    #
-                    # move point 2 data to point one (including marking)
-                    pt1 = deepcopy(self.data[playeruuid]["point1"])
-                    pt1dim = deepcopy(self.data[playeruuid]["dim1"])
-                    pt2 = deepcopy(self.data[playeruuid]["point2"])
-                    pt2dim = deepcopy(self.data[playeruuid]["dim2"])
-                    self.data[playeruuid]["point1"] = pt2
-                    self.data[playeruuid]["dim1"] = pt2dim
-                    self.data[playeruuid]["point2"] = pt1
-                    self.data[playeruuid]["dim2"] = pt1dim
-                    #
-                    # re-draw new point1 as point1 color (diamond)
-                    player.sendBlock(self.data[playeruuid]["point1"],
-                                     DIAMONDBLOCK, 0)
-                    #
-                    # Continue with point 2 (new point2) selection
-                    self.data[playeruuid]["selectionpoint"] = "point2"
-                    return
-                # error assumes two points selected - redraw those 
-                # points and remind player what to do.
-                player.sendBlock(self.data[playeruuid]["point1"],
-                                 LITREDSTONEORE, 0)
-                player.sendBlock(self.data[playeruuid]["point2"],
-                                 LITREDSTONEORE, 0)
-                player.message(
-                    "&eChange or edit selection area by clicking on a restone"
-                )
-                player.message("&e corner and then selecting a new spot.")
-                player.message("&e(to cancel, put shovel away)")
-                return
-
-            if point == "point2":
-                if position == self.data[playeruuid]["point1"]:
-                    player.sendBlock(position, DIAMONDBLOCK, 0)
-                    return  # ignore double selection/clicking
-                if self.data[playeruuid]["dim1"] != dim:
-                    # restart claim in new dimension
-                    self.data[playeruuid]["selectionpoint"] = "point1"
-                    self.data[playeruuid]["selectionmode"] = "new"
-                    player.message("&cSelection dimension changed...")
-                    return
-                # input point 2
-                self.data[playeruuid]["point2"] = position
-                # Normalize selection (set to standard pt1 low and 
-                # pt2 high coords)
-                low, high = self.regions.stat_normalize_selection(
-                    self.data[playeruuid]["point1"],
-                    self.data[playeruuid]["point2"]
-                )
-                highcorner = (high[0], position[1] + 5, high[2])
-                lowcorner = (low[0], position[1] + 1, low[2])
-                self.data[playeruuid]["point3"] = lowcorner
-                self.data[playeruuid]["point4"] = highcorner
-                # attempt claim
-                newclaim = self._claim(player, playeruuid)
-
-                if newclaim:
-                    print(newclaim)
-                    player.sendBlock(position, GOLDBLOCK, 0)
-                    player.message("&6Second Corner selected.")
-                    player.message("&6Claim action successful.")
-                    self.regions.client_show_cube(
-                        player, lowcorner, highcorner, sendblock=False
-                    )
-                    player.sendBlock(
-                        self.data[playeruuid][
-                            "claiminfo"][newclaim]["handle1"],
-                        DIAMONDBLOCK, 0
-                    )
-                    player.sendBlock(
-                        self.data[playeruuid][
-                            "claiminfo"][newclaim]["handle2"],
-                        GOLDBLOCK, 0
-                    )
-                    self.data[playeruuid]["selectionmode"] = "none"
-                    self.data[playeruuid]["selectionpoint"] = "none"
-                    return
-                if newclaim is False:
-                    player.message("&cClaim action failed.")
-                    player.message(
-                        {
-                            "text": "Change or edit selection area by selecting"
-                                    " a restone corner and then selecting a "
-                                    "new spot", "color": "yellow"
-                        }
-                    )
-                    player.sendBlock(
-                        self.data[playeruuid]["point1"],
-                        LITREDSTONEORE, 0
-                    )
-                    player.sendBlock(
-                        self.data[playeruuid]["point2"],
-                        LITREDSTONEORE, 0
-                    )
-                    self.data[playeruuid]["selectionpoint"] = "error"
-                    return
-
-            if point == "point1":  # select point 1
-                self.data[playeruuid]["point3"] = (0, 0, 0)
-                self.data[playeruuid]["point4"] = (0, 0, 0)
-                self.data[playeruuid]["point1"] = position
-                self.data[playeruuid]["dim1"] = dim
-                self.data[playeruuid]["selectionpoint"] = "point2"
-                player.sendBlock(position, DIAMONDBLOCK, 0)
-                player.message(
-                    "&6First Corner selected. &e(to cancel, put shovel away)"
-                )
-                return
-
-        if mode == "edit":
-            # entering edit mode requires the input of points 1 and 2
-            # from whatever is the edited selection.
-            #
-            # and point set to "none"
-            if point in ("error", "none"):
-                #
-                # Only clicking a previously selected corner will restore
-                # to point selection
-                # clicklowXZ = position[0], position[2]
-                if position == self.data[playeruuid]["point1"]:
-                    # Contine point 2 selection
-                    self.data[playeruuid]["selectionpoint"] = "point1"
-                    player.sendBlock(self.data[playeruuid]["point1"],
-                                     BEDROCK, 0)
-                    # Only clicking a previously selected corner will restore
-                    # to point selection
-                    return
-                if position == self.data[playeruuid]["point2"]:
-                    # Contine point 2 selection
-                    self.data[playeruuid]["selectionpoint"] = "point2"
-                    player.sendBlock(self.data[playeruuid]["point2"],
-                                     BEDROCK, 0)
-                    return
-
-                # render - clicking outside of points
-                if anyregion is False:
-                    self.data[playeruuid]["selectionmode"] = "none"
-                    self.data[playeruuid]["selectionpoint"] = "none"
-                    return
-                handle1 = self.data[playeruuid][
-                    "claiminfo"][anyregion]["handle1"]
-                handle2 = self.data[playeruuid][
-                    "claiminfo"][anyregion]["handle2"]
-                player.sendBlock(handle1, DIAMONDBLOCK, 0)
-                player.sendBlock(handle2, GOLDBLOCK, 0)
-                normpos1, normpos2 = self.regions.stat_normalize_selection(
-                    handle1, handle2
-                )
-                correcty = normpos2[1] + 4
-                normpos_tocorrected = (normpos2[0], correcty, normpos2[2])
-                self.regions.client_show_cube(
-                    player, normpos1, normpos_tocorrected, sendblock=False
-                )
-
-            if point in ("point2", "point1"):
-                if point == "point2":
-                    self.data[playeruuid]["dim2"] = dim
-                if point == "point1":
-                    self.data[playeruuid]["dim1"] = dim
-                if self.data[playeruuid]["dim2"] != self.data[
-                        "player"][playeruuid]["dim1"]:
-                    # abort editing mode
-                    self.data[playeruuid]["selectionpoint"] = "none"
-                    self.data[playeruuid]["selectionmode"] = "none"
-                    player.message("&cSelection dimension does not match...")
-                    player.message("&cExiting claim edit mode...")
-                    return
-                # input the new point
-                self.data[playeruuid][point] = position
-                # Normalize selection (set to standard pt1 low and pt2 high coords)  # noqa
-                low, high = self.regions.stat_normalize_selection(
-                    self.data[playeruuid]["point1"],
-                    self.data[playeruuid]["point2"]
-                )
-                highcorner = (high[0], position[1] + 5, high[2])
-                lowcorner = (low[0], position[1] + 1, low[2])
-                self.data[playeruuid]["point3"] = lowcorner
-                self.data[playeruuid]["point4"] = highcorner
-                if point == "point1":
-                    player.sendBlock(position, DIAMONDBLOCK, 0)
-                if point == "point2":
-                    player.sendBlock(position, GOLDBLOCK, 0)
-                player.message("&6Corner selected.")
-                # thisclaimname = self.data[playeruuid]["selectiontarget"]  # noqa
-                thisclaimname = anyregion
-                newclaim = self._editclaim(player, playeruuid, thisclaimname)
-
-                if newclaim:
-                    player.message("&6Claim action successful.")
-                    self.regions.client_show_cube(
-                        player, lowcorner, highcorner, sendblock=False
-                    )
-                    player.sendBlock(self.data[playeruuid][
-                                         "claiminfo"][newclaim]["handle1"],
-                                     DIAMONDBLOCK, 0)
-                    player.sendBlock(self.data[playeruuid][
-                                         "claiminfo"][newclaim]["handle2"],
-                                     GOLDBLOCK, 0)
-                    self.data[playeruuid]["selectionmode"] = "none"
-                    self.data[playeruuid]["selectionpoint"] = "none"
-                    return
-                if newclaim is False:
-                    player.message("&cClaim action failed.")
-                    player.message(
-                        {
-                            "text": "Change or edit selection area by selecting"
-                                    " a restone corner and then selecting a "
-                                    "new spot", "color": "yellow"
-                        }
-                    )
-                    player.sendBlock(self.data[playeruuid]["point1"],
-                                     LITREDSTONEORE, 0)
-                    player.sendBlock(self.data[playeruuid]["point2"],
-                                     LITREDSTONEORE, 0)
-                    self.data[playeruuid]["selectionpoint"] = "error"
-                    return
-
-        # modes of "idle/none"
-        if anyregion is False:
-            self.data[playeruuid]["selectionpoint"] = "point1"
-            self.data[playeruuid]["selectionmode"] = "new"
-            player.message("&eSelect two opposite corners...")
-            return
-        owneruuid = self.regions.getregioninfo(anyregion, "ownerUuid")
-
-        # determine if this region is a claim
-        if anyregion not in self.data[owneruuid]["claimlist"]:
-            player.message(
-                "&5This is a region-guarded area (%s), not a "
-                "claim..." % anyregion
+        if anyregion:
+            region_owner_uuid = self.regions.getregioninfo(
+                anyregion, "ownerUuid"
             )
-            return
+        else:
+            region_owner_uuid = False
 
-        if owneruuid == playeruuid:
-            # pull up handles.  If no handles exist, exit (error).
-
-            # owner and player can be used interchangeably because they are ==
-            data = self.data[playeruuid]
-            if anyregion not in data["claiminfo"]:
-                player.message(
-                    "&4Could not pull up claiminfo for this claim..."
+        # find the selection mode
+        # first click point1 determines the selection mode
+        if p["point"] == "point1":
+            # If not your claim, draw it and go back to idle mode
+            if region_owner_uuid and region_owner_uuid != playeruuid:
+                # TODO draw the claim you are in, message with "not your claim"
+                otheruuid = self.regions.getregioninfo(
+                    anyregion, "ownerUuid"
                 )
+                othername = self.api.minecraft.lookupbyUUID(otheruuid)
+                player.message("&cThis area is claimed by %s..." % othername)
+                point1 = self.regions.getregioninfo(
+                    anyregion, "pos1"
+                )
+                point2 = self.regions.getregioninfo(
+                    anyregion, "pos2"
+                )
+                x = int(position[0])
+                y = int(position[1]) - 1
+                z = int(position[2])
+                self._show(player, (x, y, z), point1, point2)
+                self._reset_selections(playeruuid)
+                p["mode"] = "idle"
+                return
+            # if unclaimed, go to 'new' mode
+            elif not anyregion and p["mode"] == "idle":
+                p["mode"] = "new"
+                return
+            # If your claim, then go to 'edit' mode (but don't make first point)
+            elif region_owner_uuid == playeruuid and p["mode"] == "idle":
+                p["mode"] = "edit"
+                p["rgedit"] = anyregion
+                # TODO STUFF to draw claim, place edit markers
+                player.sendBlock(cl["claiminfo"][anyregion]["handle1"],
+                                 LITREDSTONEORE, 0)
+                player.sendBlock(cl["claiminfo"][anyregion]["handle2"],
+                                 LITREDSTONEORE, 0)
                 player.message(
-                    "&4You may need to /abandonclaim and re-do it."
+                    {
+                        "text":
+                            "You are now editing the claim marked by the "
+                            "restone corners.  Select a new corner (to cancel, "
+                            "put shovel away).",
+                        "color": "gold"
+                    }
                 )
                 return
-            try:
-                handle1 = data["claiminfo"][anyregion]["handle1"]
-                handle2 = data["claiminfo"][anyregion]["handle2"]
-            except KeyError:
-                player.message(
-                    "&4Could not pull up handle adjustment points for "
-                    "this claim..."
-                )
-                player.message("&4You may need to /abandonclaim and re-do it.")
+            else:
+                # -we know it is not claimed (or is owned by player)
+                # only successful selection as point1 enables point2
+                p["point1"] = position
+                p["dim1"] = dim
+                p["point"] = "point2"
+                # re-draw new point1 as point1 color (diamond)
+                player.sendBlock(p["point1"], DIAMONDBLOCK, 0)
                 return
-            data["point1"] = handle1
-            data["point2"] = handle2
-            data["selectionmode"] = "edit"
-            data["selectionpoint"] = "none"
+        elif p["point"] == "point2":
+            # If not your claim, draw the conflicting claim
+            if region_owner_uuid and region_owner_uuid != playeruuid:
+                # TODO draw the claim you are in, message with "not your claim"
+                return
+            p["point2"] = position
+            p["dim2"] = dim
+            # Stay at point two until successful (unless user cycles wand)
+            p["point"] = "point2"
+            # UNLESS, they re-select point1:
+            if p["point2"] == p["point1"]:
+                p["point"] = "point1"
+                # TODO tell player to continue with selecting first point.
+                return
+            # or dimensions don't match:
+            if p["dim1"] != p["dim2"]:
+                self._reset_selections(playeruuid)
+                p["mode"] = "idle"
+                return
+        # We now have a 'tentative' claim we can validate:
+        # We know it's corner points were not claimed... but:
+        p["proposed"] = self.regions.stat_normalize_selection(
+            p["point1"], p["point2"]
+        )
+        newclaim = self._claim(player)
+        if newclaim:
+            # player.sendBlock(position, GOLDBLOCK, 0)
+            player.message("&6Second Corner selected.")
+            player.message("&6Claim action successful.")
+
+            pos1 = cl["claiminfo"][newclaim]["handle1"]
+            pos2 = cl["claiminfo"][newclaim]["handle2"]
+
+            player.sendBlock(pos1, DIAMONDBLOCK, 0)
+            player.sendBlock(pos2, GOLDBLOCK, 0)
+
+            low = self.regions.getregioninfo(newclaim, "pos1")
+            high = self.regions.getregioninfo(newclaim, "pos2")
+            x = int(pos2[0])
+            y = int(pos2[1]) - 1
+            z = int(pos2[2])
+            self._show(player, (x, y, z), low, high)
+            p["mode"] = None
+            p["point"] = "point1"
             return
+        if newclaim is False:
+            player.message("&cClaim action failed.")
+            player.message(
+                {
+                    "text": "Change or edit selection area by selecting"
+                            " a restone corner and then selecting a "
+                            "new spot", "color": "yellow"
+                }
+            )
+            player.sendBlock(
+                p["point1"],
+                LITREDSTONEORE, 0
+            )
+            player.sendBlock(
+                p["point2"],
+                LITREDSTONEORE, 0
+            )
+            self.data[playeruuid]["point"] = "error"
+            return
+
+    def _claim(self, player):
+        playerid = player.uuid
+        p = self.get_player_data(player.username)
+        cl = self.get_claim_data(player)
+        #  1) calculate the claim size parameters
+        lowcoord = p["proposed"][0]
+        highcoord = p["proposed"][1]
+        blocks, length, width = self._getsizeclaim(lowcoord, highcoord)
+        playersblocks = cl["blocks"]
+        usedblocks = cl["blocksused"]
+        if p["mode"] == "edit":
+            # credit back blocks used by an existing claim being edited.
+            pos1 = self.regions.getregioninfo(p["rgedit"], "pos1")
+            pos2 = self.regions.getregioninfo(p["rgedit"], "pos2")
+            x_dia = pos2[0] - pos1[0]
+            z_dia = pos2[2] - pos1[2]
+            usedblocks -= (x_dia * z_dia)
+
+        if blocks < self.minclaimsize:
+            player.message(
+                "&cClaim (%d) is not minimum size of at least %d blocks." % (
+                    blocks, self.minclaimsize
+                )
+            )
+            return False
+
+        if length < self.minclaimwidth or width < self.minclaimwidth:
+            player.message(
+                "&cClaim has to be at least %d blocks wide all "
+                "around." % self.minclaimwidth
+            )
+            return False
+
+        if blocks > playersblocks - usedblocks:
+            player.message(
+                "&cYou do not have enough blocks to make this claim."
+            )
+            player.message("&eYou have: %d" % playersblocks)
+            player.message("&eYou need: %d" % blocks)
+            return False
+
+        #  2) look for intersecting regions
+        collisions = self.regions.intersecting_regions(
+            p["dim1"], lowcoord, highcoord, rect=True
+        )
+        if collisions:
+            if p["mode"] == "edit" and len(
+                    collisions) < 2 and p["rgedit"] in collisions:
+                collisions.remove(p["rgedit"])
+            if len(collisions) > 0:
+                player.message("&cArea overlaps region(s):")
+                player.message("&5%s" % str(collisions).replace("u'", "'"))
+                return False
+
+        if p["mode"] == "edit":
+            self._delete_claim(player, p["rgedit"], playerid)
+
+        # get a new claims region name
+        thisclaimname, humanname = self._get_claimname(
+            playerid, cl["admin"]
+        )
+        if not thisclaimname:
+            player.message(
+                "&cyou have claimed the maximum number of areas "
+                "(%s)" % self.maxclaims
+            )
+            return False
+        #  3) inspections passed, claim allowed.
+        lowcorner = (lowcoord[0], 5, lowcoord[2])
+        highcorner = (highcoord[0], 255, highcoord[2])
+        handle1 = p["point1"]
+        handle2 = p["point2"]
+        self.regions.rgdefine(
+            thisclaimname, playerid, p["dim1"], lowcorner, highcorner
+        )
+        self.regions.protection_on(thisclaimname)
+        player.message(
+            "&2Region &5%s&2 created and protected." % thisclaimname
+        )
+
+        cl["claimlist"].append(thisclaimname)
+        cl["claiminfo"][thisclaimname] = {}
+        cl["claiminfo"][thisclaimname]["handle1"] = handle1
+        cl["claiminfo"][thisclaimname]["handle2"] = handle2
+        cl["blocksused"] += blocks
+
+        self._reset_selections(player.username)
+
+        p["mode"] = None
+        return thisclaimname
 
     def _check_username(self, playerobj, args, usage_msg, arg_count=1):
         if len(args) < arg_count:
@@ -720,9 +664,7 @@ class Main:
 
     def _claimblocks_comm(self, *args):
         player = args[0]
-        playerid = str(player.mojangUuid)
-        playername = player.username
-        self._claimblocks(player, playerid, playername)
+        self._claimblocks(player, player.uuid, player.username)
 
     def _adjustclaimblocks_comm(self, player, args):
         player = args[0]
@@ -736,39 +678,31 @@ class Main:
 
         amount = int(args[2])
         subcommmand = str(args[1]).lower()
-        blocksinuse = self.data[targetuuid]["claimblocksused"]
+        blocksinuse = self.data[targetuuid]["blocksused"]
         if subcommmand == "add":
-            self.data[targetuuid]["claimblocks"] += amount
+            self.data[targetuuid]["blocks"] += amount
             player.message(
                 "&eAdded %s blocks to player %s" % (amount, targetname)
             )
         if subcommmand == "sub":
-            self.data[targetuuid]["claimblocks"] -= amount
+            self.data[targetuuid]["blocks"] -= amount
             player.message(
                 "&eremoved %s blocks from player %s" % (amount, targetname)
             )
         if subcommmand == "set":
-            self.data[targetuuid]["claimblocks"] = amount - self.data[
-                "player"][targetuuid]["claimblocksused"]
+            self.data[targetuuid]["blocks"] = amount
             player.message("&eset %s's blocks to %s" % (targetname, amount))
         if subcommmand == "info":
             self._claimblocks(player, targetuuid, targetname)
             return
-        amount = self.data[targetuuid]["claimblocks"] + blocksinuse
+        amount = self.data[targetuuid]["blocks"]
         player.message("&2%s has %s blocks." % (targetname, amount))
 
     def _spade(self, *args):
         player = args[0]
-        if self.earnspade:
-            player.message(
-                "&aSorry, this server requires you to craft your own "
-                "gold shovel."
-            )
-        else:
-            self.api.minecraft.console(
-                "give %s minecraft:golden_shovel 1 30" % player.username
-            )
-        return
+        self.api.minecraft.console(
+            "give %s minecraft:golden_shovel 1 32" % player.username
+        )
 
     def _abandonclaim_comm(self, *args):
         player = args[0]
@@ -814,10 +748,6 @@ class Main:
             self._abandonclaim(player, str(thisclaimname), targetuuid)
         return
 
-    def _newclaim_comm(self, *args):
-        player = args[0]
-        self._newclaim(player)
-
     def _transferclaim_comm(self, *args):
         player = args[0]
         try:
@@ -834,7 +764,7 @@ class Main:
         if targetuuid not in self.data:
             self._init_player_record(targetuuid, targetname)
         self._abandonclaim(player, regionname, oldowneruuid)
-        self._do_claim(
+        self._quick_claim(
             player, targetuuid, dim, pos1, pos2, ycoords_of_feet=position[1]
         )
 
@@ -847,23 +777,23 @@ class Main:
         if regionname is False:
             player.message("&ethis is unclaimed")
             return
-        playeruuid = str(player.mojangUuid)
-        self.data[playeruuid]["point3"] = self.regions.getregioninfo(
+        point1 = self.regions.getregioninfo(
             regionname, "pos1"
         )
-        self.data[playeruuid]["point4"] = self.regions.getregioninfo(
+        point2 = self.regions.getregioninfo(
             regionname, "pos2"
         )
         x = int(pos[0])
         y = int(pos[1]) - 1
         z = int(pos[2])
-        self._show(player, (x, y, z), playeruuid)
+        self._show(player, (x, y, z), point1, point2)
         player.message("&eRegion: &5%s" % regionname)
 
     def _claimblocks(self, playerobject, playerid, playername):
-        blocksavailable = self.data[playerid]["claimblocks"]
-        blocksinuse = self.data[playerid]["claimblocksused"]
-        totalblocks = blocksavailable + blocksinuse
+        totalblocks = self.data[playerid]["blocks"]
+        blocksinuse = self.data[playerid]["blocksused"]
+        blocksavailable = totalblocks - blocksinuse
+
         claimlist = self.data[playerid]["claimlist"]
         totalclaims = len(claimlist)
         playerobject.message("")
@@ -876,198 +806,23 @@ class Main:
         )
         playerobject.message("&6Using &5%s&6 claims." % totalclaims)
 
-    def _newclaim(self, player):
-        playerid = str(player.mojangUuid)
-        self.data[playerid]["selectionmode"] = "new"
-        player.message("&2Entering claims selection mode...")
-        player.message("&2Use gold shovel to select points (/spade)...")
+    def _delete_claim(self, player, claimname, ownerid):
+        cl = self.get_claim_data(player)
+        handle1 = cl["claiminfo"][claimname]["handle1"]
+        handle2 = cl["claiminfo"][claimname]["handle2"]
+        blocksize, length, width = self._getsizeclaim(handle1, handle2)
+        if claimname in cl["claiminfo"]:
+            del cl["claiminfo"][claimname]
+        if claimname in cl["claimlist"]:
+            cl["claimlist"].remove(claimname)
+        self.regions.clicks_queue.append(["break", player, handle1])
+        self.regions.clicks_queue.append(["break", player, handle2])
+        self.regions.rgdelete(claimname)
+        cl["blocksused"] -= blocksize
 
     def _abandonclaim(self, player, thisclaimname, playerid):
-        handle1 = self.data[playerid][
-            "claiminfo"][thisclaimname]["handle1"]
-        handle2 = self.data[playerid][
-            "claiminfo"][thisclaimname]["handle2"]
-        blocksize, length, width = self._getsizeclaim(handle1, handle2)
-        if thisclaimname in self.data[playerid]["claiminfo"]:
-            del self.data[playerid]["claiminfo"][thisclaimname]
-        if thisclaimname in self.data[playerid]["claimlist"]:
-            self.data[playerid]["claimlist"].remove(thisclaimname)
-        player.sendBlock(handle1, BEDROCK, 0)
-        player.sendBlock(handle2, BEDROCK, 0)
-        self.regions.rgdelete(thisclaimname)
-        self.data[playerid]["claimblocks"] += blocksize
-        self.data[playerid]["claimblocksused"] -= blocksize
+        self._delete_claim(player, thisclaimname, playerid)
         player.message("&eClaim %s deleted!" % thisclaimname)
-
-    def _claim(self, player, playerid):
-        #  1) calculate the claim size parameters
-        if self.data[playerid]["selectionpoint"] != "point2":
-            player.message("&cNothing selected to claim!")
-            return False
-        lowcoord = self.data[playerid]["point3"]
-        highcoord = self.data[playerid]["point4"]
-        blocks, length, width = self._getsizeclaim(lowcoord, highcoord)
-        playersblocks = self.data[playerid]["claimblocks"]
-
-        if blocks < self.minclaimsize:
-            player.message(
-                "&cClaim (%d) is not minimum size of at least %d blocks." % (
-                    blocks, self.minclaimsize
-                )
-            )
-            return False
-        if length < self.minclaimwidth or width < self.minclaimwidth:
-            player.message(
-                "&cClaim has to be at least %d blocks wide all "
-                "around." % self.minclaimwidth
-            )
-            return False
-
-        if blocks > playersblocks:
-            player.message(
-                "&cYou do not have enough blocks to make this claim."
-            )
-            player.message("&eYou have: %d" % playersblocks)
-            player.message("&eYou need: %d" % blocks)
-            return False
-        #  2) look for interceptions
-        dim = self.data[playerid]["dim1"]
-        sel1coords = self.data[playerid]["point3"]
-        sel2coords = self.data[playerid]["point4"]
-        collisions = self.regions.intersecting_regions(
-            dim, sel1coords, sel2coords, rect=True
-        )
-        if collisions:
-            player.message("&cArea overlaps region(s):")
-            player.message("&5%s" % str(collisions).replace("u'", "'"))
-            player.message(
-                "claimed areas can be discovered with a wooden stick..."
-            )
-            return False
-        # get a new claims region name
-        thisclaimname, humanname = self._get_claimname(
-            playerid, player.hasPermission("vclaims.admin")
-        )
-        if not thisclaimname:
-            player.message(
-                "&cyou have claimed the maximum number of areas "
-                "(%s)" % self.maxclaims
-            )
-            return False
-        #  3) inspections passed, claim allowed.
-        lowcorner = (sel1coords[0], 5, sel1coords[2])
-        highcorner = (sel2coords[0], 255, sel2coords[2])
-        handle1 = self.data[playerid]["point1"]
-        handle2 = self.data[playerid]["point2"]
-
-        self.regions.rgdefine(
-            thisclaimname, playerid, dim, lowcorner, highcorner
-        )
-        self.regions.protection_on(thisclaimname)
-        player.message(
-            "&2Region &5%s&2 created and protected." % thisclaimname
-        )
-        self.data[playerid]["claimlist"].append(thisclaimname)
-        self.data[playerid]["claiminfo"][thisclaimname] = {}
-        self.data[playerid]["claiminfo"][thisclaimname][
-            "handle1"] = handle1
-        self.data[playerid]["claiminfo"][thisclaimname][
-            "handle2"] = handle2
-        self.data[playerid]["claimblocks"] -= blocks
-        self.data[playerid]["claimblocksused"] += blocks
-        self.data[playerid]["point1"] = (0, 0, 0)
-        self.data[playerid]["point2"] = (0, 0, 0)
-        self.data[playerid]["point3"] = (0, 0, 0)
-        self.data[playerid]["point4"] = (0, 0, 0)
-        self.data[playerid]["selectionpoint"] = "none"
-        self.data[playerid]["selectionmode"] = "none"
-        return thisclaimname
-
-    def _editclaim(self, player, playerid, existingclaimname):
-        # get existing claimdata
-        pos1 = self.regions.getregioninfo(existingclaimname, "pos1")
-        pos2 = self.regions.getregioninfo(existingclaimname, "pos2")
-        if pos1 is False:
-            player.message("&cClaim %s failed 'locate'!" % existingclaimname)
-            return False
-        thisclaimblocksbefore, exlength, exwidth = self._getsizeclaim(
-            pos1, pos2
-        )
-        #  1) calculate the claim size parameters
-        if self.data[playerid]["selectionpoint"] != "point2":
-            player.message("&cNothing selected to claim!")
-            return False
-        lowcoord = self.data[playerid]["point3"]
-        highcoord = self.data[playerid]["point4"]
-        blocks, length, width = self._getsizeclaim(lowcoord, highcoord)
-        playersblocksavail = self.data[playerid][
-                                 "claimblocks"] + thisclaimblocksbefore
-        if blocks < self.minclaimsize:
-            player.message(
-                "&cClaim (%d) is not minimum size of at least %d "
-                "blocks." % (blocks, self.minclaimsize)
-            )
-            return False
-        if length < self.minclaimwidth or width < self.minclaimwidth:
-            player.message(
-                "&cClaim has to be at least %d blocks wide all "
-                "around." % self.minclaimwidth
-            )
-            return False
-
-        if blocks > playersblocksavail:
-            player.message(
-                "&cYou do not have enough blocks to make this claim."
-            )
-            player.message("&eYou have: %d" % playersblocksavail)
-            player.message("&eYou need: %d" % blocks)
-            return False
-        #  2) look for interceptions
-        # must turn off protection momentarily to avoid self collision.
-        self.regions.protection_off(existingclaimname)
-        time.sleep(.1)
-        dim = self.data[playerid]["dim1"]
-        sel1coords = self.data[playerid]["point3"]
-        sel2coords = self.data[playerid]["point4"]
-        collisions = self.regions.intersecting_regions(
-            dim, sel1coords, sel2coords, rect=True
-        )
-        # restore protection status
-        self.regions.protection_on(existingclaimname)
-        if collisions:
-            player.message("&cArea overlaps region(s):")
-            player.message("&5%s" % str(collisions).replace("u'", "'"))
-            player.message(
-                "claimed areas can be discovered with a wooden stick..."
-            )
-            return False
-        #  3) inspections passed, resize allowed.
-        # using same claim name
-        lowcorner = (sel1coords[0], 5, sel1coords[2])
-        highcorner = (sel2coords[0], 255, sel2coords[2])
-        handle1 = self.data[playerid]["point1"]
-        handle2 = self.data[playerid]["point2"]
-
-        thisclaimname = self.regions.rgedit(
-            existingclaimname, playername=player.username,
-            edit_coords=True, low_corner=lowcorner, high_corner=highcorner,
-        )
-        player.message("Region %s edited." % thisclaimname)
-        self.data[playerid]["claiminfo"][thisclaimname][
-            "handle1"] = handle1
-        self.data[playerid]["claiminfo"][thisclaimname][
-            "handle2"] = handle2
-        self.data[playerid][
-            "claimblocks"] = playersblocksavail - blocks
-        self.data[playerid][
-            "claimblocksused"] += (blocks - thisclaimblocksbefore)
-        self.data[playerid]["point1"] = (0, 0, 0)
-        self.data[playerid]["point2"] = (0, 0, 0)
-        self.data[playerid]["point3"] = (0, 0, 0)
-        self.data[playerid]["point4"] = (0, 0, 0)
-        self.data[playerid]["selectionpoint"] = "none"
-        self.data[playerid]["selectionmode"] = "none"
-        return str(thisclaimname)
 
     def _get_claimname(self, playerid, admin):
         x = 0
@@ -1075,7 +830,7 @@ class Main:
 
         while True:
             claimname = "%s-%d" % (humanname, x)
-            if claimname in self.data[playerid]["claimlist"]:
+            if claimname not in self.data[playerid]["claimlist"]:
                 break
             else:
                 x += 1
@@ -1083,34 +838,41 @@ class Main:
                     return False, False
         return claimname, humanname
 
-    def _show(self, player, position, onlineuuid):
-        if self.data[onlineuuid]["point3"] == (0, 0, 0):
-            player.message("&cNo seletion to show!")
-            return
-        low = self.data[onlineuuid]["point3"]
-        high = self.data[onlineuuid]["point4"]
+    def _show(self, player, position, low, high):
+        """
+
+        :param player:
+        :param position:
+        :param low:
+        :param high:
+        :return:
+        """
         lowcorner = low[0], position[1] + 1, low[2]
         highcorner = (high[0], position[1] + 4, high[2])
         self.regions.client_show_cube(
             player, lowcorner, highcorner, sendblock=False
         )
 
-    def _finishwithselectionmode(self, playeruuid):
-        data = self.data[playeruuid]
-        data["point1"] = (0, 0, 0)
-        data["point2"] = (0, 0, 0)
-        data["point3"] = (0, 0, 0)
-        data["point4"] = (0, 0, 0)
-        data["selectionpoint"] = "none"
-        data["selectionmode"] = "none"
-        data["selectiontarget"] = "none"
-        self.data_storageobject.save()
+    def _finishwithselectionmode(self, playername):
+        self._reset_selections(playername)
+        p = self.player_dat[playername]
+        p["mode"] = None
 
-    def _do_claim(self, player_msg_object, owneruuid,
-                  dim, pos1, pos2, ycoords_of_feet=62):
+    def _reset_selections(self, playername):
+        p = self.player_dat[playername]
+        p["point1"] = [0, 0, 0]
+        p["point2"] = [0, 0, 0]
+        p["dim1"] = 0
+        p["dim2"] = 0
+        p["point"] = "point1"
+        p["proposed"] = [0, 0, 0], [0, 0, 0]
+        p["rgedit"] = None
+
+    def _quick_claim(self, player_msg_object, owneruuid,
+                     dim, pos1, pos2, ycoords_of_feet=62):
         data = self.data[owneruuid]
 
-        data["selectionpoint"] = "point2"
+        data["point"] = "point2"
         data["dim1"] = dim
         data["dim2"] = dim
         data["point1"] = pos1
@@ -1127,7 +889,7 @@ class Main:
         claimed = self._claim(player_msg_object, owneruuid)
         if claimed:
             player_msg_object.message("&6Claim action successful.")
-            data["selectionmode"] = "none"
+            data["mode"] = "none"
 
     @staticmethod
     def _getsizeclaim(coord1, coord2):

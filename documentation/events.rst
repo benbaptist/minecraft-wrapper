@@ -444,7 +444,9 @@
         :"player": player object
         :"position":  the PLAYERS position - x, y, z, pitch, yaw
         :"action": "finish_using"  or "use_item"
+        :"hand": 0 = main hand, 1 = off hand (shield).
         :"origin": Debugging information on where event was parsed.
+         Either 'pktSB.PLAYER_DIGGING' or 'pktSB.USE_ITEM'
 
     :Can be aborted/modified: Yes
 
@@ -466,9 +468,12 @@
     :Payload:
         :"playername": player's name
         :"player": player object
-        :"position":  the PLAYERS position - x, y, z, pitch, yaw
-        :"action": "finish_using"  or "use_item"
-        :"origin": Debugging information on where event was parsed.
+        :"position":  the clicked position, corrected for 'face' (i.e.,
+         the adjoining block position)
+        :"clickposition": The position of the block that was actually
+         clicked
+        :"item": The item player is holding (item['id'] = -1 if no item)
+        :"hand": hand in use (0 or 1)
 
     :Can be aborted/modified: Yes
 

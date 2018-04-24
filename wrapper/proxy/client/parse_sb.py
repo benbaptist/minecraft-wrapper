@@ -373,6 +373,7 @@ class ParseSB(object):
             return False
         # finished digging
         if data[0] == 2:
+            print("CALL FINISH DIGGING", time.time())
             if not self.proxy.eventhandler.callevent("player.dig", {
                 "playername": self.client.username,
                 "player": player,
@@ -381,6 +382,7 @@ class ParseSB(object):
                 "face": data[4]
             }):
                 return False  # stop packet if  player.dig returns False
+            print("DIG FINISHED", time.time())
             """ eventdoc
                         <group> Proxy <group>
 
@@ -438,6 +440,7 @@ class ParseSB(object):
                 "player": player,
                 "position": playerpos,
                 "action": "finish_using",
+                "hand": 0,  # hand = 0 ( main hand)
                 "origin": "pktSB.PLAYER_DIGGING"
             }):
                 return False
@@ -464,10 +467,13 @@ class ParseSB(object):
                 "player": player object
                 "position":  the PLAYERS position - x, y, z, pitch, yaw
                 "action": "finish_using"  or "use_item"
+                "hand": 0 = main hand, 1 = off hand (shield).
                 "origin": Debugging information on where event was parsed.
+                 Either 'pktSB.PLAYER_DIGGING' or 'pktSB.USE_ITEM'
                 <payload>
 
             """
+        print("DIG RETURNS TRUE", time.time())
         return True
 
     def play_player_block_placement(self):
@@ -562,9 +568,12 @@ class ParseSB(object):
                 <payload>
                 "playername": player's name
                 "player": player object
-                "position":  the PLAYERS position - x, y, z, pitch, yaw
-                "action": "finish_using"  or "use_item"
-                "origin": Debugging information on where event was parsed.
+                "position":  the clicked position, corrected for 'face' (i.e., 
+                 the adjoining block position)
+                "clickposition": The position of the block that was actually
+                 clicked
+                "item": The item player is holding (item['id'] = -1 if no item)
+                "hand": hand in use (0 or 1)
                 <payload>
 
             """
