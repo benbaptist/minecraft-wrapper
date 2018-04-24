@@ -1,3 +1,8 @@
+Build 13 [1.0.10 RC 13]
+- Fix documentation errors in block placement, digging, and interaction events.
+- optimizations to regions.py plugin.
+- include first version of vanilla claims plugin.
+
 Build 12 [1.0.9 RC 12]
 - Only call Wrapper Alerts if enabled.
 - Remove on-second timer from backups.

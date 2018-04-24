@@ -16,7 +16,7 @@ if PY3:
 NAME = "Regions"
 AUTHOR = "SurestTexas00"
 ID = "com.suresttexas00.regions"
-VERSION = (1, 3, 0)
+VERSION = (1, 3, 1)
 SUMMARY = "World regions editing and protection."
 WEBSITE = "" 
 DESCRIPTION = """
@@ -52,9 +52,11 @@ class Main:
         self.itemcontrols = True
 
         # if tnt is specifically limited
-        self.tntlimited = True
+        self.tntlimited = self.itemcontrols and True
+
         # whether a player can have TNT in a claim
-        self.tntinclaim = False
+        # change to `... and True` to allow TNT in claim
+        self.tntinclaim = self.tntlimited and False
         # above this, TNT is not allowed, unless player is in their own region.
         self.tntlevel = 20
 
@@ -287,56 +289,51 @@ class Main:
         """
         try:
             player = payload["player"]
-            action = payload["action"]
-            gamemode = int(player.getGamemode())
-            item = player.getHeldItem()
-            dim = int(player.getDimension())
+            gamemode = player.getGamemode()
+            dim = player.getDimension()
+            position = payload["position"]
+            try:
+                itemid = player.getHeldItem()["id"]
+            except TypeError:
+                itemid = -1
         except AttributeError:
             self.log.debug(
-                "region playerdig bad payload - missing GM or Item:\n%s" % (
+                "region playerdig bad payload - Payload:\n%s" % (
                     str(payload)
                 )
             )
             # bad player object - usually means player disconnected.
             return False
 
-        # obtain item id
-        try:
-            itemid = item["id"]
-        except TypeError:
-            itemid = "none"
-
-        p = self.get_memory_player(player.username)
-        position = payload["position"]
-
-        # selection pos 1
-        if itemid == 271 and p["wand"] and (
-                ((action == "end_break") and (gamemode == 1)) or (
+        if itemid == 271:
+            action = payload["action"]
+            p = self.get_memory_player(player.username)
+            if p["wand"] and (
+                    ((action == "end_break") and (gamemode == 1)) or (
                     (action == "begin_break") and (gamemode == 0))):
-            p["sel1"] = position
-            p["dim1"] = dim
-            player.sendBlock(position, BEACON, 0)
-            player.message(
-                "&dPoint one selected. (%d %d %d)" % (
-                    position[0], position[1], position[2])
-            )
-            if p["regusing"] is not None:
+                p["sel1"] = position
+                p["dim1"] = dim
+                player.sendBlock(position, BEACON, 0)
                 player.message(
-                    "&cYou were using region '%s'.  You are now "
-                    "selecting a new area." % p["regusing"]
+                    "&dPoint one selected. (%d %d %d)" % (
+                        position[0], position[1], position[2])
                 )
-            p["regusing"] = None
-            return False
+                if p["regusing"] is not None:
+                    player.message(
+                        "&cYou were using region '%s'.  You are now "
+                        "selecting a new area." % p["regusing"]
+                    )
+                p["regusing"] = None
+                return False
 
-        # cancel break in protected area
-        # -----------
         # creative and spectator ignore protections
-        if gamemode in (0, 2):
-            activeregion = self.regionname(position, dim)
-            if activeregion:
-                # if block/region not protected mode
-                if not self.rg_regions[activeregion]["protected"]:
-                    return True
+        if gamemode in (1, 3):
+            return True
+
+        activeregion = self.regionname(position, dim)
+        if activeregion:
+            # if block/region not protected mode
+            if self.rg_regions[activeregion]["protected"]:
                 return self._whenmatchingcoordsbreak(
                     player, position, activeregion
                 )
@@ -357,55 +354,53 @@ class Main:
         build a virtual structure away into air blocks to select air 
         blocks that are otherwise "unclickable".
         """
+
         try:
             player = payload["player"]
-            gamemode = int(player.getGamemode())
-            dim = int(player.getDimension())
-            position = (
-                payload["position"][0],
-                payload["position"][1],
-                payload["position"][2]
-            )
-            item = player.getHeldItem()
+            gamemode = player.getGamemode()
+            dim = player.getDimension()
+            position = payload["position"]
+            try:
+                itemid = payload["item"]["id"]
+            except AttributeError:
+                itemid = -1
         except AttributeError:
             self.log.debug(
-                "region playerplace bad payload - missing Dim/GM/POS/item:"
-                "\n%s" % str(payload)
+                "region playerplace bad payload - Payload:\n%s" % (
+                    str(payload)
+                )
             )
-            # Bad player object, usually.
+            # bad player object - usually means player disconnected.
             return False
-        p = self.get_memory_player(player.username)
-        try:
-            itemid = item["id"]
-        except TypeError:
-            itemid = "none"
 
         # selection pos 2
-        if itemid == 271 and p["wand"]:
-            p["dim2"] = dim
-            p["sel2"] = position
-            # send fake block
-            player.sendBlock(position, BEACON, 0)
-            player.message(
-                "&dPoint two selected. (%d %d %d)" % (
-                    position[0], position[1], position[2]
-                )
-            )
-            if p["regusing"] is not None:
+        if itemid == 271:
+            p = self.get_memory_player(player.username)
+            if p["wand"]:
+                p["dim2"] = dim
+                p["sel2"] = position
+                # send fake block
+                player.sendBlock(position, BEACON, 0)
                 player.message(
-                    "&cYou were using region '%s'.  You are now "
-                    "selecting a new area." % (p["regusing"])
+                    "&dPoint two selected. (%d %d %d)" % (
+                        position[0], position[1], position[2]
+                    )
                 )
-            p["regusing"] = None
-            return False
+                if p["regusing"] is not None:
+                    player.message(
+                        "&cYou were using region '%s'.  You are now "
+                        "selecting a new area." % (p["regusing"])
+                    )
+                p["regusing"] = None
+                return False
 
-        if gamemode not in (0, 2):
-            # apply controls only to survival and adventure
-            return
+        # creative and spectator ignore protections
+        if gamemode in (1, 3):
+            return True
 
         # generic TNT controls for all events - These only catch when
         #  item is not allowed even in claim
-        if itemid == TNT and self.itemcontrols and self.tntlimited and not self.tntinclaim:  # noqa
+        if itemid == TNT and not self.tntinclaim:
             if position[1] > self.tntlevel:
                 player.message(
                     "&dNo TNT ever allowed above y=%d..." % self.tntlevel
@@ -413,24 +408,25 @@ class Main:
                 return False
 
         # cancel interactions in protected regions
-        if gamemode in (0, 2):
-            activeregion = self.regionname(position, dim)
-            if activeregion:
-                # if block/region not protected mode
-                if not self.rg_regions[activeregion]["protected"]:
-                    return True
+
+        activeregion = self.regionname(position, dim)
+        if activeregion:
+            # if block/region not protected mode
+            if self.rg_regions[activeregion]["protected"]:
                 return self._whenmatchingcoordsplace(
                     player, position, activeregion, itemid
                 )
 
         # TNT controls for all events - for all events outside of a claim.
         # if it is a claim, code never reaches this (already returned True...)
-        if itemid == TNT and self.itemcontrols and self.tntlimited and (
+        if itemid == TNT and self.tntlimited and (
                 position[1] > self.tntlevel):
             player.message(
                 "&dNo TNT allowed above y=%d..." % self.tntlevel
             )
             return False
+
+        # If nothing matches, land is free...
         return True
 
     def _action_playerinteract(self, payload):
@@ -444,31 +440,30 @@ class Main:
             player = payload["player"]
             gamemode = int(player.getGamemode())
             dim = int(player.getDimension())
-            position = (
-                payload["position"][0],
-                payload["position"][1],
-                payload["position"][2]
-            )
+            position = payload["position"]
         # Bad player object, usually.
         except AttributeError:
             self.api.log("bad payload - missing Dim, GM, or POS")
             self.log.debug(
-                "region playerdig bad payload - missing Dim/GM/POS:\n%s" % (
+                "region player interaction bad payload - Payload:\n%s" % (
                     str(payload)
                 )
             )
             return False
 
-        # cancel interactions in protected regions
-        if gamemode in (0, 2):
-            activeregion = self.regionname(position, dim)
-            if activeregion:
-                # if block/region not protected mode
-                if not self.rg_regions[activeregion]["protected"]:
-                    return True
+        # creative and spectator ignore protections
+        if gamemode in (1, 3):
+            return True
+
+        activeregion = self.regionname(position, dim)
+        if activeregion:
+            # if block/region not protected mode
+            if not self.rg_regions[activeregion]["protected"]:
                 return self._whenmatchingcoordsinteract(
                     player, position, activeregion
                 )
+
+        # If nothing matches, land is free...
         return True
 
     def rgdefine(self, regionname: str, owneruuid: str, dimension: int,
@@ -743,51 +738,47 @@ class Main:
         if protected:
             self.protection_off(regionname)
         time.sleep(.1)
-
+        _region = self.rg_regions[regionname]
         # edit applicable parameters
         if new_owner_name:
             new_uuid = self.api.minecraft.lookupbyName(playername).string
-            self.rg_regions[regionname]["ownerUuid"] = new_uuid
+            _region["ownerUuid"] = new_uuid
         if edit_coords:
             lowcoord, highcoord = self.stat_normalize_selection(
                 low_corner, high_corner
             )
-            self.rg_regions[regionname]["pos1"] = lowcoord
-            self.rg_regions[regionname]["pos2"] = highcoord
+            _region["pos1"] = lowcoord
+            _region["pos2"] = highcoord
         if flags:
-            self.rg_regions[regionname]["flgs"] = flags
+            _region["flgs"] = flags
 
         if playername:
             playeruuid = self.api.minecraft.lookupbyName(playername).string
 
             if addbreak:
-                if playeruuid not in self.rg_regions[regionname]["breakplayers"]:  # noqa
-                    self.rg_regions[regionname][
-                        "breakplayers"][playeruuid] = playername
+                if playeruuid not in _region["breakplayers"]:
+                    _region["breakplayers"][playeruuid] = playername
             if addplace:
-                if playeruuid not in self.rg_regions[regionname]["placeplayers"]:  # noqa
-                    self.rg_regions[regionname][
-                        "placeplayers"][playeruuid] = playername
+                if playeruuid not in _region["placeplayers"]:
+                    _region["placeplayers"][playeruuid] = playername
             if addaccess:
-                if playeruuid not in self.rg_regions[regionname]["accessplayers"]:  # noqa
-                    self.rg_regions[regionname][
-                        "accessplayers"][playeruuid] = playername
+                if playeruuid not in _region["accessplayers"]:
+                    _region["accessplayers"][playeruuid] = playername
             if addban:
-                if playeruuid not in self.rg_regions[regionname]["banplayers"]:
-                    self.rg_regions[regionname][
-                        "banplayers"][playeruuid] = playername
+                if playeruuid not in _region["banplayers"]:
+                    _region["banplayers"][playeruuid] = playername
 
             if remove:
-                if playeruuid in self.rg_regions[regionname]["breakplayers"]:
-                    del self.rg_regions[regionname]["breakplayers"][playeruuid]
-                if playeruuid in self.rg_regions[regionname]["placeplayers"]:
-                    del self.rg_regions[regionname]["placeplayers"][playeruuid]
-                if playeruuid in self.rg_regions[regionname]["accessplayers"]:
-                    del self.rg_regions[regionname]["accessplayers"][playeruuid]
+                if playeruuid in _region["breakplayers"]:
+                    del _region["breakplayers"][playeruuid]
+                if playeruuid in _region["placeplayers"]:
+                    del _region["placeplayers"][playeruuid]
+                if playeruuid in _region["accessplayers"]:
+                    del _region["accessplayers"][playeruuid]
 
             if unban:
-                if playeruuid in self.rg_regions[regionname]["banplayers"]:
-                    del self.rg_regions[regionname]["banplayers"][playeruuid]
+                if playeruuid in _region["banplayers"]:
+                    del _region["banplayers"][playeruuid]
         self.rgs_region_storage.save()
 
         if protected:
@@ -1079,15 +1070,16 @@ class Main:
             }
 
         """
-
-        if name not in self.players:
+        try:
+            return self.players[name]
+        except KeyError:
             self.players[name] = {
                 "sel1": None, "sel2": None, "dim1": None, "dim2": None,
                 "regusing": None,
                 "wand": self.api.minecraft.getPlayer(
                     name).hasPermission("region.wand")
             }
-        return self.players[name]
+            return self.players[name]
 
     def client_show_cube(self, player, pos1, pos2, block=35, corner=51,
                          sendblock=True, numparticles=1, particle_data=1):
