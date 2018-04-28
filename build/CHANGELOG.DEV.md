@@ -1,3 +1,6 @@
+Build 17
+- try to fix errors with occasional problems in playerposition and look type packets that kill the client connection.
+
 Build 16 [1.0.13 RC 16]
 - Make the packet flush times configurable since different computers and setups may have different ideal flushing intervals.
 
