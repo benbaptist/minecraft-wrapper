@@ -257,7 +257,6 @@ class ParseSB(object):
         return False  # and cancel this original packet
 
     def _world_hub_command(self, where=""):
-        ip = "127.0.0.1"
         if where == "help":
             return self._world_hub_help("h")
 
@@ -266,11 +265,15 @@ class ParseSB(object):
 
         elif where == "":
             port = self.proxy.srv_data.server_port
-
+            ip = "127.0.0.1"
         else:
             worlds = self.proxy.proxy_worlds
             if where in worlds:
                 port = self.proxy.proxy_worlds[where]["port"]
+                try:
+                    ip = self.proxy.proxy_worlds[where]["ip"]
+                except KeyError:
+                    ip = "127.0.0.1"
             else:
                 return self._world_hub_help("w")
         t = threading.Thread(target=self.client.change_servers,

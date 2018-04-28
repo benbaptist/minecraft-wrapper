@@ -1,3 +1,16 @@
+Build 15 [1.0.12 RC 15]
+- allow different IP's for hubs (able to use 192.168.x.x, for instance).
+- fix error in backups.py.  It still referenced the "payload" argument from
+ the original 'timer.second' event that used to drive it.
+- bug fix packet.py line 645 that calls close_server method (which did not
+ formerly exist for clientconnection.py).  added a `close_server` method to
+ clientconnection.py to wrap cleintconnection's `_close_server_instance` method.
+- Improve plugin event code some.
+- Mark blockForEvent code as deprecated for removal by wrapper 1.0 final or
+ 1.1 rc.
+- Possibly fixed bug where we may not be shutting down client sockets when they abort,
+ causing the os system file limits to be exceeded after a certain amount of time.
+
 Build 14 [1.0.11 RC 14]
 - removed debug print statements in parse_sb.py
 - optimize the event processor thread timer.

@@ -59,7 +59,7 @@ class Backups(object):
             rw.start()
 
     # noinspection PyUnusedLocal
-    def _bu_process(self, payload):
+    def _bu_process(self):
         while not self.wrapper.halt.halt:
             time.sleep(1)
             # only run backups in server running/starting states
