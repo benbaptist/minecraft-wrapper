@@ -106,8 +106,9 @@ class ServerConnection(object):
         t.start()
 
     def flush_loop(self):
+        rate = self.client.flush_rate
         while not self.abort:
-            time.sleep(0.05)
+            time.sleep(rate)
             try:
                 self.packet.flush()
             except socket.error:
