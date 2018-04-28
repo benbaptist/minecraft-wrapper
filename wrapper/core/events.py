@@ -68,17 +68,17 @@ class Events(object):
         if abortable:
             return self._callevent(event, payload)
         else:
-            self.event_queue.append((event, payload))
+            self.event_queue.append((event, payload, False))
             return
 
     def _event_processor(self):
         while not self.wrapper.halt.halt:
             while len(self.event_queue) > 0:
-                _event, _payload = self.event_queue.pop(0)
-                self._callevent(_event, _payload)
+                _event, _payload, _abortable = self.event_queue.pop(0)
+                self._callevent(_event, _payload, _abortable)
             time.sleep(0.01)
 
-    def _callevent(self, event, payload):
+    def _callevent(self, event, payload, abortable=True):
         if event == "player.runCommand":
             self.wrapper.commands.playercommand(payload)
             return
@@ -123,6 +123,12 @@ class Events(object):
                         "experienced an exception calling '%s': \n%s",
                         plugin_id, event, e
                     )
+
+                # If the plugin is not abortable, no need exists to deal with
+                # the payload in any special manner
+                if not abortable:
+                    payload_status = True
+                    continue
 
                 # Evaluate this plugin's result
                 # Every plugin will be given equal time to run it's event code.

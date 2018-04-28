@@ -262,6 +262,18 @@ class Client(object):
 
         # upon self.abort
         self._close_server_instance("Client Handle Ended")
+        try:
+            self.client_socket.shutdown(2)
+        except AttributeError:
+            self.log.debug(
+                "(%s, %s) handle aborted and self.client_socket has no"
+                " shutdown attribute", self.username, self.ip
+            )
+        except socket_error:
+            self.log.debug(
+                "(%s, %s) handle aborted and self.client_socket experienced a "
+                "socket error while doing 'shutdown'.", self.username, self.ip
+            )
 
     def _flush_loop(self):
         """
@@ -279,6 +291,7 @@ class Client(object):
             except socket_error:
                 self.log.debug("%s client socket closed (socket_error).",
                                self.username)
+                self.abort = True
                 break
         if self.username != "PING REQUEST":
             self.log.debug("%s clientconnection _flush_loop thread ended",
@@ -832,6 +845,16 @@ class Client(object):
         # give it a sec to get to play mode
         time.sleep(.5)
         return True, "Success"
+
+    def close_server(self, term_message):
+        """
+        Wraps `_close_server_instance`.  This would be called by packet.py
+        where its' self.obj would equal the clientconnection instance (since
+        packet.py handles both client and server packets).
+
+        :param term_message:
+        """
+        self._close_server_instance(term_message)
 
     def _close_server_instance(self, term_message):
         """

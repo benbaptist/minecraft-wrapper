@@ -642,7 +642,10 @@ class Packet(object):
         d = self.buffer.read(length)
         if len(d) == 0 and length is not 0:
             # "Received no data or less data than expected - connection closed"
-            self.obj.close_server()
+            self.obj.close_server(
+                "Received no data or less data than expected - "
+                "connection closed"
+            )
             return b""
         return d
 

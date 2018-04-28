@@ -284,10 +284,15 @@ class API(object):
 
     def blockForEvent(self, eventtype):
         """
-        Blocks until the specified event is called.
+        Deprecated and will be removed in wrapper 1.1
+
+        Has no known use cases and it seems largely inadvisable to use this.
+        As it has no known use cases, it is untested and may not even work
+        as intended!
+
         """
         sock = []
-        self.wrapper.events.listeners.append(sock)  #
+        self.wrapper.events.listeners.append(sock)
         while True:
             for event in sock:
                 if event["event"] == eventtype:
