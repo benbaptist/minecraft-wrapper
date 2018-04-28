@@ -5,6 +5,9 @@
 # This program is distributed under the terms of the GNU
 # General Public License, version 3 or later.
 
+# future imports
+from __future__ import division
+
 # Standard Library imports
 import copy
 import threading
@@ -61,6 +64,7 @@ class Client(object):
         self.hidden_ops = self.proxy.config["hidden-ops"]
         self.silent_bans = self.proxy.config["silent-ipban"]
         self.names_change = self.proxy.config["auto-name-changes"]
+        self.flush_rate = self.proxy.config["flush-rate-ms"] / 1000
         self.onlinemode = self.proxy.onlinemode
 
         # client setup and operating paramenters
@@ -284,8 +288,9 @@ class Client(object):
         game kind of jerky. '.1' would be tolerable unless in a combat
         situation.
         """
+        rate = self.flush_rate
         while not self.abort:
-            time.sleep(0.05)
+            time.sleep(rate)
             try:
                 self.packet.flush()
             except socket_error:

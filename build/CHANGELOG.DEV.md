@@ -1,3 +1,6 @@
+Build 16 [1.0.13 RC 16]
+- Make the packet flush times configurable since different computers and setups may have different ideal flushing intervals.
+
 Build 15 [1.0.12 RC 15]
 - allow different IP's for hubs (able to use 192.168.x.x, for instance).
 - fix error in backups.py.  It still referenced the "payload" argument from
