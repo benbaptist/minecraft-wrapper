@@ -317,12 +317,14 @@ class Proxy(object):
     
         """
 
-    def use_newname(self, oldname, newname, realuuid: str, client):
+    def use_newname(self, oldname, newname, realuuid, client):
+        # type: (str, str, str, client) -> tuple
         """
         Convert a player from old to new name.
         :param oldname: The players old name
         :param newname: The player's new name
         :param realuuid: The actual string UUID used by wrapper's cache (mojang)
+        :param client: The player client
 
         :returns: A tuple of the (new string name, string uuid)
         """

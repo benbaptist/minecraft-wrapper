@@ -410,7 +410,7 @@
          using this for string purposes (json keys)!
 
         
--  lookupbyUUID(self, uuid
+-  lookupbyUUID(self, uuid)
 
         Returns the username from the specified UUID.
         If the player has never logged in before and isn't in the user

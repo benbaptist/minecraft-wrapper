@@ -114,13 +114,36 @@ class ParseSB(object):
         # ("double:x|double:feety|double:z|float:yaw|float:pitch|bool:on_ground")
         if not self.client.local:
             return True
-        data = self.packet.readpkt(self.pktSB.PLAYER_POSLOOK[PARSER])
+        try:
+            data = self.packet.readpkt(self.pktSB.PLAYER_POSLOOK[PARSER])
+        except:
+            return True
         if self.client.clientversion > PROTOCOL_1_8START:
             self.client.position = (data[0], data[1], data[2])
             self.client.head = (data[3], data[4])
         else:
             self.client.position = (data[0], data[1], data[3])
             self.client.head = (data[4], data[5])
+        return True
+
+    def play_player_position(self):
+        """ hub needs accurate position """
+        try:
+            data = self.packet.readpkt(self.pktSB.PLAYER_POSITION[PARSER])
+        except:
+            return True
+        # skip 1.7.10 and lower protocol yhead args (data[2])
+        self.client.position = (data[0], data[1], data[3])
+        return True
+
+    def play_player_look(self):
+        """ hub needs accurate position """
+        try:
+            data = self.packet.readpkt([FLOAT, FLOAT, BOOL])
+        except:
+            return True
+        # ("float:yaw|float:pitch|bool:on_ground")
+        self.client.head = (data[0], data[1])
         return True
 
     def play_chat_message(self):
@@ -338,27 +361,6 @@ class ParseSB(object):
                         "color": "dark_green"
                     }
                 )
-
-    def play_player_position(self):
-        """ hub needs accurate position """
-        if self.client.clientversion < PROTOCOL_1_8START:
-            data = self.packet.readpkt([DOUBLE, DOUBLE, DOUBLE, DOUBLE, BOOL])
-            # ("double:x|double:y|double:yhead|double:z|bool:on_ground")
-        elif self.client.clientversion >= PROTOCOL_1_8START:
-            data = self.packet.readpkt([DOUBLE, DOUBLE, NULL, DOUBLE, BOOL])
-            # ("double:x|double:y|double:z|bool:on_ground")
-        else:
-            data = [0, 0, 0, 0]
-        # skip 1.7.10 and lower protocol yhead args
-        self.client.position = (data[0], data[1], data[3])
-        return True
-
-    def play_player_look(self):
-        """ hub needs accurate position """
-        data = self.packet.readpkt([FLOAT, FLOAT, BOOL])
-        # ("float:yaw|float:pitch|bool:on_ground")
-        self.client.head = (data[0], data[1])
-        return True
 
     def play_player_digging(self):
         if not self.client.local:

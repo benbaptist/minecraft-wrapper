@@ -53,7 +53,7 @@ class Packets(object):
         self.CHAT_MESSAGE = [0x01, [STRING]]  # until 1.11, max string length is 100 or client gets kicked  # noqa
         self.USE_ENTITY = [0x02, [NULL, ]]
         self.PLAYER = [0x03, [NULL, ]]
-        self.PLAYER_POSITION = [0x04, [NULL, ]]
+        self.PLAYER_POSITION = [0x04, [DOUBLE, DOUBLE, DOUBLE, DOUBLE, BOOL]]
         self.PLAYER_LOOK = [0x05, [NULL, ]]
         self.PLAYER_POSLOOK = [0x06, [DOUBLE, DOUBLE, DOUBLE, DOUBLE, FLOAT, FLOAT, BOOL]]  # noqa
         self.PLAYER_DIGGING = [0x07, [BYTE, INT, UBYTE, INT, BYTE]]
@@ -89,6 +89,7 @@ class Packets(object):
         if protocol >= PROTOCOL_1_8START:
             self.KEEP_ALIVE[PARSER] = [VARINT]
             self.PLAYER_POSLOOK[PARSER] = [DOUBLE, DOUBLE, DOUBLE, FLOAT, FLOAT, BOOL]  # noqa
+            self.PLAYER_POSITION[PARSER] = [DOUBLE, DOUBLE, NULL, DOUBLE, BOOL]
             self.PLAYER_DIGGING[PARSER] = [BYTE, POSITION, NULL, NULL, BYTE]
             self.CLIENT_STATUS[PARSER] = [VARINT]
             self.CLICK_WINDOW[PARSER] = [UBYTE, SHORT, BYTE, SHORT, BYTE, SLOT]
