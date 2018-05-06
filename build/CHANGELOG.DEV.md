@@ -1,3 +1,6 @@
+Build 18 [1.0.14 RC 18]
+- Bugfix remove Python3 style function annotations.  Use comment style annoations instead.
+
 Build 17
 - try to fix errors with occasional problems in playerposition and look type packets that kill the client connection.
 
