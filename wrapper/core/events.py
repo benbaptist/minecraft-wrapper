@@ -5,6 +5,7 @@
 # This program is distributed under the terms of the GNU
 # General Public License, version 3 or later.
 
+from collections import deque
 import threading
 import time
 
@@ -19,7 +20,7 @@ class Events(object):
         self.listeners = []
         self.events = {}
 
-        self.event_queue = []
+        self.event_queue = deque([])
         t = threading.Thread(target=self._event_processor,
                              name="event_processor", args=())
         t.daemon = True
@@ -74,7 +75,7 @@ class Events(object):
     def _event_processor(self):
         while not self.wrapper.halt.halt:
             while len(self.event_queue) > 0:
-                _event, _payload, _abortable = self.event_queue.pop(0)
+                _event, _payload, _abortable = self.event_queue.popleft()
                 self._callevent(_event, _payload, _abortable)
             time.sleep(0.01)
 

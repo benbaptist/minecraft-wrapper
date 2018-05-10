@@ -9,6 +9,7 @@
 # ------------------------------------------------
 
 # standard
+from collections import deque
 import io  # PY3
 import json
 import struct
@@ -80,7 +81,7 @@ class Packet(object):
         self.buffer = io.BytesIO()  # Py3
         # self.buffer = StringIO.StringIO()
 
-        self.queue = []
+        self.queue = deque([])
 
         # encode/decode for NBT operations
         self._ENCODERS = {
@@ -298,7 +299,7 @@ class Packet(object):
     def flush(self):
         while len(self.queue) > 0:
             # grab next packet
-            packet_tuple = self.queue.pop(0)
+            packet_tuple = self.queue.popleft()
             # see if it is compressed
             compression = packet_tuple[0]
             packet = packet_tuple[1]  # `payload`

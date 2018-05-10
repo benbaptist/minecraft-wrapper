@@ -1,3 +1,7 @@
+Build 19
+- use collections.deque to decrease pop TimeComplexity from O(k) to O(1) in
+ event handling code and packet.py processing (https://wiki.python.org/moin/TimeComplexity).
+
 Build 18 [1.0.14 RC 18]
 - Bugfix remove Python3 style function annotations.  Use comment style annoations instead.
 
