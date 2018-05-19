@@ -17,7 +17,11 @@ import os
 import logging
 # import smtplib
 import sys  # used to pass sys.argv to server
-# from pprint import pprint
+
+try:
+    from concurrent.futures import ProcessPoolExecutor
+except ImportError:
+    ProcessPoolExecutor = False
 
 # non standard library imports
 try:
@@ -851,9 +855,13 @@ class Wrapper(object):
             self.disable_proxymode()
             return
 
-        proxythread = threading.Thread(target=self.proxy.host, args=())
-        proxythread.daemon = True
-        proxythread.start()
+        if not ProcessPoolExecutor:
+            proxythread = threading.Thread(target=self.proxy.host, args=())
+            proxythread.daemon = True
+            proxythread.start()
+        else:
+            with ProcessPoolExecutor(max_workers=2) as executor:
+                executor.submit(self.proxy.host())
 
     def disable_proxymode(self):
         self.proxymode = False
