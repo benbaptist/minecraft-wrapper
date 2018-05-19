@@ -164,7 +164,7 @@ class MCServer(object):
         output, and such.
         """
         trystart = 0
-        while not self.wrapper.halt.halt:
+        while not self.wrapper.haltsig.halt:
             trystart += 1
             self.proc = None
 
@@ -194,7 +194,7 @@ class MCServer(object):
                     " from wrapper.properties:\n'%s'", " ".join(self.args))
                 self.changestate(OFF)
                 # halt wrapper
-                self.wrapper.halt.halt = True
+                self.wrapper.haltsig.halt = True
                 # exit server_handle
                 break
 
@@ -206,7 +206,7 @@ class MCServer(object):
                     self.changestate(OFF)
                     trystart = 0
                     self.boot_server = self.server_autorestart
-                    # break out to `while not self.wrapper.halt.halt:` loop
+                    # break out to `while not self.wrapper.haltsig.halt:` loop
                     # to (possibly) connect to server again.
                     break
 
@@ -218,7 +218,7 @@ class MCServer(object):
                         self.log.exception(e)
                 self.console_output_data = []
 
-        # code ends here on wrapper.halt.halt and execution returns to
+        # code ends here on wrapper.haltsig.halt and execution returns to
         # the end of wrapper.start()
 
     def _toggle_server_started(self, server_started=True):
@@ -621,7 +621,7 @@ class MCServer(object):
 
     def __stdout__(self):
         """handles server output, not lines typed in console."""
-        while not self.wrapper.halt.halt:
+        while not self.wrapper.haltsig.halt:
             # noinspection PyBroadException,PyUnusedLocal
 
             # this reads the line and puts the line in the
@@ -640,7 +640,7 @@ class MCServer(object):
     def __stderr__(self):
         """like __stdout__, handles server output (not lines
         typed in console)."""
-        while not self.wrapper.halt.halt:
+        while not self.wrapper.haltsig.halt:
             try:
                 data = self.proc.stderr.readline()
                 if len(data) > 0:
@@ -761,7 +761,6 @@ class MCServer(object):
         # .. and load the proper ops file
         if "Starting minecraft server version" in buff and \
                 self.prepends_offset == 0:
-
             for place in range(len(line_words)-1):
                 self.prepends_offset = place
                 if line_words[place] == "Starting":
@@ -775,6 +774,9 @@ class MCServer(object):
             minor = get_int(getargs(semantics, 2))
             self.vitals.version_compute = minor + (major * 100) + (release * 10000)  # noqa
 
+            if len(self.vitals.version.split("w")) > 1:
+                # It is a snap shot
+                self.vitals.version_compute = 10800
             # 1.7.6 (protocol 5) is the cutoff where ops.txt became ops.json
             if self.vitals.version_compute > 10705 and self.vitals.protocolVersion < 0:  # noqa
                 self.vitals.protocolVersion = 5
@@ -1047,7 +1049,7 @@ class MCServer(object):
     def reboot_timer(self):
         rb_mins = self.reboot_minutes
         rb_mins_warn = self.config["General"]["timed-reboot-warning-minutes"]
-        while not self.wrapper.halt.halt:
+        while not self.wrapper.haltsig.halt:
             time.sleep(1)
             timer = rb_mins - rb_mins_warn
             while self.vitals.state in (STARTED, STARTING):

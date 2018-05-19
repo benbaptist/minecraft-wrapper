@@ -114,13 +114,36 @@ class ParseSB(object):
         # ("double:x|double:feety|double:z|float:yaw|float:pitch|bool:on_ground")
         if not self.client.local:
             return True
-        data = self.packet.readpkt(self.pktSB.PLAYER_POSLOOK[PARSER])
+        try:
+            data = self.packet.readpkt(self.pktSB.PLAYER_POSLOOK[PARSER])
+        except:
+            return True
         if self.client.clientversion > PROTOCOL_1_8START:
             self.client.position = (data[0], data[1], data[2])
             self.client.head = (data[3], data[4])
         else:
             self.client.position = (data[0], data[1], data[3])
             self.client.head = (data[4], data[5])
+        return True
+
+    def play_player_position(self):
+        """ hub needs accurate position """
+        try:
+            data = self.packet.readpkt(self.pktSB.PLAYER_POSITION[PARSER])
+        except:
+            return True
+        # skip 1.7.10 and lower protocol yhead args (data[2])
+        self.client.position = (data[0], data[1], data[3])
+        return True
+
+    def play_player_look(self):
+        """ hub needs accurate position """
+        try:
+            data = self.packet.readpkt([FLOAT, FLOAT, BOOL])
+        except:
+            return True
+        # ("float:yaw|float:pitch|bool:on_ground")
+        self.client.head = (data[0], data[1])
         return True
 
     def play_chat_message(self):
@@ -149,8 +172,13 @@ class ParseSB(object):
         if not self.client.local:
             return True
 
+        try:
+            player = self.client.srv_data.players[self.client.username]
+        except KeyError:
+            return False
         payload = self.proxy.eventhandler.callevent("player.rawMessage", {
             "playername": self.client.username,
+            "player": player,
             "message": chatmsg
         })
         """ eventdoc
@@ -168,7 +196,8 @@ class ParseSB(object):
             or a dictionary payload containing ["message"] item.
             <comments>
             <payload>
-            "player": player's name
+            "player": player object
+            "playername": player's name
             "message": the chat message string.
             <payload>
 
@@ -233,6 +262,7 @@ class ParseSB(object):
 
                 <payload>
                 "player": playerobject()
+                "playername": player's name
                 "command": slash command (or whatever is set in wrapper's
                 config as the command cursor).
                 "args": the remaining words/args
@@ -250,7 +280,6 @@ class ParseSB(object):
         return False  # and cancel this original packet
 
     def _world_hub_command(self, where=""):
-        ip = "127.0.0.1"
         if where == "help":
             return self._world_hub_help("h")
 
@@ -259,11 +288,15 @@ class ParseSB(object):
 
         elif where == "":
             port = self.proxy.srv_data.server_port
-
+            ip = "127.0.0.1"
         else:
             worlds = self.proxy.proxy_worlds
             if where in worlds:
                 port = self.proxy.proxy_worlds[where]["port"]
+                try:
+                    ip = self.proxy.proxy_worlds[where]["ip"]
+                except KeyError:
+                    ip = "127.0.0.1"
             else:
                 return self._world_hub_help("w")
         t = threading.Thread(target=self.client.change_servers,
@@ -329,27 +362,6 @@ class ParseSB(object):
                     }
                 )
 
-    def play_player_position(self):
-        """ hub needs accurate position """
-        if self.client.clientversion < PROTOCOL_1_8START:
-            data = self.packet.readpkt([DOUBLE, DOUBLE, DOUBLE, DOUBLE, BOOL])
-            # ("double:x|double:y|double:yhead|double:z|bool:on_ground")
-        elif self.client.clientversion >= PROTOCOL_1_8START:
-            data = self.packet.readpkt([DOUBLE, DOUBLE, NULL, DOUBLE, BOOL])
-            # ("double:x|double:y|double:z|bool:on_ground")
-        else:
-            data = [0, 0, 0, 0]
-        # skip 1.7.10 and lower protocol yhead args
-        self.client.position = (data[0], data[1], data[3])
-        return True
-
-    def play_player_look(self):
-        """ hub needs accurate position """
-        data = self.packet.readpkt([FLOAT, FLOAT, BOOL])
-        # ("float:yaw|float:pitch|bool:on_ground")
-        self.client.head = (data[0], data[1])
-        return True
-
     def play_player_digging(self):
         if not self.client.local:
             return True
@@ -360,10 +372,15 @@ class ParseSB(object):
         else:
             position = data[1]
 
+        try:
+            player = self.client.srv_data.players[self.client.username]
+        except KeyError:
+            return False
         # finished digging
         if data[0] == 2:
             if not self.proxy.eventhandler.callevent("player.dig", {
                 "playername": self.client.username,
+                "player": player,
                 "position": position,
                 "action": "end_break",
                 "face": data[4]
@@ -389,7 +406,8 @@ class ParseSB(object):
                         <comments>
 
                         <payload>
-                        "playername": playername (not the player object!)
+                        "playername": player's name
+                        "player": player object
                         "position": x, y, z block position
                         "action": begin_break or end_break (string)
                         "face": 0-5 (bottom, top, north, south, west, east)
@@ -401,6 +419,8 @@ class ParseSB(object):
             if self.client.gamemode != 1:
                 if not self.proxy.eventhandler.callevent("player.dig", {
                     "playername": self.client.username,
+                    "player": self.client.srv_data.players[
+                        self.client.username],
                     "position": position,
                     "action": "begin_break",
                     "face": data[4]
@@ -409,52 +429,58 @@ class ParseSB(object):
             else:
                 if not self.proxy.eventhandler.callevent("player.dig", {
                     "playername": self.client.username,
+                    "player": self.client.srv_data.players[
+                        self.client.username],
                     "position": position,
                     "action": "end_break",
                     "face": data[4]
                 }):
                     return False
-        if data[0] == 5 and position == (0, 0, 0):
-                playerpos = self.client.position
-                if not self.proxy.eventhandler.callevent("player.interact", {
-                    "playername": self.client.username,
-                    "position": playerpos,
-                    "action": "finish_using",
-                    "origin": "pktSB.PLAYER_DIGGING"
-                }):
-                    return False
-                """ eventdoc
-                    <group> Proxy <group>
+        if data[0] == 5:  # and position == (0, 0, 0):
+            playerpos = self.client.position
+            if not self.proxy.eventhandler.callevent("player.interact", {
+                "playername": self.client.username,
+                "player": player,
+                "position": playerpos,
+                "action": "finish_using",
+                "hand": 0,  # hand = 0 ( main hand)
+                "origin": "pktSB.PLAYER_DIGGING"
+            }):
+                return False
+            """ eventdoc
+                <group> Proxy <group>
 
-                    <description> Called when the client is eating food, 
-                    pulling back bows, using buckets, etc.
-                    <description>
+                <description> Called when the client is eating food, 
+                pulling back bows, using buckets, etc.
+                <description>
 
-                    <abortable> Yes <abortable>
+                <abortable> Yes <abortable>
 
-                    <comments>
-                    Can be aborted by returning False. Note that the client
-                    may still believe the action happened, but the server
-                    will act as though the event did not happen.  This 
-                    could be confusing to a player.  If the event is aborted, 
-                    consider some feedback to the client (a message, fake 
-                    particles, etc.)
-                    <comments>
+                <comments>
+                Can be aborted by returning False. Note that the client
+                may still believe the action happened, but the server
+                will act as though the event did not happen.  This 
+                could be confusing to a player.  If the event is aborted, 
+                consider some feedback to the client (a message, fake 
+                particles, etc.)
+                <comments>
 
-                    <payload>
-                    "playername": playername (not the player object!)
-                    "position":  the PLAYERS position - x, y, z, pitch, yaw
-                    "action": "finish_using"  or "use_item"
-                    "origin": Debugging information on where event was parsed.
-                    <payload>
+                <payload>
+                "playername": player's name
+                "player": player object
+                "position":  the PLAYERS position - x, y, z, pitch, yaw
+                "action": "finish_using"  or "use_item"
+                "hand": 0 = main hand, 1 = off hand (shield).
+                "origin": Debugging information on where event was parsed.
+                 Either 'pktSB.PLAYER_DIGGING' or 'pktSB.USE_ITEM'
+                <payload>
 
-                """
+            """
         return True
 
     def play_player_block_placement(self):
         if not self.client.local:
             return True
-        player = self.client.username
         hand = 0  # main hand
         helditem = self.client.inventory[36 + self.client.slot]
 
@@ -494,6 +520,7 @@ class ParseSB(object):
         # Face and Position exist in all version protocols at this point
         clickposition = position
         face = data[3]
+        self.client.lastplacecoords = position, time.time()
 
         if face == 0:  # Compensate for block placement coordinates
             position = (position[0], position[1] - 1, position[2])
@@ -508,27 +535,19 @@ class ParseSB(object):
         elif face == 5:
             position = (position[0] + 1, position[1], position[2])
 
-        if helditem is None:
-            # if no item, treat as interaction (according to wrappers
-            # inventory :(, return False  )
-            if not self.proxy.eventhandler.callevent("player.interact", {
-                "playername": player,
-                "position": position,
-                "action": "useitem",
-                "origin": "pktSB.PLAYER_BLOCK_PLACEMENT"
-            }):
-                self.log.debug(
-                    "player helditem was None. (playerblockplacement-SB)"
-                )
-                return False
+        try:
+            player = self.client.srv_data.players[self.client.username]
+        except KeyError:
+            return False
 
         # block placement event
-        self.client.lastplacecoords = position
         # position is where new block goes
         # clickposition is the block actually clicked
         if not self.proxy.eventhandler.callevent(
                 "player.place",
-                {"playername": player, "position": position,
+                {"playername": self.client.username,
+                 "player": player,
+                 "position": position,
                  "clickposition": clickposition,
                  "hand": hand, "item": helditem}):
             """ eventdoc
@@ -549,10 +568,14 @@ class ParseSB(object):
                 <comments>
 
                 <payload>
-                "playername": playername (not the player object!)
-                "position":  the PLAYERS position - x, y, z, pitch, yaw
-                "action": "finish_using"  or "use_item"
-                "origin": Debugging information on where event was parsed.
+                "playername": player's name
+                "player": player object
+                "position":  the clicked position, corrected for 'face' (i.e., 
+                 the adjoining block position)
+                "clickposition": The position of the block that was actually
+                 clicked
+                "item": The item player is holding (item['id'] = -1 if no item)
+                "hand": hand in use (0 or 1)
                 <payload>
 
             """
@@ -560,27 +583,35 @@ class ParseSB(object):
         return True
 
     def play_use_item(self):  # no 1.8 or prior packet
+        """intercept things like lava and water bukkit placement"""
         if not self.client.local:
             return True
-        data = self.packet.readpkt([REST])
-        # "rest:pack")
-        position = self.client.lastplacecoords
-        if "pack" in data:
-            if data[0] == '\x00':
-                if not self.proxy.eventhandler.callevent("player.interact", {
-                    "playername": self.client.username,
-                    "position": position,
-                    "action": "useitem",
-                    "origin": "pktSB.USE_ITEM"
-                }):
-                    return False
+        data = self.packet.readpkt([VARINT])[0]
+        position = self.client.position
+        et = time.time() - self.client.lastplacecoords[1]
+        # the time frame for this is to ensure coords are still relavant.
+        if et < .5:
+            position = self.client.lastplacecoords[0]
+
+        try:
+            player = self.client.srv_data.players[self.client.username]
+        except KeyError:
+            return False
+        if not self.proxy.eventhandler.callevent("player.interact", {
+            "playername": self.client.username,
+            "player": player,
+            "position": position,
+            "action": "use_item",
+            "hand": data,
+            "origin": "pktSB.USE_ITEM"
+        }):
+            return False
         return True
 
     def play_held_item_change(self):
         if not self.client.local:
             return True
         slot = self.packet.readpkt([SHORT])
-        # "short:short")  # ["short"]
         if 9 > slot[0] > -1:
             self.client.slot = slot[0]
         else:
@@ -610,8 +641,14 @@ class ParseSB(object):
         l2 = data[4]
         l3 = data[5]
         l4 = data[6]
+
+        try:
+            player = self.client.srv_data.players[self.client.username]
+        except KeyError:
+            return False
         payload = self.proxy.eventhandler.callevent("player.createSign", {
             "playername": self.client.username,
+            "player": player,
             "position": position,
             "line1": l1,
             "line2": l2,
@@ -651,7 +688,8 @@ class ParseSB(object):
             <comments>
 
             <payload>
-            "player": player name
+            "player": player object
+            "playername": player's name
             "position": position of sign
             "line1": l1
             "line2": l2
@@ -695,8 +733,13 @@ class ParseSB(object):
         else:
             data = [False, 0, 0, 0, 0, 0, 0]
 
+        try:
+            player = self.client.srv_data.players[self.client.username]
+        except KeyError:
+            return False
         datadict = {
             "playername": self.client.username,
+            "player": player,
             "wid": data[0],  # window id ... always 0 for inventory
             "slot": data[1],  # slot number
             "button": data[2],  # mouse / key button
@@ -704,7 +747,8 @@ class ParseSB(object):
             "mode": data[4],
             "clicked": data[5]  # item data
         }
-
+        if data[5] == {"id": -1}:
+            data[5] = None
         if not self.proxy.eventhandler.callevent("player.slotClick", datadict):
             return False
         """ eventdoc
@@ -721,7 +765,8 @@ class ParseSB(object):
             <comments>
 
             <payload>
-            "player": Players name (not the object!)
+            "player": Player object
+            "playername": the player's name
             "wid": window id ... always 0 for inventory
             "slot": slot number
             "button": mouse / key button
@@ -746,14 +791,14 @@ class ParseSB(object):
         if data[0] == 0 and data[2] in (0, 1):
             # player first clicks on an empty slot - mark empty.
             if self.client.lastitem is None and data[5] is None:
-                self.client.inventory[data[1]] = None
+                self.client.inventory[data[1]] = {"id": -1}
 
             # player first clicks on a slot where there IS some data..
             if self.client.lastitem is None:
                 # having clicked on it puts the slot into NONE
                 # status (since it can now be moved).
                 # So we set the current slot to empty/none
-                self.client.inventory[data[1]] = None
+                self.client.inventory[data[1]] = {"id": -1}
                 # ..and we cache the new slot data to see where it goes
                 self.client.lastitem = data[5]
                 return True

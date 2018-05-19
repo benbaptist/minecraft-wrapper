@@ -400,7 +400,8 @@ class Minecraft(object):
         dictitem = {"uuid": uuid, "name": name}
         return dictitem
 
-    def lookupbyUUID(self, uuid: str):
+    def lookupbyUUID(self, uuid):
+        # type: (str) -> str
         """
         Returns the username from the specified UUID.
         If the player has never logged in before and isn't in the user
@@ -413,7 +414,6 @@ class Minecraft(object):
 
         """
         # just in case MCUUID was passed instead.
-        # passing a MCUUID to this can fry the wrapper.usercache!
         try:
             # noinspection PyUnresolvedReferences
             uuid = uuid.string

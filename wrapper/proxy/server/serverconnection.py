@@ -41,6 +41,7 @@ class ServerConnection(object):
 
         # basic __init__ items from passed arguments
         self.client = client
+        self.username = self.client.username
         self.proxy = client.proxy
         self.log = client.log
         self.ip = ip
@@ -49,6 +50,7 @@ class ServerConnection(object):
 
         # server setup and operating paramenters
         self.abort = False
+        self.flush_rate = self.client.flush_rate
         self.state = HANDSHAKE
         self.packet = None
         self.parse_cb = None
@@ -65,7 +67,7 @@ class ServerConnection(object):
         self.server_socket = socket.socket()
 
         self.infos_debug = "(player=%s, IP=%s, Port=%s)" % (
-            self.client.username, self.ip, self.port)
+            self.username, self.ip, self.port)
 
     def _refresh_server_version(self):
         """Get serverversion for mcpackets use"""
@@ -106,19 +108,24 @@ class ServerConnection(object):
         t.start()
 
     def flush_loop(self):
+        rate = self.flush_rate
         while not self.abort:
+            time.sleep(rate)
             try:
                 self.packet.flush()
+            except AttributeError:
+                self.log.debug(
+                    "%s server packet instance gone.", self.username
+                               )
             except socket.error:
                 self.log.debug("Socket_error- server socket was closed"
                                " %s", self.infos_debug)
                 break
-            time.sleep(0.05)
         self.log.debug("%s serverconnection flush_loop thread ended.",
-                       self.client.username)
+                       self.username)
 
     def handle(self):
-        while not self.abort:
+        while not (self.abort or self.client.abort):
             # get packet
             try:
                 pkid, orig_packet = self.packet.grabpacket()  # noqa
@@ -144,35 +151,41 @@ class ServerConnection(object):
                     self.client.packet.send_raw_untouched(orig_packet)
                 except Exception as e:
                     return self.close_server(
-                        "handle could not send packet '%s'.  "
+                        "handle() could not send packet '%s'.  "
                         "Exception: %s TRACEBACK: \n%s" % (
                             pkid, e, traceback.format_exc())
                     )
+        return self.close_server("handle() received abort signal.")
 
     def close_server(self, reason="Disconnected"):
         """
         Client is responsible for closing the server connection and handling
         lobby states.
         """
+        # if close_server already ran, server_socket will be None.
+        if not self.server_socket:
+            return False
 
-        self.log.debug("%s called serverconnection.close_server(): %s",
-                       self.client.username, reason)
+        self.log.info("%s's proxy server connection closed: %s",
+                       self.username, reason)
 
         # end 'handle' and 'flush_loop' cleanly
         self.abort = True
-        time.sleep(0.1)
+        # time.sleep(0.1)
 
         # noinspection PyBroadException
         try:
             self.server_socket.shutdown(2)
             self.log.debug("Sucessfully closed server socket for"
-                           " %s", self.client.username)
-            # allow packet instance to be Garbage Collected
-            self.packet = None
-            return True
+                           " %s", self.username)
+            # allow old packet and socket to be Garbage Collected
+            condition = True
         except:
-            self.packet = None
-            return False
+            condition = False
+        # allow old packet and socket to be Garbage Collected
+        self.packet = None
+        self.server_socket = None
+        return condition
 
     # PARSERS SECTION
     # -----------------------------

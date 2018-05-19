@@ -72,7 +72,7 @@ class UUIDS(object):
                 Yields False if failed.
         """
         user_name = "%s" % username  # create a new name variable that is unrelated the the passed variable.
-        frequency = 2592000  # 30 days.
+        frequency = 86400  # daily (to ensure a new persons name gets loaded
         if forcepoll:
             frequency = 3600  # do not allow more than hourly
         user_uuid_matched = None
@@ -117,7 +117,8 @@ class UUIDS(object):
                 "will likely create other logical/program flow errors")
             return False  # No other options but to fail request
 
-    def getusernamebyuuid(self, useruuid: str, forcepoll=False, uselocalname=True):
+    def getusernamebyuuid(self, useruuid, forcepoll=False, uselocalname=True):
+        # type: (str, bool, bool) -> bool or str
         """
         Returns the username from the specified UUID.
         If the player has never logged in before and isn't in the user cache, it will poll Mojang's API.
@@ -130,13 +131,17 @@ class UUIDS(object):
 
         :returns: returns the username from the specified uuid, else returns False if failed.
         """
-        frequency = 2592000  # if called directly, can update cache daily (refresh names list, etc)
+        # if called directly, can update cache daily (refresh names list, etc)
+        frequency = 86400
         if forcepoll:
             frequency = 600  # 10 minute limit
 
         theirname = None
         if useruuid in self.usercache:  # if user is in the cache...
-            theirname = self.usercache[useruuid]["localname"]
+            if uselocalname:
+                theirname = self.usercache[useruuid]["localname"]
+            else:
+                theirname = self.usercache[useruuid]["name"]
             if int((time.time() - self.usercache[useruuid]["time"])) < frequency:
                 return theirname  # dont re-poll if same time frame (daily = 86400).
 

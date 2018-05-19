@@ -219,8 +219,13 @@ class ParseCB(object):
                 data = new_usage
         # self.log.debug(data)
 
+        try:
+            player = self.client.srv_data.players[self.client.username]
+        except KeyError:
+            return False
         payload = self.proxy.eventhandler.callevent(
             "player.chatbox", {"playername": self.client.username,
+                               "player": player,
                                "json": data})
         """ eventdoc
             <group> Proxy <group>
@@ -238,6 +243,7 @@ class ParseCB(object):
             
             <payload>
             "playername": client username
+            "player": player object
             "json": json or string data
             <payload>
 
@@ -276,10 +282,17 @@ class ParseCB(object):
         if not self.client.local:
             return True
         data = self.packet.readpkt([VARINT, POSITION])
+
+        try:
+            player = self.client.srv_data.players[self.client.username]
+        except KeyError:
+            return False
         if data[0] == self.client.server_eid:
             self.proxy.eventhandler.callevent(
                 "player.usebed",
-                {"playername": self.client.username, "position": data[1]},
+                {"playername": self.client.username,
+                 "player": player,
+                 "position": data[1]},
                 abortable=False
             )
 
@@ -296,6 +309,7 @@ class ParseCB(object):
 
                 <payload>
                 "playername": client username
+                "player": player object
                 "position": position of bed
                 <payload>
 
@@ -320,8 +334,14 @@ class ParseCB(object):
         if not self.client.local:
             return True
         data = self.packet.readpkt([POSITION])
+
+        try:
+            player = self.client.srv_data.players[self.client.username]
+        except KeyError:
+            return False
         self.proxy.eventhandler.callevent(
             "player.spawned", {"playername": self.client.username,
+                               "player": player,
                                "position": data},
             abortable=False
         )
@@ -339,6 +359,7 @@ class ParseCB(object):
 
             <payload>
             "playername": client username
+            "player": player object
             "position": Spawn's position
             <payload>
 
@@ -396,12 +417,37 @@ class ParseCB(object):
     def play_tab_complete(self):
         if not self.client.local:
             return True
-        rawdata = self.packet.readpkt(self.pktCB.TAB_COMPLETE[PARSER])
-        data = rawdata[0]
+        new_format = False
+        trans_id, start, length, rawdata = self.packet.readpkt(
+            self.pktCB.TAB_COMPLETE[PARSER]
+        )
 
+        data = rawdata
+        if type(data) is not list:
+            new_format = True
+
+        if new_format:
+            count = rawdata
+            data = []
+            for x in range(count):
+                match = self.packet.read_string()
+                tooltip = self.packet.read_bool()
+                if tooltip:
+                    tooltip = self.packet.read_json()
+                    data.append([match, "HasToolTip", tooltip])
+                    print([match, "HasToolTip", tooltip])
+                else:
+                    data.append([match])
+                    print([match])
+
+        try:
+            player = self.client.srv_data.players[self.client.username]
+        except KeyError:
+            return False
         payload = self.proxy.eventhandler.callevent(
             "server.autoCompletes", {
                 "playername": self.client.username,
+                "player": player,
                 "completes": data})
         """ eventdoc
             <group> Proxy <group>
@@ -418,6 +464,7 @@ class ParseCB(object):
             <comments>
             <payload>
             "playername": player's name
+            "player": player object
             "completes": A list of auto-completions supplied by the server.
             <payload>
 
@@ -426,7 +473,7 @@ class ParseCB(object):
         # allow to cancel event...
         if payload is False:
             return False
-
+        # TODO - parse new_format
         # change payload.
         if type(payload) == list:
             self.client.packet.sendpkt(self.pktCB.TAB_COMPLETE[PKT],
@@ -633,9 +680,16 @@ class ParseCB(object):
         vehormobeid = data[1]  # vehicle, leashed entity, etc
 
         if entityeid == self.client.server_eid:
+
+            try:
+                player = self.client.srv_data.players[self.client.username]
+            except KeyError:
+                return False
             if not leash:
+
                 self.proxy.eventhandler.callevent(
                     "entity.unmount", {"playername": self.client.username,
+                                       "player": player,
                                        "vehicle_id": vehormobeid,
                                        "leash": leash},
                     abortable=False
@@ -654,6 +708,7 @@ class ParseCB(object):
 
                     <payload>
                     "playername": client username
+                    "player": player object
                     "vehicle_id": EID of vehicle or MOB
                     "leash": leash True/False
                     <payload>
@@ -665,6 +720,7 @@ class ParseCB(object):
             else:
                 self.proxy.eventhandler.callevent(
                     "entity.mount", {"playername": self.client.username,
+                                     "player": player,
                                      "vehicle_id": vehormobeid,
                                      "leash": leash},
                     abortable=False
@@ -683,6 +739,7 @@ class ParseCB(object):
 
                     <payload>
                     "playername": client username
+                    "player": player object
                     "vehicle_id": EID of vehicle or MOB
                     "leash": leash True/False
                     <payload>

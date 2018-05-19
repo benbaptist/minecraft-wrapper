@@ -14,7 +14,6 @@ import hashlib
 import threading
 import time
 import os
-import resource
 import logging
 # import smtplib
 import sys  # used to pass sys.argv to server
@@ -31,13 +30,17 @@ try:
 except ImportError:
     requests = False
 
+try:
+    import resource
+except ImportError:
+    resource = False
+
 # small feature and helpers
 # noinspection PyProtectedMember
 from api.helpers import format_bytes, getargs, getargsafter, readout, get_int
 from api.helpers import putjsonfile
 from utils import readkey
 from utils import version as version_mod
-from utils.crypt import phrase_to_url_safebytes, gensalt
 
 # core items
 from core.mcserver import MCServer
@@ -54,8 +57,7 @@ from core.backups import Backups
 from core.consoleuser import ConsolePlayer
 from core.permissions import Permissions
 from core.alerts import Alerts
-from utils.crypt import Crypt
-
+from utils.crypt import Crypt, phrase_to_url_safebytes, gensalt
 
 # optional API type stuff
 from core.servervitals import ServerVitals
@@ -115,6 +117,7 @@ class Wrapper(object):
         self.serverpath = self.config["General"]["server-directory"]
         self.api = API(self, "Wrapper.py")
         self.alerts = Alerts(self)
+        self.alerts_on = self.config["Alerts"]["enabled"]
 
         # Read Config items
         # hard coded cursor for non-readline mode
@@ -180,8 +183,19 @@ class Wrapper(object):
         self.use_readline = not(self.config["Misc"]["use-betterconsole"])
         self.trap_ctrlz = self.config["Misc"]["trap-ctrl-z"]
 
+        #  HaltSig - Why? ... because if self.haltsig was just `False`, passing
+        #  a self.haltsig would simply be passing `False` (immutable).  Changing
+        # the value of self.haltsig would not necessarily change the value of
+        # the passed parameter (unless it was specifically referenced back as
+        # `wrapper.haltsig`). Since the halt signal needs to be passed, possibly
+        # several layers deep, and into modules that it may be desireable to
+        # not have direct access to wrapper, using a HaltSig object is
+        # required to ensure we are actually sharing the same value between
+        # different objects.
+        self.haltsig = HaltSig()
+
         # Storages
-        self.wrapper_storage = Storage("wrapper")
+        self.wrapper_storage = Storage("wrapper", pickle=False)
         self.wrapper_permissions = Storage("permissions", pickle=False)
         self.wrapper_usercache = Storage("usercache", pickle=False)
 
@@ -211,16 +225,6 @@ class Wrapper(object):
         self.web = None
         self.proxy = None
         self.backups = None
-
-        #  HaltSig - Why? ... because if self.halt was just `False`, passing
-        #  a self.halt would simply be passing `False` (immutable).  Changing
-        # the value of self.halt would not necessarily change the value of the
-        # passed parameter (unless it was specifically referenced back as
-        # `wrapper.halt`). Since the halt signal needs to be passed, possibly
-        # several layers deep, and into modules that it may be desireable to
-        # not have direct access to wrapper, using a HaltSig object is
-        # more desireable and reliable in behavior.
-        self.halt = HaltSig()
 
         self.updated = False
         # future plan to expose this to api
@@ -339,7 +343,10 @@ class Wrapper(object):
             t.start()
 
         # Alert sent by daemonized thread to prevent wrapper execution blocking
-        self.alerts.ui_process_alerts("Wrapper.py started at %s" % time.time())
+        if self.alerts_on:
+            self.alerts.ui_process_alerts(
+                "Wrapper.py started at %s" % time.time()
+            )
 
         self.javaserver.handle_server()
         # handle_server always runs, even if the actual server is not started
@@ -352,7 +359,10 @@ class Wrapper(object):
         self.log.info("Wrapper Storages closed and saved.")
 
         # use non-daemon thread to ensure alert gets sent before wrapper closes
-        self.alerts.ui_process_alerts("Wrapper.py stopped at %s" % time.time(), blocking=True)  # noqa
+        if self.alerts_on:
+            self.alerts.ui_process_alerts(
+                "Wrapper.py stopped at %s" % time.time(), blocking=True
+            )
 
         # wrapper execution ends here.  handle_server ends when
         # wrapper.halt.halt is True.
@@ -395,7 +405,7 @@ class Wrapper(object):
     def _halt(self):
         if self.servervitals.state in (1, 2):
             self.javaserver.stop(self.halt_message, restart_the_server=False)
-        self.halt.halt = True
+        self.haltsig.halt = True
 
     def shutdown(self):
         self._halt()
@@ -505,7 +515,7 @@ class Wrapper(object):
             # working buffer allows arrow use to restore what they
             # were typing but did not enter as a command yet
             working_buff = ''
-            while not self.halt.halt:
+            while not self.haltsig.halt:
                 keypress = readkey.getcharacter()
                 keycode = readkey.convertchar(keypress)
                 length = len(self.input_buff)
@@ -608,7 +618,7 @@ class Wrapper(object):
         return consoleinput
 
     def parseconsoleinput(self):
-        while not self.halt.halt:
+        while not self.haltsig.halt:
             consoleinput = self.getconsoleinput()
             # No command (perhaps just a line feed or spaces?)
             if len(consoleinput) < 1:
@@ -800,10 +810,11 @@ class Wrapper(object):
         if self.proxymode:
             # if wrapper is using proxy mode (which should be set to online)
             return self.config["Proxy"]["online-mode"]
-        if self.javaserver is not None:
-            if self.servervitals.onlineMode:
-                # if local server is online-mode
-                return True
+        if self.javaserver:
+            try:
+                return self.servervitals.properties["online-mode"]
+            except KeyError:
+                pass
         return False
 
     def listplugins(self, player):
@@ -833,7 +844,7 @@ class Wrapper(object):
 
     def _startproxy(self):
         try:
-            self.proxy = Proxy(self.halt, self.proxyconfig, self.servervitals,
+            self.proxy = Proxy(self.haltsig, self.proxyconfig, self.servervitals,
                                self.log, self.wrapper_usercache, self.events,
                                self.encoding)
         except ImportError:
@@ -894,7 +905,7 @@ class Wrapper(object):
         return vers_string
 
     def _auto_update_process(self):
-        while not self.halt.halt:
+        while not self.haltsig.halt:
             time.sleep(3600)
             if self.updated:
                 self.log.info(
@@ -1040,13 +1051,17 @@ class Wrapper(object):
             return False
 
     def event_timer_second(self):
-        while not self.halt.halt:
+        while not self.haltsig.halt:
             time.sleep(1)
             self.events.callevent("timer.second", None, abortable=False)
             """ eventdoc
                 <group> wrapper <group>
 
-                <description> a timer that is called each second.
+                <description> a timer that is called each second.  Do
+                <sp> not rely on these events to happen 'on-time'!  They
+                <sp> can be delayed based on their position the queue, as 
+                <sp> well as the total number of timer.second events being 
+                <sp> called.                
                 <description>
 
                 <abortable> No <abortable>
@@ -1054,7 +1069,7 @@ class Wrapper(object):
             """
 
     def event_timer_tick(self):
-        while not self.halt.halt:
+        while not self.haltsig.halt:
             self.events.callevent("timer.tick", None, abortable=False)
             time.sleep(0.05)
             """ eventdoc
@@ -1067,8 +1082,12 @@ class Wrapper(object):
                 <abortable> No <abortable>
 
                 <comments>
-                Use of this timer is not suggested and is turned off
-                <sp> by default in the wrapper.config.json file
+                Use of this timer is deprecated and is turned off
+                <sp> by default in the wrapper.config.json file.  the final 
+                <sp> wrapper version 1.0 final will not support this timer. Its
+                <sp> use in wrapper has always been a bad idea. Starting with
+                <sp> wrapper 1.0.9 RC 12, this timer will be somewhat buggy,
+                <sp> running two or more ticks behind.
                 <comments>
 
             """
@@ -1163,8 +1182,11 @@ class Wrapper(object):
         except:
             try:
                 # this might be cross-platform
-                temp = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-                totmem = {'peak': temp, 'rss': temp}
+                if resource:
+                    temp = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+                    totmem = {'peak': temp, 'rss': temp}
+                else:
+                    totmem = {'peak': 0, 'rss': 0}
             except:
                 # all efforts fail...
                 totmem = {'peak': 0, 'rss': 0}

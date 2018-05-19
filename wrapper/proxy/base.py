@@ -24,10 +24,17 @@ from proxy.utils import mcuuid
 from proxy.entity.entitycontrol import EntityControl
 
 # encryption requires 'cryptography' package.
+
 try:
     import proxy.utils.encryption as encryption
 except ImportError:
     encryption = False
+    importerror = "You must have the package 'cryptography' " \
+                  "installed to run the Proxy!"
+except EnvironmentError:
+    encryption = False
+    importerror = "Cryptography version not satisfied for proxy mode use.  " \
+                  "Version required is at least 2.0.0."
 
 # for reading skins out of our Wrapper.py:
 try:
@@ -140,8 +147,7 @@ class Proxy(object):
         self.log = loginstance
         # encryption = False if proxy.utils.encryption does not import
         if not encryption and self.config["proxy-enabled"]:
-            self.log.error("You must have the package 'cryptography' "
-                           "installed to run the Proxy!")
+            self.log.error(importerror)
             raise ImportError()
         if not pkg_resources:
             self.log.error("You must have the package `pkg_resources` "
@@ -164,7 +170,7 @@ class Proxy(object):
 
         # self assignments (gets specific values)
         self.proxy_bind = self.config["proxy-bind"]
-        self.proxy_port = self.config["proxy-port"]
+        self.proxy_port = int(self.config["proxy-port"])
         self.silent_ip_banning = self.config["silent-ipban"]
         self.srv_data.maxPlayers = self.config["max-players"]
         self.proxy_worlds = self.config["worlds"]
@@ -207,14 +213,21 @@ class Proxy(object):
 
         # loops while server is not started (STARTED = 2)
         while not self.srv_data.state == 2:
-            time.sleep(.2)
+            time.sleep(1)
 
         # get the protocol version from the server
         try:
-            self.pollserver()
+            args = self.pollserver()
         except Exception as e:
             self.log.exception("Proxy could not poll the Minecraft server - "
                                "check server/wrapper configs? (%s)", e)
+            args = [-1, "none", False]
+
+        self.srv_data.protocolVersion = args[0]
+        self.srv_data.version = args[1]
+        self.forge = args[2]
+        if self.forge:
+            self.mod_info["modinfo"] = args[3]
 
         # open proxy port to accept client connections
         while not self.usingSocket:
@@ -257,9 +270,6 @@ class Proxy(object):
             t.daemon = True
             t.start()
 
-        # received self.abort or caller.halt signal...
-        self.entity_control._abortep = True
-
     def removestaleclients(self):
         """removes aborted client and player objects"""
         for i, client in enumerate(self.srv_data.clients):
@@ -269,6 +279,15 @@ class Proxy(object):
                 self.srv_data.clients.pop(i)
 
     def pollserver(self, host="localhost", port=None):
+        """
+        Pings server for server json response information.
+
+        :param host: ip of server
+        :param port: server port.
+
+        :returns: a list - [protocol, string version name, Forge?(Bool),
+            modinfo (if Forge) ]
+        """
         if port is None:
             port = self.srv_data.server_port
 
@@ -285,26 +304,48 @@ class Proxy(object):
         packet.sendpkt(0x00, [NULL, ], ["", ])
         packet.flush()
         self.srv_data.protocolVersion = -1
+        container = []
         while True:
             pkid, packet_tuple = packet.grabpacket()
             if pkid == 0x00:
                 data = json.loads(packet.readpkt([STRING, ])[0])
-                self.srv_data.protocolVersion = data["version"][
-                    "protocol"]
-                self.srv_data.version = data["version"]["name"]
+                container.append(data["version"]["protocol"])
+                container.append(data["version"]["name"])
                 if "modinfo" in data and data["modinfo"]["type"] == "FML":
-                    self.forge = True
-                    self.mod_info["modinfo"] = data["modinfo"]
-
+                    container.append(True)
+                    container.append(data["modinfo"])
+                else:
+                    container.append(False)
                 break
         server_sock.close()
+        return container
 
-    def use_newname(self, oldname, newname, realuuid: str):
+    def run_command(self, command):
+        """
+        Runs a command on the wrapped server.
+
+        :param minecraft server command:
+        :return:
+        """
+        self.eventhandler.callevent(
+            "proxy.console", {"command": command},
+            abortable=False
+        )
+
+        """ eventdoc
+    
+        <description> internalfunction <description>
+    
+        """
+
+    def use_newname(self, oldname, newname, realuuid, client):
+        # type: (str, str, str, client) -> tuple
         """
         Convert a player from old to new name.
         :param oldname: The players old name
         :param newname: The player's new name
         :param realuuid: The actual string UUID used by wrapper's cache (mojang)
+        :param client: The player client
 
         :returns: A tuple of the (new string name, string uuid)
         """
@@ -314,8 +355,10 @@ class Proxy(object):
             self.srv_data.serverpath, self.srv_data.worldname)
         self.uuids.convert_files(old_local_uuid, new_local_uuid, cwd)
         self.usercache[realuuid]["localname"] = newname
+        client.info["username"] = newname
+        client.username = newname
         self.usercache_obj.save()
-        return newname, new_local_uuid
+        return new_local_uuid
 
     def getclientbyofflineserveruuid(self, uuid):
         """
@@ -402,16 +445,8 @@ class Proxy(object):
                                self.srv_data.serverpath):
                     # this actually is not needed. Commands now handle the kick.
                     console_command = "kick %s %s" % (name, reason)
-                    self.eventhandler.callevent(
-                        "proxy.console", {"command": console_command},
-                        abortable=False
-                    )
+                    self.run_command(console_command)
 
-                    """ eventdoc
-
-                    <description> internalfunction <description>
-
-                    """
                     return "Banned %s: %s" % (name, reason)
                 return "Could not write banlist to disk"
         else:
@@ -459,14 +494,8 @@ class Proxy(object):
                     self.log.info("kicking %s... %s", username, reason)
 
                     console_command = "kick %s Banned: %s" % (username, reason)
-                    self.eventhandler.callevent(
-                        "proxy.console", {"command": console_command},
-                        abortable=False
-                    )
-                    """ eventdoc
-                                            <description> internalfunction <description>
+                    self.run_command(console_command)
 
-                                        """  # noqa
                     return "Banned %s: %s - %s" % (username, uuid, reason)
                 return "Could not write banlist to disk"
         else:
@@ -514,14 +543,8 @@ class Proxy(object):
                         if client.ip == str(ipaddress):
 
                             console_command = "kick %s Your IP is Banned!" % client.username  # noqa
-                            self.eventhandler.callevent(
-                                "proxy.console", {"command": console_command},
-                                abortable=False
-                            )
-                            """ eventdoc
-                                                    <description> internalfunction <description>
+                            self.run_command(console_command)
 
-                                                """  # noqa
                             banned += "\n%s" % client.username
                     return "Banned ip address: %s\nPlayers kicked as " \
                            "a result:%s" % (ipaddress, banned)

@@ -76,7 +76,7 @@ class IRC(object):
         self.api.registerEvent("server.say", self.onPlayerSay)
 
     def init(self):
-        while not self.wrapper.halt.halt:
+        while not self.wrapper.haltsig.halt:
             try:
                 self.log.info("Connecting to IRC...")
                 self.connect()

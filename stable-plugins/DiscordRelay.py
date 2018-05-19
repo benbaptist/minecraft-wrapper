@@ -1,3 +1,13 @@
+# coding=utf-8
+
+from sys import version_info
+try:
+    # noinspection PyPackageRequirements
+    import discord
+except ImportError:
+    discord = False
+PY3 = version_info > (3, 5)
+
 AUTHOR = "PurePi"
 VERSION = (0, 1, 0)
 NAME = "Discord Relay"
@@ -6,19 +16,27 @@ DESCRIPTION = """ This plugin sends all players' messages to a Discord server
 and broadcasts messages from the Discord server to the Minecraft server
 """
 
-DISABLED = False
+DISABLED = True
 
-import discord
 
+# noinspection PyAttributeOutsideInit,PyPep8Naming
+# noinspection PyUnusedLocal,PyUnresolvedReferences,PyCompatibility
 class Main:
     def __init__(self, api, log):
         self.api = api
         self.log = log
 
     def onEnable(self):
+        if not discord or not PY3:
+            self.log.warning(
+                "Discord Relay plugin requires Python 3 and the discord import."
+            )
+            return False
         self.client = discord.Client()
         self.server = discord.Server(id="serverID")
-        self.sendChannel = discord.Channel(name="channelName", server=self.server, id="channelID")
+        self.sendChannel = discord.Channel(
+            name="channelName", server=self.server, id="channelID"
+        )
 
         self.api.registerEvent("player.message", self.player_message)
         self.api.registerEvent("player.login", self.login)
@@ -27,10 +45,12 @@ class Main:
         self.player_data = self.discord_storage.Data
 
         self.api.registerCommand("disctoggle", self._toggle, None)
-        self.api.registerHelp("DiscordRelay", "sends and receives messages from Discord",
-                              [("/disctoggle",
-                                "toggles whether you want to communicate with the Discord server",
-                                None)])
+        self.api.registerHelp(
+            "DiscordRelay", "sends and receives messages from Discord",
+            [("/disctoggle",
+              "toggles whether you want to communicate with the Discord server",
+              None)]
+        )
 
         @self.client.event
         async def on_message(message):

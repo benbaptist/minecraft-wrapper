@@ -5,6 +5,9 @@
 # This program is distributed under the terms of the GNU
 # General Public License, version 3 or later.
 
+# future imports
+from __future__ import division
+
 # Standard Library imports
 import copy
 import threading
@@ -61,6 +64,7 @@ class Client(object):
         self.hidden_ops = self.proxy.config["hidden-ops"]
         self.silent_bans = self.proxy.config["silent-ipban"]
         self.names_change = self.proxy.config["auto-name-changes"]
+        self.flush_rate = self.proxy.config["flush-rate-ms"] / 1000
         self.onlinemode = self.proxy.onlinemode
 
         # client setup and operating paramenters
@@ -171,7 +175,7 @@ class Client(object):
         self.head = (0, 0)  # Yaw, Pitch
         self.riding = None
         # last placement (for use in cases of bucket use)
-        self.lastplacecoords = (0, 0, 0)
+        self.lastplacecoords = (0, 0, 0), 0
 
         # misc client attributes
         self.properties = {}
@@ -262,6 +266,18 @@ class Client(object):
 
         # upon self.abort
         self._close_server_instance("Client Handle Ended")
+        try:
+            self.client_socket.shutdown(2)
+        except AttributeError:
+            self.log.debug(
+                "(%s, %s) handle aborted and self.client_socket has no"
+                " shutdown attribute", self.username, self.ip
+            )
+        except socket_error:
+            self.log.debug(
+                "(%s, %s) handle aborted and self.client_socket experienced a "
+                "socket error while doing 'shutdown'.", self.username, self.ip
+            )
 
     def _flush_loop(self):
         """
@@ -272,14 +288,21 @@ class Client(object):
         game kind of jerky. '.1' would be tolerable unless in a combat
         situation.
         """
+        rate = self.flush_rate
         while not self.abort:
+            time.sleep(rate)
             try:
                 self.packet.flush()
+            except AttributeError:
+                self.log.debug(
+                    "%s client packet instance gone.", self.username
+                )
+
             except socket_error:
                 self.log.debug("%s client socket closed (socket_error).",
                                self.username)
+                self.abort = True
                 break
-            time.sleep(0.05)
         if self.username != "PING REQUEST":
             self.log.debug("%s clientconnection _flush_loop thread ended",
                            self.username)
@@ -524,13 +547,16 @@ class Client(object):
         """
         client requests a login NOW.
         """
-        data = self.packet.readpkt([STRING, NULL])
-        self.username = data[0]
+        # This blocks waiting for _login_authenticate_client to finish.
+        self.wait_wait_for_auth = True
         t = threading.Thread(target=self._continue_login_start,
                              name="Login", args=())
         t.daemon = True
+        t.start()
+        data = self.packet.readpkt([STRING, NULL])
+        self.username = data[0]
 
-        # just to be clear, this refers to wrapper's mode, not the server.
+        # just to be clear, this refers to wrapper's proxy mode, not the server.
         if self.onlinemode:
             # Wrapper sends client a login encryption request
             self.packet.sendpkt(
@@ -541,24 +567,20 @@ class Client(object):
 
             # Server UUID (or other offline wrapper) is always offline
             self.local_uuid = self.proxy.uuids.getuuidfromname(self.username)
-            self.wait_wait_for_auth = True
+
+            # allow the socket to keep moving while _continue_login_start
+            #  continues to wait for auth..
+            return False
+
         else:
             # Wrapper proxy offline and not authenticating
             # maybe it is the destination of a hub? or you use another
             #  way to authenticate (password plugin?)
+            self._login_authenticate_client(None)
 
-            # Wrapper UUID is offline in this case.
-            self.wrapper_uuid = self.proxy.uuids.getuuidfromname(self.username)
-
-            # Of course local server is offline too...
-            self.local_uuid = self.wrapper_uuid
-
-        # allow the socket connection to keep moving while _continue_login_start
-        #  continues to run..
-        # We dont start() before this because self.wait_wait_for_auth = True
-        #  has to be set first... (for online mode).
-        t.start()
-        return False
+            # _login_authenticate_client already blocking since we called it...
+            self.wait_wait_for_auth = False
+            return False
 
     def _continue_login_start(self):
         """
@@ -834,6 +856,16 @@ class Client(object):
         time.sleep(.5)
         return True, "Success"
 
+    def close_server(self, term_message):
+        """
+        Wraps `_close_server_instance`.  This would be called by packet.py
+        where its' self.obj would equal the clientconnection instance (since
+        packet.py handles both client and server packets).
+
+        :param term_message:
+        """
+        self._close_server_instance(term_message)
+
     def _close_server_instance(self, term_message):
         """
         Close the server connection gracefully if possible.
@@ -1001,7 +1033,7 @@ class Client(object):
         Get world and port descriptions from the config.
         """
         for worlds in self.proxy.proxy_worlds:
-            if self.proxy.proxy_worlds[worlds]["port"] == portnumber:
+            if int(self.proxy.proxy_worlds[worlds]["port"]) == portnumber:
                 infos = [worlds,
                          self.proxy.proxy_worlds[worlds]["desc"]]
                 return infos
@@ -1071,7 +1103,7 @@ class Client(object):
             if self.username != "PING REQUEST":
                 self.log.debug(
                     "Client '%s', IP: '%s', State: %s': \n Disconnected: "
-                    "''", self.username, self.client_address[0], self.state,
+                    "'%s'", self.username, self.client_address[0], self.state,
                     message)
 
                 self.chat_to_client(jsondict)
@@ -1237,20 +1269,22 @@ class Client(object):
                                 " (HTTP Status Code %d)" % r.status_code)
                 return False
             mojang_name = self.proxy.uuids.getusernamebyuuid(
-                self.wrapper_uuid.string)
+                self.wrapper_uuid.string, uselocalname=False)
             self.local_uuid = self.proxy.uuids.getuuidfromname(self.username)
-
+            local_name = self.proxy.usercache[
+                self.wrapper_uuid.string]["localname"]
             if mojang_name:
-                if mojang_name != self.username:
+                if mojang_name != local_name:
                     if self.names_change:
-                        self.username, self.local_uuid = self.proxy.use_newname(
-                            self.username, mojang_name, self.wrapper_uuid.string
+                        self.local_uuid = self.proxy.use_newname(
+                            local_name, self.username, self.wrapper_uuid.string,
+                            self
                         )
-                        self.info["username"] = self.username
                     else:
                         self.log.info("%s's client performed LOGON in with "
                                       "new name, falling back to %s",
-                                      self.username, mojang_name)
+                                      self.username, local_name)
+                        self.username = local_name
 
             # verified info we can now store:
             self.info["ip"] = self.ip
@@ -1265,7 +1299,26 @@ class Client(object):
         # maybe it is the destination of a hub? or you use another
         # way to authenticate (passwords?)
         else:
-            # I'll take your word for it, bub...  You are:
+            local_name = self.username
+            mojanguuid = self.proxy.uuids.getuuidfromname(local_name).string
+
+            if self.mojanguuid:
+                mojanguuid = self.mojanguuid.string
+
+            if len(self.info["realuuid"]) > 0:
+                mojanguuid = self.info["realuuid"]
+                local_name = self.proxy.usercache[mojanguuid]["localname"]
+            if local_name != self.username:
+                if self.names_change:
+                    self.local_uuid = self.proxy.use_newname(
+                        local_name, self.username, mojanguuid, self
+                    )
+
+                else:
+                    self.log.info("%s's client performed LOGON in with "
+                                  "new name, falling back to %s",
+                                  self.username, local_name)
+                    self.username = local_name
             self.local_uuid = self.proxy.uuids.getuuidfromname(self.username)
             self.wrapper_uuid = self.local_uuid
             self.info["wrapperuuid"] = self.wrapper_uuid.string
@@ -1348,10 +1401,15 @@ class Client(object):
 
         """
         if self.clientSettings:
-            self.server_connection.packet.sendpkt(
-                self.pktSB.CLIENT_SETTINGS[PKT],
-                [RAW, ],
-                (self.clientSettings,))
+            try:
+                self.server_connection.packet.sendpkt(
+                    self.pktSB.CLIENT_SETTINGS[PKT],
+                    [RAW, ],
+                    (self.clientSettings,))
+            except AttributeError:
+                # this will fail under certain circumstances when a player
+                # disconnects abruptly.
+                pass
 
     def _send_forge_client_handshakereset(self):
         """

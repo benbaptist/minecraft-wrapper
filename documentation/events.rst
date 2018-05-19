@@ -249,7 +249,11 @@
     :Module: wrapper.py *(core/wrapper.py)*
 
     :Description:
-        a timer that is called each second.
+        a timer that is called each second.  Do
+          not rely on these events to happen 'on-time'!  They
+          can be delayed based on their position the queue, as
+          well as the total number of timer.second events being
+          called.
 
     :Payload:
          None
@@ -273,8 +277,12 @@
     :Can be aborted/modified: No
 
     :Comments:
-        Use of this timer is not suggested and is turned off
-          by default in the wrapper.config.json file
+        Use of this timer is deprecated and is turned off
+          by default in the wrapper.config.json file.  the final
+          wrapper version 1.0 final will not support this timer. Its
+          use in wrapper has always been a bad idea. Starting with
+          wrapper 1.0.9 RC 12, this timer will be somewhat buggy,
+          running two or more ticks behind.
 
 **< Group 'core/irc.py' >**
 
@@ -387,7 +395,8 @@
         Contains the "/", if present.
 
     :Payload:
-        :"player": player's name
+        :"player": player object
+        :"playername": player's name
         :"message": the chat message string.
 
     :Can be aborted/modified: Yes
@@ -406,7 +415,8 @@
         only supports starting and finishing a dig.
 
     :Payload:
-        :"playername": playername (not the player object!)
+        :"playername": player's name
+        :"player": player object
         :"position": x, y, z block position
         :"action": begin_break or end_break (string)
         :"face": 0-5 (bottom, top, north, south, west, east)
@@ -430,10 +440,13 @@
         pulling back bows, using buckets, etc.
 
     :Payload:
-        :"playername": playername (not the player object!)
+        :"playername": player's name
+        :"player": player object
         :"position":  the PLAYERS position - x, y, z, pitch, yaw
         :"action": "finish_using"  or "use_item"
+        :"hand": 0 = main hand, 1 = off hand (shield).
         :"origin": Debugging information on where event was parsed.
+         Either 'pktSB.PLAYER_DIGGING' or 'pktSB.USE_ITEM'
 
     :Can be aborted/modified: Yes
 
@@ -453,10 +466,14 @@
         Called when the client places an item
 
     :Payload:
-        :"playername": playername (not the player object!)
-        :"position":  the PLAYERS position - x, y, z, pitch, yaw
-        :"action": "finish_using"  or "use_item"
-        :"origin": Debugging information on where event was parsed.
+        :"playername": player's name
+        :"player": player object
+        :"position":  the clicked position, corrected for 'face' (i.e.,
+         the adjoining block position)
+        :"clickposition": The position of the block that was actually
+         clicked
+        :"item": The item player is holding (item['id'] = -1 if no item)
+        :"hand": hand in use (0 or 1)
 
     :Can be aborted/modified: Yes
 
@@ -476,7 +493,8 @@
         When a player creates a sign and finishes editing it
 
     :Payload:
-        :"player": player name
+        :"player": player object
+        :"playername": player's name
         :"position": position of sign
         :"line1": l1
         :"line2": l2
@@ -501,7 +519,8 @@
         When a player clicks a window slot
 
     :Payload:
-        :"player": Players name (not the object!)
+        :"player": Player object
+        :"playername": the player's name
         :"wid": window id ... always 0 for inventory
         :"slot": slot number
         :"button": mouse / key button
@@ -524,6 +543,7 @@
 
     :Payload:
         :"playername": client username
+        :"player": player object
         :"json": json or string data
 
     :Can be aborted/modified: Yes
@@ -542,6 +562,7 @@
 
     :Payload:
         :"playername": client username
+        :"player": player object
         :"position": position of bed
 
     :Can be aborted/modified: No - The server thinks the client is in bed already.
@@ -556,6 +577,7 @@
 
     :Payload:
         :"playername": client username
+        :"player": player object
         :"position": Spawn's position
 
     :Can be aborted/modified: No - Notification only.
@@ -572,6 +594,7 @@
 
     :Payload:
         :"playername": client username
+        :"player": player object
         :"vehicle_id": EID of vehicle or MOB
         :"leash": leash True/False
 
@@ -590,6 +613,7 @@
 
     :Payload:
         :"playername": client username
+        :"player": player object
         :"vehicle_id": EID of vehicle or MOB
         :"leash": leash True/False
 

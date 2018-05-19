@@ -5,7 +5,9 @@
 # This program is distributed under the terms of the GNU
 # General Public License, version 3 or later.
 
+from collections import deque
 import threading
+import time
 
 from api.player import Player
 
@@ -17,6 +19,12 @@ class Events(object):
         self.log = wrapper.log
         self.listeners = []
         self.events = {}
+
+        self.event_queue = deque([])
+        t = threading.Thread(target=self._event_processor,
+                             name="event_processor", args=())
+        t.daemon = True
+        t.start()
 
     def __getitem__(self, index):
         if not type(index) == str:
@@ -61,13 +69,17 @@ class Events(object):
         if abortable:
             return self._callevent(event, payload)
         else:
-            t = threading.Thread(target=self._callevent,
-                                 name="EventProcessor", args=(event, payload))
-            t.daemon = True
-            t.start()
+            self.event_queue.append((event, payload, False))
             return
 
-    def _callevent(self, event, payload):
+    def _event_processor(self):
+        while not self.wrapper.haltsig.halt:
+            while len(self.event_queue) > 0:
+                _event, _payload, _abortable = self.event_queue.popleft()
+                self._callevent(_event, _payload, _abortable)
+            time.sleep(0.01)
+
+    def _callevent(self, event, payload, abortable=True):
         if event == "player.runCommand":
             self.wrapper.commands.playercommand(payload)
             return
@@ -112,6 +124,12 @@ class Events(object):
                         "experienced an exception calling '%s': \n%s",
                         plugin_id, event, e
                     )
+
+                # If the plugin is not abortable, no need exists to deal with
+                # the payload in any special manner
+                if not abortable:
+                    payload_status = True
+                    continue
 
                 # Evaluate this plugin's result
                 # Every plugin will be given equal time to run it's event code.

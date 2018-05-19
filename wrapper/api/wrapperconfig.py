@@ -355,6 +355,10 @@ CONFIG = {
 
             "max-players": 1024,
 
+         # Flush rate sets the interval for packet flushing.  This is a fine-tuning mechanism. 50 Ms is one minecraft tick.  Faster (smaller) rates result in dropped items disappearing.  Larger values can create jerkiness or lag, but result in more reliable transmission.  This is a fine tuning that may be different for each server based on the number of plugins, whether the server is hub, etc.. 50-100 is recommended for most servers.  Hub servers with limited play can be set at 10.
+
+            "flush-rate-ms": 50,
+
          # Auto name changes causes wrapper to automatically change the player's server name.  Enabling this makes name change handling automatic, but will prevent setting your own custom names on the server.
 
             "auto-name-changes": True,
@@ -395,11 +399,11 @@ CONFIG = {
 
             "worlds":
 
-             # "world"= the name used in the hub/ command.  "port" = its value, corresponding to the local port. "desc" is the world's meta description that fits this sentence: ` Go to "".`.  `worlds` and `help` are reserved (do not use them for world names).  These names can also be used to drive the world change confirmation message, even if you are using your own player.connect() plugin.
+             # "world"= the name used in the hub/ command.  "port" = its value, corresponding to the local port. "desc" is the world's meta description that fits this sentence: ` Go to "".`.  `worlds` and `help` are reserved (do not use them for world names).  These names can also be used to drive the world change confirmation message, even if you are using your own player.connect() plugin.  'ip' is optional and defaults to 127.0.0.1 / localhost.
 
                 {
 
-                    "world": {"port": 25565, "desc": "a world description"},
+                    "world": {"port": 25565, "desc": "a world description", "ip": "localhost"},
 
                 },
 

@@ -9,6 +9,7 @@
 # ------------------------------------------------
 
 # standard
+from collections import deque
 import io  # PY3
 import json
 import struct
@@ -18,6 +19,7 @@ import sys
 
 # local
 from proxy.utils.mcuuid import MCUUID
+from proxy.utils.constants import *
 
 # Py3-2
 PY3 = sys.version_info > (3,)
@@ -75,11 +77,11 @@ class Packet(object):
 
         # this is set by the calling class/method.  Not presently used here,
         #  but could be. maybe to decide which metadata parser to use?
-        self.version = -1
+        self.version = self.obj.srv_data.protocolVersion
         self.buffer = io.BytesIO()  # Py3
         # self.buffer = StringIO.StringIO()
 
-        self.queue = []
+        self.queue = deque([])
 
         # encode/decode for NBT operations
         self._ENCODERS = {
@@ -297,7 +299,7 @@ class Packet(object):
     def flush(self):
         while len(self.queue) > 0:
             # grab next packet
-            packet_tuple = self.queue.pop(0)
+            packet_tuple = self.queue.popleft()
             # see if it is compressed
             compression = packet_tuple[0]
             packet = packet_tuple[1]  # `payload`
@@ -434,11 +436,12 @@ class Packet(object):
         if slot["id"] == -1:
             return r
         r += self.send_byte(slot["count"])
-        r += self.send_short(slot["damage"])
+        if self.version < PROTOCOL_PRE_RELEASE:
+            r += self.send_short(slot["damage"])
         if slot["nbt"]:
             r += self.send_tag(slot['nbt'])
         else:
-            r += "\x00"
+            r += b"\x00"
         return r
 
     def send_uuid(self, payload):
@@ -570,7 +573,7 @@ class Packet(object):
 
     def send_list(self, tag):
         # Check that all values are the same type
-        r = ""
+        r = b""
         typeslist = []
         for i in tag:
             typeslist.append(i['type'])
@@ -589,13 +592,13 @@ class Packet(object):
         return r
 
     def send_comp(self, tag):
-        r = ""
+        r = b""
 
         # Send every tag
         for i in tag:
             r += self.send_tag(i)
         # close compound
-        r += "\x00"
+        r += b"\x00"
         return r
 
     def send_int_array(self, values):
@@ -640,7 +643,10 @@ class Packet(object):
         d = self.buffer.read(length)
         if len(d) == 0 and length is not 0:
             # "Received no data or less data than expected - connection closed"
-            self.obj.close_server()
+            self.obj.close_server(
+                "Received no data or less data than expected - "
+                "connection closed"
+            )
             return b""
         return d
 
@@ -843,7 +849,10 @@ class Packet(object):
             payload = {"id": -1}
         else:
             count = self.read_ubyte()
-            damage = self.read_short()
+            if self.version < PROTOCOL_PRE_RELEASE:
+                damage = self.read_short()
+            else:
+                damage = -1
             nbt = self.read_tag()
             # nbtCount = self.read_ubyte()
             # nbt = self.read_data(nbtCount)

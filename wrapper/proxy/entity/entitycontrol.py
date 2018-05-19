@@ -68,7 +68,6 @@ class EntityControl(object):
         #   "player-thinning-radius"]
 
         self.entities = {}
-        self._abortep = False
         if self.entityControl:
 
             # entity processor thread
@@ -83,9 +82,6 @@ class EntityControl(object):
                                    name="entKill", args=())
             ekt.daemon = True
             ekt.start()
-
-    def __del__(self):
-        self._abortep = True
 
     # noinspection PyBroadException
     def getEntityByEID(self, eid):
@@ -219,18 +215,15 @@ class EntityControl(object):
             console_command = "tp @e[type=%s,x=%d,y=%d,z=%d,c=%s] ~ -500 ~" % (
                     entitydesc, pos[0], pos[1], pos[2], count)
 
-        self.proxy.eventhandler.callevent(
-            "proxy.console", {"command": console_command}, abortable=False)
-        """ eventdoc
-                                <description> internalfunction <description>
-
-                            """
+        self.proxy.run_command(console_command)
 
     def _entity_processor(self):
         self._log.debug("_entityprocessor thread started.")
         timer = float(0)
         # server is running
-        while self.srvr_data.state in (1, 2, 4) and not self._abortep:
+        while self.srvr_data.state in (1, 2, 4) and not (
+                self.proxy.caller.halt or self.proxy.abort
+        ):
             timer += .1
             sleep(.1)
             # timer for removing stale entities we want a FAST response
@@ -260,7 +253,9 @@ class EntityControl(object):
         timer = float(0)
 
         # while server is running
-        while self.srvr_data.state in (1, 2, 4) and not self._abortep:
+        while self.srvr_data.state in (1, 2, 4) and not (
+                self.proxy.caller.halt or self.proxy.abort
+        ):
 
             timer += .1
             sleep(.1)
@@ -322,5 +317,4 @@ class EntityControl(object):
         # if self.proxy.srv_data.protocolVersion < 204:
         console_command = "tp @e[type=%s,x=%d,y=%d,z=%d,c=%s] ~ ~-500 ~" % (
             entity_name, pos[0], pos[1], pos[2], count)
-        self.proxy.eventhandler.callevent(
-                 "proxy.console", {"command": console_command}, abortable=False)
+        self.proxy.run_command(console_command)

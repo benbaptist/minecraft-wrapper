@@ -170,7 +170,7 @@ class Player(object):
         self.abort = False
         self.data = None
         # meanwhile, it still needs to respect wrapper halts
-        self.wrapper_signal = self.wrapper.halt
+        self.wrapper_signal = self.wrapper.haltsig
         self.kick_nonproxy_connects = self.wrapper.config["Proxy"][
             "disconnect-nonproxy-connections"]
 
@@ -224,7 +224,8 @@ class Player(object):
                 self.log.error("The usual cause of this would be that"
                                " someone attempted to connect directly to"
                                " your server port and not the wrapper"
-                               " proxy port!")
+                               " proxy port, but can also be the result of"
+                               " a player that has abruptly disconnected.")
                 if self.kick_nonproxy_connects:
                     port = self.wrapper.proxy.proxy_port
                     self.log.info("API.player Kicked %s" % self.name)

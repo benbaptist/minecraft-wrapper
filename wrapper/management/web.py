@@ -47,7 +47,7 @@ except ImportError:
 DISCLAIMER = "Web mode is a beta feature and does not use HTTPS to send your " \
              "password to the server (just uses a plain-text HTTP GET).  " \
              "Besides password protection, we also have a setting in the " \
-             "'Web' section to only allow only certain IPs to connect.  If " \
+             "'Web' section to    only allow only certain IPs to connect.  If " \
              "you need to use web remotely, it is recommended to turn this " \
              "feature on and add the IP address from where you will be using " \
              "the web interface into the 'safe-ips' config item.  That said" \
@@ -103,7 +103,7 @@ class Web(object):
     # ordered by the time they are referenced in the code.
 
     # def update_graph(self):
-    #     while not self.wrapper.halt.halt:
+    #     while not self.wrapper.haltsig.halt:
     #         while len(self.memoryGraph) > 200:
     #             del self.memoryGraph[0]
     #         if self.wrapper.javaserver.getmemoryusage():
@@ -120,7 +120,7 @@ class Web(object):
                            "esources for possible solutions")
             return 
         
-        while not self.wrapper.halt.halt:
+        while not self.wrapper.haltsig.halt:
             try:
                 if self.bind():
                     # cProfile.run("self.listen()", "cProfile-debug")
@@ -158,7 +158,7 @@ class Web(object):
         """ Excuted by self.wrap() to listen for client(s). """
         self.log.info("Web Interface bound to %s:%d" % (
             self.config["Web"]["web-bind"], self.config["Web"]["web-port"]))
-        while not self.wrapper.halt.halt:
+        while not self.wrapper.haltsig.halt:
             # noinspection PyUnresolvedReferences
             sock, addr = self.socket.accept()
             if self.onlyusesafe_ips:
@@ -205,6 +205,10 @@ class Web(object):
                                        "message": payload["message"]}}])
 
     def on_player_join(self, payload):
+        # abrupt disconnections can cause player on-join although player is
+        # not on...
+        if not payload["player"]:
+            return
         while len(self.chatScrollback) > 200:
             self.chatScrollback.pop()
         self.chatScrollback.append([
@@ -380,7 +384,7 @@ class Client(object):
             self.close()
 
     def handle(self):
-        while not self.wrapper.halt.halt:
+        while not self.wrapper.haltsig.halt:
 
             # read data from socket
             try:
