@@ -10,7 +10,11 @@
 
 # Still in development at versions 201-210(6/14/16)
 
+# def Wrapper.py Constants:
+# """
 PROTOCOL_MAX = 4000
+
+PROTOCOL_PRE_RELEASE = 368
 
 PROTOCOL_1_12_2END = 340
 PROTOCOL_1_12_2 = 340
@@ -68,10 +72,12 @@ PROTOCOL_1_7_9 = 5
 PROTOCOL_1_7 = 4
 
 # coallate unsupprted protocols
-UNSUPPORTED = list(range(PROTOCOL_1_9START, PROTOCOL_1_9REL1, 1))
+UNSUPPORTED = list(range(6, 43, 1))
+UNSUPPORTED = UNSUPPORTED + list(range(PROTOCOL_1_9START, PROTOCOL_1_9REL1, 1))
 UNSUPPORTED = UNSUPPORTED + list(range(111, 201, 1))
 UNSUPPORTED = UNSUPPORTED + list(range(211, 301, 1))
 UNSUPPORTED = UNSUPPORTED + list(range(PROTOCOL_1_11END, PROTOCOL_1_12START, 1))
+UNSUPPORTED = UNSUPPORTED + list(range(341, 367, 1))
 
 """Minecraft version 1.6.4 and older used a protocol versioning
 scheme separate from the current one. Accordingly, an old protocol
@@ -117,6 +123,11 @@ METADATA = 17
 # It is radically different in 1.9+ now (through 11.2 atm)
 METADATA_1_9 = 19
 
+# upgrade for something that always existed:
+# this actually processes a VARINT and then the number of STRING.
+#       read returns: list of strings.
+#       send: accepts a list of strings.
+STRING_ARRAY = 20
 
 # Both of these just read or send the rest of the packet in its raw bytes form.
 REST = 90

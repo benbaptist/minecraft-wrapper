@@ -49,6 +49,39 @@ class Minecraft(object):
         """
         return self.wrapper.servervitals.state == 2
 
+    def changeServerProps(self, config_item, new_value, reload_server=False):
+        """
+        *New feature starting in version 1.0*
+
+        Edits the server.properties file
+
+        :Args:
+            :item: item, like "online-mode"
+
+            :new_value: applicable value
+
+            :reload_server: True to restart the server.
+
+        Items are changed in the config, but a server restart is required to
+         make the changes persist.
+
+        """
+        cont = self.wrapper.api.helpers.config_to_dict_read(
+            "server.properties",
+            self.wrapper.serverpath
+        )
+        if config_item in cont:
+            cont[config_item] = new_value
+
+            self.wrapper.api.helpers.config_write_from_dict(
+                "server.properties",
+                self.wrapper.serverpath,
+                cont
+            )
+
+        if reload_server:
+            self.wrapper.javaserver.restart()
+
     def configWrapper(self, section, config_item, new_value, reload_file=False):
         """
         *New feature starting in version 0.8.12*
@@ -85,16 +118,41 @@ class Minecraft(object):
         self.log.error("API.Minecraft configWrapper failed.")
         return False
 
-    def getServerPackets(self, packets="CB"):
+    def getServerPackets(self, packetset="CB"):
+        """
+        Get the current proxy packet set.  Packet use will also
+        require the following import at the begining of your
+        plugin:
+        .. code:: python
+
+        from proxy.utils.constants import *
+        # this line is needed to access constants for packet sending/parsing.
+
+        ..
+
+        :packets are also available from the player.api:
+            player.cbpkt
+            player.sbpkt
+
+        :Args:
+           :packetset: type(string)= "CB" or "SB". Argument is optional.
+            If not specified, the client-bound packetset is returned.  If
+            packetset is actually anything except "CB", the server-bound
+            set is returned.
+
+        :returns: The desired packet set.
+
+       """
+
         if not self.wrapper.proxymode:
             return False
 
         version = self.wrapper.proxy.srv_data.protocolVersion
 
-        if packets == "CB":
-            return ClientBound(version)
-        else:
+        if packetset == "SB":
             return ServerBound(version)
+        else:
+            return ClientBound(version)
 
     def getTimeofDay(self, dttmformat=0):
         """
@@ -198,7 +256,7 @@ class Minecraft(object):
                 if player_uuid == self.wrapper.uuids.getuuidfromname(username):
                     continue
 
-            # added because some files under other versions were pickling the data
+            # added because some other versions were pickling the data
             if uuid_file_found[-4:] == "json":
                 with open("wrapper-data/players/%s" % uuid_file_found) as f:
                     data = f.read()
@@ -274,6 +332,10 @@ class Minecraft(object):
         Returns the player object of the specified logged-in player.
         Will raise an exception if the player is not logged in.
 
+        This includes players who are transferred to another server. If
+        you need to test whether a player is on this server; test if
+        player.client and player.client.local == True
+
         :arg username: playername
 
         :returns: The Player Class object for "playername".
@@ -339,6 +401,7 @@ class Minecraft(object):
         return dictitem
 
     def lookupbyUUID(self, uuid):
+        # type: (str) -> str
         """
         Returns the username from the specified UUID.
         If the player has never logged in before and isn't in the user
@@ -350,6 +413,12 @@ class Minecraft(object):
         :returns: username
 
         """
+        # just in case MCUUID was passed instead.
+        try:
+            # noinspection PyUnresolvedReferences
+            uuid = uuid.string
+        except AttributeError:
+            pass
         return self.wrapper.uuids.getusernamebyuuid(uuid)
 
     def lookupbyName(self, name):
@@ -362,6 +431,9 @@ class Minecraft(object):
         :arg name:  player name
 
         :returns: a UUID object (wrapper type MCUUID)
+
+        Remember to use the MCUUID.string to get a string when
+         using this for string purposes (json keys)!
 
         """
         return self.wrapper.uuids.getuuidbyusername(name)
@@ -391,6 +463,11 @@ class Minecraft(object):
         sourcedir = "%s/playerdata/%s.dat" % (worldname, orig_server_uuid)
         destdir = "%s/playerdata/%s.dat" % (worldname, new_server_uuid)
 
+        # just in case MCUUID was passed instead.
+        try:
+            MojangUUID = MojangUUID.string
+        except AttributeError:
+            pass
         # do the name change in the cache
         if MojangUUID in cache:
             cache[MojangUUID]["localname"] = desired_name
@@ -551,7 +628,7 @@ class Minecraft(object):
             pass
 
     # functions must all be on one line to import to the documentation
-    def setBlock(self, x, y, z, tilename, datavalue=0, oldblockhandling="replace", datatag=None):
+    def setBlock(self, x, y, z, tilename, datavalue=0, oldblockhandling="replace", datatag=None):  # noqa
         """
         Sets a block at the specified coordinates with the specific
         details. Will fail if the chunk is not loaded.
@@ -705,7 +782,9 @@ class Minecraft(object):
 
     def getWorldName(self):
         """
-        Returns the world's name.
+        Returns the world's name.  If worldname does not exist (server
+         not started), it returns `None`.  If a server was stopped and a
+         new server instance not started, it will return the old world name.
 
         """
         return self.wrapper.servervitals.worldname
@@ -721,7 +800,7 @@ class Minecraft(object):
     # Ban related items - These wrap the proxy base methods
 
     # functions must all be on one line to import to the documentation
-    def banUUID(self, playeruuid, reason="by wrapper api.", source="minecraft.api", expires=False):
+    def banUUID(self, playeruuid, reason="by wrapper api.", source="minecraft.api", expires=False):  # noqa
         """
         Ban a player using the wrapper proxy system.
 
@@ -743,9 +822,11 @@ class Minecraft(object):
 
         """
         if self.wrapper.proxy:
-            return self.wrapper.proxy.banuuid(playeruuid, reason, source, expires)
+            return self.wrapper.proxy.banuuid(
+                playeruuid, reason, source, expires
+            )
 
-    def banName(self, playername, reason="by wrapper api.", source="minecraft.api", expires=False):
+    def banName(self, playername, reason="by wrapper api.", source="minecraft.api", expires=False):  # noqa
         """
         Ban a player using the wrapper proxy system.  Will attempt to
         poll or read cache for name. If no valid name is found, does a
@@ -778,7 +859,7 @@ class Minecraft(object):
             return self.wrapper.proxy.banuuid(playername, reason,
                                               source, expires)
 
-    def banIp(self, ipaddress, reason="by wrapper api.", source="minecraft.api", expires=False):
+    def banIp(self, ipaddress, reason="by wrapper api.", source="minecraft.api", expires=False):  # noqa
         """
         Ban an ip address using the wrapper proxy system. Messages
         generated by process can be directed to a particular player's

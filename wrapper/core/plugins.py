@@ -127,10 +127,14 @@ class Plugins(object):
         self.wrapper.events[pid] = {}
         self.wrapper.registered_permissions[pid] = {}
         self.wrapper.help[pid] = {}
-        main.onEnable()
-        self.log.info("Plugin %s loaded...", name)
-        self.plugins_loaded.append(name)
-        return True
+        can_enable = main.onEnable()
+        if can_enable is False:
+            self.log.warning("Plugin %s could not be loaded...", name)
+            return False
+        else:
+            self.log.info("Plugin %s loaded...", name)
+            self.plugins_loaded.append(name)
+            return True
 
     def unloadplugin(self, plugin):
         try:

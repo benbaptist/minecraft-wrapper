@@ -1,6 +1,7 @@
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python
+#  -*- coding: utf-8 -*-
 
-# Copyright (C) 2016, 2017 - BenBaptist and Wrapper.py developer(s).
+# Copyright (C) 2016 - 2018 - BenBaptist and Wrapper.py developer(s).
 # https://github.com/benbaptist/minecraft-wrapper
 # This program is distributed under the terms of the GNU
 # General Public License, version 3 or later.
@@ -31,15 +32,14 @@ parser.add_argument('--passphrase', "-p", type=str, default="wrong",
                          'Wrapper.  Please use as fairly long phrase '
                          '(minimum is 8 characters).  If not specified, '
                          'or incorrectly supplied, Wrapper will prompt '
-                         'for a new passphrase before starting! Use '
-                         '"--passphrase none" to start wrapper with '
-                         'passwords disabled.')
+                         'for a new passphrase before starting! ')
 
 args = parser.parse_args()
 
 version = sys.version_info
 VERSION = version[0]
 SUBVER = version[1]
+MICRO = version[2]
 
 PY3 = VERSION > 2
 MINSUB = 7
@@ -63,12 +63,10 @@ def main(wrapper_start_args):
 
     # develop master passphrase for wrapper
     secret_key = wrapper_start_args.passphrase
-    if len(secret_key) < 8 and secret_key != 'none':
+    if len(secret_key) < 8:
         secret_key = get_passphrase(
             'please input a master passphrase for Wrapper.  This passphrase '
             'will be used to encrypt sensitive information in Wrapper.\n>')
-    if secret_key == "none":
-        secret_key = False
 
     # __init__ wrapper and set up logging
     wrapper = Wrapper(secret_key)
@@ -76,7 +74,7 @@ def main(wrapper_start_args):
 
     # start first wrapper log entry
     log.info("Wrapper.py started - Version %s", wrapper.getbuildstring())
-    log.debug("Wrapper is using Python %s.%s.", sys.version_info[0], SUBVER)
+    log.debug("Wrapper is using Python %s.%s.%s.", VERSION, SUBVER, MICRO)
 
     # flag python version problems
     if SUBVER < MINSUB:
@@ -95,19 +93,33 @@ def main(wrapper_start_args):
     # noinspection PyBroadException
     try:
         wrapper.start()
+
     except SystemExit:
         if not wrapper.configManager.exit:
             os.system("reset")
         wrapper.plugins.disableplugins()
+        wrapper.alerts.ui_process_alerts(
+            "Wrapper called SystemExit exception",
+            blocking=True
+        )
 
         # save-all is required to have a flush argument
         wrapper.javaserver.console("save-all flush")
         wrapper.javaserver.stop("Wrapper.py received shutdown signal - bye")
-        wrapper.halt.halt = True
+        wrapper.haltsig.halt = True
+
+    except ImportWarning as ex:
+        crash_mess = ("Wrapper.py Could not start due to missing requests "
+                      "module: \n%s" % ex)
+        wrapper.alerts.ui_process_alerts(crash_mess, blocking=True)
+        log.critical(crash_mess)
+
     except Exception as ex:
+        crash_mess = ("Wrapper crashed - stopping server to be safe (%s)" % ex)
+        wrapper.alerts.ui_process_alerts(crash_mess, blocking=True)
         log.critical("Wrapper.py crashed - stopping server to be safe (%s)",
                      ex, exc_info=True)
-        wrapper.halt.halt = True
+        wrapper.haltsig.halt = True
         wrapper.plugins.disableplugins()
         try:
             wrapper.javaserver.stop("Wrapper.py crashed - please contact"
@@ -116,6 +128,7 @@ def main(wrapper_start_args):
             log.critical("Wrapper has no server instance. Server is likely "
                          "killed but could still be running, or it "
                          "might be corrupted! (%s)", exc, exc_info=True)
+
 
 if __name__ == "__main__":
     main(args)

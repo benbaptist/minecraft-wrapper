@@ -1,37 +1,35 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2016, 2017 - BenBaptist and Wrapper.py developer(s).
+# Copyright (C) 2016 - 2018 - SurestTexas00 and Wrapper.py developer(s).
 # https://github.com/benbaptist/minecraft-wrapper
 # This program is distributed under the terms of the GNU
 # General Public License, version 3 or later.
 
 
-from Crypto.PublicKey import RSA
-from Crypto import Random
-from Crypto.Cipher import AES
+from cryptography import __version__ as c_vers
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import padding
+import os
+import sys
+# print(type(c_vers[0]), c_vers[0])
+if int(c_vers[0]) < 2:
+    raise EnvironmentError
 
 # Py3-2
-import sys
 PY3 = sys.version_info > (3,)
 
 
-def decode_public_key(thebytes):
-    """Decodes a public RSA key in ASN.1 format as defined by x.509"""
-    return RSA.importKey(thebytes)
-
-
-def encode_public_key(key):
-    """Encodes a public RSA key in ASN.1 format as defined by x.509"""
-    return key.publickey().exportKey(format="DER")
-
-
-def generate_key_pair():
-    """Generates a 1024 bit RSA key pair"""
-    return RSA.generate(1024)
-
-
 def generate_random_bytes(length):
-    return Random.get_random_bytes(length)
+    return os.urandom(length)
+
+
+def aes128cfb8(shared_secret):
+    cipher = Cipher(algorithms.AES(shared_secret), modes.CFB8(shared_secret),
+                    backend=default_backend())
+    return cipher
 
 
 def generate_server_id():
@@ -47,21 +45,45 @@ def generate_challenge_token():
     return generate_random_bytes(4)
 
 
-def decrypt_shared_secret(encrypted_key, private_key):
-    """Decrypts the PKCS#1 padded shared secret using the private RSA key"""
-    return _pkcs1_unpad(private_key.decrypt(encrypted_key))
+def generate_private_key_set(bitsize=1024):
+    """ def generate_key_pair(): """
+    key = rsa.generate_private_key(backend=default_backend(),
+                                   public_exponent=65537,
+                                   key_size=bitsize)
+    return key
 
 
-# noinspection PyPep8Naming
-def AES128CFB8(shared_secret):
-    """Creates a AES128 stream cipher using cfb8 mode"""
-    return AES.new(shared_secret, AES.MODE_CFB, shared_secret)
+def _get_public_key(privatekey):
+    public_key = privatekey.public_key()
+    return public_key
 
 
-def _pkcs1_unpad(thebytes):
-    null_byte = '\x00'
-    if PY3:
-        null_byte = 0x00
-    pos = thebytes.find(null_byte)
-    if pos > 0:
-        return thebytes[pos + 1:]
+def get_public_key_bytes(privatekey):
+    """ def encode_public_key(key): """
+    obj = _get_public_key(privatekey)
+    der = obj.public_bytes(
+        encoding=serialization.Encoding.DER,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo
+    )
+    return der
+
+
+def encrypt_PKCS1v15_shared_data(thedata, privatekey):
+    y_pubkey = _get_public_key(privatekey)
+    ciphertext = y_pubkey.encrypt(thedata, padding.PKCS1v15())
+    print(ciphertext)
+
+
+def decrypt_PKCS1v15_shared_data(thedata, privatekey):
+    """def decrypt_shared_secret(encrypted_key, private_key):
+    Decrypts the PKCS#1 padded shared secret using the private RSA key
+
+    :param
+        :thedata: expects bytes (never a string!)
+        :privatekey: private_key object
+
+    :returns bytes
+
+    """
+    plaintext = privatekey.decrypt(thedata, padding.PKCS1v15())
+    return plaintext

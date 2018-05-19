@@ -1,18 +1,11 @@
 
--  Config file items and layout
+**< class Config file items and layout >**
 
 '''
 
 *wrapperconfig.py is the default config file.  Changes made
 here are inserted or deleted from the the wrapper config
 each time wrapper starts.*
-
-*Items marked as "deprecated" get removed from the wrapper
-config when wrapper starts.  These are are not valid items.
-they only exist so that they will get removed from older
-wrapper versions.  This is intended to keep the actual
-wrapper.config.json file from getting cluttered with old
-unused items.*
 
 *The wrapper.config.json file contents will look like this,
 but without all the comment lines.*
@@ -21,30 +14,30 @@ but without all the comment lines.*
 
 CONFIG = {
 
-# Automatic backups with pruning. Intervals are specified in seconds.
+# Backups - Automatic backups with pruning. Intervals are specified in seconds.
 
     "Backups":
 
-        {
-
             "backup-compression": False,
 
-         # Specify files and folders you want backed up.  Items must be in your server folder (see 'General' section)
+         # Specify server files and folders you want backed up.  Items must be in your server folder (see 'General' section)
 
             "backup-folders":
 
                 [
                     "server.properties",
 
-                    "world"
+                    "world",
+
+                    "wrapper-data",
 
                 ],
 
-         # backup interval is in seconds: 3600 = hourly, 86400 = Daily, 604800 = weekly
+         # backup interval in seconds: 3600 = hourly, 86400 = Daily, 604800 = weekly
 
             "backup-interval": 3600,
 
-         # backup location is inside wrapper's directory
+         # backup location is inside wrapper's directory, unless you use an absolute path (such as /home/otherdirectory/backups)
 
             "backup-location": "backup-directory",
 
@@ -54,23 +47,65 @@ CONFIG = {
 
             "enabled": False
 
-        },
+
+# Alerts - provide email or other notification of wrapper problems (server down, etc).
+
+    "Alerts":
+
+
+         # with some modern email providers, you may need to "allow less secure apps” on your account..
+
+         # You should use a dedicated email with a password that is different from your other accounts for this purpose.
+
+            "enabled": False,
+
+         # enable a server item by setting login name to something other than "False".  Use your email address for login-name and the associated password (encrypt it first).
+
+            "servers": [
+
+                {
+
+         # built in alerts use "wrapper" group.
+
+                    "group": "wrapper",
+
+                    "subject": "Wrapper.py Alert",
+
+                    "type": "email",
+
+                    "address": "smtp.gmail.com",
+
+                    "port": 587,
+
+                    "login-name": False,
+
+                    "encrypted-password": "Copy and Paste from 'password' after wrapper encrypts it.",
+
+                    "recipients": ["email1@provider.com", "email2@provider.com"]
+
+                }
+            ],
+
+
+         # -plaintext items are converted to hashed items by wrapper
+
+            "password-plaintext": False,
+
+            "password": "use `/password -s Alerts password <your password>` to set this (or enter a password-plaintext).",
+
+
+# Gameplay - miscellaneous configuration items.
 
     "Gameplay":
-
-        {
 
          # Use of timer-tick is not recommended.  1/20th of a second timer option for plugin use. May impact wrapper performance negatively.
 
             "use-timer-tick-event": False,
 
-        },
 
-# Entity processing is somewhat superfluous now that minecraft has more built-in entity management gamerules now.  Must be turned on to use player.mount / unmount events.
+# Entity processing - This is somewhat superfluous now that minecraft has more built-in entity management gamerules now.  Must be turned on to use player.mount / unmount events.
 
     "Entities":
-
-        {
 
          # whether to use the wrapper entity controls.  With new minecraft versions, these are largely unnecessary and better done with the Gamerules.
 
@@ -90,25 +125,22 @@ CONFIG = {
 
          # The following items thin specific mobs over the stated count.  This only happens after the total mob count threshold above is met first.  For example, 'thin-Cow: 40` starts thinning cows > 40.  Entity names must match minecraft naming exactly as they would appear in the game.
 
-            "thin-Cow": 40,
+         # Check /wrapper-data/json/entities.json
 
-         # 1.11 naming!  Check /wrapper-date/json/entities.json
-
-         # there are some surprising changes, like "PigZombie" is now zombie_pigman and EntityHorse is horse, etc
+         # there are some surprising changes after 1.11, like "PigZombie" is now zombie_pigman and EntityHorse is horse, etc.  Sheep, Cow, anc Chicken are now lower case: sheep, cow, chicken.. etc.
 
             "thin-cow": 40,
 
-            "thin-zombie_pigman": 200,
+            "thin-zombie_pigman": 40,
 
-            "thin-Sheep": 40,
+            "thin-sheep": 40,
 
-            "thin-Chicken": 30
+            "thin-chicken": 30
 
-        },
+
+# Updates - Control wrapper update behaviour.
 
     "Updates":
-
-        {
 
          # Use one of the names listed herein (i.e. 'stable-branch')
 
@@ -124,17 +156,10 @@ CONFIG = {
 
             "dev-branch": "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development",
 
-        },
 
-# look 'n' feel type customizations
+# Misc - look 'n' feel type customizations
 
     "Misc":
-
-        {
-
-         # if you change the command-prefix, no minecraft command will work because minecraft itself only recognizes "/" commands... TODO - Bug or feature? -not sure.
-
-            "command-prefix": "/",
 
          # Reboot message occurs with automatic timed server restarts ["General"]["timed-reboot"]
 
@@ -152,21 +177,18 @@ CONFIG = {
 
             "halt-message": "Halting Wrapper...",
 
-         # readline is likely to be more-cross platform, but does not use wrapper's ability to keep console keystroke entries visually intact while server produces output.
+         # Specify if wrapper should trap control-z and shutdown in a controlled manner (similar to ctrl-c).  If false, follows the behavior permitted by your system (and that might not end well!)  - Discussion: https://github.com/benbaptist/minecraft-wrapper/issues/521
 
-            "use-readline": "deprecated",
+            "trap-ctrl-z": True,
 
          # Use-betterconsole replaces "use-readline" for clarity about what this option does.  The default is False because use-betterconsole may not be fully cross-platform.  Better Console makes it easier for the console operator too see what they are typing, even while the server or wrapper my be writing output at the same time, essentially produces jline-like functionality to the wrapper console...
 
-            "use-betterconsole": False
+            "use-betterconsole": False,
 
-        },
-
-    "General":
 
 # General wrapper and server startup options
 
-        {
+    "General":
 
          # restart server automatically if it stops (unless you explicity used the "/stop" command within the console).
 
@@ -180,14 +202,10 @@ CONFIG = {
 
             "encoding": "utf-8",
 
-
-         # Using the default '.' roots the server in the same folder with wrapper. Change this to another folder to keep the wrapper and server folders separate.  Do not use a trailing slash...  e.g. - '/full/pathto/the/server'
+         # Using the default '.' roots the server in the same folder with wrapper. Change this to another folder to keep the wrapper and server folders separate.  Do not use a trailing slash...  e.g. - '/full/pathto/the/server'.  relative paths are ok too, as long as there is no trailing slash.  For instance, to use a sister directory, use `../server`.
 
             "server-directory": ".",
 
-         # server-name was moved to Web (it is used only by web module in code)
-
-            "server-name": "deprecated",
 
             "shell-scripts": False,
 
@@ -201,33 +219,10 @@ CONFIG = {
 
             "timed-reboot-warning-minutes": 5,
 
-         # wrapper detects server version and adjusts accordingly now.
 
-            "pre-1.7-mode": "deprecated",
-
-         # Deprecated for consistency with timed reboot "warning" being in "minutes", not seconds
-
-            "timed-reboot-seconds": "deprecated",
-
-         # The remaining items and functionality were moved to group "Updates" and deprecated from this section.
-
-            "auto-update-branch": "deprecated",
-
-            "auto-update-dev-build": "deprecated",
-
-            "auto-update-wrapper": "deprecated",
-
-            "stable-branch":  "deprecated",
-
-            "dev-branch":  "deprecated",
-
-        },
-
-# This allows your users to communicate to and from the server via IRC and vice versa.
+# IRC - This allows your users to communicate to and from the server via IRC and vice versa.
 
     "IRC":
-
-        {
 
             "autorun-irc-commands":
 
@@ -275,7 +270,7 @@ CONFIG = {
 
             "show-irc-join-part": True
 
-        },
+# Proxy settings -
 
 # This is a man-in-the-middle proxy similar to BungeeCord, which is used for extra plugin functionality. Online-mode must be set to False in server.properties. Make sure that the server port is not accessible directly from the outside world.
 
@@ -283,15 +278,25 @@ CONFIG = {
 
     "Proxy":
 
-        {
+         # Must be a single character.
 
+            "command-prefix": "/",
 
+         # This will kick players that are not in the playerlist (because they entered the server port directly).
 
-            "convert-player-files": False,
+            "disconnect-nonproxy-connections": True,
 
-         # This actually does nothing in the code. TODO - re-implement this somewhere? perhaps in the server JSON response?
+         # The number of players the proxy will hold.  This includes connected players from all hub worlds
 
             "max-players": 1024,
+
+         # Flush rate sets the interval for packet flushing.  This is a fine-tuning mechanism. 50 Ms is one minecraft tick.  Faster (smaller) rates result in dropped items disappearing.  Larger values can create jerkiness or lag, but result in more reliable transmission.  This is a fine tuning that may be different for each server based on the number of plugins, whether the server is hub, etc.. 50-100 is recommended for most servers.  Hub servers with limited play can be set at 10.
+
+            "flush-rate-ms": 50,
+
+         # Auto name changes causes wrapper to automatically change the player's server name.  Enabling this makes name change handling automatic, but will prevent setting your own custom names on the server.
+
+            "auto-name-changes": True,
 
          # the wrapper's online mode, NOT the server.
 
@@ -301,21 +306,9 @@ CONFIG = {
 
             "proxy-enabled": False,
 
-         # if wrapper is a sub world (wrapper needs to do extra work to spawn the player).
-
-            "proxy-sub-world": False,
-
          # the wrapper's proxy port that accepts client connections from the internet. This port is exposed to the internet via your port forwards.
 
             "proxy-port": 25565,
-
-         # Server port is deprecated - This port is autoconfigured from server console output now.
-
-            "server-port": "deprecated",
-
-         # spigot mode has some slightly "off" bytes in the login sequence.
-
-            "spigot-mode": False,
 
          # silent bans cause your server to ignore sockets from that IP (for IP bans). This will cause your server to appear offline and avoid possible confrontations.
 
@@ -331,15 +324,27 @@ CONFIG = {
 
                     "BenBaptist"
 
-                ]
+                ],
 
-        },
+         # set to True to use the wrapper built in Hub system (you must specify all your "worlds").
+
+            "built-in-hub": False,
+
+         # Define your worlds here to give players access to multiple worlds (with no plugin required).
+
+            "worlds":
+
+             # "world"= the name used in the hub/ command.  "port" = its value, corresponding to the local port. "desc" is the world's meta description that fits this sentence: ` Go to "".`.  `worlds` and `help` are reserved (do not use them for world names).  These names can also be used to drive the world change confirmation message, even if you are using your own player.connect() plugin.  'ip' is optional and defaults to 127.0.0.1 / localhost.
+
+                {
+
+                    "world": {"port": 25565, "desc": "a world description", "ip": "localhost"},
+
+                },
+
+# Web - Web mode allows you to control and monitor the server.  This is not a https connection.  Be mindful of that and don't use the same password you use anywhere else.  It is also advised that this be open only to the localhost.
 
     "Web":
-
-        {
-
-            "public-stats": True,
 
             "web-allow-file-management": True,
 
@@ -355,10 +360,12 @@ CONFIG = {
 
             "web-port": 8070,
 
+         # By default, wrapper only accepts connections from "safe" IP addresses.  Disable (set 'safe-ips-use' ot false) or add the IP address of computers you may use to access web mode.
+
+            "safe-ips": ["127.0.0.1"],
+
+            "safe-ips-use": True,
+
             "server-name": "Minecraft Server",
-
-        }
-
-    }
 
 # 

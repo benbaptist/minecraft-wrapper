@@ -75,8 +75,9 @@ class Config(object):
                     # handle new items in a (new) section
                     self.log.debug("Item '%s' in new section '%s' not in wrapper properties - adding it!",
                                    configitem, section)
-                    new_entries.append([section, configitem])
-                    changesmade = True
+                    if CONFIG[section][configitem] != "deprecated":
+                        new_entries.append([section, configitem])
+                        changesmade = True
 
         # Apply changes and save.
         if changesmade:

@@ -1,21 +1,23 @@
+# coding=utf-8
+
 import random
 
-# -- Zombie Plugin --
-# version 0.1
-# written by benbaptist
-# this plugin makes people killed by zombies and skeletons leave behind an undead version of themselves.
+NAME = "Zombie Plugin"
+AUTHOR = "benbaptist"
+ID = "com.benbaptist.plugins.zombie"
+SUMMARY = "Zombie Plugin"
+DESCRIPTION = """this plugin makes people killed by zombies and skeletons leave behind an undead version of themselves."""
+VERSION = (0, 2, 0)
+
 
 # this is the only person that can run the debug commands 'spawnzombie' and 'spawnskeleton'.
-op = "benbaptist" 
+op = "benbaptist"
 
 
 class Main:
     def __init__(self, api, log):
         self.api = api
         self.log = log
-
-        self.version = (0, 1)
-        self.description = "Actual players killed by zombies and skeletons leave behind undead versions of themselves!"
 
     def onEnable(self):
         self.log.info("Zombie is on")
@@ -39,7 +41,10 @@ class Main:
                                    "{id:397,Damage:3,SkullOwner:%s}],CanPickUpLoot:True}" % (name, name, name))
 
     def fake(self, payload):  # sloppy debug stuff. :P
-        if payload["message"] == "spawnzombie" and payload["player"] == op:
+        print(payload["message"])
+        print(payload["player"])
+        if payload["message"] == "spawnzombie" and payload["player"].__str__() == op:
+            print("ZOMBIFIED")
             self.zombie(payload["player"])
         if payload["message"] == "spawnskeleton" and payload["player"] == op:
             self.skeleton(payload["player"])

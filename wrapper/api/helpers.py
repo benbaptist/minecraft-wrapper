@@ -15,18 +15,14 @@ import json
 import time
 import datetime
 import socket
-import urllib
 
 version = sys.version_info
 PY3 = version[0] > 2
 
 if PY3:
-    str2 = str
     # noinspection PyPep8Naming
     import pickle as Pickle
 else:
-    # noinspection PyUnresolvedReferences
-    str2 = unicode
     # noinspection PyUnresolvedReferences
     import cPickle as Pickle
 
@@ -163,6 +159,20 @@ def config_to_dict_read(filename, filepath):
     return config_dict
 
 
+def config_write_from_dict(filename, filepath, dictionary):
+    """
+    Use a keyed dictionary and write a disk file with '='
+    lines (like server.properties).
+    """
+    config_dict = dictionary
+    newfile = ""
+    for items in config_dict:
+        newfile += "%s=%s\n" % (items, config_dict[items])
+
+    with open("%s/%s" % (filepath, filename), "w") as f:
+        f.write(newfile)
+
+
 def scrub_item_value(item):
     """
     Takes a text item value and determines if it should be a boolean,
@@ -211,7 +221,7 @@ def find_in_json(jsonlist, keyname, searchvalue):
 def format_bytes(number_raw_bytes):
     """
     Internal wrapper function that takes number of bytes
-    and converts to Kbtye, MiB, GiB, etc... using 4 most
+    and converts to KiB, MiB, GiB, etc... using 4 most
     significant digits.
 
     :returns: tuple - (string repr of 4 digits, string units)
@@ -237,7 +247,7 @@ def format_bytes(number_raw_bytes):
 
 def getargs(arginput, i):
     """
-    returns a certain index of argument (without producting an
+    returns a certain index of argument (without producing an
     error if out of range, etc).
 
     :Args:
@@ -359,13 +369,19 @@ def get_int(s):
 
     :arg s: Any string value.
 
-    :returns: Applicable value (or 0 for values it can't convert)
+    :returns: Applicable value (or 0 for values it can't convert). Booleans or
+     other types return their truth value as 1 (true) or 0 (false)
 
     """
     try:
         val = int(s)
     except ValueError:
         val = 0
+    except TypeError:
+        if s:
+            val = 1
+        else:
+            val = 0
     return val
 
 
@@ -390,22 +406,22 @@ def isipv4address(addr):
 
 def pickle_load(path, filename):
     """
-    Save data to Pickle file (*.pkl).  Allows saving dictionary or other
-    data in a way that json cannot always be saved due to json formatting
-    rules.
+    Load data from a Pickle file (*.pkl).  Normally the returned data would
+     be a dictionary or other python object.  Used to retrieve data that was
+     previously `pickle_save`d.
 
     :Args:
         :path: path to file (no trailing slash)
         :filename: filename including extension
-        :data: Data to be pickled.
-        :encoding: 'Machine' or 'Human' - determines whether file contents
-         can be viewed in a text editor.
 
-    :returns: saved data.  (Assumes success; errors will raise exception.)
+    :returns: saved data.  Failure will yield empty dictionary
 
     """
     with open("%s/%s" % (path, filename), "rb") as f:
-        return Pickle.load(f)
+        try:
+            return Pickle.load(f)
+        except EOFError:
+            return {}
 
 
 def pickle_save(path, filename, data, encoding="machine"):
@@ -463,7 +479,7 @@ def processcolorcodes(messagestring):
 
     :arg messagestring: String argument with "&" codings.
 
-    :returns: Json dumps() string.
+    :returns: Dictionary chat
 
     """
     if not PY3:
@@ -547,6 +563,7 @@ def processcolorcodes(messagestring):
                 # noinspection PyUnresolvedReferences
                 it.next()
             except AttributeError:
+                # noinspection PyUnresolvedReferences
                 it.__next__()
 
     extras.append({
@@ -558,7 +575,7 @@ def processcolorcodes(messagestring):
         "italic": italic,
         "strikethrough": strikethrough
     })
-    return json.dumps({"text": "", "extra": extras})
+    return {"text": "", "extra": extras}
 
 
 def processoldcolorcodes(message):
@@ -640,8 +657,26 @@ def read_timestr(mc_time_string):
 
 
 # Single line required by documentation creator (at this time)
-def readout(commandtext, description, separator=" - ", pad=15, command_text_fg="magenta", command_text_opts=("bold",), description_text_fg="yellow", usereadline=True):
+def _readout(commandtext, description, separator, pad,
+             command_text_fg, command_text_opts, description_text_fg,
+             usereadline):
+    commstyle = _use_style(foreground=command_text_fg,
+                           options=command_text_opts)
+    descstyle = _use_style(foreground=description_text_fg)
+    x = '{0: <%d}' % pad
+    commandtextpadded = x.format(commandtext)
+    if usereadline:
+        print("%s%s%s" % (commstyle(commandtextpadded),
+                          separator, descstyle(description)))
+    else:
+        print("\033[1A%s%s%s\n" % (commstyle(commandtextpadded),
+                                   separator, descstyle(description)))
+
+
+# Single line required by documentation creator (at this time)
+def readout(commandtext, description, separator=" - ", pad=15, command_text_fg="magenta", command_text_opts=("bold",), description_text_fg="yellow", usereadline=True, player=None):  # noqa
     """
+    (wraps _readout)
     display console text only with no logging - useful for displaying
     pretty console-only messages.
 
@@ -655,6 +690,8 @@ def readout(commandtext, description, separator=" - ", pad=15, command_text_fg="
         :description_text_fg: description area foreground color
         :usereadline: Use default readline  (or 'False', use
          readchar/readkey (with anti- scroll off capabilities))
+        :player: if the console, it goes via standard readout. otherwise,
+         for other players, it passes to a player.message().
 
     :returns: Nothing. Just prints to stdout/console for console
      operator readout:
@@ -666,17 +703,16 @@ def readout(commandtext, description, separator=" - ", pad=15, command_text_fg="
         ..
 
     """
-    commstyle = _use_style(foreground=command_text_fg,
-                           options=command_text_opts)
-    descstyle = _use_style(foreground=description_text_fg)
-    x = '{0: <%d}' % pad
-    commandtextpadded = x.format(commandtext)
-    if usereadline:
-        print("%s%s%s" % (commstyle(commandtextpadded),
-                          separator, descstyle(description)))
+
+    if player is None or player.username == "*Console*":
+        _readout(commandtext, description, separator, pad,
+                 command_text_fg, command_text_opts,
+                 description_text_fg, usereadline)
     else:
-        print("\033[1A%s%s%s\n" % (commstyle(commandtextpadded),
-                                   separator, descstyle(description)))
+        x = '{0: <%d}' % pad
+        commandtextpadded = x.format(commandtext)
+        message = "%s%s%s" % (commandtextpadded, separator, description)
+        player.message({"text": message, "color": "dark_purple"})
 
 
 def _secondstohuman(seconds):
@@ -906,18 +942,8 @@ def _create_chat(
     return [json.dumps(chat)]
 
 
-def get_req(something, request):
-    # This is a private function used by management.web
-    for a in request.split("/")[1:][1].split("?")[1].split("&"):
-        if a[0:a.find("=")] == something:
-            # TODO PY3 unquote not a urllib (py3) method - impacts: Web mode
-            # noinspection PyUnresolvedReferences
-            return urllib.unquote(a[a.find("=") + 1:])
-    return ""
-
-
 def _test():
-
+    # from pprint import pprint
     timecurr = time.time()
     print("Current system time:", timecurr)
     x = epoch_to_timestr(timecurr)
@@ -952,6 +978,11 @@ def _test():
     assert 'pvp' in x
     assert x['pvp'] == new_pvp
 
+    config_write_from_dict("server.properties", testpath, x)
+    y = config_to_dict_read("server.properties", testpath)
+    print("Asserting config write works")
+    assert(x == y)
+
     assert (format_bytes(1024)) == ('1', 'KiB')
     assert (format_bytes(1048576 * 2)) == ('2', 'MiB')
     assert (format_bytes(1073741824.0)) == ('1', 'GiB')
@@ -971,8 +1002,11 @@ def _test():
               "clickEvent": {}, "strikethrough": False}
 
     # test chat items
+    print("testing _handle_chat_items")
     assert _handle_chat_items(mydict) == "§f§o§l§khello"
+    print("_handle_chat_items passsed")
 
+    print("testing processcolorcodes")
     newdict = {
         "text": "", "extra": [
             {"obfuscated": False, "underlined": False, "bold": False,
@@ -991,11 +1025,21 @@ def _test():
              "text": "there", "strikethrough": False,
              "underlined": False, "italic": False}]}
 
-    assert processcolorcodes('&o&3harro &l&6there') == json.dumps(newdict)
+    print("-------------------------")
+    print(newdict)
+
+    print("-------------------------")
+
+    print(processcolorcodes('&o&3harro &l&6there'))
+    assert processcolorcodes(
+        '&o&3harro &l&6there') == newdict
+
+    print("testing processcolorcodes passed")
     assert chattocolorcodes(newdict) == "§f§f§o§3harro §3§l§6there"
 
     print("assertion tests succeeded.")
     print(epoch_to_timestr(1501437714))
+
 
 if __name__ == "__main__":
     _test()

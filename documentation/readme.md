@@ -1,21 +1,14 @@
-**Welcome to the Wrapper.py Plugin API documentation!**
+<sup>Copyright (C) 2016 - 2018 - BenBaptist and Wrapper.py developer(s).</sup>
 
-The API is divided into modules.  Click on each module to see it's documentation.
+# Welcome to the Wrapper.py docs! #
+------------------------------------------------
 
-[wrapperconfig](/documentation/wrapperconfig.rst)
+Want to write Wrapper plugins?
+- Check out our [Plugin API](/documentation/plugin_api.md) first.
+- Or maybe checkout this plugin tutorial: [How to write a plugin](/documentation/plugin_how.md)
+- Example plugins can be found [HERE](/example-plugins).
 
-[base](/documentation/base.rst)
+Want to contribute code to wrapper? see the [Contributor Guidelines](/documentation/contributor_guidelines.md)
 
-[minecraft](/documentation/minecraft.rst)
+The minecraft versions we support in Proxy mode are found [Game Versions](/documentation/minecraft_versions.md).
 
-[player](/documentation/player.rst)
-
-[world](/documentation/world.rst)
-
-[entity](/documentation/entity.rst)
-
-[backups](/documentation/backups.rst)
-
-[helpers](/documentation/helpers.rst)
-
-<br>**Click here for a list of Wrapper's events**<br>[Wrapper.py Events](/documentation/events.rst)<br>

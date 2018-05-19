@@ -17,14 +17,20 @@
     ..
 
     Player objects contains methods and data of a currently
-    logged-in player. This object is destroyed
-    upon logging off.  Most features are tied heavily to
+    logged-in player. Most features are tied heavily to
     proxy mode implementations and the proxy client instance.
+    Player creation happens at one of two points:
+     1) Proxy - at the player.preLogin event when the client first joins
+     the wrapper proxy.  It is created by core.events.py in response to
+     player.pre-Login's missing player argument.
+     2) Non-proxy - Created at the player.login event when they join the
+     local server.
 
     The player object has a self.__str___ representation that returns the
     player.username.  Therefore, plugins do not need to attempt string
     conversion or do explicit references to player.username in their code
-    (str(player) or player.username in plugin code).
+    (str(player) or player.username in plugin code). There is also an
+    additional property for getting the username: `name`
 
     When using events, events in the "proxy" (Group 'Proxy') section are only
     available in proxy mode.  "server" events (Group 'core/mcserver.py')
@@ -35,17 +41,33 @@
     
     .. code:: python
 
-        self.username
-        self.loggedIn
+        self.username  # client username on this server.
+        self.loggedIn  # time the player object logged on.
+
+        self.name  # property that returns the username
+        self.uuid  # property that returns the very best UUID available.
+        # self.uuid polls for the first UUID it finds in the list below.
+        # self.uuid is also the only uuid that is a string type
+
+        # These UUIDs are a MCUUID object.  Warning: they will not json
+        #  serialize unless you convert them to a string!
+        # To specifically get a certain uuid:
         self.mojangUuid
+        self.clientUuid  # usually = self.mojangUuid (proxy mode only)
         self.offlineUuid
+        self.serverUuid  # usually = self.offlineUuid in proxy mode.
+
+        # These are available to non-proxy mode wrappers:
         self.loginposition
         self.playereid
         self.ipaddress
 
         # proxy only
-        self.serverUuid (proxy only)
-        self.clientUuid (proxy only)
+        #-----------
+        # player.client is the player client instance.  See the
+        #  mincraft.api for getting packet constants for use with
+        self.client
+        self.clientUuid
         self.clientgameversion
         self.clientboundPackets = Packets_cb(self.clientgameversion)
         self.serverboundPackets = Packets_sb(self.clientgameversion)
@@ -63,7 +85,25 @@
     ..
 
     
+-  connect(self, ip="127.0.0.1", port=25600)
 
+        Connect to another server.  Upon calling, the client's current
+         server instance will be closed and a new server connection made
+         to the target port of another server or wrapper instance.
+
+        Any such target must be in offline-mode.
+        The player object remains valid, but is largely ignored by this
+         server.
+        The player may respawn back to this server by typing `/hub`.
+
+        :Args:
+            :port: server or wrapper port you are connecting to.
+            :ip:  the destination server ip.  Should be on your own
+             network and inaccessible to outside port forwards.
+
+        :returns: Nothing
+
+        
 -  execute(self, string)
 
         Run a command as this player. If proxy mode is not enabled,
@@ -79,91 +119,23 @@
          "execute" command.
 
         
-
--  sendCommand(self, command, args)
-
-        Sends a command to the wrapper interface as the player instance.
-        This would find a nice application with a '\sudo' plugin command.
-
-        :sample usage:
-
-            .. code:: python
-
-                player=getPlayer("username")
-                player.sendCommand("perms", ("users", "SurestTexas00", "info"))
-
-            ..
-
-        :Args:
-            :command: The wrapper (or plugin) command to execute; no
-             slash prefix
-            :args: list of arguments (I think it is a list, not a
-             tuple or dict!)
-
-        :returns: Nothing; passes command through commands.py function
-         'playercommand()'
-
-        
-
--  say(self, string)
-
-        Send a message as a player.
-
-        :arg string: message/command sent to the server as the player.
-
-        Beware: *in proxy mode, the message string is sent directly to*
-        *the server without wrapper filtering,so it could be used to*
-        *execute minecraft commands as the player if the string is*
-        *prefixed with a slash.*
-
-        
-
 -  getClient(self)
 
-        Returns the player client context.  Use at your own risk - items
-        in client are generally private or subject to change (you are
-        working with an undefined API!)... what works in this wrapper
-        version may not work in the next.
+        Deprecated - use `player.client` to Access the proxy client...
 
-        :returns: player client object (and possibly sets self.client
-         to the matching client).
+        Returns the player client context. Retained for older plugins
+        which still use it.
 
-        
+        TODO - Deprecate by wrapper version 1.5 final.
 
--  getPosition(self)
-
-        Get the players position
-        
-        :Note:  The player's position is obtained by parsing client
-         packets, which are not sent until the client logs in to 
-         the server.  Allow some time after server login to verify 
-         the wrapper has had the oppportunity to parse a suitable 
-         packet to get the information!
-        
-        :returns: a tuple of the player's current position x, y, z, 
-         and yaw, pitch of head.
-        
-        
-
--  getGamemode(self)
-
-        Get the player's current gamemode.
-        
-        :Note:  The player's Gamemode is obtained by parsing client
-         packets, which are not sent until the client logs in to 
-         the server.  Allow some time after server login to verify 
-         the wrapper has had the oppportunity to parse a suitable 
-         packet to get the information!
-         
-        :returns:  An Integer of the the player's current gamemode.
+        :returns: player client object.
 
         
-
 -  getDimension(self)
 
         Get the player's current dimension.
 
-        :Note:  The player's Dimension is obtained by parsing client
+        :Proxymode Note:  The player's Dimension is obtained by parsing client
          packets, which are not sent until the client logs in to 
          the server.  Allow some time after server login to verify 
          the wrapper has had the oppportunity to parse a suitable 
@@ -176,29 +148,106 @@
              :End: 1
 
         
+-  getFirstLogin(self)
 
--  setGamemode(self, gamemode=0)
-
-        Sets the user's gamemode.
-
-        :arg gamemode: desired gamemode, as a value 0-3
+        Returns a tuple containing the timestamp of when the user
+        first logged in for the first time, and the timezone (same
+        as time.tzname).
 
         
+-  getGamemode(self)
 
--  setResourcePack(self, url, hashrp="")
+        Get the player's current gamemode.
+        
+        :Proxymode Note:  The player's Gamemode is obtained by parsing client
+         packets, which are not sent until the client logs in to 
+         the server.  Allow some time after server login to verify 
+         the wrapper has had the oppportunity to parse a suitable 
+         packet to get the information!
+         
+        :returns:  An Integer of the the player's current gamemode.
 
-        Sets the player's resource pack to a different URL. If the
-        user hasn't already allowed resource packs, the user will
-        be prompted to change to the specified resource pack.
-        Probably broken right now.
+        
+-  getGroups(self, uuid=None)
+
+        Returns a list of permission groups that the player is in.
+
+        :arg uuid: Optional MCUUID/string UUID of a (different) player.
+
+        :returns:  list of groups
+
+        
+-  getHeldItem(self)
+
+        Returns the item object of an item currently being held.
+
+        
+-  getItemInSlot(self, slot)
+
+        :Proxymode: Returns the item object of an item currently being held.
+
+        
+-  getPosition(self)
+
+        Get the players position
+        
+        :Proxymode Note:  The player's position is obtained by parsing client
+         packets, which are not sent until the client logs in to 
+         the server.  Allow some time after server login to verify 
+         the wrapper has had the oppportunity to parse a suitable 
+         packet to get the information!
+
+        :Non-proxymode note: will still work, but the returned position will
+         be either the player's login position or where he last teleported
+         to...
+        
+        :returns: a tuple of the player's current position x, y, z, 
+         and yaw, pitch of head.
+        
+        
+-  hasGroup(self, group, uuid=None)
+
+        Returns a boolean of whether or not the player is in
+        the specified permission group.
+
+        :arg group: Group node (string)
+        :arg uuid: Optional MCUUID/string UUID of a (different) player.
+
+        :returns:  Boolean of whether player has permission or not.
+
+        
+-  hasPermission(self, node, another_player=False, group_match=True, find_child_groups=True)
+
+        If the player has the specified permission node (either
+        directly, or inherited from a group that the player is in),
+        it will return the value (usually True) of the node.
+        Otherwise, it returns False.  Using group_match and
+        find_child_groups are enabled by default.  Permissions
+        can be sped up by disabling child inheritance or even
+        group matching entirely (for high speed loops, for
+        instance).  Normally, permissions are related to
+        commands the player typed, so the 'cost' of child
+        inheritance is not a concern.
 
         :Args:
-            :url: URL of resource pack
-            :hashrp: resource pack hash
-        :return: False if not in proxy mode.
-        
-        
+            :node: Permission node (string)
+            :another_player: sending a string name of another player
+             will check THAT PLAYER's permission instead! Useful for
+             checking a player's permission for someone who is not
+             logged in and has no player object.
+            :group_match: return a permission for any group the player
+             is a member of.  If False, will only return permissions
+             player has directly.
+            :find_child_groups: If group matching, this will
+             additionally locate matches when a group contains
+             a permission that is another group's name.  So if group
+             'admin' contains a permission called 'moderator', anyone
+             with group admin will also have group moderator's
+             permissions as well.
 
+        :returns:  Boolean indicating whether player has permission or not.
+
+        
 -  isOp(self, strict=False)
 
         Check if player has Operator status. Accepts player as OP
@@ -227,45 +276,37 @@
         be required to operate permissions commands.
 
         
+-  kick(self, reason)
 
+        Kick a player with 'reason'.  Using this interface (versus the
+        console command) ensures the player receives the proper disconnect
+        messages based on whether they are in proxy mode or not.  This will
+        also allow hub players to respawn in the main wrapper server.
+
+        
 -  message(self, message="", position=0)
 
         Sends a message to the player.
 
         :Args:
-            :message: Can be text, colorcoded text, or json chat
+            :message: Can be text, colorcoded text, or chat dictionary of json.
             :position:  an integer 0-2.  2 will place it above XP bar.
              1 or 0 will place it in the chat. Using position 2 will
              only display any text component (or can be used to display
              standard minecraft translates, such as
              "{'translate': 'commands.generic.notFound', 'color': 'red'}" and
-             "{'translate': 'tile.bed.noSleep'}"
+             "{'translate': 'tile.bed.noSleep'}")
 
 
         :returns: Nothing
 
 
         
-
--  setVisualXP(self, progress, level, total)
-
-         Change the XP bar on the client's side only. Does not
-         affect actual XP levels.
-
-        :Args:
-            :progress:  Float between Between 0 and 1
-            :level:  Integer (short in older versions) of EXP level
-            :total: Total EXP.
-
-        :returns: Nothing
-
-        
-
 -  openWindow(self, windowtype, title, slots)
 
-        Opens an inventory window on the client side.  EntityHorse
-        is not supported due to further EID requirement.  *1.8*
-        *experimental only.*
+        :Proxymode: Opens an inventory window on the client side.  EntityHorse
+         is not supported due to further EID requirement.  *1.8*
+         *experimental only.*
 
         :Args:
             :windowtype:  Window Type (text string). See below
@@ -304,10 +345,166 @@
         :EntityHorse: Horse, donkey, or mule
 
         
+-  removeGroup(self, group, uuid=None)
 
+        Removes the player to a specified group.
+
+        :arg group: Group node (string)
+        :arg uuid: Optional MCUUID/string UUID of a (different) player.
+
+        :returns:  (use debug logging to see any errors)
+
+            :True: Group was found and .remove operation performed
+             (assume success if no exception raised).
+            :None: User not in group
+            :False: player uuid not found!
+
+        
+-  removePermission(self, node, uuid=None)
+
+        Completely removes a permission node from the player. They
+        will inherit this permission from their groups or from
+        plugin defaults.
+
+        If the player does not have the specific permission, an
+        IndexError is raised. Note that this method has no effect
+        on nodes inherited from groups or plugin defaults.
+
+        :arg node: Permission node (string)
+        :arg uuid: Optional MCUUID/string UUID of a (different) player.
+
+        :returns:  Boolean; True if operation succeeds, False if
+         it fails (set debug mode to see/log error).
+
+        
+-  resetPerms(self, uuid=None)
+
+
+        resets all user data (removes all permissions).
+
+        :arg uuid: Optional MCUUID/string UUID of a (different) player.
+
+        :returns:  nothing
+
+        
+-  say(self, string)
+
+        Send a message as a player.
+
+        :arg string: message/command sent to the server as the player.
+
+        Beware: *in proxy mode, the message string is sent directly to*
+        *the server without wrapper filtering,so it could be used to*
+        *execute minecraft commands as the player if the string is*
+        *prefixed with a slash (assuming the player has the permission).*
+
+        
+-  sendBlock(self, position, blockid, blockdata, sendblock=True,
+                  numparticles=1, partdata=1)
+
+        :Proxymode: Used to make phantom blocks visible ONLY to the client.
+         Sends either a particle or a block to the minecraft player's client.
+         For blocks iddata is just block id - No need to bitwise the
+         blockdata; just pass the additional block data.  The particle
+         sender is only a basic version and is not intended to do
+         anything more than send something like a barrier particle to
+         temporarily highlight something for the player.  Fancy particle
+         operations should be custom done by the plugin or someone can
+         write a nicer particle-renderer.
+
+        :Args:
+
+            :position: players position as tuple.  The coordinates must
+             be in the player's render distance or the block will appear
+             at odd places.
+
+            :blockid: usually block id, but could be particle id too.  If
+             sending pre-1.8 particles this is a string not a number...
+             the valid values are found here
+
+            :blockdata: additional block meta (a number specifying a subtype).
+
+            :sendblock: True for sending a block.
+
+            :numparticles: if particles, their numeric count.
+
+            :partdata: if particles; particle data.  Particles with
+             additional ID cannot be used ("Ironcrack").
+
+        :Valid 'blockid' values:
+         http://wayback.archive.org/web/20151023030926/https://gist.github.com/thinkofdeath/5110835
+
+        
+-  sendCommand(self, command, args)
+
+        Sends a command to the wrapper interface as the player instance.
+        This would find a nice application with a '\sudo' plugin command.
+
+        :sample usage:
+
+            .. code:: python
+
+                player=getPlayer("username")
+                player.sendCommand("perms", ("users", "SurestTexas00", "info"))
+
+            ..
+
+        :Args:
+            :command: The wrapper (or plugin) command to execute; no
+             slash prefix
+            :args: tuple/list of arguments.
+
+        :returns: Nothing; passes command through commands.py function
+         'playercommand()'.  The player will receive any player.message()
+         the command generates, if any.  Console commands in particular
+         may only show their output at the console.
+
+        
+-  setGamemode(self, gamemode=0)
+
+        Sets the user's gamemode.
+
+        :arg gamemode: desired gamemode, as a value 0-3
+
+        
+-  setGroup(self, group, creategroup=True, uuid=None)
+
+        Adds the player to a specified group.  Returns False if
+        the command fails (set debiug to see error).  Failure
+        is only normally expected if the group does not exist
+        and creategroup is False.
+
+        :Args:
+            :group: Group node (string)
+            :creategroup: If True (by default), will create the
+             group if it does not exist already.  This WILL
+             generate a warning log since it is not an expected
+             condition.
+            :uuid: Optional MCUUID/string UUID of a (different) player.
+
+        :returns:  Boolean; True if operation succeeds, False
+         if it fails (set debug mode to see/log error).
+
+        
+-  setPermission(self, node, value=True, uuid=None)
+
+        Adds the specified permission node and optionally a value
+        to the player.
+
+        :Args:
+            :node: Permission node (string)
+            :value: defaults to True, but can be set to False to
+             explicitly revoke a particular permission from the
+             player, or to any arbitrary value.
+            :uuid: Optional MCUUID/string UUID of a (different) player.
+
+        :returns: Nothing
+
+        
 -  setPlayerAbilities(self, fly)
 
-        *based on old playerSetFly (which was an unfinished function)*
+        :Proxymode: *based on old playerSetFly (which was an unfinished
+         function)*
 
         NOTE - You are implementing these abilities on the client
          side only.. if the player is in survival mode, the server
@@ -343,203 +540,35 @@
         :returns: Nothing
 
         
+-  setResourcePack(self, url, hashrp="")
 
--  sendBlock(self, position, blockid, blockdata, sendblock=True,
-                  numparticles=1, partdata=1)
-
-        Used to make phantom blocks visible ONLY to the client.  Sends
-        either a particle or a block to the minecraft player's client.
-        For blocks iddata is just block id - No need to bitwise the
-        blockdata; just pass the additional block data.  The particle
-        sender is only a basic version and is not intended to do
-        anything more than send something like a barrier particle to
-        temporarily highlight something for the player.  Fancy particle
-        operations should be custom done by the plugin or someone can
-        write a nicer particle-renderer.
+        :Proxymode: Sets the player's resource pack to a different URL. If the
+         user hasn't already allowed resource packs, the user will
+         be prompted to change to the specified resource pack.
+         Probably broken right now.
 
         :Args:
-
-            :position: players position as tuple.  The coordinates must
-             be in the player's render distance or the block will appear
-             at odd places.
-
-            :blockid: usually block id, but could be particle id too.  If
-             sending pre-1.8 particles this is a string not a number...
-             the valid values are found here
-
-            :blockdata: additional block meta (a number specifying a subtype).
-
-            :sendblock: True for sending a block.
-
-            :numparticles: if particles, their numeric count.
-
-            :partdata: if particles; particle data.  Particles with
-             additional ID cannot be used ("Ironcrack").
-
-        :Valid 'blockid' values:
-         http://wayback.archive.org/web/20151023030926/https://gist.github.com/thinkofdeath/5110835
-
+            :url: URL of resource pack
+            :hashrp: resource pack hash
+        :return: False if not in proxy mode.
         
-
--  getItemInSlot(self, slot)
-
-        Returns the item object of an item currently being held.
-
         
+-  setVisualXP(self, progress, level, total)
 
--  getHeldItem(self)
-
-        Returns the item object of an item currently being held.
-
-        
-
--  hasPermission(self, node, another_player=False, group_match=True, find_child_groups=True)
-
-        If the player has the specified permission node (either
-        directly, or inherited from a group that the player is in),
-        it will return the value (usually True) of the node.
-        Otherwise, it returns False.  Using group_match and
-        find_child_groups are enabled by default.  Permissions
-        can be sped up by disabling child inheritance or even
-        group matching entirely (for high speed loops, for
-        instance).  Normally, permissions are related to
-        commands the player typed, so the 'cost' of child
-        inheritance is not a concern.
+        :Proxymode: Change the XP bar on the client's side only. Does not
+         affect actual XP levels.
 
         :Args:
-            :node: Permission node (string)
-            :another_player: sending a string name of another player
-             will check THAT PLAYER's permission instead! Useful for
-             checking a player's permission for someone who is not
-             logged in and has no player object.
-            :group_match: return a permission for any group the player
-             is a member of.  If False, will only return permissions
-             player has directly.
-            :find_child_groups: If group matching, this will
-             additionally locate matches when a group contains
-             a permission that is another group's name.  So if group
-             'admin' contains a permission called 'moderator', anyone
-             with group admin will also have group moderator's
-             permissions as well.
-
-        :returns:  Boolean indicating whether player has permission or not.
-
-        
-
--  setPermission(self, node, value=True)
-
-        Adds the specified permission node and optionally a value
-        to the player.
-
-        :Args:
-            :node: Permission node (string)
-            :value: defaults to True, but can be set to False to
-             explicitly revoke a particular permission from the
-             player, or to any arbitrary value.
+            :progress:  Float between Between 0 and 1
+            :level:  Integer (short in older versions) of EXP level
+            :total: Total EXP.
 
         :returns: Nothing
 
         
+-  uuid(self)
 
--  removePermission(self, node)
-
-        Completely removes a permission node from the player. They
-        will inherit this permission from their groups or from
-        plugin defaults.
-
-        If the player does not have the specific permission, an
-        IndexError is raised. Note that this method has no effect
-        on nodes inherited from groups or plugin defaults.
-
-        :arg node: Permission node (string)
-
-        :returns:  Boolean; True if operation succeeds, False if
-         it fails (set debug mode to see/log error).
-
-        
-
--  resetPerms(self, uuid)
-
-
-        resets all user data (removes all permissions).
-
-        :arg uuid: The online/mojang uuid (string)
-
-        :returns:  nothing
-
-        
-
--  hasGroup(self, group)
-
-        Returns a boolean of whether or not the player is in
-        the specified permission group.
-
-        :arg group: Group node (string)
-
-        :returns:  Boolean of whether player has permission or not.
-
-        
-
--  getGroups(self)
-
-        Returns a list of permission groups that the player is in.
-
-        :returns:  list of groups
-
-        
-
--  setGroup(self, group, creategroup=True)
-
-        Adds the player to a specified group.  Returns False if
-        the command fails (set debiug to see error).  Failure
-        is only normally expected if the group does not exist
-        and creategroup is False.
-
-        :Args:
-            :group: Group node (string)
-            :creategroup: If True (by default), will create the
-             group if it does not exist already.  This WILL
-             generate a warning log since it is not an expected
-             condition.
-
-        :returns:  Boolean; True if operation succeeds, False
-         if it fails (set debug mode to see/log error).
-
-        
-
--  removeGroup(self, group)
-
-        Removes the player to a specified group.
-
-        :arg group: Group node (string)
-
-        :returns:  (use debug logging to see any errors)
-
-            :True: Group was found and .remove operation performed
-             (assume success if no exception raised).
-            :None: User not in group
-            :False: player uuid not found!
-
-        
-
--  getFirstLogin(self)
-
-        Returns a tuple containing the timestamp of when the user
-        first logged in for the first time, and the timezone (same
-        as time.tzname).
-
-        
-
--  connect(self, address, port)
-
-        Upon calling, the player object will become defunct and
-        the client will be transferred to another server or wrapper
-        instance (provided it has online-mode turned off).
-
-        :Args:
-            :address: server address (local address)
-            :port: server port (local port)
-
-        :returns: Nothing
-
+        @property
+        Return the very best UUID available as a string, with
+        the goal of never returning improper things like False and None.
         

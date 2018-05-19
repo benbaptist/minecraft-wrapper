@@ -4,19 +4,20 @@
 # https://github.com/benbaptist/minecraft-wrapper
 # This program is distributed under the terms of the GNU
 # General Public License, version 3 or later.
+from pprint import pprint
 
-import random
 import time
 import json
 
+import core.buildinfo as buildinfo
 from api.helpers import format_bytes, getargs, getargsafter, readout
-from api.helpers import get_int, set_item, putjsonfile
+from api.helpers import get_int, set_item, getjsonfile, putjsonfile
 # noinspection PyProtectedMember
 from api.helpers import _secondstohuman, _showpage
 from utils.crypt import get_passphrase
 
 
-# noinspection PyBroadException
+# noinspection PyBroadException,PyMethodMayBeStatic
 class Commands(object):
 
     def __init__(self, wrapper):
@@ -55,74 +56,68 @@ class Commands(object):
         command = str(payload["command"]).lower()
         commandtext = "/%s %s" % (command, " ".join(payload["args"]))
         player.message(commandtext)
-        self.log.info("%s executed: %s", payload["player"], commandtext)
+        if command not in ("password", "othersensitivecommand"):
+            self.log.info("%s executed: %s", payload["player"], commandtext)
 
-        # We should get of this by creating a wrapper command registering set
-
-        # make sure any command returns a True-ish item, or the
-        # chat packet will continue to the server
+        # We should get out of this by creating a wrapper command registering set # noqa
 
         if command in ("plugins", "pl"):
             self.command_plugins(player)
-            return True
+            return
+
+        # some minecraft commands (like op, ban, kick) will have implementations
+        # that should vary based on whether proxymode is enabled and are
+        # defined here to supercede the minecraft version.
+        # all commands here override their Minecraft equivalent.
 
         elif command == "op":
-            self.command_op(player, payload)
-            return True
+            return self.command_op(player, payload)
 
         elif command == "deop":
-            self.command_deop(player, payload)
-            return True
+            return self.command_deop(player, payload)
+
+        elif command == "kick":
+            return self.command_kick(player, payload)
+
+        elif command == "whitelist":
+            return self.command_whitelist(player, payload)
 
         elif command == "wrapper":
-            self.command_wrapper(player, payload)
-            return True
+            return self.command_wrapper(player, payload)
 
         elif command == "reload":
-            self.command_reload(player, payload)
-            return True
+            return self.command_reload(player, payload)
 
         elif command in ("help", "?"):
-            self.command_help(player, payload)
-            return True
+            return self.command_help(player, payload)
 
         elif command == "playerstats":
-            self.command_playerstats(player, payload)
-            return True
+            return self.command_playerstats(player, payload)
 
         elif command in ("permissions", "perm", "perms", "super"):
-            self.command_perms(player, payload)
-            return True
+            return self.command_perms(player, payload)
 
         elif command in ("ent", "entity", "entities"):
-            self.command_entities(player, payload)
-            return True
+            return self.command_entities(player, payload)
 
         elif command in (
                 "config", "con", "prop", "property", "properties"):
-            self.command_setconfig(player, payload)
-            return True
+            return self.command_setconfig(player, payload)
 
-        elif command == "ban":
-            self.command_banplayer(player, payload)
-            return True
+        elif self.wrapper.proxymode and command == "ban":
+            return self.command_banplayer(player, payload)
 
-        elif command == "pardon":
-            self.command_pardon(player, payload)
-            return True
+        elif self.wrapper.proxymode and command == "pardon":
+            return self.command_pardon(player, payload)
 
-        elif command == "ban-ip":
-            self.command_banip(player, payload)
-            return True
+        elif self.wrapper.proxymode and command == "ban-ip":
+            return self.command_banip(player, payload)
 
-        elif command == "pardon-ip":
-            self.command_pardonip(player, payload)
-            return True
+        elif self.wrapper.proxymode and command == "pardon-ip":
+            return self.command_pardonip(player, payload)
 
         elif command == "password":
-            self.command_password(player, payload)
-            return True
-
+            return self.command_password(player, payload)
         # This section calls the commands defined by api.registerCommand()
         for pluginID in self.commands:
             command = payload["command"]
@@ -151,7 +146,7 @@ class Commands(object):
                         player.message(
                             {"translate": "commands.generic.permission",
                              "color": "red"})
-                    return True
+                    return
                 except Exception as e:
                     self.log.exception(
                         "Plugin '%s' errored out when executing command:"
@@ -161,12 +156,28 @@ class Commands(object):
                         {"text": "An internal error occurred in wrapper"
                          "while trying to execute this command. Apologies.",
                          "color": "red"})
-                    return True
+                    return
 
-        # Changed the polarity to make sense and allow commands to have
-        # return values.  Returning False here will mean no plugin or
-        # wrapper command was parsed (so it passes to server).
-        return False
+        # command was not executed by werapper, so try server.
+        player.execute(commandtext)
+
+    def command_sample(self, player, payload):
+        # just a sample command as a pattern for new commands
+        """
+        :args:
+            :player: is the calling player object, equivalent to
+             payload['player']
+
+            :payload: dictionary of:
+                :args: ["list, "of", "all", "args"]
+                :player: caller player object
+                :command: type:string = the command that was called
+                :playername: - additional argument when run from in-game
+                 (proxy mode)?
+        """
+        if not self._superop(player, 3):
+            return False
+        pprint(payload)
 
     def command_setconfig(self, player, payload):
         # only allowed for console and SuperOP 10
@@ -291,7 +302,10 @@ class Commands(object):
             returnmessage = self.wrapper.proxy.pardonname(playername)
 
         if returnmessage[:8] == "pardoned":
-            player.message({"text": "player %s unbanned!" %
+            player.message({"text": "player %s unbanned!  You must restart "
+                                    "the server for this to take effect on the "
+                                    "Local server. Proxy should respect this "
+                                    "Starting NOW." %
                                     playername, "color": "yellow"})
         else:
             player.message({"text": "player unban %s failed!" %
@@ -309,7 +323,10 @@ class Commands(object):
 
         returnmessage = self.wrapper.proxy.pardonip(ipaddress)
         if returnmessage[:8] == "pardoned":
-            player.message({"text": "IP address %s unbanned!" %
+            player.message({"text": "IP address %s unbanned!  You must restart "
+                                    "the server for this to take effect on the "
+                                    "Local server. Proxy should respect this "
+                                    "Starting NOW." %
                                     ipaddress, "color": "yellow"})
         else:
             player.message({"text": "IP unban %s failed!" %
@@ -321,7 +338,6 @@ class Commands(object):
         if not self._superop(player, 5):
             player.message("&cPermission Denied")
             return False
-
         if not self.wrapper.proxymode:
             player.message(
                 "&cProxy mode is off - Entity control is not enabled.")
@@ -332,7 +348,8 @@ class Commands(object):
             readout("ERROR - ",
                     "No entity code found. (no proxy/server started?)",
                     separator="", pad=10,
-                    usereadline=self.wrapper.use_readline)
+                    usereadline=self.wrapper.use_readline,
+                    player=player)
             return
         commargs = payload["args"]
         if len(commargs) < 1:
@@ -383,23 +400,41 @@ class Commands(object):
         if len(getargs(payload["args"], 0)) > 0:
             subcommand = getargs(payload["args"], 0)
             if subcommand == "update":
-                player.message({"text": "Checking for new Wrapper.py updates...", "color": "yellow"})
+                player.message(
+                    {"text": "Checking for new Wrapper.py updates...",
+                     "color": "yellow"}
+                )
                 update = self.wrapper.get_wrapper_update_info()
                 if update:
-                    version, build, repotype = update
-                    player.message("&bNew Wrapper.py Version %s (Build #%d) available!)" %
-                                   (".".join([str(_) for _ in version]), build))
-                    player.message("&bYou are currently on %s." % self.wrapper.getbuildstring())
+                    version, repotype, reponame = update
+                    build = version[4]
+
+                    player.message(
+                        "New Wrapper.py %s version %s is available! (current "
+                        "build is #%s)" % (
+                            repotype, version, buildinfo.__version__  # noqa
+                        )
+                    )
                     player.message("&aPerforming update...")
-                    if self.wrapper.performupdate(version, build, repotype):
-                        player.message("&aUpdate completed! Version %s #%d (%s) is now installed. "
-                                       "Please reboot Wrapper.py to apply changes." % (version, build, repotype))
+                    if self.wrapper.performupdate(version, reponame):
+                        player.message(
+                            "&aUpdate completed! Version %s #%d (%s) is now "
+                            "installed. Please reboot Wrapper.py to apply "
+                            "changes." % (version, build, repotype)
+                        )
                     else:
-                        player.message("&cAn error occured while performing update.")
-                        player.message("&cPlease check the Wrapper.py console as soon as possible "
-                                       "for an explanation and traceback.")
-                        player.message("&cIf you are unsure of the cause, please file a bug report "
-                                       "on http://github.com/benbaptist/minecraft-wrapper with the traceback.")
+                        player.message(
+                            "&cAn error occured while performing update."
+                        )
+                        player.message(
+                            "&cPlease check the Wrapper.py console as soon as "
+                            "possible for an explanation and traceback."
+                        )
+                        player.message(
+                            "&cIf you are unsure of the cause, please file a "
+                            "bug report on http://github.com/benbaptist/minecra"
+                            "ft-wrapper with the traceback."
+                        )
                 else:
                     player.message("&cNo new Wrapper.py versions available.")
             elif subcommand == "halt":
@@ -409,13 +444,21 @@ class Commands(object):
                 server_bytes = self.wrapper.javaserver.getmemoryusage()
                 if server_bytes:
                     amount, units = format_bytes(server_bytes)
-                    player.message("&cServer Memory: %s %s (%s bytes)" % (amount, units, server_bytes))
+                    player.message(
+                        "&cServer Memory: %s %s (%s bytes)" % (
+                            amount, units, server_bytes
+                        )
+                    )
                 else:
-                    player.message("&cError: Couldn't retrieve memory usage for an unknown reason")
-            elif subcommand == "random":
-                player.message("&cRandom number: &a%d" % random.randrange(0, 99999999))
+                    player.message(
+                        "&cError: Couldn't retrieve memory usage for an "
+                        "unknown reason"
+                    )
         else:
-            player.message({"text": "Wrapper.py Version %s" % buildstring, "color": "gray", "italic": True})
+            player.message(
+                {"text": "Wrapper.py Version %s" % buildstring,
+                 "color": "gray", "italic": True}
+            )
         return
 
     def command_reload(self, player, payload):
@@ -424,6 +467,7 @@ class Commands(object):
             return False
 
         if getargs(payload["args"], 0) == "server":
+            # payload = {"args": ""}
             return
         try:
             self.wrapper.plugins.reloadplugins()
@@ -477,7 +521,8 @@ class Commands(object):
                         "clickEvent": {
                             "action": "run_command",
                             "value": "%shelp Minecraft %d" % (
-                                self.wrapper.servervitals.command_prefix, page + 2)
+                                self.wrapper.servervitals.command_prefix,
+                                page + 2)
                         }
                     }, {
                         "text": " "
@@ -495,7 +540,8 @@ class Commands(object):
                             # i is each help item, like:
                             # ('/bmlist', 'List bookmark names', None)
                             for i in group:
-                                command, args, permission = i[0].split(" ")[0], "", None
+                                command, args, permission = i[0].split(
+                                    " ")[0], "", None
                                 if len(i[0].split(" ")) > 1:
                                     # if there are args after the command
                                     args = getargsafter(i[0].split(" "), 1)
@@ -504,7 +550,7 @@ class Commands(object):
                                 if not player.hasPermission(i[2]):
                                     if player.isOp():
                                         permission = {
-                                            "text": "You do not have permission to"
+                                            "text": "You do not have permission to"  # noqa
                                                     " use this command.",
                                             "color": "gray", "italic": True
                                         }
@@ -522,8 +568,9 @@ class Commands(object):
                                         })
                                     continue
                                 if len(i) > 1 and player.isOp():
-                                    permission = {"text": "Requires permission '%s'." % i[2],
-                                                  "color": "gray", "italic": True}
+                                    permission = {"text": "Requires permission '%s'." % i[2],  # noqa
+                                                  "color": "gray",
+                                                  "italic": True}
                                 items.append({
                                     "text": "",
                                     "extra": [{
@@ -531,7 +578,9 @@ class Commands(object):
                                         "color": "gold",
                                         "clickEvent": {
                                             "action": "suggest_command",
-                                            "value": "%s%s" % (self.wrapper.servervitals.command_prefix, command[1:])
+                                            "value": "%s%s" % (
+                                                self.wrapper.servervitals.command_prefix,  # noqa
+                                                command[1:])
                                         },
                                         "hoverEvent": {
                                             "action": "show_text",
@@ -549,14 +598,16 @@ class Commands(object):
                                 items.append({
                                     "text": "",
                                     "extra": [{
-                                        "text": "No permission to run any of these commands",
+                                        "text": "No permission to run any of these commands",  # noqa
                                         "color": "gray",
                                         "italic": "true",
 
                                     }]
                                 })
-                            _showpage(player, page, items, "help %s" % groupname, 4,
-                                      command_prefix=self.wrapper.servervitals.command_prefix)
+                            _showpage(
+                                player, page, items, "help %s" % groupname,
+                                4,
+                                command_prefix=self.wrapper.servervitals.command_prefix)  # noqa
                             return
                 player.message("&cThe help group '%s' does not exist." % group)
 
@@ -601,7 +652,8 @@ class Commands(object):
                             "text": " - " + shortdesc
                         }]
                 })
-            _showpage(player, page, items, "help", 8, command_prefix=self.wrapper.servervitals.command_prefix)
+            _showpage(player, page, items, "help", 8,
+                      command_prefix=self.wrapper.servervitals.command_prefix)
         return False
 
     def command_password(self, player, payload):
@@ -647,7 +699,8 @@ class Commands(object):
         if not player.isOp() > 3:
             player.message("&cPermission Denied")
             return
-
+        # this, like all commands, is being run in a thread.
+        player.message("&ePlease wait as I research this..", position=2)
         subcommand = getargs(payload["args"], 0)
         totalplaytime = {}
         players = self.wrapper.api.minecraft.getAllPlayers()
@@ -682,6 +735,178 @@ class Commands(object):
                     break
         return
 
+    def command_kick(self, player, payload):
+        if not self._superop(player, 3):
+            return False
+        player_name = getargs(payload["args"], 0)
+        all_args = getargsafter(payload["args"], 1)
+        if all_args == "":
+            reason = {'translate': 'multiplayer.disconnect.kicked'}
+        else:
+            reason = {'translate': 'multiplayer.disconnect.kicked',
+                      'text': all_args}
+
+        self.wrapper.javaserver.kick_player(player_name, reason)
+
+    def command_whitelist(self, player, payload):
+        if player.isOp() < 3:
+            return False
+        wl_commands = {
+            "add": self._command_whitelist_add,
+            "list": self._command_whitelist_list,
+            "off": self._command_whitelist_off,
+            "on": self._command_whitelist_on,
+            "reload": self._command_whitelist_reload,
+            "remove": self._command_whitelist_remove,
+            "offline": self._command_whitelist_offline,
+            "online": self._command_whitelist_online,
+        }
+        wl_comm = getargs(payload["args"], 0)
+        wl_arg = getargs(payload["args"], 1)
+        if wl_comm in wl_commands:
+            wl_commands[wl_comm](player, wl_arg)
+        else:
+            player.message(
+                {"text": 'Usage: /whitelist <on|off|list|add|remove|reload>',
+                 'color': 'white'})
+            player.message(
+                {"text": 'Additional Proxy mode Usage: \n       /whitelist on'
+                         'line - Convert whitelist to online uuids (turns off '
+                         'Proxy and restarts wrapper)\n       /whi'
+                         'telist offline - Convert whitelist to offline uuids '
+                         '(wrapper will attempt to start the proxy)',
+                 'color': 'yellow'})
+
+    def _command_whitelist_add(self, player, arg):
+        if not self.wrapper.proxymode:
+            player.execute("whitelist add %s" % arg)
+            player.message("..Working.  Server may lag.")
+            player.message()
+            return
+        whitelist = getjsonfile(
+            "whitelist", self.wrapper.serverpath, self.wrapper.encoding
+        )
+        online_uuid = self.wrapper.uuids.getuuidbyusername(arg).string
+
+        if online_uuid in (None, False):
+            player.message("&c INVALID NAME")
+            return
+        proper_spelled = self.wrapper.uuids.getusernamebyuuid(online_uuid)
+        off_line = self.wrapper.uuids.getuuidfromname(proper_spelled).string
+
+        add_record = True
+        for index, entry in enumerate(whitelist):
+            # Name is already there; just update uuid
+            if whitelist[index]["name"] == proper_spelled:
+                whitelist[index]["uuid"] = off_line
+                add_record = False
+                break
+            # uuid is correct offline; make sure name matches
+            elif whitelist[index]["uuid"] == off_line:
+                whitelist[index]["name"] = proper_spelled
+                add_record = False
+                break
+            # uuid is online version; correct to offline and edit username
+            elif whitelist[index]["uuid"] == online_uuid:
+                whitelist[index]["uuid"] = off_line
+                whitelist[index]["name"] = proper_spelled
+                add_record = False
+                break
+
+        if add_record:
+            jsonitem = {"uuid": off_line, "name": proper_spelled}
+            whitelist.append(jsonitem)
+
+        putjsonfile(whitelist, "whitelist", self.wrapper.serverpath,)
+        player.message("Done!")
+        player.execute("whitelist reload")
+
+    def _command_whitelist_list(self, player, _arg):
+        player.execute("whitelist list")
+
+    def _command_whitelist_off(self, player, _arg):
+        player.execute("whitelist off")
+
+    def _command_whitelist_on(self, player, _arg):
+        player.execute("whitelist on")
+
+    def _command_whitelist_reload(self, player, _arg):
+        player.execute("whitelist reload")
+
+    def _command_whitelist_remove(self, player, arg):
+        player.execute("whitelist remove %s" % arg)
+        player.execute("whitelist reload")
+
+    def _command_whitelist_offline(self, player, _arg):
+        world = self.wrapper.api.minecraft.getWorldName()
+        curr_wd = "%s/%s" % (self.wrapper.serverpath, world)
+        if not world:
+            player.message("No server world found, so UUID's not converted...")
+        whitelist = getjsonfile(
+            "whitelist", self.wrapper.serverpath, self.wrapper.encoding
+        )
+        for index, entry in enumerate(whitelist):
+            onlineuuid = self.wrapper.uuids.getuuidbyusername(
+                whitelist[index]["name"])
+            if not onlineuuid:
+                player.message(
+                    "Could not find Mojangs entry for %s" % whitelist[index][
+                        "name"])
+                player.message("&cSkipped!")
+                continue
+            correctnamed = self.wrapper.uuids.getusernamebyuuid(
+                onlineuuid.string)
+            whitelist[index]["name"] = correctnamed
+            newuuid = self.wrapper.uuids.getuuidfromname(correctnamed).string
+            whitelist[index]["uuid"] = newuuid
+            if world:
+                self.wrapper.uuids.convert_files(onlineuuid, newuuid, curr_wd)
+        putjsonfile(whitelist, "whitelist", self.wrapper.serverpath)
+
+        # This part will convert files in wrapper's player cache, irresp. of whitelist  # noqa
+        player.message("Converting cached UUID files...")
+        if world:
+            self.wrapper.uuids.convert_user(self.wrapper.serverpath, world,
+                                            onlinemode=False)
+        player.message("Done!")
+        player.execute("whitelist reload")
+
+        self.wrapper.api.minecraft.changeServerProps("online-mode", False)
+        self.wrapper.javaserver.restart()
+        player.message("Attempting to re-start the proxy (server is in"
+                       "offline mode now.")
+        self.wrapper.enable_proxymode()
+
+    def _command_whitelist_online(self, player, _arg):
+        uuidlist = []
+        whitelist = getjsonfile(
+            "whitelist", self.wrapper.serverpath, self.wrapper.encoding
+        )
+        for index, entry in enumerate(whitelist):
+            newuuid = self.wrapper.uuids.getuuidbyusername(
+                whitelist[index]["name"])
+            if newuuid:
+                uuidlist.append(newuuid.string)
+                whitelist[index]["uuid"] = newuuid.string
+        putjsonfile(whitelist, "whitelist", self.wrapper.serverpath, )
+        player.message("Converting UUID files...")
+        world = self.wrapper.api.minecraft.getWorldName()
+        if world:
+            self.wrapper.uuids.convert_user(self.wrapper.serverpath, world,
+                                            uuid_=uuidlist, onlinemode=True)
+        else:
+            player.message("No server world found, so UUID's not converted...")
+        player.message("Done!")
+        player.execute("whitelist reload")
+        self.wrapper.api.minecraft.changeServerProps("online-mode", True)
+        restartmess = "The server is now going to online mode."
+        player.kick(restartmess)
+        self.wrapper.javaserver.restart(restartmess)
+        if self.wrapper.proxymode:
+            self.log.info("Wrapper must shutdown to fully close the Proxy.")
+            self.wrapper.disable_proxymode()
+            self.wrapper.shutdown()
+
     def command_deop(self, player, payload):
         # if player is None:
         #    player = self.wrapper.xplayer
@@ -710,9 +935,6 @@ class Commands(object):
             return "deop requires a running server instance"
 
     def command_op(self, player, payload):
-        # if player is None:  This is a security vulnerability.  console is
-        # already set to an xplayer
-        #    player = self.wrapper.xplayer
         if not self._superop(player, 9):
             return False
 
@@ -723,9 +945,14 @@ class Commands(object):
         offline_mode = "-o" in flags
 
         new_operator_name = getargs(payload["args"], 0)
-        valid_uuid = self.wrapper.uuids.getuuidbyusername(new_operator_name)
+        if new_operator_name == "":
+            player.message({'with': [{'translate': 'commands.op.usage'}],
+                            'translate': 'commands.generic.usage',
+                            'color': 'red'})
+            return
 
-        if not offline_mode and valid_uuid is None:
+        valid_uuid = self.wrapper.uuids.getuuidbyusername(new_operator_name)
+        if not offline_mode and valid_uuid in (None, False):
             player.message(
                 "&c'%s' is not a valid player name!" % new_operator_name)
             return False
@@ -749,7 +976,6 @@ class Commands(object):
 
         if superop and superlevel > 4:
             superlevel = max(5, superlevel)
-
         # 2 = make sure server STARTED
         if self.wrapper.servervitals.state == 2:
             self.wrapper.javaserver.console("op %s" % name)
@@ -777,7 +1003,6 @@ class Commands(object):
                 player.message("&6Ops.json file saved ok.")
             else:
                 player.message("&cSomething went wrong writing ops.json.")
-
         # update the superops.txt file
         if superop:
             set_item(name, superlevel, "superops.txt")
@@ -801,7 +1026,7 @@ class Commands(object):
             if subcommand in ("group", "groups", "gr", "g"):
                 player.message("&2/perms group <groupname> ...")
                 player.message("&2  new/info -create new group / get info")
-                player.message("&2  set <node> <value>  -set a perm for this group")
+                player.message("&2  set <node> <value>  -set a perm for this group")  # noqa
                 player.message("&2  delete -deletes the group entirely")
                 player.message("&2  remove <node> -just remove a node")
 
@@ -809,11 +1034,11 @@ class Commands(object):
                 player.message("&2/perms user <player> ...")
                 player.message("&2  info -display permissions for a player")
                 player.message("&2  group <group> -assign player to <group>")
-                player.message("&2  group <group> remove -remove player from <group>")
-                player.message("&2  set <node> <value>  -set a perm for this player")
-                player.message("&2  remove <node>  -remove perm <node> for this player")
+                player.message("&2  group <group> remove -remove player from <group>")  # noqa
+                player.message("&2  set <node> <value>  -set a perm for this player")  # noqa
+                player.message("&2  remove <node>  -remove perm <node> for this player")  # noqa
             else:
-                player.message("&2The primary subcommands are group, user, RESET")
+                player.message("&2The primary subcommands are group, user, RESET")  # noqa
                 player.message("&2Help with groups use: /perms help groups")
                 player.message("&2Help with users use: /perms help users")
 
@@ -854,7 +1079,8 @@ class Commands(object):
                 for uuid in self.wrapper.wrapper_permissions.Data["users"]:
                     if group in self.wrapper.wrapper_permissions.Data[
                             "users"][uuid]["groups"]:
-                        player.message("%s: &2%s" % (self.wrapper.uuids.getusernamebyuuid(uuid), uuid))
+                        player.message("%s: &2%s" % (
+                            self.wrapper.uuids.getusernamebyuuid(uuid), uuid))
                 player.message("&aPermissions for the group '%s':" % group)
                 for node in self.wrapper.wrapper_permissions.Data[
                         "groups"][group]["permissions"]:
@@ -868,8 +1094,9 @@ class Commands(object):
                         player.message("- %s: &7%s" % (node, value))
             else:
                 player.message("&6List of groups:&b %s" %
-                               ", ".join(self.wrapper.wrapper_permissions.Data["groups"]))
-                usage("groups <groupName> [new|delete(group)|info]/[set|remove(node) <node> <value>]")
+                               ", ".join(self.wrapper.wrapper_permissions.Data["groups"]))  # noqa
+                usage("groups <groupName> [new|delete(group)"
+                      "|info]/[set|remove(node) <node> <value>]")
                 player.message("&cTry '/perms help groups' for more info...")
 
         elif command in ("user", "users"):
@@ -899,7 +1126,7 @@ class Commands(object):
                 node = getargs(payload["args"], 3)
                 value = getargsafter(payload["args"], 4)
                 if len(node) > 0:
-                    call_result = self.perms.set_permission(str(uuid), node, value)
+                    call_result = self.perms.set_permission(str(uuid), node, value)  # noqa
                     player.message("&a%s" % call_result)
                 else:
                     usage("users %s set <permissionNode> [value]" % username)
@@ -914,10 +1141,11 @@ class Commands(object):
 
             elif subcommand == "info":
                 player.message("&aUser '%s' is in these groups: " % username)
-                for group in self.wrapper.wrapper_permissions.Data["users"][str(uuid)]["groups"]:
+                for group in self.wrapper.wrapper_permissions.Data["users"][str(uuid)]["groups"]:  # noqa
                     player.message("- %s" % group)
                 player.message(
-                    "&aUser '%s' is granted these individual permissions (not including permissions inherited from groups): " % username)
+                    "&aUser '%s' is granted these individual permissions (not "
+                    "including permissions inherited from groups): " % username)
                 for node in self.wrapper.wrapper_permissions.Data[
                         "users"][str(uuid)]["permissions"]:
                     value = self.wrapper.wrapper_permissions.Data[
@@ -933,17 +1161,19 @@ class Commands(object):
                 player.message("&cTry '/perms help users' for more info...")
 
         elif command == "RESET":
-            if self.reset_confirmed and ((time.time() - self.reset_timeout) < 30):
+            if self.reset_confirmed and ((time.time() - self.reset_timeout) < 30):  # noqa
                 self.perms.clear_group_data()
                 self.perms.clear_user_data()
                 self.reset_confirmed = False
-                player.message("&cGroup and player permissions have been cleared!")
+                player.message("&cGroup and player permissions have been cleared!")  # noqa
             else:
                 self.reset_timeout = time.time()
                 self.reset_confirmed = True
                 player.message("&cARE YOU SURE?")
-                player.message("&cThis will delete all groups and clear all user permissions!")
-                player.message("Confirm your intent by running '/perms RESET' again within 30 seconds.")
+                player.message("&cThis will delete all groups and clear "
+                               "all user permissions!")
+                player.message("Confirm your intent by running '/perms "
+                               "RESET' again within 30 seconds.")
         else:
             self.reset_confirmed = False
             usage("<help/groups/users/RESET> (Note: RESET is case-sensitive!)")

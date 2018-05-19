@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2016, 2017 - BenBaptist and Wrapper.py developer(s).
+# Copyright (C) 2016 - 2018 - BenBaptist and Wrapper.py developer(s).
 # https://github.com/benbaptist/minecraft-wrapper
 # This program is distributed under the terms of the GNU
 # General Public License, version 3 or later.
 
 import time
-import json
 import threading
+import pprint
 
 from proxy.packets.mcpackets_cb import Packets as Packets_cb
 from proxy.packets.mcpackets_sb import Packets as Packets_sb
@@ -64,14 +64,20 @@ class Player(object):
     ..
 
     Player objects contains methods and data of a currently
-    logged-in player. This object is destroyed
-    upon logging off.  Most features are tied heavily to
+    logged-in player. Most features are tied heavily to
     proxy mode implementations and the proxy client instance.
+    Player creation happens at one of two points:
+     1) Proxy - at the player.preLogin event when the client first joins
+     the wrapper proxy.  It is created by core.events.py in response to
+     player.pre-Login's missing player argument.
+     2) Non-proxy - Created at the player.login event when they join the
+     local server.
 
     The player object has a self.__str___ representation that returns the
     player.username.  Therefore, plugins do not need to attempt string
     conversion or do explicit references to player.username in their code
-    (str(player) or player.username in plugin code).
+    (str(player) or player.username in plugin code). There is also an
+    additional property for getting the username: `name`
 
     When using events, events in the "proxy" (Group 'Proxy') section are only
     available in proxy mode.  "server" events (Group 'core/mcserver.py')
@@ -82,17 +88,33 @@ class Player(object):
     
     .. code:: python
 
-        self.username
-        self.loggedIn
+        self.username  # client username on this server.
+        self.loggedIn  # time the player object logged on.
+
+        self.name  # property that returns the username
+        self.uuid  # property that returns the very best UUID available.
+        # self.uuid polls for the first UUID it finds in the list below.
+        # self.uuid is also the only uuid that is a string type
+
+        # These UUIDs are a MCUUID object.  Warning: they will not json
+        #  serialize unless you convert them to a string!
+        # To specifically get a certain uuid:
         self.mojangUuid
+        self.clientUuid  # usually = self.mojangUuid (proxy mode only)
         self.offlineUuid
+        self.serverUuid  # usually = self.offlineUuid in proxy mode.
+
+        # These are available to non-proxy mode wrappers:
         self.loginposition
         self.playereid
         self.ipaddress
 
         # proxy only
-        self.serverUuid (proxy only)
-        self.clientUuid (proxy only)
+        #-----------
+        # player.client is the player client instance.  See the
+        #  mincraft.api for getting packet constants for use with
+        self.client
+        self.clientUuid
         self.clientgameversion
         self.clientboundPackets = Packets_cb(self.clientgameversion)
         self.serverboundPackets = Packets_sb(self.clientgameversion)
@@ -112,47 +134,50 @@ class Player(object):
     """
 
     def __init__(self, username, wrapper):
+        """
+        :UUIDS:
+            All uuids are wrapper's MCUUID objects.  If being used in a string
+            context, they must be used with the *.string property (or str()
+            explicitly):
+                player.mojangUuid.string
+                player.mojangUuis.__str__
+                str(player.mojangUuid)
+
+            The only exception to this is the `uuid` property, which is always
+             a string.
+
+            :uuid (property, string): This will pull the best uuid
+             available in this order-
+            :1) mojangUuid: The bought and paid Mojand UUID.  Never changes and
+             is the prefered way to ID player keys.
+            :2) offlineUuid: A MD5 hash of "OfflinePlayer:%s" % username
+            :3) clientUuid: What the client believes is the uuid.  If
+             Wrapper is online, this should be the same as mojangUuid.
+            :4) serverUuid: The player's local uuid on the server,
+             usually the same as offline uuid.
+
+        :param username:
+        :param wrapper:
+        """
 
         self.wrapper = wrapper
         self.javaserver = wrapper.javaserver
         self.log = wrapper.log
-
         self.username = username
         self.loggedIn = time.time()
 
-        # TODO - clean this out.  let player objects GC with their client?
         # mcserver will set this to false later to close the thread.
         self.abort = False
+        self.data = None
         # meanwhile, it still needs to respect wrapper halts
-        self.wrapper_signal = self.wrapper.halt
+        self.wrapper_signal = self.wrapper.haltsig
+        self.kick_nonproxy_connects = self.wrapper.config["Proxy"][
+            "disconnect-nonproxy-connections"]
 
-        # these are all MCUUID objects.. I have separated out various
-        #  uses of uuid to clarify for later refractoring
-        # ---------------
-        # Mojang uuid - the bought and paid Mojand UUID.  Never
-        # changes- our one constant point of reference per player.
-        # offline uuid - created as a MD5 hash of "OfflinePlayer:%s" % username
-        # client uuid - what the client stores as the uuid (should be
-        # the same as Mojang?) The player.uuid used by old api (and
-        # internally here).
-        # server uuid = the local server uuid... used to reference
-        # the player on the local server.  Could be same as Mojang UUID
-        # if server is in online mode or same as offline if server is
-        # in offline mode (proxy mode).
-        # *******************
-
-        # This can be False if cache (and requests) Fail... bad name or
-        # bad Mojang service connection.
-        self.mojangUuid = self.wrapper.uuids.getuuidbyusername(username)
-
-        # IF False error carries forward, this is not a valid player,
-        # for whatever reason...
-        self.clientUuid = self.mojangUuid
-
+        self.mojangUuid = False
+        self.clientUuid = False
         # These two are offline by default.
         self.offlineUuid = self.wrapper.uuids.getuuidfromname(self.username)
-        # Start out as the Offline -
-        # change it to Mojang if local server is Online
         self.serverUuid = self.offlineUuid
 
         self.ipaddress = "127.0.0.0"
@@ -161,8 +186,8 @@ class Player(object):
 
         self.client = None
         self.clientgameversion = self.wrapper.servervitals.protocolVersion
-        self.clientboundPackets = Packets_cb(self.clientgameversion)
-        self.serverboundPackets = Packets_sb(self.clientgameversion)
+        self.cbpkt = Packets_cb(self.clientgameversion)
+        self.sbpkt = Packets_sb(self.clientgameversion)
 
         self.playereid = None
 
@@ -182,28 +207,44 @@ class Player(object):
             for client in self.wrapper.servervitals.clients:
                 if client.username == self.username:
                     self.client = client
-                    # Both MCUUID objects
-                    self.clientUuid = client.uuid
-                    self.serverUuid = client.serveruuid
-
+                    self.clientUuid = client.wrapper_uuid
+                    self.serverUuid = client.local_uuid
+                    self.mojangUuid = client.mojanguuid
                     self.ipaddress = client.ip
 
-                    # pktSB already set to self.wrapper.servervitals.protocolVersion
+                    # pktSB already set to self.wrapper.servervitals.protocolVersion  # noqa
                     self.clientboundPackets = self.client.pktCB
                     self.clientgameversion = self.client.clientversion
                     gotclient = True
                     break
             if not gotclient:
+                pprint.pprint(self.wrapper.servervitals.clients)
                 self.log.error("Proxy is on, but this client is not "
-                               "listed in wrapper.proxy.clients!")
+                               "listed in proxy.clients!")
                 self.log.error("The usual cause of this would be that"
-                               " someone is connecting directly to"
+                               " someone attempted to connect directly to"
                                " your server port and not the wrapper"
-                               " proxy port!")
+                               " proxy port, but can also be the result of"
+                               " a player that has abruptly disconnected.")
+                if self.kick_nonproxy_connects:
+                    port = self.wrapper.proxy.proxy_port
+                    self.log.info("API.player Kicked %s" % self.name)
+                    self.abort = True
+                    self.wrapper.javaserver.console(
+                        "kick %s %s" % (
+                            self.name,
+                            "Access Denied!  Use port %s instead!" % port
+                        )
+                    )
+
+                    return
+        if not self.mojangUuid:
+            # poll cache/mojang for proper uuid
+            self.mojangUuid = self.wrapper.uuids.getuuidbyusername(username)
 
         # Process login data
         self.data = Storage(
-            self.clientUuid.string, root="wrapper-data/players")
+            self.mojangUuid.string, root="wrapper-data/players")
         if "firstLoggedIn" not in self.data.Data:
             self.data.Data["firstLoggedIn"] = (time.time(), time.tzname)
         if "logins" not in self.data.Data:
@@ -220,7 +261,8 @@ class Player(object):
         return self.username
 
     def __del__(self):
-        self.data.close()
+        if self.data:
+            self.data.close()
 
     @property
     def name(self):
@@ -228,30 +270,25 @@ class Player(object):
 
     @property
     def uuid(self):
-        return self.mojangUuid
+        """
+        @property
+        Return the very best UUID available as a string, with
+        the goal of never returning improper things like False and None.
+        """
+        if self.mojangUuid:
+            return self.mojangUuid.string
+        if self.client and self.client.info["realuuid"] != "":
+            return self.client.info["realuuid"]
+        if self.clientUuid:
+            return self.clientUuid.string
+        if self.serverUuid:
+            return self.serverUuid.string
+        return self.offlineUuid.string
 
     def _track(self):
         """
         internal tracking that updates a player's server play time.
         Not a part of the public player object API.
-
-        Sample ReST formattings -
-
-        # emphasized notes
-        Note: *You do not need to run this function unless you want*
-         *certain permission nodes to be granted by default.*
-         *i.e., 'essentials.list' should be on by default, so players*
-         *can run /list without having any permissions*
-
-        # code samples
-            :sample usage:
-
-                .. code:: python
-
-                    < code here >
-
-                ..
-
         """
         self.data.Data["logins"][int(self.loggedIn)] = time.time()
         while not (self.abort or self.wrapper_signal.halt):
@@ -262,6 +299,16 @@ class Player(object):
             # immediately on player logoff
             time.sleep(.5)
         self.data.close()
+
+    def kick(self, reason):
+        """
+        Kick a player with 'reason'.  Using this interface (versus the
+        console command) ensures the player receives the proper disconnect
+        messages based on whether they are in proxy mode or not.  This will
+        also allow hub players to respawn in the main wrapper server.
+
+        """
+        self.wrapper.javaserver.kick_player(self, self.username, reason)
 
     def execute(self, string):
         """
@@ -278,6 +325,8 @@ class Player(object):
          "execute" command.
 
         """
+        if string[0] in (self.wrapper.servervitals.command_prefix, "/"):
+            string = string[1:]
         try:
             self.client.chat_to_server("/%s" % string)
         except AttributeError:
@@ -306,15 +355,16 @@ class Player(object):
         :Args:
             :command: The wrapper (or plugin) command to execute; no
              slash prefix
-            :args: list of arguments (I think it is a list, not a
-             tuple or dict!)
+            :args: tuple/list of arguments.
 
         :returns: Nothing; passes command through commands.py function
-         'playercommand()'
+         'playercommand()'.  The player will receive any player.message()
+         the command generates, if any.  Console commands in particular
+         may only show their output at the console.
 
         """
         pay = {"player": self, "command": command, "args": args}
-        self.wrapper.api.callEvent("player.runCommand", pay)
+        self.wrapper.api.callEvent("player.runCommand", pay, abortable=False)
 
     def say(self, string):
         """
@@ -325,7 +375,7 @@ class Player(object):
         Beware: *in proxy mode, the message string is sent directly to*
         *the server without wrapper filtering,so it could be used to*
         *execute minecraft commands as the player if the string is*
-        *prefixed with a slash.*
+        *prefixed with a slash (assuming the player has the permission).*
 
         """
         try:
@@ -337,13 +387,14 @@ class Player(object):
 
     def getClient(self):
         """
-        Returns the player client context.  Use at your own risk - items
-        in client are generally private or subject to change (you are
-        working with an undefined API!)... what works in this wrapper
-        version may not work in the next.
+        Deprecated - use `player.client` to Access the proxy client...
 
-        :returns: player client object (and possibly sets self.client
-         to the matching client).
+        Returns the player client context. Retained for older plugins
+        which still use it.
+
+        TODO - Deprecate by wrapper version 1.5 final.
+
+        :returns: player client object.
 
         """
         if self.client is None:
@@ -363,11 +414,15 @@ class Player(object):
         """
         Get the players position
         
-        :Note:  The player's position is obtained by parsing client
+        :Proxymode Note:  The player's position is obtained by parsing client
          packets, which are not sent until the client logs in to 
          the server.  Allow some time after server login to verify 
          the wrapper has had the oppportunity to parse a suitable 
          packet to get the information!
+
+        :Non-proxymode note: will still work, but the returned position will
+         be either the player's login position or where he last teleported
+         to...
         
         :returns: a tuple of the player's current position x, y, z, 
          and yaw, pitch of head.
@@ -383,7 +438,7 @@ class Player(object):
         """
         Get the player's current gamemode.
         
-        :Note:  The player's Gamemode is obtained by parsing client
+        :Proxymode Note:  The player's Gamemode is obtained by parsing client
          packets, which are not sent until the client logs in to 
          the server.  Allow some time after server login to verify 
          the wrapper has had the oppportunity to parse a suitable 
@@ -402,7 +457,7 @@ class Player(object):
         """
         Get the player's current dimension.
 
-        :Note:  The player's Dimension is obtained by parsing client
+        :Proxymode Note:  The player's Dimension is obtained by parsing client
          packets, which are not sent until the client logs in to 
          the server.  Allow some time after server login to verify 
          the wrapper has had the oppportunity to parse a suitable 
@@ -439,10 +494,10 @@ class Player(object):
 
     def setResourcePack(self, url, hashrp=""):
         """
-        Sets the player's resource pack to a different URL. If the
-        user hasn't already allowed resource packs, the user will
-        be prompted to change to the specified resource pack.
-        Probably broken right now.
+        :Proxymode: Sets the player's resource pack to a different URL. If the
+         user hasn't already allowed resource packs, the user will
+         be prompted to change to the specified resource pack.
+         Probably broken right now.
 
         :Args:
             :url: URL of resource pack
@@ -457,12 +512,12 @@ class Player(object):
             return False
         if version < PROTOCOL_1_8START:
             self.client.packet.sendpkt(
-                self.clientboundPackets.PLUGIN_MESSAGE,
+                self.clientboundPackets.PLUGIN_MESSAGE[PKT],
                 [_STRING, _BYTEARRAY],
                 ("MC|RPack", url))
         else:
             self.client.packet.sendpkt(
-                self.clientboundPackets.RESOURCE_PACK_SEND,
+                self.clientboundPackets.RESOURCE_PACK_SEND[PKT],
                 [_STRING, _STRING],
                 (url, hashrp))
 
@@ -510,13 +565,13 @@ class Player(object):
         Sends a message to the player.
 
         :Args:
-            :message: Can be text, colorcoded text, or json chat
+            :message: Can be text, colorcoded text, or chat dictionary of json.
             :position:  an integer 0-2.  2 will place it above XP bar.
              1 or 0 will place it in the chat. Using position 2 will
              only display any text component (or can be used to display
              standard minecraft translates, such as
              "{'translate': 'commands.generic.notFound', 'color': 'red'}" and
-             "{'translate': 'tile.bed.noSleep'}"
+             "{'translate': 'tile.bed.noSleep'}")
 
 
         :returns: Nothing
@@ -525,32 +580,18 @@ class Player(object):
         """
 
         if self.wrapper.proxy:
-            self.client.chat_to_client(message, position)
+            if isinstance(message, dict):
+                sentitem = message
+            else:
+                sentitem = processoldcolorcodes(message)
+
+            self.client.chat_to_client(sentitem, position)
         else:
             self.javaserver.broadcast(message, who=self.username)
 
-    def actionMessage(self, message=""):
-        try:
-            version = self.wrapper.proxy.srv_data.protocolVersion
-        except AttributeError:
-            # Non proxy mode
-            return False
-
-        if version < PROTOCOL_1_8START:
-            parsing = [_STRING, _NULL]
-            data = [message]
-        else:
-            parsing = [_STRING, _BYTE]
-            data = (json.dumps({"text": processoldcolorcodes(message)}), 2)
-
-        self.client.packet.sendpkt(
-            self.clientboundPackets.CHAT_MESSAGE,
-            parsing,  # "string|byte"
-            data)
-
     def setVisualXP(self, progress, level, total):
         """
-         Change the XP bar on the client's side only. Does not
+        :Proxymode: Change the XP bar on the client's side only. Does not
          affect actual XP levels.
 
         :Args:
@@ -573,15 +614,15 @@ class Player(object):
             parsing = [_FLOAT, _SHORT, _SHORT]
 
         self.client.packet.sendpkt(
-            self.clientboundPackets.SET_EXPERIENCE,
+            self.clientboundPackets.SET_EXPERIENCE[PKT],
             parsing,
             (progress, level, total))
 
     def openWindow(self, windowtype, title, slots):
         """
-        Opens an inventory window on the client side.  EntityHorse
-        is not supported due to further EID requirement.  *1.8*
-        *experimental only.*
+        :Proxymode: Opens an inventory window on the client side.  EntityHorse
+         is not supported due to further EID requirement.  *1.8*
+         *experimental only.*
 
         :Args:
             :windowtype:  Window Type (text string). See below
@@ -636,7 +677,7 @@ class Player(object):
             return False
 
         client.packet.sendpkt(
-            self.clientboundPackets.OPEN_WINDOW,
+            self.clientboundPackets.OPEN_WINDOW[PKT],
             [_UBYTE, _STRING, _JSON, _UBYTE],
             (client.windowCounter, windowtype, {"text": title},
              slots))
@@ -645,7 +686,8 @@ class Player(object):
 
     def setPlayerAbilities(self, fly):
         """
-        *based on old playerSetFly (which was an unfinished function)*
+        :Proxymode: *based on old playerSetFly (which was an unfinished
+         function)*
 
         NOTE - You are implementing these abilities on the client
          side only.. if the player is in survival mode, the server
@@ -701,26 +743,26 @@ class Player(object):
         # Note in versions before 1.8, field of view is the
         # walking speed for client (still a float) Server
         # field of view is still walking speed
-        sendclient(self.clientboundPackets.PLAYER_ABILITIES,
+        sendclient(self.clientboundPackets.PLAYER_ABILITIES[PKT],
                    [_BYTE, _FLOAT, _FLOAT],
                    (bitfield, self.fly_speed, self.field_of_view))
 
-        sendserver(self.serverboundPackets.PLAYER_ABILITIES,
+        sendserver(self.sbpkt.PLAYER_ABILITIES[PKT],
                    [_BYTE, _FLOAT, _FLOAT],
                    (bitfield, self.fly_speed, self.field_of_view))
 
     def sendBlock(self, position, blockid, blockdata, sendblock=True,
                   numparticles=1, partdata=1):
         """
-        Used to make phantom blocks visible ONLY to the client.  Sends
-        either a particle or a block to the minecraft player's client.
-        For blocks iddata is just block id - No need to bitwise the
-        blockdata; just pass the additional block data.  The particle
-        sender is only a basic version and is not intended to do
-        anything more than send something like a barrier particle to
-        temporarily highlight something for the player.  Fancy particle
-        operations should be custom done by the plugin or someone can
-        write a nicer particle-renderer.
+        :Proxymode: Used to make phantom blocks visible ONLY to the client.
+         Sends either a particle or a block to the minecraft player's client.
+         For blocks iddata is just block id - No need to bitwise the
+         blockdata; just pass the additional block data.  The particle
+         sender is only a basic version and is not intended to do
+         anything more than send something like a barrier particle to
+         temporarily highlight something for the player.  Fancy particle
+         operations should be custom done by the plugin or someone can
+         write a nicer particle-renderer.
 
         :Args:
 
@@ -776,11 +818,11 @@ class Player(object):
                               _FLOAT, _FLOAT, _FLOAT, _INT]
 
         if sendblock:
-            sendclient(self.clientboundPackets.BLOCK_CHANGE,
+            sendclient(self.clientboundPackets.BLOCK_CHANGE[PKT],
                        blockparser,
                        (posx, y, x, iddata, blockdata))
         else:
-            sendclient(self.clientboundPackets.PARTICLE,
+            sendclient(self.clientboundPackets.PARTICLE[PKT],
                        particleparser,
                        (blockid, True, x + .5, y + .5, z + .5, 0, 0, 0,
                         partdata, numparticles))
@@ -788,7 +830,7 @@ class Player(object):
     # Inventory-related actions.
     def getItemInSlot(self, slot):
         """
-        Returns the item object of an item currently being held.
+        :Proxymode: Returns the item object of an item currently being held.
 
         """
         try:
@@ -809,7 +851,7 @@ class Player(object):
             return False
 
     # Permissions-related
-    def hasPermission(self, node, another_player=False, group_match=True, find_child_groups=True):
+    def hasPermission(self, node, another_player=False, group_match=True, find_child_groups=True):  # noqa
         """
         If the player has the specified permission node (either
         directly, or inherited from a group that the player is in),
@@ -841,7 +883,7 @@ class Player(object):
         :returns:  Boolean indicating whether player has permission or not.
 
         """
-        uuid_to_check = self.mojangUuid.string
+        uuid_to_check = self.uuid
         if another_player:
             # get other player mojang uuid
             uuid_to_check = str(
@@ -853,7 +895,7 @@ class Player(object):
         return self.wrapper.perms.has_permission(
             uuid_to_check, node, group_match, find_child_groups)
 
-    def setPermission(self, node, value=True):
+    def setPermission(self, node, value=True, uuid=None):
         """
         Adds the specified permission node and optionally a value
         to the player.
@@ -863,13 +905,22 @@ class Player(object):
             :value: defaults to True, but can be set to False to
              explicitly revoke a particular permission from the
              player, or to any arbitrary value.
+            :uuid: Optional MCUUID/string UUID of a (different) player.
 
         :returns: Nothing
 
         """
-        self.wrapper.perms.set_permission(self.mojangUuid.string, node, value)
+        try:
+            uuid = uuid.string
+        except AttributeError:
+            pass
 
-    def removePermission(self, node):
+        if uuid:
+            self.wrapper.perms.set_permission(uuid, node, value)
+        else:
+            self.wrapper.perms.set_permission(self.uuid, node, value)
+
+    def removePermission(self, node, uuid=None):
         """
         Completely removes a permission node from the player. They
         will inherit this permission from their groups or from
@@ -880,48 +931,82 @@ class Player(object):
         on nodes inherited from groups or plugin defaults.
 
         :arg node: Permission node (string)
+        :arg uuid: Optional MCUUID/string UUID of a (different) player.
 
         :returns:  Boolean; True if operation succeeds, False if
          it fails (set debug mode to see/log error).
 
         """
-        return self.wrapper.perms.remove_permission(
-            self.mojangUuid.string, node)
+        try:
+            uuid = uuid.string
+        except AttributeError:
+            pass
 
-    def resetPerms(self, uuid):
+        if uuid:
+            return self.wrapper.perms.remove_permission(uuid, node)
+        else:
+            return self.wrapper.perms.remove_permission(self.uuid, node)
+
+    def resetPerms(self, uuid=None):
         """
 
         resets all user data (removes all permissions).
 
-        :arg uuid: The online/mojang uuid (string)
+        :arg uuid: Optional MCUUID/string UUID of a (different) player.
 
         :returns:  nothing
 
         """
-        return self.wrapper.perms.fill_user(uuid)
+        try:
+            uuid = uuid.string
+        except AttributeError:
+            pass
 
-    def hasGroup(self, group):
+        if uuid:
+            return self.wrapper.perms.fill_user(uuid)
+        else:
+            return self.wrapper.perms.fill_user(self.uuid)
+
+    def hasGroup(self, group, uuid=None):
         """
         Returns a boolean of whether or not the player is in
         the specified permission group.
 
         :arg group: Group node (string)
+        :arg uuid: Optional MCUUID/string UUID of a (different) player.
 
         :returns:  Boolean of whether player has permission or not.
 
         """
-        return self.wrapper.perms.has_group(self.mojangUuid.string, group)
+        try:
+            uuid = uuid.string
+        except AttributeError:
+            pass
+        if uuid:
+            return self.wrapper.perms.has_group(uuid, group)
+        else:
+            return self.wrapper.perms.has_group(self.uuid, group)
 
-    def getGroups(self):
+    def getGroups(self, uuid=None):
         """
         Returns a list of permission groups that the player is in.
+
+        :arg uuid: Optional MCUUID/string UUID of a (different) player.
 
         :returns:  list of groups
 
         """
-        return self.wrapper.perms.get_groups(self.mojangUuid.string)
+        try:
+            uuid = uuid.string
+        except AttributeError:
+            pass
 
-    def setGroup(self, group, creategroup=True):
+        if uuid:
+            return self.wrapper.perms.get_groups(uuid)
+        else:
+            return self.wrapper.perms.get_groups(self.uuid)
+
+    def setGroup(self, group, creategroup=True, uuid=None):
         """
         Adds the player to a specified group.  Returns False if
         the command fails (set debiug to see error).  Failure
@@ -934,19 +1019,32 @@ class Player(object):
              group if it does not exist already.  This WILL
              generate a warning log since it is not an expected
              condition.
+            :uuid: Optional MCUUID/string UUID of a (different) player.
 
         :returns:  Boolean; True if operation succeeds, False
          if it fails (set debug mode to see/log error).
 
         """
-        return self.wrapper.perms.set_group(
-            self.mojangUuid.string, group, creategroup)
+        try:
+            uuid = uuid.string
+        except AttributeError:
+            pass
 
-    def removeGroup(self, group):
+        if uuid:
+            return self.wrapper.perms.set_group(
+                uuid, group, creategroup
+            )
+        else:
+            return self.wrapper.perms.set_group(
+                self.uuid, group, creategroup
+            )
+
+    def removeGroup(self, group, uuid=None):
         """
         Removes the player to a specified group.
 
         :arg group: Group node (string)
+        :arg uuid: Optional MCUUID/string UUID of a (different) player.
 
         :returns:  (use debug logging to see any errors)
 
@@ -956,8 +1054,17 @@ class Player(object):
             :False: player uuid not found!
 
         """
-        return self.wrapper.perms.remove_group(
-            self.mojangUuid.string, group)
+        try:
+            uuid = uuid.string
+        except AttributeError:
+            pass
+
+        if uuid:
+            return self.wrapper.perms.remove_group(
+                uuid, group)
+        else:
+            return self.wrapper.perms.remove_group(
+                self.uuid, group)
 
     # Player Information
     def getFirstLogin(self):
@@ -970,18 +1077,27 @@ class Player(object):
         return self.data.Data["firstLoggedIn"]
 
     # Cross-server commands
-    def connect(self, address, port):
-        # TODO - WORK IN PROGRESS
+    def connect(self, ip="127.0.0.1", port=25600):
         """
-        Upon calling, the player object will become defunct and
-        the client will be transferred to another server or wrapper
-        instance (provided it has online-mode turned off).
+        Connect to another server.  Upon calling, the client's current
+         server instance will be closed and a new server connection made
+         to the target port of another server or wrapper instance.
+
+        Any such target must be in offline-mode.
+        The player object remains valid, but is largely ignored by this
+         server.
+        The player may respawn back to this server by typing `/hub`.
 
         :Args:
-            :address: server address (local address)
-            :port: server port (local port)
+            :port: server or wrapper port you are connecting to.
+            :ip:  the destination server ip.  Should be on your own
+             network and inaccessible to outside port forwards.
 
         :returns: Nothing
 
         """
-        self.client.change_servers(address, port)
+        if not self.wrapper.proxymode:
+            self.log.warning("Can't use player.connect() without proxy mode.")
+            return
+
+        self.client.change_servers(ip, port)

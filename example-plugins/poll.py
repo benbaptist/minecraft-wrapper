@@ -1,8 +1,10 @@
+# coding=utf-8
 # -- Poll Plugin --
 
 import json
 import os
 
+AUTHOR = "Ben Baptist"
 NAME = "Poll"
 ID = "com.benbaptist.plugins.vote"
 SUMMARY = "Voting plugin for Wrapper.py!"

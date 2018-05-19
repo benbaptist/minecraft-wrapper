@@ -36,7 +36,7 @@ class Web(object):
             self.wrapper.configManager.save()
             self.log.critical("You don't have the 'flask/flask_socketio' dashboard dependencies installed "
                               "on your system. You can now restart, but Web mode is disabled.")
-            self.wrapper.halt.halt = True
+            self.wrapper.haltsig.halt = True
 
         self.app = Flask(__name__)
         self.app.config['SECRET_KEY'] = "".join([chr(random.randrange(48, 90)) for i in range(32)])  # LOL
@@ -142,7 +142,7 @@ class Web(object):
             pass
 
     def run(self, halt):
-        while not self.wrapper.halt.halt:
+        while not self.wrapper.haltsig.halt:
             self.socketio.run(self.app, host=self.config["Web"]["web-bind"],
                           port=self.config["Web"]["web-port"])
 

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2016, 2017 - BenBaptist and Wrapper.py developer(s).
+# Copyright (C) 2016 - 2018 - BenBaptist and Wrapper.py developer(s).
 # https://github.com/benbaptist/minecraft-wrapper
 # This program is distributed under the terms of the GNU
 # General Public License, version 3 or later.
@@ -9,6 +9,7 @@
 # ------------------------------------------------
 
 # standard
+from collections import deque
 import io  # PY3
 import json
 import struct
@@ -18,6 +19,7 @@ import sys
 
 # local
 from proxy.utils.mcuuid import MCUUID
+from proxy.utils.constants import *
 
 # Py3-2
 PY3 = sys.version_info > (3,)
@@ -50,10 +52,11 @@ _CODERS = {
     "bytearray_short": 13,
     "position": 14,
     "slot": 15,
-    "slot_noNBT": 18,
+    # "slot_noNBT": 18,
     "uuid": 16,
     "metadata": 17,
     "metadata1.9": 19,
+    "stringarray": 20,
     "rest": 90,
     "raw": 90
 }
@@ -65,18 +68,20 @@ class Packet(object):
     def __init__(self, sock, obj):
         self.socket = sock
         self.obj = obj
+        self.log = self.obj.log
         self.recvCipher = None
         self.sendCipher = None
         self.compressThreshold = -1
+        self.compression = False
         self.abort = False
 
         # this is set by the calling class/method.  Not presently used here,
         #  but could be. maybe to decide which metadata parser to use?
-        self.version = -1
+        self.version = self.obj.srv_data.protocolVersion
         self.buffer = io.BytesIO()  # Py3
         # self.buffer = StringIO.StringIO()
 
-        self.queue = []
+        self.queue = deque([])
 
         # encode/decode for NBT operations
         self._ENCODERS = {
@@ -127,6 +132,7 @@ class Packet(object):
             16: self.send_uuid,
             17: self.send_metadata,
             19: self.send_metadata_1_9,
+            20: self.send_stringarray,
             90: self.send_pay,
             100: self.send_nothing
         }
@@ -149,8 +155,9 @@ class Packet(object):
             15: self.read_slot,
             16: self.read_uuid,
             17: self.read_metadata,
-            18: self.read_slot_nbtless,
+            # 18: self.read_slot_nbtless,
             19: self.read_metadata_1_9,
+            20: self.read_stringarray,
             90: self.read_rest,
             100: self.read_none
         }
@@ -164,25 +171,11 @@ class Packet(object):
             return "-%x" % ((-d) & (2 ** (40 * 4) - 1))
         return "%x" % d
 
-    def grabpacket(self):
-        length = self.unpack_varint()  # first field - entire raw packet Length
-        datalength = 0  # if 0, an uncompressed packet
-        if self.compressThreshold != -1:  # if compressed:
-            # length of the uncompressed (Packet ID + Data)
-            datalength = self.unpack_varint()
-            # find the len of the datalength field and subtract it
-            # using augmented assignment in the next line seems to BREAK this
-            length = length - len(self.pack_varint(datalength))
-        payload = self.recv(length)
-
+    def decompress(self, datalength, payload):
         if datalength > 0:  # it is compressed, unpack it
-            payload = zlib.decompress(payload)
-
-        self.buffer = io.BytesIO(payload)
-        pkid = self.read_varint()
-
-        # payload is untouched entire packet, containing the prefixed pkid
-        return pkid, payload
+            return zlib.decompress(payload)
+        else:
+            return payload
 
     def pack_varint(self, val):
         total = b''
@@ -208,71 +201,118 @@ class Packet(object):
             total = total - (1 << 32)
         return total
 
-    def setcompression(self, threshold):
-        self.send(0x03, "varint", (threshold,))
-        self.compressThreshold = threshold
+    def grab_packet_uncomp(self):
+        # unpacking varint recv's the varint byte(s)
+        packet_length_rest = self.unpack_varint()
+        contents = self.recv(packet_length_rest)
+        return contents, False, False
+
+    def grab_packet_comp(self):
+        # unpacking varint recv's the varint byte(s)
+        packet_length_rest = self.unpack_varint()
+        uncomp_data_length = self.unpack_varint()
+
+        if uncomp_data_length == 0:
+            # uncompressed data
+            uncomp_data = self.recv(packet_length_rest - 1)
+            comp_payload = uncomp_data
+        else:
+            comp_payload = self.recv(
+                packet_length_rest -
+                len(self.pack_varint(packet_length_rest))
+            )
+            uncomp_data = zlib.decompress(comp_payload)
+
+        return uncomp_data, comp_payload, uncomp_data_length
+
+    def grabpacket(self):
+        """  # noqa
+
+        Visual layout of packets:
+        _____________________________________________________________________
+        UnCompressed:
+            |VarInt                           |VarInt   |ByteArray|
+            |len(Packet ID + Data) ==========>|PacketID | Data    |
+        _____________________________________________________________________
+        Compressed:                                                                        {   <-- Compressed -->   }
+            |VarInt                                         |VarInt                        |VarInt    |ByteArray    |
+            |Length (DataLength +  PacketID + Data )=======>|DataLength (uncompressed) ===>|PacketID  | Data        |
+        _____________________________________________________________________
+
+
+        """
+
+        # first field - entire raw packet Length
+        packet_length = self.unpack_varint()
+        length = packet_length
+        datalength = 0  # if 0, an uncompressed packet
+        if self.compressThreshold != -1:  # if compressed:
+            # length of the uncompressed (Packet ID + Data)
+            datalength = self.unpack_varint()
+            # find the len of the datalength field and subtract it
+            # using augmented assignment in the next line seems to BREAK this
+            length = packet_length - len(self.pack_varint(datalength))
+        orig_payload = self.recv(length)
+        payload_read = orig_payload
+
+        if datalength > 0:  # it is compressed, unpack it
+            payload_read = zlib.decompress(orig_payload)
+
+        self.buffer = io.BytesIO(payload_read)
+        pkid = self.read_varint()
+        return pkid, self.pack_varint(datalength) + orig_payload
+
+    def socket_transmit(self, packet):
+        if self.sendCipher is None:
+            self.socket.send(packet)
+        else:
+            self.socket.send(self.sendCipher.update(packet))
+
+    def handle_compression(self, compression_threshhold, payload):
+        """  # noqa
+
+        Visual layout of packets:
+        _____________________________________________________________________
+        UnCompressed:
+            |VarInt                           |VarInt   |ByteArray|
+            |len(Packet ID + Data) ==========>|PacketID | Data    |
+        _____________________________________________________________________
+        Compressed:                                                                        {   <-- Compressed -->   }
+            |VarInt                                         |VarInt                        |VarInt    |ByteArray    |
+            |Length (DataLength +  PacketID + Data )=======>|DataLength (uncompressed) ===>|PacketID  | Data        |
+        _____________________________________________________________________
+
+        """
+        if compression_threshhold > -1:
+            # compose compressed packet
+            if len(payload) > self.compressThreshold:
+                pktcomp = self.pack_varint(len(payload)) + zlib.compress(
+                    payload)
+                return self.pack_varint(len(pktcomp)) + pktcomp
+            else:
+                packet = self.pack_varint(0) + payload
+                return self.pack_varint(len(packet)) + packet
+        else:
+            # compose uncompressed packet
+            return self.pack_varint(len(payload)) + payload
 
     def flush(self):
         while len(self.queue) > 0:
-            packet_tuple = self.queue.pop(0)
-            packet = packet_tuple[1]
-            if packet_tuple[0] > -1:
-                if len(packet) > self.compressThreshold:
-                    pktcomp = self.pack_varint(len(packet)) + zlib.compress(
-                        packet)
-                    packet = self.pack_varint(len(pktcomp)) + pktcomp
-                else:
-                    packet = self.pack_varint(0) + packet
-                    packet = self.pack_varint(len(packet)) + packet
-            else:
-                packet = self.pack_varint(len(packet)) + packet
-            if self.sendCipher is None:
-                self.socket.send(packet)
-            else:
-                self.socket.send(self.sendCipher.encrypt(packet))
+            # grab next packet
+            packet_tuple = self.queue.popleft()
+            # see if it is compressed
+            compression = packet_tuple[0]
+            packet = packet_tuple[1]  # `payload`
+            trans_packet = self.handle_compression(compression, packet)
+            self.socket_transmit(trans_packet)
+
+    def send_raw_untouched(self, payload):
+        if not self.abort:
+            self.queue.append((-1, payload))
 
     def send_raw(self, payload):
         if not self.abort:
-            # [(-1, "payload"), ..., ... ]
             self.queue.append((self.compressThreshold, payload))
-
-    def read(self, expression):
-        """
-        a readpkt() wrapper.  This is not as fast as calling readpkt(), but
-        makes a nice abstraction and is back-wards compatible.  It is also
-        nice because it gives you a dictionary back.
-
-        Args:
-            expression: Something like "double:x|double:y|double:z|
-                bool:on_ground"
-
-        Returns:
-            the original-style dict of returned values - {"x": double,
-                "y": double, "z": double, "on_ground": bool}
-
-        """
-
-        names = []
-        args = []
-        results = {}
-
-        # create a list of variable names and a list of constants
-        # representing datatypes to pass to readpkt().
-        for combo in expression.split("|"):
-            type_ = combo.split(":")[0]
-            name = combo.split(":")[1]
-            # goal - create a list of the user-desired variable names
-            names.append(name)
-            # goal: create list of integers to pass as arguments/"constants"
-            args.append(_CODERS[type_])
-
-        # obtain a list of returned arguments
-        result = self.readpkt(args)
-
-        # convert the list back to a dictionary using the names list as keys
-        for x in xrange(len(result)):
-            results[names[x]] = result[x]
-        return results
 
     def readpkt(self, args):
         """
@@ -280,9 +320,6 @@ class Packet(object):
             # abstracts of integer constants
             `data = packet.readpkt(_DOUBLE, _DOUBLE, _DOUBLE, _BOOL)`
             `x, y, z, on_ground = data`
-
-        proposed as an alternative to all the string operations used by
-        the old (and new wrapper form of..) read().
 
         Args:
             args: a list of integers representing the type of read operation.
@@ -296,42 +333,30 @@ class Packet(object):
 
         """
         result = []
-        argcount = len(args)
-        for index in xrange(argcount):
-            result.append(self._PKTREAD[args[index]]())
+        for arg in args:
+            item = self._PKTREAD[arg]()
+            result.append(item)
         return result
 
-    def send(self, pkid, expression, payload):
+    def sendpkt(self, pkid, args, payload,):
         """
-        This is deprecated. It functions as a sendpkt() wrapper.
-        This is not as fast as calling sendpkt(), is back-wards compatible,
-        but not really any easier to use.
+                Usage like:
 
-        Args:
-            pkid: packet id (int or hex - usually as an abstracted constant)
-            expression: Something like "double|double|double|float|float"
-            payload: Something like (x, y, z, yaw, pitch,) - a tuple
+                    packet.sendpkt(
+                        0xnn,
+                        [DOUBLE, DOUBLE, DOUBLE, BOOl], # integer constants
+                        (123123, 1233123, 400, True)
+                    )
 
-        Returns:
-            returns the result that was send_raw()'ed.
+                Args:
+                    :args: a list of integers representing the type of send
+                     operation.
+                    :payload: a tuple of the corresponding values
 
-        """
+                Returns:  A list of those read results (not a dictionary) in the
+                            same order the args were passed.
 
-        # we are not going to change the payload argument
-        #  any.. just the expression values.
-        args = []
-        # create a list of variable names and a list of constants
-        # representing datatypes to pass to sendpkt().
-        if len(payload) > 0:
-            for type_ in expression.split("|"):
-                # goal: create list of integers to pass as arguments
-                args.append(_CODERS[type_])
-
-        # obtain a list of returned arguments
-        result = self.sendpkt(pkid, args, payload)
-        return result
-
-    def sendpkt(self, pkid, args, payload):
+                """
         result = b""  # PY 2-3
         # start with packet id
         result += self.send_varint(pkid)
@@ -340,9 +365,9 @@ class Packet(object):
         if argcount == 0:
             self.send_raw(result)
             return result
-        for index in xrange(argcount):
-            pay = payload[index]
-            result += self._PKTSEND[args[index]](pay)
+        for x, arg in enumerate(args):
+            pay = payload[x]
+            result += self._PKTSEND[arg](pay)
         self.send_raw(result)
         return result
 
@@ -399,6 +424,7 @@ class Packet(object):
 
     def send_position(self, payload):
         x, y, z = payload
+        # position is a Ulong (reason for `Q`)
         return struct.pack(">Q", ((x & 0x3FFFFFF) << 38)
                            | ((y & 0xFFF) << 26)
                            | (z & 0x3FFFFFF))
@@ -410,11 +436,12 @@ class Packet(object):
         if slot["id"] == -1:
             return r
         r += self.send_byte(slot["count"])
-        r += self.send_short(slot["damage"])
+        if self.version < PROTOCOL_PRE_RELEASE:
+            r += self.send_short(slot["damage"])
         if slot["nbt"]:
             r += self.send_tag(slot['nbt'])
         else:
-            r += "\x00"
+            r += b"\x00"
         return r
 
     def send_uuid(self, payload):
@@ -473,8 +500,8 @@ class Packet(object):
                 b += self.send_varint(value)
 
             else:
-                print("Unsupported data type '%d' for send_metadata()  "
-                      "(Class Packet)" % value_type)
+                self.log.error("Unsupported data type '%d' for"
+                               " send_metadata() (Class Packet)", value_type)
                 raise ValueError
         b += self.send_ubyte(0xff)
         return b
@@ -482,7 +509,6 @@ class Packet(object):
     def send_metadata(self, payload):
         # definitely broken in 1.7.4.  works for 1.8
         b = b""
-        # print("payload:\n%s\n\n" % payload)
         for index in payload:
             type_ = payload[index][0]
             value = payload[index][1]
@@ -512,11 +538,21 @@ class Packet(object):
                 b += self.send_float(value[1])
                 b += self.send_float(value[2])
             else:
-                print("Unsupported data type '%d' for send_metadata()  "
-                      "(Class Packet)" % type_)
+                self.log.error("Unsupported data type '%d' for"
+                               " send_metadata() (Class Packet)", type_)
                 raise ValueError
         b += self.send_ubyte(0x7f)
-        # print("\n\n%s\n\n\n" % b)
+        return b
+
+    def send_stringarray(self, payload):
+        """payload is a list of strings, but first item is a VARINT Count of
+        the number of strings in the array.  Hence, this combines the
+        Wiki.vg items of `VARINT|STRING(array of STRING)` """
+        b = b""
+        b += self.pack_varint(len(payload))
+        for strings in payload:
+            thisone = self.send_string(strings)
+            b += thisone
         return b
 
     def send_pay(self, payload):
@@ -537,7 +573,7 @@ class Packet(object):
 
     def send_list(self, tag):
         # Check that all values are the same type
-        r = ""
+        r = b""
         typeslist = []
         for i in tag:
             typeslist.append(i['type'])
@@ -556,13 +592,13 @@ class Packet(object):
         return r
 
     def send_comp(self, tag):
-        r = ""
+        r = b""
 
         # Send every tag
         for i in tag:
             r += self.send_tag(i)
         # close compound
-        r += "\x00"
+        r += b"\x00"
         return r
 
     def send_int_array(self, values):
@@ -570,8 +606,13 @@ class Packet(object):
         return r + struct.pack(">%di" % len(values), *values)
 
     def send_tag(self, tag):
+        """tag is what is found in the item 'nbt':
+        This one is empty:
+        {'nbt': {'type': 0}, 'count': 28, 'id': 5, 'damage': 1}"""
         # send type indicator
         r = self.send_byte(tag['type'])
+        if tag['type'] == 0:
+            return r
         # send length prefix
         r += self.send_short(len(tag["name"]))
         # send name
@@ -596,13 +637,16 @@ class Packet(object):
                 raise EOFError("Packet stream ended (Client disconnected")
         if self.recvCipher is None:
             return d
-        return self.recvCipher.decrypt(d)
+        return self.recvCipher.update(d)
 
     def read_data(self, length):
         d = self.buffer.read(length)
         if len(d) == 0 and length is not 0:
             # "Received no data or less data than expected - connection closed"
-            self.obj.close_server()
+            self.obj.close_server(
+                "Received no data or less data than expected - "
+                "connection closed"
+            )
             return b""
         return d
 
@@ -674,16 +718,6 @@ class Packet(object):
             z = (z & 0x1FFFFFF) - 0x2000000
         return x, y, z
 
-    def read_slot(self):
-        sid = self.read_short()
-        if sid != -1:
-            count = self.read_ubyte()
-            damage = self.read_short()
-            nbt = self.read_tag()
-            # nbtCount = self.read_ubyte()
-            # nbt = self.read_data(nbtCount)
-            return {"id": sid, "count": count, "damage": damage, "nbt": nbt}
-
     def read_uuid(self):
         return MCUUID(bytes=self.read_data(16))
 
@@ -752,13 +786,17 @@ class Packet(object):
                 meta_data[index] = (data_type, self.read_varint())
 
             elif data_type == 13:
-                print("1.9 metadata found data type 13 'nbt tag', which "
-                      "wrapper does not parse.. read as 'rest/raw'. "
-                      "Added in version 1.12 minecraft??")
+                self.log.error(
+                    "1.9 metadata found data type 13 'nbt tag',  "
+                    "which wrapper does not parse.. read as 'rest/raw'. "
+                    "Added in version 1.12 minecraft??"
+                )
                 meta_data[index] = (data_type, self.read_rest())
             else:
-                print("Unsupported data type '%d' for read_metadata_1_9()  "
-                      "(Class Packet)", data_type)
+                self.log.error(
+                    "Unsupported data type '%d' for read_metadata_1_9()  "
+                    "(Class Packet)", data_type
+                )
                 raise ValueError
 
     def read_metadata(self):
@@ -799,21 +837,38 @@ class Packet(object):
                     self.read_float(), self.read_float(), self.read_float()))
 
             else:
-                print("Unsupported data type '%d' for read_metadata()  "
-                      "(Class Packet)", data_type)
+                self.log.error(
+                    "Unsupported data type '%d' for read_metadata()  "
+                    "(Class Packet)", data_type
+                )
                 raise ValueError
 
-    def read_slot_nbtless(self):
-        """Temporary(?) solution for parsing pre-1.8 slots because
-        reading NBT fails for 1.7 NBT items"""
+    def read_slot(self):
         sid = self.read_short()
-        if sid != -1:
+        if sid == -1:
+            payload = {"id": -1}
+        else:
             count = self.read_ubyte()
-            damage = self.read_short()
-            # nbt = self.read_tag()
+            if self.version < PROTOCOL_PRE_RELEASE:
+                damage = self.read_short()
+            else:
+                damage = -1
+            nbt = self.read_tag()
             # nbtCount = self.read_ubyte()
             # nbt = self.read_data(nbtCount)
-            return {"id": sid, "count": count, "damage": damage, "nbt": {}}
+            payload = {"id": sid, "count": count, "damage": damage, "nbt": nbt}
+        return payload
+
+    def read_stringarray(self):
+        """payload is a list of strings, but first item is a VARINT Count of
+        the number of strings in the array.  Hence, this combines the
+        Wiki.vg items of `VARINT|STRING(array of STRING)` """
+
+        b = self.read_varint()
+        pay = []
+        for _ in xrange(b):
+            pay.append(self.read_string())
+        return pay
 
     def read_rest(self):
         return self.read_data(1024 * 1024)
@@ -854,7 +909,7 @@ class Packet(object):
 
     def read_int_array(self):
         size = self.read_int()
-        return [self.read_int() for _ in range(size)]
+        return [self.read_int() for _ in xrange(size)]
 
     def read_tag(self):
         a = {"type": self.read_byte()}
@@ -862,6 +917,3 @@ class Packet(object):
             a["name"] = self.read_short_string()
             a["value"] = self._DECODERS[a["type"]]()
         return a
-
-    def read_ulong(self):  # unused ...?
-        return struct.unpack(">Q", self.read_data(8))[0]

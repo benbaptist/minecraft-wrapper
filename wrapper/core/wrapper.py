@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2016, 2017 - BenBaptist and Wrapper.py developer(s).
+# Copyright (C) 2016 - 2018 - BenBaptist and Wrapper.py developer(s).
 # https://github.com/benbaptist/minecraft-wrapper
 # This program is distributed under the terms of the GNU
 # General Public License, version 3 or later.
@@ -17,6 +17,7 @@ import os
 import logging
 # import smtplib
 import sys  # used to pass sys.argv to server
+# from pprint import pprint
 
 # non standard library imports
 try:
@@ -29,11 +30,17 @@ try:
 except ImportError:
     requests = False
 
+try:
+    import resource
+except ImportError:
+    resource = False
+
 # small feature and helpers
 # noinspection PyProtectedMember
 from api.helpers import format_bytes, getargs, getargsafter, readout, get_int
+from api.helpers import putjsonfile
 from utils import readkey
-from utils.crypt import phrase_to_url_safebytes, gensalt
+from utils import version as version_mod
 
 # core items
 from core.mcserver import MCServer
@@ -43,16 +50,18 @@ from core.events import Events
 from core.storage import Storage
 from core.irc import IRC
 from core.scripts import Scripts
-import core.buildinfo as core_buildinfo_version
+import core.buildinfo as buildinfo
 from proxy.utils.mcuuid import UUIDS
 from core.config import Config
 from core.backups import Backups
 from core.consoleuser import ConsolePlayer
 from core.permissions import Permissions
-from utils.crypt import Crypt
+from core.alerts import Alerts
+from utils.crypt import Crypt, phrase_to_url_safebytes, gensalt
 
 # optional API type stuff
-from proxy.base import Proxy, ProxyConfig, HaltSig, ServerVitals
+from core.servervitals import ServerVitals
+from proxy.base import Proxy, ProxyConfig, HaltSig
 from api.base import API
 import management.web as manageweb
 
@@ -104,13 +113,17 @@ class Wrapper(object):
         self.configManager = Config()
         self.configManager.loadconfig()
         self.config = self.configManager.config
+        self.encoding = self.config["General"]["encoding"]
+        self.serverpath = self.config["General"]["server-directory"]
+        self.api = API(self, "Wrapper.py")
+        self.alerts = Alerts(self)
+        self.alerts_on = self.config["Alerts"]["enabled"]
 
         # Read Config items
         # hard coded cursor for non-readline mode
         self.cursor = ">"
         # This was to allow alternate encodings
-        self.encoding = self.config["General"]["encoding"]
-        self.serverpath = self.config["General"]["server-directory"]
+
         self.proxymode = self.config["Proxy"]["proxy-enabled"]
         self.wrapper_onlinemode = self.config["Proxy"]["online-mode"]
         self.halt_message = self.config["Misc"]["halt-message"]
@@ -123,8 +136,8 @@ class Wrapper(object):
             salt = gensalt(self.encoding)
             self.config["General"]["salt"] = salt
             config_changes = True
-        # passphrase is provided at startup by the wrapper operator or script (not stored)
-        passphrase = phrase_to_url_safebytes(secret_passphrase, self.encoding, salt)
+        # passphrase is provided at startup by the wrapper operator or script (not stored)  # noqa
+        passphrase = phrase_to_url_safebytes(secret_passphrase, self.encoding, salt)  # noqa
         self.cipher = Crypt(passphrase, self.encoding)
 
         # Update passwords (hash any plaintext passwords)
@@ -134,7 +147,7 @@ class Wrapper(object):
                     # i.e., cfg_items ===> like ["web-password-plaintext"]
                     hash_item = cfg_items[:-10]
                     # hash_item ===> i.e., ["web-password"]
-                    if hash_item in self.config[groups] and self.config[groups][cfg_items]:
+                    if hash_item in self.config[groups] and self.config[groups][cfg_items]:  # noqa
                         # encrypt contents of (i.e.) ["web-password-plaintext"]
                         hashed_item = self.cipher.encrypt(
                             self.config[groups][cfg_items])
@@ -149,7 +162,7 @@ class Wrapper(object):
         for entries in self.config["Updates"]:
             if "/build/version.json" in str(self.config["Updates"][entries]):
                 oldentry = copy.copy(self.config["Updates"][entries])
-                self.config["Updates"][entries] = oldentry.split("/build/version.json")[0]
+                self.config["Updates"][entries] = oldentry.split("/build/version.json")[0]  # noqa
                 config_changes = True
 
         # save changes made to config file
@@ -160,21 +173,31 @@ class Wrapper(object):
         self.auto_update_wrapper = self.config["Updates"]["auto-update-wrapper"]
         self.auto_update_branch = self.config["Updates"]["auto-update-branch"]
         if not self.auto_update_branch:
-            self.update_url = "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development"
+            self.update_url = "https://raw.githubusercontent.com/benbaptist/minecraft-wrapper/development"  # noqa
         else:
             self.update_url = self.config["Updates"][self.auto_update_branch]
 
+        # load some general options
         self.use_timer_tick_event = self.config[
             "Gameplay"]["use-timer-tick-event"]
         self.use_readline = not(self.config["Misc"]["use-betterconsole"])
+        self.trap_ctrlz = self.config["Misc"]["trap-ctrl-z"]
+
+        #  HaltSig - Why? ... because if self.haltsig was just `False`, passing
+        #  a self.haltsig would simply be passing `False` (immutable).  Changing
+        # the value of self.haltsig would not necessarily change the value of
+        # the passed parameter (unless it was specifically referenced back as
+        # `wrapper.haltsig`). Since the halt signal needs to be passed, possibly
+        # several layers deep, and into modules that it may be desireable to
+        # not have direct access to wrapper, using a HaltSig object is
+        # required to ensure we are actually sharing the same value between
+        # different objects.
+        self.haltsig = HaltSig()
 
         # Storages
-        self.wrapper_storage = Storage(
-            "wrapper", encoding=self.encoding)
-        self.wrapper_permissions = Storage(
-            "permissions", encoding=self.encoding, pickle=False)
-        self.wrapper_usercache = Storage(
-            "usercache", encoding=self.encoding, pickle=False)
+        self.wrapper_storage = Storage("wrapper", pickle=False)
+        self.wrapper_permissions = Storage("permissions", pickle=False)
+        self.wrapper_usercache = Storage("usercache", pickle=False)
 
         # storage Data objects
         self.storage = self.wrapper_storage.Data
@@ -197,22 +220,11 @@ class Wrapper(object):
 
         # init items that are set up later (or opted out of/ not set up.)
         self.javaserver = None
-        self.api = None
         self.irc = None
         self.scripts = None
         self.web = None
         self.proxy = None
         self.backups = None
-
-        #  HaltSig - Why? ... because if self.halt was just `False`, passing
-        #  a self.halt would simply be passing `False` (immutable).  Changing
-        # the value of self.halt would not necessarily change the value of the
-        # passed parameter (unless it was specifically referenced back as
-        # `wrapper.halt`). Since the halt signal needs to be passed, possibly
-        # several layers deep, and into modules that it may be desireable to
-        # not have direct access to wrapper, using a HaltSig object is
-        # more desireable and reliable in behavior.
-        self.halt = HaltSig()
 
         self.updated = False
         # future plan to expose this to api
@@ -224,15 +236,6 @@ class Wrapper(object):
                 "'readline' not imported.  This is needed for proper"
                 " console functioning. Press <Enter> to acknowledge...")
             sys.stdin.readline()
-
-        # requests is just being used in too many places to try
-        # and track its usages piece-meal.
-        if not requests:
-            self.log.error(
-                "You must have the requests module installed to use wrapper!"
-                " console functioning. Press <Enter> to Exit...")
-            sys.stdin.readline()
-            self._halt()
 
         # create server/proxy vitals and config objects
         self.servervitals = ServerVitals(self.players)
@@ -246,7 +249,7 @@ class Wrapper(object):
             "General"]["server-directory"]
         self.servervitals.state = OFF
         self.servervitals.command_prefix = self.config[
-            "Misc"]["command-prefix"]
+            "Proxy"]["command-prefix"]
 
         self.proxyconfig = ProxyConfig()
         self.proxyconfig.proxy = self.config["Proxy"]
@@ -264,15 +267,20 @@ class Wrapper(object):
     def start(self):
         """wrapper execution starts here"""
 
+        # requests is just being used in too many places to try
+        # and track its usages piece-meal.
+        if not requests:
+            self.log.error(
+                "You must have the requests module installed to use wrapper!"
+                " console functioning. Press <Enter> to Exit...")
+            sys.stdin.readline()
+            raise ImportWarning
+
         self.signals()
-
         self.backups = Backups(self)
-
-        self.api = API(self, "Wrapper.py")
         self._registerwrappershelp()
 
-        # This is not the actual server... the MCServer
-        # class is a console wherein the server is started
+        # The MCServerclass is a console wherein the server is started
         self.javaserver = MCServer(self, self.servervitals)
         self.javaserver.init()
 
@@ -286,12 +294,8 @@ class Wrapper(object):
             t.start()
 
         if self.config["Web"]["web-enabled"]:  # this should be a plugin
-            if manageweb.pkg_resources and manageweb.requests:
-                self.log.warning(
-                    "Our apologies!  Web mode is currently broken.  Wrapper"
-                    " will start web mode anyway, but it will not likely "
-                    "function well (or at all).  For now, you should turn "
-                    "off web mode in wrapper.properties.json.")
+            if manageweb.pkg_resources:
+                self.log.warning(manageweb.DISCLAIMER)
                 self.web = manageweb.Web(self)
                 t = threading.Thread(target=self.web.wrap, args=())
                 t.daemon = True
@@ -299,7 +303,7 @@ class Wrapper(object):
             else:
                 self.log.error(
                     "Web remote could not be started because you do not have"
-                    " the required modules installed: pkg_resources\n"
+                    " the pkg_resources module installed: \n"
                     "Hint: http://stackoverflow.com/questions/7446187")
 
         # Console Daemon runs while not wrapper.halt.halt
@@ -338,6 +342,12 @@ class Wrapper(object):
             t.daemon = True
             t.start()
 
+        # Alert sent by daemonized thread to prevent wrapper execution blocking
+        if self.alerts_on:
+            self.alerts.ui_process_alerts(
+                "Wrapper.py started at %s" % time.time()
+            )
+
         self.javaserver.handle_server()
         # handle_server always runs, even if the actual server is not started
 
@@ -347,6 +357,12 @@ class Wrapper(object):
         self.wrapper_permissions.close()
         self.wrapper_usercache.close()
         self.log.info("Wrapper Storages closed and saved.")
+
+        # use non-daemon thread to ensure alert gets sent before wrapper closes
+        if self.alerts_on:
+            self.alerts.ui_process_alerts(
+                "Wrapper.py stopped at %s" % time.time(), blocking=True
+            )
 
         # wrapper execution ends here.  handle_server ends when
         # wrapper.halt.halt is True.
@@ -361,7 +377,8 @@ class Wrapper(object):
         # noinspection PyBroadException
         try:
             # lacking in Windows
-            signal.signal(signal.SIGTSTP, self.sigtstp)
+            if self.trap_ctrlz:
+                signal.signal(signal.SIGTSTP, self.sigtstp)
         except:
             pass
 
@@ -381,12 +398,14 @@ class Wrapper(object):
         self = args[0]
         self.log.info("Wrapper.py received SIGTSTP; NO sleep support!"
                       " Wrapper halting...\n")
+        # this continues a frozen server, if it was frozen...
         os.system("kill -CONT %d" % self.javaserver.proc.pid)
         self._halt()
 
     def _halt(self):
-        self.javaserver.stop(self.halt_message, restart_the_server=False)
-        self.halt.halt = True
+        if self.servervitals.state in (1, 2):
+            self.javaserver.stop(self.halt_message, restart_the_server=False)
+        self.haltsig.halt = True
 
     def shutdown(self):
         self._halt()
@@ -400,43 +419,72 @@ class Wrapper(object):
         """
         cursor = self.cursor
 
+        def _console_event():
+            self.events.callevent("server.consoleMessage",
+                                  {"message": message}, abortable=False)
+            """ eventdoc
+                <group> core/wrapper.py <group>
+
+                <description> a line of Console output.
+                <description>
+
+                <abortable> No
+                <abortable>
+
+                <comments>
+                This event is triggered by console output which has already been sent. 
+                <comments>
+
+                <payload>
+                "message": <str> type - The line of buffered output.
+                <payload>
+
+            """  # noqa
+
         if self.use_readline:
+            _console_event()
             print(message)
             return
 
-        def _wrapper(msg):
+        def _wrapper_line():
+            _console_event()
+            _wrapper()
+
+        def _wrapper():
             """_wrapper is normally displaying a live typing buffer.
             Therefore, there is no cr/lf at end because it is 
             constantly being re-printed in the same spot as the
             user types."""
-            if msg != "":
+            if message != "":
                 # re-print what the console user was typing right below that.
                 # /wrapper commands receive special magenta coloring
-                if msg[0:1] == '/':
+                if message[0:1] == '/':
                     print("{0}{1}{2}{3}{4}{5}".format(
                         UP_LINE, cursor, FG_YELLOW,
-                        msg, RESET, CLEAR_EOL))
+                        message, RESET, CLEAR_EOL))
                 else:
                     print("{0}{1}{2}{3}".format(
                         BACKSPACE, cursor,
-                        msg, CLEAR_EOL))
+                        message, CLEAR_EOL))
 
-        def _server(msg):
+        def _server():
             # print server lines
-            print("{0}{1}{2}\r\n".format(UP_LINE, CLEAR_LINE, msg, CLEAR_EOL))
+            _console_event()
+            print("{0}{1}{2}\r\n".format(UP_LINE, CLEAR_LINE, message, CLEAR_EOL))  # noqa
 
-        def _print(msg):
-            _server(msg)
+        def _print():
+            _server()
 
         parse = {
             "server": _server,
             "wrapper": _wrapper,
+            "wrapper_line": _wrapper_line,
             "print": _print,
         }
 
         # if this fails due to key error, we WANT that raised, as it is
         #  a program code error, not a run-time error.
-        parse[source](message)
+        parse[source]()
 
     def getconsoleinput(self):
         """If wrapper is NOT using readline (self.use_readline == False),
@@ -467,7 +515,7 @@ class Wrapper(object):
             # working buffer allows arrow use to restore what they
             # were typing but did not enter as a command yet
             working_buff = ''
-            while not self.halt.halt:
+            while not self.haltsig.halt:
                 keypress = readkey.getcharacter()
                 keycode = readkey.convertchar(keypress)
                 length = len(self.input_buff)
@@ -565,19 +613,23 @@ class Wrapper(object):
 
             # print the finished command to console
             self.write_stdout(
-                "%s\r\n" % self.input_buff, source="wrapper")
+                "%s\r\n" % self.input_buff, source="wrapper_line")
 
         return consoleinput
 
     def parseconsoleinput(self):
-        while not self.halt.halt:
+        while not self.haltsig.halt:
             consoleinput = self.getconsoleinput()
             # No command (perhaps just a line feed or spaces?)
             if len(consoleinput) < 1:
                 continue
+            self.process_command(consoleinput)
 
+    def process_command(self, commandline, player=None):
+            if player is None:
+                player = self.xplayer
             # for use with runwrapperconsolecommand() command
-            wholecommandline = consoleinput[0:].split(" ")
+            wholecommandline = commandline[0:].split(" ")
             command = str(getargs(wholecommandline, 0)).lower()
 
             # this can be passed to runwrapperconsolecommand() command for args
@@ -599,96 +651,92 @@ class Wrapper(object):
                 self._checkforupdate(True)
             # "plugins" command (with no slash) reserved for server commands
             elif command == "/plugins":
-                self.listplugins()
+                self.listplugins(player)
             elif command in ("/mem", "/memory", "mem", "memory"):
                 self._memory()
             elif command in ("/raw", "raw"):
-                self._raw(consoleinput)
+                self._raw(commandline)
             elif command in ("/freeze", "freeze"):
                 self._freeze()
             elif command in ("/unfreeze", "unfreeze"):
                 self._unfreeze()
             elif command == "/version":
                 readout("/version", self.getbuildstring(),
-                        usereadline=self.use_readline)
+                        usereadline=self.use_readline, player=player)
             elif command in ("/mute", "/pause", "/cm", "/m", "/p"):
-                self._mute_console(allargs)
+                self._mute_console(allargs, player)
 
             # Commands that share the commands.py in-game interface
 
             # "reload" (with no slash) may be used by bukkit servers
             elif command == "/reload":
-                self.runwrapperconsolecommand("reload", [])
+                self.runwrapperconsolecommand("reload", [], player)
 
             # proxy mode ban system
             elif self.proxymode and command == "/ban":
-                self.runwrapperconsolecommand("ban", allargs)
+                self.runwrapperconsolecommand("ban", allargs, player)
 
             elif self.proxymode and command == "/ban-ip":
-                self.runwrapperconsolecommand("ban-ip", allargs)
+                self.runwrapperconsolecommand("ban-ip", allargs, player)
 
             elif self.proxymode and command == "/pardon-ip":
-                self.runwrapperconsolecommand("pardon-ip", allargs)
+                self.runwrapperconsolecommand("pardon-ip", allargs, player)
 
             elif self.proxymode and command == "/pardon":
-                self.runwrapperconsolecommand("pardon", allargs)
+                self.runwrapperconsolecommand("pardon", allargs, player)
 
             elif command in ("/perm", "/perms", "/super", "/permissions",
                              "perm", "perms", "super", "permissions"):
-                self.runwrapperconsolecommand("perms", allargs)
+                self.runwrapperconsolecommand("perms", allargs, player)
 
             elif command in ("/playerstats", "/stats", "playerstats", "stats"):
-                self.runwrapperconsolecommand("playerstats", allargs)
+                self.runwrapperconsolecommand("playerstats", allargs, player)
 
             elif command in ("/ent", "/entity", "/entities", "ent",
                              "entity", "entities"):
-                self.runwrapperconsolecommand("ent", allargs)
+                self.runwrapperconsolecommand("ent", allargs, player)
 
             elif command in ("/config", "/con", "/prop",
                              "/property", "/properties"):
-                self.runwrapperconsolecommand("config", allargs)
+                self.runwrapperconsolecommand("config", allargs, player)
+
+            elif command in ("whitelist", "/whitelist"):
+                self.runwrapperconsolecommand("whitelist", allargs, player)
 
             elif command in ("op", "/op"):
-                self.runwrapperconsolecommand("op", allargs)
+                self.runwrapperconsolecommand("op", allargs, player)
+
+            elif command in ("kick", "/kick"):
+                self.runwrapperconsolecommand("kick", allargs, player)
 
             elif command in ("deop", "/deop"):
-                self.runwrapperconsolecommand("deop", allargs)
+                self.runwrapperconsolecommand("deop", allargs, player)
 
-            elif command in ("pass", "/pass", "pw", "/pw", "password", "/password"):
-                self.runwrapperconsolecommand("password", allargs)
-
-            # TODO Add more commands below here, below the original items:
-            # TODO __________________
-
-            # more commands here...
-
-            # TODO __________________
-            # TODO add more commands above here, above the help-related items:
+            elif command in ("pass", "/pass", "pw", "/pw", "password", "/password"):  # noqa
+                self.runwrapperconsolecommand("password", allargs, player)
 
             # minecraft help command
             elif command == "help":
                 readout("/help", "Get wrapper.py help.",
                         separator=" (with a slash) - ",
-                        usereadline=self.use_readline)
-                self.javaserver.console(consoleinput)
+                        usereadline=self.use_readline, player=player)
+                self.javaserver.console(commandline)
 
             # wrapper's help (console version)
             elif command == "/help":
-                self._show_help_console()
+                self._show_help_console(player)
 
             # wrapper ban help
             elif command == "/bans":
-                self._show_help_bans()
+                self._show_help_bans(player)
 
             # Commmand not recognized by wrapper
             else:
                 try:
-                    self.javaserver.console(consoleinput)
+                    self.javaserver.console(commandline)
                 except Exception as e:
-                    self.log.error("[BREAK] Console input exception"
+                    self.log.error("Console input exception"
                                    " (nothing passed to server) \n%s" % e)
-                    break
-                continue
 
     def _registerwrappershelp(self):
         # All commands listed herein are accessible in-game
@@ -741,9 +789,11 @@ class Wrapper(object):
                  " displays on single page!)", "mc1.7.6")
             ])
 
-    def runwrapperconsolecommand(self, wrappercommand, argslist):
+    def runwrapperconsolecommand(self, wrappercommand, argslist, player=None):
+        if player is None:
+            player = self.xplayer
         xpayload = {
-            'player': self.xplayer,
+            'player': player,
             'command': wrappercommand,
             'args': argslist
         }
@@ -760,16 +810,17 @@ class Wrapper(object):
         if self.proxymode:
             # if wrapper is using proxy mode (which should be set to online)
             return self.config["Proxy"]["online-mode"]
-        if self.javaserver is not None:
-            if self.servervitals.onlineMode:
-                # if local server is online-mode
-                return True
+        if self.javaserver:
+            try:
+                return self.servervitals.properties["online-mode"]
+            except KeyError:
+                pass
         return False
 
-    def listplugins(self):
+    def listplugins(self, player):
         readout("",
                 "List of Wrapper.py plugins installed:", separator="", pad=4,
-                usereadline=self.use_readline)
+                usereadline=self.use_readline, player=player)
         for plid in self.plugins:
             plugin = self.plugins[plid]
             if plugin["good"]:
@@ -778,14 +829,13 @@ class Wrapper(object):
                 if summary is None:
                     summary = "No description available for this plugin"
 
-                version = plugin["version"]
-                readout(name, summary,
-                        separator=(
-                            " - v%s - " % ".".join([str(_) for _ in version])),
-                        usereadline=self.use_readline)
+                plugin_version = plugin["version"]
+                sep = " - v%s - " % ".".join([str(_) for _ in plugin_version])
+                readout(name, summary, separator=sep,
+                        usereadline=self.use_readline, player=player)
             else:
                 readout("failed to load plugin", plugin, pad=25,
-                        usereadline=self.use_readline)
+                        usereadline=self.use_readline, player=player)
 
     def _start_emailer(self):
         alerts = self.config["Alerts"]["enabled"]
@@ -793,11 +843,15 @@ class Wrapper(object):
             self.config["Alerts"] = "alerts true"
 
     def _startproxy(self):
-
-        # error will raise if requests or cryptography is missing.
-        self.proxy = Proxy(self.halt, self.proxyconfig,
-                           self.servervitals, self.log,
-                           self.usercache, self.events)
+        try:
+            self.proxy = Proxy(self.haltsig, self.proxyconfig, self.servervitals,
+                               self.log, self.wrapper_usercache, self.events,
+                               self.encoding)
+        except ImportError:
+            self.log.error("Proxy mode not started because of missing "
+                           "dependencies for encryption!")
+            self.disable_proxymode()
+            return
 
         # wait for server to start
         timer = 0
@@ -829,23 +883,29 @@ class Wrapper(object):
         self.log.warning(
             "\nProxy mode is now turned off in wrapper.properties.json.\n")
 
+    def enable_proxymode(self):
+        self.proxymode = True
+        self.config["Proxy"]["proxy-enabled"] = True
+        self.configManager.save()
+        self.log.warning(
+            "\nProxy mode is now back on in wrapper.properties.json.\n")
+        self.log.debug("attempting a restart of proxy mode...")
+        self._startproxy()
+
     @staticmethod
     def getbuildstring():
-        if core_buildinfo_version.__branch__ == "dev":
-            return "%s (development build #%d)" % (
-                core_buildinfo_version.__version__,
-                core_buildinfo_version.__build__)
 
-        elif core_buildinfo_version.__branch__ == "stable":
-            return "%s (stable)" % core_buildinfo_version.__version__
-        else:
-            return "Version: %s (%s build #%d)" % (
-                core_buildinfo_version.__version__,
-                core_buildinfo_version.__branch__,
-                core_buildinfo_version.__build__)
+        thisversion = version_mod.get_complete_version()
+        vers_string = "%d.%d.%d - %s (%s build #%d)" % (
+            thisversion[0], thisversion[1], thisversion[2],  # 3 part semantic
+            thisversion[3],                                  # release type
+            buildinfo.__branch__,                            # branch
+            thisversion[4],                                  # build number
+        )
+        return vers_string
 
     def _auto_update_process(self):
-        while not self.halt.halt:
+        while not self.haltsig.halt:
             time.sleep(3600)
             if self.updated:
                 self.log.info(
@@ -859,15 +919,16 @@ class Wrapper(object):
         self.log.info("Checking for new builds...")
         update = self.get_wrapper_update_info()
         if update:
-            version, build, repotype, reponame = update
+            version, repotype, reponame = update
+            build = version[4]
             self.log.info(
                 "New Wrapper.py %s build #%d is available!"
                 " (current build is #%d)",
-                repotype, build, core_buildinfo_version.__build__)
+                repotype, build, buildinfo.__version__[4])
 
             if self.auto_update_wrapper or update_now:
                 self.log.info("Updating...")
-                self.performupdate(version, build)
+                self.performupdate(version, reponame)
             else:
                 self.log.info(
                     "Because you have 'auto-update-wrapper' set to False,"
@@ -880,41 +941,90 @@ class Wrapper(object):
         """get the applicable branch wrapper update"""
         # read the installed branch info
         if repotype is None:
-            repotype = core_buildinfo_version.__branch__
+            repotype = buildinfo.__branch__
+
+        # develop updates location
         if self.auto_update_branch:
             branch_key = self.auto_update_branch
         else:
             branch_key = "%s-branch" % repotype
-        r = requests.get("%s/build/version.json" % self.config["Updates"][branch_key])
+
+        # get the update information
+        r = requests.get("%s/build/version.json" % self.config["Updates"][branch_key])  # noqa
         if r.status_code == 200:
             data = r.json()
-            if data["__build__"] > core_buildinfo_version.__build__:
-                if repotype == "dev":
-                    reponame = "development"
-                elif repotype == "stable":
-                    reponame = "master"
-                else:
-                    reponame = data["__branch__"]
-                if "__version__" not in data:
-                    data["__version__"] = data["version"]
-                return data["__version__"], data["__build__"], data["__branch__"], reponame
-
         else:
             self.log.warning(
                 "Failed to check for updates - are you connected to the"
                 " internet? (Status Code %d)", r.status_code)
             return False
+        # do some renaming for humans (maintain consistent branch namings)
+        if repotype == "dev":
+            reponame = "development"
+        elif repotype == "stable":
+            reponame = "master"
+        else:
+            reponame = data["__branch__"]
 
-    def performupdate(self, version, build):
+        # should not happen unless someone points to a very old repo.
+        if "__version__" not in data:
+            self.log.warning("corrupted repo data. Saved debug data to disk!")
+            putjsonfile(data, "repo_update_failure_debug")
+            return False
+
+        release_mapping = {'alpha': 0, 'beta': 1, 'rc': 2, "final": 3}
+        this_wrapper_rel = release_mapping[buildinfo.__version__[3]]
+        found_wrapper_rel = release_mapping[data["__version__"][3]]
+        versionisbetter = data["__version__"][0] > buildinfo.__version__[0]
+        versionissame = data["__version__"][0] = buildinfo.__version__[0]
+        subversionhigher = data["__version__"][1] > buildinfo.__version__[1]
+        subversionsame = data["__version__"][1] = buildinfo.__version__[1]
+        miniversionhigher = data["__version__"][2] > buildinfo.__version__[2]
+        buildishigher = data["__version__"][4] > buildinfo.__version__[4]
+
+        ''' 
+        version[__build__] is deprecated and remains in version.json solely
+        for older wrapper builds before (old build number) 265.  Since the 
+        new version tuple includes build as the fifth element, we use that.
+        Of course really old versions (0.8.x and older) still use the old
+        `"build"` item... 
+        
+        Build numbers are now unique to a given release and version.  So
+        [1, 0, 0, 'rc', <build>] will have a different build number sequence
+        from both [0, 16, 1, 'beta', <build>] and [1, 0, 0, 'final', <build>]
+        '''
+
+        update = False
+        if found_wrapper_rel > this_wrapper_rel:
+            update = True
+        elif versionisbetter:
+            update = True
+        elif buildishigher:
+            update = True
+        elif versionissame:
+            if subversionhigher:
+                update = True
+            elif subversionsame and miniversionhigher:
+                update = True
+
+        if update:
+            return data["__version__"], data[
+                "__branch__"], reponame
+        else:
+            return False
+
+    def performupdate(self, version, repo):
         """
         Perform update; returns True if update succeeds.  User must
         still restart wrapper manually.
 
         :param version: first argument from get_wrapper_update_info()
-        :param build: second argument from get_wrapper_update_info()
+        :param repo: get_wrapper_update_info().__branch__
         :return: True if update succeeds
         """
 
+        if self.updated:
+            return True
         wraphash = requests.get("%s/build/Wrapper.py.md5" % self.update_url)
         wrapperfile = requests.get("%s/Wrapper.py" % self.update_url)
 
@@ -926,8 +1036,9 @@ class Wrapper(object):
                 with open(sys.argv[0], "wb") as f:
                     f.write(wrapperfile.content)
                 self.log.info(
-                    "Wrapper.py %s (#%d) installed. Please reboot Wrapper.py.",
-                    ".".join([str(_) for _ in version]), build)
+                    "Wrapper.py %s (%s) installed. Please reboot Wrapper.py.",
+                    version_mod.get_main_version(version), repo
+                )
                 self.updated = True
                 return True
             else:
@@ -940,13 +1051,17 @@ class Wrapper(object):
             return False
 
     def event_timer_second(self):
-        while not self.halt.halt:
+        while not self.haltsig.halt:
             time.sleep(1)
-            self.events.callevent("timer.second", None)
+            self.events.callevent("timer.second", None, abortable=False)
             """ eventdoc
                 <group> wrapper <group>
 
-                <description> a timer that is called each second.
+                <description> a timer that is called each second.  Do
+                <sp> not rely on these events to happen 'on-time'!  They
+                <sp> can be delayed based on their position the queue, as 
+                <sp> well as the total number of timer.second events being 
+                <sp> called.                
                 <description>
 
                 <abortable> No <abortable>
@@ -954,8 +1069,8 @@ class Wrapper(object):
             """
 
     def event_timer_tick(self):
-        while not self.halt.halt:
-            self.events.callevent("timer.tick", None)
+        while not self.haltsig.halt:
+            self.events.callevent("timer.tick", None, abortable=False)
             time.sleep(0.05)
             """ eventdoc
                 <group> wrapper <group>
@@ -967,37 +1082,63 @@ class Wrapper(object):
                 <abortable> No <abortable>
 
                 <comments>
-                Use of this timer is not suggested and is turned off
-                <sp> by default in the wrapper.config.json file
+                Use of this timer is deprecated and is turned off
+                <sp> by default in the wrapper.config.json file.  the final 
+                <sp> wrapper version 1.0 final will not support this timer. Its
+                <sp> use in wrapper has always been a bad idea. Starting with
+                <sp> wrapper 1.0.9 RC 12, this timer will be somewhat buggy,
+                <sp> running two or more ticks behind.
                 <comments>
 
             """
 
-    def _pause_console(self, pause_time):
+    def backups_running(self):
+        return self._backup_progress()
+
+    def backups_idle(self):
+        return not self._backup_progress()
+
+    def _backup_progress(self):
+        if self.backups:
+            if self.backups.inprogress:
+                self.log.info(
+                    "backup_progress reporting: A backup is in progress."
+                )
+                return True
+            else:
+                return False
+        else:
+            return False
+
+    def _pause_console(self, pause_time, player):
         if not self.javaserver:
             readout("ERROR - ",
                     "There is no running server instance to mute.",
-                    separator="", pad=10, usereadline=self.use_readline)
+                    separator="", pad=10,
+                    usereadline=self.use_readline, player=player)
             return
         self.javaserver.server_muted = True
         readout("Server is now muted for %d seconds." % pause_time, "",
                 separator="", command_text_fg="yellow",
-                usereadline=self.use_readline)
+                usereadline=self.use_readline, player=player)
         time.sleep(pause_time)
         readout("Server now unmuted.", "", separator="",
-                usereadline=self.use_readline)
+                usereadline=self.use_readline, player=player)
         self.javaserver.server_muted = False
         for lines in self.javaserver.queued_lines:
-            readout("Q\\", "", lines, pad=3, usereadline=self.use_readline)
+            readout("Q\\", "", lines, pad=3,
+                    usereadline=self.use_readline, player=player)
             time.sleep(.1)
         self.javaserver.queued_lines = []
 
-    def _mute_console(self, all_args):
+    def _mute_console(self, all_args, player):
         pausetime = 30
         if len(all_args) > 0:
             pausetime = get_int(all_args[0])
         # spur off a pause thread
-        cm = threading.Thread(target=self._pause_console, args=(pausetime,))
+        cm = threading.Thread(
+            target=self._pause_console, args=(pausetime, player)
+        )
         cm.daemon = True
         cm.start()
 
@@ -1012,6 +1153,44 @@ class Wrapper(object):
             self.log.exception(
                 "Something went wrong when trying to freeze the"
                 " server! (%s)", exc)
+
+    # noinspection PyBroadException
+    @staticmethod
+    def memory_usage():
+        """Memory usage of the current process in kilobytes.
+        returns dict {'peak': 0, 'rss': 0}"""
+
+        def _memory_usage():
+            """Memory usage of the current process in kilobytes."""
+            status = None
+            result = {'peak': 0, 'rss': 0}
+            try:
+                # This will only work on systems with a /proc file system
+                # (like Linux).
+                status = open('/proc/self/status')
+                for line in status:
+                    parts = line.split()
+                    key = parts[0][2:-1].lower()
+                    if key in result:
+                        result[key] = int(parts[1])
+            finally:
+                if status is not None:
+                    status.close()
+            return result
+        try:
+            totmem = _memory_usage()
+        except:
+            try:
+                # this might be cross-platform
+                if resource:
+                    temp = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+                    totmem = {'peak': temp, 'rss': temp}
+                else:
+                    totmem = {'peak': 0, 'rss': 0}
+            except:
+                # all efforts fail...
+                totmem = {'peak': 0, 'rss': 0}
+        return totmem
 
     def _memory(self):
         try:
@@ -1050,69 +1229,69 @@ class Wrapper(object):
                 "Something went wrong when trying to unfreeze"
                 " the server! (%s)", exc)
 
-    def _show_help_console(self):
+    def _show_help_console(self, player):
         # This is the console help command display.
         readout("", "Get Minecraft help.",
                 separator="help (no slash) - ", pad=0,
-                usereadline=self.use_readline)
+                usereadline=self.use_readline, player=player)
         readout("/reload", "Reload Wrapper.py plugins.",
-                usereadline=self.use_readline)
+                usereadline=self.use_readline, player=player)
         readout("/plugins", "Lists Wrapper.py plugins.",
-                usereadline=self.use_readline)
+                usereadline=self.use_readline, player=player)
         readout("/update-wrapper",
                 "Checks for new Wrapper.py updates, and will install\n"
                 "them automatically if one is available.",
-                usereadline=self.use_readline)
+                usereadline=self.use_readline, player=player)
         readout("/stop",
                 "Stop the minecraft server without"
                 " auto-restarting and without\n"
                 "                  shuttingdown Wrapper.py.",
-                usereadline=self.use_readline)
+                usereadline=self.use_readline, player=player)
         readout("/start", "Start the minecraft server.",
-                usereadline=self.use_readline)
+                usereadline=self.use_readline, player=player)
         readout("/restart", "Restarts the minecraft server.",
-                usereadline=self.use_readline)
+                usereadline=self.use_readline, player=player)
         readout("/halt", "Shutdown Wrapper.py completely.",
-                usereadline=self.use_readline)
+                usereadline=self.use_readline, player=player)
         readout("/cm [seconds]",
                 "Mute server output (Wrapper console"
                 " logging still happens)",
-                usereadline=self.use_readline)
+                usereadline=self.use_readline, player=player)
         readout("/kill", "Force kill the server without saving.",
-                usereadline=self.use_readline)
+                usereadline=self.use_readline, player=player)
         readout("/freeze",
                 "Temporarily locks the server up"
                 " until /unfreeze is executed\n"
                 "                  (Only works on *NIX servers).",
-                usereadline=self.use_readline)
+                usereadline=self.use_readline, player=player)
         readout("/unfreeze", "Unlocks a frozen state server"
                              " (Only works on *NIX servers).",
-                usereadline=self.use_readline)
+                usereadline=self.use_readline, player=player)
         readout("/mem", "Get memory usage of the server"
                         " (Only works on *NIX servers).",
-                usereadline=self.use_readline)
+                usereadline=self.use_readline, player=player)
         readout("/raw [command]",
                 "Send command to the Minecraft"
                 " Server. Useful for Forge\n"
                 "                  commands like '/fml confirm'.",
-                usereadline=self.use_readline)
+                usereadline=self.use_readline, player=player)
         readout("/password",
                 "run `/password help` for more...)",
-                usereadline=self.use_readline)
+                usereadline=self.use_readline, player=player)
         readout("/perms", "/perms for more...)",
-                usereadline=self.use_readline)
+                usereadline=self.use_readline, player=player)
         readout("/config", "Change wrapper.properties (type"
                            " /config help for more..)",
-                usereadline=self.use_readline)
+                usereadline=self.use_readline, player=player)
         readout("/version", self.getbuildstring(),
-                usereadline=self.use_readline)
+                usereadline=self.use_readline, player=player)
         readout("/entity",
                 "Work with entities (run /entity for more...)",
-                usereadline=self.use_readline)
+                usereadline=self.use_readline, player=player)
         readout("/bans", "Display the ban help page.",
-                usereadline=self.use_readline)
+                usereadline=self.use_readline, player=player)
 
-    def _show_help_bans(self):
+    def _show_help_bans(self, player):
         # ban commands help.
         if not self.proxymode:
             readout(
@@ -1120,44 +1299,44 @@ class Wrapper(object):
                 "Wrapper proxy-mode bans are not enabled "
                 "(proxy mode is not on).", separator="",
                 pad=10,
-                usereadline=self.use_readline)
+                usereadline=self.use_readline, player=player)
             return
 
         readout(
             "",
             "Bans - To use the server's versions, do not type a slash.",
             separator="", pad=5,
-            usereadline=self.use_readline)
+            usereadline=self.use_readline, player=player)
         readout(
             "", "", separator="-----1.7.6 and later ban commands-----",
             pad=10,
-            usereadline=self.use_readline)
+            usereadline=self.use_readline, player=player)
         readout(
             "/ban",
             " - Ban a player. Specifying h:<hours> or d:<days>"
             " creates a temp ban.",
             separator="<name> [reason..] [d:<days>/h:<hours>] ",
             pad=12,
-            usereadline=self.use_readline)
+            usereadline=self.use_readline, player=player)
         readout(
             "/ban-ip",
             " - Ban an IP address. Reason and days (d:) are optional.",
             separator="<ip> [<reason..> <d:<number of days>] ", pad=12,
-            usereadline=self.use_readline)
+            usereadline=self.use_readline, player=player)
         readout(
             "/pardon",
             " - pardon a player. Default is byuuidonly.  To unban a"
             "specific name (without checking uuid), use"
             " `pardon <player> False`",
             separator="<player> [byuuidonly(true/false)]", pad=12,
-            usereadline=self.use_readline)
+            usereadline=self.use_readline, player=player)
         readout(
             "/pardon-ip", " - Pardon an IP address.",
             separator="<address> ", pad=12,
-            usereadline=self.use_readline)
+            usereadline=self.use_readline, player=player)
         readout(
             "/banlist",
             " - search and display the banlist (warning -"
             " displays on single page!)",
             separator="[players|ips] [searchtext] ", pad=12,
-            usereadline=self.use_readline)
+            usereadline=self.use_readline, player=player)

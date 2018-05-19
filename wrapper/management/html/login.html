@@ -1,74 +1,107 @@
-<!-- I'm sorry for how sloppy this code is. I truly am. -->
+<!DOCTYPE html>
+<!-- refactored to get rid of `_` function and replace with getElem (for readability). -->
+
 <html>
-	<head>
-		<title>Admin Login - Wrapper.py</title>
-		<script type="text/javascript" src="requests.js"></script>
-		<script src="js/ie-emulation-modes-warning.js"></script>
-		<link href="css/bootstrap.min.css" rel="stylesheet">
-		<link href="css/signin.css" rel="stylesheet">
-		<script type="text/javascript" >
-			invalidLogins = 0
-			_ = function(id) {return document.getElementById(id)}
-			function isAuthed(){
-				if(!localStorage.sessionKey) return false
-				if(requests.action("is_admin", {"key": localStorage.sessionKey})["status"] == "good") return true
-				return false
-			}
-			function loginWithPassword(password){
-				r = requests.action("login", {"password": password, "remember-me": _("remember-me").checked})
-				if (r["payload"] == "permission_denied"){
-					_("login_invalid").style.display = "block"
-					invalidLogins += 1
-					if(invalidLogins > 1){
-						_("login_invalid").innerHTML = "The password was invalid. (" + invalidLogins + " attempts)"
-					}
-				}
-				else{
-					localStorage.sessionKey = r["payload"]["session-key"]
-					console.log("Login Success!")
-					window.location = "admin.html"
-				}
-			}
-			window.onload = function() {
-				if(isAuthed()){
-					window.location = "admin.html"
-				}
-			}
-			function _login(){
-				loginWithPassword(_('login_password').value)
-			}
-		</script>
-		<style type="text/css">
-			r{color:red;}
-			y{color:gold;}
-			g{color:green;}
-			.small{
-				font-style: italic;
-				font-size: 12px;
-			}
-			.op{color:darkgoldenrod;}
-		</style>
-	</head>
-	<body>
-		<div id="login_page" class="container">
-			<!--<h1>Wrapper.py Admin Login</h1>
-			<div id="login_invalid" style="display:none;color:red;font-weight:bold;">The password was invalid.</div>
-			Password: <input type="password" id="login_password" onkeydown="if(event.keyCode==13){_login();this.value='';}"/><button onclick="_login()">Login</button>-->
-			<form class="form-signin" role="form" action="javascript:_login();">
-				<h2 class="form-signin-heading">Admin Login</h2>
-				<div id="login_invalid" style="display:none;" class="alert alert-danger">The password was invalid.</div>
-				<label for="inputPassword" class="sr-only">Password</label>
-				<input type="password" id="login_password" class="form-control" placeholder="Password" required>
-				<div class="checkbox">
-					<label>
-						<input type="checkbox" id="remember-me"> Remember me
-					</label>
-				</div>
-				<button class="btn btn-lg btn-primary btn-block" type="submit">Login</button>
-			</form>
-		</div><!-- /container -->
-		<script src="js/jquery.min.js"></script>
-		<script src="js/bootstrap.min.js"></script>
-		<script src="js/ie10-viewport-bug-workaround.js"></script>
-	</body>
+    <head>
+        <meta charset="utf-8"/>
+        <title>Admin Login - Wrapper.py</title>
+        <script type="text/javascript" src="requests.js"></script>
+        <!-- <script src="js/ie-emulation-modes-warning.js"></script> -->
+        <link href="css/bootstrap.min.css" rel="stylesheet">
+        <link href="css/signin.css" rel="stylesheet">
+        <script type="text/javascript">
+
+            invalidLogins = 0;
+            getElem = function(id) {return document.getElementById(id)};
+
+            function isAuthed(){
+                if(!localStorage.sessionKey){
+                    return false;
+                }
+                var loginKey = requests.action("is_admin", {});
+                if (loginKey["status"] == "good"){
+                    return true;
+                }
+                localStorage.sessionKey = undefined
+                return false;
+            }
+
+            function loginWithPassword(password){
+                console.log("start loginWithPassword");
+                var r = requests.action("login", {"password": password, "remember-me": getElem("remember-me").checked, username: getElem("user_name").value});
+                if (r == "permission_denied"){
+                    invalidLogins += 1;
+                    getElem("login_invalid").style.display = "block";
+                    if(invalidLogins > 1){
+                        getElem("login_invalid").innerHTML = "The password was invalid. (" + invalidLogins + " attempts)";
+                    return;
+                    }
+                }
+                if (r == "timed_out"){
+                    if (invalidLogins > 5){
+                    invalidLogins = -1;
+                    }
+                    invalidLogins += 1;
+                    getElem("login_invalid").style.display = "block";
+                    getElem("login_invalid").innerHTML = "Timed out.. Too many attempts!";
+                    return;
+                }
+
+                localStorage.sessionKey = r["session-key"];
+                window.location = "admin.html";
+            }
+            window.onload = function() {
+                if(isAuthed()){
+                    console.log("got authed on window load...");
+                    window.location = "admin.html";
+                }
+                else{
+                    invalidLogins += 1;
+                    getElem("login_invalid").style.display = "block";
+                    getElem("login_invalid").innerHTML = "You must login to access Web interface.";
+                }
+            }
+            function _login(){
+                console.log("starting login.");
+                console.log(getElem("login_password").value);
+                loginWithPassword(getElem("login_password").value);
+            }
+        </script>
+        <style type="text/css">
+            r{color:red;}
+            y{color:gold;}
+            g{color:green;}
+            .small{
+                font-style: italic;
+                font-size: 12px;
+            }
+            .op{color:darkgoldenrod;}
+        </style>
+    </head>
+
+    <body>
+        <div id="login_page" class="container">
+            <!--<h1>Wrapper.py Admin Login</h1>
+            <div id="login_invalid" style="display:none;color:red;font-weight:bold;">The password was invalid.</div>
+            Password: <input type="password" id="login_password" onkeydown="if(event.keyCode==13){_login();this.value='';}"/><button onclick="_login()">Login</button>-->
+            <form class="form-signin" action="javascript:_login();">
+                <h2 class="form-signin-heading">Admin Login</h2><br>
+                <h4> Enter your Wrapper.py 'Web' Password. </h4>
+                <div id="login_invalid" style="display:none;" class="alert alert-danger">The password was invalid.</div>
+                <label class="sr-only">Password</label>
+                <input type="text" id="user_name" class="form-control" required value="WebAdmin">
+                <input type="password" id="login_password" class="form-control" placeholder="Password" required>
+                <div class="checkbox">
+                    <label>
+                        <input type="checkbox" id="remember-me"> Remember me
+                    </label>
+                </div>
+                <button class="btn btn-lg btn-primary btn-block" >Login</button>
+            </form>
+        </div><!-- /container -->
+        <script src="js/jquery.min.js"></script>
+        <script src="js/bootstrap.min.js"></script>
+        <!-- <script src="js/ie10-viewport-bug-workaround.js"></script> -->
+    </body>
+
 </html>
