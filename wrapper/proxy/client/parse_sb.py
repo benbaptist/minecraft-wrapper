@@ -10,7 +10,6 @@ import threading
 import time
 
 from proxy.utils.constants import *
-from proxy.utils.mcuuid import MCUUID
 
 
 # noinspection PyMethodMayBeStatic
@@ -26,7 +25,7 @@ class ParseSB(object):
         self.pktSB = self.client.pktSB
         self.pktCB = self.client.pktCB
 
-        self.command_prefix = self.proxy.srv_data.command_prefix
+        self.command_prefix = self.proxy.command_prefix
         self.command_prefix_non_standard = self.command_prefix != "/"
 
     def keep_alive(self):
@@ -78,12 +77,14 @@ class ParseSB(object):
         """
         if "ip" in response:
             self.client.info["username"] = response["username"]
-            self.client.info["realuuid"] = MCUUID(response["realuuid"]).string
+            self.client.info["realuuid"] = self.proxy.wrapper.mcuuid(
+                response["realuuid"]).string
             self.client.info["ip"] = response["ip"]
 
             self.client.ip = response["ip"]
             if response["realuuid"] != "":
-                self.client.mojanguuid = MCUUID(response["realuuid"])
+                self.client.mojanguuid = self.proxy.wrapper.mcuuid(
+                    response["realuuid"])
             self.client.username = response["username"]
             return True
         else:
@@ -173,7 +174,7 @@ class ParseSB(object):
             return True
 
         try:
-            player = self.client.srv_data.players[self.client.username]
+            player = self.client.proxy.wrapper.players[self.client.username]
         except KeyError:
             return False
         payload = self.proxy.eventhandler.callevent("player.rawMessage", {
@@ -228,7 +229,7 @@ class ParseSB(object):
                     "playername":
                         self.client.username,
                     "player":
-                        self.client.srv_data.players[self.client.username],
+                        self.client.proxy.wrapper.players[self.client.username],
                     "command":
                         allwords[0][1:],
                     "args":
@@ -287,7 +288,7 @@ class ParseSB(object):
             return self._world_hub_help("w")
 
         elif where == "":
-            port = self.proxy.srv_data.server_port
+            port = self.client.javaserver.server_port
             ip = "127.0.0.1"
         else:
             worlds = self.proxy.proxy_worlds
@@ -373,7 +374,7 @@ class ParseSB(object):
             position = data[1]
 
         try:
-            player = self.client.srv_data.players[self.client.username]
+            player = self.client.proxy.wrapper.players[self.client.username]
         except KeyError:
             return False
         # finished digging
@@ -419,7 +420,7 @@ class ParseSB(object):
             if self.client.gamemode != 1:
                 if not self.proxy.eventhandler.callevent("player.dig", {
                     "playername": self.client.username,
-                    "player": self.client.srv_data.players[
+                    "player": self.client.proxy.wrapper.players[
                         self.client.username],
                     "position": position,
                     "action": "begin_break",
@@ -429,7 +430,7 @@ class ParseSB(object):
             else:
                 if not self.proxy.eventhandler.callevent("player.dig", {
                     "playername": self.client.username,
-                    "player": self.client.srv_data.players[
+                    "player": self.client.proxy.wrapper.players[
                         self.client.username],
                     "position": position,
                     "action": "end_break",
@@ -536,7 +537,7 @@ class ParseSB(object):
             position = (position[0] + 1, position[1], position[2])
 
         try:
-            player = self.client.srv_data.players[self.client.username]
+            player = self.client.proxy.wrapper.players[self.client.username]
         except KeyError:
             return False
 
@@ -594,7 +595,7 @@ class ParseSB(object):
             position = self.client.lastplacecoords[0]
 
         try:
-            player = self.client.srv_data.players[self.client.username]
+            player = self.client.proxy.wrapper.players[self.client.username]
         except KeyError:
             return False
         if not self.proxy.eventhandler.callevent("player.interact", {
@@ -643,7 +644,7 @@ class ParseSB(object):
         l4 = data[6]
 
         try:
-            player = self.client.srv_data.players[self.client.username]
+            player = self.client.proxy.wrapper.players[self.client.username]
         except KeyError:
             return False
         payload = self.proxy.eventhandler.callevent("player.createSign", {
@@ -734,7 +735,7 @@ class ParseSB(object):
             data = [False, 0, 0, 0, 0, 0, 0]
 
         try:
-            player = self.client.srv_data.players[self.client.username]
+            player = self.client.proxy.wrapper.players[self.client.username]
         except KeyError:
             return False
         datadict = {

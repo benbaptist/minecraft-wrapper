@@ -18,7 +18,6 @@ import sys
 # import StringIO
 
 # local
-from proxy.utils.mcuuid import MCUUID
 from proxy.utils.constants import *
 
 # Py3-2
@@ -77,7 +76,7 @@ class Packet(object):
 
         # this is set by the calling class/method.  Not presently used here,
         #  but could be. maybe to decide which metadata parser to use?
-        self.version = self.obj.srv_data.protocolVersion
+        self.version = self.obj.javaserver.protocolVersion
         self.buffer = io.BytesIO()  # Py3
         # self.buffer = StringIO.StringIO()
 
@@ -719,7 +718,7 @@ class Packet(object):
         return x, y, z
 
     def read_uuid(self):
-        return MCUUID(bytes=self.read_data(16))
+        return self.obj.proxy.wrapper.mcuuid(bytes=self.read_data(16))
 
     def read_metadata_1_9(self):
         meta_data = {}
