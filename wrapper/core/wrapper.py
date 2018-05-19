@@ -183,15 +183,16 @@ class Wrapper(object):
         self.use_readline = not(self.config["Misc"]["use-betterconsole"])
         self.trap_ctrlz = self.config["Misc"]["trap-ctrl-z"]
 
-        #  HaltSig - Why? ... because if self.halt was just `False`, passing
-        #  a self.halt would simply be passing `False` (immutable).  Changing
-        # the value of self.halt would not necessarily change the value of the
-        # passed parameter (unless it was specifically referenced back as
-        # `wrapper.halt`). Since the halt signal needs to be passed, possibly
+        #  HaltSig - Why? ... because if self.haltsig was just `False`, passing
+        #  a self.haltsig would simply be passing `False` (immutable).  Changing
+        # the value of self.haltsig would not necessarily change the value of
+        # the passed parameter (unless it was specifically referenced back as
+        # `wrapper.haltsig`). Since the halt signal needs to be passed, possibly
         # several layers deep, and into modules that it may be desireable to
         # not have direct access to wrapper, using a HaltSig object is
-        # more desireable and reliable in behavior.
-        self.halt = HaltSig()
+        # required to ensure we are actually sharing the same value between
+        # different objects.
+        self.haltsig = HaltSig()
 
         # Storages
         self.wrapper_storage = Storage("wrapper", pickle=False)
@@ -404,7 +405,7 @@ class Wrapper(object):
     def _halt(self):
         if self.servervitals.state in (1, 2):
             self.javaserver.stop(self.halt_message, restart_the_server=False)
-        self.halt.halt = True
+        self.haltsig.halt = True
 
     def shutdown(self):
         self._halt()
@@ -514,7 +515,7 @@ class Wrapper(object):
             # working buffer allows arrow use to restore what they
             # were typing but did not enter as a command yet
             working_buff = ''
-            while not self.halt.halt:
+            while not self.haltsig.halt:
                 keypress = readkey.getcharacter()
                 keycode = readkey.convertchar(keypress)
                 length = len(self.input_buff)
@@ -617,7 +618,7 @@ class Wrapper(object):
         return consoleinput
 
     def parseconsoleinput(self):
-        while not self.halt.halt:
+        while not self.haltsig.halt:
             consoleinput = self.getconsoleinput()
             # No command (perhaps just a line feed or spaces?)
             if len(consoleinput) < 1:
@@ -843,7 +844,7 @@ class Wrapper(object):
 
     def _startproxy(self):
         try:
-            self.proxy = Proxy(self.halt, self.proxyconfig, self.servervitals,
+            self.proxy = Proxy(self.haltsig, self.proxyconfig, self.servervitals,
                                self.log, self.wrapper_usercache, self.events,
                                self.encoding)
         except ImportError:
@@ -904,7 +905,7 @@ class Wrapper(object):
         return vers_string
 
     def _auto_update_process(self):
-        while not self.halt.halt:
+        while not self.haltsig.halt:
             time.sleep(3600)
             if self.updated:
                 self.log.info(
@@ -1050,7 +1051,7 @@ class Wrapper(object):
             return False
 
     def event_timer_second(self):
-        while not self.halt.halt:
+        while not self.haltsig.halt:
             time.sleep(1)
             self.events.callevent("timer.second", None, abortable=False)
             """ eventdoc
@@ -1068,7 +1069,7 @@ class Wrapper(object):
             """
 
     def event_timer_tick(self):
-        while not self.halt.halt:
+        while not self.haltsig.halt:
             self.events.callevent("timer.tick", None, abortable=False)
             time.sleep(0.05)
             """ eventdoc

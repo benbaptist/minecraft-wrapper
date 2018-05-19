@@ -1,5 +1,6 @@
 # coding=utf-8
 
+from collections import deque
 import math
 import threading
 import time
@@ -94,7 +95,7 @@ class Main:
 
         # _restoreworld parameters
         self.run = True
-        self.clicks_queue = []
+        self.clicks_queue = deque([])
         self.lastmessage = {}
         rw = threading.Thread(target=self._restoreworld,
                               name="restores", args=())
@@ -202,7 +203,7 @@ class Main:
             time.sleep(.5)
             while len(self.clicks_queue) > 0:
                 # grab next change
-                action_tuple = self.clicks_queue.pop(0)
+                action_tuple = self.clicks_queue.popleft()
                 action, player, position = action_tuple
                 status = 1  # canceled digging
                 face = 1

@@ -1,4 +1,88 @@
 #Changelog#
+<h4>1.0.15 rc 20</h4>
+Primary reasons for update:
+- Regular update prior to further new Wrapper development
+
+Api improvements:
+- Updates to NBT.py for various parts of Mincraft 1.12 and upcoming 1.13.
+- version checking added to proxy/utils/encryption.py cryptography import.
+- Make the packet flush times configurable since different computers and setups may have different ideal flushing intervals.
+- allow different IP's for hubs (able to use 192.168.x.x, for instance).
+- adds DiscordRelay plugin by @PurePi
+- api.helpers.get_int - accepts possible booleans
+- add Regions suite to stable plugins.
+- Add base API property `wrapper_version` to allow plugins to inspect Wrapper's version.
+- improved name changes to include offline hubs being able to update names too!
+  : whitelist warning : Names are still whitelisted by offline name. An
+   automatic name change will cause player to not be whitelisted (you will
+   have to `whitelist add` the new name).
+- Make wrapper current through snapshot 18w14b:
+    - add protocol 368 as PROTOCOL_PRE_RELEASE
+    - add PROTOCOL_PRE_RELEASE packets for CB and SB.
+    - Fix slot parsing, which has changed with new snapshots.
+    **TEMPORARILY BROKE / not implemented yet** - server.autoCompletes
+     (parse_cb.py) event is not compliant for sending/modding the new packet.
+
+Bugfixes:
+- name changes were not actually working (old name persisted).
+- Fixed wrapper's player.interact use_item event that has been broken
+ ever since wrapper stopped using the old string-keys packet read() format.
+- Fix error that causes wrapper to think snapshots are pre-netty.
+- Fix old Py3 Errors in NBT things
+- Harden up wrapper's handling of disconnected players.
+- Patch resource imports that may not work on Windows.
+- Fix wrapper client inventory bugs (inconsistent use of None versus {"id" = -1}
+ in code.
+- Various regions plugin bugfixes and improvements.
+- Fix bug in api.backups.enableBackups.
+- fix bug in portals.py
+- fix bug clientconnection.py line 1074 (not enough args for log formatting).
+- fix bug in parse_sb.py and parse_cb.py player objects, usually caused by player disconnection.
+- Possibly fixed bug where we may not be shutting down client sockets when they abort,
+ causing the os system file limits to be exceeded after a certain amount of time.
+- fix error in backups.py.  It still referenced the "payload" argument from
+ the original 'timer.second' event that used to drive it.
+- bug fix packet.py line 645 that calls close_server method (which did not
+ formerly exist for clientconnection.py).  added a `close_server` method to
+ clientconnection.py to wrap cleintconnection's `_close_server_instance` method.
+- Bugfix remove Python3 style function annotations.  Use comment style annoations instead.
+- fix errors with occasional problems in playerposition and look type packets that kill the client connection.
+- Fix documentation errors in block placement, digging, and interaction events.
+- removed debug print statements in parse_sb.py
+- Restore interact event's ability to parse the placement coords of buckets.
+
+Refactors and code improvements:
+- Change proxy.base.pollserver() to return values instead of modding wrapper's
+ values directly.  This makes it a truly public function, not an internal method.
+ Provides for future ability to poll other servers besides the locally wrapped one.
+- Tie entitycontrol abort signal to wrapper/proxy abort signals, eliminate its' personal abort signal.
+- refactor wrapper halt signal from halt to haltsig.
+- Cleanup disconnection code some.
+- Mark blockForEvent code as deprecated for removal by wrapper 1.0 final or
+ 1.1 rc.
+- Only call Wrapper Alerts if enabled.- Possibly fixed bug where we may not be shutting down client sockets when they abort,
+ causing the os system file limits to be exceeded after a certain amount of time.
+- Remove on-second timer from backups.
+- Change event coding to use a single thread for processing non-blocking events, utilizing a queue.
+- Backups timer uses wrapper storage to store it's backup timer between restarts.
+- Changed existing plugins that use timer.second to implement their own timers.
+- Remove player.interact event out of the block placement code because there
+ really is no way to tell if the client is interacting or not based on inventory.
+ clicking on a chest with no item or clicking on a chest with a block in hand still
+ opens the chest, for example.
+- added a player object "player" to event payloads that did not have it.  This is
+ only a cosmetic change in the API (and a speed optimization) because the event
+ code already added "player" objects to payloads missing the player object,  This
+ also corrects the documentation that did not list player as a payload.  Retained
+ the "playername" payload in these events, for backwards compatibility.
+- optimize the event processor thread timer.
+- Improve plugin event code some.
+- use collections.deque to decrease pop TimeComplexity from O(k) to O(1) in
+ event handling code and packet.py processing (https://wiki.python.org/moin/TimeComplexity).
+
+KNOWN BUG (which exists in previous release version too):
+- does not work with compression disabled.
+
 <h4>1.0.2 rc 4</h4>
 Primary reasons for update:
 - critical bug fix for name changes.

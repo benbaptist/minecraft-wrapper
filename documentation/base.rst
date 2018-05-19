@@ -214,6 +214,9 @@
                 # to close (and save):
                 def onDisable(self):
                     self.homes.close()
+
+                # to load a storage from disk:
+                self.homes.load()
             ..
 
             the key difference is here (under the old Storage API):

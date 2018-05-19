@@ -35,7 +35,7 @@ class ConsolePlayer(object):
             self.output_stream = outputstream
 
         # if self.abort is ever used, must follow `self.abort.halt`
-        self.abort = wrapper.halt
+        self.abort = wrapper.haltsig
 
         # these map minecraft color codes to "approximate" ANSI
         # terminal color used by our color formatter.

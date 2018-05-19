@@ -73,7 +73,7 @@ class Events(object):
             return
 
     def _event_processor(self):
-        while not self.wrapper.halt.halt:
+        while not self.wrapper.haltsig.halt:
             while len(self.event_queue) > 0:
                 _event, _payload, _abortable = self.event_queue.popleft()
                 self._callevent(_event, _payload, _abortable)
