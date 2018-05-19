@@ -103,7 +103,7 @@ class Web(object):
     # ordered by the time they are referenced in the code.
 
     # def update_graph(self):
-    #     while not self.wrapper.halt.halt:
+    #     while not self.wrapper.haltsig.halt:
     #         while len(self.memoryGraph) > 200:
     #             del self.memoryGraph[0]
     #         if self.wrapper.javaserver.getmemoryusage():
@@ -120,7 +120,7 @@ class Web(object):
                            "esources for possible solutions")
             return 
         
-        while not self.wrapper.halt.halt:
+        while not self.wrapper.haltsig.halt:
             try:
                 if self.bind():
                     # cProfile.run("self.listen()", "cProfile-debug")
@@ -158,7 +158,7 @@ class Web(object):
         """ Excuted by self.wrap() to listen for client(s). """
         self.log.info("Web Interface bound to %s:%d" % (
             self.config["Web"]["web-bind"], self.config["Web"]["web-port"]))
-        while not self.wrapper.halt.halt:
+        while not self.wrapper.haltsig.halt:
             # noinspection PyUnresolvedReferences
             sock, addr = self.socket.accept()
             if self.onlyusesafe_ips:
@@ -384,7 +384,7 @@ class Client(object):
             self.close()
 
     def handle(self):
-        while not self.wrapper.halt.halt:
+        while not self.wrapper.haltsig.halt:
 
             # read data from socket
             try:

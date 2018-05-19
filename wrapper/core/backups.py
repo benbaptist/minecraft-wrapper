@@ -60,7 +60,7 @@ class Backups(object):
 
     # noinspection PyUnusedLocal
     def _bu_process(self):
-        while not self.wrapper.halt.halt:
+        while not self.wrapper.haltsig.halt:
             time.sleep(1)
             # only run backups in server running/starting states
             if self.wrapper.javaserver.vitals.state in (1, 2) and not self.idle:

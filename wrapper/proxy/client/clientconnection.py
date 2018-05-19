@@ -293,6 +293,11 @@ class Client(object):
             time.sleep(rate)
             try:
                 self.packet.flush()
+            except AttributeError:
+                self.log.debug(
+                    "%s client packet instance gone.", self.username
+                )
+
             except socket_error:
                 self.log.debug("%s client socket closed (socket_error).",
                                self.username)
@@ -1028,7 +1033,7 @@ class Client(object):
         Get world and port descriptions from the config.
         """
         for worlds in self.proxy.proxy_worlds:
-            if self.proxy.proxy_worlds[worlds]["port"] == portnumber:
+            if int(self.proxy.proxy_worlds[worlds]["port"]) == portnumber:
                 infos = [worlds,
                          self.proxy.proxy_worlds[worlds]["desc"]]
                 return infos
