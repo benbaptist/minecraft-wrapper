@@ -170,7 +170,7 @@ class Player(object):
         self.abort = False
         self.data = None
         # meanwhile, it still needs to respect wrapper halts
-        self.wrapper_signal = self.wrapper.halt
+        self.wrapper_signal = self.wrapper.haltsig
         self.kick_nonproxy_connects = self.wrapper.config["Proxy"][
             "disconnect-nonproxy-connections"]
 

@@ -5,15 +5,20 @@
 # This program is distributed under the terms of the GNU
 # General Public License, version 3 or later.
 
-import os
+
+from cryptography import __version__ as c_vers
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import padding
+import os
+import sys
+# print(type(c_vers[0]), c_vers[0])
+if int(c_vers[0]) < 2:
+    raise EnvironmentError
 
 # Py3-2
-import sys
 PY3 = sys.version_info > (3,)
 
 
@@ -56,8 +61,10 @@ def _get_public_key(privatekey):
 def get_public_key_bytes(privatekey):
     """ def encode_public_key(key): """
     obj = _get_public_key(privatekey)
-    der = obj.public_bytes(encoding=serialization.Encoding.DER,
-                           format=serialization.PublicFormat.SubjectPublicKeyInfo)
+    der = obj.public_bytes(
+        encoding=serialization.Encoding.DER,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo
+    )
     return der
 
 

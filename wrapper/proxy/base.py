@@ -24,10 +24,17 @@ from proxy.utils import mcuuid
 from proxy.entity.entitycontrol import EntityControl
 
 # encryption requires 'cryptography' package.
+
 try:
     import proxy.utils.encryption as encryption
 except ImportError:
     encryption = False
+    importerror = "You must have the package 'cryptography' " \
+                  "installed to run the Proxy!"
+except EnvironmentError:
+    encryption = False
+    importerror = "Cryptography version not satisfied for proxy mode use.  " \
+                  "Version required is at least 2.0.0."
 
 # for reading skins out of our Wrapper.py:
 try:
@@ -140,8 +147,7 @@ class Proxy(object):
         self.log = loginstance
         # encryption = False if proxy.utils.encryption does not import
         if not encryption and self.config["proxy-enabled"]:
-            self.log.error("You must have the package 'cryptography' "
-                           "installed to run the Proxy!")
+            self.log.error(importerror)
             raise ImportError()
         if not pkg_resources:
             self.log.error("You must have the package `pkg_resources` "
@@ -164,7 +170,7 @@ class Proxy(object):
 
         # self assignments (gets specific values)
         self.proxy_bind = self.config["proxy-bind"]
-        self.proxy_port = self.config["proxy-port"]
+        self.proxy_port = int(self.config["proxy-port"])
         self.silent_ip_banning = self.config["silent-ipban"]
         self.srv_data.maxPlayers = self.config["max-players"]
         self.proxy_worlds = self.config["worlds"]
@@ -207,14 +213,21 @@ class Proxy(object):
 
         # loops while server is not started (STARTED = 2)
         while not self.srv_data.state == 2:
-            time.sleep(.2)
+            time.sleep(1)
 
         # get the protocol version from the server
         try:
-            self.pollserver()
+            args = self.pollserver()
         except Exception as e:
             self.log.exception("Proxy could not poll the Minecraft server - "
                                "check server/wrapper configs? (%s)", e)
+            args = [-1, "none", False]
+
+        self.srv_data.protocolVersion = args[0]
+        self.srv_data.version = args[1]
+        self.forge = args[2]
+        if self.forge:
+            self.mod_info["modinfo"] = args[3]
 
         # open proxy port to accept client connections
         while not self.usingSocket:
@@ -257,9 +270,6 @@ class Proxy(object):
             t.daemon = True
             t.start()
 
-        # received self.abort or caller.halt signal...
-        self.entity_control._abortep = True
-
     def removestaleclients(self):
         """removes aborted client and player objects"""
         for i, client in enumerate(self.srv_data.clients):
@@ -269,6 +279,15 @@ class Proxy(object):
                 self.srv_data.clients.pop(i)
 
     def pollserver(self, host="localhost", port=None):
+        """
+        Pings server for server json response information.
+
+        :param host: ip of server
+        :param port: server port.
+
+        :returns: a list - [protocol, string version name, Forge?(Bool),
+            modinfo (if Forge) ]
+        """
         if port is None:
             port = self.srv_data.server_port
 
@@ -285,19 +304,21 @@ class Proxy(object):
         packet.sendpkt(0x00, [NULL, ], ["", ])
         packet.flush()
         self.srv_data.protocolVersion = -1
+        container = []
         while True:
             pkid, packet_tuple = packet.grabpacket()
             if pkid == 0x00:
                 data = json.loads(packet.readpkt([STRING, ])[0])
-                self.srv_data.protocolVersion = data["version"][
-                    "protocol"]
-                self.srv_data.version = data["version"]["name"]
+                container.append(data["version"]["protocol"])
+                container.append(data["version"]["name"])
                 if "modinfo" in data and data["modinfo"]["type"] == "FML":
-                    self.forge = True
-                    self.mod_info["modinfo"] = data["modinfo"]
-
+                    container.append(True)
+                    container.append(data["modinfo"])
+                else:
+                    container.append(False)
                 break
         server_sock.close()
+        return container
 
     def run_command(self, command):
         """

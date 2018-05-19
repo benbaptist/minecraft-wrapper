@@ -14,6 +14,7 @@ from api.backups import Backups
 from api import helpers
 from utils import version as version_mod
 
+
 # noinspection PyPep8Naming
 class API(object):
     """
@@ -441,6 +442,9 @@ class API(object):
                 # to close (and save):
                 def onDisable(self):
                     self.homes.close()
+
+                # to load a storage from disk:
+                self.homes.load()
             ..
 
             the key difference is here (under the old Storage API):

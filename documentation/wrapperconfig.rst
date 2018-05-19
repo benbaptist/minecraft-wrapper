@@ -334,11 +334,11 @@ CONFIG = {
 
             "worlds":
 
-             # "world"= the name used in the hub/ command.  "port" = its value, corresponding to the local port. "desc" is the world's meta description that fits this sentence: ` Go to "".`.  `worlds` and `help` are reserved (do not use them for world names).  These names can also be used to drive the world change confirmation message, even if you are using your own player.connect() plugin.
+             # "world"= the name used in the hub/ command.  "port" = its value, corresponding to the local port. "desc" is the world's meta description that fits this sentence: ` Go to "".`.  `worlds` and `help` are reserved (do not use them for world names).  These names can also be used to drive the world change confirmation message, even if you are using your own player.connect() plugin.  'ip' is optional and defaults to 127.0.0.1 / localhost.
 
                 {
 
-                    "world": {"port": 25565, "desc": "a world description"},
+                    "world": {"port": 25565, "desc": "a world description", "ip": "localhost"},
 
                 },
 
