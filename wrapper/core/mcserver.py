@@ -491,8 +491,8 @@ class MCServer(object):
             elif player.client.state != LOBBY and player.client.local:
                 player.abort = True
                 del self.wrapper.players[players_name]
-
-            self.wrapper.proxy.removestaleclients()
+            if self.wrapper.proxy:
+                self.wrapper.proxy.removestaleclients()
 
         if len(self.wrapper.players) == 0:
             self.wrapper.backups.idle = True
