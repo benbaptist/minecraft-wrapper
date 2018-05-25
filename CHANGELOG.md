@@ -1,5 +1,5 @@
 #Changelog#
-<h4>1.0.17 rc 22</h4>
+<h4>1.0.17-18 rc 22-23</h4>
 -bugfix for non-proxy setups.  See Dev changelogs (on development branch).
 
 <h4>1.0.15 rc 20</h4>
