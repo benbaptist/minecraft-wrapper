@@ -1,3 +1,9 @@
+Build 23
+- Bugfixes:
+  - at player logout (mcserver.py), server would attempt to run
+   proxy method removestaleclients(), even if proxy mode was not running.
+  - mcserver.py getplayer() not returning a player object in non-proxy mode.
+
 Build 22
 - Implement the proxy host as a ProcessPoolExecutor multiprocessor (only on Python3)
 
