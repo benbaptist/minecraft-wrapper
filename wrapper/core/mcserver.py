@@ -493,6 +493,8 @@ class MCServer(object):
             player = self.vitals.players[username]
             if player.client and player.client.state != LOBBY and player.client.local:  # noqa
                 return player
+            elif not self.wrapper.proxymode:
+                return player
         return False
 
     def reloadproperties(self):
