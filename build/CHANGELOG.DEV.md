@@ -1,3 +1,6 @@
+Build 24
+Version number bumps to match Master  1.0.17 RC 24
+
 Build 23
 - Bugfixes:
   - at player logout (mcserver.py), server would attempt to run
