@@ -475,7 +475,8 @@ class MCServer(object):
                 player.abort = True
                 del self.vitals.players[players_name]
 
-            self.wrapper.proxy.removestaleclients()
+            if self.wrapper.proxy:
+                self.wrapper.proxy.removestaleclients()
 
         if len(self.vitals.players) == 0:
             self.wrapper.backups.idle = True
