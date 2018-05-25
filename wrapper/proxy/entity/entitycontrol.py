@@ -39,11 +39,11 @@ class EntityControl(object):
 
         self.proxy = proxy
         self.ent_config = self.proxy.ent_config
-        self.srvr_data = self.proxy.srv_data
+        self.javaserver = self.proxy.wrapper.javaserver
         self._log = self.proxy.log
 
         # Entities - living beings (includes XP orbs!)
-        pre1_11 = self.srvr_data.version_compute < 11100
+        pre1_11 = self.javaserver.version_compute < 11100
         entitylistobject = Entitytypes(pre1_11)
         self.entitytypes = entitylistobject.entitylist
 
@@ -221,8 +221,8 @@ class EntityControl(object):
         self._log.debug("_entityprocessor thread started.")
         timer = float(0)
         # server is running
-        while self.srvr_data.state in (1, 2, 4) and not (
-                self.proxy.caller.halt or self.proxy.abort
+        while self.javaserver.state in (1, 2, 4) and not (
+                self.proxy.wrapper.haltsig.halt or self.proxy.abort
         ):
             timer += .1
             sleep(.1)
@@ -234,7 +234,7 @@ class EntityControl(object):
 
             # start looking for stale client entities
             playerlist = []
-            for player in self.srvr_data.clients:
+            for player in self.proxy.clients:
                 playerlist.append(player.username)
             entity_eids = list(self.entities.keys())
             for eid in entity_eids:
@@ -253,8 +253,8 @@ class EntityControl(object):
         timer = float(0)
 
         # while server is running
-        while self.srvr_data.state in (1, 2, 4) and not (
-                self.proxy.caller.halt or self.proxy.abort
+        while self.javaserver.state in (1, 2, 4) and not (
+                self.proxy.wrapper.haltsig.halt or self.proxy.abort
         ):
 
             timer += .1
@@ -270,7 +270,7 @@ class EntityControl(object):
                 continue
 
             # gather client list
-            playerlist = self.srvr_data.clients
+            playerlist = self.proxy.clients
             # loop through playerlist
             for playerclient in playerlist:
                 players_position = playerclient.position
@@ -294,8 +294,8 @@ class EntityControl(object):
 
                             # turn off console_spam
                             server_msg = "Teleported %s to" % mob_type
-                            if server_msg not in self.srvr_data.spammy_stuff:
-                                self.srvr_data.spammy_stuff.append(
+                            if server_msg not in self.javaserver.spammy_stuff:
+                                self.javaserver.spammy_stuff.append(
                                     "Teleported %s to" % mob_type)
 
                             # can't be too agressive with killing because
@@ -313,8 +313,6 @@ class EntityControl(object):
         pos = position
         # send those creatures away
         self._log.debug("killing %d %s" % (count, entity_name))
-
-        # if self.proxy.srv_data.protocolVersion < 204:
         console_command = "tp @e[type=%s,x=%d,y=%d,z=%d,c=%s] ~ ~-500 ~" % (
             entity_name, pos[0], pos[1], pos[2], count)
         self.proxy.run_command(console_command)

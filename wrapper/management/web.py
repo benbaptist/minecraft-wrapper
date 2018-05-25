@@ -696,8 +696,8 @@ class Client(object):
                 last_refresh = time.time()
             players = []
             refresh_time = time.time()
-            for i in self.wrapper.servervitals.players:
-                player = self.wrapper.servervitals.players[i]
+            for i in self.wrapper.players:
+                player = self.wrapper.players[i]
                 players.append({
                     "name": i,
                     "loggedIn": player.loggedIn,
@@ -743,17 +743,17 @@ class Client(object):
             mem_use = self.wrapper.memory_usage()
             wrapper_peak_mem = mem_use["peak"] * 1000
             wrapper_rss_mem = mem_use["rss"] * 1000
-            stats = {"playerCount": (len(self.wrapper.servervitals.players),
-                                     self.wrapper.servervitals.maxplayers),
+            stats = {"playerCount": (len(self.wrapper.players),
+                                     self.wrapper.proxy.maxplayers),
                      "players": players,
                      "plugins": plugins,
-                     "server_state": self.wrapper.servervitals.state,
+                     "server_state": self.wrapper.javaserver.state,
                      "wrapper_build": self.wrapper.getbuildstring(),
                      "console": console_scrollback,
                      "chat": chat_scrollback,
-                     "level_name": self.wrapper.servervitals.worldname,
-                     "server_version": self.wrapper.servervitals.version,
-                     "motd": self.wrapper.servervitals.motd,
+                     "level_name": self.wrapper.javaserver.worldname,
+                     "server_version": self.wrapper.javaserver.version,
+                     "motd": self.wrapper.javaserver.motd,
                      "last_refresh": refresh_time,
                      "disk_avail": self.web.getdisk_usage(),
                      "server_name": self.config["Web"]["server-name"],
@@ -761,7 +761,7 @@ class Client(object):
                      "wrapper_memory_rss": wrapper_rss_mem,
                      "wrapper_memory_peak": wrapper_peak_mem,
                      "server_memory_graph": memory_graph,
-                     "world_size": self.wrapper.servervitals.worldsize
+                     "world_size": self.wrapper.javaserver.worldsize
                      }
             return stats
 

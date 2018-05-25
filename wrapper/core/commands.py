@@ -521,7 +521,7 @@ class Commands(object):
                         "clickEvent": {
                             "action": "run_command",
                             "value": "%shelp Minecraft %d" % (
-                                self.wrapper.servervitals.command_prefix,
+                                self.wrapper.proxy.command_prefix,
                                 page + 2)
                         }
                     }, {
@@ -579,7 +579,7 @@ class Commands(object):
                                         "clickEvent": {
                                             "action": "suggest_command",
                                             "value": "%s%s" % (
-                                                self.wrapper.servervitals.command_prefix,  # noqa
+                                                self.wrapper.proxy.command_prefix,  # noqa
                                                 command[1:])
                                         },
                                         "hoverEvent": {
@@ -607,7 +607,7 @@ class Commands(object):
                             _showpage(
                                 player, page, items, "help %s" % groupname,
                                 4,
-                                command_prefix=self.wrapper.servervitals.command_prefix)  # noqa
+                                command_prefix=self.wrapper.proxy.command_prefix)  # noqa
                             return
                 player.message("&cThe help group '%s' does not exist." % group)
 
@@ -638,13 +638,13 @@ class Commands(object):
                             "clickEvent": {
                                 "action": "run_command",
                                 "value": "%shelp %s" % (
-                                    self.wrapper.servervitals.command_prefix,
+                                    self.wrapper.proxy.command_prefix,
                                     v["name"])
                             },
                             "hoverEvent": {
                                 "action": "show_text",
                                 "value": "%shelp %s" % (
-                                    self.wrapper.servervitals.command_prefix,
+                                    self.wrapper.proxy.command_prefix,
                                     v["name"])
                             }
                         },
@@ -653,7 +653,7 @@ class Commands(object):
                         }]
                 })
             _showpage(player, page, items, "help", 8,
-                      command_prefix=self.wrapper.servervitals.command_prefix)
+                      command_prefix=self.wrapper.proxy.command_prefix)
         return False
 
     def command_password(self, player, payload):
@@ -913,13 +913,13 @@ class Commands(object):
         if not self._superop(player, 9):
             return False
         operator_name = getargs(payload["args"], 0)
-        if self.wrapper.servervitals.state == 2:
+        if self.wrapper.javaserver.state == 2:
             # deop from server
             self.wrapper.javaserver.console("deop %s" % operator_name)
 
             # deop from superops.txt
             file_text = ""
-            owner_names = self.wrapper.servervitals.ownernames
+            owner_names = self.wrapper.javaserver.ownernames
             for eachname in owner_names:
                 if eachname != operator_name:
                     if eachname not in ("<op_player_1>", "<op_player_2>"):
@@ -977,13 +977,13 @@ class Commands(object):
         if superop and superlevel > 4:
             superlevel = max(5, superlevel)
         # 2 = make sure server STARTED
-        if self.wrapper.servervitals.state == 2:
+        if self.wrapper.javaserver.state == 2:
             self.wrapper.javaserver.console("op %s" % name)
 
         # if not, wrapper makes ops.json edits
         else:
             self.wrapper.javaserver.refresh_ops(read_super_ops=False)
-            oplist = self.wrapper.servervitals.operator_list
+            oplist = self.wrapper.javaserver.operator_list
             newop_item = {
                 "uuid": uuid,
                 "name": name,

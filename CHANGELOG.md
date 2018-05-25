@@ -1,4 +1,7 @@
 #Changelog#
+<h4>1.0.16 rc 21</h4>
+-bugfix for non-proxy setups.  See Dev changelogs (on development branch).
+
 <h4>1.0.15 rc 20</h4>
 Primary reasons for update:
 - Regular update prior to further new Wrapper development

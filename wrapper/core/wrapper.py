@@ -17,7 +17,11 @@ import os
 import logging
 # import smtplib
 import sys  # used to pass sys.argv to server
-# from pprint import pprint
+
+try:
+    from concurrent.futures import ProcessPoolExecutor
+except ImportError:
+    ProcessPoolExecutor = False
 
 # non standard library imports
 try:
@@ -51,7 +55,7 @@ from core.storage import Storage
 from core.irc import IRC
 from core.scripts import Scripts
 import core.buildinfo as buildinfo
-from proxy.utils.mcuuid import UUIDS
+from proxy.utils.mcuuid import UUIDS, MCUUID
 from core.config import Config
 from core.backups import Backups
 from core.consoleuser import ConsolePlayer
@@ -60,8 +64,7 @@ from core.alerts import Alerts
 from utils.crypt import Crypt, phrase_to_url_safebytes, gensalt
 
 # optional API type stuff
-from core.servervitals import ServerVitals
-from proxy.base import Proxy, ProxyConfig, HaltSig
+from proxy.base import Proxy
 from api.base import API
 import management.web as manageweb
 
@@ -188,9 +191,8 @@ class Wrapper(object):
         # the value of self.haltsig would not necessarily change the value of
         # the passed parameter (unless it was specifically referenced back as
         # `wrapper.haltsig`). Since the halt signal needs to be passed, possibly
-        # several layers deep, and into modules that it may be desireable to
-        # not have direct access to wrapper, using a HaltSig object is
-        # required to ensure we are actually sharing the same value between
+        # several layers deep, and into other modules , using a HaltSig object
+        # is required to ensure we are actually sharing the same value between
         # different objects.
         self.haltsig = HaltSig()
 
@@ -207,6 +209,7 @@ class Wrapper(object):
         # core functions and datasets
         self.perms = Permissions(self)
         self.uuids = UUIDS(self.log, self.usercache)
+        self.mcuuid = MCUUID
         self.plugins = Plugins(self)
         self.commands = Commands(self)
         self.events = Events(self)
@@ -237,24 +240,6 @@ class Wrapper(object):
                 " console functioning. Press <Enter> to acknowledge...")
             sys.stdin.readline()
 
-        # create server/proxy vitals and config objects
-        self.servervitals = ServerVitals(self.players)
-
-        # LETS TAKE A SECOND TO DISCUSS PLAYER OBJECTS:
-        # The ServerVitals class gets passed the player object list now, but
-        # player objects are now housed in wrapper.  This is how we are
-        # passing information between proxy and wrapper.
-
-        self.servervitals.serverpath = self.config[
-            "General"]["server-directory"]
-        self.servervitals.state = OFF
-        self.servervitals.command_prefix = self.config[
-            "Proxy"]["command-prefix"]
-
-        self.proxyconfig = ProxyConfig()
-        self.proxyconfig.proxy = self.config["Proxy"]
-        self.proxyconfig.entity = self.config["Entities"]
-
     def __del__(self):
         """prevent error message on very first wrapper starts when
         wrapper exits after creating new wrapper.properties file.
@@ -281,7 +266,7 @@ class Wrapper(object):
         self._registerwrappershelp()
 
         # The MCServerclass is a console wherein the server is started
-        self.javaserver = MCServer(self, self.servervitals)
+        self.javaserver = MCServer(self)
         self.javaserver.init()
 
         # load plugins
@@ -403,7 +388,7 @@ class Wrapper(object):
         self._halt()
 
     def _halt(self):
-        if self.servervitals.state in (1, 2):
+        if self.javaserver.state in (1, 2):
             self.javaserver.stop(self.halt_message, restart_the_server=False)
         self.haltsig.halt = True
 
@@ -812,7 +797,7 @@ class Wrapper(object):
             return self.config["Proxy"]["online-mode"]
         if self.javaserver:
             try:
-                return self.servervitals.properties["online-mode"]
+                return self.javaserver.properties["online-mode"]
             except KeyError:
                 pass
         return False
@@ -844,9 +829,7 @@ class Wrapper(object):
 
     def _startproxy(self):
         try:
-            self.proxy = Proxy(self.haltsig, self.proxyconfig, self.servervitals,
-                               self.log, self.wrapper_usercache, self.events,
-                               self.encoding)
+            self.proxy = Proxy(self)
         except ImportError:
             self.log.error("Proxy mode not started because of missing "
                            "dependencies for encryption!")
@@ -855,7 +838,7 @@ class Wrapper(object):
 
         # wait for server to start
         timer = 0
-        while self.servervitals.state < STARTED:
+        while self.javaserver.state < STARTED:
             timer += 1
             time.sleep(.1)
             if timer > 1200:
@@ -866,15 +849,19 @@ class Wrapper(object):
                 self.disable_proxymode()
                 return
 
-        if self.proxy.proxy_port == self.servervitals.server_port:
+        if self.proxy.proxy_port == self.javaserver.server_port:
             self.log.warning("Proxy mode cannot start because the wrapper"
                              " port is identical to the server port.")
             self.disable_proxymode()
             return
 
-        proxythread = threading.Thread(target=self.proxy.host, args=())
-        proxythread.daemon = True
-        proxythread.start()
+        if not ProcessPoolExecutor:
+            proxythread = threading.Thread(target=self.proxy.host, args=())
+            proxythread.daemon = True
+            proxythread.start()
+        else:
+            with ProcessPoolExecutor(max_workers=2) as executor:
+                executor.submit(self.proxy.host())
 
     def disable_proxymode(self):
         self.proxymode = False
@@ -1340,3 +1327,16 @@ class Wrapper(object):
             " displays on single page!)",
             separator="[players|ips] [searchtext] ", pad=12,
             usereadline=self.use_readline, player=player)
+
+
+class HaltSig(object):
+    """
+    HaltSig is simply a sort of dummy class created for the
+    proxy.  proxy expects this object with a self.halt property
+    that tells proxy to shutdown.  The caller maintains control
+    of the Haltsig object and uses it to signal the proxy to
+    shut down.  The caller will import this class, instantiate
+    it, and then pass the object to proxy as the argument for
+    termsignal."""
+    def __init__(self):
+        self.halt = False

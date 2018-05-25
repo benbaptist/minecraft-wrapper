@@ -27,7 +27,6 @@ from proxy.packets import mcpackets_sb
 from proxy.packets import mcpackets_cb
 from proxy.utils.constants import *
 
-from proxy.utils.mcuuid import MCUUID
 from api.helpers import processcolorcodes, getjsonfile, putjsonfile
 
 
@@ -44,8 +43,7 @@ class Client(object):
            client (self.packet.sendpkt())
 
            Client receives the parent proxy as it's argument.
-           No longer receives the proxy's wrapper instance!  All
-           data is passed via srv_data from proxy's srv_data.
+
     """
     def __init__(self, proxy, clientsock, client_addr, banned=False):
 
@@ -53,9 +51,10 @@ class Client(object):
         self.client_socket = clientsock
         self.client_address = client_addr
         self.proxy = proxy
+        self.wrapper = self.proxy.wrapper
+        self.javaserver = self.wrapper.javaserver
         self.public_key = self.proxy.public_key
         self.private_key = self.proxy.private_key
-        self.srv_data = self.proxy.srv_data
         self.log = self.proxy.log
         self.ipbanned = banned
 
@@ -76,9 +75,9 @@ class Client(object):
         self.MOTD = {}
 
         # client will reset this later, if need be..
-        self.clientversion = self.srv_data.protocolVersion
+        self.clientversion = self.javaserver.protocolVersion
         # default server port (to this wrapper's server)
-        self.serverport = self.srv_data.server_port
+        self.serverport = self.javaserver.server_port
 
         # packet stuff
         self.pktSB = mcpackets_sb.Packets(self.clientversion)
@@ -306,7 +305,7 @@ class Client(object):
         if self.username != "PING REQUEST":
             self.log.debug("%s clientconnection _flush_loop thread ended",
                            self.username)
-        self.proxy.removestaleclients()  # from proxy.srv_data.clients
+        self.proxy.removestaleclients()  # from proxy.clients
 
     def _parse(self, pkid):
         """
@@ -443,20 +442,20 @@ class Client(object):
                 # and cannot be sure of the info itself
                 if not self.onlinemode:
                     # Spigot and Wrapper share this in common:
-                    self.mojanguuid = MCUUID(splitaddress[2])
+                    self.mojanguuid = self.proxy.wrapper.mcuuid(splitaddress[2])
                     self.info["realuuid"] = self.mojanguuid.string
                     self.ip = splitaddress[1]
                 if len(splitaddress) > 3 and splitaddress[3] == "WPY":
                     self.info["client-is-wrapper"] = True
 
-            if self.srv_data.protocolVersion == -1:
+            if self.javaserver.protocolVersion == -1:
                 #  ... returns -1 to signal no server
                 self.disconnect(
                     "The server is not started (protocol not established)."
                 )
                 return False
 
-            if not self.srv_data.state == 2:
+            if not self.javaserver.state == 2:
                 self.disconnect(
                     "Server has not finished booting. Please try"
                     " connecting again in a few seconds"
@@ -467,7 +466,7 @@ class Client(object):
                 self.disconnect("You're running an unsupported snapshot"
                                 " (protocol: %s)!" % self.clientversion)
                 return False
-            if self.srv_data.protocolVersion != self.clientversion:
+            if self.javaserver.protocolVersion != self.clientversion:
                 self.disconnect("You're not running the same Minecraft"
                                 " version as the server!")
                 return False
@@ -499,16 +498,16 @@ class Client(object):
         back to HANDSHAKE mode.
         """
         sample = []
-        for player in self.srv_data.players:
-            playerobj = self.srv_data.players[player]
+        for player in self.proxy.wrapper.players:
+            playerobj = self.proxy.wrapper.players[player]
             if playerobj.username not in self.hidden_ops:
                 sample.append({"name": playerobj.username,
                                "id": str(playerobj.mojangUuid)})
             if len(sample) > 5:
                 break
-        reported_version = self.srv_data.protocolVersion
-        reported_name = self.srv_data.version
-        motdtext = self.srv_data.motd
+        reported_version = self.javaserver.protocolVersion
+        reported_name = self.javaserver.version
+        motdtext = self.javaserver.motd
         if self.clientversion >= PROTOCOL_1_8START:
             motdtext = processcolorcodes(motdtext.replace(
                 "\\", ""))
@@ -516,7 +515,7 @@ class Client(object):
             "description": motdtext,
             "players": {
                 "max": int(self.proxy.config["max-players"]),
-                "online": len(self.srv_data.players),
+                "online": len(self.proxy.wrapper.players),
                 "sample": sample
             },
             "version": {
@@ -526,8 +525,8 @@ class Client(object):
         }
 
         # add Favicon, if it exists
-        if self.srv_data.serverIcon:
-            self.MOTD["favicon"] = self.srv_data.serverIcon
+        if self.javaserver.servericon:
+            self.MOTD["favicon"] = self.javaserver.servericon
 
         # add Forge information, if applicable.
         if self.proxy.forge:
@@ -625,7 +624,7 @@ class Client(object):
         """
 
         # read response Tokens - "shared_secret|verify_token"
-        if self.srv_data.protocolVersion < 6:
+        if self.javaserver.protocolVersion < 6:
             data = self.packet.readpkt([BYTEARRAY_SHORT, BYTEARRAY_SHORT])
         else:
             data = self.packet.readpkt([BYTEARRAY, BYTEARRAY])
@@ -684,7 +683,7 @@ class Client(object):
             return
 
         # add client (or disconnect if full
-        if len(self.proxy.srv_data.clients) < self.proxy.config["max-players"]:
+        if len(self.proxy.clients) < self.proxy.config["max-players"]:
             self._add_client()
         else:
             uuids = getjsonfile(
@@ -744,7 +743,7 @@ class Client(object):
 
             self.state = HANDSHAKE
             self.disconnect("Login denied by a Plugin.")
-            del self.srv_data.players[self.username]
+            del self.proxy.wrapper.players[self.username]
             return
 
         self.permit_disconnect_from_server = True
@@ -757,8 +756,8 @@ class Client(object):
         # set compression
         # compression was at the bottom of _login_authenticate_client...
         if self.clientversion >= PROTOCOL_1_8START:
-            if "network-compression-threshold" in self.proxy.srv_data.properties:  # noqa
-                comp = self.proxy.srv_data.properties[
+            if "network-compression-threshold" in self.javaserver.properties:  # noqa
+                comp = self.javaserver.properties[
                     "network-compression-threshold"]
                 self.packet.sendpkt(
                     self.pktCB.LOGIN_SET_COMPRESSION[PKT], [VARINT], [comp])
@@ -1248,7 +1247,7 @@ class Client(object):
                 # }
                 requestdata = r.json()
                 playerid = requestdata["id"]
-                self.wrapper_uuid = MCUUID(playerid)
+                self.wrapper_uuid = self.proxy.wrapper.mcuuid(playerid)
 
                 if requestdata["name"] != self.username:
                     self.disconnect("Client's username did not"
@@ -1334,8 +1333,8 @@ class Client(object):
         Put client into server data. (player login will be called
         later by mcserver.py)
         """
-        if self not in self.proxy.srv_data.clients:
-            self.proxy.srv_data.clients.append(self)
+        if self not in self.proxy.clients:
+            self.proxy.clients.append(self)
 
     def _keep_alive_tracker(self):
         """
@@ -1386,10 +1385,10 @@ class Client(object):
         onto the local server (which normally keeps tabs on player
         and client objects).
         """
-        if self.username in self.proxy.srv_data.players:
-            if self.proxy.srv_data.players[self.username].client.state != LOBBY:
-                self.proxy.srv_data.players[self.username].abort = True
-                del self.proxy.srv_data.players[self.username]
+        if self.username in self.proxy.wrapper.players:
+            if self.proxy.wrapper.players[self.username].client.state != LOBBY:
+                self.proxy.wrapper.players[self.username].abort = True
+                del self.proxy.wrapper.players[self.username]
 
     def send_client_settings(self):
         """
