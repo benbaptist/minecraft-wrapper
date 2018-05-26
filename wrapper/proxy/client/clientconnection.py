@@ -126,7 +126,7 @@ class Client(object):
             # these uuids are stored as strings
             "realuuid": "",  # if set, the real UUID from mojang API.
             "serveruuid": "",
-            "wrapperuuid": "",  # usually the usernamereal uuid if wrapper is online.
+            "wrapperuuid": "",  # usually the real uuid if wrapper is online.
             "ip": ""
         }
 
