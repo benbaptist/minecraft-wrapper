@@ -1,3 +1,7 @@
+Build 25
+- Explicitly `close()` sockets that were shutdown.
+- substitute 'localhost' for code occurences of '127.0.0.1'.
+
 Build 24
 Version number bumps to match Master  1.0.17 RC 24
 
