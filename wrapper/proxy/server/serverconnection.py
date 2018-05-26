@@ -177,6 +177,7 @@ class ServerConnection(object):
         # noinspection PyBroadException
         try:
             self.server_socket.shutdown(2)
+            self.server_socket.close()
             self.log.debug("Sucessfully closed server socket for"
                            " %s", self.username)
             # allow old packet and socket to be Garbage Collected

@@ -93,6 +93,7 @@ class Client(object):
         self.keepalive_val = 0
 
         # client and server status
+
         # ------------------------
         # health items
         self.health = False
@@ -125,7 +126,7 @@ class Client(object):
             # these uuids are stored as strings
             "realuuid": "",  # if set, the real UUID from mojang API.
             "serveruuid": "",
-            "wrapperuuid": "",  # usually the real uuid if wrapper is online.
+            "wrapperuuid": "",  # usually the usernamereal uuid if wrapper is online.
             "ip": ""
         }
 
@@ -145,7 +146,7 @@ class Client(object):
         # This ID will be the same no matter what mode wrapper is in
         # or whether it is a lobby, etc.  This will be the formal uuid
         # to use for all wrapper internal functions for referencing a
-        # unique player.
+        # unique player.Test
         self.mojanguuid = None
 
         # information gathered during login or socket connection processes
@@ -220,7 +221,7 @@ class Client(object):
                 )
                 time.sleep(.4)
                 self.disc_request = False
-                self.change_servers("127.0.0.1", self.serverport)
+                self.change_servers("localhost", self.serverport)
             else:
                 self.disc_request = True
 
@@ -267,15 +268,11 @@ class Client(object):
         self._close_server_instance("Client Handle Ended")
         try:
             self.client_socket.shutdown(2)
-        except AttributeError:
+            self.client_socket.close()
+        except (AttributeError, socket_error):
             self.log.debug(
-                "(%s, %s) handle aborted and self.client_socket has no"
-                " shutdown attribute", self.username, self.ip
-            )
-        except socket_error:
-            self.log.debug(
-                "(%s, %s) handle aborted and self.client_socket experienced a "
-                "socket error while doing 'shutdown'.", self.username, self.ip
+                "(%s, %s) handle ending and client_socket does not "
+                "exist any longer", self.username, self.ip
             )
 
     def _flush_loop(self):
@@ -397,6 +394,7 @@ class Client(object):
         )
         self.packet.send_raw(0xff+0x00+0x00+0x00)
         self.client_socket.shutdown(2)
+        self.client_socket.close()
         self.abort = True
 
     def _parse_handshaking(self):
@@ -872,7 +870,7 @@ class Client(object):
         if self.server_connection:
             self.server_connection.close_server(term_message)
 
-    def change_servers(self, ip="127.0.0.1", port=25600):
+    def change_servers(self, ip="localhost", port=25600):
         """
         Leaves the current proxy server connection and attempts a
         new server connection.  If it fails, it attempts to re-connect

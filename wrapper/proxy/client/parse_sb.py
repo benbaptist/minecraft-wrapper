@@ -289,7 +289,7 @@ class ParseSB(object):
 
         elif where == "":
             port = self.client.javaserver.server_port
-            ip = "127.0.0.1"
+            ip = "localhost"
         else:
             worlds = self.proxy.proxy_worlds
             if where in worlds:
@@ -297,7 +297,7 @@ class ParseSB(object):
                 try:
                     ip = self.proxy.proxy_worlds[where]["ip"]
                 except KeyError:
-                    ip = "127.0.0.1"
+                    ip = "localhost"
             else:
                 return self._world_hub_help("w")
         t = threading.Thread(target=self.client.change_servers,
