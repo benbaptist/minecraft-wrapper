@@ -173,6 +173,7 @@ class Proxy(object):
             if self.silent_ip_banning and banned_ip:
                 # 0: done receiving, 1: done sending, 2: both
                 sock.shutdown(2)
+                sock.close()
                 self.log.info("Someone tried to connect from a banned ip:"
                               " %s  (connection refused)", addr)
                 continue
