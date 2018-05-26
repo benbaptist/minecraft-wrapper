@@ -93,7 +93,6 @@ class Client(object):
         self.keepalive_val = 0
 
         # client and server status
-
         # ------------------------
         # health items
         self.health = False
@@ -146,7 +145,7 @@ class Client(object):
         # This ID will be the same no matter what mode wrapper is in
         # or whether it is a lobby, etc.  This will be the formal uuid
         # to use for all wrapper internal functions for referencing a
-        # unique player
+        # unique player.
         self.mojanguuid = None
 
         # information gathered during login or socket connection processes
