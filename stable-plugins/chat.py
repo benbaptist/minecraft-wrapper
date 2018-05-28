@@ -1,5 +1,6 @@
 # coding=utf-8
 
+import copy
 import sys
 
 PY3 = sys.version_info[0] > 2
@@ -21,25 +22,25 @@ and let players create colored/styled chat.
 SECT = u'\xa7'
 
 
-# noinspection PyPep8Naming,PyCompatibility
+# noinspection PyPep8Naming,PyMethodMayBeStatic,PyUnusedLocal
+# noinspection PyClassicStyleClass,PyAttributeOutsideInit
 class Main:
     def __init__(self, api, log):
+
         self.api = api
         self.log = log
-        self.ranks = {}
-        self.player_ranks = {}
-        self.default = {
-                "trans": False,
-                "isOp": False,
-                "rank": None,
-                "color": "f"  # white
-            }
 
     def onEnable(self):
         self.api.registerEvent("player.chatbox", self.playerChatBox)
-        self.api.registerEvent("player.login", self.login)
         self.api.registerEvent("player.logout", self.logout)
 
+        self.player_ranks = {}
+        self.default = {
+            "trans": False,
+            "isOp": False,
+            "rank": None,
+            "color": "f"  # white
+        }
         self.ranks = [  # from highest to lowest
             # perm               display rank       display color
             {"perm": "owner", "rank": "Owner", "color": "4"},
@@ -55,12 +56,11 @@ class Main:
     def onDisable(self):
         pass
 
-    def login(self, payload):
-        """ Obtain the player's rank when he logs in """
-        player = payload["player"]
-        uuid = player.uuid
-        if uuid not in self.player_ranks:
-            self.player_ranks[uuid] = self.default
+    def verify(self, player):
+        """ Obtain the player's rank """
+        if player.uuid not in self.player_ranks:
+            uuid = player.uuid
+            self.player_ranks[uuid] = copy.copy(self.default)
             if player.isOp():
                 self.player_ranks[uuid]["isOp"] = True
 
@@ -85,8 +85,8 @@ class Main:
         """ We can modify the chat.
 
         All the permissions legwork that could slow up the code
-        is already done just once at login.. we have to keep this
-        packet moving to prevent lag!
+        is done just once when player chat is first used..
+        we have to keep this packet moving to prevent lag!
 
         {'translate': 'chat.type.text',
          'with': [__[0]__{'clickEvent': {'action': 'suggest_command',
@@ -103,6 +103,7 @@ class Main:
 
         player = payload["player"]
         data = payload["json"]
+        self.verify(player)
 
         if "translate" in data:  # special type of chat
 
@@ -124,7 +125,7 @@ class Main:
 
                 # chatdisplayname[0]
                 insertionplayer = self.api.minecraft.getPlayer(insertionplayername)  # noqa
-
+                self.verify(insertionplayer)
                 # permanently tag OP suffix
                 if self.player_ranks[insertionplayer.uuid]["isOp"]:
                     data["with"][0]["text"] = "%s §8[OP]§r" % chatdisplayname
