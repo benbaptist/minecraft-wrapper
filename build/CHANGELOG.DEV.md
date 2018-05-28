@@ -1,3 +1,10 @@
+Build 26
+- Fix Chat.py plugin (all player's were sharing the same chat configuration).
+- Fix Chat.py breaking on /reload.
+- bugfix message from offline wrapper that is a hub in mcserver.py.
+- changed deop to allow any vanilla level 4 OP to run it.
+- add Geode plugin that prints each player's IP and country code at login.
+
 Build 25
 - Explicitly `close()` sockets that were shutdown.
 - substitute 'localhost' for code occurences of '127.0.0.1'.

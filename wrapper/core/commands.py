@@ -908,9 +908,8 @@ class Commands(object):
             self.wrapper.shutdown()
 
     def command_deop(self, player, payload):
-        # if player is None:
-        #    player = self.wrapper.xplayer
-        if not self._superop(player, 9):
+        """DeOP has lower permission level"""
+        if not self._superop(player, 3):
             return False
         operator_name = getargs(payload["args"], 0)
         if self.wrapper.javaserver.state == 2:

@@ -48,7 +48,6 @@ class ServerConnection(object):
         self.ip = ip
         self.port = port
 
-
         # server setup and operating paramenters
         self.abort = False
         self.flush_rate = self.client.flush_rate

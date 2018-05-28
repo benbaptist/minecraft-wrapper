@@ -829,15 +829,18 @@ class MCServer(object):
             prefix = " ".join(buff.split(' ')[:self.prepends_offset])
 
             if not self.wrapper.wrapper_onlinemode:
+                try:
+                    pport = "either port %s or " % self.wrapper.proxy.proxy_port
+                except AttributeError:
+                    pport = ""
                 message = (
                     "%s Since you are running Wrapper in OFFLINE mode, THIS "
                     "COULD BE SERIOUS!\n%s Wrapper is not handling any"
                     " authentication.\n%s This is only ok if this wrapper "
-                    "is not accessible from either port %s or port %s"
+                    "is not accessible from %sport %s"
                     " (I.e., this wrapper is a multiworld for a hub server, or"
                     " you are doing your own authorization via a plugin)." % (
-                        prefix, prefix, prefix,
-                        self.server_port, self.wrapper.proxy.proxy_port))
+                        prefix, prefix, prefix, pport, self.server_port))
             else:
                 message = (
                     "%s Since you are running Wrapper in proxy mode, this"
