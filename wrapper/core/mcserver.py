@@ -1004,11 +1004,14 @@ class MCServer(object):
             # [SurestTexas00: Teleported SapperLeader to 48.49417131908783, 77.67081086259394, -279.88880690937475]  # noqa
             if playername in self.wrapper.players:
                 playerobj = self.getplayer(playername)
-                playerobj._position = [
-                    get_int(float(getargs(line_words, 4).split(",")[0])),
-                    get_int(float(getargs(line_words, 5).split(",")[0])),
-                    get_int(float(getargs(line_words, 6).split("]")[0])), 0, 0
-                ]
+                try:
+                    playerobj._position = [
+                        get_int(float(getargs(line_words, 4).split(",")[0])),
+                        get_int(float(getargs(line_words, 5).split(",")[0])),
+                        get_int(float(getargs(line_words, 6).split("]")[0])), 0, 0
+                    ]
+                except ValueError:
+                    pass
                 self.wrapper.events.callevent(
                     "player.teleport",
                     {"player": playerobj}, abortable=False)
@@ -1034,11 +1037,14 @@ class MCServer(object):
             # Teleported SurestTexas00 to 48.49417131908783, 77.67081086259394, -279.88880690937475  # noqa
             if playername in self.wrapper.players:
                 playerobj = self.getplayer(playername)
-                playerobj._position = [
-                    get_int(float(getargs(line_words, 3).split(",")[0])),
-                    get_int(float(getargs(line_words, 4).split(",")[0])),
-                    get_int(float(getargs(line_words, 5))), 0, 0
-                ]
+                try:
+                    playerobj._position = [
+                        get_int(float(getargs(line_words, 3).split(",")[0])),
+                        get_int(float(getargs(line_words, 4).split(",")[0])),
+                        get_int(float(getargs(line_words, 5))), 0, 0
+                    ]
+                except ValueError:
+                    pass
                 self.wrapper.events.callevent(
                     "player.teleport",
                     {"player": playerobj}, abortable=False)
