@@ -1,3 +1,9 @@
+Build 27
+- increment version to 1.0.18 RC 27
+- fix player to player teleport ValueError bug caused by trying to read coordinates
+ where only a player name was given ("[lukeeexd: Teleported lukeeexd to Nyaii]")
+- create PR to development.
+
 Build 26
 - Fix Chat.py plugin (all player's were sharing the same chat configuration).
 - Fix Chat.py breaking on /reload.
