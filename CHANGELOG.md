@@ -1,4 +1,19 @@
 #Changelog#
+
+<h4>1.0.19 rc 28</h4>
+Bugfixes:
+- Bugfix commands.py line 784 where player message is used with no argument.
+- fix player to player teleport ValueError bug caused by trying to read coordinates
+ where only a player name was given ("[lukeeexd: Teleported lukeeexd to Nyaii]")
+- Fix Chat.py plugin (all player's were sharing the same chat configuration).
+- Fix Chat.py breaking on /reload.
+- bugfix message from offline wrapper that is a hub in mcserver.py.
+- changed deop to allow any vanilla level 4 OP to run it.
+- Explicitly `close()` sockets that were shutdown.
+- substitute 'localhost' for code occurences of '127.0.0.1'.
+New Plugin:
+- add Geode plugin that prints each player's IP and country code at login.
+
 <h4>1.0.17-18 rc 22-23</h4>
 -bugfix for non-proxy setups.  See Dev changelogs (on development branch).
 

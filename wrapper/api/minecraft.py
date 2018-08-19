@@ -47,7 +47,7 @@ class Minecraft(object):
         Return a boolean indicating if the server is
         fully booted or not.
         """
-        return self.wrapper.servervitals.state == 2
+        return self.wrapper.javaserver.state == 2
 
     def changeServerProps(self, config_item, new_value, reload_server=False):
         """
@@ -147,7 +147,7 @@ class Minecraft(object):
         if not self.wrapper.proxymode:
             return False
 
-        version = self.wrapper.proxy.srv_data.protocolVersion
+        version = self.wrapper.javaserver.protocolVersion
 
         if packetset == "SB":
             return ServerBound(version)
@@ -170,7 +170,7 @@ class Minecraft(object):
         # 0 = ticks, 1 = Military, else = civilian AM/PM, return -1 if no one
         # on or server not started
         if self.isServerStarted is True and self.wrapper.proxymode:
-            servertimeofday = self.wrapper.proxy.srv_data.timeofday
+            servertimeofday = self.wrapper.javaserver.timeofday
             ticktime = servertimeofday % 24000
             if dttmformat == 0 or ticktime == -1:
                 return ticktime
@@ -282,7 +282,7 @@ class Minecraft(object):
         Returns a list of the currently connected players.
 
         """
-        return self.wrapper.servervitals.players
+        return self.wrapper.players
 
     def getEntityControl(self):
         """
@@ -342,7 +342,7 @@ class Minecraft(object):
 
         """
         try:
-            return self.wrapper.servervitals.players[str(username)]
+            return self.wrapper.players[str(username)]
         except Exception as e:
             self.log.error("No such player %s is logged in:\n%s", username, e)
 
@@ -356,7 +356,7 @@ class Minecraft(object):
         :returns: The Player Class object for the specified EID.
          If the EID is not a player or is not found, returns False
         """
-        for client in self.wrapper.servervitals.clients:
+        for client in self.wrapper.proxy.clients:
             if client.server_eid == eid:
                 try:
                     return self.wrapper.players[client.username]
@@ -705,7 +705,7 @@ class Minecraft(object):
 
         """
         if not worldname:
-            worldname = self.wrapper.servervitals.worldname
+            worldname = self.wrapper.javaserver.worldname
         if not worldname:
             raise Exception("Server Uninitiated")
         f = NBTFile("%s/%s/level.dat" % (self.serverpath, worldname), "rb")
@@ -768,7 +768,7 @@ class Minecraft(object):
         Gets the server's path.
 
         """
-        return self.wrapper.servervitals.serverpath
+        return self.wrapper.javaserver.serverpath
 
     def getWorld(self):
         """
@@ -787,7 +787,7 @@ class Minecraft(object):
          new server instance not started, it will return the old world name.
 
         """
-        return self.wrapper.servervitals.worldname
+        return self.wrapper.javaserver.worldname
 
     def getUuidCache(self):
         """

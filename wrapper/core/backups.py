@@ -63,7 +63,7 @@ class Backups(object):
         while not self.wrapper.haltsig.halt:
             time.sleep(1)
             # only run backups in server running/starting states
-            if self.wrapper.javaserver.vitals.state in (1, 2) and not self.idle:
+            if self.wrapper.javaserver.state in (1, 2) and not self.idle:
                 if time.time() - self.timer > self.backup_interval and self.enabled:  # noqa
                     self.dobackup()
             else:

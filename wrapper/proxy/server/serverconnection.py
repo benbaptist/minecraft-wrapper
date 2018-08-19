@@ -19,7 +19,6 @@ from proxy.packets import mcpackets_sb
 from proxy.packets import mcpackets_cb
 
 from proxy.utils.constants import *
-from proxy.utils.mcuuid import MCUUID
 
 
 # noinspection PyMethodMayBeStatic,PyBroadException
@@ -43,10 +42,11 @@ class ServerConnection(object):
         self.client = client
         self.username = self.client.username
         self.proxy = client.proxy
+        self.wrapper = self.proxy.wrapper
+        self.javaserver = self.wrapper.javaserver
         self.log = client.log
         self.ip = ip
         self.port = port
-        self.srv_data = self.proxy.srv_data
 
         # server setup and operating paramenters
         self.abort = False
@@ -72,7 +72,7 @@ class ServerConnection(object):
     def _refresh_server_version(self):
         """Get serverversion for mcpackets use"""
 
-        self.version = self.proxy.srv_data.protocolVersion
+        self.version = self.proxy.javaserver.protocolVersion
         self.pktSB = mcpackets_sb.Packets(self.version)
         self.pktCB = mcpackets_cb.Packets(self.version)
         self.parse_cb = ParseCB(self, self.packet)
@@ -89,7 +89,7 @@ class ServerConnection(object):
         # Connect to a local server address
         if self.ip is None:
             self.server_socket.connect((
-                "localhost", self.proxy.srv_data.server_port))
+                "localhost", self.proxy.javaserver.server_port))
 
         # Connect to some specific server address
         else:
@@ -167,7 +167,7 @@ class ServerConnection(object):
             return False
 
         self.log.info("%s's proxy server connection closed: %s",
-                       self.username, reason)
+                      self.username, reason)
 
         # end 'handle' and 'flush_loop' cleanly
         self.abort = True
@@ -176,6 +176,7 @@ class ServerConnection(object):
         # noinspection PyBroadException
         try:
             self.server_socket.shutdown(2)
+            self.server_socket.close()
             self.log.debug("Sucessfully closed server socket for"
                            " %s", self.username)
             # allow old packet and socket to be Garbage Collected
@@ -260,13 +261,9 @@ class ServerConnection(object):
         return False
 
     # Login Success - UUID & Username are sent in this packet as strings
+    # no point in parsing because we already know the UUID and Username
     def _parse_login_success(self):
         self.state = PLAY
-        # todo - we may not need to assign this to a variable.
-        # (we supplied uuid/name anyway!)
-        # noinspection PyUnusedLocal
-        data = self.packet.readpkt([STRING, STRING])
-        self.client.local_uuid = MCUUID(data[0])
         return False
 
     def _parse_login_set_compression(self):

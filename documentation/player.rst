@@ -85,7 +85,7 @@
     ..
 
     
--  connect(self, ip="127.0.0.1", port=25600)
+-  connect(self, ip="localhost", port=25600)
 
         Connect to another server.  Upon calling, the client's current
          server instance will be closed and a new server connection made
