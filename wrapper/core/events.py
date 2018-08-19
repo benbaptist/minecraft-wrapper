@@ -87,10 +87,10 @@ class Events(object):
         # create reference player object for payload, if needed.
         if payload and ("playername" in payload) and ("player" not in payload):
 
-            for client in self.wrapper.servervitals.clients:
+            for client in self.wrapper.proxy.clients:
                 if client.username == payload["playername"]:
-                    if client.username not in self.wrapper.servervitals.players:
-                        self.wrapper.servervitals.players[
+                    if client.username not in self.wrapper.players:
+                        self.wrapper.players[
                             client.username] = Player(client.username,
                                                       self.wrapper)
             payload["player"] = self.wrapper.api.minecraft.getPlayer(

@@ -220,7 +220,7 @@ class ParseCB(object):
         # self.log.debug(data)
 
         try:
-            player = self.client.srv_data.players[self.client.username]
+            player = self.proxy.wrapper.players[self.client.username]
         except KeyError:
             return False
         payload = self.proxy.eventhandler.callevent(
@@ -284,7 +284,7 @@ class ParseCB(object):
         data = self.packet.readpkt([VARINT, POSITION])
 
         try:
-            player = self.client.srv_data.players[self.client.username]
+            player = self.proxy.wrapper.players[self.client.username]
         except KeyError:
             return False
         if data[0] == self.client.server_eid:
@@ -336,7 +336,7 @@ class ParseCB(object):
         data = self.packet.readpkt([POSITION])
 
         try:
-            player = self.client.srv_data.players[self.client.username]
+            player = self.proxy.wrapper.players[self.client.username]
         except KeyError:
             return False
         self.proxy.eventhandler.callevent(
@@ -409,7 +409,7 @@ class ParseCB(object):
         # There could be a number of clients trying to update this at once
         # noinspection PyBroadException
         try:
-            self.proxy.srv_data.timeofday = data[1]
+            self.proxy.wrapper.javaserver.timeofday = data[1]
         except:
             pass
         return True
@@ -441,7 +441,7 @@ class ParseCB(object):
                     print([match])
 
         try:
-            player = self.client.srv_data.players[self.client.username]
+            player = self.proxy.wrapper.players[self.client.username]
         except KeyError:
             return False
         payload = self.proxy.eventhandler.callevent(
@@ -682,7 +682,7 @@ class ParseCB(object):
         if entityeid == self.client.server_eid:
 
             try:
-                player = self.client.srv_data.players[self.client.username]
+                player = self.proxy.wrapper.players[self.client.username]
             except KeyError:
                 return False
             if not leash:
