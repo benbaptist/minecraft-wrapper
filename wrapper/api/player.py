@@ -185,7 +185,7 @@ class Player(object):
         self._position = [0, 0, 0, 0, 0]  # internally used for non-proxy mode
 
         self.client = None
-        self.clientgameversion = self.wrapper.servervitals.protocolVersion
+        self.clientgameversion = self.wrapper.javaserver.protocolVersion
         self.cbpkt = Packets_cb(self.clientgameversion)
         self.sbpkt = Packets_sb(self.clientgameversion)
 
@@ -204,7 +204,7 @@ class Player(object):
 
         if self.wrapper.proxy:
             gotclient = False
-            for client in self.wrapper.servervitals.clients:
+            for client in self.wrapper.proxy.clients:
                 if client.username == self.username:
                     self.client = client
                     self.clientUuid = client.wrapper_uuid
@@ -212,13 +212,13 @@ class Player(object):
                     self.mojangUuid = client.mojanguuid
                     self.ipaddress = client.ip
 
-                    # pktSB already set to self.wrapper.servervitals.protocolVersion  # noqa
+                    # pktSB already set to self.wrapper.javaserver.protocolVersion  # noqa
                     self.clientboundPackets = self.client.pktCB
                     self.clientgameversion = self.client.clientversion
                     gotclient = True
                     break
             if not gotclient:
-                pprint.pprint(self.wrapper.servervitals.clients)
+                pprint.pprint(self.wrapper.proxy.clients)
                 self.log.error("Proxy is on, but this client is not "
                                "listed in proxy.clients!")
                 self.log.error("The usual cause of this would be that"
@@ -325,12 +325,12 @@ class Player(object):
          "execute" command.
 
         """
-        if string[0] in (self.wrapper.servervitals.command_prefix, "/"):
+        if string[0] in (self.wrapper.proxy.command_prefix, "/"):
             string = string[1:]
         try:
             self.client.chat_to_server("/%s" % string)
         except AttributeError:
-            if self.wrapper.servervitals.protocolVersion > PROTOCOL_1_7_9:
+            if self.wrapper.javaserver.protocolVersion > PROTOCOL_1_7_9:
                 self.wrapper.javaserver.console(
                     "execute %s ~ ~ ~ %s" % (self.username, string))
             else:
@@ -398,7 +398,7 @@ class Player(object):
 
         """
         if self.client is None:
-            for client in self.wrapper.servervitals.clients:
+            for client in self.wrapper.proxy.clients:
                 if client.username == self.username:
                     self.client = client
                     return client
@@ -506,7 +506,7 @@ class Player(object):
         
         """
         try:
-            version = self.wrapper.proxy.srv_data.protocolVersion
+            version = self.wrapper.javaserver.protocolVersion
         except AttributeError:
             # Non proxy mode
             return False
@@ -550,10 +550,10 @@ class Player(object):
 
         """
 
-        if self.wrapper.servervitals.operator_list in (False, None):
+        if self.wrapper.javaserver.operator_list in (False, None):
             return False  # no ops in file
         # each op item is a dictionary
-        for ops in self.wrapper.servervitals.operator_list:
+        for ops in self.wrapper.javaserver.operator_list:
             if ops["uuid"] == self.serverUuid.string:
                 return ops["level"]
             if ops["name"] == self.username and not strict:
@@ -603,7 +603,7 @@ class Player(object):
 
         """
         try:
-            version = self.wrapper.proxy.srv_data.protocolVersion
+            version = self.wrapper.javaserver.protocolVersion
         except AttributeError:
             # Non proxy mode
             return False
@@ -662,7 +662,7 @@ class Player(object):
 
         """
         try:
-            version = self.wrapper.proxy.srv_data.protocolVersion
+            version = self.wrapper.javaserver.protocolVersion
         except AttributeError:
             # Non proxy mode
             return False
@@ -1077,7 +1077,7 @@ class Player(object):
         return self.data.Data["firstLoggedIn"]
 
     # Cross-server commands
-    def connect(self, ip="127.0.0.1", port=25600):
+    def connect(self, ip="localhost", port=25600):
         """
         Connect to another server.  Upon calling, the client's current
          server instance will be closed and a new server connection made
