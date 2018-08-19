@@ -781,7 +781,7 @@ class Commands(object):
         if not self.wrapper.proxymode:
             player.execute("whitelist add %s" % arg)
             player.message("..Working.  Server may lag.")
-            player.message()
+            player.message("...")
             return
         whitelist = getjsonfile(
             "whitelist", self.wrapper.serverpath, self.wrapper.encoding
