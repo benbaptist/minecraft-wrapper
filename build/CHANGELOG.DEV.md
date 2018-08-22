@@ -1,3 +1,7 @@
+Build 28, 1.0.19 RC 28
+- Bugfix commands.py line 784 where player message is used with no argument.
+- Update Master branch
+
 Build 27
 - increment version to 1.0.18 RC 27
 - fix player to player teleport ValueError bug caused by trying to read coordinates

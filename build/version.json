@@ -1,14 +1,14 @@
 {
-    "__branch__": "dev", 
+    "__branch__": "stable", 
     "__build__": 266, 
     "__version__": [
         1, 
         0, 
-        18, 
+        19, 
         "rc", 
-        27
+        28
     ], 
     "build": 229, 
-    "release_time": 1531664620.436368, 
+    "release_time": 1534692383.768469, 
     "repotype": "stable"
 }
