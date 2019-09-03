@@ -1,3 +1,6 @@
+# Repository is currently not active #
+If you are interested in helping to bring wrapper up to date and maintain it, please respond using the issues tab.  An open issue exists to [request a new wrapper developer](https://github.com/benbaptist/minecraft-wrapper/issues/622).
+
 # Overview #
 -------------------------------------------
 Wrapper.py is an easy to use Minecraft server wrapper for adding extra functionality into the server without modifying 
