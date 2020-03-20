@@ -51,7 +51,7 @@ class Wrapper:
 
         # Database manager
         self.storify = Storify(log=self.log_manager.getLogger("storify"))
-		self.db = self.storify.getDB("main")
-
+        self.db = self.storify.getDB("main")
+        
     def start(self):
         self.log.info("Hello world. I'm just some placeholder code, just to let you know that I'm doing something.")
