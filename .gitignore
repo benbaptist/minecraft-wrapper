@@ -1,0 +1,60 @@
+#############
+## Python
+#############
+
+*.py[cod]
+
+# Packages
+*.egg
+*.egg-info
+dist/
+#build/
+eggs/
+parts/
+var/
+sdist/
+develop-eggs/
+.installed.cfg
+ *__pycache__*
+
+# Installer logs
+pip-log.txt
+
+# Unit test / coverage reports
+.coverage
+.tox
+
+# Translations
+*.mo
+
+# Mr Developer
+.mr.developer.cfg
+
+# Minecraft Wrapper
+
+build/version.json
+
+# PyCharm project
+*.idea
+test.py
+
+#local test server environment
+# this list is old -update for your config, if applicable
+wrapper-plugins
+backups
+plugins
+logs
+AllTheWorld
+wrapper-data
+banned-*
+eula.txt
+logging.json
+*.jar
+ops.json
+server-icon.png
+usercache.json
+whitelist.json
+wrapper.properties
+server.properties
+start-wrapper.py
+v
