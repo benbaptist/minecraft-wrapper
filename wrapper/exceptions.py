@@ -1,0 +1,1 @@
+class AlreadyStarted(Exception): pass

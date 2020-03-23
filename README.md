@@ -6,7 +6,17 @@ to create Bukkit-like plugins without any server modding.
 We also have a gitter channel: [![Join the chat at https://gitter.im/benbaptist/minecraft-wrapper](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/benbaptist/minecraft-wrapper?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 # 'Lite' Version #
-This is a new branch of Wrapper.py. It's a complete re-write, and is focused on being very lightweight and efficient.
+This is a new branch of Wrapper.py. It's a complete re-write of Wrapper.py, and is focused on being extremely lightweight and clean.
+
+### **Design Goals**
+- Quick setup
+- Robust, stable, set-it-and-forget-it design
+    - Wrapper should always be able to start without user input (e.g. with a physical server boot)
+    - Updates to Wrapper should never intrude or require user input to fix problems
+    - Resilient to corruption, should repair itself
+- No excess of functionality; only bare bone features will be implemented
+- Plugin API, to supplement any specific features or use cases
+- Python 2.x and 3.x compatible
 
 ###  **Wrapper.py Versions**
 
