@@ -1,0 +1,11 @@
+- Wrapper shuts down on first start, to allow user to edit generated config file
+    - Eventually, interactive first-time setup
+
+- Implement backup system
+    - Support various containers (zip, tar, 7z, etc.) and compression methods (gzip, etc.)
+    - Automatic world rollback through dashboard
+- Implement shell script calls
+- Implement dashboard using Flask
+    - Multi-user support with multiple access levels
+- Implement plugin API
+    - Player object

@@ -1,8 +1,12 @@
 import os
+import time
+import threading
 
 from wrapper.config import Config
 from wrapper.storify import Storify
 from wrapper.log_manager import LogManager
+from wrapper.server import Server
+from wrapper.console import Console
 
 CONFIG_TEMPLATE = {
     "server": {
@@ -36,7 +40,7 @@ CONFIG_TEMPLATE = {
 class Wrapper:
     def __init__(self):
         self.log_manager = LogManager()
-        self.log = self.log_manager.getLogger("main")
+        self.log = self.log_manager.get_logger("main")
 
         # Check if wrapper-data folder exists before continuing
         if not os.path.exists("wrapper-data"):
@@ -45,13 +49,30 @@ class Wrapper:
         # Configuration manager
         self.config = Config(path="wrapper-data/config.json",
             template=CONFIG_TEMPLATE,
-            log=self.log_manager.getLogger("config")
+            log=self.log_manager.get_logger("config")
         )
         self.config.save()
 
         # Database manager
-        self.storify = Storify(log=self.log_manager.getLogger("storify"))
+        self.storify = Storify(log=self.log_manager.get_logger("storify"))
         self.db = self.storify.getDB("main")
-        
+
+        # Other
+        self.server = Server(self)
+        self.console = Console(self)
+
+        self.abort = False
+
     def start(self):
-        self.log.info("Hello world. I'm just some placeholder code, just to let you know that I'm doing something.")
+        self.log.info("Wrapper starting")
+
+        t = threading.Thread(target=self.console.read_console)
+        t.daemon = True
+        t.start()
+
+        self.run()
+
+    def run(self):
+        while not self.abort:
+            self.server.tick()
+            time.sleep(1 / 20.0) # 20 ticks per second

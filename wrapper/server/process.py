@@ -4,16 +4,17 @@ import traceback
 
 from subprocess import Popen, PIPE
 
-# from wrapper.exceptions import *
+from wrapper.exceptions import *
 
 class Process:
     def __init__(self):
         self.process = None
         self.threads = {}
+        self.console_output = []
 
     def start(self, jar_name, java_args=[], java_bin="java", jar_args=["nogui"]):
         if self.process:
-            raise AlreadyStarted("Cannot start java process, because it is already running.")
+            raise StartingException("Cannot start java process, because it is already running.")
 
         command = [java_bin] + java_args + ["-jar", jar_name] + jar_args
 
@@ -27,13 +28,25 @@ class Process:
         self.threads["__stderr__"].daemon = True
         self.threads["__stderr__"].start()
 
+    def read_console(self):
+        i = 0
+        while i < len(self.console_output):
+            line = self.console_output[i]
+            yield line
+
+            del self.console_output[i]
+            i += 1
+
     def kill(self):
         if self.process:
             self.process.kill()
             self.process = None
 
     def write(self, cmd):
-        self.process.stdin.write("%s\n" % cmd)
+        if not self.process:
+            raise ServerStopped("Can't write to server process because it is stopped")
+
+        self.process.stdin.write(cmd)
         self.process.stdin.flush()
 
     def __stread__(self, read):
@@ -45,7 +58,7 @@ class Process:
             elif read == "stderr":
                 std = self.process.stderr
 
-            print("__stread__ start // %s" % read)
+            # print("__stread__ start // %s" % read)
             while self.process:
                 blob = std.readline()
 
@@ -60,13 +73,12 @@ class Process:
                     # Strip line of \r
                     line = line.replace("\r", "")
 
-                    # Print line to console
-                    print(line)
+                    self.console_output.append([read, line])
 
             # After loop is killed, ensure process is cleaned up
             self.kill()
 
-            print("__stread__ end // %s" % read)
+            # print("__stread__ end // %s" % read)
         except:
             # If a fatal error occurs, print traceback and ensure process is cleaned up
             traceback.print_exc()
@@ -74,7 +86,7 @@ class Process:
 
 # For experimentaion purposes, this module can be called directly
 # This will be removed later
-from builtins import input
+# from builtins import input
 if __name__ == "__main__":
     proc = Process()
     proc.start("server.jar")

@@ -19,8 +19,8 @@ class LogManager:
 		self.fh.setLevel(logging.INFO)
 		self.fh.setFormatter(self.formatter)
 
-		self.log = self.getLogger(__name__)
-	def getLogger(self, name):
+		self.log = self.get_logger(__name__)
+	def get_logger(self, name):
 		logger = logging.getLogger(name)
 		logger.addHandler(self.ch)
 		logger.addHandler(self.fh)
