@@ -9,3 +9,6 @@
     - Multi-user support with multiple access levels
 - Implement plugin API
     - Player object
+- Implement server.properties hijacking (temporarily replace server.properties with custom values before starting server, and putting original one back after server booted)
+- Auto-accept EULA
+- [Very Low Priority] Implement Proxy mode

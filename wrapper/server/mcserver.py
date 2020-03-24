@@ -1,7 +1,10 @@
 import re
 import json
+import uuid
 
 from wrapper.server.process import Process
+from wrapper.server.player import Player
+from wrapper.server.uuid_cache import UUID_Cache
 from wrapper.commons import *
 from wrapper.exceptions import *
 
@@ -15,6 +18,8 @@ class MCServer:
 
         self.state = SERVER_STOPPED
 
+        self.uuid_cache = UUID_Cache()
+
     def start(self):
         if self.state != SERVER_STOPPED:
             raise StartingException("Server is already running")
@@ -24,6 +29,13 @@ class MCServer:
         self.process = Process()
         self.process.start(self.config["server"]["jar"])
         self.state = SERVER_STARTING
+
+        self.players = []
+        self.world = None
+        self.server_version = None
+        self.server_port = None
+
+        self.uuid_cache = {}
 
     def stop(self):
         return
@@ -52,7 +64,7 @@ class MCServer:
             print(line)
 
             # Compatible with most recent versions of Minecraft server
-            m = re.search("(\[[0-9:]*\]) \[([A-z -]*)\/([A-z -]*)\]: (.*)", line)
+            m = re.search("(\[[0-9:]*\]) \[(.*)\/(.*)\]: (.*)", line)
 
             # If regex did not match, continue to prevent issues
             if m == None:
@@ -86,6 +98,46 @@ class MCServer:
                 # Server started
                 if "Done" in output:
                     self.state = SERVER_STARTED
+                    print("Server started yay")
+            if self.state == SERVER_STARTED:
+                # UUID catcher
+                if "UUID" in output and "User Authenticator" in server_thread:
+                    r = re.search("UUID of player (.*) is (.*)", output)
+
+                    username, uuid_string = r.group(1), r.group(2)
+                    uuid_obj = uuid.UUID(str=uuid_string)
+
+                    self.uuid_cache.add_uuid(username, uuid_obj)
+
+                # Player Join
+                r = re.search("(.*)\[/(.*):(.*)\] logged in with entity id (.*) at \((.*), (.*), (.*)\)", output)
+                if r:
+                    username = r.group(1)
+                    ip_address = r.group(2)
+                    entity_id = r.group(4)
+                    position = [
+                        float(r.group(5)),
+                        float(r.group(6)),
+                        float(r.group(7))
+                    ]
+
+                    uuid_obj = self.uuid_cache.get_uuid(username)
+
+                    player_obj = Player(username=username, uuid=uuid_obj)
+
+                    print(username, ip_address, entity_id, position)
+
+                # Player Disconnect
+                r = re.search("(.*) lost connection: (.*)", output)
+                if r:
+                    username = r.group(1)
+                    server_disconnect_reason = r.group(2)
+
+                # Chat messages
+                if "<" in output and ">" in output:
+                    r = re.search("<(.*)> (.*)", output)
+                    username, message = r.group(1), r.group(2)
+                    print(username, message)
 
         # Dirty hack, let's make this better later using process.read_console()
         self.process.console_output = []

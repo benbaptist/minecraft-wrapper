@@ -27,8 +27,8 @@ class Server:
     def start(self):
         return
 
-    def stop(self):
+    def stop(self, reason="Server stopping"):
         return
 
-    def restart(self):
+    def restart(self, reason="Server restarting"):
         return

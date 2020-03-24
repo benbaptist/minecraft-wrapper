@@ -71,6 +71,14 @@ class Wrapper:
         t.start()
 
         self.run()
+        self.cleanup()
+
+    def shutdown(self):
+        self.log.info("Shutting down Wrapper.py")
+        self.abort = True
+
+    def cleanup(self):
+        self.server.stop()
 
     def run(self):
         while not self.abort:
