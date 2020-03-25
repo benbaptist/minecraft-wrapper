@@ -58,4 +58,6 @@ class Config:
 
 	def save(self):
 		with open(self.path, "w") as f:
-			f.write(json.dumps(self.data))
+			f.write(
+				json.dumps(self.data, sort_keys=True, indent=4, separators=(',', ': '))
+			)

@@ -100,6 +100,7 @@ class Wrapper:
             self.log.info("Wrapper caught KeyboardInterrupt, shutting down")
         except:
             self.log.traceback("Fatal error, shutting down")
+            self.server.kill()
             # This won't properly wait for the server to stop. This needs to be fixed.
 
         self.cleanup()

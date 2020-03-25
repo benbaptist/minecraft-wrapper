@@ -13,13 +13,18 @@ class Server(object):
             self.db["server"] = {
                 "state": SERVER_STARTED # SERVER_STARTED/SERVER_STOPPED
             }
-    def __getattr__(self, name):
-        if name == "state":
-            return self.mcserver.state
-        elif name == "players":
-            return self.mcserver.players
-        else:
-            return super(Server, self).__getattr__(name)
+
+    @property
+    def state(self):
+        return self.mcserver.state
+
+    @property
+    def players(self):
+        return self.mcserver.players
+
+    @property
+    def world(self):
+        return self.mcserver.world
 
     def tick(self):
         if self.mcserver.state == SERVER_STOPPED:
@@ -39,6 +44,9 @@ class Server(object):
 
         if save:
             self.db["server"]["state"] = SERVER_STOPPED
+
+    def kill(self):
+        self.mcserver.kill()
 
     def restart(self, reason="Server restarting"):
         return

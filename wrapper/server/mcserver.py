@@ -44,6 +44,9 @@ class MCServer:
     def stop(self, reason):
         self.target_state = (SERVER_STOPPED, time.time())
 
+    def kill(self):
+        self.process.kill()
+
     def run_command(self, cmd):
         self.process.write("%s\n" % cmd)
 
@@ -74,7 +77,7 @@ class MCServer:
             # Check if server shutdown has been going for too long, and kill server
             if self.state == SERVER_STOPPING:
                 if time.time() - target_state_time > 60:
-                    self.process.kill()
+                    self.kill()
 
         # Regex new lines
         for std, line in self.process.console_output:
@@ -110,8 +113,7 @@ class MCServer:
                 # Grab world name
                 if "Preparing level" in output:
                     r = re.search("Preparing level \"(.*)\"", output)
-                    world_name = r.group(1)
-                    print(world_name)
+                    self.world = r.group(1)
 
                 # Server started
                 if "Done" in output:
