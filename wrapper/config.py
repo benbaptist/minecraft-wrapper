@@ -1,7 +1,7 @@
 import json
 import os
 
-# Ben's Configurator v1.0
+# Ben's Configurator v1.1
 # Copyright benbaptist.com 2019
 
 class DummyLogger:
@@ -38,6 +38,9 @@ class Config:
 		self.template = template
 		self.log = log
 
+		# Changes to True when a config file was updated with new entries, from the template
+		self.updated_from_template = False
+
 		if os.path.exists(path):
 			self.log.debug("Reading config %s" % self.path)
 			with open(path, "r") as f:
@@ -47,6 +50,7 @@ class Config:
 
 		for i in template:
 			if i not in self.data:
+				self.updated_from_template = True
 				self.log.debug("Populating '%s'" % i)
 				self.data[i] = template[i]
 

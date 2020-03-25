@@ -38,6 +38,8 @@ class Console:
                     self.log.info("Restart initiated from console")
                     self.server.restart()
 
+                    continue
+
                 if command == "wrapper":
                     subcommand = args(1)
                     if subcommand in ("halt", "stop"):
@@ -47,6 +49,8 @@ class Console:
                         self.log.info("Wrapper.py")
                     else:
                         self.log.info("Usage: /wrapper [stop/about]")
+
+                    continue
 
 
             try:

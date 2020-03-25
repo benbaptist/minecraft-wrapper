@@ -7,6 +7,8 @@ from wrapper.storify import Storify
 from wrapper.log_manager import LogManager
 from wrapper.server import Server
 from wrapper.console import Console
+from wrapper.backups import Backups
+from wrapper.commons import *
 
 CONFIG_TEMPLATE = {
     "server": {
@@ -22,18 +24,31 @@ CONFIG_TEMPLATE = {
     #     "enable": False
     # },
     "backups": {
-        "compression": {
-            "enable": True,
-            "format": "gzip" # Only gzip is supported for now
+        "enable": False,
+        "archive-format": {
+            "format": "auto",
+            "compression": {
+                "enable": True
+            }
         },
         "history": 50,
         "interval-seconds": 600,
-        "destination": None,
-        "notification": {
+        "only-backup-if-player-joins": True,
+        "destination": "backups",
+        "chat-notification": {
             "enable": True,
             "only-ops": False,
             "verbose": False
-        }
+        },
+        "backup-mode": "auto",
+        "include": {
+            "world": True,
+            "logs": False,
+            "server-properties": False,
+            "wrapper-data": True,
+            "whitelist-ops-banned": True
+        },
+        "include-paths": ["wrapper-data"]
     }
 }
 
@@ -51,7 +66,6 @@ class Wrapper:
             template=CONFIG_TEMPLATE,
             log=self.log_manager.get_logger("config")
         )
-        self.config.save()
 
         # Database manager
         self.storify = Storify(log=self.log_manager.get_logger("storify"))
@@ -60,27 +74,51 @@ class Wrapper:
         # Other
         self.server = Server(self)
         self.console = Console(self)
+        self.backups = Backups(self)
 
         self.abort = False
+        self.initiate_shutdown = False
 
     def start(self):
+        if self.config.updated_from_template:
+            self.log.info(
+                "Configuration file has been updated with new"
+                "entries. Open config.json, and make sure your"
+                "settings are good before running."
+            )
+            return
+
         self.log.info("Wrapper starting")
 
         t = threading.Thread(target=self.console.read_console)
         t.daemon = True
         t.start()
 
-        self.run()
+        try:
+            self.run()
+        except KeyboardInterrupt:
+            self.log.info("Wrapper caught KeyboardInterrupt, shutting down")
+        except:
+            self.log.traceback("Fatal error, shutting down")
+            # This won't properly wait for the server to stop. This needs to be fixed.
+
         self.cleanup()
 
     def shutdown(self):
-        self.log.info("Shutting down Wrapper.py")
-        self.abort = True
+        self.initiate_shutdown = True
 
     def cleanup(self):
-        self.server.stop()
+        self.server.stop(save=False)
 
     def run(self):
         while not self.abort:
+            if self.initiate_shutdown and self.server.state != SERVER_STOPPING:
+                self.server.stop(save=False)
+
+            if self.initiate_shutdown and self.server.state == SERVER_STOPPED:
+                self.abort = True
+                break
+
             self.server.tick()
+            self.backups.tick()
             time.sleep(1 / 20.0) # 20 ticks per second

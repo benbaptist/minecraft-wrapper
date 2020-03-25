@@ -1,14 +1,20 @@
-- Wrapper shuts down on first start, to allow user to edit generated config file
+- [DONE] Wrapper shuts down on first start, to allow user to edit generated config file
     - Eventually, interactive first-time setup
 
-- Implement backup system
+- [PARTIAL] Implement backup system
     - Support various containers (zip, tar, 7z, etc.) and compression methods (gzip, etc.)
     - Automatic world rollback through dashboard
+    - Don't backup if server has been in stopped state
+    - Option to stop backup if no players have logged in
 - Implement shell script calls
 - Implement dashboard using Flask
     - Multi-user support with multiple access levels
 - Implement plugin API
-    - Player object
+    - Server object
+        - World object
+        - Player object
+        - (if proxy mode is implemented) Entity object
+- Automatically turn on gamerule to hide command runs from ops, to prevent chat spam
 - Implement server.properties hijacking (temporarily replace server.properties with custom values before starting server, and putting original one back after server booted)
 - Auto-accept EULA
 - [Very Low Priority] Implement Proxy mode

@@ -1,6 +1,7 @@
 import re
 import json
 import uuid
+import time
 
 from wrapper.server.process import Process
 from wrapper.server.player import Player
@@ -17,6 +18,7 @@ class MCServer:
         self.process = None
 
         self.state = SERVER_STOPPED
+        self.target_state = None
 
         self.uuid_cache = UUID_Cache()
 
@@ -37,8 +39,10 @@ class MCServer:
 
         self.uuid_cache = {}
 
-    def stop(self):
-        return
+        self.target_state = (SERVER_STARTED, time.time())
+
+    def stop(self, reason):
+        self.target_state = (SERVER_STOPPED, time.time())
 
     def run_command(self, cmd):
         self.process.write("%s\n" % cmd)
@@ -58,6 +62,20 @@ class MCServer:
             self.log.info("Server stopped")
             self.state = SERVER_STOPPED
 
+        # Check target state, and do accordingly
+        target_state, target_state_time = self.target_state
+        if target_state == SERVER_STOPPED:
+
+            # Start server shutdown, if it hasn't already started
+            if self.state not in (SERVER_STOPPING, SERVER_STOPPED):
+                self.run_command("stop")
+                self.state = SERVER_STOPPING
+
+            # Check if server shutdown has been going for too long, and kill server
+            if self.state == SERVER_STOPPING:
+                if time.time() - target_state_time > 60:
+                    self.process.kill()
+
         # Regex new lines
         for std, line in self.process.console_output:
             # Print line to console
@@ -70,7 +88,7 @@ class MCServer:
             if m == None:
                 continue
 
-            time = m.group(1)
+            log_time = m.group(1)
             server_thread = m.group(2)
             log_level = m.group(3)
             output = m.group(4)
