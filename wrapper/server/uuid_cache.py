@@ -8,8 +8,23 @@ class UUID_Cache:
 
         self.uuid_cache = {}
 
-    def add_uuid(self, username, uuid_obj):
+    def add(self, username, uuid_obj):
         self.uuid_cache[username] = uuid_obj
+
+    def get(self, username):
+        if not self.online_mode:
+            return self.get_offline_uuid(username)
+
+        if username in self.uuid_cache:
+            return self.uuid_cache[username]
+
+        with open("usercache.json", "r") as f:
+            data = json.loads(f.read())
+            for player in data:
+                if player["name"] == username:
+                    return UUID(str=player["uuid"])
+
+        raise EOFError("No UUID could be found for the username %s" % username)
 
     def get_offline_uuid(self, username):
         playername = "OfflinePlayer:%s" % username
@@ -21,18 +36,3 @@ class UUID_Cache:
         d[8] &= 0x3f
         d[8] |= 0x80
         return UUID(bytes=bytes(d))
-
-    def get_uuid(self, username):
-        if not online_mode:
-            return self.get_offline_uuid(username)
-
-        if username in self.uuid_cache:
-            return self.uuid_cache[username]
-
-        with open("usercache.json", "r") as f:
-            data = json.loads(f.read())
-            for player in data:
-                if player["name"] == username:
-                    return player["uuid"]
-
-        raise EOFError("No UUID could be found for the username %s" % username)

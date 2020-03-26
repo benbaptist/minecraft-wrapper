@@ -25,6 +25,12 @@ class Console:
                 except:
                     pass
 
+            def args_after(i):
+                try:
+                    return " ".join(data.split(" ")[i:])
+                except:
+                    pass
+
             if len(data) > 1:
                 command = args(0)
 
@@ -37,6 +43,12 @@ class Console:
                 if command == "restart":
                     self.log.info("Restart initiated from console")
                     self.server.restart()
+
+                    continue
+
+                if command == "broadcast":
+                    message = args_after(1)
+                    self.server.broadcast(message)
 
                     continue
 

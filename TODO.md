@@ -2,13 +2,14 @@
     - Eventually, interactive first-time setup
 
 - [PARTIAL] Implement backup system
-    - Support various containers (zip, tar, 7z, etc.) and compression methods (gzip, etc.)
-    - Don't backup if server has been in stopped state
+    - [DONE] Support various containers (zip, tar, 7z, etc.) and compression methods (gzip, etc.)
+    - [DONE] Don't backup if server has been in stopped state
     - Option to stop backup if no players have logged in
     - Automatic world rollback through dashboard
 - Implement shell script calls
 - Implement dashboard using Flask
     - Multi-user support with multiple access levels
+- Implement locales
 - Implement plugin API
     - Server object
         - World object

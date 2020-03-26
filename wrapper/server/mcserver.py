@@ -37,8 +37,6 @@ class MCServer:
         self.server_version = None
         self.server_port = None
 
-        self.uuid_cache = {}
-
         self.target_state = (SERVER_STARTED, time.time())
 
     def stop(self, reason):
@@ -46,6 +44,8 @@ class MCServer:
 
     def kill(self):
         self.process.kill()
+
+    # Commands
 
     def run_command(self, cmd):
         self.process.write("%s\n" % cmd)
@@ -58,6 +58,33 @@ class MCServer:
                 "text": msg
             })
         self.run_command("tellraw @a %s" % json_blob)
+
+    # Players
+    def list_players(self):
+        players = []
+
+        for player in self.players:
+            # Filters go here
+
+            players.append(player)
+
+        return players
+
+    def get_player(self, username=None, mcuuid=None, ip_address=None):
+        for player in self.players:
+            if username:
+                if username == player.username:
+                    return player
+
+            if mcuuid:
+                if player.uuid == mcuuid:
+                    return player
+
+            if ip_address:
+                if player.ip_address == ip_address:
+                    return player
+
+    # Tick
 
     def tick(self):
         # Check if server process is stopped
@@ -85,52 +112,53 @@ class MCServer:
             print(line)
 
             # Compatible with most recent versions of Minecraft server
-            m = re.search("(\[[0-9:]*\]) \[(.*)\/(.*)\]: (.*)", line)
+            r = re.search("(\[[0-9:]*\]) \[(.*)\/(.*)\](.*)", line)
 
             # If regex did not match, continue to prevent issues
-            if m == None:
+            if r == None:
                 continue
 
-            log_time = m.group(1)
-            server_thread = m.group(2)
-            log_level = m.group(3)
-            output = m.group(4)
+            log_time = r.group(1)
+            server_thread = r.group(2)
+            log_level = r.group(3)
+            output = r.group(4)
 
             # Parse output
             if self.state == SERVER_STARTING:
                 # Grab server version
                 if "Starting minecraft" in output:
-                    r = re.search("Starting minecraft server version (.*)", output)
+                    r = re.search(": Starting minecraft server version (.*)", output)
                     server_version = r.group(1)
                     print(server_version)
 
                 # Grab server port
                 if "Starting Minecraft server on" in output:
-                    r = re.search("Starting Minecraft server on \*:([0-9]*)", output)
+                    r = re.search(": Starting Minecraft server on \*:([0-9]*)", output)
                     server_port = r.group(1)
                     print(server_port)
 
                 # Grab world name
                 if "Preparing level" in output:
-                    r = re.search("Preparing level \"(.*)\"", output)
+                    r = re.search(": Preparing level \"(.*)\"", output)
                     self.world = r.group(1)
 
                 # Server started
                 if "Done" in output:
                     self.state = SERVER_STARTED
-                    print("Server started yay")
+                    self.run_command("gamerule sendCommandFeedback false")
             if self.state == SERVER_STARTED:
                 # UUID catcher
-                if "UUID" in output and "User Authenticator" in server_thread:
-                    r = re.search("UUID of player (.*) is (.*)", output)
+                if "User Authenticator" in server_thread:
+                    r = re.search(": UUID of player (.*) is (.*)", output)
 
-                    username, uuid_string = r.group(1), r.group(2)
-                    uuid_obj = uuid.UUID(str=uuid_string)
+                    if r:
+                        username, uuid_string = r.group(1), r.group(2)
+                        uuid_obj = uuid.UUID(hex=uuid_string)
 
-                    self.uuid_cache.add_uuid(username, uuid_obj)
+                        self.uuid_cache.add(username, uuid_obj)
 
                 # Player Join
-                r = re.search("(.*)\[/(.*):(.*)\] logged in with entity id (.*) at \((.*), (.*), (.*)\)", output)
+                r = re.search(": (.*)\[/(.*):(.*)\] logged in with entity id (.*) at \((.*), (.*), (.*)\)", output)
                 if r:
                     username = r.group(1)
                     ip_address = r.group(2)
@@ -141,21 +169,28 @@ class MCServer:
                         float(r.group(7))
                     ]
 
-                    uuid_obj = self.uuid_cache.get_uuid(username)
+                    uuid_obj = self.uuid_cache.get(username)
 
-                    player_obj = Player(username=username, uuid=uuid_obj)
+                    player = Player(username=username, uuid=uuid_obj)
+
+                    self.players.append(player)
 
                     print(username, ip_address, entity_id, position)
 
                 # Player Disconnect
-                r = re.search("(.*) lost connection: (.*)", output)
+                r = re.search(": (.*) lost connection: (.*)", output)
                 if r:
                     username = r.group(1)
                     server_disconnect_reason = r.group(2)
 
+                    player = self.get_player(username=username)
+                    if player:
+                        print("Removing %s from players" % player)
+                        self.players.remove(player)
+
                 # Chat messages
-                if "<" in output and ">" in output:
-                    r = re.search("<(.*)> (.*)", output)
+                r = re.search(": <(.*)> (.*)", output)
+                if r:
                     username, message = r.group(1), r.group(2)
                     print(username, message)
 

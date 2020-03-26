@@ -78,7 +78,10 @@ class Backups:
                 include.append("ops.json")
                 include.append("whitelist.json")
 
-            include += self.config["include-paths"]
+            for include_path in self.config["include-paths"]:
+                if include_path not in include:
+                    include.append(include_path)
+
             return include
         elif self.config["backup-mode"] == "manual":
             # Only backup specified files in 'include-paths'
@@ -95,13 +98,31 @@ class Backups:
 
         # If there's a current backup, check on it
         if self.current_backup:
+            if self.current_backup.status == BACKUP_STARTED:
+                self.server.title({
+                    "text": "Backup started. Server may lag.",
+                    "color": "red"
+                }, title_type="actionbar")
             if self.current_backup.status == BACKUP_COMPLETE:
-                self.log.info("Backup complete.")
+                details = self.current_backup.details
 
-            if self.current_backup.status == BACKUP_FAILURE:
+                self.log.info(
+                    "Backup complete. Took %s seconds, and uses %s of storage."
+                    % (details["backup-complete"] - details["backup-start"],
+                    bytes_to_human(details["filesize"]))
+                )
+
+                self.server.title({
+                    "text": "Backup complete.",
+                    "color": "green"
+                }, title_type="actionbar")
+
+                self.last_backup = time.time()
+
+            if self.current_backup.status == BACKUP_FAILED:
                 self.log.info("Backup failed.")
 
-            if self.current_backup.status in (BACKUP_COMPLETE, BACKUP_FAILURE):
+            if self.current_backup.status in (BACKUP_COMPLETE, BACKUP_FAILED):
                 self.current_backup = None
             return
 
@@ -120,8 +141,7 @@ class Backups:
                 self.last_backup = time.time()
                 return
 
-            self.log.info("Commence backup")
-            self.last_backup = time.time()
+            self.log.info("Starting backup")
 
             self.current_backup = Backup(self)
             self.current_backup.start()

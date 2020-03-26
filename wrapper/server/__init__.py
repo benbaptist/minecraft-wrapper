@@ -1,3 +1,5 @@
+import json
+
 from wrapper.server.mcserver import MCServer
 from wrapper.commons import *
 
@@ -25,6 +27,26 @@ class Server(object):
     @property
     def world(self):
         return self.mcserver.world
+
+    def broadcast(self, message):
+        self.mcserver.broadcast(message)
+
+    def title(self, message, target="@a", title_type="title", fade_in=None, stay=None, fade_out=None):
+        if fade_in or stay or fade_out:
+            pass
+
+        if type(message) == dict:
+            json_blob = json.dumps(message)
+        else:
+            json_blob = {
+                "text": message
+            }
+            json_blob = json.dumps(json_blob)
+
+        self.mcserver.run_command(
+            "title %s %s %s"
+            % (target, title_type, json_blob)
+        )
 
     def tick(self):
         if self.mcserver.state == SERVER_STOPPED:

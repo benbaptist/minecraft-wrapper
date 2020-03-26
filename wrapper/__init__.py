@@ -11,6 +11,9 @@ from wrapper.backups import Backups
 from wrapper.commons import *
 
 CONFIG_TEMPLATE = {
+    "general": {
+        "debug-mode": True
+    },
     "server": {
         "jar": "server.jar",
         "arguments": "",
@@ -35,7 +38,7 @@ CONFIG_TEMPLATE = {
         "interval-seconds": 600,
         "only-backup-if-player-joins": True,
         "destination": "backups",
-        "chat-notification": {
+        "ingame-notification": {
             "enable": True,
             "only-ops": False,
             "verbose": False
@@ -82,9 +85,9 @@ class Wrapper:
     def start(self):
         if self.config.updated_from_template:
             self.log.info(
-                "Configuration file has been updated with new"
-                "entries. Open config.json, and make sure your"
-                "settings are good before running."
+                "Configuration file has been updated with new entries. Open "
+                "config.json, and make sure your settings are good "
+                "before running."
             )
             return
 
