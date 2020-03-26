@@ -17,8 +17,9 @@ class Process:
             raise StartingException("Cannot start java process, because it is already running.")
 
         command = [java_bin] + java_args + ["-jar", jar_name] + jar_args
+        # command = ["python", "/home/benbaptist/Documents/Programming/minecraft-wrapper/tools/fake_minecraft_server.py"]
 
-        self.process = Popen(command, stdout=PIPE, stderr=PIPE, stdin=PIPE, universal_newlines=True)
+        self.process = Popen(command, stdout=PIPE, stderr=PIPE, stdin=PIPE, universal_newlines=True, bufsize=1)
 
         self.threads["__stdout__"] = threading.Thread(target=self.__stread__, args=("stdout", ))
         self.threads["__stdout__"].daemon = True

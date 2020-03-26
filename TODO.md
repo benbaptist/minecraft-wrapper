@@ -3,9 +3,9 @@
 
 - [PARTIAL] Implement backup system
     - Support various containers (zip, tar, 7z, etc.) and compression methods (gzip, etc.)
-    - Automatic world rollback through dashboard
     - Don't backup if server has been in stopped state
     - Option to stop backup if no players have logged in
+    - Automatic world rollback through dashboard
 - Implement shell script calls
 - Implement dashboard using Flask
     - Multi-user support with multiple access levels

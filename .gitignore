@@ -41,8 +41,6 @@ test.py
 #local test server environment
 # this list is old -update for your config, if applicable
 wrapper-plugins
-backups
-plugins
 logs
 AllTheWorld
 wrapper-data
@@ -56,5 +54,3 @@ usercache.json
 whitelist.json
 wrapper.properties
 server.properties
-start-wrapper.py
-v

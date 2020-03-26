@@ -5,8 +5,8 @@ import time
 
 class LogManager:
 	def __init__(self):
-		if not os.path.exists("logs"):
-			os.mkdir("logs")
+		if not os.path.exists("logs/wrapper"):
+			os.makedirs("logs/wrapper")
 
 		self.start_date = time.strftime("%Y-%m-%d")
 		self.formatter = logging.Formatter(fmt="%(asctime)s [Wrapper/%(name)s/%(levelname)s] %(message)s", datefmt='[%Y-%m-%d %H:%M:%S]')
@@ -15,7 +15,7 @@ class LogManager:
 		self.ch.setLevel(logging.DEBUG)
 		self.ch.setFormatter(self.formatter)
 
-		self.fh = logging.FileHandler("logs/%s.log" % self.start_date, "a")
+		self.fh = logging.FileHandler("logs/wrapper/%s.log" % self.start_date, "a")
 		self.fh.setLevel(logging.INFO)
 		self.fh.setFormatter(self.formatter)
 
