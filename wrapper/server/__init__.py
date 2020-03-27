@@ -28,10 +28,24 @@ class Server(object):
     def world(self):
         return self.mcserver.world
 
+    @property
+    def dirty(self):
+        return self.mcserver.dirty
+
+    @dirty.setter
+    def dirty(self, value):
+        self.mcserver.dirty = value
+
     def broadcast(self, message):
+        if len(self.players) < 1:
+            return
+
         self.mcserver.broadcast(message)
 
     def title(self, message, target="@a", title_type="title", fade_in=None, stay=None, fade_out=None):
+        if len(self.players) < 1:
+            return
+
         if fade_in or stay or fade_out:
             pass
 
@@ -48,18 +62,14 @@ class Server(object):
             % (target, title_type, json_blob)
         )
 
-    def tick(self):
-        if self.mcserver.state == SERVER_STOPPED:
-            if self.db["server"]["state"] == SERVER_STARTED:
-                self.mcserver.start()
-
-        self.mcserver.tick()
-
     def run_command(self, cmd):
         self.mcserver.run_command(cmd)
 
     def start(self):
         self.db["server"]["state"] = SERVER_STARTED
+
+    def restart(self, reason="Server restarting"):
+        self.mcserver.restart(reason)
 
     def stop(self, reason="Server stopping", save=True):
         self.mcserver.stop(reason)
@@ -70,5 +80,9 @@ class Server(object):
     def kill(self):
         self.mcserver.kill()
 
-    def restart(self, reason="Server restarting"):
-        return
+    def tick(self):
+        if self.mcserver.state == SERVER_STOPPED:
+            if self.db["server"]["state"] == SERVER_STARTED:
+                self.mcserver.start()
+
+        self.mcserver.tick()

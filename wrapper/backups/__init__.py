@@ -16,6 +16,10 @@ class Backups:
         self.server = wrapper.server
         self.config = self.wrapper.config["backups"]
         self.log = wrapper.log_manager.get_logger("backups")
+        self.backup_db = self.wrapper.storify.getDB("backups")
+
+        if "backups" not in self.backup_db:
+            self.backup_db["backups"] = []
 
         self.last_backup = time.time()
         self.current_backup = None
@@ -96,6 +100,13 @@ class Backups:
         if self.server.state != SERVER_STARTED:
             return
 
+        # If server hasn't had a player join, skip tick
+        if not self.server.dirty:
+            if self.config["only-backup-if-player-joins"]:
+                # This ensures backup counter STARTS once a player joins
+                self.last_backup = time.time()
+                return
+
         # If there's a current backup, check on it
         if self.current_backup:
             if self.current_backup.status == BACKUP_STARTED:
@@ -112,18 +123,24 @@ class Backups:
                     bytes_to_human(details["filesize"]))
                 )
 
+            if self.current_backup.status == BACKUP_FAILED:
+                self.log.info(
+                    "Backup complete, potentially with errors. Took %s seconds, and uses %s of storage."
+                    % (details["backup-complete"] - details["backup-start"],
+                    bytes_to_human(details["filesize"]))
+                )
+
+            if self.current_backup.status in (BACKUP_COMPLETE, BACKUP_FAILED):
                 self.server.title({
                     "text": "Backup complete.",
                     "color": "green"
                 }, title_type="actionbar")
 
-                self.last_backup = time.time()
 
-            if self.current_backup.status == BACKUP_FAILED:
-                self.log.info("Backup failed.")
-
-            if self.current_backup.status in (BACKUP_COMPLETE, BACKUP_FAILED):
+                self.server.dirty = False
+                self.backup_db["backups"].append(self.current_backup.details)
                 self.current_backup = None
+                self.last_backup = time.time()
             return
 
         # Check when backup is ready

@@ -22,7 +22,7 @@ class UUID_Cache:
             data = json.loads(f.read())
             for player in data:
                 if player["name"] == username:
-                    return UUID(str=player["uuid"])
+                    return UUID(hex=player["uuid"])
 
         raise EOFError("No UUID could be found for the username %s" % username)
 

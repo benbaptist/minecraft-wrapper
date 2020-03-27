@@ -113,6 +113,7 @@ class Wrapper:
 
     def cleanup(self):
         self.server.stop(save=False)
+        self.storify.flush()
 
     def run(self):
         while not self.abort:
@@ -125,4 +126,5 @@ class Wrapper:
 
             self.server.tick()
             self.backups.tick()
+            self.storify.tick()
             time.sleep(1 / 20.0) # 20 ticks per second

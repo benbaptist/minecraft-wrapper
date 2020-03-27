@@ -28,6 +28,20 @@ class MCServer:
 
         self.log.info("Starting server")
 
+        # Check EULA
+        agree_eula = False
+        if os.path.exists("eula.txt"):
+            with open("eula.txt", "r") as f:
+                if not "eula=true" in f.read():
+                    agree_eula = True
+        else:
+            agree_eula = True
+
+        if agree_eula:
+            with open("eula.txt", "w") as f:
+                f.write("eula=true")
+
+        # Start process
         self.process = Process()
         self.process.start(self.config["server"]["jar"])
         self.state = SERVER_STARTING
@@ -36,6 +50,8 @@ class MCServer:
         self.world = None
         self.server_version = None
         self.server_port = None
+
+        self.dirty = False
 
         self.target_state = (SERVER_STARTED, time.time())
 
@@ -106,13 +122,17 @@ class MCServer:
                 if time.time() - target_state_time > 60:
                     self.kill()
 
+        # Check if server is 'dirty'
+        if len(self.players) > 0:
+            self.dirty = True
+
         # Regex new lines
         for std, line in self.process.console_output:
             # Print line to console
             print(line)
 
             # Compatible with most recent versions of Minecraft server
-            r = re.search("(\[[0-9:]*\]) \[(.*)\/(.*)\](.*)", line)
+            r = re.search("(\[[0-9:]*\]) \[([A-z #]*)\/([A-z #]*)\](.*)", line)
 
             # If regex did not match, continue to prevent issues
             if r == None:
@@ -158,7 +178,7 @@ class MCServer:
                         self.uuid_cache.add(username, uuid_obj)
 
                 # Player Join
-                r = re.search(": (.*)\[/(.*):(.*)\] logged in with entity id (.*) at \((.*), (.*), (.*)\)", output)
+                r = re.search(": (.*)\[\/(.*):(.*)\] logged in with entity id (.*) at \((.*), (.*), (.*)\)", output)
                 if r:
                     username = r.group(1)
                     ip_address = r.group(2)
@@ -174,6 +194,8 @@ class MCServer:
                     player = Player(username=username, uuid=uuid_obj)
 
                     self.players.append(player)
+
+                    self.dirty = True
 
                     print(username, ip_address, entity_id, position)
 
