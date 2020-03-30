@@ -8,7 +8,7 @@
     - [DONE] Don't backup if server has been in stopped state
     - [DONE] Option to stop backup if no players have logged in
     - Automatic world rollback through dashboard
-- Implement shell script calls
+- [DONE] Implement shell script calls
 - Implement dashboard using Flask
     - Multi-user support with multiple access levels (or permissions)
 - Implement locales, potentially
@@ -23,6 +23,13 @@
 # Minor To-Do List #
 - [DONE] Auto-accept EULA
 - [DONE] Automatically turn on gamerule to hide command runs from ops, to prevent chat spam
+- Server
+    - Respect arguments
+    - Respect auto-restart
 - log_manager
-    - Rotate logs
-    - Compress old logs using gzip
+    - [PARTIAL] Rotate logs
+    - [DONE] Compress old logs using gzip
+    - [DONE] Respect debug-mode settings
+- Backups
+    - Purge old backups
+    - Respect ingame-notification settings

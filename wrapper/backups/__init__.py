@@ -136,6 +136,7 @@ class Backups:
                     "color": "green"
                 }, title_type="actionbar")
 
+                self.events.call("backups.complete", details=self.current_backup.details)
 
                 self.server.dirty = False
                 self.backup_db["backups"].append(self.current_backup.details)

@@ -2,6 +2,7 @@ import re
 import json
 import uuid
 import time
+import os
 
 from wrapper.server.process import Process
 from wrapper.server.player import Player
@@ -12,6 +13,7 @@ from wrapper.exceptions import *
 class MCServer:
     def __init__(self, wrapper):
         self.wrapper = wrapper
+        self.events = wrapper.events
         self.config = wrapper.config
         self.log = wrapper.log_manager.get_logger("mcserver")
 
@@ -27,6 +29,9 @@ class MCServer:
             raise StartingException("Server is already running")
 
         self.log.info("Starting server")
+
+        # Call event
+        self.events.call("server.starting")
 
         # Check EULA
         agree_eula = False
@@ -101,12 +106,12 @@ class MCServer:
                     return player
 
     # Tick
-
     def tick(self):
         # Check if server process is stopped
         if not self.process.process and self.state != SERVER_STOPPED:
             self.log.info("Server stopped")
             self.state = SERVER_STOPPED
+            self.events.call("server.stopped")
 
         # Check target state, and do accordingly
         target_state, target_state_time = self.target_state
@@ -166,6 +171,8 @@ class MCServer:
                 if "Done" in output:
                     self.state = SERVER_STARTED
                     self.run_command("gamerule sendCommandFeedback false")
+                    self.events.call("server.started")
+
             if self.state == SERVER_STARTED:
                 # UUID catcher
                 if "User Authenticator" in server_thread:
@@ -191,15 +198,16 @@ class MCServer:
 
                     uuid_obj = self.uuid_cache.get(username)
 
-                    player = Player(username=username, uuid=uuid_obj)
+                    player = Player(username=username, mcuuid=uuid_obj)
 
                     self.players.append(player)
 
                     self.dirty = True
+                    self.events.call("server.player.join", player=player)
 
                     print(username, ip_address, entity_id, position)
 
-                # Player Disconnect
+                # Player Part
                 r = re.search(": (.*) lost connection: (.*)", output)
                 if r:
                     username = r.group(1)
@@ -207,6 +215,8 @@ class MCServer:
 
                     player = self.get_player(username=username)
                     if player:
+                        self.events.call("server.player.join", player=player)
+                        
                         print("Removing %s from players" % player)
                         self.players.remove(player)
 

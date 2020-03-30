@@ -1,7 +1,7 @@
 class Player:
-    def __init__(self, username, uuid):
+    def __init__(self, username, mcuuid):
         self.username = username
-        self.uuid = uuid
+        self.mcuuid = mcuuid
 
         self.position = None
         self.ip_address = None

@@ -1,6 +1,7 @@
 import os
 import time
 import threading
+import logging
 
 from wrapper.config import Config
 from wrapper.storify import Storify
@@ -8,6 +9,8 @@ from wrapper.log_manager import LogManager
 from wrapper.server import Server
 from wrapper.console import Console
 from wrapper.backups import Backups
+from wrapper.events import Events
+from wrapper.scripts import Scripts
 from wrapper.commons import *
 
 CONFIG_TEMPLATE = {
@@ -23,9 +26,17 @@ CONFIG_TEMPLATE = {
     #     "bind": "127.0.0.1",
     #     "port": 8025
     # },
-    # "scripts": {
-    #     "enable": False
-    # },
+    "scripts": {
+        "enable": False,
+        "scripts": {
+            "server-started": None,
+            "server-stopped": None,
+            "backup-start": None,
+            "backup-complete": None,
+            "player-join": None,
+            "player-part": None
+        }
+    },
     "backups": {
         "enable": False,
         "archive-format": {
@@ -71,13 +82,18 @@ class Wrapper:
         )
 
         # Database manager
-        self.storify = Storify(log=self.log_manager.get_logger("storify"))
+        self.storify = Storify(
+            root="wrapper-data",
+            log=self.log_manager.get_logger("storify")
+        )
         self.db = self.storify.getDB("main")
 
-        # Other
+        # Core functionality
+        self.events = Events()
         self.server = Server(self)
         self.console = Console(self)
         self.backups = Backups(self)
+        self.scripts = Scripts(self)
 
         self.abort = False
         self.initiate_shutdown = False
@@ -91,7 +107,11 @@ class Wrapper:
             )
             return
 
+        if self.config["general"]["debug-mode"]:
+            self.log_manager.level = logging.DEBUG
+
         self.log.info("Wrapper starting")
+        self.log.debug("Debug?")
 
         t = threading.Thread(target=self.console.read_console)
         t.daemon = True
