@@ -1,0 +1,48 @@
+{% extends "__layout__.html" %}
+
+{% block head %}
+
+{% endblock %}
+{% block body %}
+    <div class="container valign-wrapper">
+        <div class="row">
+            <div class="col">
+                <div class="card">
+                    <div class="card-content">
+                        <form method="post">
+                            <div class="row">
+                                <span class="card-title">Login</span>
+
+                                {% if auth_failure %}
+                                    <div class="card red darken-4 white-text">
+                                        <div class="card-content">
+                                            {{ auth_failure}}
+                                        </div>
+                                    </div>
+                                {% endif %}
+
+                                <div class="input-field col s12">
+                                    <input name="username" type="text">
+                                    <label for="username">Username</label>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="input-field col s12">
+                                    <input name="password" type="password">
+                                    <label for="password">Password</label>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="input-field col s12">
+                                    <input class="btn right" type="submit" value="Log In">
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

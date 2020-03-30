@@ -11,60 +11,8 @@ from wrapper.console import Console
 from wrapper.backups import Backups
 from wrapper.events import Events
 from wrapper.scripts import Scripts
+from wrapper.dashboard import Dashboard
 from wrapper.commons import *
-
-CONFIG_TEMPLATE = {
-    "general": {
-        "debug-mode": True
-    },
-    "server": {
-        "jar": "server.jar",
-        "arguments": "",
-        "auto-restart": True
-    },
-    # "dashboard": {
-    #     "bind": "127.0.0.1",
-    #     "port": 8025
-    # },
-    "scripts": {
-        "enable": False,
-        "scripts": {
-            "server-started": None,
-            "server-stopped": None,
-            "backup-start": None,
-            "backup-complete": None,
-            "player-join": None,
-            "player-part": None
-        }
-    },
-    "backups": {
-        "enable": False,
-        "archive-format": {
-            "format": "auto",
-            "compression": {
-                "enable": True
-            }
-        },
-        "history": 50,
-        "interval-seconds": 600,
-        "only-backup-if-player-joins": True,
-        "destination": "backups",
-        "ingame-notification": {
-            "enable": True,
-            "only-ops": False,
-            "verbose": False
-        },
-        "backup-mode": "auto",
-        "include": {
-            "world": True,
-            "logs": False,
-            "server-properties": False,
-            "wrapper-data": True,
-            "whitelist-ops-banned": True
-        },
-        "include-paths": ["wrapper-data"]
-    }
-}
 
 class Wrapper:
     def __init__(self):
@@ -94,11 +42,20 @@ class Wrapper:
         self.console = Console(self)
         self.backups = Backups(self)
         self.scripts = Scripts(self)
+        self.dashboard = Dashboard(self)
 
         self.abort = False
         self.initiate_shutdown = False
 
+    @property
+    def debug(self):
+        """ Returns True if debug-mode is enabled, otherwise False. """
+        return self.config["general"]["debug-mode"]
+
     def start(self):
+        """ Starts wrapper. """
+
+        # Alert user if config was changed from an update, and shutdown
         if self.config.updated_from_template:
             self.log.info(
                 "Configuration file has been updated with new entries. Open "
@@ -107,13 +64,20 @@ class Wrapper:
             )
             return
 
-        if self.config["general"]["debug-mode"]:
+        # Set logging level if debug mode is enabled
+        if self.debug:
             self.log_manager.level = logging.DEBUG
 
         self.log.info("Wrapper starting")
         self.log.debug("Debug?")
 
+        # Start thread that reads console input
         t = threading.Thread(target=self.console.read_console)
+        t.daemon = True
+        t.start()
+
+        # Run dashboard
+        t = threading.Thread(target=self.dashboard.run)
         t.daemon = True
         t.start()
 

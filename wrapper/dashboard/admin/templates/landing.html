@@ -1,0 +1,22 @@
+{% extends "__layout_dashboard__.html" %}
+
+{% set enable_navbar = True %}
+{% block pagename %}Overview{% endblock %}}
+
+{% block subnav %}
+<li class="tab">
+    <a target="_self" href="#"{% if request.endpoint == "test"%} class="active"{% endif %}>
+        Test
+    </a>
+</li>
+
+<li class="tab">
+    <a target="_self" href="#"{% if request.endpoint == "test"%} class="active"{% endif %}>
+        Test 2
+    </a>
+</li>
+{% endblock %}
+
+{% block subbody %}
+
+{% endblock %}

@@ -1,6 +1,7 @@
 from builtins import input
 
 from wrapper.exceptions import *
+from wrapper.commons import *
 
 class Console:
     def __init__(self, wrapper):
@@ -52,6 +53,45 @@ class Console:
 
                     continue
 
+                if command == "backups":
+                    subcommand = args(1)
+                    if subcommand == "start":
+                        self.wrapper.backups.start()
+                    elif subcommand == "list":
+                        for index, backup in enumerate(self.wrapper.backups.list()):
+                            self.log.info("%s: %s | %s"
+                                % (
+                                    index,
+                                    backup["name"],
+                                    bytes_to_human(backup["filesize"])
+                                )
+                            )
+                    elif subcommand == "cancel":
+                        self.wrapper.backups.cancel()
+                    elif subcommand == "delete":
+                        try:
+                            backup_index = int(args(2))
+                        except:
+                            self.log.error(
+                                "Usage: /backups delete <index>"
+                            )
+                            self.log.error(
+                                "Use /backups list` to see a list of backups."
+                            )
+                            continue
+
+                        backup = self.wrapper.backups.list()[backup_index]
+
+                        self.wrapper.backups.delete(backup)
+                    else:
+                        self.log.info("Usage: /backups <start/list/delete/cancel>")
+
+                    continue
+
+                if command == "stop":
+                    self.wrapper.server.stop()
+                    continue
+
                 if command == "wrapper":
                     subcommand = args(1)
                     if subcommand in ("halt", "stop"):
@@ -60,10 +100,9 @@ class Console:
                     elif subcommand == "about":
                         self.log.info("Wrapper.py")
                     else:
-                        self.log.info("Usage: /wrapper [stop/about]")
+                        self.log.info("Usage: /wrapper <stop/about>")
 
                     continue
-
 
             try:
                 self.server.run_command(data)

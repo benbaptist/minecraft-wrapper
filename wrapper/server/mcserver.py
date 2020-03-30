@@ -20,9 +20,19 @@ class MCServer:
         self.process = None
 
         self.state = SERVER_STOPPED
-        self.target_state = None
+        self.target_state = (SERVER_STOPPED, time.time())
 
         self.uuid_cache = UUID_Cache()
+        self._reset()
+
+    def _reset(self):
+        self.players = []
+        self.world = None
+        self.server_version = None
+        self.server_port = None
+
+        self.process = None
+        self.dirty = False
 
     def start(self):
         if self.state != SERVER_STOPPED:
@@ -51,12 +61,7 @@ class MCServer:
         self.process.start(self.config["server"]["jar"])
         self.state = SERVER_STARTING
 
-        self.players = []
-        self.world = None
-        self.server_version = None
-        self.server_port = None
-
-        self.dirty = False
+        self._reset()
 
         self.target_state = (SERVER_STARTED, time.time())
 
@@ -69,6 +74,9 @@ class MCServer:
     # Commands
 
     def run_command(self, cmd):
+        if not self.process:
+            raise ServerStopped()
+        
         self.process.write("%s\n" % cmd)
 
     def broadcast(self, msg):
@@ -108,7 +116,11 @@ class MCServer:
     # Tick
     def tick(self):
         # Check if server process is stopped
-        if not self.process.process and self.state != SERVER_STOPPED:
+        if self.process:
+            if not self.process.process:
+                self._reset()
+
+        if not self.process and self.state != SERVER_STOPPED:
             self.log.info("Server stopped")
             self.state = SERVER_STOPPED
             self.events.call("server.stopped")
@@ -122,10 +134,14 @@ class MCServer:
                 self.run_command("stop")
                 self.state = SERVER_STOPPING
 
-            # Check if server shutdown has been going for too long, and kill server
+            # Check if server stop has been going for too long, and kill server
             if self.state == SERVER_STOPPING:
                 if time.time() - target_state_time > 60:
                     self.kill()
+
+        # Don't go further unless a server process exists
+        if not self.process:
+            return
 
         # Check if server is 'dirty'
         if len(self.players) > 0:
@@ -171,6 +187,7 @@ class MCServer:
                 if "Done" in output:
                     self.state = SERVER_STARTED
                     self.run_command("gamerule sendCommandFeedback false")
+                    self.run_command("gamerule logAdminCommands false")
                     self.events.call("server.started")
 
             if self.state == SERVER_STARTED:
@@ -216,7 +233,7 @@ class MCServer:
                     player = self.get_player(username=username)
                     if player:
                         self.events.call("server.player.join", player=player)
-                        
+
                         print("Removing %s from players" % player)
                         self.players.remove(player)
 

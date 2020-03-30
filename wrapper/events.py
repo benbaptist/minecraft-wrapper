@@ -1,9 +1,6 @@
-# from collections import deque
-
 class Events:
 
     def __init__(self):
-        # self.queue = deque()
         self.listeners = []
 
     def call(self, event, *args, **kwargs):
@@ -12,7 +9,6 @@ class Events:
                 listener.callback(*args, **kwargs)
 
     def _hook(self, event, callback):
-        print("hooking event %s" % event)
         listener = Listener(event, callback)
         self.listeners.append(listener)
 

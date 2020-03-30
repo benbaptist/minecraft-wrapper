@@ -2,6 +2,7 @@ import time
 import os
 
 from subprocess import PIPE, Popen
+from uuid import UUID
 
 from wrapper.commons import *
 from wrapper.exceptions import *
@@ -50,7 +51,8 @@ class Backup(object):
             "archive-method": self.archive_method,
             "filesize": os.path.getsize(self.path),
             "compression": self.config["archive-format"]["compression"]["enable"],
-            "include-paths": self.backups.get_included_paths()
+            "include-paths": self.backups.get_included_paths(),
+            "id": str(UUID(bytes=os.urandom(16)))
         }
 
     def build_command(self):
@@ -97,4 +99,4 @@ class Backup(object):
         self.execute_command(command)
 
     def cancel(self):
-        return
+        raise Exception("Unimplemented feature")

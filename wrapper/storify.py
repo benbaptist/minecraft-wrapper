@@ -42,7 +42,7 @@ class Storify:
 			if force:
 				db.flush()
 			else:
-				if time.time() - db.lastFlush > 60 * 2: # Saves every two minutes
+				if time.time() - db.lastFlush > 60 * 5: # Saves every 5 minutes
 					db.flush()
 
 			i += 1
@@ -81,10 +81,15 @@ class Database:
 						continue
 
 			return
+
 	def unpack(self, path):
 		with open(path, "rb") as f:
 			blob = f.read()
-			return msgpack.unpackb(blob, encoding="utf-8")
+			try:
+				return msgpack.unpackb(blob, encoding="utf-8")
+			except TypeError:
+				return msgpack.unpackb(blob)
+
 	def grabLatestBackup(self):
 		backupPath = os.path.join(self.root, ".backups", self.name)
 
@@ -101,6 +106,7 @@ class Database:
 			return int(self.backups[0])
 		else:
 			return 0
+
 	def grabLastBackup(self):
 		backupPath = os.path.join(self.root, ".backups", self.name)
 
@@ -119,7 +125,7 @@ class Database:
 		backup = str(self.backups[0])
 		del self.backups[0]
 		return os.path.join(backupPath, backup)
-	# def asdfghjklqwertyuiopzxcvbnm
+
 	def flush(self):
 		# Save code here
 		path = os.path.join(self.root, "%s.mpack" % self.name)
@@ -155,27 +161,32 @@ class Database:
 				f.write(msgpack.packb(self.data))
 			self.lastFlush = time.time()
 		except IOError:
-			self.log.error("Possibly out of space... not sure how to handle this one. Just hopefully some space is made before the script goes down to ensure this gets written.")
+			self.log.error(
+				"Possibly out of space... not sure how to handle this one. "
+				"Just hopefully some space is made before the script goes down "
+				"to ensure this data gets written.")
 
 	def __getitem__(self, index):
 		if not (type(index) in (str, bytes)):
-			raise Exception("A string must be passed to the stuff")
+			raise TypeError("Expected str or bytes, got '%s'" % type(index))
 		return self.data[index]
+
 	def __setitem__(self, index, value):
 		if not (type(index) in (str, bytes)):
-			raise Exception("A string must be passed to the stuff")
+			raise TypeError("Expected str or bytes, got '%s'" % type(index))
 		self.data[index] = value
 		return self.data[index]
+
 	def __delattr__(self, index):
 		if not (type(index) in (str, bytes)):
-			raise Exception("A string must be passed to the stuff")
+			raise TypeError("Expected str or bytes, got '%s'" % type(index))
 		del self.data[index]
+
 	def __delitem__(self, index):
 		if not (type(index) in (str, bytes)):
-			raise Exception("A string must be passed to the stuff")
+			raise TypeError("Expected str or bytes, got '%s'" % type(index))
 		del self.data[index]
+
 	def __iter__(self):
 		for i in self.data:
-			# if type(i) == str:
-			# 	i = i.encode("utf8")
 			yield i

@@ -3,17 +3,17 @@ import os
 import subprocess
 import platform
 
+from uuid import UUID
+
 from wrapper.exceptions import *
 from wrapper.commons import *
 from wrapper.backups.backup import Backup
-
-# Archival methods
-from wrapper.backups.tar import Tar
 
 class Backups:
     def __init__(self, wrapper):
         self.wrapper = wrapper
         self.server = wrapper.server
+        self.events = wrapper.events
         self.config = self.wrapper.config["backups"]
         self.log = wrapper.log_manager.get_logger("backups")
         self.backup_db = self.wrapper.storify.getDB("backups")
@@ -21,8 +21,56 @@ class Backups:
         if "backups" not in self.backup_db:
             self.backup_db["backups"] = []
 
+        if "deleted_backups" not in self.backup_db:
+            self.backup_db["deleted_backups"] = []
+
+        # remove this non-sense after one commit
+        for backup in self.backup_db["backups"]:
+            if "id" not in backup:
+                self.log.warning("assigning ID to backup %s" % backup)
+                backup["id"] = str(UUID(bytes=os.urandom(16)))
+
         self.last_backup = time.time()
         self.current_backup = None
+
+    def start(self):
+        """ Forces a backup to start, regardless of conditions. """
+        if self.current_backup:
+            raise Exception("Backup in progress")
+
+        self.log.info("Starting backup")
+
+        self.current_backup = Backup(self)
+        self.current_backup.start()
+
+    def list(self):
+        """ Returns a list of backups. """
+        return self.backup_db["backups"]
+
+    def get(self, id):
+        for backup in self.backup_db["backups"]:
+            if backup["id"] == id:
+                return backup
+
+        raise OSError("Backup not found in DB")
+
+    def cancel(self):
+        """ Cancels an ongoing backup, if applicable. """
+        if not self.current_backup:
+            raise EOFError("No ongoing backup")
+
+        self.current_backup.cancel()
+
+    def delete(self, id):
+        """ Deletes a backup, both from the database and from the filesystem. """
+        backup = self.get(id)
+
+        path = backup["path"]
+        if os.path.exists(path):
+            os.remove(path)
+
+        self.backup_db["deleted_backups"].append(backup)
+        self.backup_db["backups"].remove(backup)
 
     def check_bin_installed(self, bin):
         which = "where" if platform.system() == "Windows" else "which"
@@ -92,21 +140,6 @@ class Backups:
             return self.config["include-paths"]
 
     def tick(self):
-        # If backups are disabled, skip tick
-        if not self.config["enable"]:
-            return
-
-        # If server isn't fully started, skip tick
-        if self.server.state != SERVER_STARTED:
-            return
-
-        # If server hasn't had a player join, skip tick
-        if not self.server.dirty:
-            if self.config["only-backup-if-player-joins"]:
-                # This ensures backup counter STARTS once a player joins
-                self.last_backup = time.time()
-                return
-
         # If there's a current backup, check on it
         if self.current_backup:
             if self.current_backup.status == BACKUP_STARTED:
@@ -114,6 +147,7 @@ class Backups:
                     "text": "Backup started. Server may lag.",
                     "color": "red"
                 }, title_type="actionbar")
+
             if self.current_backup.status == BACKUP_COMPLETE:
                 details = self.current_backup.details
 
@@ -142,7 +176,23 @@ class Backups:
                 self.backup_db["backups"].append(self.current_backup.details)
                 self.current_backup = None
                 self.last_backup = time.time()
+
             return
+
+        # If backups are disabled, skip tick
+        if not self.config["enable"]:
+            return
+
+        # If server isn't fully started, skip tick
+        if self.server.state != SERVER_STARTED:
+            return
+
+        # If server hasn't had a player join, skip tick
+        if not self.server.dirty:
+            if self.config["only-backup-if-player-joins"]:
+                # This ensures backup counter STARTS once a player joins
+                self.last_backup = time.time()
+                return
 
         # Check when backup is ready
         if time.time() - self.last_backup > self.config["interval-seconds"]:
@@ -150,7 +200,7 @@ class Backups:
             destination = self.get_backup_destination()
             if not destination or not os.path.exists(destination):
                 try:
-                    os.mkdir(destination)
+                    os.makedirs(destination)
                 except OSError:
                     self.log.error(
                         "Backup path could not be created. Skipping backup"
@@ -159,7 +209,4 @@ class Backups:
                 self.last_backup = time.time()
                 return
 
-            self.log.info("Starting backup")
-
-            self.current_backup = Backup(self)
-            self.current_backup.start()
+            self.start()

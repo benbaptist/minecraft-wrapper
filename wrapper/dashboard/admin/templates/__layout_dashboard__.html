@@ -1,0 +1,89 @@
+{% extends "__layout__.html" %}
+
+{% block head %}
+
+<script>
+    $(document).ready(function(){
+        $('.sidenav').sidenav()
+        M.AutoInit()
+
+        check_sizes = function(){
+            var calculated_width = $(".pagename").outerWidth() + $(".buttons").outerWidth()
+            if(calculated_width > $(".subnav").width()){
+                $(".buttons").attr("style", "display: none")
+                $(".hamburger").attr("style", "display: inline-block")
+            }else{
+                $(".buttons").attr("style", "display: inline-block")
+                $(".hamburger").attr("style", "display: none")
+            }
+        }
+
+        $(window).on("resize", check_sizes)
+
+        setInterval(check_sizes, 500)
+    })
+</script>
+
+{% endblock %}
+
+{% block body %}
+    <div class="row">
+        <div class="col">
+            <ul class="sidenav sidenav-fixed lighten-3 white-text" id="sidenav-left">
+                <li class="logo">
+                    <a class="brand-logo" href="/">
+                        <h3>wrapper</h3>
+                    </a>
+
+                    <a href="/logout">Logout</a>
+                </li>
+
+                <li>
+                    <div class="nav-header">
+                        Server
+                    </div>
+
+                    <ul class="nav-sub">
+                        <li><a href="#">Overview</a></li>
+                        <li><a href="#">Chat</a></li>
+                        <li><a href="#">Logs</a></li>
+                    </ul>
+                </li>
+
+                <li>
+                    <div class="nav-header">
+                        Wrapper
+                    </div>
+
+                    <ul class="nav-sub">
+                        <li><a href="/backups">Backups</a></li>
+                        <li><a href="/plugins">Plugins</a></li>
+                        <li><a href="/scripts">Scripts</a></li>
+                        <li><a href="/dashboard">Dashboard</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+
+        <!-- topbar -->
+        <nav class="subnav navbar nav-extended">
+            <div class="child">
+                <div class="nav-wrapper">
+                    <a href="#!" data-target="sidenav-left" class="sidenav-trigger left">
+                        <i class="material-icons black-text">menu</i>
+                    </a>
+
+                    <a href="#" class="brand-logo">{% block pagename %}{% endblock %}</a>
+                </div>
+
+                {% if enable_navbar %}
+                    <div class="nav-content">
+                        <ul class="tabs">
+                            {% block subnav %}{% endblock %}
+                        </ul>
+                    </div>
+                {% endif %}
+            </div>
+        </nav>
+    </div>
+{% endblock %}
