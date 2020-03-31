@@ -27,6 +27,7 @@
     - [ ] Throttle server start attempts if failing to start (i.e. invalid CLI arguments, wrong server jar name, etc.)
     - [ ] Respect arguments
     - [ ] Respect auto-restart
+    - [ ] Custom java executable
 - [ ] log_manager
     - [PARTIAL] Rotate logs
     - [x] Compress old logs using gzip
