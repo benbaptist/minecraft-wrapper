@@ -39,11 +39,13 @@ class LogManager:
 			log_compressed_path = os.path.join(LOG_PATH, log + ".gz")
 
 			if ext == "log":
+				# File was already compressed before, ignore
 				if os.path.exists(log_compressed_path):
 					continue
-				
+
+				# Compress log file
 				self.log.info("Compressing %s" % log)
-				with gzip.open(log_compressed_path, "w") as cf, \
+				with gzip.open(log_compressed_path, "wb") as cf, \
 					open(log_path, "r") as uf:
 					cf.write(uf.read())
 

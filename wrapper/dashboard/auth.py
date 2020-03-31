@@ -66,14 +66,19 @@ class Auth:
         return token
 
     def verify_token(self):
+        if "_wrapper_token" not in request.cookies:
+            raise AuthError("Token invalid")
+
         token = request.cookies["_wrapper_token"]
 
         if token in self.db["sessions"]:
             session = self.db["sessions"][token]
 
             if time.time() - session["time"] > TOKEN_EXPIRE_TIME:
-                self.db["sessions"].remove(session)
+                del self.db["sessions"][token]
                 raise AuthError("Token invalid")
+
+            session["time"] = time.time()
 
             return session["username"]
 

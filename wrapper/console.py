@@ -41,6 +41,10 @@ class Console:
 
                 # Commands
 
+                if command == "start":
+                    self.server.start()
+                    continue
+
                 if command == "restart":
                     self.log.info("Restart initiated from console")
                     self.server.restart()

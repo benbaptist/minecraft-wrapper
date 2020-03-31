@@ -7,6 +7,7 @@ import os
 from wrapper.dashboard.login import blueprint_login
 from wrapper.dashboard.admin import blueprint_admin
 from wrapper.dashboard.auth import Auth
+from wrapper.dashboard.iomethods import Methods
 
 class Dashboard:
     def __init__(self, wrapper):
@@ -22,17 +23,18 @@ class Dashboard:
 
         self.socketio = SocketIO(self.app)
 
+        # IOMethods(self.wrapper, self.socketio)
+
         self.auth = Auth(self.wrapper)
+
+        self.methods = Methods(self.wrapper, self.auth)
+        self.socketio.on_namespace(self.methods)
 
         self.do_decorators()
         self.register_blueprints()
 
     def do_decorators(self):
-        self.app.before_request
-        def before_request():
-            print("before_request")
-            g.wrapper = current_app.wrapper
-            print(g.wrapper)
+        return
 
     def register_blueprints(self):
         self.app.register_blueprint(blueprint_login)

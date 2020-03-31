@@ -31,7 +31,7 @@ class Wrapper:
 
         # Database manager
         self.storify = Storify(
-            root="wrapper-data",
+            root="wrapper-data/db",
             log=self.log_manager.get_logger("storify")
         )
         self.db = self.storify.getDB("main")

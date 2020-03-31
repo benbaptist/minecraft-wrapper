@@ -56,17 +56,23 @@ class MCServer:
             with open("eula.txt", "w") as f:
                 f.write("eula=true")
 
+        self._reset()
+
         # Start process
         self.process = Process()
         self.process.start(self.config["server"]["jar"])
         self.state = SERVER_STARTING
 
-        self._reset()
-
         self.target_state = (SERVER_STARTED, time.time())
 
     def stop(self, reason):
         self.target_state = (SERVER_STOPPED, time.time())
+
+    def freeze(self):
+        return
+
+    def unfreeze(self):
+        return
 
     def kill(self):
         self.process.kill()
@@ -76,7 +82,7 @@ class MCServer:
     def run_command(self, cmd):
         if not self.process:
             raise ServerStopped()
-        
+
         self.process.write("%s\n" % cmd)
 
     def broadcast(self, msg):
@@ -121,6 +127,7 @@ class MCServer:
                 self._reset()
 
         if not self.process and self.state != SERVER_STOPPED:
+            print("self.process is dead, state == server-stopped")
             self.log.info("Server stopped")
             self.state = SERVER_STOPPED
             self.events.call("server.stopped")
@@ -170,13 +177,11 @@ class MCServer:
                 if "Starting minecraft" in output:
                     r = re.search(": Starting minecraft server version (.*)", output)
                     server_version = r.group(1)
-                    print(server_version)
 
                 # Grab server port
                 if "Starting Minecraft server on" in output:
                     r = re.search(": Starting Minecraft server on \*:([0-9]*)", output)
                     server_port = r.group(1)
-                    print(server_port)
 
                 # Grab world name
                 if "Preparing level" in output:

@@ -2,52 +2,88 @@ body{
     background-color: #eee;
 }
 
+/* general */
+.desktop-padding{
+    padding-left: 210px !important;
+}
+
+.subbody{
+    padding: 16px;
+}
+
+.vertical-center{
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    /*transform: translateX(-50%), translateY(-50%);*/
+    -webkit-transform-origin: 50%;
+    -moz-transform-origin: 50%;
+    transform-origin: 50%;
+    -webkit-transform: translate(-50%, -50%);
+}
+
 /* inputs */
 .input-field{
     margin-top: 0px;
 }
 
 /* sidenav */
-.sidenav{
-    width: auto;
-    display: block;
-    width: 210px;
-    background-color: #293033;
-}
+    .sidenav{
+        width: auto;
+        display: block;
+        width: 210px;
+        background-color: #293033;
+    }
 
-.sidenav hr{
-    width: 80%;
-    line-height: 1px;
-    margin-top: 25px;
-    margin-bottom: 25px;
-}
+    .sidenav hr{
+        width: 80%;
+        line-height: 1px;
+        margin-top: 25px;
+        margin-bottom: 25px;
+    }
 
-.sidenav li>a{
-    color: #eee !important;
-}
+    .sidenav li>a{
+        color: #eee !important;
+    }
 
-.sidenav .nav-sub li:hover{
-    background-color: rgba(0, 0, 0, .2);
-}
+    /* darken on hover */
+    .sidenav .nav-sub li:hover{
+        background-color: rgba(0, 0, 0, .2);
+    }
 
-.nav-header{
-    margin-left: 30px;
-    text-transform: uppercase;
-    font-weight: bold;
-    color: #888;
-    font-size: 13px;
-}
+    /* darken when active page */
+    .sidenav li.active {
+        background-color: rgba(0, 0, 0, 0.2);
+    }
 
-.nav-sub li a{
-    padding-left: 40px;
-    overflow: hidden;
-}
+    .nav-header{
+        margin-left: 30px;
+        text-transform: uppercase;
+        font-weight: bold;
+        color: #888;
+        font-size: 13px;
+    }
 
-.nav-sub li a{
-    font-size: 17px;
-}
+    .nav-sub li a{
+        padding-left: 40px;
+        overflow: hidden;
+    }
+
+    .nav-sub li a{
+        font-size: 17px;
+    }
 
 /* topnav */
+nav.navbar .brand-logo {
+    float: left;
+    font-size: 18px;
+    color: rgba(0,0,0,0.87);
+}
+
+.nav-extended .nav-wrapper {
+    padding-left: 24px;
+}
+
 .subnav{
     background-color: white;
     height: 64px;
@@ -87,4 +123,11 @@ body{
 
 .subnav .buttons{
     float: right;
+}
+
+/* responsive */
+@media only screen and (max-width : 992px) {
+    .desktop-padding{
+        padding-left: 0px !important;
+    }
 }

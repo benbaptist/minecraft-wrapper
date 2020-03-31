@@ -9,7 +9,7 @@
     - [x] Option to stop backup if no players have logged in
     - [ ] Automatic world rollback through dashboard
 - [x] Implement shell script calls
-- [ y] Implement dashboard using Flask
+- [ ] Implement dashboard using Flask
     - [ ] Multi-user support with permissions
 - [ ] Implement locales, potentially
 - [ ] Implement plugin API
@@ -41,3 +41,4 @@
 
 # Plugin Ideas #
 - [ ] IRC bridge plugin
+- [ ] Essentials Clone

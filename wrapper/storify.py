@@ -24,7 +24,7 @@ class Storify:
 		self.log = log
 
 		if not os.path.exists(self.root):
-			os.mkdir(self.root)
+			os.makedirs(self.root)
 
 		if not os.path.exists(os.path.join(self.root, ".backups")):
 			os.mkdir(os.path.join(self.root, ".backups"))

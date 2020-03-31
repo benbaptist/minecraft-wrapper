@@ -2,6 +2,8 @@
 
 {% block head %}
 
+<script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js" integrity="sha256-yr4fRk/GU1ehYJPAs8P4JlTgu0Hdsp4ZKrx8bDEDC3I=" crossorigin="anonymous"></script>
+
 <script>
     $(document).ready(function(){
         $('.sidenav').sidenav()
@@ -21,8 +23,17 @@
         $(window).on("resize", check_sizes)
 
         setInterval(check_sizes, 500)
+
+        socket = io()
+        socket.on("connect", function(){
+            __socketio_ready()
+        })
     })
+
+    __socketio_ready = function(){}
 </script>
+
+{% block subhead %}{% endblock %}
 
 {% endblock %}
 
@@ -44,9 +55,9 @@
                     </div>
 
                     <ul class="nav-sub">
-                        <li><a href="#">Overview</a></li>
-                        <li><a href="#">Chat</a></li>
-                        <li><a href="#">Logs</a></li>
+                        <li{% if request.endpoint == "admin.landing" %} class="active"{% endif %}><a href="/">Overview</a></li>
+                        <li><a href="/chat"{% if request.endpoint == "admin.chat" %} class="active"{% endif %}>Chat</a></li>
+                        <li><a href="/logs">Logs</a></li>
                     </ul>
                 </li>
 
@@ -65,25 +76,33 @@
             </ul>
         </div>
 
-        <!-- topbar -->
-        <nav class="subnav navbar nav-extended">
-            <div class="child">
-                <div class="nav-wrapper">
-                    <a href="#!" data-target="sidenav-left" class="sidenav-trigger left">
-                        <i class="material-icons black-text">menu</i>
-                    </a>
+        <!-- main body -->
+        <div class="desktop-padding">
+            <!-- topbar -->
+            <nav class="subnav navbar nav-extended">
+                <div class="child">
+                    <div class="nav-wrapper">
+                        <a href="#!" data-target="sidenav-left" class="sidenav-trigger left">
+                            <i class="material-icons black-text">menu</i>
+                        </a>
 
-                    <a href="#" class="brand-logo">{% block pagename %}{% endblock %}</a>
-                </div>
-
-                {% if enable_navbar %}
-                    <div class="nav-content">
-                        <ul class="tabs">
-                            {% block subnav %}{% endblock %}
-                        </ul>
+                        <a href="#" class="brand-logo">{% block pagename %}{% endblock %}</a>
                     </div>
-                {% endif %}
+
+                    {% if enable_navbar %}
+                        <div class="nav-content">
+                            <ul class="tabs">
+                                {% block subnav %}{% endblock %}
+                            </ul>
+                        </div>
+                    {% endif %}
+                </div>
+            </nav>
+
+            <!-- subbody -->
+            <div class="subbody">
+                {% block subbody %}{% endblock %}
             </div>
-        </nav>
+        </div>
     </div>
 {% endblock %}

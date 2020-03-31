@@ -1,7 +1,43 @@
 {% extends "__layout_dashboard__.html" %}
 
-{% set enable_navbar = True %}
+{% set enable_navbar = False %}
 {% block pagename %}Overview{% endblock %}}
+
+{% block subhead %}
+    <script>
+        refresh = function(){
+            socket.emit("server_status")
+        }
+        __socketio_ready = function(){
+            setInterval(refresh, 500)
+            refresh()
+
+            socket.on("server_status", function(payload){
+                // server state
+                if(payload.state == 0){
+                    $("#server-state").text("Server starting")
+                    $("#card-status").removeClass("green red darken-2")
+                    $("#card-status").addClass("yellow darken-3")
+                }
+                if(payload.state == 1){
+                    $("#server-state").text("Server started")
+                    $("#card-status").removeClass("yellow red darken-3")
+                    $("#card-status").addClass("green darken-2")
+                }
+                if(payload.state == 2){
+                    $("#server-state").text("Server stopping")
+                    $("#card-status").removeClass("green red darken-2")
+                    $("#card-status").addClass("yellow darken-3")
+                }
+                if(payload.state == 3){
+                    $("#server-state").text("Server offline")
+                    $("#card-status").removeClass("green red yellow darken-2 darken-3")
+                    $("#card-status").addClass("grey darken-2")
+                }
+            })
+        }
+    </script>
+{% endblock %}
 
 {% block subnav %}
 <li class="tab">
@@ -18,5 +54,55 @@
 {% endblock %}
 
 {% block subbody %}
+    <div class="row">
+        <div class="col s12 m6">
+            <div class="card green darken-2" id="card-status">
+                <div class="card-content white-text">
+                    <span class="card-title">Status</span>
 
+                    <span id="server-state"></span>
+                    server version
+                    level_name
+                    server memory usage
+                    world size
+                    free disk space
+                </div>
+            </div>
+        </div>
+
+        <div class="col s12 m6">
+            <div class="card blue-grey darken-1">
+                <div class="card-content white-text">
+                    <span class="card-title">Players</span>
+
+                    <table>
+                        <thead>
+                            <th>Face</th>
+                            <th>Username</th>
+                            <th>Actions</th>
+                        </thead>
+                        <tbody id="table-players">
+                            <tr id="table-players-{uuid}">
+                                <td><img src="/static/images/steve_skin_face.png" height="32"/></td>
+                                <td>benbaptist</td>
+                                <td>
+                                    <button class="btn btn-small">Kick</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col s12">
+            <div class="card blue-grey darken-1" id="card-status">
+                <div class="card-content white-text">
+                    <span class="card-title">Chat</span>
+                </div>
+            </div>
+        </div>
+    </div>
 {% endblock %}
