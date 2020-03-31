@@ -9,8 +9,8 @@
     - [x] Option to stop backup if no players have logged in
     - [ ] Automatic world rollback through dashboard
 - [x] Implement shell script calls
-- [ ] Implement dashboard using Flask
-    - [ ] Multi-user support with multiple access levels (or permissions)
+- [ y] Implement dashboard using Flask
+    - [ ] Multi-user support with permissions
 - [ ] Implement locales, potentially
 - [ ] Implement plugin API
     - [ ] Server object
@@ -21,15 +21,15 @@
 - [ ] (Very Low Priority) Implement Proxy mode
 
 # Minor To-Do List #
-- [ ] Auto-accept EULA
-- [ ] Automatically turn on gamerule to hide command runs from ops, to prevent chat spam
+- [x] Auto-accept EULA
+- [x] Automatically turn on gamerule to hide command runs from ops, to prevent chat spam
 - [ ] Server
     - [ ] Respect arguments
     - [ ] Respect auto-restart
 - [ ] log_manager
     - [PARTIAL] Rotate logs
-    - [ ] Compress old logs using gzip
-    - [ ] Respect debug-mode settings
+    - [x] Compress old logs using gzip
+    - [x] Respect debug-mode settings
 - [ ] Backups
     - [ ] Purge old backups
     - [ ] Respect ingame-notification settings

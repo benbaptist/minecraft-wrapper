@@ -1,0 +1,13 @@
+include README.md
+
+include wrapper/backups/*.py
+include wrapper/dashboard/*.py
+include wrapper/dashboard/login/*.py
+include wrapper/dashboard/admin/*.py
+include wrapper/log_manager/*.py
+include wrapper/plugins/*.py
+include wrapper/server/*.py
+
+global-include *.html
+global-include *.css
+global-include *.js

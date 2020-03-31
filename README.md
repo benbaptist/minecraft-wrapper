@@ -8,6 +8,20 @@ We also have a gitter channel: [![Join the chat at https://gitter.im/benbaptist/
 # 'Lite' Version #
 This is a new branch of Wrapper.py. It's a complete re-write of Wrapper.py, and is focused on being extremely lightweight and clean.
 
+# Installation #
+```
+pip install https://github.com/benbaptist/minecraft-wrapper/archive/lite.zip
+```
+
+Just run `wrapper-lite` in the working directory of your Minecraft server to start.
+On first start, it'll write a configuration file to `wrapper-data/config.json`. Edit to your needs, and then run `wrapper-lite` again.
+
+You may need to adjust your shell's $PATH to incorporate your local bin folder, depending on your system. For some systems, adding this to your .bashrc may work:
+
+```
+export PATH=$PATH:~/.local/bin
+```
+
 ### **Design Goals of the 'Lite' Version**
 - Quick setup
 - Robust, stable, set-it-and-forget-it design
