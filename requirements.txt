@@ -1,3 +1,5 @@
-msgpack
+passlib==1.7.1
+Flask_SocketIO==4.1.0
+Flask==0.12.2
+msgpack_python==0.5.6
 future
-passlib

@@ -1,7 +1,7 @@
-# from distutils.core import setup
 from setuptools import find_packages, setup, Command
 
-from wrapper.__version__ import __version__
+with open("wrapper/__version__.py", "r") as f:
+    exec(f.read())
 
 setup(
     name='Wrapper.py',

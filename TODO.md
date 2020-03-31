@@ -24,6 +24,7 @@
 - [x] Auto-accept EULA
 - [x] Automatically turn on gamerule to hide command runs from ops, to prevent chat spam
 - [ ] Server
+    - [ ] Throttle server start attempts if failing to start (i.e. invalid CLI arguments, wrong server jar name, etc.)
     - [ ] Respect arguments
     - [ ] Respect auto-restart
 - [ ] log_manager
@@ -33,6 +34,10 @@
 - [ ] Backups
     - [ ] Purge old backups
     - [ ] Respect ingame-notification settings
-    - [ ] Console commands for controlling backups
+    - [x] Console commands for controlling backups
+    - [x] Cancel ongoing backup
 - [ ] Dashboard
     - [ ] Localize MaterializeCSS dependencies (don't use CDN)
+
+# Plugin Ideas #
+- [ ] IRC bridge plugin
