@@ -5,6 +5,7 @@ include wrapper/backups/*.py
 include wrapper/dashboard/*.py
 include wrapper/dashboard/login/*.py
 include wrapper/dashboard/admin/*.py
+include wrapper/dashboard/static/images/*.png 
 include wrapper/log_manager/*.py
 include wrapper/plugins/*.py
 include wrapper/server/*.py
