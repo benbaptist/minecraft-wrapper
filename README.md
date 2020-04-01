@@ -3,6 +3,8 @@ Wrapper.py has moved to a [new repository](https://github.com/benbaptist/wrapper
 
 This will remain online as an archived repository only.
 
+An extremely huge thank-you to @suresttexas00 for maintaining the Wrapper.py project for so long! Wrapper would've been dead in the road long ago if it weren't for you. 
+
 # Overview #
 -------------------------------------------
 Wrapper.py is an easy to use Minecraft server wrapper for adding extra functionality into the server without modifying 
