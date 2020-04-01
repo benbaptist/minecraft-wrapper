@@ -1,5 +1,7 @@
-# Repository is currently not active #
-If you are interested in helping to bring wrapper up to date and maintain it, please respond using the issues tab.  An open issue exists to [request a new wrapper developer](https://github.com/benbaptist/minecraft-wrapper/issues/622).
+# Outdated Repository #
+Wrapper.py has moved to a [new repository](https://github.com/benbaptist/wrapper.py). It features a total re-write, with better performance, Python 2.x and 3.x compatibility from the ground up, a new, sleek dashboard interface, and more.
+
+This will remain online as an archived repository only.
 
 # Overview #
 -------------------------------------------
