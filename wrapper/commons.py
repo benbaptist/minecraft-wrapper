@@ -4,6 +4,7 @@ SERVER_STOPPING = 0x02
 SERVER_STOPPED = 0x03
 SERVER_ERROR = 0x04
 SERVER_FROZEN = 0x05
+SERVER_RESTART = 0x06
 
 BACKUP_STARTED = 0x10
 BACKUP_COMPLETE = 0x11
@@ -24,7 +25,8 @@ CONFIG_TEMPLATE = {
     "server": {
         "jar": "server.jar",
         "arguments": "",
-        "auto-restart": True
+        "auto-restart": True,
+        "custom-java-bin": None
     },
     "dashboard": {
         "enable": False,
@@ -60,7 +62,8 @@ CONFIG_TEMPLATE = {
         "ingame-notification": {
             "enable": True,
             "only-ops": False,
-            "verbose": False
+            "verbose": False,
+            "type": "action_bar"
         },
         "backup-mode": "auto",
         "include": {

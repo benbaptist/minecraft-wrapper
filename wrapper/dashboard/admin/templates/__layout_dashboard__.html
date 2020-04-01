@@ -3,6 +3,7 @@
 {% block head %}
 
 <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js" integrity="sha256-yr4fRk/GU1ehYJPAs8P4JlTgu0Hdsp4ZKrx8bDEDC3I=" crossorigin="anonymous"></script>
+<script src="https://cdn.filesizejs.com/filesize.min.js"></script>
 
 <script>
     $(document).ready(function(){
@@ -58,6 +59,7 @@
                         <li{% if request.endpoint == "admin.landing" %} class="active"{% endif %}><a href="/">Overview</a></li>
                         <li><a href="/chat"{% if request.endpoint == "admin.chat" %} class="active"{% endif %}>Chat</a></li>
                         <li><a href="/logs">Logs</a></li>
+                        <li><a href="/config">Config</a></li>
                     </ul>
                 </li>
 

@@ -19,3 +19,7 @@ def before_request():
 @blueprint_admin.route("/", methods=["GET"])
 def landing():
     return render_template("landing.html")
+
+@blueprint_admin.route("/chat", methods=["GET"])
+def chat():
+    return render_template("chat.html")

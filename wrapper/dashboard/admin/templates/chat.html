@@ -1,0 +1,103 @@
+{% extends "__layout_dashboard__.html" %}
+
+{% set enable_navbar = False %}
+{% block pagename %}Chat{% endblock %}}
+
+{% block subhead %}
+    <style>
+        .chat{
+            height: calc(100% - 46px);
+            overflow-y: scroll;
+        }
+
+        .subbody{
+            padding: 0px;
+            height: calc(100% - 64px);
+        }
+
+        #chat-send-message{
+            margin: 0px;
+            width: calc(100% - 24px);
+            padding-left: 24px;
+        }
+
+        .card{
+            margin: 0px;
+        }
+
+        /* responsive */
+        @media only screen and (max-width : 992px) {
+            .subbody{
+                padding: 0px;
+                height: calc(100% - 56px);
+            }
+
+            .chat{
+                height: calc(100% - 43px);
+            }
+        }
+    </style>
+
+    <script>
+        __socketio_ready = function(){
+            socket.emit("chat")
+
+            // Players
+            socket.on("server.player.join", function(payload){
+                console.log("server.player.join", payload)
+            })
+
+            socket.on("server.player.part", function(payload){
+                console.log("server.player.part", payload)
+            })
+
+            socket.on("server.player.message", function(payload){
+                console.log("server.player.message", payload)
+                var player = payload.player
+                var message = payload.message
+                chat_message(player, message)
+            })
+
+            socket.on("chat", function(payload){
+                console.log("chat", payload)
+                $("#chat").text("")
+                for(i in payload){
+                    var chat = payload[i]
+                    var player = chat.player; var message = chat.message
+
+                    chat_message(player, message)
+                }
+            })
+        }
+
+        chat_message = function(player, message){
+            var username = player.username
+            $("#chat").append("&lt;" + username + "&gt; " + message+"\n")
+            $("#card-chat").scrollTop( $("#card-chat")[0].scrollHeight )
+        }
+
+        $(document).ready(function(){
+            $("#chat-send-message").on("keydown", function(e){
+                if(e.keyCode == 13){
+                    socket.emit("send_chat", this.value)
+
+                    this.value = ""
+                }
+            })
+        })
+    </script>
+{% endblock %}
+
+{% block subbody %}
+            <div class="card teal darken-5 chat" id="card-chat">
+                <div class="card-content white-text">
+                    <pre id="chat" style="margin: 0px;">&lt;benbaptist&gt; get the wood from the tree
+&lt;wgrickel&gt; no man, get the wood from the chest
+&lt;benbaptist&gt; ok fine
+&lt;wahdah&gt; i made a torch
+&lt;benbaptist&gt; congratulation</pre>
+                </div>
+            </div>
+
+            <input id="chat-send-message" type="text" placeholder="Send message...">
+{% endblock %}

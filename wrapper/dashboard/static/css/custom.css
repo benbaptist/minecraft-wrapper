@@ -9,6 +9,11 @@ body{
 
 .subbody{
     padding: 16px;
+    height: calc(100% - 64px - 16px);
+    position: fixed;
+    width: calc(100% - 210px);
+    display: block;
+    overflow-y: auto;
 }
 
 .vertical-center{
@@ -129,5 +134,14 @@ nav.navbar .brand-logo {
 @media only screen and (max-width : 992px) {
     .desktop-padding{
         padding-left: 0px !important;
+    }
+
+    .subbody{
+        width: 100%;
+    }
+
+    .subnav{
+        height: 56px;
+        line-height: 56px;
     }
 }

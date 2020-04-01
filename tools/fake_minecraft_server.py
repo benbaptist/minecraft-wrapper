@@ -1,12 +1,35 @@
 import time
 import random
 import os
+import sys
+import threading
 
 from uuid import UUID
+
+# Simulate a Minecraft server's console output. Useful for debugging
+# wrapper.py's console output without running a bulky Java server.
+# Must use Python 3.x.
+
+# Also, 'This Is Us'. You know what I mean. ;)
 
 names = [
     "Kevin", "Kate", "Randall", "Jack", "BabyJack", "Rebecca", "Pearson",
     "benbaptist", "Toby", "DrK", "Sophie", "Nicky", "Beth", "William"
+]
+
+messages = [
+    "I need a torch",
+    "get the wood from the tree",
+    "no man, get the wood from the chest",
+    "ok fine",
+    "I made a torch",
+    "Use the force",
+    "Eat a potato",
+    "Crash at my place?",
+    "Need diamonds",
+    "dude man",
+    "yo do you have any cows",
+    "lol that man"
 ]
 
 class Player:
@@ -14,35 +37,63 @@ class Player:
         self.username = random.choice(names) + str(random.randrange(0, 99))
         self.uuid = UUID(bytes=os.urandom(16))
 
-print("[11:11:11] [Server thread/INFO]: Starting minecraft server version 1.15.2\n\r")
+def fancy_print(msg, thread="Server thread", level="INFO", time="11:12:13"):
+    print("[%s] [%s/%s]: %s" % (time, thread, level, msg), file=sys.stdout)
+
+# global ABORT
+ABORT = False
+
+def read_console():
+    global ABORT
+    while not ABORT:
+        blob = input("> ")
+
+        if blob == "stop":
+            ABORT = True
+            fancy_print("Shutting down?")
+            time.sleep(1)
+            break
+
+t = threading.Thread(target=read_console, args=())
+t.daemon = True
+t.start()
+
+fancy_print("Starting minecraft server version 1.15.2")
+# time.sleep(.5)
+fancy_print("Starting Minecraft server on *:25565")
 time.sleep(.5)
-print("[11:11:11] [Server thread/INFO]: Starting Minecraft server on *:25565\n\r")
+fancy_print("Preparing level \"flat\"")
 time.sleep(.5)
-print("[11:11:11] [Server thread/INFO]: Preparing level \"flat\"\n\r")
-time.sleep(.5)
-print("[11:11:11] [Server thread/INFO]: Done (17.526s)! For help, type \"help\"\n\r")
+fancy_print("Done (17.526s)! For help, type \"help\"")
 
 players = []
 
-while True:
+while not ABORT:
     # random events
 
     # make player join
     if random.randrange(0, 10) == 2:
         player = Player()
         players.append(player)
-        print("[11:11:11] [User Authenticator #1/INFO]: UUID of player %s is %s" % ( player.username, player.uuid ))
-        print("[11:11:11] [Server thread/INFO]: %s[127.0.0.1:12345] logged in with entity id 123 at (1, 2, 3)" % player.username)
+        fancy_print(
+            "UUID of player %s is %s"
+            % ( player.username, player.uuid ),
+            thread="User Authenticator #1"
+        )
+        fancy_print("%s[/127.0.0.1:12345] logged in with entity id 123 at (1, 2, 3)" % player.username)
 
     # make player chat
-    if random.randrange(0, 10) == 2:
-        pass
+    if random.randrange(0, 4) == 2:
+        if len(players) > 0:
+            player = random.choice(players)
+            message = random.choice(messages)
+            fancy_print("<%s> %s" % (player.username, message))
 
     # make player leave
     if random.randrange(0, 10) == 2:
         if len(players) > 0:
             player = random.choice(players)
-            print("[11:11:11] [Server thread/INFO]: %s lost connection: Disconnected" % player.username)
+            fancy_print("%s lost connection: Disconnected" % player.username)
             players.remove(player)
 
     time.sleep(.5)

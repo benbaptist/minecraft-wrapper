@@ -1,7 +1,7 @@
 import json
 import os
 
-# Ben's Configurator v1.1
+# Ben's Configurator v1.2
 # Copyright benbaptist.com 2019
 
 class DummyLogger:
@@ -48,11 +48,27 @@ class Config:
 		else:
 			self.data = {}
 
-		for i in template:
-			if i not in self.data:
-				self.updated_from_template = True
-				self.log.debug("Populating '%s'" % i)
-				self.data[i] = template[i]
+		def check(obj, temp, recur=["root"]):
+			self.log.debug("Checking '%s'" % "/".join(recur))
+			for t in temp:
+				if t not in obj:
+					self.updated_from_template = True
+					obj[t] = temp[t]
+					self.log.debug(
+						"Populating '%s/%s'"
+						% ("/".join(recur), t)
+					)
+				else:
+					if type(temp[t]) == dict:
+						check(obj[t], temp[t], recur + [t])
+
+		check(self.data, template)
+
+		# for i in template:
+		# 	if i not in self.data:
+		# 		self.updated_from_template = True
+		# 		self.log.debug("Populating '%s'" % i)
+		# 		self.data[i] = template[i]
 
 		self.save()
 

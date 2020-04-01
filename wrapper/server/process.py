@@ -1,6 +1,8 @@
 import threading
 import time
 import traceback
+import resource
+import psutil
 
 from subprocess import Popen, PIPE
 
@@ -9,6 +11,7 @@ from wrapper.exceptions import *
 class Process:
     def __init__(self):
         self.process = None
+        self.process_status = None
         self.threads = {}
         self.console_output = []
 
@@ -17,9 +20,10 @@ class Process:
             raise StartingException("Cannot start java process, because it is already running.")
 
         command = [java_bin] + java_args + ["-jar", jar_name] + jar_args
-        # command = ["python", "/home/benbaptist/Documents/Programming/minecraft-wrapper/tools/fake_minecraft_server.py"]
+        command = ["python3", "-u", "/home/benbaptist/Documents/Programming/minecraft-wrapper/tools/fake_minecraft_server.py"]
 
         self.process = Popen(command, stdout=PIPE, stderr=PIPE, stdin=PIPE, universal_newlines=True, bufsize=1)
+        self.process_status = psutil.Process(self.process.pid)
 
         self.threads["__stdout__"] = threading.Thread(target=self.__stread__, args=("stdout", ))
         self.threads["__stdout__"].daemon = True
@@ -28,6 +32,18 @@ class Process:
         self.threads["__stderr__"] = threading.Thread(target=self.__stread__, args=("stderr", ))
         self.threads["__stderr__"].daemon = True
         self.threads["__stderr__"].start()
+
+    def get_ram_usage(self):
+        with open("/proc/%d/statm" % self.process.pid) as f:
+            getbytes = int(f.read().split(" ")[1]) * resource.getpagesize()
+
+        return getbytes
+
+    def get_cpu_usage(self):
+        if not self.process_status and not self.process:
+            return
+
+        return self.process_status.cpu_percent()
 
     def read_console(self):
         i = 0
@@ -42,6 +58,7 @@ class Process:
         if self.process:
             self.process.kill()
             self.process = None
+            self.process_status = None
 
     def write(self, cmd):
         if not self.process:
@@ -59,7 +76,7 @@ class Process:
             elif read == "stderr":
                 std = self.process.stderr
 
-            # print("__stread__ start // %s" % read)
+            print("__stread__ start // %s" % read)
             while self.process:
                 blob = std.readline()
 

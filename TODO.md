@@ -24,10 +24,12 @@
 - [x] Auto-accept EULA
 - [x] Automatically turn on gamerule to hide command runs from ops, to prevent chat spam
 - [ ] Server
+    - [ ] MCServer object's life should only be during the server's life; once the server stops, the MCServer object should be destroyed. A new one should be created when the server is started again
+    - [ ] Sepearate console parsing from MCServer
     - [ ] Throttle server start attempts if failing to start (i.e. invalid CLI arguments, wrong server jar name, etc.)
     - [ ] Respect arguments
     - [ ] Respect auto-restart
-    - [ ] Custom java executable
+    - [x] Custom java executable
 - [ ] log_manager
     - [PARTIAL] Rotate logs
     - [x] Compress old logs using gzip

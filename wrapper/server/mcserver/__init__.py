@@ -3,6 +3,7 @@ import json
 import uuid
 import time
 import os
+import resource
 
 from wrapper.server.process import Process
 from wrapper.server.player import Player
@@ -23,7 +24,19 @@ class MCServer:
         self.target_state = (SERVER_STOPPED, time.time())
 
         self.uuid_cache = UUID_Cache()
+
         self._reset()
+
+        self._timeout = 0
+
+        self._chat_scrollback = []
+        self._resource_analytics = []
+
+        # Dummy player used for console user
+        self._console_player = Player(
+            username="$Console$",
+            mcuuid=uuid.UUID(bytes=bytes(16))
+        )
 
     def _reset(self):
         self.players = []
@@ -59,14 +72,22 @@ class MCServer:
         self._reset()
 
         # Start process
+        custom_java_bin = self.config["server"]["custom-java-bin"]
+        if not custom_java_bin:
+            custom_java_bin = "java"
+
         self.process = Process()
-        self.process.start(self.config["server"]["jar"])
+        self.process.start(self.config["server"]["jar"], java_bin=custom_java_bin)
         self.state = SERVER_STARTING
 
         self.target_state = (SERVER_STARTED, time.time())
 
+    # Control server states
     def stop(self, reason):
         self.target_state = (SERVER_STOPPED, time.time())
+
+    def restart(self, reason):
+        self.target_state = (SERVER_RESTART, time.time())
 
     def freeze(self):
         return
@@ -78,7 +99,6 @@ class MCServer:
         self.process.kill()
 
     # Commands
-
     def run_command(self, cmd):
         if not self.process:
             raise ServerStopped()
@@ -119,6 +139,19 @@ class MCServer:
                 if player.ip_address == ip_address:
                     return player
 
+    # Server stuff
+    def get_ram_usage(self):
+        if not self.process:
+            raise ServerStopped("Server not running")
+
+        return self.process.get_ram_usage()
+
+    def get_cpu_usage(self):
+        if not self.process:
+            raise ServerStopped("Server not running")
+
+        return self.process.get_cpu_usage()
+
     # Tick
     def tick(self):
         # Check if server process is stopped
@@ -127,14 +160,15 @@ class MCServer:
                 self._reset()
 
         if not self.process and self.state != SERVER_STOPPED:
-            print("self.process is dead, state == server-stopped")
+            # print("self.process is dead, state == server-stopped")
             self.log.info("Server stopped")
             self.state = SERVER_STOPPED
             self.events.call("server.stopped")
+            self._reset()
 
         # Check target state, and do accordingly
         target_state, target_state_time = self.target_state
-        if target_state == SERVER_STOPPED:
+        if target_state in (SERVER_STOPPED, SERVER_RESTART):
 
             # Start server shutdown, if it hasn't already started
             if self.state not in (SERVER_STOPPING, SERVER_STOPPED):
@@ -146,9 +180,23 @@ class MCServer:
                 if time.time() - target_state_time > 60:
                     self.kill()
 
+            # Check if server is fully stopped, and then start it again
+            if target_state == SERVER_RESTART and self.state == SERVER_STOPPED:
+                self.start()
+
         # Don't go further unless a server process exists
         if not self.process:
             return
+
+        # Get server resource usage every second
+        if time.time() - self._timeout > 1:
+            ram_usage = self.get_ram_usage()
+            self.events.call("server.status.ram", usage=ram_usage)
+
+            cpu_usage = self.get_cpu_usage()
+            self.events.call("server.status.cpu", usage=cpu_usage)
+
+            self._timeout = time.time()
 
         # Check if server is 'dirty'
         if len(self.players) > 0:
@@ -160,7 +208,7 @@ class MCServer:
             print(line)
 
             # Compatible with most recent versions of Minecraft server
-            r = re.search("(\[[0-9:]*\]) \[([A-z #]*)\/([A-z #]*)\](.*)", line)
+            r = re.search("(\[[0-9:]*\]) \[([A-z #0-9]*)\/([A-z #]*)\](.*)", line)
 
             # If regex did not match, continue to prevent issues
             if r == None:
@@ -197,8 +245,11 @@ class MCServer:
 
             if self.state == SERVER_STARTED:
                 # UUID catcher
+                # print(server_thread)
                 if "User Authenticator" in server_thread:
                     r = re.search(": UUID of player (.*) is (.*)", output)
+
+                    # print("UUID", r)
 
                     if r:
                         username, uuid_string = r.group(1), r.group(2)
@@ -227,7 +278,7 @@ class MCServer:
                     self.dirty = True
                     self.events.call("server.player.join", player=player)
 
-                    print(username, ip_address, entity_id, position)
+                    # print(username, ip_address, entity_id, position)
 
                 # Player Part
                 r = re.search(": (.*) lost connection: (.*)", output)
@@ -237,16 +288,28 @@ class MCServer:
 
                     player = self.get_player(username=username)
                     if player:
-                        self.events.call("server.player.join", player=player)
+                        self.events.call("server.player.part", player=player)
 
-                        print("Removing %s from players" % player)
+                        # print("Removing %s from players" % player)
                         self.players.remove(player)
 
                 # Chat messages
                 r = re.search(": <(.*)> (.*)", output)
                 if r:
                     username, message = r.group(1), r.group(2)
-                    print(username, message)
+
+                    player = self.get_player(username=username)
+                    self.events.call(
+                        "server.player.message",
+                        player=player,
+                        message=message
+                    )
+
+                    self._chat_scrollback.append([player, message, time.time()])
+
+                    # Purge chat scrollback to 200 lines
+                    while len(self._chat_scrollback) > 200:
+                        del self._chat_scrollback[0]
 
         # Dirty hack, let's make this better later using process.read_console()
         self.process.console_output = []
